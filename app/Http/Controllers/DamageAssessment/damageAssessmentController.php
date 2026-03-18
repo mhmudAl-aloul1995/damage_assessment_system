@@ -41,7 +41,7 @@ class damageAssessmentController extends Controller
     {
 
         $token = null;
-        $response = Http::withOptions([
+/*         $response = Http::withOptions([
             'verify' => 'C:\\nginx\\cacert.pem',
         ])->asForm()->post('https://www.arcgis.com/sharing/rest/generateToken', [
             'f' => 'json',
@@ -53,7 +53,7 @@ class damageAssessmentController extends Controller
 
 
         $token = $response->json()['token'];
-
+ */
         $startDate = '2026-01-20';
         $endDate = Carbon::today()->toDateString();
 

@@ -36,7 +36,7 @@ class auditController extends Controller
                 'assignedUsers.user',
                 'engineerStatus.status',
                 'lawyerStatus.status'
-            ])->orderBy('building_name','desc');
+            ])->where('field_status','COMPLETED')->orderBy('building_name','ASC');
 
             return DataTables::of($data)
                 ->addIndexColumn()
