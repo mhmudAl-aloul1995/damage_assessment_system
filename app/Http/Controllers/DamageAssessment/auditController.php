@@ -30,6 +30,7 @@ class auditController extends Controller
 {
     public function index(Request $request)
     {
+        
         if ($request->ajax()) {
 
             $data = Building::with([
@@ -110,13 +111,15 @@ class auditController extends Controller
         $request->validate([
             'building_ids' => 'required|array',
             'user_id' => 'required|exists:users,id',
-            'type' => 'required|in:eng,lawyer'
+            //'type' => 'required|in:eng,lawyer'
         ]);
 
+
+        
         foreach ($request->building_ids as $id) {
             AssignedAssessmentUser::updateOrCreate(
-                ['building_id' => $id, 'type' => $request->type],
-                ['user_id' => $request->user_id, 'manager_id' => Auth::id()]
+                ['building_id' => $id, 'type' => $request->type, 'type' => $request->type],
+                ['user_id' => $request->user_id, 'manager_id' => Auth::id(), 'type' => $request->type]
             );
         }
 
@@ -243,17 +246,17 @@ class auditController extends Controller
     {
         if ($request->ajax()) {
 
-dd($request->all());
-            $user = Auth::user();
+
+        $user = Auth::user();
 
             $type = $user->hasRole('Engineering Auditor') ? 'Engineering Auditor' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
 
-            if (!$type) {
+           /*  if (!$type) {
                 abort(403, 'Unauthorized');
             }
             if (!in_array($type, ['eng', 'lawyer'])) {
                 abort(403, 'Unauthorized');
-            }
+            } */
 
             $statusRelation = $type === 'eng' ? 'engineerStatus.status' : 'lawyerStatus.status';
 
@@ -265,7 +268,7 @@ dd($request->all());
                     ->where('user_id', $user->id);
             });
 
-            return DataTables::of($data->orderByAsc('building_name'))
+            return DataTables::of($data)
                 ->addIndexColumn()
 
                 ->editColumn('building_name', function ($row) {

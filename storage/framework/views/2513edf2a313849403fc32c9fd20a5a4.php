@@ -274,7 +274,7 @@
 
 			// 2. Set Modal Details
 			$('#modal_title,#user_label').text('تعيين للمهندس');
-			$('#assign_type').val('eng');
+			$('#assign_type').val('Engineering Auditor');
 
 			const container = $('#selected_buildings_container');
 			container.empty();
@@ -309,7 +309,7 @@
 
 			// 2. Set Modal Details
 			$('#modal_title,#user_label').text('تعيين للمحامي');
-			$('#assign_type').val('lawyer'); // Hidden input to tell backend the role
+			$('#assign_type').val('Legal Auditor'); // Hidden input to tell backend the role
 
 			// 3. Clear and Fill IDs in a hidden container inside the form
 			const container = $('#selected_buildings_container');

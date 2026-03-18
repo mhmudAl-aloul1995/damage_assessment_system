@@ -23,24 +23,14 @@ class DatabaseSeeder extends Seeder
             'email' => 'mhmudaloul@gmail.com',
             'password' => bcrypt('123456'),
         ]);
-               User::factory()->create([
-            'name' => 'hasssanAli',
-            'email' => 'mhmudaloul1@gmail.com',
-            'password' => bcrypt('123456'),
-        ]);
-                       User::factory()->create([
-            'name' => 'khaledAloul',
-            'email' => 'mhmudaloul1@gmail.com',
-            'password' => bcrypt('123456'),
-        ]);
+
         $this->call([
-                        AssessmentsSqlSeeder::class,
+            AssessmentsSqlSeeder::class,
             AssessmentStatusSeeder::class,
             FilterSeeder::class,
+            RolesAndPermissionsSeeder::class,
             BuildingSeeder::class,
             HousingSeeder::class,
-                    RolesAndPermissionsSeeder::class,
-
 
 
         ]);

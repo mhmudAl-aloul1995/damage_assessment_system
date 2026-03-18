@@ -14,7 +14,7 @@ return new class extends Migration
             // FIXED: nullable() must come BEFORE constrained() for nullOnDelete() to work
             $table->foreignId('manager_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->enum('type', ['eng', 'lawyer', 'other'])->default('eng');
+            $table->string('type');
             $table->foreignId('building_id')->constrained('buildings')->cascadeOnDelete();
             $table->timestamps();
         });
