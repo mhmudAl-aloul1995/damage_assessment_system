@@ -38,3 +38,4 @@ assets
 *.rar
 *.zip
 *.7z
+/public
