@@ -1,0 +1,388 @@
+<?php
+
+namespace App\Http\Controllers\DamageAssessment;
+
+use App\Http\Controllers\Controller;
+use App\Models\Assessment;
+use App\Models\Buildings;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use phpDocumentor\Reflection\Project;
+use Yajra\Datatables\Datatables;
+use Rap2hpoutre\FastExcel\FastExcel;
+use Yajra\Datatables\Enginges\EloquentEngine;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\View;
+use Illuminate\Database\Eloquent\Builder;
+use Hash;
+use Spatie\Permission\Models\Role;
+use App\Models\HousingUnit;
+use App\Models\Building;
+use App\Exports\BuildingExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Spatie\LaravelPdf\Facades\Pdf;
+use Illuminate\Support\Facades\Http;
+use App\Models\Filter;
+use App\Models\EditAssessment;
+
+
+class damageAssessmentController extends Controller
+{
+    /*
+        function __construct()
+        {
+            $this->middleware('permission:user-list|user-create|user-edit|user-delete', ['only' => ['index', 'show']]);
+            $this->middleware('permission:user-create', ['only' => ['create', 'store']]);
+            $this->middleware('permission:user-edit', ['only' => ['edit', 'update']]);
+            $this->middleware('permission:user-delete', ['only' => ['destroy']]);
+        }*/
+
+    public function index($objectid = null)
+    {
+
+        $token = null;
+        $response = Http::withOptions([
+            'verify' => 'C:\\nginx\\cacert.pem',
+        ])->asForm()->post('https://www.arcgis.com/sharing/rest/generateToken', [
+            'f' => 'json',
+            'username' => 'Mahmoud.Alalloul',
+            'password' => 'Qazxcv@464',
+            'client' => 'referer',
+            'referer' => 'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0',
+        ]);
+
+
+        $token = $response->json()['token'];
+
+        $startDate = '2026-01-20';
+        $endDate = Carbon::today()->toDateString();
+
+        $data = [
+            'buildings' => Building::selectRaw("
+        COALESCE(SUM(field_status = 'Not_Completed'), 0) as not_completed,
+        COALESCE(SUM(field_status = 'COMPLETED'), 0) as completed,
+        COALESCE(SUM(field_status NOT IN ('COMPLETED', 'Not_Completed')), 0) as pending,
+        COALESCE(SUM(building_damage_status = 'fully_damaged'), 0) as fully_damaged,
+        COALESCE(SUM(building_damage_status = 'partially_damaged'), 0) as partially_damaged,
+        COALESCE(SUM(building_damage_status = 'committee_review'), 0) as committee_review,
+        COALESCE(SUM(security_situation = 'Unsafe'), 0) as security_unsafe,
+        COALESCE(SUM(uxo_present = 'yes3'), 0) as uxo,
+        COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
+        COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris
+    ")
+                //   ->whereBetween('editdate', [$startDate, $endDate])
+                ->first(),
+
+            'units' => HousingUnit::selectRaw("
+        COALESCE(SUM(unit_damage_status = 'fully_damaged2'), 0) as fully_damaged,
+        COALESCE(SUM(unit_damage_status = 'partially_damaged2'), 0) as partially_damaged,
+        COALESCE(SUM(unit_damage_status = 'committee_review2'), 0) as committee_review,
+        COALESCE(SUM(has_fire = 'yes'), 0) as has_fire,
+        COALESCE(SUM(unit_stripping = 'yes'), 0) as has_strip,
+        COALESCE(SUM(is_the_housing_unit_or_living_habitable = 'yes'), 0) as habitable,
+        COALESCE(SUM(security_situation_unit = 'Unsafe'), 0) as security_unsafe,
+        COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,
+        COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed
+    ")
+                //   ->whereBetween('creationdate', [$startDate, $endDate])
+                ->first()
+        ];
+
+        $unitStats = [
+            'fully_damaged' => $data['units']->fully_damaged,
+            'partially_damaged' => $data['units']->partially_damaged,
+            'committee_review' => $data['units']->committee_review,
+            'has_fire' => $data['units']->has_fire,
+            'has_strip' => $data['units']->has_strip,
+            'habitable' => $data['units']->habitable,
+            'security_unsafe' => $data['units']->security_unsafe,
+            'unit_stripping' => $data['units']->unit_stripping,
+            'unit_support_needed' => $data['units']->unit_support_needed,
+        ];
+        $buildingStats = [
+            'not_completed' => $data['buildings']->not_completed,
+            'completed' => $data['buildings']->completed,
+            'pending' => $data['buildings']->pending,
+            'fully_damaged' => $data['buildings']->fully_damaged,
+            'partially_damaged' => $data['buildings']->partially_damaged,
+            'committee_review' => $data['buildings']->committee_review,
+            'security_unsafe' => $data['buildings']->security_unsafe,
+            'uxo' => $data['buildings']->uxo,
+            'bodies' => $data['buildings']->bodies,
+            'debris' => $data['buildings']->debris,
+        ];
+
+        return View::make(
+            'DamageAssessment.damageAssessment',
+            compact(
+                'token',
+                'unitStats',
+                'buildingStats',
+            )
+        );
+    }
+
+
+
+    public function search(Request $request)
+    {
+        $term = $request->search;
+
+        $results = Building::where('building_name', 'LIKE', "%{$term}%")
+            ->orWhereHas('housing_unit', function ($q) use ($term) {
+                $q->where('q_9_3_1_first_name', 'LIKE', "%{$term}%");
+                $q->where('q_9_3_2_second_name__father', 'LIKE', "%{$term}%");
+                $q->where('q_9_3_3_third_name__grandfather', 'LIKE', "%{$term}%");
+                $q->where('q_9_3_4_last_name', 'LIKE', "%{$term}%");
+                $q->select('q_9_3_1_first_name', 'q_9_3_2_second_name__father', 'q_9_3_3_third_name__grandfather', 'q_9_3_4_last_name');
+            })
+            ->with('housing_unit')
+            ->limit(10)
+            ->select('building_name')
+            ->get();
+
+        return response()->json($results);
+    }
+
+
+
+    public function showBuildings(Request $request)
+    {
+        return $this->renderAssessmentTable(
+            modelClass: Building::class,
+            globalid: $request->globalid,
+            type: 'building_table'
+        );
+    }
+
+    public function showHousings(Request $request)
+    {
+        return $this->renderAssessmentTable(
+            modelClass: HousingUnit::class,
+            globalid: $request->globalid,
+            type: 'housing_table'
+        );
+    }
+
+
+    private function renderAssessmentTable(string $modelClass, ?string $globalid, string $type)
+    {
+        $model = $modelClass::where('globalid', $globalid)->first();
+        $record = $model?->toArray() ?? [];
+
+        $fillable = (new $modelClass())->getFillable();
+
+        $assessments = Assessment::query()->whereIn('name', $fillable);
+
+        if (!empty(request()->search['value'])) {
+            $search = request()->search['value'];
+
+            $assessments->where(function ($query) use ($search) {
+                $query->where('label', 'like', "%{$search}%")
+                    ->orWhere('hint', 'like', "%{$search}%");
+            });
+        }
+
+        $edits = collect();
+        $allEdits = collect();
+
+        if ($globalid) {
+
+            $edits = EditAssessment::with('user')
+                ->where('type', $type)
+                ->where('global_id', $globalid)
+                //   ->where('user_id', auth()->id())
+                ->orderBy('updated_at', 'desc')
+                ->get()
+                ->groupBy('field_name')
+                ->map(fn($group) => $group->first());
+
+
+            $allEdits = EditAssessment::with('user')
+                ->where('type', $type)
+                ->where('global_id', $globalid)
+                ->orderBy('updated_at', 'desc')
+                ->get()
+                ->groupBy('field_name');
+        }
+
+        return DataTables::of($assessments)
+            ->addColumn('question', function ($row) {
+                return $row->label . '<br><small class="text-muted">' . e($row->hint ?? '') . '</small>';
+            })
+
+            ->addColumn('answer', function ($row) use ($record, $allEdits, $globalid, $type) {
+                $fieldEdits = $allEdits->get($row->name, collect());
+                $lastEdit = $fieldEdits->first();
+
+                $originalValue = $record[$row->name] ?? null;
+                $editedValue = $lastEdit?->field_value;
+                $editedBy = $lastEdit?->user?->name;
+                $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
+
+                $canViewHistory = auth()->user()->hasAnyRole(['Administrator', 'General Supervisor', 'Engineering Auditor', 'Legal Auditor']);
+
+                if ((is_null($originalValue) || $originalValue === '') && $fieldEdits->isEmpty()) {
+                    return '<span class="text-muted">-</span>';
+                }
+
+                if ($fieldEdits->isEmpty() || !$canViewHistory) {
+                    return $originalValue;
+                }
+
+                $historyHtml = '';
+
+                if ($canViewHistory) {
+                    $collapseId = 'history_' . md5($type . '_' . $globalid . '_' . $row->name);
+
+                    foreach ($fieldEdits as $edit) {
+                        $historyHtml .= '
+                        <div class="border rounded p-2 mb-2 bg-light-info">
+                            <div><small class="text-muted">القيمة:</small> <span class="fw-semibold">' . e($edit->field_value ?? '-') . '</span></div>
+                            <div><small class="text-muted">بواسطة:</small> ' . e($edit->user?->name ?? '-') . '</div>
+                            <div><small class="text-muted">الوقت:</small> ' . e(optional($edit->updated_at)->format('Y-m-d h:i A') ?? '-') . '</div>
+                        </div>
+                    ';
+                    }
+
+                    $historyHtml = '
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse" data-bs-target="#' . $collapseId . '" aria-expanded="false">
+                            عرض سجل التعديلات (' . $fieldEdits->count() . ')
+                        </button>
+
+                        <div class="collapse mt-2" id="' . $collapseId . '">
+                            ' . $historyHtml . '
+                        </div>
+                    </div>
+                ';
+                }
+
+                return '
+                <div class="border rounded p-3 bg-light-warning">
+                    <div class="mb-2">
+                        <small class="text-muted d-block">الأصل</small>
+                        <span class="text-gray-700">' . e($originalValue) . '</span>
+                    </div>
+
+                    <div class="mb-2">
+                        <small class="text-warning d-block fw-bold">آخر تعديل</small>
+                        <span class="text-gray-900 fw-bold">' . e($editedValue) . '</span>
+                    </div>
+
+                    <div class="mb-1">
+                        <small class="text-info d-block fw-bold">اسم المعدّل</small>
+                        <span class="text-gray-800">' . e($editedBy ?? '-') . '</span>
+                    </div>
+
+                    <div>
+                        <small class="text-primary d-block fw-bold">وقت التعديل</small>
+                        <span class="text-gray-600">' . e($editedAt ?? '-') . '</span>
+                    </div>
+
+                    ' . $historyHtml . '
+                </div>
+            ';
+            })
+
+            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
+                $lastEdit = $edits->get($row->name);
+                $editedValue = $lastEdit?->field_value;
+                $originalValue = $record[$row->name] ?? '';
+                $value = ($editedValue !== null && $editedValue !== '') ? $editedValue : $originalValue;
+
+                $filters = Filter::where('list_name', $row->name)->get();
+
+                if ($filters->count() > 0) {
+                    $selectedValues = array_filter(array_map('trim', explode(',', (string) $value)));
+
+                    $html = '<select
+            class="form-select form-select-sm form-select-solid inline-edit-select"
+            data-field="' . e($row->name) . '"
+            data-globalid="' . e($globalid) . '"
+            data-type="' . e($type) . '"
+            data-control="select2"
+            data-close-on-select="true"
+            data-placeholder="اختر">';
+
+                    $html .= '<option value=""></option>';
+
+                    foreach ($filters as $option) {
+                        $selected = in_array($option->name, $selectedValues) ? 'selected' : '';
+                        $html .= '<option value="' . e($option->name) . '" ' . $selected . '>' . e($option->label) . '</option>';
+                    }
+
+                    $html .= '</select>';
+
+                    return $html;
+                }
+
+                return '
+        <div class="d-flex gap-2 align-items-center justify-content-center">
+            <input
+                type="text"
+                class="form-control form-control-sm form-control-solid inline-edit-input"
+                value="' . e($value) . '"
+                data-field="' . e($row->name) . '"
+                data-globalid="' . e($globalid) . '"
+                data-type="' . e($type) . '"
+            >
+            <button type="button"
+                class="btn btn-sm btn-light-primary inline-save-btn"
+                data-field="' . e($row->name) . '"
+                data-globalid="' . e($globalid) . '"
+                data-type="' . e($type) . '">
+                حفظ
+            </button>
+        </div>
+    ';
+            })
+            ->rawColumns(['question', 'answer', 'editAnswer'])
+            ->make(true);
+    }
+    public function updateInlineAssessment(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|in:building_table,housing_table',
+            'globalid' => 'required|string',
+            'field' => 'required|string',
+            'value' => 'nullable',
+        ]);
+
+        $modelClass = $request->type === 'building_table'
+            ? Building::class
+            : HousingUnit::class;
+
+        $fillable = (new $modelClass())->getFillable();
+
+        if (!in_array($request->field, $fillable)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'هذا الحقل غير قابل للتعديل'
+            ], 422);
+        }
+
+        $value = $request->value;
+
+        if (is_array($value)) {
+            $value = implode(',', $value);
+        }
+
+        EditAssessment::create(
+            [
+                'global_id' => $request->globalid,
+                'type' => $request->type,
+                'field_name' => $request->field,
+                'user_id' => Auth::id(),
+            ],
+            [
+                'field_value' => $value,
+            ]
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم حفظ التعديل في سجل التعديلات بنجاح'
+        ]);
+    }
+}
