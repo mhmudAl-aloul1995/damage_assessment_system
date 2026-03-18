@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
             FilterSeeder::class,
             RolesAndPermissionsSeeder::class,
             BuildingSeeder::class,
-            HousingSeeder::class,
+            HousingSeeder::class,//55
 
 
         ]);
