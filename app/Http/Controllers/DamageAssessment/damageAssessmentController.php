@@ -272,7 +272,7 @@ class damageAssessmentController extends Controller
                 $editedBy = $lastEdit?->user?->name;
                 $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
 
-                $canViewHistory = auth()->user()->hasAnyRole(['Administrator', 'General Supervisor', 'Engineering Auditor', 'Legal Auditor']);
+                $canViewHistory = auth()->user()->hasAnyRole(['Administrator', 'General Supervisor', 'Engineering Auditor', 'Legal Auditor','Auditing Supervisor']);
 
                 if ((is_null($originalValue) || $originalValue === '') && $fieldEdits->isEmpty()) {
                     return '<span class="text-muted">-</span>';
