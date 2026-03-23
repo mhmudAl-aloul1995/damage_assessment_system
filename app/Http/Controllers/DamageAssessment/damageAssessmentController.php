@@ -224,16 +224,14 @@ class damageAssessmentController extends Controller
             ->addColumn('question', function ($row) {
                 return $row->label.'<br>'.$row->hint;
             })
-            ->addColumn('answer', function ($row) use (
-                $record,
+              ->addColumn('answer', function ($row) use ($record,
                 $allEdits,
                 $model,
                 $attachments,
                 $token,
                 $arcgis,
-                $layerId
-            ) {
-                if ($row->name === 'attachments') {
+                $layerId,$type,$globalid) {
+                       if ($row->name === 'attachments') {
                     if (!$model || !$model->objectid || !$token || $attachments->isEmpty()) {
                         return '<span class="text-muted">لا يوجد مرفقات</span>';
                     }
@@ -269,10 +267,76 @@ class damageAssessmentController extends Controller
                 $fieldEdits = $allEdits->get($row->name, collect());
                 $lastEdit = $fieldEdits->first();
 
-                $value = $lastEdit?->field_value ?? ($record[$row->name] ?? '');
+                $originalValue = $record[$row->name] ?? null;
+                $editedValue = $lastEdit?->field_value;
+                $editedBy = $lastEdit?->user?->name;
+                $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
 
-                return e($value ?: '-');
+                $canViewHistory = auth()->user()->hasAnyRole(['Administrator', 'General Supervisor', 'Engineering Auditor', 'Legal Auditor']);
+
+                if ((is_null($originalValue) || $originalValue === '') && $fieldEdits->isEmpty()) {
+                    return '<span class="text-muted">-</span>';
+                }
+
+                if ($fieldEdits->isEmpty() || !$canViewHistory) {
+                    return $originalValue;
+                }
+
+                $historyHtml = '';
+
+                if ($canViewHistory) {
+                    $collapseId = 'history_' . md5($type . '_' . $globalid . '_' . $row->name);
+
+                    foreach ($fieldEdits as $edit) {
+                        $historyHtml .= '
+                        <div class="border rounded p-2 mb-2 bg-light-info">
+                            <div><small class="text-muted">القيمة:</small> <span class="fw-semibold">' . e($edit->field_value ?? '-') . '</span></div>
+                            <div><small class="text-muted">بواسطة:</small> ' . e($edit->user?->name ?? '-') . '</div>
+                            <div><small class="text-muted">الوقت:</small> ' . e(optional($edit->updated_at)->format('Y-m-d h:i A') ?? '-') . '</div>
+                        </div>
+                    ';
+                    }
+
+                    $historyHtml = '
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse" data-bs-target="#' . $collapseId . '" aria-expanded="false">
+                            عرض سجل التعديلات (' . $fieldEdits->count() . ')
+                        </button>
+
+                        <div class="collapse mt-2" id="' . $collapseId . '">
+                            ' . $historyHtml . '
+                        </div>
+                    </div>
+                ';
+                }
+
+                return '
+                <div class="border rounded p-3 bg-light-warning">
+                    <div class="mb-2">
+                        <small class="text-muted d-block">الأصل</small>
+                        <span class="text-gray-700">' . e($originalValue) . '</span>
+                    </div>
+
+                    <div class="mb-2">
+                        <small class="text-warning d-block fw-bold">آخر تعديل</small>
+                        <span class="text-gray-900 fw-bold">' . e($editedValue) . '</span>
+                    </div>
+
+                    <div class="mb-1">
+                        <small class="text-info d-block fw-bold">اسم المعدّل</small>
+                        <span class="text-gray-800">' . e($editedBy ?? '-') . '</span>
+                    </div>
+
+                    <div>
+                        <small class="text-primary d-block fw-bold">وقت التعديل</small>
+                        <span class="text-gray-600">' . e($editedAt ?? '-') . '</span>
+                    </div>
+
+                    ' . $historyHtml . '
+                </div>
+            ';
             })
+
               ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
                 if ($row->name === 'attachments') {
                     return;
