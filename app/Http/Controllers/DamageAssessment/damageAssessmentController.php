@@ -274,6 +274,9 @@ class damageAssessmentController extends Controller
                 return e($value ?: '-');
             })
               ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
+                if ($row->name === 'attachments') {
+                    return;
+                }
                 $lastEdit = $edits->get($row->name);
                 $editedValue = $lastEdit?->field_value;
                 $originalValue = $record[$row->name] ?? '';
