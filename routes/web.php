@@ -42,7 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('sync', controller: ArcGISController::class);
 
 
-    Route::post('/pull', function () {
+    Route::get('/pull', function () {
         // Run the git pull command in the project root
         $result = Process::path(base_path())
             ->run('git pull');
