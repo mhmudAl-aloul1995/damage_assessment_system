@@ -55,6 +55,9 @@ class damageAssessmentController extends Controller
 
         $token = $response->json()['token'];
  */
+        $arcgis = app(ArcgisService::class);
+        $token = $arcgis->getToken();
+
         $startDate = '2026-01-20';
         $endDate = Carbon::today()->toDateString();
 
@@ -146,7 +149,7 @@ class damageAssessmentController extends Controller
     }
 
 
- public function showBuildings(Request $request)
+    public function showBuildings(Request $request)
     {
         return $this->renderAssessmentTable(
             modelClass: Building::class,
@@ -208,7 +211,7 @@ class damageAssessmentController extends Controller
                 ->get()
                 ->groupBy('field_name');
         }
-       
+
 
         $layerId = $arcgis->getLayerId($modelClass);
 
@@ -222,16 +225,20 @@ class damageAssessmentController extends Controller
 
         return DataTables::of($assessments)
             ->addColumn('question', function ($row) {
-                return $row->label.'<br>'.$row->hint;
+                return $row->label . '<br>' . $row->hint;
             })
-              ->addColumn('answer', function ($row) use ($record,
+            ->addColumn('answer', function ($row) use (
+                $record,
                 $allEdits,
                 $model,
                 $attachments,
                 $token,
                 $arcgis,
-                $layerId,$type,$globalid) {
-                       if ($row->name === 'attachments') {
+                $layerId,
+                $type,
+                $globalid
+            ) {
+                if ($row->name === 'attachments') {
                     if (!$model || !$model->objectid || !$token || $attachments->isEmpty()) {
                         return '<span class="text-muted">لا يوجد مرفقات</span>';
                     }
@@ -272,7 +279,7 @@ class damageAssessmentController extends Controller
                 $editedBy = $lastEdit?->user?->name;
                 $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
 
-                $canViewHistory = auth()->user()->hasAnyRole(['Administrator', 'General Supervisor', 'Engineering Auditor', 'Legal Auditor','Auditing Supervisor']);
+                $canViewHistory = auth()->user()->hasAnyRole(['Administrator', 'General Supervisor', 'Engineering Auditor', 'Legal Auditor', 'Auditing Supervisor']);
 
                 if ((is_null($originalValue) || $originalValue === '') && $fieldEdits->isEmpty()) {
                     return '<span class="text-muted">-</span>';
@@ -337,7 +344,7 @@ class damageAssessmentController extends Controller
             ';
             })
 
-              ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
+            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
                 if ($row->name === 'attachments') {
                     return;
                 }
@@ -392,7 +399,7 @@ class damageAssessmentController extends Controller
                 </div>
             ';
             })
-            ->rawColumns(['answer','question','editAnswer'])
+            ->rawColumns(['answer', 'question', 'editAnswer'])
             ->make(true);
     }
 }
