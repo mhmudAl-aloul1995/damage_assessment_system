@@ -57,6 +57,52 @@ Route::middleware('auth')->group(function () {
 
 
 
+
+Route::get('/push', function () {
+    $repo = base_path();
+    $safeRepo = str_replace('\\', '/', $repo);
+
+    $commands = [
+        'git -c safe.directory="' . $safeRepo . '" add .',
+        'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
+        'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
+        'git -c safe.directory="' . $safeRepo . '" push origin main',
+    ];
+
+    $outputs = [];
+
+    foreach ($commands as $index => $command) {
+        $result = Process::path($repo)->run($command);
+
+        // diff --cached --quiet يرجع 1 إذا فيه تغييرات
+        if ($index === 1) {
+            if ($result->exitCode() === 0) {
+                return response()->json([
+                    'status' => 'success',
+                    'output' => ['No changes to commit.'],
+                ]);
+            }
+            continue;
+        }
+
+        if (!$result->successful()) {
+            return response()->json([
+                'status' => 'failed',
+                'command' => $command,
+                'error' => $result->errorOutput() ?: $result->output(),
+                'exit_code' => $result->exitCode(),
+            ], 500);
+        }
+
+        $outputs[] = $result->output();
+    }
+
+    return response()->json([
+        'status' => 'success',
+        'output' => $outputs,
+    ]);
+});
+
     Route::prefix('user-management/user')->group(function () {
 
         Route::get('/', [userController::class, 'index'])->name('users.index');
