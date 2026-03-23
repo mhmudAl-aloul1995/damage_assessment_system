@@ -42,13 +42,11 @@ return new class extends Migration
             $table->timestamps();
         });
 
+
         Schema::create('building_statuses', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('building_id')
-                ->constrained('buildings')
-                ->references('objectid')
-                ->cascadeOnDelete();
+            $table->integer('building_id')->index();
 
             $table->foreignId('status_id')
                 ->constrained('assessment_statuses')
@@ -61,7 +59,6 @@ return new class extends Migration
 
             $table->string('type');
             $table->text('notes')->nullable();
-
             $table->timestamps();
 
             $table->unique(['building_id', 'type']);
@@ -70,11 +67,7 @@ return new class extends Migration
         Schema::create('building_status_histories', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('building_id')
-                ->constrained('buildings')
-                ->references('objectid')
-                ->cascadeOnDelete();
-
+            $table->integer('building_id')->index();
             $table->foreignId('status_id')
                 ->constrained('assessment_statuses')
                 ->restrictOnDelete();
@@ -93,11 +86,7 @@ return new class extends Migration
         Schema::create('housing_statuses', function (Blueprint $table) {
             $table->id();
 
-            // غيّر housing_units إذا كان اسم جدولك مختلف
-            $table->foreign('housing_id')
-                ->references('objectid')
-                ->on('housing_units')
-                ->cascadeOnDelete();
+            $table->integer('housing_id')->index();
 
             $table->foreignId('status_id')
                 ->constrained('assessment_statuses')
@@ -119,11 +108,8 @@ return new class extends Migration
         Schema::create('housing_status_histories', function (Blueprint $table) {
             $table->id();
 
-            // غيّر housing_units إذا كان اسم جدولك مختلف
-            $table->foreign('housing_id')
-                ->references('objectid')
-                ->on('housing_units')
-                ->cascadeOnDelete();
+            $table->integer('housing_id')->index();
+
 
             $table->foreignId('status_id')
                 ->constrained('assessment_statuses')
