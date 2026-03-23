@@ -12,29 +12,29 @@ class ArcgisService
     // =========================
     // GET TOKEN (WITH CACHE)
     // =========================
-    public function getToken(): string
-    {
-        return Cache::remember('arcgis_token', 50 * 60, function () {
+public function getToken(): string
+{
+    return Cache::remember('arcgis_token', 50 * 60, function () {
 
-            $response = Http::asForm()->post(
-                'https://www.arcgis.com/sharing/rest/generateToken',
-                [
-                    'username' => config('services.arcgis.username'),
-                    'password' => config('services.arcgis.password'),
-                    'client' => 'referer',
-                    'referer' => config('app.url'),
-                    'expiration' => 60,
-                    'f' => 'json',
-                ]
-            );
+        $response = Http::asForm()->withoutVerifying()->post(
+            'https://www.arcgis.com/sharing/rest/generateToken',
+            [
+                'username' => config('services.arcgis.username'),
+                'password' => config('services.arcgis.password'),
+                'client' => 'referer',
+                'referer' => config('app.url'),
+                'expiration' => 60,
+                'f' => 'json',
+            ]
+        );
 
-            if (!$response->successful()) {
-                throw new \Exception('ArcGIS token failed');
-            }
+        if (!$response->successful()) {
+            throw new \Exception('ArcGIS token failed: ' . $response->body());
+        }
 
-            return $response->json()['token'];
-        });
-    }
+        return $response->json()['token'];
+    });
+}
 
     // =========================
     // GET LAYER
