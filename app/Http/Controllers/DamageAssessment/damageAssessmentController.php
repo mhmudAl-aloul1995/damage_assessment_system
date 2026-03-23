@@ -325,7 +325,7 @@ class damageAssessmentController extends Controller
                 </div>
             ';
             })
-            ->rawColumns(['answer','question'])
+            ->rawColumns(['answer','question','editAnswer'])
             ->make(true);
     }
 }
