@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Yajra\Datatables\Datatables;
 use Yajra\Datatables\Enginges\EloquentEngine;
 use Illuminate\Support\Facades\DB;
-use View;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\HousingUnit;

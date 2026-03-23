@@ -198,8 +198,8 @@
 				[1, 'asc']
 			],
 			columns: [{
-					data: 'id',
-					name: 'id',
+					data: 'objectid',
+					name: 'objectid',
 					orderable: false,
 					searchable: false,
 					render: (data) => `<div class="form-check form-check-sm form-check-custom form-check-solid me-3">

@@ -54,54 +54,50 @@ Route::middleware('auth')->group(function () {
         return response()->json(['error' => $result->errorOutput()], 500);
     });
 
+    Route::get('/push', function () {
+        $repo = base_path();
+        $safeRepo = str_replace('\\', '/', $repo);
 
+        $commands = [
+            'git -c safe.directory="' . $safeRepo . '" add .',
+            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
+            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
+            'git -c safe.directory="' . $safeRepo . '" push',
+        ];
 
+        $outputs = [];
 
+        foreach ($commands as $index => $command) {
+            $result = Process::path($repo)->run($command);
 
-Route::get('/push', function () {
-    $repo = base_path();
-    $safeRepo = str_replace('\\', '/', $repo);
-
-    $commands = [
-        'git -c safe.directory="' . $safeRepo . '" add .',
-        'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
-        'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
-        'git -c safe.directory="' . $safeRepo . '" push origin main',
-    ];
-
-    $outputs = [];
-
-    foreach ($commands as $index => $command) {
-        $result = Process::path($repo)->run($command);
-
-        // diff --cached --quiet يرجع 1 إذا فيه تغييرات
-        if ($index === 1) {
-            if ($result->exitCode() === 0) {
-                return response()->json([
-                    'status' => 'success',
-                    'output' => ['No changes to commit.'],
-                ]);
+            // diff --cached --quiet يرجع 1 إذا فيه تغييرات
+            if ($index === 1) {
+                if ($result->exitCode() === 0) {
+                    return response()->json([
+                        'status' => 'success',
+                        'output' => ['No changes to commit.'],
+                    ]);
+                }
+                continue;
             }
-            continue;
+
+            if (!$result->successful()) {
+                return response()->json([
+                    'status' => 'failed',
+                    'command' => $command,
+                    'error' => $result->errorOutput() ?: $result->output(),
+                    'exit_code' => $result->exitCode(),
+                ], 500);
+            }
+
+            $outputs[] = $result->output();
         }
 
-        if (!$result->successful()) {
-            return response()->json([
-                'status' => 'failed',
-                'command' => $command,
-                'error' => $result->errorOutput() ?: $result->output(),
-                'exit_code' => $result->exitCode(),
-            ], 500);
-        }
-
-        $outputs[] = $result->output();
-    }
-
-    return response()->json([
-        'status' => 'success',
-        'output' => $outputs,
-    ]);
-});
+        return response()->json([
+            'status' => 'success',
+            'output' => $outputs,
+        ]);
+    });
 
     Route::prefix('user-management/user')->group(function () {
 
@@ -194,6 +190,12 @@ Route::get('/push', function () {
     Route::get('showAssessmentAudit/{globalid}', action: [auditController::class, 'showAssessmentAudit']);
     Route::post('/assessment/inline-update', [auditController::class, 'updateInlineAssessment'])
         ->name('assessment.inline.update');
+
+        Route::get('/housing-units-by-building', [auditController::class, 'housingUnitsByBuilding'])
+    ->name('housing.units.by.building');
+
+    Route::post('/housing-assessment/set-status', [auditController::class, 'setHousingStatus'])
+    ->name('housing.assessment.set.status');
 });
 
 require __DIR__ . '/auth.php';

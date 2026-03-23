@@ -27,6 +27,9 @@ use App\Models\User;
 use App\Models\AssignedAssessmentUser;
 use App\Models\BuildingStatusHistory;
 use App\Models\BuildingStatus;
+use App\Models\HousingStatus;
+use App\Models\HousingStatusHistory;
+use App\Models\AssessmentStatus;
 
 class auditController extends Controller
 {
@@ -64,7 +67,7 @@ class auditController extends Controller
                         ->where('type', 'Engineering Legal')
                         ->first()?->user?->name ?? '-';
                 })
-                             // finalApproval 
+                // finalApproval 
                 ->addColumn('finalApproval', function ($row) {
 
                     $status = $row->finalApproval?->status?->label_en ?? 'Pending';
@@ -100,7 +103,7 @@ class auditController extends Controller
                     return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
                 })
                 ->addColumn('actions', function ($row) {
-                    $assessmentUrl = url("/assessment/{$row->globalid}");
+                    $assessmentUrl = url("/showAssessmentAudit/{$row->globalid}");
 
                     return '
     <div class="d-flex justify-content-end">
@@ -122,7 +125,7 @@ class auditController extends Controller
     ';
                 })
 
-                ->rawColumns(['building_name', 'eng_status', 'law_status', 'actions','finalApproval'])
+                ->rawColumns(['building_name', 'eng_status', 'law_status', 'actions', 'finalApproval'])
                 ->make(true);
         }
 
@@ -140,6 +143,173 @@ class auditController extends Controller
             compact('users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments')
         );
     }
+
+    public function housingUnitsByBuilding(Request $request)
+    {
+        $query = HousingUnit::query();
+
+        if ($request->globalid) {
+            $query->where('parentglobalid', $request->globalid);
+        }
+
+        return DataTables::of($query->orderBy('floor_number', 'asc')
+            ->orderBy('housing_unit_number', 'asc'))
+
+
+
+            ->editColumn('owner_name', function ($row) {
+                // لو عندك full_name بدل owner_name
+                return $row->owner_name ?? $row->full_name ?? '-';
+            })
+
+            ->editColumn('unit_direction', function ($row) {
+                return $row->unit_direction ?? '-';
+            })
+
+
+            // finalApproval 
+            ->addColumn('final_approval_status', function ($row) {
+
+                $status = $row->finalApproval?->assessment_status?->label_en ?? 'Pending';
+
+                $color = str_contains(strtolower($status), 'rejected')
+                    ? 'badge-light-danger'
+                    : 'badge-light-success';
+
+                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+            })
+
+            // Engineer Status
+            ->addColumn('engineering_audit_status', function ($row) {
+
+                $status = $row->engineerStatus?->assessment_status?->label_en ?? 'Pending';
+
+                $color = str_contains(strtolower($status), 'Rejected By Engineer')
+                    ? 'badge-light-danger'
+                    : 'badge-light-success';
+
+                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+            })
+
+            // Lawyer Status
+            ->addColumn('legal_audit_status', function ($row) {
+
+                $status = $row->lawyerStatus?->assessment_status?->label_en ?? 'Pending';
+
+                $color = str_contains(strtolower($status), 'Rejected By Lawyer')
+                    ? 'badge-danger'
+                    : 'badge-light-primary';
+
+                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+            })
+
+            ->rawColumns([
+                'legal_audit_status',
+                'engineering_audit_status',
+                'final_approval_status'
+            ])
+
+            ->make(true);
+    }
+
+
+
+    public function setHousingStatus(Request $request)
+    {
+        $request->validate([
+            'globalid' => ['required', 'string'],
+            'status'   => ['required', 'in:rejected,accepted,need_review'],
+            'notes'    => ['nullable', 'string'],
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $user = Auth::user();
+
+            $housing = HousingUnit::where('globalid', $request->globalid)->first();
+
+            if (!$housing) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'الوحدة السكنية غير موجودة',
+                ], 404);
+            }
+
+            $type = null;
+
+            if ($user->hasRole('Engineering Auditor')) {
+                $type = 'Engineering Auditor';
+            } elseif ($user->hasRole('Legal Auditor')) {
+                $type = 'Legal Auditor';
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'ليس لديك صلاحية لتحديث حالة الوحدة',
+                ], 403);
+            }
+
+            $roleType = $type === 'Engineering Auditor' ? 'engineer' : 'lawyer';
+
+            $statusMap = [
+                'rejected'    => 'rejected_by_' . $roleType,
+                'accepted'    => 'accepted_by_' . $roleType,
+                'need_review' => 'need_review',
+            ];
+            $statusName = $statusMap[$request->status] ?? null;
+
+            $assessmentStatus = AssessmentStatus::where('name', $statusName)->first();
+
+            if (!$assessmentStatus) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'الحالة غير موجودة في جدول AssessmentStatus',
+                ], 422);
+            }
+
+            $housingStatus = HousingStatus::updateOrCreate(
+                [
+                    'housing_id' => $housing->objectid,
+                    'type'       => $type,
+                ],
+                [
+                    'status_id' => $assessmentStatus->id,
+                    'user_id'   => Auth::id(),
+                    'notes'     => $request->notes,
+                ]
+            );
+
+            HousingStatusHistory::create([
+                'housing_id' => $housing->objectid,
+                'status_id'  => $assessmentStatus->id,
+                'user_id'    => Auth::id(),
+                'notes'      => $request->notes,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم تحديث حالة الوحدة بنجاح',
+                'data'    => [
+                    'housing_objectid' => $housing->objectid,
+                    'housing_globalid' => $housing->globalid,
+                    'type'             => $type,
+                    'status_id'        => $assessmentStatus->id,
+                    'status_name'      => $assessmentStatus->name,
+                    'record_id'        => $housingStatus->id,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'حدث خطأ أثناء تحديث حالة الوحدة',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
     public function assign(Request $request)
     {
         $request->validate([
@@ -154,6 +324,13 @@ class auditController extends Controller
         try {
             DB::transaction(function () use ($request) {
                 foreach ($request->building_ids as $buildingId) {
+
+                    $building = Building::find($buildingId);
+
+                    if (!$building) {
+                        continue;
+                    }
+
                     AssignedAssessmentUser::updateOrCreate(
                         [
                             'building_id' => $buildingId,
@@ -193,6 +370,33 @@ class auditController extends Controller
                             'notes' => $request->notes,
                             'type' => $request->type,
                         ]);
+                    }
+
+                    $housings = HousingUnit::where('parentglobalid', $building->globalid)->get();
+
+                    foreach ($housings as $housing) {
+                        $housingStatus = HousingStatus::firstOrNew([
+                            'housing_id' => $housing->objectid,
+                            'type' => $request->type,
+                        ]);
+
+                        $housingStatusChanged = !$housingStatus->exists || (int) $housingStatus->status_id !== (int) $request->status_id;
+
+                        $housingStatus->status_id = $request->status_id;
+                        $housingStatus->user_id = $request->user_id;
+                        $housingStatus->notes = $request->notes;
+                        $housingStatus->type = $request->type;
+                        $housingStatus->save();
+
+                        if ($housingStatusChanged) {
+                            HousingStatusHistory::create([
+                                'housing_id' => $housing->objectid,
+                                'status_id' => $request->status_id,
+                                'user_id' => Auth::id(),
+                                'notes' => $request->notes,
+                                'type' => $request->type,
+                            ]);
+                        }
                     }
                 }
             });
@@ -464,5 +668,58 @@ class auditController extends Controller
             'status' => true,
             'message' => 'تم حفظ التعديل بنجاح'
         ]);
+    }
+
+    public function housingUnitAudit(Request $request)
+    {
+        $globalid = $request->globalid;
+        $data = HousingUnit::query()->where('global_id', $globalid);
+
+        return DataTables::of($data)
+
+            ->addColumn('final_approval_status', function ($row) {
+                return $row->final_approval_status ?? 'Pending';
+            })
+
+            ->addColumn('legal_audit_status', function ($row) {
+                $status = $row->legal_audit_status ?? '-';
+
+                if ($status === 'Rejected By Lawyer') {
+                    return '<span class="badge badge-light-danger w-100 d-inline-block py-3">' . $status . '</span>';
+                }
+
+                return '<span class="badge badge-light-warning">' . $status . '</span>';
+            })
+
+            ->addColumn('engineering_audit_status', function ($row) {
+                return $row->engineering_audit_status ?? '-';
+            })
+
+            ->addColumn('unit_direction', function ($row) {
+                return $row->unit_direction ?? '-';
+            })
+
+            ->addColumn('owner_name', function ($row) {
+                return $row->owner_name ?? '-';
+            })
+
+            ->addColumn('unit_number', function ($row) {
+                return $row->housing_unit_number ?? '-';
+            })
+
+            ->addColumn('floor_number', function ($row) {
+                return $row->floor_number ?? '-';
+            })
+
+            ->addColumn('damage_status', function ($row) {
+                return $row->unit_damage_status ?? '-';
+            })
+
+            ->addColumn('unit_type', function ($row) {
+                return $row->housing_unit_type ?? '-';
+            })
+
+            ->rawColumns(['edit', 'legal_audit_status'])
+            ->make(true);
     }
 }

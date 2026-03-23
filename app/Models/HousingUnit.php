@@ -703,12 +703,29 @@ class HousingUnit extends Model
                 $attributes['q_9_3_4_last_name'] ?? '',
             ])),
         );
-
     }
     public function building()
     {
         return $this->belongsTo(Building::class, 'parentglobalid', 'globalid'); // Post::class is the related model
     }
+    public function buildingStatuses()
+    {
+        return $this->hasMany(BuildingStatus::class);
+    }
 
-
+    public function engineerStatus()
+    {
+        return $this->hasOne(HousingStatus::class,'housing_id','objectid')
+            ->where('type', 'Engineering Auditor');
+    }
+        public function finalApproval()
+    {
+        return $this->hasOne(HousingStatus::class,'housing_id','objectid')
+            ->where('status_id', 19);
+    }
+    public function lawyerStatus()
+    {
+        return $this->hasOne(HousingStatus::class,'housing_id','objectid')
+            ->where('type', 'Legal Auditor');
+    }
 }

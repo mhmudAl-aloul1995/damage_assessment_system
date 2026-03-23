@@ -96,7 +96,7 @@ return [
                 'title' => 'الرئيسية',
                 'url' => 'audit',
                 'pattern' => 'audit',
-                'roles' => ['Administrator', 'Legal Auditor', 'Engineering Auditor', 'Auditing Supervisor', 'General Supervisor'],
+                'roles' => ['Administrator','Auditing Supervisor', 'General Supervisor'],
             ],
             [
                 'title' => 'تدقيق المبنى',
