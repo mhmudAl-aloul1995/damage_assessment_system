@@ -4,11 +4,11 @@
 
 @section('content')
 @php
-    $authType = auth()->user()->roles->first()->name; // eng | lawyer
-    $isEngineer = $authType === 'Engineering Auditor';
-    $pageTitle = $isEngineer ? 'Engineering Auditor' : 'Legal Auditor';
-    
-    $assignedColumnTitle = $isEngineer ? 'Engineer' : 'Lawyer';
+$authType = auth()->user()->roles->first()->name; // eng | lawyer
+$isEngineer = $authType === 'Engineering Auditor';
+$pageTitle = $isEngineer ? 'Engineering Auditor' : 'Legal Auditor';
+
+$assignedColumnTitle = $isEngineer ? 'Engineer' : 'Lawyer';
 @endphp
 
 <div class="card card-flush mb-7">
@@ -53,15 +53,14 @@
 
 @section('script')
 <script>
-    $(function () {
+    $(function() {
         let table = $('#auditTable').DataTable({
             processing: true,
             serverSide: true,
             ajax: {
                 url: "{{ route('audit.auditBuilding') }}"
             },
-            columns: [
-                {
+            columns: [{
                     data: 'DT_RowIndex',
                     name: 'DT_RowIndex',
                     orderable: false,
@@ -72,7 +71,7 @@
                     data: 'building_name',
                     name: 'building_name'
                 },
-                
+
                 {
                     data: 'owner_name',
                     name: 'owner_name'
@@ -100,10 +99,10 @@
                 }
             ]
         });
-$('#auditTable').on('draw.dt', function () {
-    KTMenu.createInstances();
-});
-        $('#resetFilters').on('click', function () {
+        $('#auditTable').on('draw.dt', function() {
+            KTMenu.createInstances();
+        });
+        $('#resetFilters').on('click', function() {
             table.ajax.reload();
         });
     });

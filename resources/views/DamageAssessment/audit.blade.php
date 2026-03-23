@@ -120,6 +120,7 @@
 							<th>Eng Status</th>
 							<th>Legal Status</th>
 							<th>Final Approval</th>
+							<th>Actions </th>
 						</tr>
 					</thead>
 				</table>
@@ -144,6 +145,7 @@
 				{{ csrf_field() }}
 				<div class="modal-body py-10 px-lg-17">
 					<input type="hidden" name="type" id="assign_type">
+					<input type="hidden" name="status_id" id="assign_status_id">
 					<!-- Placeholder for selected IDs -->
 					<div id="selected_buildings_container"></div>
 
@@ -234,8 +236,13 @@
 					name: 'law_status'
 				},
 				{
-					data: 'id',
-					render: () => '<span class="badge badge-light-warning">Pending</span>'
+					data: 'finalApproval',
+					//render: () => '<span class="badge badge-light-warning">Pending</span>'
+				},
+				{
+
+					data: 'actions'
+
 				}
 			],
 			language: {
@@ -275,6 +282,7 @@
 			// 2. Set Modal Details
 			$('#modal_title,#user_label').text('تعيين للمهندس');
 			$('#assign_type').val('Engineering Auditor');
+			$('#assign_status_id').val(2);
 
 			const container = $('#selected_buildings_container');
 			container.empty();
@@ -310,6 +318,7 @@
 			// 2. Set Modal Details
 			$('#modal_title,#user_label').text('تعيين للمحامي');
 			$('#assign_type').val('Legal Auditor'); // Hidden input to tell backend the role
+			$('#assign_status_id').val(6);
 
 			// 3. Clear and Fill IDs in a hidden container inside the form
 			const container = $('#selected_buildings_container');
@@ -390,5 +399,8 @@
 		}, 700); // 3000 milliseconds = 3 seconds
 
 	}
+	$('#kt_datatable_audits').on('draw.dt', function() {
+		KTMenu.createInstances();
+	});
 </script>
 @endsection

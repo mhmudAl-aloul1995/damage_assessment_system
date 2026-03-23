@@ -24,7 +24,8 @@ use Spatie\LaravelPdf\Facades\Pdf;
 use Illuminate\Support\Facades\Http;
 use App\Models\Filter;
 use App\Models\EditAssessment;
-
+use Illuminate\Support\Facades\Auth;
+use App\Services\ArcgisService;
 
 class damageAssessmentController extends Controller
 {
@@ -41,7 +42,7 @@ class damageAssessmentController extends Controller
     {
 
         $token = null;
-/*         $response = Http::withOptions([
+        /*         $response = Http::withOptions([
             'verify' => 'C:\\nginx\\cacert.pem',
         ])->asForm()->post('https://www.arcgis.com/sharing/rest/generateToken', [
             'f' => 'json',
@@ -145,8 +146,7 @@ class damageAssessmentController extends Controller
     }
 
 
-
-    public function showBuildings(Request $request)
+ public function showBuildings(Request $request)
     {
         return $this->renderAssessmentTable(
             modelClass: Building::class,
@@ -164,225 +164,95 @@ class damageAssessmentController extends Controller
         );
     }
 
+    private function renderAssessmentTable(
+        string $modelClass,
+        ?string $globalid,
+        string $type
+    ) {
+        $arcgis = app(ArcgisService::class);
+        $token = $arcgis->getToken();
 
-    private function renderAssessmentTable(string $modelClass, ?string $globalid, string $type)
-    {
         $model = $modelClass::where('globalid', $globalid)->first();
         $record = $model?->toArray() ?? [];
 
         $fillable = (new $modelClass())->getFillable();
-
         $assessments = Assessment::query()->whereIn('name', $fillable);
 
-        if (!empty(request()->search['value'])) {
-            $search = request()->search['value'];
-
-            $assessments->where(function ($query) use ($search) {
-                $query->where('label', 'like', "%{$search}%")
-                    ->orWhere('hint', 'like', "%{$search}%");
-            });
-        }
-
-        $edits = collect();
         $allEdits = collect();
 
         if ($globalid) {
-
-            $edits = EditAssessment::with('user')
-                ->where('type', $type)
-                ->where('global_id', $globalid)
-                //   ->where('user_id', auth()->id())
-                ->orderBy('updated_at', 'desc')
-                ->get()
-                ->groupBy('field_name')
-                ->map(fn($group) => $group->first());
-
-
             $allEdits = EditAssessment::with('user')
                 ->where('type', $type)
                 ->where('global_id', $globalid)
-                ->orderBy('updated_at', 'desc')
+                ->latest()
                 ->get()
                 ->groupBy('field_name');
         }
 
+        $layerId = $arcgis->getLayerId($modelClass);
+
+        $attachments = collect();
+
+        if ($model && $model->objectid && $token) {
+            $attachments = collect(
+                $arcgis->getAttachments($model->objectid, $layerId, $token)
+            );
+        }
+
         return DataTables::of($assessments)
             ->addColumn('question', function ($row) {
-                return $row->label . '<br><small class="text-muted">' . e($row->hint ?? '') . '</small>';
+                return $row->label;
             })
+            ->addColumn('answer', function ($row) use (
+                $record,
+                $allEdits,
+                $model,
+                $attachments,
+                $token,
+                $arcgis,
+                $layerId
+            ) {
+                if ($row->name === 'attachments') {
+                    if (!$model || !$model->objectid || !$token || $attachments->isEmpty()) {
+                        return '<span class="text-muted">لا يوجد مرفقات</span>';
+                    }
 
-            ->addColumn('answer', function ($row) use ($record, $allEdits, $globalid, $type) {
+                    $html = '<div class="d-flex flex-wrap gap-2">';
+
+                    foreach ($attachments as $a) {
+                        $attachmentId = $a['id'] ?? null;
+
+                        if (!$attachmentId) {
+                            continue;
+                        }
+
+                        $url = $arcgis->buildUrl(
+                            $model->objectid,
+                            $attachmentId,
+                            $layerId,
+                            $token
+                        );
+
+                        $html .= '
+                            <a href="' . e($url) . '" target="_blank">
+                                <img src="' . e($url) . '"
+                                     style="width:100px;height:100px;object-fit:cover"
+                                     class="rounded border">
+                            </a>
+                        ';
+                    }
+
+                    return $html . '</div>';
+                }
+
                 $fieldEdits = $allEdits->get($row->name, collect());
                 $lastEdit = $fieldEdits->first();
 
-                $originalValue = $record[$row->name] ?? null;
-                $editedValue = $lastEdit?->field_value;
-                $editedBy = $lastEdit?->user?->name;
-                $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
+                $value = $lastEdit?->field_value ?? ($record[$row->name] ?? '');
 
-                $canViewHistory = auth()->user()->hasAnyRole(['Administrator', 'General Supervisor', 'Engineering Auditor', 'Legal Auditor']);
-
-                if ((is_null($originalValue) || $originalValue === '') && $fieldEdits->isEmpty()) {
-                    return '<span class="text-muted">-</span>';
-                }
-
-                if ($fieldEdits->isEmpty() || !$canViewHistory) {
-                    return $originalValue;
-                }
-
-                $historyHtml = '';
-
-                if ($canViewHistory) {
-                    $collapseId = 'history_' . md5($type . '_' . $globalid . '_' . $row->name);
-
-                    foreach ($fieldEdits as $edit) {
-                        $historyHtml .= '
-                        <div class="border rounded p-2 mb-2 bg-light-info">
-                            <div><small class="text-muted">القيمة:</small> <span class="fw-semibold">' . e($edit->field_value ?? '-') . '</span></div>
-                            <div><small class="text-muted">بواسطة:</small> ' . e($edit->user?->name ?? '-') . '</div>
-                            <div><small class="text-muted">الوقت:</small> ' . e(optional($edit->updated_at)->format('Y-m-d h:i A') ?? '-') . '</div>
-                        </div>
-                    ';
-                    }
-
-                    $historyHtml = '
-                    <div class="mt-3">
-                        <button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse" data-bs-target="#' . $collapseId . '" aria-expanded="false">
-                            عرض سجل التعديلات (' . $fieldEdits->count() . ')
-                        </button>
-
-                        <div class="collapse mt-2" id="' . $collapseId . '">
-                            ' . $historyHtml . '
-                        </div>
-                    </div>
-                ';
-                }
-
-                return '
-                <div class="border rounded p-3 bg-light-warning">
-                    <div class="mb-2">
-                        <small class="text-muted d-block">الأصل</small>
-                        <span class="text-gray-700">' . e($originalValue) . '</span>
-                    </div>
-
-                    <div class="mb-2">
-                        <small class="text-warning d-block fw-bold">آخر تعديل</small>
-                        <span class="text-gray-900 fw-bold">' . e($editedValue) . '</span>
-                    </div>
-
-                    <div class="mb-1">
-                        <small class="text-info d-block fw-bold">اسم المعدّل</small>
-                        <span class="text-gray-800">' . e($editedBy ?? '-') . '</span>
-                    </div>
-
-                    <div>
-                        <small class="text-primary d-block fw-bold">وقت التعديل</small>
-                        <span class="text-gray-600">' . e($editedAt ?? '-') . '</span>
-                    </div>
-
-                    ' . $historyHtml . '
-                </div>
-            ';
+                return e($value ?: '-');
             })
-
-            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
-                $lastEdit = $edits->get($row->name);
-                $editedValue = $lastEdit?->field_value;
-                $originalValue = $record[$row->name] ?? '';
-                $value = ($editedValue !== null && $editedValue !== '') ? $editedValue : $originalValue;
-
-                $filters = Filter::where('list_name', $row->name)->get();
-
-                if ($filters->count() > 0) {
-                    $selectedValues = array_filter(array_map('trim', explode(',', (string) $value)));
-
-                    $html = '<select
-            class="form-select form-select-sm form-select-solid inline-edit-select"
-            data-field="' . e($row->name) . '"
-            data-globalid="' . e($globalid) . '"
-            data-type="' . e($type) . '"
-            data-control="select2"
-            data-close-on-select="true"
-            data-placeholder="اختر">';
-
-                    $html .= '<option value=""></option>';
-
-                    foreach ($filters as $option) {
-                        $selected = in_array($option->name, $selectedValues) ? 'selected' : '';
-                        $html .= '<option value="' . e($option->name) . '" ' . $selected . '>' . e($option->label) . '</option>';
-                    }
-
-                    $html .= '</select>';
-
-                    return $html;
-                }
-
-                return '
-        <div class="d-flex gap-2 align-items-center justify-content-center">
-            <input
-                type="text"
-                class="form-control form-control-sm form-control-solid inline-edit-input"
-                value="' . e($value) . '"
-                data-field="' . e($row->name) . '"
-                data-globalid="' . e($globalid) . '"
-                data-type="' . e($type) . '"
-            >
-            <button type="button"
-                class="btn btn-sm btn-light-primary inline-save-btn"
-                data-field="' . e($row->name) . '"
-                data-globalid="' . e($globalid) . '"
-                data-type="' . e($type) . '">
-                حفظ
-            </button>
-        </div>
-    ';
-            })
-            ->rawColumns(['question', 'answer', 'editAnswer'])
+            ->rawColumns(['answer'])
             ->make(true);
-    }
-    public function updateInlineAssessment(Request $request)
-    {
-        $request->validate([
-            'type' => 'required|in:building_table,housing_table',
-            'globalid' => 'required|string',
-            'field' => 'required|string',
-            'value' => 'nullable',
-        ]);
-
-        $modelClass = $request->type === 'building_table'
-            ? Building::class
-            : HousingUnit::class;
-
-        $fillable = (new $modelClass())->getFillable();
-
-        if (!in_array($request->field, $fillable)) {
-            return response()->json([
-                'status' => false,
-                'message' => 'هذا الحقل غير قابل للتعديل'
-            ], 422);
-        }
-
-        $value = $request->value;
-
-        if (is_array($value)) {
-            $value = implode(',', $value);
-        }
-
-        EditAssessment::create(
-            [
-                'global_id' => $request->globalid,
-                'type' => $request->type,
-                'field_name' => $request->field,
-                'user_id' => Auth::id(),
-            ],
-            [
-                'field_value' => $value,
-            ]
-        );
-
-        return response()->json([
-            'status' => true,
-            'message' => 'تم حفظ التعديل في سجل التعديلات بنجاح'
-        ]);
     }
 }

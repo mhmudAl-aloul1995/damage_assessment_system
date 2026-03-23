@@ -67,7 +67,7 @@ return new class extends Migration
                 ->constrained()
                 ->nullOnDelete();
 
-            $table->enum('type', ['eng', 'lawyer']);
+            $table->text('type');
 
             $table->text('notes')->nullable();
 
@@ -83,8 +83,9 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->foreignId('assessment_status_id')
-                ->constrained('assessment_statuses');
+            $table->foreignId('status_id')
+                ->constrained('assessment_statuses')
+                ->restrictOnDelete();
 
             $table->foreignId('user_id')
                 ->nullable()

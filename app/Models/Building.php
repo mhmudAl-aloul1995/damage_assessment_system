@@ -203,6 +203,7 @@ class Building extends Model
      */
     protected $fillable = [
         'id',
+        'attachments',
         'assignedto',
         'objectid',
         'globalid',
@@ -378,13 +379,17 @@ class Building extends Model
     public function engineerStatus()
     {
         return $this->hasOne(BuildingStatus::class)
-            ->where('type', 'eng');
+            ->where('type', 'Engineering Auditor');
     }
-
+    public function finalApproval()
+    {
+        return $this->hasOne(BuildingStatus::class)
+            ->where('status_id', 19);
+    }
     public function lawyerStatus()
     {
         return $this->hasOne(BuildingStatus::class)
-            ->where('type', 'lawyer');
+            ->where('type', 'Legal Auditor');
     }
     public function assignedUsers()
 {

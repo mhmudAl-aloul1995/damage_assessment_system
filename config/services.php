@@ -34,5 +34,9 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'arcgis' => [
+    'username' => env('ARCGIS_USERNAME'),
+    'password' => env('ARCGIS_PASSWORD'),
+],
 
 ];

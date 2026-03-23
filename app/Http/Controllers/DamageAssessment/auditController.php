@@ -25,19 +25,21 @@ use function Spatie\LaravelPdf\Support\pdf;
 use App\Models\Filter;
 use App\Models\User;
 use App\Models\AssignedAssessmentUser;
+use App\Models\BuildingStatusHistory;
+use App\Models\BuildingStatus;
 
 class auditController extends Controller
 {
     public function index(Request $request)
     {
-        
+
         if ($request->ajax()) {
 
             $data = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
                 'lawyerStatus.status'
-            ])->where('field_status','COMPLETED')->orderBy('building_name','ASC');
+            ])->where('field_status', 'COMPLETED')->orderBy('building_name', 'ASC');
 
             return DataTables::of($data)
                 ->addIndexColumn()
@@ -52,15 +54,26 @@ class auditController extends Controller
                 // Engineer Name
                 ->addColumn('engineer', function ($row) {
                     return $row->assignedUsers
-                        ->where('type', 'eng')
+                        ->where('type', 'Engineering Auditor')
                         ->first()?->user?->name ?? '-';
                 })
 
                 // Lawyer Name
                 ->addColumn('lawyer', function ($row) {
                     return $row->assignedUsers
-                        ->where('type', 'lawyer')
+                        ->where('type', 'Engineering Legal')
                         ->first()?->user?->name ?? '-';
+                })
+                             // finalApproval 
+                ->addColumn('finalApproval', function ($row) {
+
+                    $status = $row->finalApproval?->status?->label_en ?? 'Pending';
+
+                    $color = str_contains(strtolower($status), 'rejected')
+                        ? 'badge-light-danger'
+                        : 'badge-light-success';
+
+                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
                 })
 
                 // Engineer Status
@@ -68,7 +81,7 @@ class auditController extends Controller
 
                     $status = $row->engineerStatus?->status?->label_en ?? 'Pending';
 
-                    $color = str_contains(strtolower($status), 'rejected')
+                    $color = str_contains(strtolower($status), 'Rejected By Engineer')
                         ? 'badge-light-danger'
                         : 'badge-light-success';
 
@@ -80,14 +93,36 @@ class auditController extends Controller
 
                     $status = $row->lawyerStatus?->status?->label_en ?? 'Pending';
 
-                    $color = str_contains(strtolower($status), 'rejected')
+                    $color = str_contains(strtolower($status), 'Rejected By Lawyer')
                         ? 'badge-danger'
                         : 'badge-light-primary';
 
                     return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
                 })
+                ->addColumn('actions', function ($row) {
+                    $assessmentUrl = url("/assessment/{$row->globalid}");
 
-                ->rawColumns(['building_name', 'eng_status', 'law_status'])
+                    return '
+    <div class="d-flex justify-content-end">
+        <button class="btn btn-light btn-sm"
+            data-kt-menu-trigger="click"
+            data-kt-menu-placement="bottom-end">
+            إجراءات
+        </button>
+
+        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4"
+             data-kt-menu="true">
+
+            <div class="menu-item px-3">
+                <a target="_blank" href="' . $assessmentUrl . '" class="menu-link px-3">الإستبيان</a>
+            </div>
+         
+        </div>
+    </div>
+    ';
+                })
+
+                ->rawColumns(['building_name', 'eng_status', 'law_status', 'actions','finalApproval'])
                 ->make(true);
         }
 
@@ -107,25 +142,71 @@ class auditController extends Controller
     }
     public function assign(Request $request)
     {
-
         $request->validate([
-            'building_ids' => 'required|array',
-            'user_id' => 'required|exists:users,id',
-            //'type' => 'required|in:eng,lawyer'
+            'building_ids' => ['required', 'array'],
+            'building_ids.*' => ['required', 'exists:buildings,id'],
+            'user_id' => ['required', 'exists:users,id'],
+            'type' => ['required', 'string'],
+            'status_id' => ['nullable', 'exists:assessment_statuses,id'],
+            'notes' => ['nullable', 'string'],
         ]);
 
+        try {
+            DB::transaction(function () use ($request) {
+                foreach ($request->building_ids as $buildingId) {
+                    AssignedAssessmentUser::updateOrCreate(
+                        [
+                            'building_id' => $buildingId,
+                            'type' => $request->type,
+                        ],
+                        [
+                            'user_id' => $request->user_id,
+                            'manager_id' => Auth::id(),
+                            'type' => $request->type,
+                        ]
+                    );
 
-        
-        foreach ($request->building_ids as $id) {
-            AssignedAssessmentUser::updateOrCreate(
-                ['building_id' => $id, 'type' => $request->type, 'type' => $request->type],
-                ['user_id' => $request->user_id, 'manager_id' => Auth::id(), 'type' => $request->type]
-            );
+                    if (!$request->filled('status_id')) {
+                        continue;
+                    }
+
+                    $buildingStatus = BuildingStatus::firstOrNew([
+                        'building_id' => $buildingId,
+                        'type' => $request->type,
+                    ]);
+
+                    $statusChanged =
+                        !$buildingStatus->exists ||
+                        (int) $buildingStatus->status_id !== (int) $request->status_id;
+
+                    $buildingStatus->status_id = $request->status_id;
+                    $buildingStatus->user_id = $request->user_id;
+                    $buildingStatus->notes = $request->notes;
+                    $buildingStatus->type = $request->type;
+                    $buildingStatus->save();
+
+                    if ($statusChanged) {
+                        BuildingStatusHistory::create([
+                            'building_id' => $buildingId,
+                            'status_id' => $request->status_id,
+                            'user_id' => Auth::id(),
+                            'notes' => $request->notes,
+                            'type' => $request->type,
+                        ]);
+                    }
+                }
+            });
+
+            return response()->json([
+                'message' => 'Assignment completed successfully.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Something went wrong.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json(['message' => 'Assignment successful!']);
     }
-
 
     public function assessmentAudit(Request $request)
     {
@@ -247,11 +328,11 @@ class auditController extends Controller
         if ($request->ajax()) {
 
 
-        $user = Auth::user();
+            $user = Auth::user();
 
             $type = $user->hasRole('Engineering Auditor') ? 'Engineering Auditor' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
 
-           /*  if (!$type) {
+            /*  if (!$type) {
                 abort(403, 'Unauthorized');
             }
             if (!in_array($type, ['eng', 'lawyer'])) {
