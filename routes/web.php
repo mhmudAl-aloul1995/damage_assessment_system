@@ -16,7 +16,7 @@ use Carbon\Carbon;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\DamageAssessment\auditController;
-
+use Illuminate\Support\Facades\Process;
 
 Route::get('/', function () {
 
@@ -41,6 +41,18 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('sync', controller: ArcGISController::class);
 
+
+    Route::post('/pull', function () {
+        // Run the git pull command in the project root
+        $result = Process::path(base_path())
+            ->run('git pull');
+
+        if ($result->successful()) {
+            return response()->json(['message' => 'Successfully pulled latest changes']);
+        }
+
+        return response()->json(['error' => $result->errorOutput()], 500);
+    });
 
 
 
