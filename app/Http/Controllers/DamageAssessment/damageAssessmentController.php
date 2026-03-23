@@ -201,7 +201,7 @@ class damageAssessmentController extends Controller
 
         return DataTables::of($assessments)
             ->addColumn('question', function ($row) {
-                return $row->label;
+                return $row->label.'<br>'.$row->hint;
             })
             ->addColumn('answer', function ($row) use (
                 $record,
@@ -252,7 +252,7 @@ class damageAssessmentController extends Controller
 
                 return e($value ?: '-');
             })
-            ->rawColumns(['answer'])
+            ->rawColumns(['answer','question'])
             ->make(true);
     }
 }

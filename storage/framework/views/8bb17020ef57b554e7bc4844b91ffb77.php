@@ -59,15 +59,15 @@
                     </div>
 
                     <div class="card-body py-4">
-                        <table class="table table-rounded table-striped align-middle table-row-dashed fs-6 gy-5"
+                        <table class="table text-black-600 table-rounded table-striped align-middle table-row-dashed fs-6 gy-5"
                                id="kt_table_building_assessment">
                             <thead>
-                                <tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
+                                <tr class="text-start text-black-600 fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
                                     <th class="text-start min-w-250px">السؤال</th>
                                     <th class="text-center min-w-200px">الجواب</th>
                                 </tr>
                             </thead>
-                            <tbody class="text-gray-600 fw-semibold"></tbody>
+                            <tbody class=" fw-semibold"></tbody>
                         </table>
                     </div>
                 </div>
@@ -126,15 +126,15 @@
                     </div>
 
                     <div class="card-body py-4">
-                        <table class="table table-rounded table-striped align-middle table-row-dashed fs-6 gy-5"
+                        <table  class="table text-black-600 table-rounded table-striped align-middle table-row-dashed fs-6 gy-5"
                                id="kt_table_housing_assessment">
                             <thead>
-                                <tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
+                                <tr class="text-start text-black-600 fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
                                     <th class="text-start min-w-250px">السؤال</th>
                                     <th class="text-center min-w-200px">الجواب</th>
                                 </tr>
                             </thead>
-                            <tbody class="text-gray-600 fw-semibold"></tbody>
+                            <tbody class=" fw-semibold"></tbody>
                         </table>
                     </div>
                 </div>
