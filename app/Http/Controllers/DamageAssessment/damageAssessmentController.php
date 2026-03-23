@@ -180,14 +180,35 @@ class damageAssessmentController extends Controller
 
         $allEdits = collect();
 
+        if (!empty(request()->search['value'])) {
+            $search = request()->search['value'];
+
+            $assessments->where(function ($query) use ($search) {
+                $query->where('label', 'like', "%{$search}%")
+                    ->orWhere('hint', 'like', "%{$search}%");
+            });
+        }
+
+        $edits = collect();
+        $allEdits = collect();
+
         if ($globalid) {
+            $edits = EditAssessment::with('user')
+                ->where('type', $type)
+                ->where('global_id', $globalid)
+                ->orderBy('updated_at', 'desc')
+                ->get()
+                ->groupBy('field_name')
+                ->map(fn($group) => $group->first());
+
             $allEdits = EditAssessment::with('user')
                 ->where('type', $type)
                 ->where('global_id', $globalid)
-                ->latest()
+                ->orderBy('updated_at', 'desc')
                 ->get()
                 ->groupBy('field_name');
         }
+       
 
         $layerId = $arcgis->getLayerId($modelClass);
 
@@ -251,6 +272,58 @@ class damageAssessmentController extends Controller
                 $value = $lastEdit?->field_value ?? ($record[$row->name] ?? '');
 
                 return e($value ?: '-');
+            })
+              ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
+                $lastEdit = $edits->get($row->name);
+                $editedValue = $lastEdit?->field_value;
+                $originalValue = $record[$row->name] ?? '';
+                $value = ($editedValue !== null && $editedValue !== '') ? $editedValue : $originalValue;
+
+                $filters = Filter::where('list_name', $row->name)->get();
+
+                if ($filters->count() > 0) {
+                    $selectedValues = array_filter(array_map('trim', explode(',', (string) $value)));
+
+                    $html = '<select
+                    class="form-select form-select-sm form-select-solid inline-edit-select"
+                    data-field="' . e($row->name) . '"
+                    data-globalid="' . e($globalid) . '"
+                    data-type="' . e($type) . '"
+                    data-control="select2"
+                    data-close-on-select="true"
+                    data-placeholder="اختر">';
+
+                    $html .= '<option value=""></option>';
+
+                    foreach ($filters as $option) {
+                        $selected = in_array($option->name, $selectedValues) ? 'selected' : '';
+                        $html .= '<option value="' . e($option->name) . '" ' . $selected . '>' . e($option->label) . '</option>';
+                    }
+
+                    $html .= '</select>';
+
+                    return $html;
+                }
+
+                return '
+                <div class="d-flex gap-2 align-items-center justify-content-center">
+                    <input
+                        type="text"
+                        class="form-control form-control-sm form-control-solid inline-edit-input"
+                        value="' . e($value) . '"
+                        data-field="' . e($row->name) . '"
+                        data-globalid="' . e($globalid) . '"
+                        data-type="' . e($type) . '"
+                    >
+                    <button type="button"
+                        class="btn btn-sm btn-light-primary inline-save-btn"
+                        data-field="' . e($row->name) . '"
+                        data-globalid="' . e($globalid) . '"
+                        data-type="' . e($type) . '">
+                        حفظ
+                    </button>
+                </div>
+            ';
             })
             ->rawColumns(['answer','question'])
             ->make(true);
