@@ -393,6 +393,6 @@ class Building extends Model
     }
     public function assignedUsers()
 {
-    return $this->hasMany(AssignedAssessmentUser::class);
+    return $this->hasMany(AssignedAssessmentUser::class,'building_id','objectid');
 }
 }

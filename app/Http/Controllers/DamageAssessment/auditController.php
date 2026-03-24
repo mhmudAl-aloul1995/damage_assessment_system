@@ -45,7 +45,7 @@ class auditController extends Controller
             ])->where('field_status', 'COMPLETED')->orderBy('building_name', 'ASC');
 
             return DataTables::of($data)
-                ->addIndexColumn()
+               
 
                 // Building Name
                 ->editColumn(
@@ -56,7 +56,8 @@ class auditController extends Controller
 
                 // Engineer Name
                 ->addColumn('engineer', function ($row) {
-                    return $row->assignedUsers
+
+                return $row->assignedUsers
                         ->where('type', 'Engineering Auditor')
                         ->first()?->user?->name ?? '-';
                 })
@@ -187,7 +188,7 @@ class auditController extends Controller
                 $color = str_contains(strtolower($status), 'Rejected By Engineer')
                     ? 'badge-light-danger'
                     : 'badge-light-success';
-                    dd($color);
+                 
 
                 return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
             })
@@ -315,7 +316,7 @@ class auditController extends Controller
     {
         $request->validate([
             'building_ids' => ['required', 'array'],
-            'building_ids.*' => ['required', 'exists:buildings,id'],
+            'building_ids.*' => ['required', 'exists:buildings,objectid'],
             'user_id' => ['required', 'exists:users,id'],
             'type' => ['required', 'string'],
             'status_id' => ['nullable', 'exists:assessment_statuses,id'],
@@ -326,7 +327,7 @@ class auditController extends Controller
             DB::transaction(function () use ($request) {
                 foreach ($request->building_ids as $buildingId) {
 
-                    $building = Building::find($buildingId);
+                    $building = Building::where('objectid',$buildingId)->first();
 
                     if (!$building) {
                         continue;
@@ -375,6 +376,7 @@ class auditController extends Controller
 
                     $housings = HousingUnit::where('parentglobalid', $building->globalid)->get();
 
+                    
                     foreach ($housings as $housing) {
                         $housingStatus = HousingStatus::firstOrNew([
                             'housing_id' => $housing->objectid,

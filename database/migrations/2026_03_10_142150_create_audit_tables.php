@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('manager_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('type');
-            $table->foreignId('building_id')->constrained('buildings')->cascadeOnDelete();
+            $table->integer('building_id')->index();
             $table->timestamps();
         });
 
