@@ -187,6 +187,7 @@ class auditController extends Controller
                 $color = str_contains(strtolower($status), 'Rejected By Engineer')
                     ? 'badge-light-danger'
                     : 'badge-light-success';
+                    dd($color);
 
                 return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
             })
