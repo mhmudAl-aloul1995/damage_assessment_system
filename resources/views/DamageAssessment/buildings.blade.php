@@ -319,8 +319,8 @@
 						name: 'objectid'
 					},
 					{
-						data: 'building name',
-						name: 'building name'
+						data: 'building_name',
+						name: 'building_name'
 					},
 					{
 						data: 'zone_code',
