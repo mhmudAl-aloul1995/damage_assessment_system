@@ -59,7 +59,8 @@ class housingController extends Controller
                 unset($data[$key]);
             }
         }
-
+        
+/* 
         $marged_data = array_merge(
             array_keys($data),
             [
@@ -80,9 +81,9 @@ class housingController extends Controller
                 'parentglobalid'
 
             ]
-        );
+        ); */
 
-        $users = HousingUnit::query()->select($marged_data);
+        $users = HousingUnit::query();
 
         if (count($data) > 0) {
 
