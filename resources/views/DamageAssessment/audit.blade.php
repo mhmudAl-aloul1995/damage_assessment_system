@@ -195,7 +195,7 @@
 				searchable: false
 			}],
 			order: [
-				[1, 'asc']
+				[1, 'desc']
 			],
 			columns: [{
 					data: 'objectid',

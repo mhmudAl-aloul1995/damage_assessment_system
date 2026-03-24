@@ -378,17 +378,17 @@ class Building extends Model
 
     public function engineerStatus()
     {
-        return $this->hasOne(BuildingStatus::class)
+        return $this->hasOne(BuildingStatus::class,'building_id','objectid')
             ->where('type', 'Engineering Auditor');
     }
     public function finalApproval()
     {
-        return $this->hasOne(BuildingStatus::class)
+        return $this->hasOne(BuildingStatus::class,'building_id','objectid')
             ->where('status_id', 19);
     }
     public function lawyerStatus()
     {
-        return $this->hasOne(BuildingStatus::class)
+        return $this->hasOne(BuildingStatus::class,'building_id','objectid')
             ->where('type', 'Legal Auditor');
     }
     public function assignedUsers()

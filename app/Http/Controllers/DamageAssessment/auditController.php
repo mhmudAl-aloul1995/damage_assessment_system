@@ -42,7 +42,7 @@ class auditController extends Controller
                 'assignedUsers.user',
                 'engineerStatus.status',
                 'lawyerStatus.status'
-            ])->where('field_status', 'COMPLETED')->orderBy('building_name', 'ASC');
+            ])->where('field_status', 'COMPLETED');
 
             return DataTables::of($data)
                
@@ -56,6 +56,7 @@ class auditController extends Controller
 
                 // Engineer Name
                 ->addColumn('engineer', function ($row) {
+
 
                 return $row->assignedUsers
                         ->where('type', 'Engineering Auditor')
@@ -83,7 +84,9 @@ class auditController extends Controller
                 // Engineer Status
                 ->addColumn('eng_status', function ($row) {
 
+               
                     $status = $row->engineerStatus?->status?->label_en ?? 'Pending';
+
 
                     $color = str_contains(strtolower($status), 'Rejected By Engineer')
                         ? 'badge-light-danger'
@@ -138,6 +141,7 @@ class auditController extends Controller
         $assessments = Assessment::all();
         $filterName = Filter::distinct('list_name')->pluck('list_name');
         $filters = Filter::all();
+        
 
         return View::make(
             'DamageAssessment.audit',
@@ -215,8 +219,104 @@ class auditController extends Controller
     }
 
 
+public function setStatus(Request $request)
+{
+    $request->validate([
+        'globalid' => ['required', 'string'],
+        'status'   => ['required', 'in:rejected,accepted,need_review'],
+        'notes'    => ['nullable', 'string'],
+    ]);
 
-    public function setHousingStatus(Request $request)
+    DB::beginTransaction();
+
+    try {
+        $user = Auth::user();
+
+        $building = Building::where('globalid', $request->globalid)->first();
+
+        if (!$building) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المبنى غير موجود',
+            ], 404);
+        }
+
+        $type = null;
+
+        if ($user->hasRole('Engineering Auditor')) {
+            $type = 'Engineering Auditor';
+        } elseif ($user->hasRole('Legal Auditor')) {
+            $type = 'Legal Auditor';
+        } else {
+            return response()->json([
+                'status' => false,
+                'message' => 'ليس لديك صلاحية لتحديث حالة المبنى',
+            ], 403);
+        }
+
+        $roleType = $type === 'Engineering Auditor' ? 'engineer' : 'lawyer';
+
+        $statusMap = [
+            'rejected'    => 'rejected_by_' . $roleType,
+            'accepted'    => 'accepted_by_' . $roleType,
+            'need_review' => 'need_review',
+        ];
+
+        $statusName = $statusMap[$request->status] ?? null;
+
+        $assessmentStatus = AssessmentStatus::where('name', $statusName)->first();
+
+        if (!$assessmentStatus) {
+            return response()->json([
+                'status' => false,
+                'message' => 'الحالة غير موجودة في جدول AssessmentStatus',
+            ], 422);
+        }
+
+        $buildingStatus = BuildingStatus::updateOrCreate(
+            [
+                'building_id' => $building->objectid,
+                'type'       => $type,
+            ],
+            [
+                'status_id' => $assessmentStatus->id,
+                'user_id'   => Auth::id(),
+                'notes'     => $request->notes,
+            ]
+        );
+
+        BuildingStatusHistory::create([
+            'building_id' => $building->objectid,
+            'status_id'   => $assessmentStatus->id,
+            'user_id'     => Auth::id(),
+            'notes'       => $request->notes,
+            'type'        => $type,
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم تحديث حالة المبنى بنجاح',
+            'data'    => [
+                'building_objectid' => $building->objectid,
+                'building_globalid' => $building->globalid,
+                'type'              => $type,
+                'status_id'         => $assessmentStatus->id,
+                'status_name'       => $assessmentStatus->name,
+                'record_id'         => $buildingStatus->id,
+            ]
+        ]);
+    } catch (\Throwable $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'status'  => false,
+            'message' => 'حدث خطأ أثناء تحديث حالة المبنى',
+            'error'   => $e->getMessage(),
+        ], 500);
+    }
+}    public function setHousingStatus(Request $request)
     {
         $request->validate([
             'globalid' => ['required', 'string'],
