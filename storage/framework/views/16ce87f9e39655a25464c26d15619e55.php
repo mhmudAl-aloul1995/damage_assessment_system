@@ -1,8 +1,7 @@
-@extends('layouts.app')
-@section('title', 'الإستبيان')
-@section('pageName', 'الإستبيان')
+<?php $__env->startSection('title', 'الإستبيان'); ?>
+<?php $__env->startSection('pageName', 'الإستبيان'); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 
 <div class="card card-flush mb-7">
     <div class="card-header pt-7">
@@ -28,7 +27,7 @@
 
         <div class="tab-content">
 
-            {{-- تبويب المبنى --}}
+            
             <div class="tab-pane fade show active" id="tab_building" role="tabpanel">
                 <div class="row">
                     <div class="col-md-12">
@@ -82,10 +81,10 @@
                 </div>
             </div>
 
-            {{-- تبويب الوحدة السكنية --}}
+            
             <div class="tab-pane fade" id="tab_housing" role="tabpanel">
 
-                {{-- جدول الوحدات --}}
+                
                 <div class="card card-flush mb-7">
                     <div class="card-header pt-5">
                         <div class="card-title">
@@ -128,7 +127,7 @@
                     </div>
                 </div>
 
-                {{-- جدول تقييم الوحدة --}}
+                
                 <div class="card">
                     <div class="card-header border-0 pt-6">
                         <div class="card-title">
@@ -158,11 +157,12 @@
                                         data-dropdown-css-class="w-250px"
                                         data-placeholder="إختر الوحدة">
                                         <option value=""></option>
-                                        @foreach ($HousingUnit as $value)
-                                        <option value="{{ $value->globalid }}">
-                                            {{ $value->objectid . '--' . $value->full_name }}
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $HousingUnit; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                        <option value="<?php echo e($value->globalid); ?>">
+                                            <?php echo e($value->objectid . '--' . $value->full_name); ?>
+
                                         </option>
-                                        @endforeach
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                                     </select>
                                 </div>
 
@@ -222,9 +222,9 @@
     </div>
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('script')
+<?php $__env->startSection('script'); ?>
 <script>
     function initInlineEditors() {
         $('.inline-edit-select').each(function() {
@@ -240,10 +240,10 @@
 
     function saveInlineValue(field, globalid, type, value, callback = null) {
         $.ajax({
-            url: "{{ route('assessment.inline.update') }}",
+            url: "<?php echo e(route('assessment.inline.update')); ?>",
             method: "POST",
             data: {
-                _token: "{{ csrf_token() }}",
+                _token: "<?php echo e(csrf_token()); ?>",
                 field: field,
                 globalid: globalid,
                 type: type,
@@ -293,10 +293,10 @@
         }
 
         $.ajax({
-            url: "{{ route('housing.assessment.set.status') }}",
+            url: "<?php echo e(route('housing.assessment.set.status')); ?>",
             method: "POST",
             data: {
-                _token: "{{ csrf_token() }}",
+                _token: "<?php echo e(csrf_token()); ?>",
                 globalid: globalid,
                 status: status,
                 notes: null
@@ -382,9 +382,9 @@
             datatable = $(table).DataTable({
                 serverSide: true,
                 ajax: {
-                    url: "{{ url('showBuildings') }}",
+                    url: "<?php echo e(url('showBuildings')); ?>",
                     data: function(d) {
-                        d.globalid = '{{ $globalid }}';
+                        d.globalid = '<?php echo e($globalid); ?>';
                     },
                 },
                 info: false,
@@ -463,9 +463,9 @@
                 order: [],
                 pageLength: 25,
                 ajax: {
-                    url: "{{ route('housing.units.by.building') }}",
+                    url: "<?php echo e(route('housing.units.by.building')); ?>",
                     data: function(d) {
-                        d.globalid = '{{ $globalid }}';
+                        d.globalid = '<?php echo e($globalid); ?>';
                     }
                 },
                 columns: [{
@@ -542,9 +542,9 @@
             datatable = $(table).DataTable({
                 serverSide: true,
                 ajax: {
-                    url: "{{ url('showHousings') }}",
+                    url: "<?php echo e(url('showHousings')); ?>",
                     data: function(d) {
-                        d.parentglobalid = '{{ $globalid }}';
+                        d.parentglobalid = '<?php echo e($globalid); ?>';
                         d.globalid = $("[name='globalid']").val();
                     },
                 },
@@ -577,12 +577,8 @@
                 createdRow: function(row, data) {
                     $(row).css('cursor', 'default');
 
-
-
-                    // استخراج النص من HTML
-                    var text = $('<div>').html(data.answer).text().trim();
-
-                    if (text === '-' || text === '') {
+                    alert(data.answer)
+                    if (data.answer === null || data.answer === '') {
                         $(row).css('background-color', '#d4edda');
                     }
                 }
@@ -659,4 +655,5 @@
         });
     });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/assessmentAudit.blade.php ENDPATH**/ ?>
