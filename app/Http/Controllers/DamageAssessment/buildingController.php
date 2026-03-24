@@ -79,7 +79,7 @@ class buildingController extends Controller
             ->editColumn('action', function ($ctr) {
                 // Using route() helpers is cleaner than url()
                 $housingUrl = url("/showHousing/{$ctr->globalid}");
-                $assessmentUrl = url("/assessment/{$ctr->objectid}");
+                $assessmentUrl = url("/assessment/{$ctr->globalid}");
 
                 return '
                 <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">إجراءات

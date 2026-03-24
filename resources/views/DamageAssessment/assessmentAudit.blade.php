@@ -65,7 +65,7 @@
                             </div>
 
                             <div class="card-body py-4">
-                                <table class="table table-rounded table-striped align-middle table-row-dashed fs-6 gy-5"
+                                <table class="table table-rounded align-middle table-row-dashed fs-6 gy-5"
                                     id="kt_table_building_assessment">
                                     <thead>
                                         <tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
@@ -202,7 +202,7 @@
                     </div>
 
                     <div class="card-body py-4">
-                        <table class="table table-rounded table-striped align-middle table-row-dashed fs-6 gy-5"
+                        <table class="table table-rounded  align-middle fs-6 gy-5"
                             id="kt_table_housing_assessment">
                             <thead>
                                 <tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
@@ -392,7 +392,7 @@
                 pageLength: 200,
                 processing: true,
                 columns: [{
-                        className: 'text-start w-100px',
+                        className: 'text-start w-2000px',
                         data: 'question',
                         name: 'question',
                         searchable: false,
@@ -413,8 +413,14 @@
                         orderable: false
                     },
                 ],
-                createdRow: function(row) {
+                              createdRow: function(row, data) {
                     $(row).css('cursor', 'default');
+                    // استخراج النص من HTML
+                    var text = $('<div>').html(data.answer).text().trim();
+
+                    if (text !== '' && text !== '-') {
+                        $(row).css('background-color', '#d4edda');
+                    }
                 }
             });
 
@@ -576,13 +582,10 @@
                 ],
                 createdRow: function(row, data) {
                     $(row).css('cursor', 'default');
-
-
-
                     // استخراج النص من HTML
                     var text = $('<div>').html(data.answer).text().trim();
 
-                    if (text === '-' || text === '') {
+                    if (text !== '' && text !== '-') {
                         $(row).css('background-color', '#d4edda');
                     }
                 }
