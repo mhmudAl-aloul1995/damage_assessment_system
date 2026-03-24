@@ -2,8 +2,55 @@
 @section('title', 'الإستبيان')
 @section('pageName', 'الإستبيان')
 
-@section('content')
+@php
+    $buildingCurrentStatus = $buildingCurrentStatus ?? null;
+@endphp
 
+
+@section('content')
+<style>
+    .building-status-btn,
+    .housing-status-btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+    .building-status-btn:hover,
+    .housing-status-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .building-status-btn.is-active,
+    .housing-status-btn.is-active {
+        transform: translateY(-1px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12);
+    }
+
+    .building-status-btn.btn-light-danger.is-active,
+    .housing-status-btn.btn-light-danger.is-active {
+        background-color: var(--bs-danger) !important;
+        border-color: var(--bs-danger) !important;
+        color: #fff !important;
+    }
+
+    .building-status-btn.btn-light-success.is-active,
+    .housing-status-btn.btn-light-success.is-active {
+        background-color: var(--bs-success) !important;
+        border-color: var(--bs-success) !important;
+        color: #fff !important;
+    }
+
+    .building-status-btn.btn-light-warning.is-active,
+    .housing-status-btn.btn-light-warning.is-active {
+        background-color: var(--bs-warning) !important;
+        border-color: var(--bs-warning) !important;
+        color: #fff !important;
+    }
+    .building-status-btn:disabled,
+.housing-status-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+</style>
 <div class="card card-flush mb-7">
     <div class="card-header pt-7">
         <div class="card-title">
@@ -53,6 +100,7 @@
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-danger building-status-btn"
+                                            data-status="rejected"
                                             onclick="setBuildingStatus('rejected')">
                                             مرفوض
                                         </button>
@@ -60,6 +108,7 @@
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-success building-status-btn"
+                                            data-status="accepted"
                                             onclick="setBuildingStatus('accepted')">
                                             مقبول
                                         </button>
@@ -67,6 +116,7 @@
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-warning building-status-btn"
+                                            data-status="need_review"
                                             onclick="setBuildingStatus('need_review')">
                                             بحاجة لمراجعة
                                         </button>
@@ -87,7 +137,7 @@
 
                             <div class="card-body pt-0 pb-4">
                                 <div class="table-responsive">
-                                    <table class="table align-middle table-row-bordered table-rounded  gs-7 gy-4"
+                                    <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                         id="kt_table_building_assessment">
                                         <thead>
                                             <tr class="fw-bold fs-7 text-gray-800 border-bottom border-gray-300">
@@ -131,19 +181,19 @@
 
                     <div class="card-body pt-0 pb-4">
                         <div class="table-responsive">
-                            <table class="table align-middle table-row-bordered table-rounded  gs-7 gy-4"
+                            <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                 id="housing_table">
                                 <thead>
                                     <tr class="fw-bold fs-7 text-gray-800 border-bottom border-gray-300">
-                                        <th class="px-6 py-4 x">نوع الوحدة</th>
-                                        <th class="px-6 py-4 ">حالة الضرر</th>
-                                        <th class="px-6 py-4 ">رقم الطابق</th>
-                                        <th class="px-6 py-4 ">رقم الوحدة</th>
+                                        <th class="px-6 py-4">نوع الوحدة</th>
+                                        <th class="px-6 py-4">حالة الضرر</th>
+                                        <th class="px-6 py-4">رقم الطابق</th>
+                                        <th class="px-6 py-4">رقم الوحدة</th>
                                         <th class="px-6 py-4 min-w-280px">اسم المالك</th>
-                                        <th class="px-6 py-4 ">اتجاه الوحدة</th>
-                                        <th class="px-6 py-4 ">التدقيق القانوني</th>
-                                        <th class="px-6 py-4 ">التدقيق الهندسي</th>
-                                        <th class="px-6 py-4 ">الاعتماد النهائي</th>
+                                        <th class="px-6 py-4">اتجاه الوحدة</th>
+                                        <th class="px-6 py-4">التدقيق القانوني</th>
+                                        <th class="px-6 py-4">التدقيق الهندسي</th>
+                                        <th class="px-6 py-4">الاعتماد النهائي</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -192,6 +242,7 @@
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-light-danger housing-status-btn"
+                                    data-status="rejected"
                                     onclick="setHousingStatus('rejected')">
                                     مرفوض
                                 </button>
@@ -199,6 +250,7 @@
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-light-success housing-status-btn"
+                                    data-status="accepted"
                                     onclick="setHousingStatus('accepted')">
                                     مقبول
                                 </button>
@@ -206,6 +258,7 @@
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-light-warning housing-status-btn"
+                                    data-status="need_review"
                                     onclick="setHousingStatus('need_review')">
                                     بحاجة لمراجعة
                                 </button>
@@ -226,7 +279,7 @@
 
                     <div class="card-body pt-0 pb-4">
                         <div class="table-responsive">
-                            <table class="table align-middle table-row-bordered table-rounded  gs-7 gy-4"
+                            <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                 id="kt_table_housing_assessment">
                                 <thead>
                                     <tr class="fw-bold fs-7 text-gray-800 border-bottom border-gray-300">
@@ -262,6 +315,32 @@
             }
         });
     }
+
+    function normalizeStatus(statusName) {
+        if (!statusName) return null;
+
+        if (statusName.includes('accepted')) return 'accepted';
+        if (statusName.includes('rejected')) return 'rejected';
+        if (statusName === 'need_review') return 'need_review';
+
+        return null;
+    }
+function setActiveStatusButton(selector, status) {
+
+    // إزالة active + enable لكل الأزرار
+    $(selector)
+        .removeClass('is-active')
+        .prop('disabled', false);
+
+    if (!status) return;
+
+    let activeBtn = $(selector + '[data-status="' + status + '"]');
+
+    // إضافة active + disable
+    activeBtn
+        .addClass('is-active')
+        .prop('disabled', true);
+}
 
     function saveInlineValue(field, globalid, type, value, callback = null) {
         $.ajax({
@@ -331,6 +410,7 @@
             },
             success: function(response) {
                 toastr.success(response.message || 'تم تحديث حالة المبنى');
+                setActiveStatusButton('.building-status-btn', status);
                 reloadBuildingAssessmentTable();
                 reloadBuildingUnitsTable();
             },
@@ -371,6 +451,7 @@
             },
             success: function(response) {
                 toastr.success(response.message || 'تم تحديث الحالة بنجاح');
+                setActiveStatusButton('.housing-status-btn', status);
                 reloadHousingAssessmentTable();
                 reloadBuildingUnitsTable();
             },
@@ -542,22 +623,22 @@
                 columns: [{
                         data: 'housing_unit_type',
                         name: 'housing_unit_type',
-                        className: 'text-start px-6 py-4 '
+                        className: 'text-start px-6 py-4'
                     },
                     {
                         data: 'unit_damage_status',
                         name: 'unit_damage_status',
-                        className: 'text-center px-6 py-4 '
+                        className: 'text-center px-6 py-4'
                     },
                     {
                         data: 'floor_number',
                         name: 'floor_number',
-                        className: 'text-center px-6 py-4 '
+                        className: 'text-center px-6 py-4'
                     },
                     {
                         data: 'housing_unit_number',
                         name: 'housing_unit_number',
-                        className: 'text-center px-6 py-4 '
+                        className: 'text-center px-6 py-4'
                     },
                     {
                         data: 'owner_name',
@@ -567,22 +648,22 @@
                     {
                         data: 'unit_direction',
                         name: 'unit_direction',
-                        className: 'text-center px-6 py-4 '
+                        className: 'text-center px-6 py-4'
                     },
                     {
                         data: 'legal_audit_status',
                         name: 'legal_audit_status',
-                        className: 'text-center px-6 py-4 '
+                        className: 'text-center px-6 py-4'
                     },
                     {
                         data: 'engineering_audit_status',
                         name: 'engineering_audit_status',
-                        className: 'text-center px-6 py-4 '
+                        className: 'text-center px-6 py-4'
                     },
                     {
                         data: 'final_approval_status',
                         name: 'final_approval_status',
-                        className: 'text-center px-6 py-4 '
+                        className: 'text-center px-6 py-4'
                     }
                 ],
                 createdRow: function(row) {
@@ -651,8 +732,6 @@
 
                     if (text !== '' && text !== '-') {
                         $(row).css('background-color', '#d4edda');
-
-
                     }
                 }
             });
@@ -701,6 +780,10 @@
         KTBuildingUnitsList.init();
         KTHousingAssessmentList.init();
         initInlineEditors();
+        setActiveStatusButton(
+            '.building-status-btn',
+            normalizeStatus(@json($buildingCurrentStatus))
+        );
 
         $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function() {
             $.fn.dataTable.tables({
@@ -723,6 +806,10 @@
             if (!data.globalid) return;
 
             $('[name="globalid"]').val(data.globalid).trigger('change');
+
+            if (data.current_status) {
+                setActiveStatusButton('.housing-status-btn', normalizeStatus(data.current_status));
+            }
 
             reloadHousingAssessmentTable();
         });

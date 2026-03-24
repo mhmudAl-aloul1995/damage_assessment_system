@@ -141,7 +141,7 @@ class auditController extends Controller
         $assessments = Assessment::all();
         $filterName = Filter::distinct('list_name')->pluck('list_name');
         $filters = Filter::all();
-        
+       
 
         return View::make(
             'DamageAssessment.audit',
@@ -626,8 +626,13 @@ public function setStatus(Request $request)
         $building = Building::where('globalid', $request->globalid)->first();
         $HousingUnit = HousingUnit::where('parentglobalid', $request->globalid)->get();
         $assessments = Assessment::all();
+       $buildingCurrentStatus = BuildingStatus::with('status')
+    ->whereHas('building', function ($q) use ($globalid) {
+        $q->where('globalid', $globalid);
+    })
+    ->first()?->status?->name;
 
-        return View::make('DamageAssessment.assessmentAudit', compact('globalid', 'building', 'assessments', 'HousingUnit'));
+    return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus','globalid', 'building', 'assessments', 'HousingUnit'));
     }
 
     public function auditBuilding(Request $request)

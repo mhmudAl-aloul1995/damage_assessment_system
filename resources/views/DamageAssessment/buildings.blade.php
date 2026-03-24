@@ -245,7 +245,7 @@
 						<th class="min-w-70px"> إسم الباحث</th>
 						<th class="min-w-70px"> حالط الاستبيان </th>
 						<th class="min-w-70px">رقم المبنى </th>
-						<th class="min-w-70px">اسم المالك </th>
+						<th class="min-w-70px">اسم المبنى </th>
 						<th class="min-w-70px">رقم الزون </th>
 						<th class="min-w-70px">عدد الوحدات المتضررة </th>
 						<th class="min-w-70px">البلدية </th>
@@ -319,8 +319,8 @@
 						name: 'objectid'
 					},
 					{
-						data: 'owner_name',
-						name: 'owner_name'
+						data: 'building name',
+						name: 'building name'
 					},
 					{
 						data: 'zone_code',

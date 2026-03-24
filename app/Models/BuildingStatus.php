@@ -22,4 +22,10 @@ class BuildingStatus extends Model
     {
         return $this->belongsTo(User::class);
     }
+        public function building()
+    {
+        return $this->belongsTo(Building::class,'building_id','objectid');
+    }
+
+    
 }
