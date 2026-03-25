@@ -1021,430 +1021,521 @@
 
 @endsection
 
-
-
-
-
 @section('script')
 
-
-
 <script src="https://js.arcgis.com/4.22/"></script>
-<script src="https://jsdelivr.net"></script>
 
 <script>
+    // =========================
+    // Charts
+    // =========================
+    var buildingsChart = null;
+    var housingChart = null;
+
+    var buildingsOptions = {
+        series: [
+            {{ $buildingStats['fully_damaged'] ?? 0 }},
+            {{ $buildingStats['partially_damaged'] ?? 0 }},
+            {{ $buildingStats['committee_review'] ?? 0 }},
+            {{ $buildingStats['security_unsafe'] ?? 0 }}
+        ],
+        chart: {
+            type: 'donut',
+            height: 350
+        },
+        labels: ['ضرر كلي', 'ضرر جزئي', 'لجنة فنية', 'صعوبة في التقييم'],
+        colors: ['#F1416C', '#FFAD0F', '#009EF7', '#7239EA'],
+        legend: {
+            position: 'bottom'
+        },
+        dataLabels: {
+            enabled: true
+        }
+    };
+
+    buildingsChart = new ApexCharts(document.querySelector("#buildings_donut_chart"), buildingsOptions);
+    buildingsChart.render();
+
+    var housingOptions = {
+        series: [
+            {{ $unitStats['fully_damaged'] ?? 0 }},
+            {{ $unitStats['partially_damaged'] ?? 0 }},
+            {{ $unitStats['committee_review'] ?? 0 }}
+        ],
+        chart: {
+            type: 'donut',
+            height: 350
+        },
+        labels: ['ضرر كلي (وحدات)', 'ضرر جزئي (وحدات)', 'لجنة فنية'],
+        colors: ['#D9214E', '#F1BC00', '#50CD89'],
+        legend: {
+            position: 'bottom'
+        },
+        dataLabels: {
+            enabled: true
+        }
+    };
+
+    housingChart = new ApexCharts(document.querySelector("#housing_units_donut_chart"), housingOptions);
+    housingChart.render();
+
+    // =========================
+    // ArcGIS Map
+    // =========================
+
+
 	require([
-		"esri/Map",
-		"esri/views/MapView",
-		"esri/layers/FeatureLayer",
-		"esri/identity/OAuthInfo",
-		"esri/identity/IdentityManager",
-		"esri/layers/OpenStreetMapLayer",
-		"esri/widgets/BasemapToggle",
-		"esri/widgets/Legend",
-		"esri/widgets/Expand",
-		"esri/widgets/Search",
-		"esri/widgets/ScaleBar"
-	], function(Map, MapView, FeatureLayer, OAuthInfo, esriId, OpenStreetMapLayer, BasemapToggle, Legend, Expand, Search, ScaleBar) {
+    "esri/Map",
+    "esri/views/MapView",
+    "esri/layers/FeatureLayer",
+    "esri/layers/GraphicsLayer",
+    "esri/Graphic",
+    "esri/identity/IdentityManager",
+    "esri/widgets/BasemapToggle",
+    "esri/widgets/Legend",
+    "esri/widgets/Search",
+    "esri/widgets/ScaleBar"
+], function(
+    Map,
+    MapView,
+    FeatureLayer,
+    GraphicsLayer,
+    Graphic,
+    esriId,
+    BasemapToggle,
+    Legend,
+    Search,
+    ScaleBar
+) {
 
-		const damageRenderer = {
-			type: "unique-value", // autocasts as new UniqueValueRenderer()
-			field: "building_damage_status",
-			// Default symbol for values not defined below
-			defaultSymbol: {
-				type: "simple-fill",
-				color: [128, 128, 128, 0.9], // Gray
-				outline: {
-					color: "white",
-					width: 1
-				}
-			},
-			uniqueValueInfos: [{
-					value: "committee_review",
-					symbol: {
-						type: "simple-fill",
-						color: [255, 255, 0, 0.5], // Yellow
-						outline: {
-							color: "black",
-							width: 1
-						}
-					},
-					label: "Committee Review"
-				},
-				{
-					value: "fully_damaged",
-					symbol: {
-						type: "simple-fill",
-						color: [255, 0, 0, 0.5], // Red
-						outline: {
-							color: "white",
-							width: 2
-						}
-					},
-					label: "Fully Damaged"
-				},
-				{
-					value: "partially_damaged",
-					symbol: {
-						type: "simple-fill",
-						color: [0, 255, 0, 0.5], // Green
-						outline: {
-							color: "white",
-							width: 1
-						}
-					},
-					label: "Partially Damaged"
-				}
-			]
-		};
+    const assessmentBaseUrl = "{{ url('assessment') }}";
 
+    const damageRenderer = {
+        type: "unique-value",
+        field: "building_damage_status",
+        defaultSymbol: {
+            type: "simple-fill",
+            color: [128, 128, 128, 0.9],
+            outline: {
+                color: "white",
+                width: 1
+            }
+        },
+        uniqueValueInfos: [
+            {
+                value: "committee_review",
+                symbol: {
+                    type: "simple-fill",
+                    color: [255, 255, 0, 0.5],
+                    outline: {
+                        color: "black",
+                        width: 1
+                    }
+                },
+                label: "Committee Review"
+            },
+            {
+                value: "fully_damaged",
+                symbol: {
+                    type: "simple-fill",
+                    color: [255, 0, 0, 0.5],
+                    outline: {
+                        color: "white",
+                        width: 2
+                    }
+                },
+                label: "Fully Damaged"
+            },
+            {
+                value: "partially_damaged",
+                symbol: {
+                    type: "simple-fill",
+                    color: [0, 255, 0, 0.5],
+                    outline: {
+                        color: "white",
+                        width: 1
+                    }
+                },
+                label: "Partially Damaged"
+            }
+        ]
+    };
 
-		esriId.registerToken({
-			// Use the portal's sharing base URL instead of a specific FeatureServer URL
-			server: "https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0", // or your ArcGIS Server URL
-			token: "{{ $token }}",
-			expires: 1678886400000 // Ensure this matches your token's actual expiration
-		});
+    esriId.registerToken({
+        server: "https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0",
+        token: "{{ $token }}",
+        expires: Date.now() + (60 * 60 * 1000)
+    });
 
-		const fieldInfos = [{
-			fieldName: "objectid"
-		}, {
-			fieldName: "building_name"
-		}, {
-			fieldName: "assignedto"
-		}, {
-			fieldName: "building_damage_status"
-		}];
-		const measureThisAction = {
-			title: "Measure Length",
-			id: "measure-this",
-			icon: "measure",
-		};
-		const featureLayer = new FeatureLayer({
-			// Point to the Warren Wilson College tree carbon storage service.
-			url: "https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0",
-			renderer: damageRenderer,
-			labelingInfo: [{
-				symbol: {
-					type: "text", // autocasts as new TextSymbol()
-					color: "white",
-					haloColor: "black",
-					haloSize: "1px",
-					font: {
-						family: "Ubuntu Mono",
-						size: 10,
-						weight: "bold"
-					}
-				},
-				labelPlacement: "always-horizontal",
-				labelExpressionInfo: {
-					expression: "$feature.building_name" // Displays the building name
-				}
-			}],
-			popupTemplate: {
-				dockEnabled: true, // Enables docking
-				dockOptions: {
-					// Choose a position: "top-left", "top-right", "bottom-left", "bottom-right", "top-center", "bottom-center"
-					position: "top-left",
-					// Set a breakpoint (e.g., in pixels) below which the popup automatically docks
-					breakpoint: false
-				},
-				title: "المبنى: {building_name} <a target='_blank' style='color:red;' href='{{ url('assessment') }}/{globalid}'>الإستبيان</a>",
-				content: [{
-						type: "fields",
-						fieldInfos: fieldInfos // Ensure fieldInfos is defined elsewhere
-					},
-					{
-						type: 'text',
-						text: '<a style="color:red;" href="{{ url("assessment") }}/{globalid}">الإستبيان</a>'
-					}
-				],
+    const fieldInfos = [
+        { fieldName: "objectid" },
+        { fieldName: "building_name" },
+        { fieldName: "assignedto" },
+        { fieldName: "building_damage_status" }
+    ];
 
-				actions: [measureThisAction],
-			},
-		});
-		const map = new Map({
-			basemap: 'satellite',
-			layers: [featureLayer] // Add the layer to the map
-		});
-		const view = new MapView({
-			container: "viewDiv", // The DOM element ID for the view
-			map: map,
-			center: [34.460987, 31.514266], // Center the view
-			zoom: 16.5 // Zoom level
-				,
-		});
-		const basemapToggle = new BasemapToggle({
-			view: view,
-			nextBasemap: "osm" // The basemap it switches to when clicked
-		});
-		const legend = new Legend({
-			view: view,
-			container: "externalLegendDiv",
-			layerInfos: [{
-				layer: featureLayer,
-				title: "Building Damage Status"
-			}]
-		});
+    const measureThisAction = {
+        title: "Measure Length",
+        id: "measure-this",
+        icon: "measure"
+    };
 
+    const featureLayer = new FeatureLayer({
+        url: "https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0",
+        renderer: damageRenderer,
+        outFields: ["*"],
+		// ADD THESE TWO LINES:
+    minScale: 0, // Keeps it visible when zooming out
+    maxScale: 0, // Keeps it visible when zooming in (Fixes the Legend)
+        labelingInfo: [{
+            symbol: {
+                type: "text",
+                color: "white",
+                haloColor: "black",
+                haloSize: "1px",
+                font: {
+                    family: "Ubuntu Mono",
+                    size: 10,
+                    weight: "bold"
+                }
+            },
+            labelPlacement: "always-horizontal",
+            labelExpressionInfo: {
+                expression: "$feature.building_name"
+            }
+        }],
+popupTemplate: {
+    title: function(event) {
+        const attrs = event.graphic.attributes;
+        const g = attrs.globalid || attrs.GLOBALID || "";
+        const name = attrs.building_name || "";
+        return `المبنى: ${name} <a target="_blank" style="color:red;" href="${assessmentBaseUrl}/${g}">الإستبيان</a>`;
+    },
+    content: [
+        {
+            type: "fields",
+            fieldInfos: fieldInfos
+        },
+        {
+            type: "text",
+            text: `<a style="color:red;" target="_blank" href="${assessmentBaseUrl}/{globalid}">الإستبيان</a>`
+        }
+    ],
+    actions: [measureThisAction]
+}
+    });
 
-		view.watch("extent", function() {
+    // طبقة خاصة للتحديد الثابت
+    const selectionLayer = new GraphicsLayer({
+        listMode: "hide"
+    });
 
-			view.whenLayerView(featureLayer).then(function(layerView) {
-				layerView.filter = {
-					geometry: view.extent,
-					spatialRelationship: "intersects"
-				};
-			});
-		});
+    const map = new Map({
+        basemap: "satellite",
+        layers: [featureLayer, selectionLayer]
+    });
 
-		view.ui.add(basemapToggle, "top-left");
+    const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [34.460987, 31.514266],
+        zoom: 18
+    });
+view.popup.dockEnabled = true;
+view.popup.dockOptions = {
+    position: "top-left",
+    breakpoint: false,
+    buttonEnabled: false
+};
 
-		//view.ui.add(legend, "bottom-right");
+view.popup.collapseEnabled = false;
+view.popup.visibleElements = {
+    closeButton: true
+};
+    const basemapToggle = new BasemapToggle({
+        view: view,
+        nextBasemap: "osm"
+    });
 
-		let highlightHandle = null; // 1. Variable to store the current highlight
-		const searchWidget = new Search({
-			view: view,
-			allPlaceholder: "بحث ",
-			includeDefaultSources: false, // Disables the generic world address search
-			sources: [{
-				layer: featureLayer, // Your building layer
-				searchFields: ["building_name", "objectid"], // Field to search in
-				displayField: "building_name", // Field to show in suggestions
-				exactMatch: false,
-				outFields: ["*"],
-				name: "Buildings",
-				placeholder: "بحث عن المبنى بالاسم أو الرقم"
-			}]
-		});
-		view.ui.add(searchWidget, {
-			position: "top-right"
-		});
+    view.ui.add(basemapToggle, "top-left");
 
-		const scaleBar = new ScaleBar({
-			view: view,
-			unit: "metric", // Options: "metric", "non-metric", or "dual"
-			expandIconClass: "esri-icon-measure"
-		});
+    const legend = new Legend({
+        view: view,
+        container: "externalLegendDiv",
+        layerInfos: [{
+            layer: featureLayer,
+            title: "Building Damage Status"
+        }]
+    });
 
-		// Add the widget to the bottom-left corner of the view
-		view.ui.add(scaleBar, {
-			position: "bottom-left"
-		});
+    const searchWidget = new Search({
+        view: view,
+        allPlaceholder: "بحث",
+        includeDefaultSources: false,
+        sources: [{
+            layer: featureLayer,
+            searchFields: ["building_name", "objectid"],
+            displayField: "building_name",
+            exactMatch: false,
+            outFields: ["*"],
+            name: "Buildings",
+            placeholder: "بحث عن المبنى بالاسم أو الرقم"
+        }]
+    });
 
-		function zoomToFeatureByGlobalId(globalId) {
-			const query = {
-				where: `globalid = '${globalId}'`,
-				returnGeometry: true,
-				outFields: ["*"]
-			};
+    view.ui.add(searchWidget, {
+        position: "top-right"
+    });
 
-			featureLayer.queryFeatures(query).then(function(results) {
-				if (results.features.length > 0) {
-					const feature = results.features[0];
+    const scaleBar = new ScaleBar({
+        view: view,
+        unit: "metric"
+    });
 
+    view.ui.add(scaleBar, {
+        position: "bottom-left"
+    });
 
-					/* const zoomTarget = feature.geometry.extent
-						? feature.geometry.extent.expand(1,0)
-						: {target: feature.geometry, zoom: 20 }; */
+    let selectedObjectId = null;
+    let selectedFeature = null;
+    let selectedGraphic = null;
 
-					view.goTo(feature.geometry.extent.expand(1, 1) || feature.geometry, {
-						duration: 2000,
-						easing: "in-out-expo",
-						popupEnabled: false
-					}).catch(function(error) {
-						if (error.name !== "AbortError") console.error("GoTo failed:", error);
-					});
+    function getObjectId(feature) {
+        return feature.attributes.OBJECTID || feature.attributes.objectid;
+    }
 
+    function clearSelectionGraphic() {
+        selectionLayer.removeAll();
+        selectedGraphic = null;
+    }
 
-					// 2. Highlight the feature using its LayerView
-					view.whenLayerView(featureLayer).then(function(layerView) {
-						// Remove previous highlight if it exists
-						if (highlightHandle) {
-							highlightHandle.remove();
-						}
-						// Apply new highlight
-						highlightHandle = layerView.highlight(feature);
+    function getSelectionSymbol(geometryType) {
+        if (geometryType === "polygon" || geometryType === "extent") {
+            return {
+                type: "simple-fill",
+                color: [0, 0, 0, 0],
+                outline: {
+                    color: [0, 255, 255, 1],
+                    width: 3
+                }
+            };
+        }
 
+        if (geometryType === "polyline") {
+            return {
+                type: "simple-line",
+                color: [0, 255, 255, 1],
+                width: 4
+            };
+        }
 
+        return {
+            type: "simple-marker",
+            style: "circle",
+            size: 12,
+            color: [0, 255, 255, 0.25],
+            outline: {
+                color: [0, 255, 255, 1],
+                width: 2
+            }
+        };
+    }
 
-					});
+    function drawPersistentSelection(feature) {
+        if (!feature || !feature.geometry) return;
 
-				} else {
-					console.warn("Feature not found:", globalId);
-				}
-			}).catch(function(error) {
-				console.error("Query Error:", error);
-			});
+        clearSelectionGraphic();
 
+        selectedGraphic = new Graphic({
+            geometry: feature.geometry.clone ? feature.geometry.clone() : feature.geometry,
+            attributes: feature.attributes,
+            symbol: getSelectionSymbol(feature.geometry.type)
+        });
 
-		}
+        selectionLayer.add(selectedGraphic);
+    }
 
+    function openFeaturePopup(feature) {
+        view.popup.open({
+            features: [feature],
+            location: feature.geometry.extent
+                ? feature.geometry.extent.center
+                : feature.geometry
+        });
+    }
 
-		$('#kt_table_building').on('click', 'tr', function() {
-			var globalid = this.id; // Accesses the 'id' attribute of the clicked row
-			zoomToFeatureByGlobalId(globalid);
+    function selectFeature(feature, doZoom = true) {
+        selectedFeature = feature;
+        selectedObjectId = getObjectId(feature);
 
-		});
+        // هذا هو البديل الحقيقي عن highlight()
+        drawPersistentSelection(feature);
+        openFeaturePopup(feature);
 
+        if (doZoom) {
+            const zoomTarget = feature.geometry.extent
+                ? feature.geometry.extent.expand(1.5)
+                : { target: feature.geometry, zoom: 20 };
 
-	});
+            view.goTo(zoomTarget, {
+                duration: 2000,
+                easing: "in-out-expo"
+            }).catch(function(error) {
+                if (error.name !== "AbortError") {
+                    console.error("GoTo failed:", error);
+                }
+            });
+        }
+    }
 
-	var KTEngineersList = function() {
-		// Define shared variables
-		var table = document.getElementById('kt_table_building');
-		var kt_engineer_filter = document.getElementById('kt_engineer_filter');
-		var datatable;
-		var toolbarBase;
-		var toolbarSelected;
-		var selectedCount;
+    function zoomToFeatureByGlobalId(globalId) {
+        const query = featureLayer.createQuery();
+        query.where = "GLOBALID = '" + globalId + "'";
+        query.returnGeometry = true;
+        query.outFields = ["*"];
 
-		// Private functions
-		var initEngineerTable = function() {
-			// Set date data order
-			const tableRows = table.querySelectorAll('tbody tr');
+        featureLayer.queryFeatures(query).then(function(results) {
+            if (!results.features.length) {
+                console.warn("Feature not found:", globalId);
+                return;
+            }
 
-			datatable = $(table).DataTable({
-				serverSide: true,
-				ajax: {
-					url: "{{url('building/show')}}",
-					data: function(d) {
-						d.hompage_building = 1
+            const feature = results.features[0];
+            selectFeature(feature, true);
+        }).catch(function(error) {
+            console.error("Query Error:", error);
+        });
+    }
 
-					},
-				},
-				dom: "<'table-responsive'tr>" + // Table body
-					"<'row'<'col-sm-12 col-md-5 d-flex align-items-center justify-content-center justify-content-md-start'i>" + // Info (left)
-					"<'col-sm-12 col-md-7 d-flex align-items-center justify-content-center justify-content-md-end'p>>", // Pagination (right)
+    // عند الضغط على الخريطة
+    view.on("click", function(event) {
+        view.hitTest(event).then(function(response) {
+            const result = response.results.find(function(r) {
+                return r.graphic && r.graphic.layer === featureLayer;
+            });
 
-				"info": false,
-				'order': [],
-				"pageLength": 10,
-				"lengthChange": false,
-				processing: true,
-				columns: [
-					/* 							{data: 'assignedto', name: 'assignedto', searchable: true },
-					 */
-					{
-						data: 'neighborhood',
-						name: 'neighborhood',
-						searchable: true
-					},
-					{
-						data: 'objectid',
-						name: 'objectid',
-						searchable: true
-					},
-					{
-						data: 'building_name',
-						name: 'building_name',
-						searchable: true
-					},
-					{
-						data: 'owner_name',
-						name: 'owner_name',
-						searchable: true
-					},
-					{
-						data: 'zone_code',
-						name: 'zone_code',
-						searchable: true
-					},
+            if (result) {
+                selectFeature(result.graphic, false);
+            } else {
+                clearSelectionGraphic();
+            }
+        });
+    });
 
-				],
-				createdRow: (row, data, index) => {
-					$(row).css('cursor', 'pointer')
+    // عند الضغط من الجدول
+    $('#kt_table_building tbody').on('click', 'tr', function() {
+        var globalid = this.id;
+        if (!globalid) return;
 
+        zoomToFeatureByGlobalId(globalid);
+    });
 
-				}
-			});
-
-			// Re-init functions on every table re-draw -- more info: https://datatables.net/reference/event/draw
-			datatable.on('draw', function() {
-
-				KTMenu.createInstances(); // For Metronic
-
-			});
-		}
-
-
-		var handleSearchDatatable = () => {
-			const filterSearch = document.querySelector('[data-kt-engineer-table-filter="search"]');
-
-			filterSearch.addEventListener('keydown', function(e) {
-				if (e.which == 13) {
-					// Prevent the default action (e.g., form submission and page refresh)
-					e.preventDefault();
-					datatable.search(e.target.value).draw();
-				}
-			});
-		}
-
-		return {
-			// Public functions
-			init: function() {
-				if (!table) {
-					return;
-				}
-
-				initEngineerTable();
-				handleSearchDatatable();
+});
 
 
-			}
-		}
-	}();
+var KTEngineersList = function() {
+        var table = document.getElementById('kt_table_building');
+        var datatable;
 
+        var initEngineerTable = function() {
+            datatable = $(table).DataTable({
+                serverSide: true,
+                ajax: {
+                    url: "{{ url('building/show') }}",
+                    data: function(d) {
+                        d.hompage_building = 1;
+                    },
+                },
+                dom:
+                    "<'table-responsive'tr>" +
+                    "<'row'<'col-sm-12 col-md-5 d-flex align-items-center justify-content-center justify-content-md-start'i>" +
+                    "<'col-sm-12 col-md-7 d-flex align-items-center justify-content-center justify-content-md-end'p>>",
+                info: false,
+                order: [],
+                pageLength: 10,
+                lengthChange: false,
+                processing: true,
+                columns: [
+                    { data: 'neighborhood', name: 'neighborhood', searchable: true },
+                    { data: 'objectid', name: 'objectid', searchable: true },
+                    { data: 'building_name', name: 'building_name', searchable: true },
+                    { data: 'owner_name', name: 'owner_name', searchable: true },
+                    { data: 'zone_code', name: 'zone_code', searchable: true }
+                ],
+                createdRow: function(row, data, index) {
+                    $(row).css('cursor', 'pointer');
+                    if (data.globalid) {
+                        $(row).attr('id', data.globalid);
+                    }
+                }
+            });
 
-	KTUtil.onDOMContentLoaded(function() {
-		KTEngineersList.init();
-// 1. Buildings Donut Chart
-	var buildingsOptions = {
-		series: [
-			{{ $buildingStats['fully_damaged'] ?? 0 }},
-			{{ $buildingStats['partially_damaged'] ?? 0 }},
-			{{ $buildingStats['committee_review'] ?? 0 }},
-			{{ $buildingStats['security_unsafe'] ?? 0 }}
-		],
-		chart: {
-			type: 'donut',
-			height: 350
-		},
-		labels: ['ضرر كلي', 'ضرر جزئي', 'لجنة فنية', 'صعوبة في التقييم'],
-		colors: ['#F1416C', '#FFAD0F', '#009EF7', '#7239EA'],
-		legend: {
-			position: 'bottom'
-		},
-		dataLabels: {
-			enabled: true
-		}
-	};
-	new ApexCharts(document.querySelector("#buildings_donut_chart"), buildingsOptions).render();
+            datatable.on('draw', function() {
+                KTMenu.createInstances();
+            });
+        };
 
-	// 2. Housing Units Donut Chart
-	var housingOptions = {
-		series: [
-			{{ $unitStats['fully_damaged'] ?? 0 }},
-			{{ $unitStats['partially_damaged'] ?? 0 }},
-			{{ $unitStats['committee_review'] ?? 0 }}
-		],
-		chart: {
-			type: 'donut',
-			height: 350
-		},
-		labels: ['ضرر كلي (وحدات)', 'ضرر جزئي (وحدات)', 'لجنة فنية'],
-		colors: ['#D9214E', '#F1BC00', '#50CD89'],
-		legend: {
-			position: 'bottom'
-		},
-		dataLabels: {
-			enabled: true
-		}
-	};
-	new ApexCharts(document.querySelector("#housing_units_donut_chart"), housingOptions).render();
-	});
+        var handleSearchDatatable = function() {
+            const filterSearch = document.querySelector('[data-kt-engineer-table-filter="search"]');
+
+            if (!filterSearch) return;
+
+            filterSearch.addEventListener('keydown', function(e) {
+                if (e.which == 13) {
+                    e.preventDefault();
+                    datatable.search(e.target.value).draw();
+                }
+            });
+        };
+
+        return {
+            init: function() {
+                if (!table) {
+                    return;
+                }
+
+                initEngineerTable();
+                handleSearchDatatable();
+            }
+        };
+    }();
+
+    KTUtil.onDOMContentLoaded(function() {
+        KTEngineersList.init();
+    });
+
+    // =========================
+    // Auto Update Charts
+    // =========================
+    function updateCharts(newBuildingData, newUnitData) {
+        if (buildingsChart) {
+            buildingsChart.updateSeries([
+                newBuildingData.fully_damaged ?? 0,
+                newBuildingData.partially_damaged ?? 0,
+                newBuildingData.committee_review ?? 0,
+                newBuildingData.security_unsafe ?? 0
+            ]);
+        }
+
+        if (housingChart) {
+            housingChart.updateSeries([
+                newUnitData.fully_damaged ?? 0,
+                newUnitData.partially_damaged ?? 0,
+                newUnitData.committee_review ?? 0
+            ]);
+        }
+    }
+
+    setInterval(function() {
+        fetch('/api/get-latest-stats')
+            .then(response => response.json())
+            .then(data => {
+                updateCharts(data.buildingStats, data.unitStats);
+            })
+            .catch(error => {
+                console.error('Failed to update charts:', error);
+            });
+    }, 300000);
 </script>
-
-
 
 @endsection

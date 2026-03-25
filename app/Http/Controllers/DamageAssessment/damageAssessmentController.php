@@ -41,20 +41,7 @@ class damageAssessmentController extends Controller
     public function index($objectid = null)
     {
 
-        $token = null;
-        /*         $response = Http::withOptions([
-            'verify' => 'C:\\nginx\\cacert.pem',
-        ])->asForm()->post('https://www.arcgis.com/sharing/rest/generateToken', [
-            'f' => 'json',
-            'username' => 'Mahmoud.Alalloul',
-            'password' => 'Qazxcv@464',
-            'client' => 'referer',
-            'referer' => 'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0',
-        ]);
-
-
-        $token = $response->json()['token'];
- */
+   
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
 
@@ -125,7 +112,6 @@ class damageAssessmentController extends Controller
             )
         );
     }
-
 
 
     public function search(Request $request)

@@ -54,6 +54,7 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('audit.index');
         }
 
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
