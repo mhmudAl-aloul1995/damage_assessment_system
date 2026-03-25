@@ -716,23 +716,27 @@ class HousingUnit extends Model
 
     public function engineerStatus()
     {
-        return $this->hasOne(HousingStatus::class,'housing_id','objectid')
+        return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
             ->where('type', 'Engineering Auditor');
     }
-        public function finalApproval()
+    public function finalApproval()
     {
-        return $this->hasOne(HousingStatus::class,'housing_id','objectid')
+        return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
             ->where('status_id', 19);
     }
     public function lawyerStatus()
     {
-        return $this->hasOne(HousingStatus::class,'housing_id','objectid')
+        return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
             ->where('type', 'Legal Auditor');
     }
-        public function statusWhereRoleAuth()
-    {
-        return $this->hasOne(HousingStatus::class,'housing_id','objectid')
-            ->where('type', Auth::user()->role->name)->assessment_status->name;
-    }
 
+    public function getCurrentStatusAttribute()
+    {
+        return optional($this->statusWhereRoleAuth?->assessment_status)->name;
+    }
+    public function statusWhereRoleAuth()
+    {
+        return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
+            ->where('type', Auth::user()->roles->first()->name);
+    }
 }
