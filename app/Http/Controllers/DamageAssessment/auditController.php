@@ -172,7 +172,7 @@ class auditController extends Controller
     {
         $query = HousingUnit::with('statusWhereRoleAuth')->query();
 
-        dd($query);
+        
         if ($request->globalid) {
             $query->where('parentglobalid', $request->globalid);
         }
