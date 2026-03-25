@@ -15,73 +15,95 @@
 </style>
 <div class="row">
 	<div class="card mb-12">
-		<div class="card card-flush">
-			<div class="card-header collapsible cursor-pointer rotate" data-bs-toggle="collapse"
-				data-bs-target="#kt_building_filter">
-				<h3 class="card-title">فلتر</h3>
-				<div class="card-toolbar rotate-180">
-					<i class="ki-duotone ki-down fs-1"></i>
-				</div>
-			</div>
-			<form id="filter_buliding_form" class="form" data-kt-Building-table-filter="form" action="#">
+		<div class="card card-flush mb-7">
+    <div class="card-header pt-6">
+        <div class="card-title">
+            <h3 class="fw-bold m-0">الفلاتر</h3>
+        </div>
 
-				<div id="kt_building_filter" class="collapse hide">
+        <div class="card-toolbar">
+            <button type="button" class="btn btn-sm btn-light-danger" id="resetFilters">
+                إعادة تعيين
+            </button>
+        </div>
+    </div>
 
+    <div class="card-body pt-0">
+        <div class="row g-5">
 
-					<div class="card-body">
-						<div class="row g-9 mb-8">
-							<!--begin::Col-->
-							@foreach ($filterName as $filter)
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">بحث باسم المبنى</label>
+                <input type="text" id="filter_building_name" class="form-control form-control-solid"
+                    placeholder="اسم المبنى" />
+            </div>
 
-							@if (Schema::hasColumn('buildings', $filter))
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">المهندس</label>
+                <select id="filter_engineer" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="اختر المهندس">
+                    <option></option>
+                    @foreach($engineers as $engineer)
+                        <option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-							<div class="col-md-3 fv-row">
-								<label class="fs-6 fw-semibold mb-2">{{ $filter }}</label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder="{{ $filter }}"
-									name="{{ $filter }}">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">المحامي</label>
+                <select id="filter_lawyer" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="اختر المحامي">
+                    <option></option>
+                    @foreach($lawyers as $lawyer)
+                        <option value="{{ $lawyer->id }}">{{ $lawyer->name }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-									<option value=""></option>
-									@foreach (App\Models\Filter::where('list_name', $filter)->get() as $option)
-									<option value="{{ $option->name }}">{{ $option->label }}</option>
-									@endforeach
-								</select>
-							</div>
-							@endif
-							@endforeach
-							<div class="col-md-3 fv-row">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">الحالة الهندسية</label>
+                <select id="filter_eng_status" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="اختر الحالة">
+                    <option></option>
+                    <option value="pending">Pending</option>
+                    <option value="accepted_by_engineer">Accepted By Engineer</option>
+                    <option value="rejected_by_engineer">Rejected By Engineer</option>
+                    <option value="assigned_to_engineer">Assigned To Engineer</option>
+                </select>
+            </div>
 
-								<label class="fs-6 fw-semibold mb-2">neighborhood</label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder="neighborhood"
-									name="neighborhood">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">الحالة القانونية</label>
+                <select id="filter_legal_status" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="اختر الحالة">
+                    <option></option>
+                    <option value="pending">Pending</option>
+                    <option value="accepted_by_lawyer">Accepted By Lawyer</option>
+                    <option value="rejected_by_lawyer">Rejected By Lawyer</option>
+                    <option value="assigned_to_lawyer">Assigned To Lawyer</option>
+                </select>
+            </div>
 
-									<option value=""></option>
-									@foreach ($neighborhoods as $value )
-									<option value="{{ $value }}">{{ $value }}</option>
-									@endforeach
-								</select>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">الاعتماد النهائي</label>
+                <select id="filter_final_status" class="form-select form-select-solid" data-control="select2" data-allow-clear="true" data-placeholder="اختر الحالة">
+                    <option></option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
 
-							</div>
-						</div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">منطقة/حي</label>
+                <input type="text" id="filter_area" class="form-control form-control-solid"
+                    placeholder="المنطقة أو الحي" />
+            </div>
 
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="button" class="btn btn-primary w-100" id="applyFilters">
+                    تطبيق الفلاتر
+                </button>
+            </div>
 
-					</div>
-					<div class="card-footer">
-						<div class="text-center">
-							<button type="reset" class="btn btn-light me-3" data-kt-Buildings-filter-action="reset">إعادة
-								تعيين</button>
-							<button onclick="$('#kt_table_Building').DataTable().ajax.reload()" type="submit"
-								class="btn btn-primary" data-kt-Building-table-filter="filter">
-								<span class="indicator-label">بحث</span>
-								<span class="indicator-progress">يرجى الإنتظار...
-									<span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
-							</button>
-						</div>
-					</div>
-				</div>
-			</form>
-		</div>
+        </div>
+    </div>
+</div>
 	</div>
 </div>
 
