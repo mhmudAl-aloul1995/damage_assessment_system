@@ -183,7 +183,7 @@ $type = auth()->user()->roles->first()->name;
 
 ->addColumn('current_status', function ($row) use ($type) {
     return optional($row->statusByType($type)?->first()?->assessment_status)->name;
-});
+})
 
             ->editColumn('owner_name', function ($row) {
                 // لو عندك full_name بدل owner_name
