@@ -909,7 +909,7 @@
         $('#housing_table tbody').on('click', 'tr', function() {
             let table = $('#housing_table').DataTable();
             let data = table.row(this).data();
-
+alert(4)
             if (!data) return;
 
             $('#housing_table tbody tr').removeClass('selected');
