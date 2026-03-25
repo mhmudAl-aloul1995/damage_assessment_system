@@ -730,13 +730,9 @@ class HousingUnit extends Model
             ->where('type', 'Legal Auditor');
     }
 
-    public function getCurrentStatusAttribute()
-    {
-        return optional($this->statusWhereRoleAuth?->assessment_status)->name;
-    }
-    public function statusWhereRoleAuth()
-    {
-        return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
-            ->where('type', Auth::user()->roles->first()->name);
-    }
+public function statusByType($type)
+{
+    return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
+        ->where('type', $type);
+}
 }
