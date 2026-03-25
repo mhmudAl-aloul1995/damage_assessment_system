@@ -52,7 +52,7 @@
     }
 </style>
 
-<div class="card fs-4 card-flush mb-7">
+<div class="card fs-5 card-flush mb-7">
     <div class="card-header pt-7">
         <div class="card-title">
             <h2>الإستبيان</h2>
