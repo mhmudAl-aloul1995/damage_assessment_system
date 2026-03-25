@@ -65,7 +65,7 @@ return new class extends Migration
             // Metadata & Device Info
             $table->text('start')->nullable();
             $table->text('end')->nullable();
-            $table->text('today')->nullable();
+            $table->text('today')->nullable();            
             $table->text('username')->nullable();
             $table->text('simserial')->nullable();
             $table->text('subscriberid')->nullable();

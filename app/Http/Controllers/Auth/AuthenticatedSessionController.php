@@ -47,7 +47,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         if ($user->hasRole('Legal Auditor')) {
-            return redirect()->route('auditBuilding');
+            return redirect()->route('audit.auditBuilding');
         }
 
         if ($user->hasRole('Auditing Supervisor')) {
