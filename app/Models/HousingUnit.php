@@ -354,6 +354,8 @@ class HousingUnit extends Model
      */
     protected $fillable = [
         'id',
+                'attachments',
+
         'objectid',
         'globalid',
         'housing_unit_type',
