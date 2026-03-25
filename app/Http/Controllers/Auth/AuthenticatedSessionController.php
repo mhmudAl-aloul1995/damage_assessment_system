@@ -43,15 +43,15 @@ class AuthenticatedSessionController extends Controller
         }
 
         if ($user->hasRole('Engineering Auditor')) {
-            return redirect()->route('auditBuilding');
+            return redirect()->route('audit.auditBuilding');
         }
 
         if ($user->hasRole('Legal Auditor')) {
             return redirect()->route('auditBuilding');
         }
 
-        if ($user->hasRole('field engineer')) {
-            return redirect()->route('engineer.tasks');
+        if ($user->hasRole('Auditing Supervisor')) {
+            return redirect()->route('audit.index');
         }
 
         return redirect()->intended(route('dashboard', absolute: false));
