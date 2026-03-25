@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Container\Attributes\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute; // Import Attribute if using modern Laravel accessors
 
@@ -728,4 +729,10 @@ class HousingUnit extends Model
         return $this->hasOne(HousingStatus::class,'housing_id','objectid')
             ->where('type', 'Legal Auditor');
     }
+        public function statusWhereRoleAuth()
+    {
+        return $this->hasOne(HousingStatus::class,'housing_id','objectid')
+            ->where('type', Auth::user()->role->name)->assessment_status->name;
+    }
+
 }

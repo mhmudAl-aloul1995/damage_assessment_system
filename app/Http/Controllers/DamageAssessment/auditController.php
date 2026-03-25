@@ -170,8 +170,9 @@ class auditController extends Controller
 
     public function housingUnitsByBuilding(Request $request)
     {
-        $query = HousingUnit::query();
+        $query = HousingUnit::with('statusWhereRoleAuth')->query();
 
+        dd($query);
         if ($request->globalid) {
             $query->where('parentglobalid', $request->globalid);
         }
