@@ -45,7 +45,7 @@ class auditController extends Controller
             ])->where('field_status', 'COMPLETED');
 
             return DataTables::of($data)
-               
+
 
                 // Building Name
                 ->editColumn(
@@ -58,7 +58,7 @@ class auditController extends Controller
                 ->addColumn('engineer', function ($row) {
 
 
-                return $row->assignedUsers
+                    return $row->assignedUsers
                         ->where('type', 'Engineering Auditor')
                         ->first()?->user?->name ?? '-';
                 })
@@ -84,25 +84,44 @@ class auditController extends Controller
                 // Engineer Status
                 ->addColumn('eng_status', function ($row) {
 
-               
+
                     $status = $row->engineerStatus?->status?->label_en ?? 'Pending';
 
 
-                    $color = str_contains(strtolower($status), 'Rejected By Engineer')
-                        ? 'badge-light-danger'
-                        : 'badge-light-success';
+                    $statusName = strtolower($status);
 
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    if (str_contains($statusName, 'reject')) {
+                        $color =  'badge-danger';
+                    } elseif (str_contains($statusName, 'accepted')) {
+                        $color= 'badge-success';
+                    } elseif (str_contains($statusName, 'review')) {
+                        $color = 'badge-warning';
+                    } elseif (str_contains($statusName, 'assigned')) {
+                        $color = 'badge-primary';
+                    } else {
+                        $color = 'badge-secondary';
+                    }
+
+                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
                 })
 
                 // Lawyer Status
                 ->addColumn('law_status', function ($row) {
 
                     $status = $row->lawyerStatus?->status?->label_en ?? 'Pending';
+                    $statusName = strtolower($status);
 
-                    $color = str_contains(strtolower($status), 'Rejected By Lawyer')
-                        ? 'badge-danger'
-                        : 'badge-light-primary';
+                     if (str_contains($statusName, 'reject')) {
+                        $color =  'badge-danger';
+                    } elseif (str_contains($statusName, 'accepted')) {
+                        $color= 'badge-success';
+                    } elseif (str_contains($statusName, 'review')) {
+                        $color = 'badge-warning';
+                    } elseif (str_contains($statusName, 'assigned')) {
+                        $color = 'badge-primary';
+                    } else {
+                        $color = 'badge-secondary';
+                    }
 
                     return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
                 })
@@ -141,7 +160,7 @@ class auditController extends Controller
         $assessments = Assessment::all();
         $filterName = Filter::distinct('list_name')->pluck('list_name');
         $filters = Filter::all();
-       
+
 
         return View::make(
             'DamageAssessment.audit',
@@ -192,7 +211,7 @@ class auditController extends Controller
                 $color = str_contains(strtolower($status), 'Rejected By Engineer')
                     ? 'badge-light-danger'
                     : 'badge-light-success';
-                 
+
 
                 return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
             })
@@ -219,110 +238,112 @@ class auditController extends Controller
     }
 
 
-public function setStatus(Request $request)
-{
-    $request->validate([
-        'globalid' => ['required', 'string'],
-        'status'   => ['required', 'in:rejected,accepted,need_review'],
-        'notes'    => ['nullable', 'string'],
-    ]);
-
-    DB::beginTransaction();
-
-    try {
-        $user = Auth::user();
-
-        $building = Building::where('globalid', $request->globalid)->first();
-
-        if (!$building) {
-            return response()->json([
-                'status' => false,
-                'message' => 'المبنى غير موجود',
-            ], 404);
-        }
-
-        $type = null;
-
-        if ($user->hasRole('Engineering Auditor')) {
-            $type = 'Engineering Auditor';
-        } elseif ($user->hasRole('Legal Auditor')) {
-            $type = 'Legal Auditor';
-        } else {
-            return response()->json([
-                'status' => false,
-                'message' => 'ليس لديك صلاحية لتحديث حالة المبنى',
-            ], 403);
-        }
-
-        $roleType = $type === 'Engineering Auditor' ? 'engineer' : 'lawyer';
-
-        $statusMap = [
-            'rejected'    => 'rejected_by_' . $roleType,
-            'accepted'    => 'accepted_by_' . $roleType,
-            'need_review' => 'need_review',
-        ];
-
-        $statusName = $statusMap[$request->status] ?? null;
-
-        $assessmentStatus = AssessmentStatus::where('name', $statusName)->first();
-
-        if (!$assessmentStatus) {
-            return response()->json([
-                'status' => false,
-                'message' => 'الحالة غير موجودة في جدول AssessmentStatus',
-            ], 422);
-        }
-
-        $buildingStatus = BuildingStatus::updateOrCreate(
-            [
-                'building_id' => $building->objectid,
-                'type'       => $type,
-            ],
-            [
-                'status_id' => $assessmentStatus->id,
-                'user_id'   => Auth::id(),
-                'notes'     => $request->notes,
-            ]
-        );
-
-        BuildingStatusHistory::create([
-            'building_id' => $building->objectid,
-            'status_id'   => $assessmentStatus->id,
-            'user_id'     => Auth::id(),
-            'notes'       => $request->notes,
-            'type'        => $type,
-        ]);
-
-        DB::commit();
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'تم تحديث حالة المبنى بنجاح',
-            'data'    => [
-                'building_objectid' => $building->objectid,
-                'building_globalid' => $building->globalid,
-                'type'              => $type,
-                'status_id'         => $assessmentStatus->id,
-                'status_name'       => $assessmentStatus->name,
-                'record_id'         => $buildingStatus->id,
-            ]
-        ]);
-    } catch (\Throwable $e) {
-        DB::rollBack();
-
-        return response()->json([
-            'status'  => false,
-            'message' => 'حدث خطأ أثناء تحديث حالة المبنى',
-            'error'   => $e->getMessage(),
-        ], 500);
-    }
-}    public function setHousingStatus(Request $request)
+    public function setStatus(Request $request)
     {
         $request->validate([
             'globalid' => ['required', 'string'],
             'status'   => ['required', 'in:rejected,accepted,need_review'],
             'notes'    => ['nullable', 'string'],
         ]);
+
+        DB::beginTransaction();
+
+        try {
+            $user = Auth::user();
+
+            $building = Building::where('globalid', $request->globalid)->first();
+
+            if (!$building) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'المبنى غير موجود',
+                ], 404);
+            }
+
+            $type = null;
+
+            if ($user->hasRole('Engineering Auditor')) {
+                $type = 'Engineering Auditor';
+            } elseif ($user->hasRole('Legal Auditor')) {
+                $type = 'Legal Auditor';
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'ليس لديك صلاحية لتحديث حالة المبنى',
+                ], 403);
+            }
+
+            $roleType = $type === 'Engineering Auditor' ? 'engineer' : 'lawyer';
+
+            $statusMap = [
+                'rejected'    => 'rejected_by_' . $roleType,
+                'accepted'    => 'accepted_by_' . $roleType,
+                'need_review' => 'need_review',
+            ];
+
+            $statusName = $statusMap[$request->status] ?? null;
+
+            $assessmentStatus = AssessmentStatus::where('name', $statusName)->first();
+
+            if (!$assessmentStatus) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'الحالة غير موجودة في جدول AssessmentStatus',
+                ], 422);
+            }
+
+            $buildingStatus = BuildingStatus::updateOrCreate(
+                [
+                    'building_id' => $building->objectid,
+                    'type'       => $type,
+                ],
+                [
+                    'status_id' => $assessmentStatus->id,
+                    'user_id'   => Auth::id(),
+                    'notes'     => $request->notes,
+                ]
+            );
+
+            BuildingStatusHistory::create([
+                'building_id' => $building->objectid,
+                'status_id'   => $assessmentStatus->id,
+                'user_id'     => Auth::id(),
+                'notes'       => $request->notes,
+                'type'        => $type,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم تحديث حالة المبنى بنجاح',
+                'data'    => [
+                    'building_objectid' => $building->objectid,
+                    'building_globalid' => $building->globalid,
+                    'type'              => $type,
+                    'status_id'         => $assessmentStatus->id,
+                    'status_name'       => $assessmentStatus->name,
+                    'record_id'         => $buildingStatus->id,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'حدث خطأ أثناء تحديث حالة المبنى',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function setHousingStatus(Request $request)
+    {
+        $request->validate([
+            'globalid' => ['required', 'string'],
+            'status'   => ['required', 'in:rejected,accepted,need_review'],
+            'notes'    => ['nullable', 'string'],
+        ]);
+
 
         DB::beginTransaction();
 
@@ -388,6 +409,8 @@ public function setStatus(Request $request)
                 'notes'      => $request->notes,
             ]);
 
+
+
             DB::commit();
 
             return response()->json([
@@ -427,7 +450,7 @@ public function setStatus(Request $request)
             DB::transaction(function () use ($request) {
                 foreach ($request->building_ids as $buildingId) {
 
-                    $building = Building::where('objectid',$buildingId)->first();
+                    $building = Building::where('objectid', $buildingId)->first();
 
                     if (!$building) {
                         continue;
@@ -476,7 +499,7 @@ public function setStatus(Request $request)
 
                     $housings = HousingUnit::where('parentglobalid', $building->globalid)->get();
 
-                    
+
                     foreach ($housings as $housing) {
                         $housingStatus = HousingStatus::firstOrNew([
                             'housing_id' => $housing->objectid,
@@ -626,13 +649,13 @@ public function setStatus(Request $request)
         $building = Building::where('globalid', $request->globalid)->first();
         $HousingUnit = HousingUnit::where('parentglobalid', $request->globalid)->get();
         $assessments = Assessment::all();
-       $buildingCurrentStatus = BuildingStatus::with('status')
-    ->whereHas('building', function ($q) use ($globalid) {
-        $q->where('globalid', $globalid);
-    })
-    ->first()?->status?->name;
+        $buildingCurrentStatus = BuildingStatus::with('status')
+            ->whereHas('building', function ($q) use ($globalid) {
+                $q->where('globalid', $globalid);
+            })
+            ->first()?->status?->name;
 
-    return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus','globalid', 'building', 'assessments', 'HousingUnit'));
+        return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'globalid', 'building', 'assessments', 'HousingUnit'));
     }
 
     public function auditBuilding(Request $request)
@@ -675,7 +698,7 @@ public function setStatus(Request $request)
                 })
 
                 ->addColumn('status', function ($row) use ($type) {
-                    $statusModel = $type === 'eng'
+                    $statusModel = $type === 'Engineering Auditor'
                         ? $row->engineerStatus?->status
                         : $row->lawyerStatus?->status;
 
@@ -683,11 +706,13 @@ public function setStatus(Request $request)
                     $statusName = strtolower($statusModel?->name ?? 'pending');
 
                     if (str_contains($statusName, 'reject')) {
-                        $color = $type === 'eng' ? 'badge-light-danger' : 'badge-danger';
-                    } elseif (str_contains($statusName, 'accept')) {
-                        $color = $type === 'eng' ? 'badge-light-success' : 'badge-light-primary';
+                        $color = $type === 'Engineering Auditor' ? 'badge-light-danger' : 'badge-danger';
+                    } elseif (str_contains($statusName, 'accepted')) {
+                        $color = $type === 'Engineering Auditor' ? 'badge-light-success' : 'badge-light-primary';
                     } elseif (str_contains($statusName, 'review')) {
                         $color = 'badge-light-warning';
+                    } elseif (str_contains($statusName, 'assigned')) {
+                        $color = 'badge-light-primary';
                     } else {
                         $color = 'badge-light-secondary';
                     }

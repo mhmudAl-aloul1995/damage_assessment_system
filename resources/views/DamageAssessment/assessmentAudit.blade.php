@@ -6,7 +6,6 @@
     $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 @endphp
 
-
 @section('content')
 <style>
     .building-status-btn,
@@ -45,12 +44,14 @@
         border-color: var(--bs-warning) !important;
         color: #fff !important;
     }
+
     .building-status-btn:disabled,
-.housing-status-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.8;
-}
+    .housing-status-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.8;
+    }
 </style>
+
 <div class="card card-flush mb-7">
     <div class="card-header pt-7">
         <div class="card-title">
@@ -119,6 +120,13 @@
                                             data-status="need_review"
                                             onclick="setBuildingStatus('need_review')">
                                             بحاجة لمراجعة
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-light-dark"
+                                            onclick="openNotesModal('building')">
+                                            ملاحظات
                                         </button>
 
                                         <button
@@ -265,6 +273,13 @@
 
                                 <button
                                     type="button"
+                                    class="btn btn-sm btn-light-dark"
+                                    onclick="openNotesModal('housing')">
+                                    ملاحظات
+                                </button>
+
+                                <button
+                                    type="button"
                                     class="btn btn-sm btn-light-primary me-3"
                                     onclick="reloadHousingAssessmentTable()">
                                     <i class="ki-duotone ki-arrows-circle fs-2">
@@ -300,10 +315,49 @@
     </div>
 </div>
 
+{{-- Modal الملاحظات --}}
+<div class="modal fade" id="notesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-500px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="fw-bold" id="notesModalTitle">إضافة ملاحظة</h3>
+
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+                    <i class="ki-duotone ki-cross fs-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <textarea
+                    id="notesInput"
+                    class="form-control form-control-solid"
+                    rows="5"
+                    placeholder="اكتب الملاحظة هنا..."></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    إلغاء
+                </button>
+
+                <button type="button" class="btn btn-primary" onclick="submitStatusWithNotes()">
+                    حفظ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('script')
 <script>
+    let notesContext = null;   // building | housing
+    let pendingStatus = null;  // accepted | rejected | need_review | null
+
     function initInlineEditors() {
         $('.inline-edit-select').each(function() {
             if (!$(this).hasClass('select2-hidden-accessible')) {
@@ -325,22 +379,41 @@
 
         return null;
     }
-function setActiveStatusButton(selector, status) {
 
-    // إزالة active + enable لكل الأزرار
-    $(selector)
-        .removeClass('is-active')
-        .prop('disabled', false);
+    function setActiveStatusButton(selector, status) {
+        $(selector)
+            .removeClass('is-active')
+            .prop('disabled', false);
 
-    if (!status) return;
+        if (!status) return;
 
-    let activeBtn = $(selector + '[data-status="' + status + '"]');
+        let activeBtn = $(selector + '[data-status="' + status + '"]');
 
-    // إضافة active + disable
-    activeBtn
-        .addClass('is-active')
-        .prop('disabled', true);
-}
+        activeBtn
+            .addClass('is-active')
+            .prop('disabled', true);
+    }
+
+    function openNotesModal(type, status = null) {
+        notesContext = type;
+        pendingStatus = status;
+
+        $('#notesInput').val('');
+
+        $('#notesModalTitle').text(
+            type === 'building' ? 'إضافة ملاحظة للمبنى' : 'إضافة ملاحظة للوحدة'
+        );
+
+        const modalEl = document.getElementById('notesModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    function closeNotesModal() {
+        const modalEl = document.getElementById('notesModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.hide();
+    }
 
     function saveInlineValue(field, globalid, type, value, callback = null) {
         $.ajax({
@@ -396,37 +469,7 @@ function setActiveStatusButton(selector, status) {
             return;
         }
 
-        $.ajax({
-            url: "{{ route('building.assessment.set.status') }}",
-            method: "POST",
-            data: {
-                _token: "{{ csrf_token() }}",
-                globalid: globalid,
-                status: status,
-                notes: null
-            },
-            beforeSend: function() {
-                $('.building-status-btn').prop('disabled', true);
-            },
-            success: function(response) {
-                toastr.success(response.message || 'تم تحديث حالة المبنى');
-                setActiveStatusButton('.building-status-btn', status);
-                reloadBuildingAssessmentTable();
-                reloadBuildingUnitsTable();
-            },
-            error: function(xhr) {
-                let message = 'حدث خطأ أثناء تحديث الحالة';
-
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    message = xhr.responseJSON.message;
-                }
-
-                toastr.error(message);
-            },
-            complete: function() {
-                $('.building-status-btn').prop('disabled', false);
-            }
-        });
+        openNotesModal('building', status);
     }
 
     function setHousingStatus(status) {
@@ -437,37 +480,105 @@ function setActiveStatusButton(selector, status) {
             return;
         }
 
-        $.ajax({
-            url: "{{ route('housing.assessment.set.status') }}",
-            method: "POST",
-            data: {
-                _token: "{{ csrf_token() }}",
-                globalid: globalid,
-                status: status,
-                notes: null
-            },
-            beforeSend: function() {
-                $('.housing-status-btn').prop('disabled', true);
-            },
-            success: function(response) {
-                toastr.success(response.message || 'تم تحديث الحالة بنجاح');
-                setActiveStatusButton('.housing-status-btn', status);
-                reloadHousingAssessmentTable();
-                reloadBuildingUnitsTable();
-            },
-            error: function(xhr) {
-                let message = 'حدث خطأ أثناء تحديث الحالة';
+        openNotesModal('housing', status);
+    }
 
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    message = xhr.responseJSON.message;
-                }
+    function submitStatusWithNotes() {
+        let notes = $('#notesInput').val();
 
-                toastr.error(message);
-            },
-            complete: function() {
-                $('.housing-status-btn').prop('disabled', false);
+        if (notesContext === 'building' && !pendingStatus) {
+            toastr.warning('اختر حالة أولاً');
+            return;
+        }
+
+        if (notesContext === 'housing' && !pendingStatus) {
+            toastr.warning('اختر حالة أولاً');
+            return;
+        }
+
+        if (notesContext === 'building') {
+            let globalid = '{{ $globalid }}';
+
+            if (!globalid) {
+                toastr.warning('لا يوجد مبنى محدد');
+                return;
             }
-        });
+
+            $.ajax({
+                url: "{{ route('building.assessment.set.status') }}",
+                method: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    globalid: globalid,
+                    status: pendingStatus,
+                    notes: notes
+                },
+                beforeSend: function() {
+                    $('.building-status-btn').prop('disabled', true);
+                },
+                success: function(response) {
+                    toastr.success(response.message || 'تم تحديث حالة المبنى');
+                    setActiveStatusButton('.building-status-btn', pendingStatus);
+                    reloadBuildingAssessmentTable();
+                    reloadBuildingUnitsTable();
+                    closeNotesModal();
+                },
+                error: function(xhr) {
+                    let message = 'حدث خطأ أثناء تحديث الحالة';
+
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+
+                    toastr.error(message);
+                },
+                complete: function() {
+                    $('.building-status-btn').not('.is-active').prop('disabled', false);
+                }
+            });
+        }
+
+        if (notesContext === 'housing') {
+            let globalid = $("[name='globalid']").val();
+
+            if (!globalid) {
+                toastr.warning('يرجى اختيار الوحدة أولاً');
+                return;
+            }
+
+            $.ajax({
+                url: "{{ route('housing.assessment.set.status') }}",
+                method: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    globalid: globalid,
+                    status: pendingStatus,
+                    notes: notes
+                },
+                beforeSend: function() {
+                    $('.housing-status-btn').prop('disabled', true);
+                },
+                success: function(response) {
+                    toastr.success(response.message || 'تم تحديث الحالة بنجاح');
+                    setActiveStatusButton('.housing-status-btn', pendingStatus);
+                    reloadHousingAssessmentTable();
+                    reloadBuildingUnitsTable();
+                    closeNotesModal();
+                },
+                error: function(xhr) {
+                    let message = 'حدث خطأ أثناء تحديث الحالة';
+
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+
+                    toastr.error(message);
+                },
+                complete: function() {
+                    $('.housing-status-btn').not('.is-active').prop('disabled', false);
+                }
+            });
+        }
     }
 
     $(document).on('click', '.inline-save-btn', function() {
@@ -780,6 +891,7 @@ function setActiveStatusButton(selector, status) {
         KTBuildingUnitsList.init();
         KTHousingAssessmentList.init();
         initInlineEditors();
+
         setActiveStatusButton(
             '.building-status-btn',
             normalizeStatus(@json($buildingCurrentStatus))
