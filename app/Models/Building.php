@@ -395,4 +395,18 @@ class Building extends Model
 {
     return $this->hasMany(AssignedAssessmentUser::class,'building_id','objectid');
 }
+
+
+public function lawyerAssignment()
+{
+    return $this->hasOne(AssignedAssessmentUser::class, 'building_id', 'objectid')
+        ->where('type', 'Legal Auditor');
+}
+public function engineerAssignment()
+{
+    return $this->hasOne(AssignedAssessmentUser::class, 'building_id', 'objectid')
+        ->where('type', 'Engineering Auditor');
+}
+
+
 }

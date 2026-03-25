@@ -38,13 +38,58 @@ class auditController extends Controller
 
         if ($request->ajax()) {
 
-            $data = Building::with([
+            $query = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
                 'lawyerStatus.status'
             ])->where('field_status', 'COMPLETED');
 
-            return DataTables::of($data)
+                if ($request->filled('building_name')) {
+        $query->where('building_name', 'like', '%' . $request->building_name . '%');
+    }
+
+    if ($request->filled('area')) {
+        $query->where('neighborhood', 'like', '%' . $request->area . '%');
+    }
+
+    if ($request->filled('engineer_id')) {
+        $query->whereHas('engineerAssignment', function ($q) use ($request) {
+            $q->where('user_id', $request->engineer_id);
+        });
+    }
+
+    if ($request->filled('lawyer_id')) {
+        $query->whereHas('lawyerAssignment', function ($q) use ($request) {
+            $q->where('user_id', $request->lawyer_id);
+        });
+    }
+
+if ($request->filled('eng_status')) {
+    if ($request->eng_status === 'pending') {
+        $query->whereDoesntHave('engineerStatus');
+    } else {
+        $query->whereHas('engineerStatus.assessment_status', function ($q) use ($request) {
+            $q->where('name', $request->eng_status);
+        });
+    }
+}
+
+   if ($request->filled('legal_status')) {
+    if ($request->legal_status === 'pending') {
+        $query->whereDoesntHave('lawyerStatus');
+    } else {
+        $query->whereHas('lawyerStatus.assessment_status', function ($q) use ($request) {
+            $q->where('name', $request->legal_status);
+        });
+    }
+}
+
+    if ($request->filled('final_status')) {
+        $query->whereHas('finalApproval.assessment_status', function ($q) use ($request) {
+            $q->where('name', $request->final_status);
+        });
+    }
+            return DataTables::of($query)
 
 
                 // Building Name
@@ -160,11 +205,12 @@ class auditController extends Controller
         $assessments = Assessment::all();
         $filterName = Filter::distinct('list_name')->pluck('list_name');
         $filters = Filter::all();
-
+$engineers = User::role('Engineering Auditor')->get();
+    $lawyers = User::role('Legal Auditor')->get();
 
         return View::make(
             'DamageAssessment.audit',
-            compact('users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments')
+            compact('engineers','lawyers','users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments')
         );
     }
 

@@ -26,6 +26,9 @@ class BuildingStatus extends Model
     {
         return $this->belongsTo(Building::class,'building_id','objectid');
     }
-
+   public function assessment_status()
+    {
+        return $this->belongsTo(AssessmentStatus::class, 'status_id');
+    }
     
 }
