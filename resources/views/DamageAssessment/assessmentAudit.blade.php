@@ -52,7 +52,7 @@
     }
 </style>
 
-<div class="card fs-5 card-flush mb-7">
+<div class="card  card-flush mb-7">
     <div class="card-header pt-7">
         <div class="card-title">
             <h2>الإستبيان</h2>
@@ -145,7 +145,7 @@
 
                             <div class="card-body pt-0 pb-4">
                                 <div class="table-responsive">
-                                    <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
+                                    <table class="table align-middle table-row-bordered fs-5 table-rounded gs-7 gy-4"
                                         id="kt_table_building_assessment">
                                         <thead>
                                             <tr class="fw-bold  text-gray-800 border-bottom border-gray-300">
@@ -297,7 +297,7 @@
                             <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                 id="kt_table_housing_assessment">
                                 <thead>
-                                    <tr class="fw-bold fs-7 text-gray-800 border-bottom border-gray-300">
+                                    <tr class="fw-bold fs-5 text-gray-800 border-bottom border-gray-300">
                                         <th class="px-6 py-4 min-w-300px">السؤال</th>
                                         <th class="text-center px-6 py-4 min-w-250px">الجواب</th>
                                         <th class="text-center px-6 py-4 min-w-300px">تعديل الإجابة</th>
