@@ -196,11 +196,21 @@ class auditController extends Controller
 
                 $status = $row->finalApproval?->assessment_status?->label_en ?? 'Pending';
 
-                $color = str_contains(strtolower($status), 'rejected')
-                    ? 'badge-light-danger'
-                    : 'badge-light-success';
+                    $statusName = strtolower($status);
 
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    if (str_contains($statusName, 'reject')) {
+                        $color =  'badge-danger';
+                    } elseif (str_contains($statusName, 'accepted')) {
+                        $color= 'badge-success';
+                    } elseif (str_contains($statusName, 'review')) {
+                        $color = 'badge-warning';
+                    } elseif (str_contains($statusName, 'assigned')) {
+                        $color = 'badge-primary';
+                    } else {
+                        $color = 'badge-secondary';
+                    }
+
+                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
             })
 
             // Engineer Status
@@ -208,12 +218,23 @@ class auditController extends Controller
 
                 $status = $row->engineerStatus?->assessment_status?->label_en ?? 'Pending';
 
-                $color = str_contains(strtolower($status), 'Rejected By Engineer')
-                    ? 'badge-light-danger'
-                    : 'badge-light-success';
 
 
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    $statusName = strtolower($status);
+
+                    if (str_contains($statusName, 'reject')) {
+                        $color =  'badge-danger';
+                    } elseif (str_contains($statusName, 'accepted')) {
+                        $color= 'badge-success';
+                    } elseif (str_contains($statusName, 'review')) {
+                        $color = 'badge-warning';
+                    } elseif (str_contains($statusName, 'assigned')) {
+                        $color = 'badge-primary';
+                    } else {
+                        $color = 'badge-secondary';
+                    }
+
+                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
             })
 
             // Lawyer Status
@@ -221,11 +242,21 @@ class auditController extends Controller
 
                 $status = $row->lawyerStatus?->assessment_status?->label_en ?? 'Pending';
 
-                $color = str_contains(strtolower($status), 'Rejected By Lawyer')
-                    ? 'badge-danger'
-                    : 'badge-light-primary';
+                    $statusName = strtolower($status);
 
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    if (str_contains($statusName, 'reject')) {
+                        $color =  'badge-danger';
+                    } elseif (str_contains($statusName, 'accepted')) {
+                        $color= 'badge-success';
+                    } elseif (str_contains($statusName, 'review')) {
+                        $color = 'badge-warning';
+                    } elseif (str_contains($statusName, 'assigned')) {
+                        $color = 'badge-primary';
+                    } else {
+                        $color = 'badge-secondary';
+                    }
+
+                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
             })
 
             ->rawColumns([
