@@ -15,10 +15,12 @@ Schedule::command('sync:building')
     ->withoutOverlapping() // Prevents the task from running if the previous one is still active
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
-    ->appendOutputTo(storage_path('logs/schedule.log'));
+    ->appendOutputTo(storage_path('logs/schedule.log'))
+    ->runInBackground();
 Schedule::command('sync:housing')
     ->everyTenMinutes()
     ->withoutOverlapping() // Prevents the task from running if the previous one is still active
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
-    ->appendOutputTo(storage_path('logs/schedule.log'));
+    ->appendOutputTo(storage_path('logs/schedule.log'))
+    ->runInBackground();
