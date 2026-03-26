@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Attendance;
 use Carbon\Carbon;
-
+use Yajra\Datatables\Datatables;
+use Rap2hpoutre\FastExcel\FastExcel;
+use Yajra\Datatables\Enginges\EloquentEngine;
 class AttendanceController extends Controller
 {
     /**
@@ -22,82 +24,54 @@ class AttendanceController extends Controller
      */
     public function data(Request $request)
     {
-        $month = $request->month ?? now()->month;
-        $year  = $request->year ?? now()->year;
+        $month = $request->month ?: now()->month;
+        $year  = $request->year ?: now()->year;
 
-        $daysInMonth = Carbon::create($year, $month)->daysInMonth;
+        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
 
-        $users = User::with(['attendances' => function ($q) use ($month, $year) {
-            $q->whereMonth('date', $month)
-              ->whereYear('date', $year);
-        }]);
+        $users = User::with([
+            'attendances' => function ($q) use ($month, $year) {
+                $q->whereMonth('date', $month)
+                  ->whereYear('date', $year);
+            }
+        ])->get();
 
-        return datatables()->of($users)
-            ->addIndexColumn()
+        $rows = $users->map(function ($user, $index) use ($year, $month, $daysInMonth) {
+            $row = [
+                'DT_RowIndex'   => $index + 1,
+                'contract_date' => $user->contract_start_date,
+                'name_en'       => $user->name,
+                'name_ar'       => $user->name_ar,
+                'position'      => $user->position,
+                'id_no'         => $user->id_number,
+                'contact'       => $user->phone,
+                'total'         => 0,
+            ];
 
-            ->addColumn('contract_date', fn($u) => $u->contract_start_date)
-            ->addColumn('name_en', fn($u) => $u->name)
-            ->addColumn('name_ar', fn($u) => $u->name_ar)
-            ->addColumn('position', fn($u) => $u->position)
-            ->addColumn('id_no', fn($u) => $u->id_number)
-            ->addColumn('contact', fn($u) => $u->phone)
+            for ($day = 1; $day <= 31; $day++) {
+                $row['day_' . $day] = '';
+            }
 
-            /**
-             * مجموع الحضور
-             */
-            ->addColumn('total', function ($u) {
-                return $u->attendances->sum('status');
-            })
+            $total = 0;
 
-            /**
-             * أيام الشهر (1 → 31)
-             */
-            ->addColumn('days', function ($u) use ($year, $month, $daysInMonth) {
+            foreach (range(1, $daysInMonth) as $day) {
+                $date = Carbon::createFromDate($year, $month, $day)->format('Y-m-d');
 
-                $days = [];
+                $attendance = $user->attendances->firstWhere('date', $date);
 
-                foreach (range(1, $daysInMonth) as $day) {
-
-                    $date = Carbon::create($year, $month, $day)->format('Y-m-d');
-
-                    $record = $u->attendances->firstWhere('date', $date);
-
-                    $days[$day] = $record ? $record->status : '';
+                if ($attendance) {
+                    $status = (int) $attendance->status;
+                    $row['day_' . $day] = $status;
+                    $total += $status;
                 }
+            }
 
-                return $days;
-            })
+            $row['total'] = $total;
 
-            /**
-             * HTML rendering للأيام
-             */
-            ->addColumn('days_html', function ($u) use ($year, $month, $daysInMonth) {
+            return $row;
+        });
 
-                $html = '';
-
-                foreach (range(1, $daysInMonth) as $day) {
-
-                    $date = Carbon::create($year, $month, $day)->format('Y-m-d');
-
-                    $record = $u->attendances->firstWhere('date', $date);
-                    $status = $record ? $record->status : '';
-
-                    // لون مثل Excel
-                    $color = '';
-                    if ($status === 1) {
-                        $color = 'background-color:#d4edda'; // أخضر
-                    } elseif ($status === 0) {
-                        $color = 'background-color:#f8d7da'; // أحمر
-                    }
-
-                    $html .= "<td style='{$color}'>{$status}</td>";
-                }
-
-                return $html;
-            })
-
-            ->rawColumns(['days_html'])
-            ->make(true);
+        return DataTables::of($rows)->make(true);
     }
 
     /**
