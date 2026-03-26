@@ -131,44 +131,23 @@ class auditController extends Controller
 
 
                     $status = $row->engineerStatus?->status?->label_en ?? 'Pending';
+                    $statusName = $row->engineerStatus?->status?->name ?? 'Pending';
 
 
-                    $statusName = strtolower($status);
+                 
 
-                    if (str_contains($statusName, 'reject')) {
-                        $color =  'badge-danger';
-                    } elseif (str_contains($statusName, 'accepted')) {
-                        $color = 'badge-success';
-                    } elseif (str_contains($statusName, 'review')) {
-                        $color = 'badge-warning';
-                    } elseif (str_contains($statusName, 'assigned')) {
-                        $color = 'badge-primary';
-                    } else {
-                        $color = 'badge-secondary';
-                    }
+              
 
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return '<span class="badge ' .$this->getStatusBadge($statusName). ' fw-bold px-4 py-3">' . e($status) . '</span>';
                 })
 
                 // Lawyer Status
                 ->addColumn('law_status', function ($row) {
 
                     $status = $row->lawyerStatus?->status?->label_en ?? 'Pending';
-                    $statusName = strtolower($status);
+                    $statusName = $row->engineerStatus?->status?->name ?? 'Pending';
 
-                    if (str_contains($statusName, 'reject')) {
-                        $color =  'badge-danger';
-                    } elseif (str_contains($statusName, 'accepted')) {
-                        $color = 'badge-success';
-                    } elseif (str_contains($statusName, 'review')) {
-                        $color = 'badge-warning';
-                    } elseif (str_contains($statusName, 'assigned')) {
-                        $color = 'badge-primary';
-                    } else {
-                        $color = 'badge-secondary';
-                    }
-
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . $status . '</span>';
                 })
                 ->addColumn('actions', function ($row) {
                     $assessmentUrl = url("/showAssessmentAudit/{$row->globalid}");
@@ -660,18 +639,9 @@ class auditController extends Controller
 
                     $status = $statusModel?->label_en ?? 'Pending';
                     $statusName = strtolower($statusModel?->name ?? 'pending');
+                  
 
-                    if (str_contains($statusName, 'reject')) {
-                        $color = $type === 'eng' ? 'badge-light-danger' : 'badge-danger';
-                    } elseif (str_contains($statusName, 'accept')) {
-                        $color = $type === 'eng' ? 'badge-light-success' : 'badge-light-primary';
-                    } elseif (str_contains($statusName, 'review')) {
-                        $color = 'badge-light-warning';
-                    } else {
-                        $color = 'badge-light-secondary';
-                    }
-
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
                 })
 
                 ->addColumn('actions', function ($row) {
@@ -786,19 +756,9 @@ class auditController extends Controller
                     $status = $statusModel?->label_en ?? 'Pending';
                     $statusName = strtolower($statusModel?->name ?? 'pending');
 
-                    if (str_contains($statusName, 'reject')) {
-                        $color = $type === 'Engineering Auditor' ? 'badge-light-danger' : 'badge-danger';
-                    } elseif (str_contains($statusName, 'accepted')) {
-                        $color = $type === 'Engineering Auditor' ? 'badge-light-success' : 'badge-light-primary';
-                    } elseif (str_contains($statusName, 'review')) {
-                        $color = 'badge-light-warning';
-                    } elseif (str_contains($statusName, 'assigned')) {
-                        $color = 'badge-light-primary';
-                    } else {
-                        $color = 'badge-light-secondary';
-                    }
+                
 
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
                 })
                 ->editColumn('actions', function ($ctr) {
                     // Using route() helpers is cleaner than url()
@@ -955,7 +915,7 @@ class auditController extends Controller
                 $roleName    = $item->user?->roles?->first()?->name ?? '-';
 
                 return [
-                    'status_name' => '<span ' . $this->getStatusBadge($statusName, $roleName) . '>' . e($statusLabel) . '</span>',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
                     'user_name'   => $item->user->name ?? '-',
                     'role_name'   => $roleName,
                     'notes'       => $item->notes ?? '-',
@@ -982,7 +942,7 @@ class auditController extends Controller
                 $roleName    = $item->user?->roles?->first()?->name ?? '-';
 
                 return [
-                    'status_name' => '<span ' . $this->getStatusBadge($statusName, $roleName) . '>' . e($statusLabel) . '</span>',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
                     'user_name'   => $item->user->name ?? '-',
                     'role_name'   => $roleName,
                     'notes'       => $item->notes ?? '-',
@@ -994,15 +954,15 @@ class auditController extends Controller
     private function getStatusBadge($statusName, $role = null)
     {
         return match ($statusName) {
-            'assigned_to_lawyer' => 'class="badge badge-light-primary fw-bold"',
-            'assigned_to_engineer' => 'class="badge badge-light-primary fw-bold"',
+            'assigned_to_lawyer' => 'badge badge-light-primary fw-bold',
+            'assigned_to_engineer' => 'badge badge-light-primary fw-bold',
             'accepted_by_engineer',
-            'accepted'             => 'class="badge badge-light-success fw-bold"',
+            'accepted'             => 'badge badge-light-success fw-bold',
             'rejected_by_engineer',
-            'rejected'             => 'class="badge badge-light-danger fw-bold"',
-            'need_review'          => 'class="badge badge-light-warning fw-bold"',
-            'legal_notes'          => 'class="badge badge-light-primary fw-bold"',
-            default                => 'class="badge badge-light-secondary fw-bold"',
+            'rejected'             => 'badge badge-light-danger fw-bold',
+            'need_review'          => 'badge badge-light-warning fw-bold',
+            'legal_notes'          => 'badge badge-light-primary fw-bold',
+            default                => 'badge badge-light-secondary fw-bold',
         };
     }
 }
