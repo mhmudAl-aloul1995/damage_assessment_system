@@ -5,15 +5,71 @@
 
 <?php $__env->startSection('content'); ?>
 <style>
+    .attendance-sheet-head {
+        display: grid;
+        grid-template-columns: 220px 1fr 320px;
+        align-items: center;
+        gap: 0;
+        border: 1px solid #2b2b2b;
+        border-bottom: 0;
+        background: #fff;
+        direction: rtl;
+    }
+
+    .sheet-title-left,
+    .sheet-title-center,
+    .sheet-title-right {
+        min-height: 86px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        border-left: 1px solid #2b2b2b;
+        padding: 8px 12px;
+        font-weight: 700;
+        color: #000;
+    }
+
+    .sheet-title-right {
+        text-align: right;
+    }
+
+    .sheet-title-center {
+        text-align: center;
+        font-size: 22px;
+    }
+
+    .sheet-title-left {
+        text-align: center;
+        font-size: 16px;
+        line-height: 1.5;
+        border-left: 0;
+    }
+
+    .sheet-main-title {
+        font-size: 24px;
+        font-weight: 800;
+    }
+
+    /* ✅ الحاوية RTL فقط */
     .attendance-rtl-wrapper {
         direction: rtl !important;
         overflow-x: auto;
     }
 
+    /* ✅ الجدول نفسه LTR حتى يطابق DataTables */
+    #attendanceTable,
+    #attendanceTable_wrapper,
+    #attendanceTable_wrapper .dataTables_scroll,
+    #attendanceTable_wrapper .dataTables_scrollHead,
+    #attendanceTable_wrapper .dataTables_scrollBody,
+    #attendanceTable_wrapper table {
+        direction: ltr !important;
+    }
+
     #attendanceTable {
-        direction: rtl !important;
         width: 100% !important;
         border-collapse: collapse !important;
+        margin-top: 0 !important;
     }
 
     #attendanceTable thead th,
@@ -21,32 +77,6 @@
         white-space: nowrap;
         vertical-align: middle !important;
         border: 1px solid #2b2b2b !important;
-    }
-
-    #attendanceTable thead .title-row th {
-        background: #ffffff !important;
-        color: #000 !important;
-        font-weight: 700;
-        font-size: 16px;
-        text-align: center;
-        padding: 6px 8px !important;
-    }
-
-    .team-title {
-        font-size: 20px !important;
-    }
-
-    .sheet-title {
-        font-size: 22px !important;
-        font-weight: 800 !important;
-        text-align: right !important;
-        padding-right: 10px !important;
-    }
-
-    .month-box {
-        font-size: 14px !important;
-        font-weight: 700 !important;
-        line-height: 1.4;
     }
 
     #attendanceTable thead .header-row th {
@@ -61,6 +91,7 @@
         background: #eef0c9;
         padding: 4px 6px !important;
         font-size: 13px;
+        text-align: center;
     }
 
     #attendanceTable tbody tr:nth-child(even) td.base-col {
@@ -80,14 +111,6 @@
         background: #eef0c9 !important;
         text-align: center !important;
         padding: 3px !important;
-    }
-
-    #attendanceTable tbody td.day-col.weekend {
-        background: #dfe6ef !important;
-    }
-
-    #attendanceTable tbody td.day-col.holiday {
-        background: #d9decb !important;
     }
 
     .name-en {
@@ -126,29 +149,12 @@
         border-radius: 4px;
         font-weight: 700;
         line-height: 1.2;
-    }
-
-    .day-badge.present {
-        color: #000;
-        background: transparent;
-    }
-
-    .day-badge.absent {
         color: #000;
         background: transparent;
     }
 
     #attendanceTable tbody tr:hover td {
         background-color: #f7f1b5 !important;
-    }
-
-    .dataTables_wrapper .dataTables_scroll {
-        direction: rtl !important;
-    }
-
-    .dataTables_wrapper .dataTables_scrollHead,
-    .dataTables_wrapper .dataTables_scrollBody {
-        direction: rtl !important;
     }
 
     .dataTables_wrapper .dataTables_paginate,
@@ -158,6 +164,7 @@
         display: none !important;
     }
 </style>
+
 <div class="card card-flush mb-7">
     <div class="card-header align-items-center py-5 gap-2 gap-md-5">
         <div class="card-title">
@@ -192,11 +199,28 @@
     </div>
 
     <div class="card-body">
-        <div class="attendance-rtl-wrapper">
-            <table id="attendanceTable" class="table table-bordered align-middle text-center fs-7 gy-3" style="width:100%">
-                <thead>
-              
 
+        <div class="attendance-sheet-head mb-4">
+            <div class="sheet-title-right">
+                <div class="sheet-main-title">
+                    Attendance Sheet - <span id="sheetMonthYearText">Month Year</span>
+                </div>
+            </div>
+
+            <div class="sheet-title-center">
+                Damage Assessment Team
+            </div>
+
+            <div class="sheet-title-left">
+                <div>Attendance</div>
+                <div id="sheetMonthLabel">Month</div>
+                <div id="sheetYearLabel">Year</div>
+            </div>
+        </div>
+
+        <div class="attendance-rtl-wrapper">
+            <table id="attendanceTable" class="table table-bordered align-middle text-center fs-7" style="width:100%">
+                <thead>
                     <tr class="header-row">
                         <th class="w-50px min-w-50px">No.</th>
                         <th class="w-125px min-w-125px">Contract<br>Start Date</th>
@@ -222,25 +246,14 @@
 </div>
 <?php $__env->stopSection(); ?>
 
-
-
 <?php $__env->startSection('script'); ?>
 <script>
     let table;
 
     const monthNames = {
-        1: 'January',
-        2: 'February',
-        3: 'March',
-        4: 'April',
-        5: 'May',
-        6: 'June',
-        7: 'July',
-        8: 'August',
-        9: 'September',
-        10: 'October',
-        11: 'November',
-        12: 'December'
+        1: 'January', 2: 'February', 3: 'March', 4: 'April',
+        5: 'May', 6: 'June', 7: 'July', 8: 'August',
+        9: 'September', 10: 'October', 11: 'November', 12: 'December'
     };
 
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -256,7 +269,7 @@
         for (let i = 1; i <= 31; i++) {
             let d = new Date(year, month - 1, i);
 
-            if (d.getMonth() + 1 == month) {
+            if ((d.getMonth() + 1) == month) {
                 $('#day_name_' + i).text(dayNames[d.getDay()]);
             } else {
                 $('#day_name_' + i).text('');
@@ -277,9 +290,6 @@
             searching: false,
             ordering: false,
             info: false,
-            language: {
-                processing: 'Loading...'
-            },
             ajax: {
                 url: "<?php echo e(route('attendance.data')); ?>",
                 type: "POST",
@@ -289,20 +299,8 @@
                     d.year = $('#year').val();
                 }
             },
-            createdRow: function(row, data) {
-                $('td', row).eq(0).addClass('base-col');
-                $('td', row).eq(1).addClass('base-col name-en');
-                $('td', row).eq(2).addClass('base-col name-ar');
-                $('td', row).eq(3).addClass('base-col position-col');
-                $('td', row).eq(4).addClass('base-col');
-                $('td', row).eq(5).addClass('base-col');
-                $('td', row).eq(6).addClass('base-col');
-                $('td', row).eq(7).addClass('total-col');
 
-                for (let i = 9; i <= 39; i++) {
-                    $('td', row).eq(i).addClass('day-col');
-                }
-            },
+            /* ✅ لا تقلب الترتيب */
             columns: [
                 { data: 'DT_RowIndex', className: 'text-center' },
                 { data: 'contract_date', className: 'text-center' },
@@ -313,7 +311,7 @@
                 {
                     data: null,
                     className: 'text-center',
-                    render: function() {
+                    render: function () {
                         return 'PDA- PHC';
                     }
                 },
@@ -325,32 +323,45 @@
                     data: 'day_<?php echo e($i); ?>',
                     defaultContent: '',
                     className: 'text-center',
-                    render: function(data, type, row, meta) {
+                    render: function(data) {
                         let month = $('#month').val() || '<?php echo e(now()->month); ?>';
                         let year = $('#year').val() || '<?php echo e(now()->year); ?>';
                         let day = <?php echo e($i); ?>;
                         let d = new Date(year, month - 1, day);
 
-                        if (d.getMonth() + 1 != month) {
+                        if ((d.getMonth() + 1) != month) {
                             return '';
                         }
 
-                        let extraClass = '';
-                        if (d.getDay() === 5) {
-                            extraClass = ' weekend';
-                        }
-
                         if (data === '' || data === null || typeof data === 'undefined') {
-                            return '<span class="day-badge' + extraClass + '"></span>';
+                            return '<span class="day-badge"></span>';
                         }
 
-                        return '<span class="day-badge ' + (data == 1 ? 'present' : 'absent') + extraClass + '">' + data + '</span>';
+                        return '<span class="day-badge">' + data + '</span>';
                     }
                 },
                 <?php endfor; ?>
             ],
+
+            createdRow: function(row, data) {
+                $('td', row).eq(0).addClass('base-col');
+                $('td', row).eq(1).addClass('base-col');
+                $('td', row).eq(2).addClass('base-col name-en');
+                $('td', row).eq(3).addClass('base-col name-ar');
+                $('td', row).eq(4).addClass('base-col position-col');
+                $('td', row).eq(5).addClass('base-col');
+                $('td', row).eq(6).addClass('base-col');
+                $('td', row).eq(7).addClass('base-col');
+                $('td', row).eq(8).addClass('total-col');
+
+                for (let i = 9; i <= 39; i++) {
+                    $('td', row).eq(i).addClass('day-col');
+                }
+            },
+
             drawCallback: function() {
                 updateSheetHeader();
+                table.columns.adjust();
             }
         });
 
@@ -362,6 +373,7 @@
             updateSheetHeader();
 
             table.ajax.reload(function () {
+                table.columns.adjust();
                 btn.removeAttr('data-kt-indicator');
                 btn.prop('disabled', false);
             }, false);
@@ -369,7 +381,9 @@
 
         $('#month, #year').on('change', function () {
             updateSheetHeader();
-            table.ajax.reload(null, false);
+            table.ajax.reload(function () {
+                table.columns.adjust();
+            }, false);
         });
     });
 </script>

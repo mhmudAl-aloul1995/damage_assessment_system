@@ -50,13 +50,24 @@
         font-weight: 800;
     }
 
+    /* الحاوية الخارجية RTL */
     .attendance-rtl-wrapper {
         direction: rtl !important;
         overflow-x: auto;
     }
 
+    /* لكن الجدول نفسه و DataTables داخله LTR */
+    #attendanceTable_wrapper,
+    #attendanceTable_wrapper .dataTables_scroll,
+    #attendanceTable_wrapper .dataTables_scrollHead,
+    #attendanceTable_wrapper .dataTables_scrollHeadInner,
+    #attendanceTable_wrapper .dataTables_scrollBody,
+    #attendanceTable_wrapper table,
     #attendanceTable {
-        direction: rtl !important;
+        direction: ltr !important;
+    }
+
+    #attendanceTable {
         width: 100% !important;
         border-collapse: collapse !important;
         margin-top: 0 !important;
@@ -81,6 +92,7 @@
         background: #eef0c9;
         padding: 4px 6px !important;
         font-size: 13px;
+        text-align: center;
     }
 
     #attendanceTable tbody tr:nth-child(even) td.base-col {
@@ -152,7 +164,55 @@
     .dataTables_wrapper .dataTables_length {
         display: none !important;
     }
+
+    /* تحسين عرض الجدول */
+    #attendanceTable th.w-50px,
+    #attendanceTable td.w-50px {
+        min-width: 50px !important;
+    }
+
+    #attendanceTable th.w-100px,
+    #attendanceTable td.w-100px {
+        min-width: 100px !important;
+    }
+
+    #attendanceTable th.w-110px,
+    #attendanceTable td.w-110px {
+        min-width: 110px !important;
+    }
+
+    #attendanceTable th.w-125px,
+    #attendanceTable td.w-125px {
+        min-width: 125px !important;
+    }
+
+    #attendanceTable th.w-150px,
+    #attendanceTable td.w-150px {
+        min-width: 150px !important;
+    }
+
+    #attendanceTable th.w-200px,
+    #attendanceTable td.w-200px {
+        min-width: 200px !important;
+    }
+
+    /* عرض الأيام */
+    .day-col,
+    .day-head {
+        min-width: 45px !important;
+        width: 45px !important;
+        max-width: 45px !important;
+    }
+
+    /*
+      إذا تريد بصريًا الأعمدة الأساسية تكون جهة اليمين عند فتح الجدول
+      نخلي السكرول يبدأ من أقصى اليمين بعد التحميل
+    */
+    .attendance-rtl-wrapper .dataTables_scrollBody {
+        overflow-x: auto !important;
+    }
 </style>
+
 <div class="card card-flush mb-7">
     <div class="card-header align-items-center py-5 gap-2 gap-md-5">
         <div class="card-title">
@@ -188,7 +248,6 @@
 
     <div class="card-body">
 
-        {{-- عنوان مثل Excel لكن خارج الجدول --}}
         <div class="attendance-sheet-head mb-4">
             <div class="sheet-title-right">
                 <div class="sheet-main-title">
@@ -231,20 +290,28 @@
                 </thead>
             </table>
         </div>
+
     </div>
 </div>
 @endsection
-
-
 
 @section('script')
 <script>
     let table;
 
     const monthNames = {
-        1: 'January', 2: 'February', 3: 'March', 4: 'April',
-        5: 'May', 6: 'June', 7: 'July', 8: 'August',
-        9: 'September', 10: 'October', 11: 'November', 12: 'December'
+        1: 'January',
+        2: 'February',
+        3: 'March',
+        4: 'April',
+        5: 'May',
+        6: 'June',
+        7: 'July',
+        8: 'August',
+        9: 'September',
+        10: 'October',
+        11: 'November',
+        12: 'December'
     };
 
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -265,6 +332,13 @@
             } else {
                 $('#day_name_' + i).text('');
             }
+        }
+    }
+
+    function moveScrollToRight() {
+        let body = $('#attendanceTable_wrapper .dataTables_scrollBody');
+        if (body.length) {
+            body.scrollLeft(body[0].scrollWidth);
         }
     }
 
@@ -290,37 +364,22 @@
                     d.year = $('#year').val();
                 }
             },
-            createdRow: function(row, data) {
-                $('td', row).eq(0).addClass('base-col');
-                $('td', row).eq(1).addClass('base-col');
-                $('td', row).eq(2).addClass('base-col name-en');
-                $('td', row).eq(3).addClass('base-col name-ar');
-                $('td', row).eq(4).addClass('base-col position-col');
-                $('td', row).eq(5).addClass('base-col');
-                $('td', row).eq(6).addClass('base-col');
-                $('td', row).eq(7).addClass('base-col');
-                $('td', row).eq(8).addClass('total-col');
-
-                for (let i = 9; i <= 39; i++) {
-                    $('td', row).eq(i).addClass('day-col');
-                }
-            },
             columns: [
-                { data: 'DT_RowIndex', className: 'text-center' },
-                { data: 'contract_date', className: 'text-center' },
-                { data: 'name_en', className: 'text-start' },
-                { data: 'name_ar', className: 'text-end' },
-                { data: 'position', className: 'text-start' },
-                { data: 'id_no', className: 'text-center' },
+                { data: 'DT_RowIndex', className: 'text-center w-50px' },
+                { data: 'contract_date', className: 'text-center w-125px' },
+                { data: 'name_en', className: 'text-start w-200px' },
+                { data: 'name_ar', className: 'text-end w-200px' },
+                { data: 'position', className: 'text-start w-150px' },
+                { data: 'id_no', className: 'text-center w-125px' },
                 {
                     data: null,
-                    className: 'text-center',
+                    className: 'text-center w-100px',
                     render: function () {
                         return 'PDA- PHC';
                     }
                 },
-                { data: 'contact', className: 'text-center' },
-                { data: 'total', className: 'text-center' },
+                { data: 'contact', className: 'text-center w-125px' },
+                { data: 'total', className: 'text-center w-110px' },
 
                 @for($i = 1; $i <= 31; $i++)
                 {
@@ -346,8 +405,33 @@
                 },
                 @endfor
             ],
+            createdRow: function(row, data) {
+                $('td', row).eq(0).addClass('base-col');
+                $('td', row).eq(1).addClass('base-col');
+                $('td', row).eq(2).addClass('base-col name-en');
+                $('td', row).eq(3).addClass('base-col name-ar');
+                $('td', row).eq(4).addClass('base-col position-col');
+                $('td', row).eq(5).addClass('base-col');
+                $('td', row).eq(6).addClass('base-col');
+                $('td', row).eq(7).addClass('base-col');
+                $('td', row).eq(8).addClass('total-col');
+
+                for (let i = 9; i <= 39; i++) {
+                    $('td', row).eq(i).addClass('day-col');
+                }
+            },
             drawCallback: function() {
                 updateSheetHeader();
+                table.columns.adjust();
+                setTimeout(function () {
+                    moveScrollToRight();
+                }, 50);
+            },
+            initComplete: function() {
+                table.columns.adjust();
+                setTimeout(function () {
+                    moveScrollToRight();
+                }, 100);
             }
         });
 
@@ -359,6 +443,8 @@
             updateSheetHeader();
 
             table.ajax.reload(function () {
+                table.columns.adjust();
+                moveScrollToRight();
                 btn.removeAttr('data-kt-indicator');
                 btn.prop('disabled', false);
             }, false);
@@ -366,7 +452,17 @@
 
         $('#month, #year').on('change', function () {
             updateSheetHeader();
-            table.ajax.reload(null, false);
+            table.ajax.reload(function () {
+                table.columns.adjust();
+                moveScrollToRight();
+            }, false);
+        });
+
+        $(window).on('resize', function () {
+            if (table) {
+                table.columns.adjust();
+                moveScrollToRight();
+            }
         });
     });
 </script>
