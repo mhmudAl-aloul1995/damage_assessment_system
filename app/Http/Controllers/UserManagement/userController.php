@@ -128,7 +128,7 @@ class userController extends Controller
             // Stores in storage/app/public/avatars
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
-        $randomPassword = Str::password(6);
+        $randomPassword = Str::password(6, false, true, false, false);
         $hashedPassword = Hash::make($randomPassword);
         DB::transaction(function () use ($request,$hashedPassword, $avatarPath, &$user) {
 
