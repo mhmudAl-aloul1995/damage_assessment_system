@@ -111,7 +111,7 @@ class auditController extends Controller
                 // Lawyer Name
                 ->addColumn('lawyer', function ($row) {
                     return $row->assignedUsers
-                        ->where('type', 'Engineering Legal')
+                        ->where('type', 'Legal Auditor')
                         ->first()?->user?->name ?? '-';
                 })
                 // finalApproval 
