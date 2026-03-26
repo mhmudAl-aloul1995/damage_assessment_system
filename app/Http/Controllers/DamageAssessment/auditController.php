@@ -994,6 +994,7 @@ public function buildingHistory(Request $request)
     private function getStatusBadge($statusName, $role = null)
 {
     return match ($statusName) {
+        'assigned_to_lawyer' => 'class="badge badge-light-primary fw-bold"',
         'assigned_to_engineer' => 'class="badge badge-light-primary fw-bold"',
         'accepted_by_engineer',
         'accepted'             => 'class="badge badge-light-success fw-bold"',
