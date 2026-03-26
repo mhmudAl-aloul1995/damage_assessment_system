@@ -2,7 +2,7 @@
 <?php $__env->startSection('pageName', 'الإستبيان'); ?>
 
 <?php
-    $buildingCurrentStatus = $buildingCurrentStatus ?? null;
+$buildingCurrentStatus = $buildingCurrentStatus ?? null;
 ?>
 
 <?php $__env->startSection('content'); ?>
@@ -97,6 +97,26 @@
 
                                 <div class="card-toolbar">
                                     <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap" data-kt-Building-table-toolbar="base">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
+
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-light-success building-status-btn"
+                                            data-status="accepted"
+                                            onclick="setBuildingStatus('accepted')">
+                                            مقبول
+                                        </button>
+ <button
+                                            type="button"
+                                            class="btn btn-sm btn-light-warning building-status-btn"
+                                            data-status="legal_notes"
+                                            onclick="setBuildingStatus('legal_notes')">
+                                             ملاحظات قانونية
+                                        </button>
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                                        <?php if (! \Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
+
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-danger building-status-btn"
@@ -120,6 +140,8 @@
                                             onclick="setBuildingStatus('need_review')">
                                             بحاجة لمراجعة
                                         </button>
+
+                                        <?php endif; ?>
 
                                         <button
                                             type="button"
@@ -246,48 +268,51 @@
                                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                                     </select>
                                 </div>
+<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-danger housing-status-btn"
-                                    data-status="rejected"
-                                    onclick="setHousingStatus('rejected')">
-                                    مرفوض
-                                </button>
+    <button
+        type="button"
+        class="btn btn-sm btn-light-success housing-status-btn"
+        data-status="accepted"
+        onclick="setHousingStatus('accepted')">
+        مقبول
+    </button>
+ <button
+        type="button"
+        class="btn btn-sm btn-light-warning housing-status-btn"
+        data-status="legal_notes"
+        onclick="setHousingStatus('legal_notes')">
+        بحاجة لمراجعة
+    </button>
+<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-success housing-status-btn"
-                                    data-status="accepted"
-                                    onclick="setHousingStatus('accepted')">
-                                    مقبول
-                                </button>
+<?php if (! \Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-warning housing-status-btn"
-                                    data-status="need_review"
-                                    onclick="setHousingStatus('need_review')">
-                                    بحاجة لمراجعة
-                                </button>
+    <button
+        type="button"
+        class="btn btn-sm btn-light-danger housing-status-btn"
+        data-status="rejected"
+        onclick="setHousingStatus('rejected')">
+        مرفوض
+    </button>
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-dark"
-                                    onclick="openNotesModal('housing')">
-                                    ملاحظات
-                                </button>
+    <button
+        type="button"
+        class="btn btn-sm btn-light-success housing-status-btn"
+        data-status="accepted"
+        onclick="setHousingStatus('accepted')">
+        مقبول
+    </button>
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-primary me-3"
-                                    onclick="reloadHousingAssessmentTable()">
-                                    <i class="ki-duotone ki-arrows-circle fs-2">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    تحديث
-                                </button>
+    <button
+        type="button"
+        class="btn btn-sm btn-light-warning housing-status-btn"
+        data-status="need_review"
+        onclick="setHousingStatus('need_review')">
+        بحاجة لمراجعة
+    </button>
+
+<?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -355,8 +380,8 @@
 
 <?php $__env->startSection('script'); ?>
 <script>
-    let notesContext = null;   // building | housing
-    let pendingStatus = null;  // accepted | rejected | need_review | null
+    let notesContext = null; // building | housing
+    let pendingStatus = null; // accepted | rejected | need_review | null
 
     function initInlineEditors() {
         $('.inline-edit-select').each(function() {
@@ -920,7 +945,7 @@
 
             $('[name="globalid"]').val(data.globalid).trigger('change');
 
-            
+
             if (data.current_status) {
                 setActiveStatusButton('.housing-status-btn', normalizeStatus(data.current_status));
             }

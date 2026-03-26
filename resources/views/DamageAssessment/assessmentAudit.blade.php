@@ -98,6 +98,26 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
                                 <div class="card-toolbar">
                                     <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap" data-kt-Building-table-toolbar="base">
+                                        @role('Legal Auditor')
+
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-light-success building-status-btn"
+                                            data-status="accepted"
+                                            onclick="setBuildingStatus('accepted')">
+                                            مقبول
+                                        </button>
+ <button
+                                            type="button"
+                                            class="btn btn-sm btn-light-warning building-status-btn"
+                                            data-status="legal_notes"
+                                            onclick="setBuildingStatus('legal_notes')">
+                                             ملاحظات قانونية
+                                        </button>
+                                        @endrole
+
+                                        @unlessrole('Legal Auditor')
+
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-danger building-status-btn"
@@ -121,6 +141,8 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                             onclick="setBuildingStatus('need_review')">
                                             بحاجة لمراجعة
                                         </button>
+
+                                        @endunlessrole
 
                                         <button
                                             type="button"
@@ -246,51 +268,51 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                         @endforeach
                                     </select>
                                 </div>
+@role('Legal Auditor')
 
-                                @if($roleName === 'Legal Auditor')
-
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-success housing-status-btn"
-                                    data-status="accepted"
-                                    onclick="setHousingStatus('accepted')">
-                                    مقبول
-                                </button>
     <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-warning housing-status-btn"
-                                    data-status="legal_notes"
-                                    onclick="setHousingStatus('legal_notes')">
-                                     ملاحظة قانونية
-                                </button>
+        type="button"
+        class="btn btn-sm btn-light-success housing-status-btn"
+        data-status="accepted"
+        onclick="setHousingStatus('accepted')">
+        مقبول
+    </button>
+ <button
+        type="button"
+        class="btn btn-sm btn-light-warning housing-status-btn"
+        data-status="legal_notes"
+        onclick="setHousingStatus('legal_notes')">
+        بحاجة لمراجعة
+    </button>
+@endrole
 
-                                @else
+@unlessrole('Legal Auditor')
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-danger housing-status-btn"
-                                    data-status="rejected"
-                                    onclick="setHousingStatus('rejected')">
-                                    مرفوض
-                                </button>
+    <button
+        type="button"
+        class="btn btn-sm btn-light-danger housing-status-btn"
+        data-status="rejected"
+        onclick="setHousingStatus('rejected')">
+        مرفوض
+    </button>
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-success housing-status-btn"
-                                    data-status="accepted"
-                                    onclick="setHousingStatus('accepted')">
-                                    مقبول
-                                </button>
+    <button
+        type="button"
+        class="btn btn-sm btn-light-success housing-status-btn"
+        data-status="accepted"
+        onclick="setHousingStatus('accepted')">
+        مقبول
+    </button>
 
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-warning housing-status-btn"
-                                    data-status="need_review"
-                                    onclick="setHousingStatus('need_review')">
-                                    بحاجة لمراجعة
-                                </button>
+    <button
+        type="button"
+        class="btn btn-sm btn-light-warning housing-status-btn"
+        data-status="need_review"
+        onclick="setHousingStatus('need_review')">
+        بحاجة لمراجعة
+    </button>
 
-                                @endif
+@endunlessrole
                             </div>
                         </div>
                     </div>
