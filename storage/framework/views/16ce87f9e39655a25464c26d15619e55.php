@@ -1,12 +1,11 @@
-@extends('layouts.app')
-@section('title', 'الإستبيان')
-@section('pageName', 'الإستبيان')
+<?php $__env->startSection('title', 'الإستبيان'); ?>
+<?php $__env->startSection('pageName', 'الإستبيان'); ?>
 
-@php
-$buildingCurrentStatus = $buildingCurrentStatus ?? null;
-@endphp
+<?php
+    $buildingCurrentStatus = $buildingCurrentStatus ?? null;
+?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <style>
     .building-status-btn,
     .housing-status-btn {
@@ -76,7 +75,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
         <div class="tab-content">
 
-            {{-- تبويب المبنى --}}
+            
             <div class="tab-pane fade show active" id="tab_building" role="tabpanel">
                 <div class="row">
                     <div class="col-md-12">
@@ -163,10 +162,10 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                 </div>
             </div>
 
-            {{-- تبويب الوحدة السكنية --}}
+            
             <div class="tab-pane fade" id="tab_housing" role="tabpanel">
 
-                {{-- جدول الوحدات --}}
+                
                 <div class="card card-flush mb-7 shadow-sm border-0">
                     <div class="card-header pt-6 pb-4 border-0">
                         <div class="card-title">
@@ -210,7 +209,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                     </div>
                 </div>
 
-                {{-- جدول تقييم الوحدة --}}
+                
                 <div class="card card-flush shadow-sm border-0">
                     <div class="card-header border-0 pt-6 pb-4">
                         <div class="card-title">
@@ -239,32 +238,14 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                         data-dropdown-css-class="w-250px"
                                         data-placeholder="إختر الوحدة">
                                         <option value=""></option>
-                                        @foreach ($HousingUnit as $value)
-                                        <option value="{{ $value->globalid }}">
-                                            {{ $value->objectid . '--' . $value->full_name }}
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $HousingUnit; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                        <option value="<?php echo e($value->globalid); ?>">
+                                            <?php echo e($value->objectid . '--' . $value->full_name); ?>
+
                                         </option>
-                                        @endforeach
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                                     </select>
                                 </div>
-
-                                @if($roleName === 'Legal Auditor')
-
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-success housing-status-btn"
-                                    data-status="accepted"
-                                    onclick="setHousingStatus('accepted')">
-                                    مقبول
-                                </button>
-    <button
-                                    type="button"
-                                    class="btn btn-sm btn-light-warning housing-status-btn"
-                                    data-status="legal_notes"
-                                    onclick="setHousingStatus('legal_notes')">
-                                     ملاحظة قانونية
-                                </button>
-
-                                @else
 
                                 <button
                                     type="button"
@@ -290,7 +271,23 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                     بحاجة لمراجعة
                                 </button>
 
-                                @endif
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-light-dark"
+                                    onclick="openNotesModal('housing')">
+                                    ملاحظات
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-light-primary me-3"
+                                    onclick="reloadHousingAssessmentTable()">
+                                    <i class="ki-duotone ki-arrows-circle fs-2">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    تحديث
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -318,7 +315,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     </div>
 </div>
 
-{{-- Modal الملاحظات --}}
+
 <div class="modal fade" id="notesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered mw-500px">
         <div class="modal-content">
@@ -354,12 +351,12 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     </div>
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('script')
+<?php $__env->startSection('script'); ?>
 <script>
-    let notesContext = null; // building | housing
-    let pendingStatus = null; // accepted | rejected | need_review | null
+    let notesContext = null;   // building | housing
+    let pendingStatus = null;  // accepted | rejected | need_review | null
 
     function initInlineEditors() {
         $('.inline-edit-select').each(function() {
@@ -420,10 +417,10 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
     function saveInlineValue(field, globalid, type, value, callback = null) {
         $.ajax({
-            url: "{{ route('assessment.inline.update') }}",
+            url: "<?php echo e(route('assessment.inline.update')); ?>",
             method: "POST",
             data: {
-                _token: "{{ csrf_token() }}",
+                _token: "<?php echo e(csrf_token()); ?>",
                 field: field,
                 globalid: globalid,
                 type: type,
@@ -465,7 +462,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     }
 
     function setBuildingStatus(status) {
-        let globalid = '{{ $globalid }}';
+        let globalid = '<?php echo e($globalid); ?>';
 
         if (!globalid) {
             toastr.warning('لا يوجد مبنى محدد');
@@ -500,7 +497,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
         }
 
         if (notesContext === 'building') {
-            let globalid = '{{ $globalid }}';
+            let globalid = '<?php echo e($globalid); ?>';
 
             if (!globalid) {
                 toastr.warning('لا يوجد مبنى محدد');
@@ -508,10 +505,10 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             }
 
             $.ajax({
-                url: "{{ route('building.assessment.set.status') }}",
+                url: "<?php echo e(route('building.assessment.set.status')); ?>",
                 method: "POST",
                 data: {
-                    _token: "{{ csrf_token() }}",
+                    _token: "<?php echo e(csrf_token()); ?>",
                     globalid: globalid,
                     status: pendingStatus,
                     notes: notes
@@ -550,10 +547,10 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             }
 
             $.ajax({
-                url: "{{ route('housing.assessment.set.status') }}",
+                url: "<?php echo e(route('housing.assessment.set.status')); ?>",
                 method: "POST",
                 data: {
-                    _token: "{{ csrf_token() }}",
+                    _token: "<?php echo e(csrf_token()); ?>",
                     globalid: globalid,
                     status: pendingStatus,
                     notes: notes
@@ -643,9 +640,9 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             datatable = $(table).DataTable({
                 serverSide: true,
                 ajax: {
-                    url: "{{ url('showBuildings') }}",
+                    url: "<?php echo e(url('showBuildings')); ?>",
                     data: function(d) {
-                        d.globalid = '{{ $globalid }}';
+                        d.globalid = '<?php echo e($globalid); ?>';
                     },
                 },
                 info: false,
@@ -729,9 +726,9 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                 order: [],
                 pageLength: 25,
                 ajax: {
-                    url: "{{ route('housing.units.by.building') }}",
+                    url: "<?php echo e(route('housing.units.by.building')); ?>",
                     data: function(d) {
-                        d.globalid = '{{ $globalid }}';
+                        d.globalid = '<?php echo e($globalid); ?>';
                     }
                 },
                 columns: [{
@@ -808,9 +805,9 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             datatable = $(table).DataTable({
                 serverSide: true,
                 ajax: {
-                    url: "{{ url('showHousings') }}",
+                    url: "<?php echo e(url('showHousings')); ?>",
                     data: function(d) {
-                        d.parentglobalid = '{{ $globalid }}';
+                        d.parentglobalid = '<?php echo e($globalid); ?>';
                         d.globalid = $("[name='globalid']").val();
                     },
                 },
@@ -897,7 +894,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
         setActiveStatusButton(
             '.building-status-btn',
-            normalizeStatus(@json($buildingCurrentStatus))
+            normalizeStatus(<?php echo json_encode($buildingCurrentStatus, 15, 512) ?>)
         );
 
         $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function() {
@@ -923,7 +920,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
             $('[name="globalid"]').val(data.globalid).trigger('change');
 
-
+            
             if (data.current_status) {
                 setActiveStatusButton('.housing-status-btn', normalizeStatus(data.current_status));
             }
@@ -932,4 +929,5 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
         });
     });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/assessmentAudit.blade.php ENDPATH**/ ?>

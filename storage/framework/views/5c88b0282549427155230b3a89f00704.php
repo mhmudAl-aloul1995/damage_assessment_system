@@ -1209,7 +1209,7 @@
                 haloSize: "1px",
                 font: {
                     family: "Ubuntu Mono",
-                    size: 10,
+                    size: 12,
                     weight: "bold"
                 }
             },
@@ -1382,7 +1382,6 @@ view.popup.visibleElements = {
         selectedFeature = feature;
         selectedObjectId = getObjectId(feature);
 
-        // هذا هو البديل الحقيقي عن highlight()
         drawPersistentSelection(feature);
         openFeaturePopup(feature);
 
