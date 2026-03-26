@@ -937,32 +937,32 @@ class auditController extends Controller
             ->make(true);
     }
 
-public function buildingHistory(Request $request)
-{
-    $building = Building::where('globalid', $request->globalid)->first();
+    public function buildingHistory(Request $request)
+    {
+        $building = Building::where('globalid', $request->globalid)->first();
 
-    if (!$building) {
-        return [];
+        if (!$building) {
+            return [];
+        }
+
+        return BuildingStatusHistory::with(['user.roles', 'status'])
+            ->where('building_id', $building->objectid)
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                $statusName  = $item->status->name ?? '-';
+                $statusLabel = $item->status->label_en ?? $statusName;
+                $roleName    = $item->user?->roles?->first()?->name ?? '-';
+
+                return [
+                    'status_name' => '<span ' . $this->getStatusBadge($statusName, $roleName) . '>' . e($statusLabel) . '</span>',
+                    'user_name'   => $item->user->name ?? '-',
+                    'role_name'   => $roleName,
+                    'notes'       => $item->notes ?? '-',
+                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                ];
+            });
     }
-
-    return BuildingStatusHistory::with(['user.roles', 'status'])
-        ->where('building_id', $building->objectid)
-        ->latest()
-        ->get()
-        ->map(function ($item) {
-            $statusName  = $item->status->name ?? '-';
-            $statusLabel = $item->status->label_en ?? $statusName;
-            $roleName    = $item->user?->roles?->first()?->name ?? '-';
-
-            return [
-                'status_name' => '<span ' . $this->getStatusBadge($statusName, $roleName) . '>' . e($statusLabel) . '</span>',
-                'user_name'   => $item->user->name ?? '-',
-                'role_name'   => $roleName,
-                'notes'       => $item->notes ?? '-',
-                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-            ];
-        });
-}
 
     public function housingHistory(Request $request)
     {
@@ -992,17 +992,17 @@ public function buildingHistory(Request $request)
     }
 
     private function getStatusBadge($statusName, $role = null)
-{
-    return match ($statusName) {
-        'assigned_to_lawyer' => 'class="badge badge-light-primary fw-bold"',
-        'assigned_to_engineer' => 'class="badge badge-light-primary fw-bold"',
-        'accepted_by_engineer',
-        'accepted'             => 'class="badge badge-light-success fw-bold"',
-        'rejected_by_engineer',
-        'rejected'             => 'class="badge badge-light-danger fw-bold"',
-        'need_review'          => 'class="badge badge-light-warning fw-bold"',
-        'legal_notes'          => 'class="badge badge-light-primary fw-bold"',
-        default                => 'class="badge badge-light-secondary fw-bold"',
-    };
-}
+    {
+        return match ($statusName) {
+            'assigned_to_lawyer' => 'class="badge badge-light-primary fw-bold"',
+            'assigned_to_engineer' => 'class="badge badge-light-primary fw-bold"',
+            'accepted_by_engineer',
+            'accepted'             => 'class="badge badge-light-success fw-bold"',
+            'rejected_by_engineer',
+            'rejected'             => 'class="badge badge-light-danger fw-bold"',
+            'need_review'          => 'class="badge badge-light-warning fw-bold"',
+            'legal_notes'          => 'class="badge badge-light-primary fw-bold"',
+            default                => 'class="badge badge-light-secondary fw-bold"',
+        };
+    }
 }

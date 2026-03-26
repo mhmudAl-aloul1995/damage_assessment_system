@@ -99,7 +99,6 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                 <div class="card-toolbar">
                                     <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap" data-kt-Building-table-toolbar="base">
                                         @role('Legal Auditor')
-
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-success building-status-btn"
@@ -140,13 +139,12 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                             onclick="setBuildingStatus('need_review')">
                                             بحاجة لمراجعة
                                         </button>
-
                                         @endrole
 
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-dark"
-                                            onclick="openNotesModal('building')">
+                                            onclick="openNotesModal('building', 'history')">
                                             ملاحظات
                                         </button>
 
@@ -166,10 +164,10 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
                             <div class="card-body pt-0 pb-4">
                                 <div class="table-responsive">
-                                    <table class="table align-middle table-row-bordered fs-4 table-rounded gs-7 gy-4"
+                                    <table class="table align-middle table-row-bordered fs-6 table-rounded gs-7 gy-4"
                                         id="kt_table_building_assessment">
                                         <thead>
-                                            <tr class="fw-bold  text-gray-800 border-bottom border-gray-300">
+                                            <tr class="fw-bold text-gray-800 border-bottom border-gray-300">
                                                 <th class="px-6 py-4 min-w-300px">السؤال</th>
                                                 <th class="text-center px-6 py-4 min-w-250px">الجواب</th>
                                                 <th class="text-center px-6 py-4 min-w-300px">تعديل الإجابة</th>
@@ -267,8 +265,8 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                         @endforeach
                                     </select>
                                 </div>
-                                @role('Legal Auditor')
 
+                                @role('Legal Auditor')
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-light-success housing-status-btn"
@@ -286,7 +284,6 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                 @endrole
 
                                 @role('Engineering Auditor')
-
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-light-danger housing-status-btn"
@@ -310,12 +307,12 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                     onclick="setHousingStatus('need_review')">
                                     بحاجة لمراجعة
                                 </button>
-
                                 @endrole
+
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-light-dark"
-                                    onclick="openNotesModal('housing')">
+                                    onclick="openNotesModal('housing', 'history')">
                                     ملاحظات
                                 </button>
                             </div>
@@ -327,7 +324,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                             <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                 id="kt_table_housing_assessment">
                                 <thead>
-                                    <tr class="fw-bold fs-4 text-gray-800 border-bottom border-gray-300">
+                                    <tr class="fw-bold fs-6 text-gray-800 border-bottom border-gray-300">
                                         <th class="px-6 py-4 min-w-300px">السؤال</th>
                                         <th class="text-center px-6 py-4 min-w-250px">الجواب</th>
                                         <th class="text-center px-6 py-4 min-w-300px">تعديل الإجابة</th>
@@ -345,13 +342,13 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     </div>
 </div>
 
-{{-- Modal الملاحظات --}}
+{{-- Modal الملاحظات / سجل الحالات --}}
 <div class="modal fade" id="notesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered mw-800px">
         <div class="modal-content">
 
             <div class="modal-header">
-                <h3 class="fw-bold" id="notesModalTitle">الملاحظات وسجل الحالات</h3>
+                <h3 class="fw-bold" id="notesModalTitle">الملاحظات</h3>
 
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
                     ✖
@@ -360,8 +357,8 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
             <div class="modal-body">
 
-                {{-- جدول history --}}
-                <div class="mb-5">
+                {{-- سجل الحالات --}}
+                <div class="mb-5" id="historyWrapper">
                     <h5 class="fw-bold mb-3">سجل الحالات</h5>
 
                     <div class="table-responsive">
@@ -386,11 +383,13 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                 </div>
 
                 {{-- إدخال ملاحظة --}}
-                <textarea
-                    id="notesInput"
-                    class="form-control form-control-solid"
-                    rows="4"
-                    placeholder="اكتب الملاحظة هنا..."></textarea>
+                <div id="notesInputWrapper" style="display:none;">
+                    <textarea
+                        id="notesInput"
+                        class="form-control form-control-solid"
+                        rows="5"
+                        placeholder="اكتب الملاحظة هنا..."></textarea>
+                </div>
 
             </div>
 
@@ -399,7 +398,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                     إلغاء
                 </button>
 
-                <button type="button" class="btn btn-primary" onclick="submitStatusWithNotes()">
+                <button type="button" class="btn btn-primary" id="notesSaveBtn" style="display:none;" onclick="submitStatusWithNotes()">
                     حفظ
                 </button>
             </div>
@@ -430,9 +429,12 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     function normalizeStatus(statusName) {
         if (!statusName) return null;
 
+        statusName = String(statusName).toLowerCase();
+
         if (statusName.includes('accepted')) return 'accepted';
         if (statusName.includes('rejected')) return 'rejected';
-        if (statusName === 'need_review') return 'need_review';
+        if (statusName.includes('need_review')) return 'need_review';
+        if (statusName.includes('legal_notes')) return 'legal_notes';
 
         return null;
     }
@@ -451,15 +453,49 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             .prop('disabled', true);
     }
 
-    function openNotesModal(type, status = null) {
+    function openNotesModal(type, mode = 'history', status = null) {
         notesContext = type;
         pendingStatus = status;
 
         $('#notesInput').val('');
 
-        $('#notesModalTitle').text(
-            type === 'building' ? 'إضافة ملاحظة للمبنى' : 'إضافة ملاحظة للوحدة'
-        );
+        let globalid = null;
+
+        if (type === 'building') {
+            globalid = '{{ $globalid }}';
+
+            if (!globalid) {
+                toastr.warning('لا يوجد مبنى محدد');
+                return;
+            }
+        } else {
+            globalid = $("[name='globalid']").val();
+
+            if (!globalid) {
+                toastr.warning('يرجى اختيار الوحدة أولاً');
+                return;
+            }
+        }
+
+        if (mode === 'history') {
+            $('#notesModalTitle').text(
+                type === 'building' ? 'سجل حالات المبنى' : 'سجل حالات الوحدة'
+            );
+
+            $('#historyWrapper').show();
+            $('#notesInputWrapper').hide();
+            $('#notesSaveBtn').hide();
+
+            loadStatusHistory(type, globalid);
+        } else {
+            $('#notesModalTitle').text(
+                type === 'building' ? 'إضافة ملاحظة للمبنى' : 'إضافة ملاحظة للوحدة'
+            );
+
+            $('#historyWrapper').hide();
+            $('#notesInputWrapper').show();
+            $('#notesSaveBtn').show();
+        }
 
         const modalEl = document.getElementById('notesModal');
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -470,6 +506,47 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
         const modalEl = document.getElementById('notesModal');
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.hide();
+    }
+
+    function loadStatusHistory(type, globalid) {
+        $('#statusHistoryTable').html(`
+            <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
+        `);
+
+        $.ajax({
+            url: type === 'building'
+                ? "{{ route('building.status.history') }}"
+                : "{{ route('housing.status.history') }}",
+            method: "GET",
+            data: {
+                globalid: globalid
+            },
+            success: function(response) {
+                let rows = '';
+
+                if (!response.length) {
+                    rows = `<tr><td colspan="4" class="text-center text-muted">لا يوجد سجل</td></tr>`;
+                } else {
+                    response.forEach(item => {
+                        rows += `
+                            <tr>
+                                <td>${item.status_name}</td>
+                                <td>${item.user_name}</td>
+                                <td>${item.notes ?? '-'}</td>
+                                <td>${item.created_at}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                $('#statusHistoryTable').html(rows);
+            },
+            error: function() {
+                $('#statusHistoryTable').html(`
+                    <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
+                `);
+            }
+        });
     }
 
     function saveInlineValue(field, globalid, type, value, callback = null) {
@@ -526,7 +603,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             return;
         }
 
-        openNotesModal('building', status);
+        openNotesModal('building', 'note', status);
     }
 
     function setHousingStatus(status) {
@@ -537,7 +614,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             return;
         }
 
-        openNotesModal('housing', status);
+        openNotesModal('housing', 'note', status);
     }
 
     function submitStatusWithNotes() {
@@ -966,7 +1043,6 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
         $('#housing_table tbody').on('click', 'tr', function() {
             let table = $('#housing_table').DataTable();
             let data = table.row(this).data();
-            console.log(data)
 
             if (!data) return;
 
@@ -977,7 +1053,6 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
             $('[name="globalid"]').val(data.globalid).trigger('change');
 
-
             if (data.current_status) {
                 setActiveStatusButton('.housing-status-btn', normalizeStatus(data.current_status));
             }
@@ -985,74 +1060,5 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             reloadHousingAssessmentTable();
         });
     });
-
-
-    function openNotesModal(type, status = null) {
-        notesContext = type;
-        pendingStatus = status;
-
-        $('#notesInput').val('');
-
-        let globalid = null;
-
-        if (type === 'building') {
-            globalid = '{{ $globalid }}';
-        } else {
-            globalid = $("[name='globalid']").val();
-        }
-
-        loadStatusHistory(type, globalid);
-
-        $('#notesModalTitle').text(
-            type === 'building' ? 'المبنى - الملاحظات وسجل الحالات' : 'الوحدة - الملاحظات وسجل الحالات'
-        );
-
-        const modal = new bootstrap.Modal(document.getElementById('notesModal'));
-        modal.show();
-    }
-
-    function loadStatusHistory(type, globalid) {
-        $('#statusHistoryTable').html(`
-        <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
-    `);
-
-        $.ajax({
-            url: type === 'building' ?
-                "{{ route('building.status.history') }}" :
-                "{{ route('housing.status.history') }}",
-
-            method: "GET",
-            data: {
-                globalid: globalid
-            },
-
-            success: function(response) {
-                let rows = '';
-
-                if (!response.length) {
-                    rows = `<tr><td colspan="4" class="text-center text-muted">لا يوجد سجل</td></tr>`;
-                } else {
-                    response.forEach(item => {
-                        rows += `
-                        <tr>
-                            <td>${item.status_name}</td>
-                            <td>${item.user_name}</td>
-                            <td>${item.notes ?? '-'}</td>
-                            <td>${item.created_at}</td>
-                        </tr>
-                    `;
-                    });
-                }
-
-                $('#statusHistoryTable').html(rows);
-            },
-
-            error: function() {
-                $('#statusHistoryTable').html(`
-                <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
-            `);
-            }
-        });
-    }
 </script>
 @endsection
