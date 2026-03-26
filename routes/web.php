@@ -198,6 +198,12 @@ Route::middleware('auth')->group(function () {
     ->name('housing.assessment.set.status');
     Route::post('/building/status', [auditController::class, 'setStatus'])
     ->name('building.assessment.set.status');
+
+    Route::get('audit/building-status-history', [auditController::class, 'buildingHistory'])
+    ->name('building.status.history');
+
+Route::get('audit/housing-status-history', [auditController::class, 'housingHistory'])
+    ->name('housing.status.history');
 });
 
 require __DIR__ . '/auth.php';

@@ -44,51 +44,51 @@ class auditController extends Controller
                 'lawyerStatus.status'
             ])->where('field_status', 'COMPLETED');
 
-                if ($request->filled('building_name')) {
-        $query->where('building_name', 'like', '%' . $request->building_name . '%');
-    }
+            if ($request->filled('building_name')) {
+                $query->where('building_name', 'like', '%' . $request->building_name . '%');
+            }
 
-    if ($request->filled('area')) {
-        $query->where('neighborhood', 'like', '%' . $request->area . '%');
-    }
+            if ($request->filled('area')) {
+                $query->where('neighborhood', 'like', '%' . $request->area . '%');
+            }
 
-    if ($request->filled('engineer_id')) {
-        $query->whereHas('engineerAssignment', function ($q) use ($request) {
-            $q->where('user_id', $request->engineer_id);
-        });
-    }
+            if ($request->filled('engineer_id')) {
+                $query->whereHas('engineerAssignment', function ($q) use ($request) {
+                    $q->where('user_id', $request->engineer_id);
+                });
+            }
 
-    if ($request->filled('lawyer_id')) {
-        $query->whereHas('lawyerAssignment', function ($q) use ($request) {
-            $q->where('user_id', $request->lawyer_id);
-        });
-    }
+            if ($request->filled('lawyer_id')) {
+                $query->whereHas('lawyerAssignment', function ($q) use ($request) {
+                    $q->where('user_id', $request->lawyer_id);
+                });
+            }
 
-if ($request->filled('eng_status')) {
-    if ($request->eng_status === 'pending') {
-        $query->whereDoesntHave('engineerStatus');
-    } else {
-        $query->whereHas('engineerStatus.assessment_status', function ($q) use ($request) {
-            $q->where('name', $request->eng_status);
-        });
-    }
-}
+            if ($request->filled('eng_status')) {
+                if ($request->eng_status === 'pending') {
+                    $query->whereDoesntHave('engineerStatus');
+                } else {
+                    $query->whereHas('engineerStatus.assessment_status', function ($q) use ($request) {
+                        $q->where('name', $request->eng_status);
+                    });
+                }
+            }
 
-   if ($request->filled('legal_status')) {
-    if ($request->legal_status === 'pending') {
-        $query->whereDoesntHave('lawyerStatus');
-    } else {
-        $query->whereHas('lawyerStatus.assessment_status', function ($q) use ($request) {
-            $q->where('name', $request->legal_status);
-        });
-    }
-}
+            if ($request->filled('legal_status')) {
+                if ($request->legal_status === 'pending') {
+                    $query->whereDoesntHave('lawyerStatus');
+                } else {
+                    $query->whereHas('lawyerStatus.assessment_status', function ($q) use ($request) {
+                        $q->where('name', $request->legal_status);
+                    });
+                }
+            }
 
-    if ($request->filled('final_status')) {
-        $query->whereHas('finalApproval.assessment_status', function ($q) use ($request) {
-            $q->where('name', $request->final_status);
-        });
-    }
+            if ($request->filled('final_status')) {
+                $query->whereHas('finalApproval.assessment_status', function ($q) use ($request) {
+                    $q->where('name', $request->final_status);
+                });
+            }
             return DataTables::of($query)
 
 
@@ -138,7 +138,7 @@ if ($request->filled('eng_status')) {
                     if (str_contains($statusName, 'reject')) {
                         $color =  'badge-danger';
                     } elseif (str_contains($statusName, 'accepted')) {
-                        $color= 'badge-success';
+                        $color = 'badge-success';
                     } elseif (str_contains($statusName, 'review')) {
                         $color = 'badge-warning';
                     } elseif (str_contains($statusName, 'assigned')) {
@@ -156,10 +156,10 @@ if ($request->filled('eng_status')) {
                     $status = $row->lawyerStatus?->status?->label_en ?? 'Pending';
                     $statusName = strtolower($status);
 
-                     if (str_contains($statusName, 'reject')) {
+                    if (str_contains($statusName, 'reject')) {
                         $color =  'badge-danger';
                     } elseif (str_contains($statusName, 'accepted')) {
-                        $color= 'badge-success';
+                        $color = 'badge-success';
                     } elseif (str_contains($statusName, 'review')) {
                         $color = 'badge-warning';
                     } elseif (str_contains($statusName, 'assigned')) {
@@ -205,12 +205,12 @@ if ($request->filled('eng_status')) {
         $assessments = Assessment::all();
         $filterName = Filter::distinct('list_name')->pluck('list_name');
         $filters = Filter::all();
-$engineers = User::role('Engineering Auditor')->get();
-    $lawyers = User::role('Legal Auditor')->get();
+        $engineers = User::role('Engineering Auditor')->get();
+        $lawyers = User::role('Legal Auditor')->get();
 
         return View::make(
             'DamageAssessment.audit',
-            compact('engineers','lawyers','users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments')
+            compact('engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments')
         );
     }
 
@@ -221,15 +221,15 @@ $engineers = User::role('Engineering Auditor')->get();
         if ($request->globalid) {
             $query->where('parentglobalid', $request->globalid);
         }
-$type = auth()->user()->roles->first()->name;
+        $type = auth()->user()->roles->first()->name;
 
         return DataTables::of($query->orderBy('floor_number', 'asc')
             ->orderBy('housing_unit_number', 'asc'))
 
 
-->addColumn('current_status', function ($row) use ($type) {
-    return optional($row->statusByType($type)?->first()?->assessment_status)->name;
-})
+            ->addColumn('current_status', function ($row) use ($type) {
+                return optional($row->statusByType($type)?->first()?->assessment_status)->name;
+            })
 
             ->editColumn('owner_name', function ($row) {
                 // لو عندك full_name بدل owner_name
@@ -246,21 +246,21 @@ $type = auth()->user()->roles->first()->name;
 
                 $status = $row->finalApproval?->assessment_status?->label_en ?? 'Pending';
 
-                    $statusName = strtolower($status);
+                $statusName = strtolower($status);
 
-                    if (str_contains($statusName, 'reject')) {
-                        $color =  'badge-danger';
-                    } elseif (str_contains($statusName, 'accepted')) {
-                        $color= 'badge-success';
-                    } elseif (str_contains($statusName, 'review')) {
-                        $color = 'badge-warning';
-                    } elseif (str_contains($statusName, 'assigned')) {
-                        $color = 'badge-primary';
-                    } else {
-                        $color = 'badge-secondary';
-                    }
+                if (str_contains($statusName, 'reject')) {
+                    $color =  'badge-danger';
+                } elseif (str_contains($statusName, 'accepted')) {
+                    $color = 'badge-success';
+                } elseif (str_contains($statusName, 'review')) {
+                    $color = 'badge-warning';
+                } elseif (str_contains($statusName, 'assigned')) {
+                    $color = 'badge-primary';
+                } else {
+                    $color = 'badge-secondary';
+                }
 
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
             })
 
             // Engineer Status
@@ -270,21 +270,21 @@ $type = auth()->user()->roles->first()->name;
 
 
 
-                    $statusName = strtolower($status);
+                $statusName = strtolower($status);
 
-                    if (str_contains($statusName, 'reject')) {
-                        $color =  'badge-danger';
-                    } elseif (str_contains($statusName, 'accepted')) {
-                        $color= 'badge-success';
-                    } elseif (str_contains($statusName, 'review')) {
-                        $color = 'badge-warning';
-                    } elseif (str_contains($statusName, 'assigned')) {
-                        $color = 'badge-primary';
-                    } else {
-                        $color = 'badge-secondary';
-                    }
+                if (str_contains($statusName, 'reject')) {
+                    $color =  'badge-danger';
+                } elseif (str_contains($statusName, 'accepted')) {
+                    $color = 'badge-success';
+                } elseif (str_contains($statusName, 'review')) {
+                    $color = 'badge-warning';
+                } elseif (str_contains($statusName, 'assigned')) {
+                    $color = 'badge-primary';
+                } else {
+                    $color = 'badge-secondary';
+                }
 
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
             })
 
             // Lawyer Status
@@ -292,21 +292,21 @@ $type = auth()->user()->roles->first()->name;
 
                 $status = $row->lawyerStatus?->assessment_status?->label_en ?? 'Pending';
 
-                    $statusName = strtolower($status);
+                $statusName = strtolower($status);
 
-                    if (str_contains($statusName, 'reject')) {
-                        $color =  'badge-danger';
-                    } elseif (str_contains($statusName, 'accepted')) {
-                        $color= 'badge-success';
-                    } elseif (str_contains($statusName, 'review')) {
-                        $color = 'badge-warning';
-                    } elseif (str_contains($statusName, 'assigned')) {
-                        $color = 'badge-primary';
-                    } else {
-                        $color = 'badge-secondary';
-                    }
+                if (str_contains($statusName, 'reject')) {
+                    $color =  'badge-danger';
+                } elseif (str_contains($statusName, 'accepted')) {
+                    $color = 'badge-success';
+                } elseif (str_contains($statusName, 'review')) {
+                    $color = 'badge-warning';
+                } elseif (str_contains($statusName, 'assigned')) {
+                    $color = 'badge-primary';
+                } else {
+                    $color = 'badge-secondary';
+                }
 
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
             })
 
             ->rawColumns([
@@ -936,4 +936,72 @@ $type = auth()->user()->roles->first()->name;
             ->rawColumns(['edit', 'legal_audit_status'])
             ->make(true);
     }
+
+public function buildingHistory(Request $request)
+{
+    $building = Building::where('globalid', $request->globalid)->first();
+
+    if (!$building) {
+        return [];
+    }
+
+    return BuildingStatusHistory::with(['user.roles', 'status'])
+        ->where('building_id', $building->objectid)
+        ->latest()
+        ->get()
+        ->map(function ($item) {
+            $statusName  = $item->status->name ?? '-';
+            $statusLabel = $item->status->label_en ?? $statusName;
+            $roleName    = $item->user?->roles?->first()?->name ?? '-';
+
+            return [
+                'status_name' => '<span ' . $this->getStatusBadge($statusName, $roleName) . '>' . e($statusLabel) . '</span>',
+                'user_name'   => $item->user->name ?? '-',
+                'role_name'   => $roleName,
+                'notes'       => $item->notes ?? '-',
+                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+            ];
+        });
+}
+
+    public function housingHistory(Request $request)
+    {
+        $housing = HousingUnit::where('globalid', $request->globalid)->first();
+
+        if (!$housing) {
+            return [];
+        }
+
+        return HousingStatusHistory::with(['user.roles', 'assessment_status'])
+            ->where('housing_id', $housing->objectid)
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                $statusName  = $item->assessment_status->name ?? '-';
+                $statusLabel = $item->assessment_status->label_en ?? $statusName;
+                $roleName    = $item->user?->roles?->first()?->name ?? '-';
+
+                return [
+                    'status_name' => '<span ' . $this->getStatusBadge($statusName, $roleName) . '>' . e($statusLabel) . '</span>',
+                    'user_name'   => $item->user->name ?? '-',
+                    'role_name'   => $roleName,
+                    'notes'       => $item->notes ?? '-',
+                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                ];
+            });
+    }
+
+    private function getStatusBadge($statusName, $role = null)
+{
+    return match ($statusName) {
+        'assigned_to_engineer' => 'class="badge badge-light-primary fw-bold"',
+        'accepted_by_engineer',
+        'accepted'             => 'class="badge badge-light-success fw-bold"',
+        'rejected_by_engineer',
+        'rejected'             => 'class="badge badge-light-danger fw-bold"',
+        'need_review'          => 'class="badge badge-light-warning fw-bold"',
+        'legal_notes'          => 'class="badge badge-light-primary fw-bold"',
+        default                => 'class="badge badge-light-secondary fw-bold"',
+    };
+}
 }

@@ -60,9 +60,9 @@ class AssessmentStatusSeeder extends Seeder
             ],
 
             [
-                'name' => 'rejected_by_lawyer',
-                'label_en' => 'Rejected By Lawyer',
-                'label_ar' => 'مرفوضة بواسطة المحامي',
+                'name' => 'legal_notes',
+                'label_en' => 'Legal Notes',
+                'label_ar' => 'ملاحظات قانونية',
                 'stage' => 'lawyer',
                 'order_step' => 7
             ],

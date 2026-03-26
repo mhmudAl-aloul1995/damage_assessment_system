@@ -354,7 +354,7 @@ class HousingUnit extends Model
      */
     protected $fillable = [
         'id',
-                'attachments',
+        'attachments',
 
         'objectid',
         'globalid',
@@ -732,9 +732,9 @@ class HousingUnit extends Model
             ->where('type', 'Legal Auditor');
     }
 
-public function statusByType($type)
-{
-    return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
-        ->where('type', $type);
-}
+    public function statusByType($type)
+    {
+        return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
+            ->where('type', $type);
+    }
 }

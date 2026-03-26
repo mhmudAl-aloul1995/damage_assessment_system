@@ -106,17 +106,16 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                             onclick="setBuildingStatus('accepted')">
                                             مقبول
                                         </button>
- <button
+                                        <button
                                             type="button"
                                             class="btn btn-sm btn-light-warning building-status-btn"
                                             data-status="legal_notes"
                                             onclick="setBuildingStatus('legal_notes')">
-                                             ملاحظات قانونية
+                                            ملاحظات قانونية
                                         </button>
                                         <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-                                        <?php if (! \Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
-
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Engineering Auditor')): ?>
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-danger building-status-btn"
@@ -141,7 +140,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                             بحاجة لمراجعة
                                         </button>
 
-                                        <?php endif; ?>
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                                         <button
                                             type="button"
@@ -268,51 +267,57 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                                     </select>
                                 </div>
-<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
 
-    <button
-        type="button"
-        class="btn btn-sm btn-light-success housing-status-btn"
-        data-status="accepted"
-        onclick="setHousingStatus('accepted')">
-        مقبول
-    </button>
- <button
-        type="button"
-        class="btn btn-sm btn-light-warning housing-status-btn"
-        data-status="legal_notes"
-        onclick="setHousingStatus('legal_notes')">
-        بحاجة لمراجعة
-    </button>
-<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-light-success housing-status-btn"
+                                    data-status="accepted"
+                                    onclick="setHousingStatus('accepted')">
+                                    مقبول
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-light-warning housing-status-btn"
+                                    data-status="legal_notes"
+                                    onclick="setHousingStatus('legal_notes')">
+                                    بحاجة لمراجعة
+                                </button>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-<?php if (! \Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Engineering Auditor')): ?>
 
-    <button
-        type="button"
-        class="btn btn-sm btn-light-danger housing-status-btn"
-        data-status="rejected"
-        onclick="setHousingStatus('rejected')">
-        مرفوض
-    </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-light-danger housing-status-btn"
+                                    data-status="rejected"
+                                    onclick="setHousingStatus('rejected')">
+                                    مرفوض
+                                </button>
 
-    <button
-        type="button"
-        class="btn btn-sm btn-light-success housing-status-btn"
-        data-status="accepted"
-        onclick="setHousingStatus('accepted')">
-        مقبول
-    </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-light-success housing-status-btn"
+                                    data-status="accepted"
+                                    onclick="setHousingStatus('accepted')">
+                                    مقبول
+                                </button>
 
-    <button
-        type="button"
-        class="btn btn-sm btn-light-warning housing-status-btn"
-        data-status="need_review"
-        onclick="setHousingStatus('need_review')">
-        بحاجة لمراجعة
-    </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-light-warning housing-status-btn"
+                                    data-status="need_review"
+                                    onclick="setHousingStatus('need_review')">
+                                    بحاجة لمراجعة
+                                </button>
 
-<?php endif; ?>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-light-dark"
+                                    onclick="openNotesModal('housing')">
+                                    ملاحظات
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -342,25 +347,51 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
 
 
 <div class="modal fade" id="notesModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered mw-500px">
+    <div class="modal-dialog modal-dialog-centered mw-800px">
         <div class="modal-content">
+
             <div class="modal-header">
-                <h3 class="fw-bold" id="notesModalTitle">إضافة ملاحظة</h3>
+                <h3 class="fw-bold" id="notesModalTitle">الملاحظات وسجل الحالات</h3>
 
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
-                    <i class="ki-duotone ki-cross fs-1">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
+                    ✖
                 </div>
             </div>
 
             <div class="modal-body">
+
+                
+                <div class="mb-5">
+                    <h5 class="fw-bold mb-3">سجل الحالات</h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-row-bordered align-middle">
+                            <thead>
+                                <tr class="fw-bold text-gray-800">
+                                    <th>الحالة</th>
+                                    <th>المستخدم</th>
+                                    <th>الملاحظة</th>
+                                    <th>التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="statusHistoryTable">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        جاري التحميل...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                
                 <textarea
                     id="notesInput"
                     class="form-control form-control-solid"
-                    rows="5"
+                    rows="4"
                     placeholder="اكتب الملاحظة هنا..."></textarea>
+
             </div>
 
             <div class="modal-footer">
@@ -372,6 +403,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                     حفظ
                 </button>
             </div>
+
         </div>
     </div>
 </div>
@@ -953,6 +985,75 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
             reloadHousingAssessmentTable();
         });
     });
+
+
+    function openNotesModal(type, status = null) {
+        notesContext = type;
+        pendingStatus = status;
+
+        $('#notesInput').val('');
+
+        let globalid = null;
+
+        if (type === 'building') {
+            globalid = '<?php echo e($globalid); ?>';
+        } else {
+            globalid = $("[name='globalid']").val();
+        }
+
+        loadStatusHistory(type, globalid);
+
+        $('#notesModalTitle').text(
+            type === 'building' ? 'المبنى - الملاحظات وسجل الحالات' : 'الوحدة - الملاحظات وسجل الحالات'
+        );
+
+        const modal = new bootstrap.Modal(document.getElementById('notesModal'));
+        modal.show();
+    }
+
+    function loadStatusHistory(type, globalid) {
+        $('#statusHistoryTable').html(`
+        <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
+    `);
+
+        $.ajax({
+            url: type === 'building' ?
+                "<?php echo e(route('building.status.history')); ?>" :
+                "<?php echo e(route('housing.status.history')); ?>",
+
+            method: "GET",
+            data: {
+                globalid: globalid
+            },
+
+            success: function(response) {
+                let rows = '';
+
+                if (!response.length) {
+                    rows = `<tr><td colspan="4" class="text-center text-muted">لا يوجد سجل</td></tr>`;
+                } else {
+                    response.forEach(item => {
+                        rows += `
+                        <tr>
+                            <td>${item.status_name}</td>
+                            <td>${item.user_name}</td>
+                            <td>${item.notes ?? '-'}</td>
+                            <td>${item.created_at}</td>
+                        </tr>
+                    `;
+                    });
+                }
+
+                $('#statusHistoryTable').html(rows);
+            },
+
+            error: function() {
+                $('#statusHistoryTable').html(`
+                <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
+            `);
+            }
+        });
+    }
 </script>
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/assessmentAudit.blade.php ENDPATH**/ ?>
