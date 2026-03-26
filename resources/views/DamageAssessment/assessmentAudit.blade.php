@@ -1021,6 +1021,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     }();
 
     KTUtil.onDOMContentLoaded(function() {
+        $("#kt_app_sidebar_toggle").click()
         KTBuildingAssessmentList.init();
         KTBuildingUnitsList.init();
         KTHousingAssessmentList.init();

@@ -83,4 +83,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(BuildingStatusHistory::class);
     }
+    
+    public function attendances()
+{
+    return $this->hasMany(Attendance::class);
+}
 }

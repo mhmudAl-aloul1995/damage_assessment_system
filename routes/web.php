@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\DamageAssessment\auditController;
+use App\Http\Controllers\DamageAssessment\AttendanceController;
 use Illuminate\Support\Facades\Process;
 
 Route::get('/', function () {
@@ -184,7 +185,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/engineer-table', [AuditController::class, 'engineerTable']);
     Route::get('/lawyer-table', [AuditController::class, 'lawyerTable']);
 
+//attendence
 
+Route::get('/attendance', [AttendanceController::class, 'index']);
+Route::post('/attendance/data', [AttendanceController::class, 'data'])->name('attendance.data');
+Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
+Route::post('/attendance/delete', [AttendanceController::class, 'delete'])->name('attendance.delete');
     // assessmentAudit
 
     Route::get('showAssessmentAudit/{globalid}', action: [auditController::class, 'showAssessmentAudit']);
