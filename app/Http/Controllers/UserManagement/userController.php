@@ -57,15 +57,19 @@ class userController extends Controller
     public function show(Request $request)
     {
         $users = User::with('roles')->where('id', '!=', Auth::id());
-
-        return DataTables::of($users)
+        return DataTables::of(User::query())
             ->addColumn('checkbox', function ($user) {
-                return '
-                <div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-                    <input class="form-check-input row-checkbox" type="checkbox" value="' . $user->id . '" />
-                </div>
-            ';
+                return '<div class="form-check form-check-sm form-check-custom form-check-solid">
+                    <input class="form-check-input" type="checkbox" value="' . $user->id . '" />
+                </div>';
             })
+            ->editColumn('name', fn($user) => $user->name ?? '-')
+            ->editColumn('name_en', fn($user) => $user->name_en ?? '-')
+            ->editColumn('email', fn($user) => $user->email ?? '-')
+            ->editColumn('id_no', fn($user) => $user->id_no ?? '-')
+            ->editColumn('contract_type', fn($user) => strtoupper($user->contract_type ?? '-'))
+            ->editColumn('phone', fn($user) => $user->phone ?? '-')
+            ->editColumn('created_at', fn($user) => optional($user->created_at)->format('Y-m-d h:i A'))
             ->addColumn('action', function ($user) {
                 return '
         <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
@@ -82,104 +86,118 @@ class userController extends Controller
         </div>
     ';
             })
-            ->editColumn('created_at', function ($user) {
-                return optional($user->created_at)->format('Y-m-d h:i A');
-            })
+
             ->rawColumns(['checkbox', 'action'])
             ->make(true);
     }
-    public function edit(Request $request, $id)
-    {
-        $user = User::with('roles')->find($id);
+public function edit($id)
+{
+    $user = User::with('roles')->find($id);
 
-        if (!$user) {
-            return response()->json([
-                'message' => 'المستخدم غير موجود'
-            ], 404);
-        }
-
+    if (!$user) {
         return response()->json([
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'address' => $user->address,
-                'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-            ],
-            'role' => $user->roles->pluck('name')->first()
-        ]);
+            'message' => 'المستخدم غير موجود'
+        ], 404);
     }
 
-    public function store(Request $request)
-    {
+    return response()->json([
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'name_en' => $user->name_en,
+            'email' => $user->email,
+            'id_no' => $user->id_no,
+            'contract_type' => $user->contract_type,
+            'phone' => $user->phone,
+            'address' => $user->address,
+            'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+        ],
+        'role' => $user->roles->pluck('name')->first()
+    ]);
+}
+   public function store(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'name_en' => 'nullable|string|max:255',
+        'email' => 'required|email|unique:users,email',
+        'id_no' => 'nullable|string|max:255|unique:users,id_no',
+        'contract_type' => 'nullable|in:phc,undp,mpwh,pef',
+        'phone' => 'required|string|max:255',
+        'address' => 'required|string|max:255',
+        'role' => 'required|string|exists:roles,name',
+        'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+    ]);
 
-        // 1. Validation including the avatar image
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'role' => 'required',
-            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048' // max 2MB
-        ]);
+    $avatarPath = null;
 
-        // 2. Handle file upload
-        $avatarPath = null;
-        if ($request->hasFile('avatar')) {
-            // Stores in storage/app/public/avatars
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
-        }
-        $randomPassword = Str::password(6, false, true, false, false);
-        $hashedPassword = Hash::make($randomPassword);
-        DB::transaction(function () use ($request,$hashedPassword, $avatarPath, &$user) {
-
-            $user = User::create([
-                'phone' => $request->phone,
-                'address' => $request->address,
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => $hashedPassword,
-                'avatar' => $avatarPath,
-            ]);
-
-            $role = Role::findByName($request->role);
-            $user->assignRole($role);
-        });
-
-        Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
-
-        return response()->json(['message' => 'تم إضافة المستخدم وتعيين دوره بنجاح']);
+    if ($request->hasFile('avatar')) {
+        $avatarPath = $request->file('avatar')->store('avatars', 'public');
     }
 
+    $randomPassword = Str::password(6, false, true, false, false);
+    $hashedPassword = Hash::make($randomPassword);
 
-
-    public function update(Request $request, User $user)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'phone' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'role' => 'required|string|exists:roles,name',
-            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+    DB::transaction(function () use ($request, $hashedPassword, $avatarPath, &$user) {
+        $user = User::create([
+            'name' => $request->name,
+            'name_en' => $request->name_en,
+            'email' => $request->email,
+            'id_no' => $request->id_no,
+            'contract_type' => $request->contract_type,
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'password' => $hashedPassword,
+            'avatar' => $avatarPath,
         ]);
 
-        if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('users', 'public');
-            $user->avatar = $avatarPath;
-        }
+        $role = Role::findByName($request->role);
+        $user->assignRole($role);
+    });
 
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->phone = $request->phone;
-        $user->address = $request->address;
-        $user->save();
+    Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
 
-        $user->syncRoles([$request->role]);
+    return response()->json([
+        'message' => 'تم إضافة المستخدم وتعيين دوره بنجاح'
+    ]);
+}
 
-        return response()->json([
-            'message' => 'تم تعديل المستخدم بنجاح'
-        ]);
+
+public function update(Request $request, User $user)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'name_en' => 'nullable|string|max:255',
+        'email' => 'required|email|unique:users,email,' . $user->id,
+        'id_no' => 'nullable|string|max:255|unique:users,id_no,' . $user->id,
+        'contract_type' => 'nullable|in:phc,undp,mpwh,pef',
+        'phone' => 'required|string|max:255',
+        'address' => 'required|string|max:255',
+        'role' => 'required|string|exists:roles,name',
+        'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+    ]);
+
+    $data = [
+        'name' => $request->name,
+        'name_en' => $request->name_en,
+        'email' => $request->email,
+        'id_no' => $request->id_no,
+        'contract_type' => $request->contract_type,
+        'phone' => $request->phone,
+        'address' => $request->address,
+    ];
+
+    if ($request->hasFile('avatar')) {
+        $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
     }
+
+    $user->update($data);
+    $user->syncRoles([$request->role]);
+
+    return response()->json([
+        'message' => 'تم تعديل المستخدم بنجاح'
+    ]);
+}
 
     public function destroy(Request $request, $id)
     {

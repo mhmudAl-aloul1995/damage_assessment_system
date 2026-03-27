@@ -41,6 +41,9 @@ class User extends Authenticatable
         'email_verified_at',
         'password',
         'remember_token',
+         'id_no',
+    'contract_type',
+    'name_en',
     ];
 
     /**

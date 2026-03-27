@@ -1,8 +1,7 @@
-@extends('layouts.app')
-@section('title', 'المستخدمين')
-@section('pageName', 'المستخدمين')
+<?php $__env->startSection('title', 'المستخدمين'); ?>
+<?php $__env->startSection('pageName', 'المستخدمين'); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="card">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
@@ -75,7 +74,7 @@
 
             <div class="modal-body px-5 my-7">
                 <form id="kt_modal_user_form" class="form" enctype="multipart/form-data">
-                    @csrf
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" name="id" id="user_id">
 
                     <div
@@ -93,11 +92,11 @@
 
                             <style>
                                 .image-input-placeholder {
-                                    background-image: url('{{ asset('assets/media/svg/files/blank-image.svg') }}');
+                                    background-image: url('<?php echo e(asset('assets/media/svg/files/blank-image.svg')); ?>');
                                 }
 
                                 [data-bs-theme="dark"] .image-input-placeholder {
-                                    background-image: url('{{ asset('assets/media/svg/files/blank-image-dark.svg') }}');
+                                    background-image: url('<?php echo e(asset('assets/media/svg/files/blank-image-dark.svg')); ?>');
                                 }
                             </style>
 
@@ -220,27 +219,28 @@
                         <div class="mb-5">
                             <label class="required fw-semibold fs-6 mb-5">الدور</label>
 
-                            @foreach($roles as $role)
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
                                 <div class="d-flex fv-row">
                                     <div class="form-check form-check-custom form-check-solid">
                                         <input
                                             class="form-check-input me-3"
                                             name="role"
                                             type="radio"
-                                            value="{{ $role->name }}"
-                                            id="role_option_{{ $role->id }}"
-                                            {{ $loop->first ? 'checked' : '' }}
+                                            value="<?php echo e($role->name); ?>"
+                                            id="role_option_<?php echo e($role->id); ?>"
+                                            <?php echo e($loop->first ? 'checked' : ''); ?>
+
                                         />
-                                        <label class="form-check-label" for="role_option_{{ $role->id }}">
-                                            <div class="fw-bold text-gray-800">{{ $role->name }}</div>
+                                        <label class="form-check-label" for="role_option_<?php echo e($role->id); ?>">
+                                            <div class="fw-bold text-gray-800"><?php echo e($role->name); ?></div>
                                         </label>
                                     </div>
                                 </div>
 
-                                @if(!$loop->last)
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$loop->last): ?>
                                     <div class="separator separator-dashed my-5"></div>
-                                @endif
-                            @endforeach
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                         </div>
                     </div>
 
@@ -262,10 +262,10 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('script')
-<script src="{{ asset('assets/js/widgets.bundle.js') }}"></script>
+<?php $__env->startSection('script'); ?>
+<script src="<?php echo e(asset('assets/js/widgets.bundle.js')); ?>"></script>
 
 <script>
     let usersTable;
@@ -303,7 +303,7 @@
 
     function showUser(id) {
         $.ajax({
-            url: "{{ url('user-management/user') }}/" + id + "/edit",
+            url: "<?php echo e(url('user-management/user')); ?>/" + id + "/edit",
             type: "GET",
             success: function(response) {
                 resetUserForm();
@@ -348,7 +348,7 @@
             serverSide: true,
             processing: true,
             ajax: {
-                url: "{{ url('user-management/user/show') }}"
+                url: "<?php echo e(url('user-management/user/show')); ?>"
             },
             info: false,
             order: [],
@@ -427,8 +427,8 @@
             let submitButton = $('#save_user_btn');
 
             let url = userId
-                ? "{{ url('user-management/user') }}/" + userId
-                : "{{ route('users.store') }}";
+                ? "<?php echo e(url('user-management/user')); ?>/" + userId
+                : "<?php echo e(route('users.store')); ?>";
 
             if (userId) {
                 formData.append('_method', 'PUT');
@@ -474,4 +474,5 @@
         });
     });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/UserManagement/users.blade.php ENDPATH**/ ?>

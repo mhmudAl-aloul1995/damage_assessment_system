@@ -137,7 +137,15 @@ Route::middleware('auth')->group(function () {
         Route::put('/{permission}', [PermissionController::class, 'update'])->name('update');
         Route::delete('/{permission}', [PermissionController::class, 'destroy'])->name('destroy');
     });
-    Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);
+    Route::prefix('user-management/attendance')->name('attendance.')->group(function () {
+          Route::get('/', [AttendanceController::class, 'index']);
+Route::post('data', [AttendanceController::class, 'data'])->name('data');
+Route::post('store', [AttendanceController::class, 'store'])->name('store');
+Route::post('delete', [AttendanceController::class, 'delete'])->name('delete');
+
+    });
+
+     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);
     Route::get('/create_housing_data/{token}', [ArcGISController::class, 'create_housing_data']);
 
     Route::get('/sync_housings/{no_day}', [ArcGISController::class, 'sync_housings']);
@@ -187,10 +195,7 @@ Route::middleware('auth')->group(function () {
 
 //attendence
 
-Route::get('/attendance', [AttendanceController::class, 'index']);
-Route::post('/attendance/data', [AttendanceController::class, 'data'])->name('attendance.data');
-Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
-Route::post('/attendance/delete', [AttendanceController::class, 'delete'])->name('attendance.delete');
+
     // assessmentAudit
 
     Route::get('showAssessmentAudit/{globalid}', action: [auditController::class, 'showAssessmentAudit']);
