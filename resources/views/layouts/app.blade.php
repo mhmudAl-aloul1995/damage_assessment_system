@@ -298,7 +298,7 @@
 													<div class="d-flex flex-column justify-content-start fw-semibold">
 														<span class="fs-6 fw-semibold">Edward Kulnic</span>
 														<span class="fs-7 fw-semibold text-muted">System
-															Administrator</span>
+															Database Officer</span>
 													</div>
 													<!--end::Title-->
 												</a>

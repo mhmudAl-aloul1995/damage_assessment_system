@@ -42,7 +42,7 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('dashboard');
         }
 
-        if ($user->hasRole('Engineering Auditor')) {
+        if ($user->hasRole('QC/QA Engineer')) {
             return redirect()->route('audit.auditBuilding');
         }
 

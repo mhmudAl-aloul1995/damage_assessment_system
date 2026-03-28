@@ -115,7 +115,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                         </button>
                                         @endrole
 
-                                        @role('Engineering Auditor')
+                                        @role('QC/QA Engineer')
                                         <button
                                             type="button"
                                             class="btn btn-sm btn-light-danger building-status-btn"
@@ -283,7 +283,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                 </button>
                                 @endrole
 
-                                @role('Engineering Auditor')
+                                @role('QC/QA Engineer')
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-light-danger housing-status-btn"

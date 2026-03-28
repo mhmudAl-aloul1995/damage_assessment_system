@@ -1,9 +1,9 @@
+@extends('layouts.app')
 
+@section('title', 'Attendance')
+@section('pageName', 'Attendance')
 
-<?php $__env->startSection('title', 'Attendance'); ?>
-<?php $__env->startSection('pageName', 'Attendance'); ?>
-
-<?php $__env->startSection('content'); ?>
+@section('content')
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css" />
 
     <style>
@@ -142,7 +142,7 @@
                     <div class="card-toolbar">
                         <div class="d-flex align-items-center toolbar-filters">
                             <input type="month" id="filter_month" class="form-control form-control-solid w-200px"
-                                value="<?php echo e(date('Y-m')); ?>">
+                                value="{{ date('Y-m') }}">
 
                             <select id="filter_contract" class="form-select form-select-solid w-150px">
                                 <option value="">All Contracts</option>
@@ -151,7 +151,11 @@
                                 <option value="mopwh">MOPWH</option>
                                 <option value="pef">PEF</option>
                             </select>
-
+                            <select id="filter_region" class="form-select form-select-solid w-150px">
+                                <option value="">All Regions</option>
+                                <option value="north">North</option>
+                                <option value="south">South</option>
+                            </select>
                             <button class="btn btn-light-primary" id="btn_reload" type="button">
                                 Reload
                             </button>
@@ -162,9 +166,14 @@
                 <div class="card-body pt-4 pb-0">
                     <form id="attendanceImportForm" enctype="multipart/form-data"
                         class="d-flex align-items-center gap-3 flex-wrap import-form-box">
-                        <?php echo csrf_field(); ?>
+                        @csrf
                         <input type="file" name="file" accept=".xlsx,.xls" class="form-control form-control-solid w-250px"
                             required>
+                        <select name="region" class="form-select form-select-solid w-150px" required>
+                            <option value="">Select Region</option>
+                            <option value="north">North</option>
+                            <option value="south">South</option>
+                        </select>
                         <button type="submit" class="btn btn-primary" id="btn_import_excel">
                             <span class="indicator-label">Import Excel</span>
                             <span class="indicator-progress">
@@ -172,6 +181,7 @@
                                 <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                             </span>
                         </button>
+
                     </form>
                 </div>
                 <div class="w-100 mt-3" id="import_progress_wrapper" style="display:none;">
@@ -192,25 +202,26 @@
                                 <th>ID</th>
                                 <th>Phone</th>
                                 <th>Contract</th>
+                                <th>Region</th>
                                 <th>Total</th>
 
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php for($i = 1; $i <= 31; $i++): ?>
+                                @for($i = 1; $i <= 31; $i++)
                                     <th class="day-column">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <span class="fw-bold"><?php echo e($i); ?></span>
+                                            <span class="fw-bold">{{ $i }}</span>
 
                                             <button type="button" class="btn btn-icon btn-light-success btn-sm set-day-present"
-                                                data-day="<?php echo e($i); ?>" title="Set all present">
+                                                data-day="{{ $i }}" title="Set all present">
                                                 ✓
                                             </button>
 
                                             <button type="button" class="btn btn-icon btn-light-danger btn-sm set-day-absent"
-                                                data-day="<?php echo e($i); ?>" title="Set all absent">
+                                                data-day="{{ $i }}" title="Set all absent">
                                                 ✕
                                             </button>
                                         </div>
                                     </th>
-                                <?php endfor; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                @endfor
 
                             </tr>
                         </thead>
@@ -221,9 +232,9 @@
 
         </div>
     </div>
-<?php $__env->stopSection(); ?>
+@endsection
 
-<?php $__env->startSection('script'); ?>
+@section('script')
     <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
 
     <script>
@@ -253,7 +264,7 @@
             }
 
             function getDayColumnIndex(dayNumber) {
-                return 6 + (parseInt(dayNumber) - 1);
+                return 7 + (parseInt(dayNumber) - 1);
             }
 
             function updateDayButtonsWithoutReload(dayNumber, newStatus, fullDate) {
@@ -322,10 +333,10 @@
                 scrollX: true,
                 scrollCollapse: true,
                 fixedColumns: {
-                    leftColumns: 6
+                    leftColumns: 7
                 },
                 ajax: {
-                    url: "<?php echo e(route('attendance.data')); ?>",
+                    url: "{{ route('attendance.data') }}",
                     type: "POST",
                     data: function (d) {
                         let val = $('#filter_month').val();
@@ -334,7 +345,9 @@
                         d.year = parts[0];
                         d.month = parts[1];
                         d.contract_type = $('#filter_contract').val();
-                        d._token = "<?php echo e(csrf_token()); ?>";
+                        d.region = $('#filter_region').val();
+                        d._token = "{{ csrf_token() }}";
+
                     }
                 },
                 drawCallback: function () {
@@ -356,11 +369,11 @@
                         let nameEn = data ?? '-';
                         let nameAr = row.name ?? '';
                         return `
-                                        <div class="employee-name-box">
-                                            <div class="name-en">${nameEn}</div>
-                                            <div class="name-ar">${nameAr}</div>
-                                        </div>
-                                    `;
+                                                            <div class="employee-name-box">
+                                                                <div class="name-en">${nameEn}</div>
+                                                                <div class="name-ar">${nameAr}</div>
+                                                            </div>
+                                                        `;
                     }
                 },
                 {
@@ -392,6 +405,16 @@
                     }
                 },
                 {
+                    data: 'region',
+                    name: 'region',
+                    className: 'text-center',
+                    width: '120px',
+                    render: function (data) {
+                        if (!data) return '-';
+                        return `<span class="badge badge-light-info text-uppercase">${data}</span>`;
+                    }
+                },
+                {
                     data: 'total',
                     name: 'total',
                     className: 'text-center',
@@ -412,10 +435,10 @@
                     }
                 },
 
-                    <?php for($i = 1; $i <= 31; $i++): ?>
-                                                {
-                            data: 'day_<?php echo e($i); ?>',
-                            name: 'day_<?php echo e($i); ?>',
+                    @for ($i = 1; $i <= 31; $i++)
+                                                                                                            {
+                            data: 'day_{{ $i }}',
+                            name: 'day_{{ $i }}',
                             className: 'text-center day-column',
                             width: '55px',
                             orderable: false,
@@ -426,7 +449,7 @@
                                 }
 
                                 let monthVal = $('#filter_month').val();
-                                let date = monthVal + '-' + String(<?php echo e($i); ?>).padStart(2, '0');
+                                let date = monthVal + '-' + String({{ $i }}).padStart(2, '0');
 
                                 let today = new Date();
                                 today.setHours(0, 0, 0, 0);
@@ -436,14 +459,14 @@
 
                                 if (cellDate > today) {
                                     return `
-                                                                <button type="button"
-                                                                        class="btn btn-light-secondary btn-attendance"
-                                                                        disabled
-                                                                        data-bs-toggle="tooltip"
-                                                                        title="Future date">
-                                                                    <span>-</span>
-                                                                </button>
-                                                            `;
+                                                                                                                            <button type="button"
+                                                                                                                                    class="btn btn-light-secondary btn-attendance"
+                                                                                                                                    disabled
+                                                                                                                                    data-bs-toggle="tooltip"
+                                                                                                                                    title="Future date">
+                                                                                                                                <span>-</span>
+                                                                                                                            </button>
+                                                                                                                        `;
                                 }
 
                                 let status = parseInt(data) === 1 ? 1 : 0;
@@ -452,23 +475,23 @@
                                 let title = (status === 1 ? 'Present' : 'Absent') + ' - ' + date;
 
                                 return `
-                                                            <button type="button"
-                                                                    class="btn ${color} btn-attendance toggle-status"
-                                                                    data-user="${row.id}"
-                                                                    data-date="${date}"
-                                                                    data-status="${status}"
-                                                                    data-bs-toggle="tooltip"
-                                                                    title="${title}">
-                                                                <span>${text}</span>
-                                                            </button>
-                                                        `;
+                                                                                                                        <button type="button"
+                                                                                                                                class="btn ${color} btn-attendance toggle-status"
+                                                                                                                                data-user="${row.id}"
+                                                                                                                                data-date="${date}"
+                                                                                                                                data-status="${status}"
+                                                                                                                                data-bs-toggle="tooltip"
+                                                                                                                                title="${title}">
+                                                                                                                            <span>${text}</span>
+                                                                                                                        </button>
+                                                                                                                    `;
                             }
                         },
-                    <?php endfor; ?>
-                        ]
+                    @endfor
+                                            ]
             });
 
-            $('#filter_month, #filter_contract').on('change', function () {
+            $('#filter_month, #filter_contract, #filter_region').on('change', function () {
                 table.ajax.reload();
             });
 
@@ -493,10 +516,10 @@
                 btn.prop('disabled', true);
 
                 $.ajax({
-                    url: "<?php echo e(route('attendance.store')); ?>",
+                    url: "{{ route('attendance.store') }}",
                     type: "POST",
                     data: {
-                        _token: "<?php echo e(csrf_token()); ?>",
+                        _token: "{{ csrf_token() }}",
                         user_id: userId,
                         date: date,
                         status: newStatus
@@ -576,10 +599,10 @@
                 setHeaderButtonLoading(btn, true);
 
                 $.ajax({
-                    url: "<?php echo e(route('attendance.set-day-present')); ?>",
+                    url: "{{ route('attendance.set-day-present') }}",
                     type: "POST",
                     data: {
-                        _token: "<?php echo e(csrf_token()); ?>",
+                        _token: "{{ csrf_token() }}",
                         date: fullDate,
                         contract_type: $('#filter_contract').val()
                     },
@@ -628,10 +651,10 @@
                 setHeaderButtonLoading(btn, true);
 
                 $.ajax({
-                    url: "<?php echo e(route('attendance.set-day-absent')); ?>",
+                    url: "{{ route('attendance.set-day-absent') }}",
                     type: "POST",
                     data: {
-                        _token: "<?php echo e(csrf_token()); ?>",
+                        _token: "{{ csrf_token() }}",
                         date: fullDate,
                         contract_type: $('#filter_contract').val()
                     },
@@ -651,7 +674,7 @@
                     }
                 });
             });
-           
+
             $('#attendanceImportForm').on('submit', function (e) {
                 e.preventDefault();
 
@@ -664,7 +687,7 @@
                 $('#import_progress_text').text('Uploading file...');
 
                 $.ajax({
-                    url: "<?php echo e(route('attendance.import')); ?>",
+                    url: "{{ route('attendance.import') }}",
                     type: "POST",
                     data: formData,
                     processData: false,
@@ -701,7 +724,7 @@
 
                         let interval = setInterval(function () {
 
-                            $.get("<?php echo e(route('attendance.import.progress', ['log' => '__ID__'])); ?>".replace('__ID__', logId), function (progress) {
+                            $.get("{{ route('attendance.import.progress', ['log' => '__ID__']) }}".replace('__ID__', logId), function (progress) {
 
                                 let percent = progress.status === 'completed' ? 100 : 60;
 
@@ -748,5 +771,4 @@
 
         });
     </script>
-<?php $__env->stopSection(); ?>
-<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/attendance.blade.php ENDPATH**/ ?>
+@endsection

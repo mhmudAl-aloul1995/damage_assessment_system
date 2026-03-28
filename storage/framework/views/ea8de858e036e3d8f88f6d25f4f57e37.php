@@ -151,7 +151,11 @@
                                 <option value="mopwh">MOPWH</option>
                                 <option value="pef">PEF</option>
                             </select>
-
+                            <select id="filter_region" class="form-select form-select-solid w-150px">
+                                <option value="">All Regions</option>
+                                <option value="north">North</option>
+                                <option value="south">South</option>
+                            </select>
                             <button class="btn btn-light-primary" id="btn_reload" type="button">
                                 Reload
                             </button>
@@ -165,6 +169,11 @@
                         <?php echo csrf_field(); ?>
                         <input type="file" name="file" accept=".xlsx,.xls" class="form-control form-control-solid w-250px"
                             required>
+                        <select name="region" class="form-select form-select-solid w-150px" required>
+                            <option value="">Select Region</option>
+                            <option value="north">North</option>
+                            <option value="south">South</option>
+                        </select>
                         <button type="submit" class="btn btn-primary" id="btn_import_excel">
                             <span class="indicator-label">Import Excel</span>
                             <span class="indicator-progress">
@@ -172,6 +181,7 @@
                                 <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                             </span>
                         </button>
+
                     </form>
                 </div>
                 <div class="w-100 mt-3" id="import_progress_wrapper" style="display:none;">
@@ -192,6 +202,7 @@
                                 <th>ID</th>
                                 <th>Phone</th>
                                 <th>Contract</th>
+                                <th>Region</th>
                                 <th>Total</th>
 
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php for($i = 1; $i <= 31; $i++): ?>
@@ -253,7 +264,7 @@
             }
 
             function getDayColumnIndex(dayNumber) {
-                return 6 + (parseInt(dayNumber) - 1);
+                return 7 + (parseInt(dayNumber) - 1);
             }
 
             function updateDayButtonsWithoutReload(dayNumber, newStatus, fullDate) {
@@ -322,7 +333,7 @@
                 scrollX: true,
                 scrollCollapse: true,
                 fixedColumns: {
-                    leftColumns: 6
+                    leftColumns: 7
                 },
                 ajax: {
                     url: "<?php echo e(route('attendance.data')); ?>",
@@ -334,7 +345,9 @@
                         d.year = parts[0];
                         d.month = parts[1];
                         d.contract_type = $('#filter_contract').val();
+                        d.region = $('#filter_region').val();
                         d._token = "<?php echo e(csrf_token()); ?>";
+
                     }
                 },
                 drawCallback: function () {
@@ -356,11 +369,11 @@
                         let nameEn = data ?? '-';
                         let nameAr = row.name ?? '';
                         return `
-                                        <div class="employee-name-box">
-                                            <div class="name-en">${nameEn}</div>
-                                            <div class="name-ar">${nameAr}</div>
-                                        </div>
-                                    `;
+                                                            <div class="employee-name-box">
+                                                                <div class="name-en">${nameEn}</div>
+                                                                <div class="name-ar">${nameAr}</div>
+                                                            </div>
+                                                        `;
                     }
                 },
                 {
@@ -392,6 +405,16 @@
                     }
                 },
                 {
+                    data: 'region',
+                    name: 'region',
+                    className: 'text-center',
+                    width: '120px',
+                    render: function (data) {
+                        if (!data) return '-';
+                        return `<span class="badge badge-light-info text-uppercase">${data}</span>`;
+                    }
+                },
+                {
                     data: 'total',
                     name: 'total',
                     className: 'text-center',
@@ -413,7 +436,7 @@
                 },
 
                     <?php for($i = 1; $i <= 31; $i++): ?>
-                                                {
+                                                                                                            {
                             data: 'day_<?php echo e($i); ?>',
                             name: 'day_<?php echo e($i); ?>',
                             className: 'text-center day-column',
@@ -436,14 +459,14 @@
 
                                 if (cellDate > today) {
                                     return `
-                                                                <button type="button"
-                                                                        class="btn btn-light-secondary btn-attendance"
-                                                                        disabled
-                                                                        data-bs-toggle="tooltip"
-                                                                        title="Future date">
-                                                                    <span>-</span>
-                                                                </button>
-                                                            `;
+                                                                                                                            <button type="button"
+                                                                                                                                    class="btn btn-light-secondary btn-attendance"
+                                                                                                                                    disabled
+                                                                                                                                    data-bs-toggle="tooltip"
+                                                                                                                                    title="Future date">
+                                                                                                                                <span>-</span>
+                                                                                                                            </button>
+                                                                                                                        `;
                                 }
 
                                 let status = parseInt(data) === 1 ? 1 : 0;
@@ -452,23 +475,23 @@
                                 let title = (status === 1 ? 'Present' : 'Absent') + ' - ' + date;
 
                                 return `
-                                                            <button type="button"
-                                                                    class="btn ${color} btn-attendance toggle-status"
-                                                                    data-user="${row.id}"
-                                                                    data-date="${date}"
-                                                                    data-status="${status}"
-                                                                    data-bs-toggle="tooltip"
-                                                                    title="${title}">
-                                                                <span>${text}</span>
-                                                            </button>
-                                                        `;
+                                                                                                                        <button type="button"
+                                                                                                                                class="btn ${color} btn-attendance toggle-status"
+                                                                                                                                data-user="${row.id}"
+                                                                                                                                data-date="${date}"
+                                                                                                                                data-status="${status}"
+                                                                                                                                data-bs-toggle="tooltip"
+                                                                                                                                title="${title}">
+                                                                                                                            <span>${text}</span>
+                                                                                                                        </button>
+                                                                                                                    `;
                             }
                         },
                     <?php endfor; ?>
-                        ]
+                                            ]
             });
 
-            $('#filter_month, #filter_contract').on('change', function () {
+            $('#filter_month, #filter_contract, #filter_region').on('change', function () {
                 table.ajax.reload();
             });
 
@@ -651,7 +674,7 @@
                     }
                 });
             });
-           
+
             $('#attendanceImportForm').on('submit', function (e) {
                 e.preventDefault();
 
@@ -749,4 +772,4 @@
         });
     </script>
 <?php $__env->stopSection(); ?>
-<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/attendance.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/Attendance/attendance.blade.php ENDPATH**/ ?>

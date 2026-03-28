@@ -719,7 +719,7 @@ class HousingUnit extends Model
     public function engineerStatus()
     {
         return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
-            ->where('type', 'Engineering Auditor');
+            ->where('type', 'QC/QA Engineer');
     }
     public function finalApproval()
     {

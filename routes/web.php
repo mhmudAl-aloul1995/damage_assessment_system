@@ -16,8 +16,11 @@ use Carbon\Carbon;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\DamageAssessment\auditController;
-use App\Http\Controllers\DamageAssessment\AttendanceController;
+use App\Http\Controllers\Attendance\AttendanceController;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Artisan;
+
+
 
 Route::get('/', function () {
 
@@ -38,7 +41,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/run-migrations', function () {
+        // This runs 'php artisan migrate'
+        $exitCode = Artisan::call('migrate', [
+            '--force' => true, // Required for running in production environments
+        ]);
 
+        return $exitCode === 0 ? "Migration successful!" : "Migration failed.";
+    });
 
     Route::resource('sync', controller: ArcGISController::class);
 
@@ -137,15 +147,26 @@ Route::middleware('auth')->group(function () {
         Route::put('/{permission}', [PermissionController::class, 'update'])->name('update');
         Route::delete('/{permission}', [PermissionController::class, 'destroy'])->name('destroy');
     });
-    Route::prefix('user-management/attendance')->name('attendance.')->group(function () {
-          Route::get('/', [AttendanceController::class, 'index']);
-Route::post('data', [AttendanceController::class, 'data'])->name('data');
-Route::post('store', [AttendanceController::class, 'store'])->name('store');
-Route::post('delete', [AttendanceController::class, 'delete'])->name('delete');
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('/', [AttendanceController::class, 'index'])->name('index');
+        Route::post('/data', [AttendanceController::class, 'data'])->name('data');
+        Route::post('/store', [AttendanceController::class, 'store'])->name('store');
+        Route::post('/import', [AttendanceController::class, 'import'])->name('import');
+        Route::get('import-progress/{log}', [AttendanceController::class, 'importProgress'])
+            ->name('import.progress');
+        Route::post('/set-day-present', [AttendanceController::class, 'setDayPresent'])->name('set-day-present');
+        Route::post('/set-day-absent', [AttendanceController::class, 'setDayAbsent'])->name('set-day-absent');
+        Route::get('dashboard', [AttendanceController::class, 'dashboard'])
+            ->name('dashboard');
 
+        Route::get('monthly-report', [AttendanceController::class, 'monthlyReport'])
+            ->name('monthly-report');
+        Route::get('export-monthly-report', [AttendanceController::class, 'exportMonthlyReport'])
+            ->name('export-monthly-report');
     });
 
-     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);
+
+    Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);
     Route::get('/create_housing_data/{token}', [ArcGISController::class, 'create_housing_data']);
 
     Route::get('/sync_housings/{no_day}', [ArcGISController::class, 'sync_housings']);
@@ -193,7 +214,7 @@ Route::post('delete', [AttendanceController::class, 'delete'])->name('delete');
     Route::get('/engineer-table', [AuditController::class, 'engineerTable']);
     Route::get('/lawyer-table', [AuditController::class, 'lawyerTable']);
 
-//attendence
+    //attendence
 
 
     // assessmentAudit
@@ -202,19 +223,19 @@ Route::post('delete', [AttendanceController::class, 'delete'])->name('delete');
     Route::post('/assessment/inline-update', [auditController::class, 'updateInlineAssessment'])
         ->name('assessment.inline.update');
 
-        Route::get('/housing-units-by-building', [auditController::class, 'housingUnitsByBuilding'])
-    ->name('housing.units.by.building');
+    Route::get('/housing-units-by-building', [auditController::class, 'housingUnitsByBuilding'])
+        ->name('housing.units.by.building');
 
     Route::post('/housing-assessment/set-status', [auditController::class, 'setHousingStatus'])
-    ->name('housing.assessment.set.status');
+        ->name('housing.assessment.set.status');
     Route::post('/building/status', [auditController::class, 'setStatus'])
-    ->name('building.assessment.set.status');
+        ->name('building.assessment.set.status');
 
     Route::get('audit/building-status-history', [auditController::class, 'buildingHistory'])
-    ->name('building.status.history');
+        ->name('building.status.history');
 
-Route::get('audit/housing-status-history', [auditController::class, 'housingHistory'])
-    ->name('housing.status.history');
+    Route::get('audit/housing-status-history', [auditController::class, 'housingHistory'])
+        ->name('housing.status.history');
 });
 
 require __DIR__ . '/auth.php';

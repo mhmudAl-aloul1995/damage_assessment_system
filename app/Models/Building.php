@@ -379,7 +379,7 @@ class Building extends Model
     public function engineerStatus()
     {
         return $this->hasOne(BuildingStatus::class,'building_id','objectid')
-            ->where('type', 'Engineering Auditor');
+            ->where('type', 'QC/QA Engineer');
     }
     public function finalApproval()
     {
@@ -405,7 +405,7 @@ public function lawyerAssignment()
 public function engineerAssignment()
 {
     return $this->hasOne(AssignedAssessmentUser::class, 'building_id', 'objectid')
-        ->where('type', 'Engineering Auditor');
+        ->where('type', 'QC/QA Engineer');
 }
 
 

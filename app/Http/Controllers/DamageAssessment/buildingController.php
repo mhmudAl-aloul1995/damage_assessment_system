@@ -29,7 +29,7 @@ class buildingController extends Controller
 
     function __construct()
     {
-        $this->middleware('role:Administrator|General Supervisor');
+        $this->middleware('role:Database Officer|Project Officer');
     }
 
     public function index()

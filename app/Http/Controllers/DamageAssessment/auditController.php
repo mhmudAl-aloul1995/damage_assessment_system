@@ -104,7 +104,7 @@ class auditController extends Controller
 
 
                     return $row->assignedUsers
-                        ->where('type', 'Engineering Auditor')
+                        ->where('type', 'QC/QA Engineer')
                         ->first()?->user?->name ?? '-';
                 })
 
@@ -184,7 +184,7 @@ class auditController extends Controller
         $assessments = Assessment::all();
         $filterName = Filter::distinct('list_name')->pluck('list_name');
         $filters = Filter::all();
-        $engineers = User::role('Engineering Auditor')->get();
+        $engineers = User::role('QC/QA Engineer')->get();
         $lawyers = User::role('Legal Auditor')->get();
 
         return View::make(
@@ -322,8 +322,8 @@ class auditController extends Controller
 
             $type = null;
 
-            if ($user->hasRole('Engineering Auditor')) {
-                $type = 'Engineering Auditor';
+            if ($user->hasRole('QC/QA Engineer')) {
+                $type = 'QC/QA Engineer';
             } elseif ($user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
             } else {
@@ -333,7 +333,7 @@ class auditController extends Controller
                 ], 403);
             }
 
-            $roleType = $type === 'Engineering Auditor' ? 'engineer' : 'lawyer';
+            $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
                 'rejected'    => 'rejected_by_' . $roleType,
@@ -421,8 +421,8 @@ class auditController extends Controller
 
             $type = null;
 
-            if ($user->hasRole('Engineering Auditor')) {
-                $type = 'Engineering Auditor';
+            if ($user->hasRole('QC/QA Engineer')) {
+                $type = 'QC/QA Engineer';
             } elseif ($user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
             } else {
@@ -432,7 +432,7 @@ class auditController extends Controller
                 ], 403);
             }
 
-            $roleType = $type === 'Engineering Auditor' ? 'engineer' : 'lawyer';
+            $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
                 'rejected'    => 'rejected_by_' . $roleType,
@@ -604,7 +604,7 @@ class auditController extends Controller
 
 
             $user = Auth::user();
-            $type = $user->hasRole('Engineering Auditor') ? 'Engineering Auditor' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
+            $type = $user->hasRole('QC/QA Engineer') ? 'QC/QA Engineer' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
 
             if (!$type) {
                 abort(403, 'Unauthorized');
@@ -716,7 +716,7 @@ class auditController extends Controller
 
             $user = Auth::user();
 
-            $type = $user->hasRole('Engineering Auditor') ? 'Engineering Auditor' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
+            $type = $user->hasRole('QC/QA Engineer') ? 'QC/QA Engineer' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
 
             /*  if (!$type) {
                 abort(403, 'Unauthorized');
@@ -749,7 +749,7 @@ class auditController extends Controller
                 })
 
                 ->addColumn('status', function ($row) use ($type) {
-                    $statusModel = $type === 'Engineering Auditor'
+                    $statusModel = $type === 'QC/QA Engineer'
                         ? $row->engineerStatus?->status
                         : $row->lawyerStatus?->status;
 

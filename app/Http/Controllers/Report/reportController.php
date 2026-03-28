@@ -40,7 +40,7 @@ class reportController extends Controller
 
     function __construct()
     {
-        $this->middleware('role:Administrator|General Supervisor|Auditing Supervisor');
+        $this->middleware('role:Database Officer|Project Officer|Auditing Supervisor');
     }
 
 

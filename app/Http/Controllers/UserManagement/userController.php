@@ -27,7 +27,7 @@ class userController extends Controller
 
     function __construct()
     {
-        $this->middleware('role:Administrator');
+        $this->middleware('role:Database Officer');
         /*  $this->middleware('permission:user-create', ['only' => ['create', 'store']]);
           $this->middleware('permission:user-edit', ['only' => ['edit', 'update']]);
           $this->middleware('permission:user-delete', ['only' => ['destroy']]);*/
@@ -111,6 +111,7 @@ public function edit($id)
             'phone' => $user->phone,
             'address' => $user->address,
             'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+            'region' => $user->region
         ],
         'role' => $user->roles->pluck('name')->first()
     ]);
@@ -122,7 +123,7 @@ public function edit($id)
         'name_en' => 'nullable|string|max:255',
         'email' => 'required|email|unique:users,email',
         'id_no' => 'nullable|string|max:255|unique:users,id_no',
-        'contract_type' => 'nullable|in:phc,undp,mpwh,pef',
+        'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
         'phone' => 'required|string|max:255',
         'address' => 'required|string|max:255',
         'role' => 'required|string|exists:roles,name',
@@ -170,7 +171,7 @@ public function update(Request $request, User $user)
         'name_en' => 'nullable|string|max:255',
         'email' => 'required|email|unique:users,email,' . $user->id,
         'id_no' => 'nullable|string|max:255|unique:users,id_no,' . $user->id,
-        'contract_type' => 'nullable|in:phc,undp,mpwh,pef',
+        'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
         'phone' => 'required|string|max:255',
         'address' => 'required|string|max:255',
         'role' => 'required|string|exists:roles,name',

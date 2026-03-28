@@ -52,12 +52,12 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         $systemManager = Role::firstOrCreate([
-            'name' => 'Administrator',
+            'name' => 'Database Officer',
             'guard_name' => 'web',
         ]);
 
         $areaManager = Role::firstOrCreate([
-            'name' => 'General Supervisor',
+            'name' => 'Project Officer',
             'guard_name' => 'web',
         ]);
 
@@ -72,7 +72,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         $fieldEngineer = Role::firstOrCreate([
-            'name' => 'Engineering Auditor',
+            'name' => 'QC/QA Engineer',
             'guard_name' => 'web',
         ]);
         $fieldEngineer = Role::firstOrCreate([

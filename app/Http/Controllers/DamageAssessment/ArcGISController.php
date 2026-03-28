@@ -18,7 +18,7 @@ class ArcGISController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Administrator|Manager');
+        $this->middleware('role:Database Officer|Manager');
     }
 
     public function index(Request $request)

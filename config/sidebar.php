@@ -1,13 +1,13 @@
 <?php
 
 return [
-    //        'roles' => ['Administrator','General Supervisor','Team Leader', 'Auditing Supervisor', 'Legal Auditor', 'Engineering Auditor','Field Engineer'],
+    //        'roles' => ['Database Officer','Project Officer','Team Leader', 'Auditing Supervisor', 'Legal Auditor', 'QC/QA Engineer','Field Engineer'],
 
     [
         'title' => 'حصر الأضرار',
         'icon' => 'ki-abstract-28',
 
-        'roles' => ['Administrator', 'General Supervisor', 'Team Leader', 'Auditing Supervisor'],
+        'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor'],
 
         'active_patterns' => [
             'damageAssessment*',
@@ -22,28 +22,28 @@ return [
                 'title' => 'الرئيسية',
                 'url' => 'damageAssessment',
                 'pattern' => 'damageAssessment*',
-                'roles' => ['Administrator', 'General Supervisor', 'Team Leader', 'Auditing Supervisor']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
             ],
 
             [
                 'title' => 'المباني',
                 'url' => 'building',
                 'pattern' => 'building*',
-                'roles' => ['Administrator', 'General Supervisor', 'Team Leader', 'Auditing Supervisor']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
             ],
 
             [
                 'title' => 'الوحدات السكنية',
                 'url' => 'housing',
                 'pattern' => 'housing*',
-                'roles' => ['Administrator', 'General Supervisor', 'Team Leader', 'Auditing Supervisor']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
             ],
 
             [
                 'title' => 'الباحثين',
                 'url' => 'engineer',
                 'pattern' => 'engineer*',
-                'roles' => ['Administrator', 'General Supervisor', 'Team Leader', 'Auditing Supervisor']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
             ],
 
         ],
@@ -54,7 +54,7 @@ return [
         'title' => 'التقارير',
         'icon' => 'ki-chart-line',
 
-        'roles' => ['Administrator', 'General Supervisor', 'Team Leader'],
+        'roles' => ['Database Officer', 'Project Officer', 'Team Leader'],
 
         'active_patterns' => [
             'reports*'
@@ -66,14 +66,14 @@ return [
                 'title' => 'إنتاجية المناطق',
                 'url' => 'reports/commulative',
                 'pattern' => 'reports/commulative*',
-                'roles' => ['Administrator', 'General Supervisor', 'Team Leader']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader']
             ],
 
             [
                 'title' => 'إنتاجية المهندسين',
                 'url' => 'reports/productivity',
                 'pattern' => 'reports/productivity*',
-                'roles' => ['Administrator', 'General Supervisor', 'Team Leader']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader']
             ],
 
         ]
@@ -84,7 +84,7 @@ return [
         'title' => 'التدقيق',
         'icon' => 'ki-medal-star',
 
-        'roles' => ['Administrator', 'Legal Auditor', 'Engineering Auditor', 'Auditing Supervisor', 'General Supervisor'],
+        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer'],
 
         'active_patterns' => [
             'audit*'
@@ -96,13 +96,42 @@ return [
                 'title' => 'الرئيسية',
                 'url' => 'audit',
                 'pattern' => 'audit',
-                'roles' => ['Administrator','Auditing Supervisor', 'General Supervisor'],
+                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer'],
             ],
             [
                 'title' => 'تدقيق المبنى',
                 'url' => 'auditBuilding',
                 'pattern' => 'auditBuilding',
-                'roles' => ['Administrator', 'Legal Auditor', 'Engineering Auditor', 'Auditing Supervisor', 'General Supervisor'],
+                'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer'],
+            ],
+
+        ]
+
+    ],
+    [
+        'title' => 'الحضور والغياب',
+        'icon' => 'ki-calendar-8',
+
+        'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
+
+        'active_patterns' => [
+            'attendance*'
+        ],
+
+        'items' => [
+
+
+            [
+                'title' => 'حضور/غياب',
+                'url' => 'attendance',
+                'pattern' => 'attendance',
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
+            ],
+            [
+                'title' => 'التقرير',
+                'url' => 'attendance/dashboard',
+                'pattern' => 'attendance/dashboard',
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
             ],
 
         ]
@@ -112,7 +141,7 @@ return [
         'title' => 'إدارة المستخدمين',
         'icon' => 'ki-user',
 
-        'roles' => ['Administrator'],
+        'roles' => ['Database Officer'],
 
         'active_patterns' => [
             'user*'
@@ -124,22 +153,30 @@ return [
                 'title' => 'المستخدمين',
                 'url' => 'user-management/user',
                 'pattern' => 'user',
-                'roles' => ['Administrator']
+                'roles' => ['Database Officer']
+            ],
+            [
+                'title' => 'حضور/غياب',
+                'url' => 'user-management/attendance',
+                'pattern' => 'attendance',
+                'roles' => ['Database Officer', 'Area Manager']
             ],
             [
                 'title' => 'الأدوار',
                 'url' => 'user-management/roles',
                 'pattern' => 'user',
-                'roles' => ['Administrator']
+                'roles' => ['Database Officer']
             ],
             [
                 'title' => 'الصلاحيات',
                 'url' => 'user-management/permissions',
                 'pattern' => 'user',
-                'roles' => ['Administrator']
+                'roles' => ['Database Officer']
             ],
 
         ]
 
     ],
+
+
 ];

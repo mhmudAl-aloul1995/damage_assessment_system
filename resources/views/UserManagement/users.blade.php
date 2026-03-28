@@ -192,7 +192,7 @@
                                 <option value="">اختر نوع العقد</option>
                                 <option value="phc">PHC</option>
                                 <option value="undp">UNDP</option>
-                                <option value="mpwh">MPWH</option>
+                                <option value="mopwh">mopwh</option>
                                 <option value="pef">PEF</option>
                             </select>
                         </div>
@@ -216,6 +216,14 @@
                                 placeholder="رقم الجوال"
                             />
                         </div>
+                        <div class="fv-row mb-7">
+    <label class="fw-semibold fs-6 mb-2">Region</label>
+    <select name="region" class="form-select form-select-solid">
+        <option value="">Select Region</option>
+        <option value="north">North</option>
+        <option value="south">South</option>
+    </select>
+</div>
 
                         <div class="mb-5">
                             <label class="required fw-semibold fs-6 mb-5">الدور</label>
@@ -319,7 +327,7 @@
                 $('#kt_modal_user_form select[name="contract_type"]').val(user.contract_type ?? '');
                 $('#kt_modal_user_form input[name="phone"]').val(user.phone ?? '');
                 $('#kt_modal_user_form input[name="address"]').val(user.address ?? '');
-
+                $('#kt_modal_user_form select[name="region"]').val(user.region ?? '');
                 if (response.role) {
                     $('#kt_modal_user_form input[name="role"][value="' + response.role + '"]').prop('checked', true);
                 }

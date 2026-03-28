@@ -191,7 +191,7 @@
                                 <option value="">اختر نوع العقد</option>
                                 <option value="phc">PHC</option>
                                 <option value="undp">UNDP</option>
-                                <option value="mpwh">MPWH</option>
+                                <option value="mopwh">mopwh</option>
                                 <option value="pef">PEF</option>
                             </select>
                         </div>

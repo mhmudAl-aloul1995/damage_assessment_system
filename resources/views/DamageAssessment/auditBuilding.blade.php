@@ -5,8 +5,8 @@
 @section('content')
 @php
 $authType = auth()->user()->roles->first()->name; // eng | lawyer
-$isEngineer = $authType === 'Engineering Auditor';
-$pageTitle = $isEngineer ? 'Engineering Auditor' : 'Legal Auditor';
+$isEngineer = $authType === 'QC/QA Engineer';
+$pageTitle = $isEngineer ? 'QC/QA Engineer' : 'Legal Auditor';
 
 $assignedColumnTitle = $isEngineer ? 'Engineer' : 'Lawyer';
 @endphp

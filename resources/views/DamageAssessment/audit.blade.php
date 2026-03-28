@@ -330,7 +330,7 @@
 
 			// 2. Set Modal Details
 			$('#modal_title,#user_label').text('تعيين للمهندس');
-			$('#assign_type').val('Engineering Auditor');
+			$('#assign_type').val('QC/QA Engineer');
 			$('#assign_status_id').val(2);
 
 			const container = $('#selected_buildings_container');

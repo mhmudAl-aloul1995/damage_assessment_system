@@ -41,11 +41,17 @@ class User extends Authenticatable
         'email_verified_at',
         'password',
         'remember_token',
-         'id_no',
-    'contract_type',
-    'name_en',
+        'id_no',
+        'contract_type',
+        'contract_start_date',
+        'region',
+        'name_en',
     ];
 
+
+    protected $casts = [
+        'contract_start_date' => 'date',
+    ];
     /**
      * The model's default values for attributes.
      *
@@ -72,6 +78,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'string',
             'remember_token' => 'string',
+            'contract_start_date' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -86,9 +93,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(BuildingStatusHistory::class);
     }
-    
+
     public function attendances()
-{
-    return $this->hasMany(Attendance::class);
-}
+    {
+        return $this->hasMany(Attendance::class);
+    }
 }
