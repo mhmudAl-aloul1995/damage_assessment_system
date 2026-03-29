@@ -163,7 +163,7 @@ return [
             ],
             [
                 'title' => 'حضور/غياب',
-                'url' => 'user-management/attendance',
+                'url' => 'Attendance/attendance',
                 'pattern' => 'attendance',
                 'roles' => ['Database Officer', 'Area Manager']
             ],
