@@ -31,7 +31,7 @@ class AttendanceController extends Controller
         $dateContext = \Carbon\Carbon::createFromDate($year, $month, 1);
         $daysInMonth = $dateContext->daysInMonth;
 
-        $users = \App\Models\User::role(['Field Engineer', 'Team Leader', 'QC/QA Engineer', 'Area Manager', 'Team Leader -INF', 'Engineering Auditor', 'Legal Auditor', 'Auditing Supervisor'])
+        $users = \App\Models\User::role(['Field Engineer', 'Team Leader', 'QC/QA Engineer', 'Area Manager', 'Team Leader -INF', 'Legal Auditor', 'Auditing Supervisor'])
             ->with([
                 'roles',
                 'attendances' => function ($query) use ($month, $year) {
