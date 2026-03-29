@@ -206,7 +206,7 @@ class AttendanceSheetImport implements ToCollection, WithTitle
             str_contains($v, 'Area Manager') => 'Area Manager',
             str_contains($v, 'area manager') => 'area manager',
             str_contains($v, 'Team Leader -INF') => 'Team Leader -INF',
-            str_contains($v, 'Team leader') => 'Team leader',
+            str_contains($v, 'Team Leader') => 'Team Leader',
             default => '',
         };
     }
