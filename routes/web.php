@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\auditContoller;
+use App\Models\Attendance;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserManagement\userController;
@@ -19,7 +20,7 @@ use App\Http\Controllers\DamageAssessment\auditController;
 use App\Http\Controllers\Attendance\AttendanceController;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Artisan;
-
+use App\Models\AttendanceImportLog;
 
 
 Route::get('/', function () {
@@ -111,6 +112,8 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('/deleteUsers', function () {
         user::where('id', '>', '12')->delete();
+        AttendanceImportLog::where('id','>','0')->delete();
+        Attendance::where('id','>','0')->delete();
 
     });
 
