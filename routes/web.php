@@ -110,7 +110,7 @@ Route::middleware('auth')->group(function () {
         ]);
     });
     Route::get('/deleteUsers', function () {
-        user::where('id' > '12')->delete();
+        user::where('id', '>', '12')->delete();
 
     });
 
