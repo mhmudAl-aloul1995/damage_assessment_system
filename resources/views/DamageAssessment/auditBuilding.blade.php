@@ -6,6 +6,7 @@
 @php
 $authType = auth()->user()->roles->first()->name; // eng | lawyer
 $isEngineer = $authType === 'QC/QA Engineer';
+dd($authType);
 
 $pageTitle = $isEngineer ? 'QC/QA Engineer' : 'Legal Auditor';
 
