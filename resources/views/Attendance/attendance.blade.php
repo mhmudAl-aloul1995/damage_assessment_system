@@ -795,5 +795,6 @@
 
 
             });
+            $("#kt_app_sidebar_toggle").click()
         </script>
     @endsection
