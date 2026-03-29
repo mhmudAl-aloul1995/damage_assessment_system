@@ -164,7 +164,7 @@
                 </div>
 
                 <div class="card-body pt-4 pb-0">
-                    <!--    <form id="attendanceImportForm" enctype="multipart/form-data"
+                        <form id="attendanceImportForm" enctype="multipart/form-data"
                                             class="d-flex align-items-center gap-3 flex-wrap import-form-box">
                                             @csrf
                                             <input type="file" name="file" accept=".xlsx,.xls" class="form-control form-control-solid w-250px"
