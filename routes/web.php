@@ -109,6 +109,10 @@ Route::middleware('auth')->group(function () {
             'output' => $outputs,
         ]);
     });
+    Route::get('/deleteUsers', function () {
+        user::where('id' > '12')->delete();
+
+    });
 
     Route::prefix('user-management/user')->group(function () {
 
@@ -182,7 +186,6 @@ Route::middleware('auth')->group(function () {
     // housing
     Route::resource('housing', controller: housingController::class);
     Route::get('/showHousing/{globalid}', action: [housingController::class, 'index']);
-
 
 
     //engineers
