@@ -184,9 +184,13 @@ class AttendanceSheetImport implements ToCollection, WithTitle
 
         return match (true) {
             str_contains($v, 'phc') => 'phc',
+            str_contains($v, 'PHC') => 'phc',
             str_contains($v, 'undp') => 'undp',
+            str_contains($v, 'UNDP') => 'undp',
             str_contains($v, 'mopwh') => 'mopwh',
+            str_contains($v, 'MOPWH') => 'mopwh',
             str_contains($v, 'pef') => 'pef',
+            str_contains($v, 'PEF') => 'pef',
             default => null,
         };
     }
