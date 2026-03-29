@@ -180,7 +180,7 @@ class AttendanceSheetImport implements ToCollection, WithTitle
     // =====================
     protected function normalizeContract(?string $value): ?string
     {
-        $v = strtolower(trim((string) $value));
+        $v = trim((string) $value);
 
         return match (true) {
             str_contains($v, 'phc') => 'phc',
