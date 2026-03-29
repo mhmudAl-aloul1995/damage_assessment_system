@@ -198,7 +198,7 @@ class userController extends Controller
 
         if ($request->filled('send_password') == 'yes') {
             if ($user->password) {
-                Mail::to($user->email)->send(new WelcomeUserMail($user->email, $user->password));
+                Mail::to($user->email)->send(new WelcomeUserMail($user->email, decrypt($user->password)));
             } else {
 
                 $randomPassword = Str::password(6, false, true, false, false);
