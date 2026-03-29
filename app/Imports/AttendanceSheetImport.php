@@ -64,8 +64,7 @@ class AttendanceSheetImport implements ToCollection, WithTitle
             if ($idNo === '' && $nameEn === '')
                 continue;
 
-            dd($contractRaw);
-            $contractType = $this->normalizeContract($contractRaw);
+            $contractType = $contractRaw=='PDA- PHC'?'PHC':'MOPWH';
             $roleName = $this->normalizeRoleFromPosition($positionRaw);
             $region = $this->region;
             // =====================
