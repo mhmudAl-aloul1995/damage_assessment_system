@@ -164,7 +164,7 @@
                 </div>
 
                 <div class="card-body pt-4 pb-0">
-                    <form id="attendanceImportForm" enctype="multipart/form-data"
+                   <!--    <form id="attendanceImportForm" enctype="multipart/form-data"
                         class="d-flex align-items-center gap-3 flex-wrap import-form-box">
                         <?php echo csrf_field(); ?>
                         <input type="file" name="file" accept=".xlsx,.xls" class="form-control form-control-solid w-250px"
@@ -184,7 +184,7 @@
 
                     </form>
                 </div>
-                <div class="w-100 mt-3" id="import_progress_wrapper" style="display:none;">
+              <div class="w-100 mt-3" id="import_progress_wrapper" style="display:none;">
                     <div class="progress h-20px">
                         <div id="import_progress_bar" class="progress-bar progress-bar-striped progress-bar-animated"
                             role="progressbar" style="width: 0%">
@@ -192,7 +192,7 @@
                         </div>
                     </div>
                     <div class="text-muted mt-2" id="import_progress_text">Starting import...</div>
-                </div>
+                </div> -->
                 <div class="card-body py-4">
                     <table class="table table-bordered align-middle fs-7 gy-2" id="kt_attendance_table">
                         <thead>
