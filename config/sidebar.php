@@ -7,7 +7,7 @@ return [
         'title' => 'حصر الأضرار',
         'icon' => 'ki-abstract-28',
 
-        'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor'],
+        'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
 
         'active_patterns' => [
             'damageAssessment*',
@@ -22,34 +22,34 @@ return [
                 'title' => 'الرئيسية',
                 'url' => 'damageAssessment',
                 'pattern' => 'damageAssessment*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
             ],
 
             [
                 'title' => 'الإستبيانات',
                 'url' => 'assessmentAll',
                 'pattern' => 'assessmentAll*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
-            ],  
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
+            ],
             [
                 'title' => 'المباني',
                 'url' => 'building',
                 'pattern' => 'building*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
             ],
 
             [
                 'title' => 'الوحدات السكنية',
                 'url' => 'housing',
                 'pattern' => 'housing*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
             ],
 
             [
                 'title' => 'الباحثين',
                 'url' => 'engineer',
                 'pattern' => 'engineer*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
             ],
 
         ],
