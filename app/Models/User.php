@@ -2,34 +2,21 @@
 
 namespace App\Models;
 
-// 1. Add this import at the top
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use Spatie\Permission\Models\Role;
 
 class User extends Authenticatable
 {
-    // 2. Add HasFactory inside the class definition
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
+
     protected $table = 'users';
-
-    /**
-     * @var string
-     */
     protected $connection = 'mysql';
-
     protected $primaryKey = 'id';
-
     public $timestamps = true;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'id',
         'name',
@@ -37,7 +24,6 @@ class User extends Authenticatable
         'phone',
         'avatar',
         'address',
-        'role',
         'email_verified_at',
         'password',
         'remember_token',
@@ -48,24 +34,11 @@ class User extends Authenticatable
         'name_en',
     ];
 
-
-    protected $casts = [
-        'contract_start_date' => 'date',
-    ];
-    /**
-     * The model's default values for attributes.
-     *
-     * @var array<string, mixed>
-     */
-    protected $attributes = [];
-
     protected $hidden = [
         'password',
+        'remember_token',
     ];
 
-    /**
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -96,6 +69,6 @@ class User extends Authenticatable
 
     public function attendances()
     {
-        return $this->hasMany(Attendance::class);
+        return $this->hasMany(Attendance::class, 'user_id');
     }
 }

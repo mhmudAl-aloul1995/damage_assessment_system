@@ -22,67 +22,71 @@ class AttendanceController extends Controller
         return view('Attendance.attendance');
     }
 
-  
+
     public function data(Request $request)
-{
-    $month = $request->month ?? date('m');
-    $year  = $request->year ?? date('Y');
+    {
+        $month = $request->month ?? date('m');
+        $year = $request->year ?? date('Y');
 
-    $dateContext = \Carbon\Carbon::createFromDate($year, $month, 1);
-    $daysInMonth = $dateContext->daysInMonth;
+        $dateContext = \Carbon\Carbon::createFromDate($year, $month, 1);
+        $daysInMonth = $dateContext->daysInMonth;
 
-    $users = \App\Models\User::with([
-            'roles',
-            'attendances' => function ($query) use ($month, $year) {
-                $query->whereMonth('date', $month)
-                      ->whereYear('date', $year);
-            }
-        ])
-        ->withCount([
-            'attendances as total_present' => function ($query) use ($month, $year) {
-                $query->whereMonth('date', $month)
-                      ->whereYear('date', $year)
-                      ->where('status', 1);
-            }
-        ]);
+        $users = \App\Models\User::query()
+            ->with([
+                'roles',
+                'attendances' => function ($query) use ($month, $year) {
+                    $query->whereMonth('date', $month)
+                        ->whereYear('date', $year);
+                }
+            ])
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['Field Engineer']);
+            })
+            ->withCount([
+                'attendances as total_present' => function ($query) use ($month, $year) {
+                    $query->whereMonth('date', $month)
+                        ->whereYear('date', $year)
+                        ->where('status', 1);
+                }
+            ]);
 
-    if ($request->filled('contract_type')) {
-        $users->where('contract_type', $request->contract_type);
-    }
+        if ($request->filled('contract_type')) {
+            $users->where('contract_type', $request->contract_type);
+        }
 
-    if ($request->filled('region')) {
-        $users->where('region', $request->region);
-    }
+        if ($request->filled('region')) {
+            $users->where('region', $request->region);
+        }
 
-    $dataTable = datatables()->eloquent($users)
-        ->addIndexColumn()
-        ->addColumn('id', fn($user) => $user->id)
-        ->addColumn('name', fn($user) => $user->name ?? '-')
-        ->addColumn('name_en', fn($user) => $user->name_en ?? '-')
-        ->addColumn('id_no', fn($user) => $user->id_no ?? '-')
-        ->addColumn('phone', fn($user) => $user->phone ?? '-')
-        ->addColumn('contract_type', fn($user) => $user->contract_type ?? '-')
-        ->addColumn('region', fn($user) => $user->region ?? '-')
-        ->addColumn('total', fn($user) => $user->total_present ?? 0);
+        $dataTable = datatables()->eloquent($users)
+            ->addIndexColumn()
+            ->addColumn('id', fn($user) => $user->id)
+            ->addColumn('name', fn($user) => $user->name ?? '-')
+            ->addColumn('name_en', fn($user) => $user->name_en ?? '-')
+            ->addColumn('id_no', fn($user) => $user->id_no ?? '-')
+            ->addColumn('phone', fn($user) => $user->phone ?? '-')
+            ->addColumn('contract_type', fn($user) => $user->contract_type ?? '-')
+            ->addColumn('region', fn($user) => $user->region ?? '-')
+            ->addColumn('total', fn($user) => $user->total_present ?? 0);
 
-    for ($i = 1; $i <= 31; $i++) {
-        $dataTable->addColumn("day_$i", function ($user) use ($i, $daysInMonth, $year, $month) {
-            if ($i > $daysInMonth) {
-                return 'N/A';
-            }
+        for ($i = 1; $i <= 31; $i++) {
+            $dataTable->addColumn("day_$i", function ($user) use ($i, $daysInMonth, $year, $month) {
+                if ($i > $daysInMonth) {
+                    return 'N/A';
+                }
 
-            $dateStr = \Carbon\Carbon::createFromDate($year, $month, $i)->format('Y-m-d');
+                $dateStr = \Carbon\Carbon::createFromDate($year, $month, $i)->format('Y-m-d');
 
-            $record = $user->attendances->first(function ($attendance) use ($dateStr) {
-                return \Carbon\Carbon::parse($attendance->date)->format('Y-m-d') === $dateStr;
+                $record = $user->attendances->first(function ($attendance) use ($dateStr) {
+                    return \Carbon\Carbon::parse($attendance->date)->format('Y-m-d') === $dateStr;
+                });
+
+                return $record ? (int) $record->status : 0;
             });
+        }
 
-            return $record ? (int) $record->status : 0;
-        });
+        return $dataTable->make(true);
     }
-
-    return $dataTable->make(true);
-}
     public function store(Request $request)
     {
         $request->validate([
