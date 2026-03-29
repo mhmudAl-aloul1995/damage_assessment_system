@@ -72,14 +72,14 @@ return [
                 'title' => 'إنتاجية المناطق',
                 'url' => 'reports/commulative',
                 'pattern' => 'reports/commulative*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader']
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager']
             ],
 
             [
                 'title' => 'إنتاجية المهندسين',
                 'url' => 'reports/productivity',
                 'pattern' => 'reports/productivity*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader']
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager']
             ],
 
         ]
