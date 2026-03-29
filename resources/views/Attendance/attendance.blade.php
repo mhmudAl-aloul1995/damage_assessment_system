@@ -413,6 +413,7 @@
                                 if (role === 'Team Leader -INF') color = 'badge-light-primary';
                                 if (role === 'Area Manager') color = 'badge-light-warning';
                                 if (role === 'QC/QA Engineer') color = 'badge-light-info';
+                                if (role === 'Auditing Supervisor') color = 'badge-danger-info';
 
                                 return `<span class="badge ${color} me-1 text-uppercase">${role}</span>`;
                             }).join('');
