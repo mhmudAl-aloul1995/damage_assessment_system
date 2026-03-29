@@ -100,7 +100,15 @@
 							<input type="text" id="filter_area" class="form-control form-control-solid"
 								placeholder="المنطقة أو الحي" />
 						</div>
+						<div class="col-md-3">
+							<label class="form-label fw-semibold">من تاريخ الإنشاء</label>
+							<input type="date" id="filter_from_date" class="form-control form-control-solid">
+						</div>
 
+						<div class="col-md-3">
+							<label class="form-label fw-semibold">إلى تاريخ الإنشاء</label>
+							<input type="date" id="filter_to_date" class="form-control form-control-solid">
+						</div>
 						<div class="col-md-3 d-flex align-items-end">
 							<button type="button" class="btn btn-primary w-100" id="applyFilters">
 								تطبيق الفلاتر
@@ -246,9 +254,9 @@
 					orderable: false,
 					searchable: false,
 					render: (data) => `<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-											<input class="form-check-input" type="checkbox" 
-												data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-										</div>`
+												<input class="form-check-input" type="checkbox" 
+													data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+											</div>`
 				},
 
 				{

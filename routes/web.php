@@ -111,7 +111,7 @@ Route::middleware('auth')->group(function () {
         ]);
     });
     Route::get('/deleteUsers', function () {
-        user::where('id', '>', '12')->delete();
+        user::where('id', '>', '3')->delete();
         AttendanceImportLog::where('id','>','0')->delete();
         Attendance::where('id','>','0')->delete();
 
