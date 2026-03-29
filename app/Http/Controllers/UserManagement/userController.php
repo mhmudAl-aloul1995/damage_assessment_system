@@ -113,7 +113,7 @@ class userController extends Controller
                 'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                 'region' => $user->region
             ],
-            'role' => $user->roles->pluck('name')->first()
+            'roles' => $user->roles->pluck('name')->toArray()
         ]);
     }
     public function store(Request $request)
@@ -152,8 +152,8 @@ class userController extends Controller
                 'avatar' => $avatarPath,
             ]);
 
-            $role = Role::findByName($request->role);
-            $user->assignRole($role);
+            $roles = $request->roles; // array
+            $user->syncRoles($roles);
         });
 
         Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
@@ -193,8 +193,8 @@ class userController extends Controller
         }
 
         $user->update($data);
-
-        $user->syncRoles([$request->role]);
+        $roles = $request->roles; // array
+        $user->syncRoles($roles);
 
         if ($request->filled('send_password') && $request->send_password == 'yes') {
             // Generate a new temporary password
