@@ -32,7 +32,7 @@ class damageAssessmentController extends Controller
     
         function __construct()
         {
-            $this->middleware('role:Database Officer|Team Leader|Auditing Supervisor|Area Manager');
+            $this->middleware('role:Database Officer|Team Leader|Auditing Supervisor|Area Manager|Project Officer');
          /*   $this->middleware('permission:user-create', ['only' => ['create', 'store']]);
             $this->middleware('permission:user-edit', ['only' => ['edit', 'update']]);
             $this->middleware('permission:user-delete', ['only' => ['destroy']]);*/
