@@ -190,6 +190,7 @@ Route::middleware('auth')->group(function () {
     Route::get('engineerAssessments/{assignedto}', [engineerController::class, 'engineerAssessments']);
     Route::get(uri: 'assessment/{globalid}', action: [engineerController::class, 'showAssessment']);
     Route::get('/engineers/filter', [EngineerController::class, 'filter'])->name('engineers.filter');
+    Route::get('/assessmentAll', [EngineerController::class, 'assessmentAll'])->name('engineers.assessmentAll');
     //Assessment
     Route::resource(name: 'damageAssessment', controller: damageAssessmentController::class);
     Route::get('/showBuildings', action: [damageAssessmentController::class, 'showBuildings']);

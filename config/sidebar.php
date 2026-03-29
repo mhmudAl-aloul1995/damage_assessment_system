@@ -26,6 +26,12 @@ return [
             ],
 
             [
+                'title' => 'الإستبيانات',
+                'url' => 'assessmentAll',
+                'pattern' => 'assessmentAll*',
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor']
+            ],  
+            [
                 'title' => 'المباني',
                 'url' => 'building',
                 'pattern' => 'building*',

@@ -40,19 +40,24 @@ class engineerController extends Controller
         $completed = Building::where('assignedto', $request->assignedto)
             ->where('field_status', 'COMPLETED')
             ->count();
-
         $notCompleted = Building::where('assignedto', $request->assignedto)
             ->where('field_status', 'NOT_COMPLETED')
             ->count();
 
         $total = Building::where('assignedto', $request->assignedto)->count();
-        $completion = $total > 0 ? ($completed / $total) * 100 : 0;
 
+        $completion = $total > 0 ? $completed / $total * 100 : 0;
+        $completion = intval($completion);
         $assignedto = $request->assignedto;
 
 
 
         return View::make('DamageAssessment.engineerAssessments', compact('assignedto', 'completion', 'completed', 'notCompleted'));
+    }
+    public function assessmentAll(Request $request)
+    {
+
+        return View::make('DamageAssessment.assessmentAll');
     }
 
     public function filter(Request $request)
@@ -61,9 +66,7 @@ class engineerController extends Controller
         $status = $request->status;
         $assignedto = $request->assignedto;
         $search = $request->search;
-
-        $query = Building::where('assignedto', $assignedto)
-            ->with('housing_unit:parentglobalid,q_13_3_1_first_name,q_13_3_4_last_name__family,objectid')
+        $query = Building::with('housing_unit:parentglobalid,q_13_3_1_first_name,q_13_3_4_last_name__family,objectid')
             ->select([
                 'building_damage_status',
                 'objectid',
@@ -75,6 +78,11 @@ class engineerController extends Controller
                 'building_name',
                 'globalid'
             ]);
+        if ($request->assignedto != null) {
+
+            $query->where('assignedto', $assignedto);
+
+        }
 
         if ($status != 'all') {
             $query->where('field_status', $status);

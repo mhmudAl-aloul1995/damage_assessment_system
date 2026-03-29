@@ -1,8 +1,8 @@
-@extends('layouts.app') 
+ 
 
-@section('title', 'الإستبيانات') 
+<?php $__env->startSection('title', 'الإستبيانات'); ?> 
 
-@section('content') 
+<?php $__env->startSection('content'); ?> 
 <style> 
     /* تحسينات عامة */
     .card { border: none; box-shadow: 0 0.1rem 1rem 0.25rem rgba(0, 0, 0, 0.05); transition: transform 0.2s ease; }
@@ -51,10 +51,11 @@
                         </div> 
                         <div class="d-flex flex-wrap fw-semibold fs-6 mb-4 pe-2"> 
                             <span class="d-flex align-items-center text-gray-500 me-5 mb-2">
-                                <i class="ki-duotone ki-geolocation fs-4 me-1 text-primary"><span class="path1"></span><span class="path2"></span></i>{{ $assignedto }}
+                                <i class="ki-duotone ki-geolocation fs-4 me-1 text-primary"><span class="path1"></span><span class="path2"></span></i><?php echo e($assignedto); ?>
+
                             </span> 
                             <span class="d-flex align-items-center text-gray-500 mb-2"> 
-                                <i class="ki-duotone ki-sms fs-4 me-1 text-primary"><span class="path1"></span><span class="path2"></span></i>{{ $assignedto }}@gmail.com
+                                <i class="ki-duotone ki-sms fs-4 me-1 text-primary"><span class="path1"></span><span class="path2"></span></i><?php echo e($assignedto); ?>@gmail.com
                             </span> 
                         </div> 
                     </div> 
@@ -64,13 +65,13 @@
                 <div class="row g-4 mb-6"> 
                     <div class="col-6 col-md-3">
                         <div class="bg-light-success rounded border border-success border-dashed p-4 text-center stat-card">
-                            <div class="fs-2 fw-bolder text-success">{{ $completed }}</div>
+                            <div class="fs-2 fw-bolder text-success"><?php echo e($completed); ?></div>
                             <div class="fw-bold text-gray-600">مكتملة</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="bg-light-danger rounded border border-danger border-dashed p-4 text-center stat-card">
-                            <div class="fs-2 fw-bolder text-danger">{{ $notCompleted }}</div>
+                            <div class="fs-2 fw-bolder text-danger"><?php echo e($notCompleted); ?></div>
                             <div class="fw-bold text-gray-600">غير مكتملة</div>
                         </div>
                     </div>
@@ -78,10 +79,10 @@
                         <div class="bg-light-primary rounded border border-primary border-dashed p-4 stat-card">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="fw-bolder text-gray-800">نسبة الإنجاز الكلية</span>
-                                <span class="badge badge-primary fs-7">{{ $completion }}%</span>
+                                <span class="badge badge-primary fs-7"><?php echo e($completion); ?>%</span>
                             </div>
                             <div class="h-8px w-100 bg-white rounded">
-                                <div class="bg-primary rounded h-8px" role="progressbar" style="width: {{ $completion }}%;"></div>
+                                <div class="bg-primary rounded h-8px" role="progressbar" style="width: <?php echo e($completion); ?>%;"></div>
                             </div>
                         </div>
                     </div>
@@ -114,7 +115,7 @@
 <!-- Enhanced Skeleton Loader -->
 <div id="skeleton-loader" class="d-none">  
     <div class="row g-6">  
-        @for ($i = 0; $i < 3; $i++)  
+        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php for($i = 0; $i < 3; $i++): ?>  
             <div class="col-md-6 col-xl-4">  
                 <div class="card h-100 p-6">
                     <div class="skeleton rounded-circle mb-4" style="width: 50px; height: 50px;"></div>
@@ -123,19 +124,19 @@
                     <div class="skeleton rounded" style="width: 40%; height: 15px;"></div>
                 </div>  
             </div>  
-        @endfor  
+        <?php endfor; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>  
     </div>  
 </div> 
-@endsection 
+<?php $__env->stopSection(); ?> 
 
-@section('script') 
+<?php $__env->startSection('script'); ?> 
 <script> 
     let searchTimeout;
 
     function loadEngineers(url) { 
         let status = $('select[name="field_status"]').val(); 
         let search = $("#search").val(); 
-        let assignedto = "{{ $assignedto }}"; 
+        let assignedto = "<?php echo e($assignedto); ?>"; 
 
         $("#engineers-container").html($("#skeleton-loader").html()); 
 
@@ -150,13 +151,13 @@
     } 
 
     $(document).ready(function () { 
-        $('select[name="field_status"]').on('change', () => loadEngineers("{{ route('engineers.filter') }}")); 
+        $('select[name="field_status"]').on('change', () => loadEngineers("<?php echo e(route('engineers.filter')); ?>")); 
         
-        loadEngineers("{{ route('engineers.filter') }}"); 
+        loadEngineers("<?php echo e(route('engineers.filter')); ?>"); 
 
         $("#search").on("input", function () { 
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => loadEngineers("{{ route('engineers.filter') }}"), 400);
+            searchTimeout = setTimeout(() => loadEngineers("<?php echo e(route('engineers.filter')); ?>"), 400);
         }); 
     }); 
 
@@ -165,4 +166,6 @@
         loadEngineers($(this).attr('href')); 
     }); 
 </script> 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/engineerAssessments.blade.php ENDPATH**/ ?>
