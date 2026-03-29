@@ -196,17 +196,17 @@ class userController extends Controller
 
         $user->syncRoles([$request->role]);
 
-        if ($request->filled('send_password') == 'yes') {
-            if ($user->password) {
-                Mail::to($user->email)->send(new WelcomeUserMail($user->email, decrypt($user->password)));
-            } else {
+        if ($request->filled('send_password') && $request->send_password == 'yes') {
+            // Generate a new temporary password
+            $randomPassword = Str::random(6);
 
-                $randomPassword = Str::password(6, false, true, false, false);
-                $hashedPassword = Hash::make($randomPassword);
-                $user->update(['password' => $hashedPassword]);
-                Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
-            }
+            $user->update([
+                'password' => Hash::make($randomPassword)
+            ]);
+
+            Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
         }
+
 
         return response()->json([
             'message' => 'تم تعديل المستخدم بنجاح'
