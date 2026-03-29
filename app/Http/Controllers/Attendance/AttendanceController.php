@@ -31,7 +31,7 @@ class AttendanceController extends Controller
         $dateContext = \Carbon\Carbon::createFromDate($year, $month, 1);
         $daysInMonth = $dateContext->daysInMonth;
 
-        $users = \App\Models\User::role(['Field Engineer', 'Team Leader', 'QC/QA Engineer', 'Area Manager', 'Team Leader -INF'])
+        $users = \App\Models\User::role(['Field Engineer', 'Team Leader', 'QC/QA Engineer', 'Area Manager', 'Team Leader -INF', 'Engineering Auditor', 'Legal Auditor', 'Auditing Supervisor'])
             ->with([
                 'roles',
                 'attendances' => function ($query) use ($month, $year) {
@@ -64,6 +64,9 @@ class AttendanceController extends Controller
             ->addColumn('phone', fn($user) => $user->phone ?? '-')
             ->addColumn('contract_type', fn($user) => $user->contract_type ?? '-')
             ->addColumn('region', fn($user) => $user->region ?? '-')
+            ->addColumn('role', function ($user) {
+                return $user->roles->pluck('name')->implode(', ') ?: '-';
+            })
             ->addColumn('total', fn($user) => $user->total_present ?? 0);
 
         for ($i = 1; $i <= 31; $i++) {
@@ -84,6 +87,8 @@ class AttendanceController extends Controller
 
         return $dataTable->make(true);
     }
+
+
     public function store(Request $request)
     {
         $request->validate([
