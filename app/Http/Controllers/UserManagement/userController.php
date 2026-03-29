@@ -90,57 +90,95 @@ class userController extends Controller
             ->rawColumns(['checkbox', 'action'])
             ->make(true);
     }
-public function edit($id)
-{
-    $user = User::with('roles')->find($id);
+    public function edit($id)
+    {
+        $user = User::with('roles')->find($id);
 
-    if (!$user) {
+        if (!$user) {
+            return response()->json([
+                'message' => 'المستخدم غير موجود'
+            ], 404);
+        }
+
         return response()->json([
-            'message' => 'المستخدم غير موجود'
-        ], 404);
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'name_en' => $user->name_en,
+                'email' => $user->email,
+                'id_no' => $user->id_no,
+                'contract_type' => $user->contract_type,
+                'phone' => $user->phone,
+                'address' => $user->address,
+                'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+                'region' => $user->region
+            ],
+            'role' => $user->roles->pluck('name')->first()
+        ]);
+    }
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'name_en' => 'nullable|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'id_no' => 'nullable|string|max:255|unique:users,id_no',
+            'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
+            'phone' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+            'role' => 'required|string|exists:roles,name',
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        $avatarPath = null;
+
+        if ($request->hasFile('avatar')) {
+            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        $randomPassword = Str::password(6, false, true, false, false);
+        $hashedPassword = Hash::make($randomPassword);
+
+        DB::transaction(function () use ($request, $hashedPassword, $avatarPath, &$user) {
+            $user = User::create([
+                'name' => $request->name,
+                'name_en' => $request->name_en,
+                'email' => $request->email,
+                'id_no' => $request->id_no,
+                'contract_type' => $request->contract_type,
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'password' => $hashedPassword,
+                'avatar' => $avatarPath,
+            ]);
+
+            $role = Role::findByName($request->role);
+            $user->assignRole($role);
+        });
+
+        Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
+
+        return response()->json([
+            'message' => 'تم إضافة المستخدم وتعيين دوره بنجاح'
+        ]);
     }
 
-    return response()->json([
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'name_en' => $user->name_en,
-            'email' => $user->email,
-            'id_no' => $user->id_no,
-            'contract_type' => $user->contract_type,
-            'phone' => $user->phone,
-            'address' => $user->address,
-            'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-            'region' => $user->region
-        ],
-        'role' => $user->roles->pluck('name')->first()
-    ]);
-}
-   public function store(Request $request)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'name_en' => 'nullable|string|max:255',
-        'email' => 'required|email|unique:users,email',
-        'id_no' => 'nullable|string|max:255|unique:users,id_no',
-        'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
-        'phone' => 'required|string|max:255',
-        'address' => 'required|string|max:255',
-        'role' => 'required|string|exists:roles,name',
-        'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-    ]);
 
-    $avatarPath = null;
+    public function update(Request $request, User $user)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'name_en' => 'nullable|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'id_no' => 'nullable|string|max:255|unique:users,id_no,' . $user->id,
+            'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
+            'phone' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+            'role' => 'required|string|exists:roles,name',
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
 
-    if ($request->hasFile('avatar')) {
-        $avatarPath = $request->file('avatar')->store('avatars', 'public');
-    }
-
-    $randomPassword = Str::password(6, false, true, false, false);
-    $hashedPassword = Hash::make($randomPassword);
-
-    DB::transaction(function () use ($request, $hashedPassword, $avatarPath, &$user) {
-        $user = User::create([
+        $data = [
             'name' => $request->name,
             'name_en' => $request->name_en,
             'email' => $request->email,
@@ -148,57 +186,32 @@ public function edit($id)
             'contract_type' => $request->contract_type,
             'phone' => $request->phone,
             'address' => $request->address,
-            'password' => $hashedPassword,
-            'avatar' => $avatarPath,
+        ];
+
+        if ($request->hasFile('avatar')) {
+            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        $user->update($data);
+
+        $user->syncRoles([$request->role]);
+
+        if ($request->filled('send_password') == 'yes') {
+            if ($user->password) {
+                Mail::to($user->email)->send(new WelcomeUserMail($user->email, $user->password));
+            } else {
+
+                $randomPassword = Str::password(6, false, true, false, false);
+                $hashedPassword = Hash::make($randomPassword);
+                $user->update(['password' => $hashedPassword]);
+                Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
+            }
+        }
+
+        return response()->json([
+            'message' => 'تم تعديل المستخدم بنجاح'
         ]);
-
-        $role = Role::findByName($request->role);
-        $user->assignRole($role);
-    });
-
-    Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
-
-    return response()->json([
-        'message' => 'تم إضافة المستخدم وتعيين دوره بنجاح'
-    ]);
-}
-
-
-public function update(Request $request, User $user)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'name_en' => 'nullable|string|max:255',
-        'email' => 'required|email|unique:users,email,' . $user->id,
-        'id_no' => 'nullable|string|max:255|unique:users,id_no,' . $user->id,
-        'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
-        'phone' => 'required|string|max:255',
-        'address' => 'required|string|max:255',
-        'role' => 'required|string|exists:roles,name',
-        'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-    ]);
-
-    $data = [
-        'name' => $request->name,
-        'name_en' => $request->name_en,
-        'email' => $request->email,
-        'id_no' => $request->id_no,
-        'contract_type' => $request->contract_type,
-        'phone' => $request->phone,
-        'address' => $request->address,
-    ];
-
-    if ($request->hasFile('avatar')) {
-        $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
     }
-
-    $user->update($data);
-    $user->syncRoles([$request->role]);
-
-    return response()->json([
-        'message' => 'تم تعديل المستخدم بنجاح'
-    ]);
-}
 
     public function destroy(Request $request, $id)
     {

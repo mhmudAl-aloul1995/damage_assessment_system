@@ -215,6 +215,22 @@
                                 placeholder="رقم الجوال"
                             />
                         </div>
+                        <div class="fv-row mb-7">
+    <label class="fw-semibold fs-6 mb-2">المنطقة</label>
+    <select name="region" class="form-select form-select-solid">
+        <option value=""> إختر المنطقة</option>
+        <option value="north">شمال</option>
+        <option value="south">جنوب</option>
+    </select>
+</div>
+   <div class="fv-row mb-7">
+    <label class="fw-semibold fs-6 mb-2">إرسال كلمة مرور</label>
+    <select name="region" class="form-select form-select-solid">
+        <option value="">إرسال كلمة مرور</option>
+        <option value="yes">نعم</option>
+        <option value="no">لا</option>
+    </select>
+</div>
 
                         <div class="mb-5">
                             <label class="required fw-semibold fs-6 mb-5">الدور</label>
@@ -319,7 +335,7 @@
                 $('#kt_modal_user_form select[name="contract_type"]').val(user.contract_type ?? '');
                 $('#kt_modal_user_form input[name="phone"]').val(user.phone ?? '');
                 $('#kt_modal_user_form input[name="address"]').val(user.address ?? '');
-
+                $('#kt_modal_user_form select[name="region"]').val(user.region ?? '');
                 if (response.role) {
                     $('#kt_modal_user_form input[name="role"][value="' + response.role + '"]').prop('checked', true);
                 }

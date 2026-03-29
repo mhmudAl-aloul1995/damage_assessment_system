@@ -217,11 +217,19 @@
                             />
                         </div>
                         <div class="fv-row mb-7">
-    <label class="fw-semibold fs-6 mb-2">Region</label>
+    <label class="fw-semibold fs-6 mb-2">المنطقة</label>
     <select name="region" class="form-select form-select-solid">
-        <option value="">Select Region</option>
-        <option value="north">North</option>
-        <option value="south">South</option>
+        <option value=""> إختر المنطقة</option>
+        <option value="north">شمال</option>
+        <option value="south">جنوب</option>
+    </select>
+</div>
+   <div class="fv-row mb-7">
+    <label class="fw-semibold fs-6 mb-2">إرسال كلمة مرور</label>
+    <select name="send_password" class="form-select form-select-solid">
+        <option value="">إرسال كلمة مرور</option>
+        <option value="yes">نعم</option>
+        <option value="no">لا</option>
     </select>
 </div>
 
