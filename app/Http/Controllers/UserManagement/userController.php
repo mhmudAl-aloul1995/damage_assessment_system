@@ -175,7 +175,8 @@ class userController extends Controller
             'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
             'phone' => 'required|string|max:255',
             'address' => 'required|string|max:255',
-            'role' => 'required|string|exists:roles,name',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'required|string|exists:roles,name',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
