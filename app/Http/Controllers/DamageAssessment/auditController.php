@@ -134,11 +134,11 @@ class auditController extends Controller
                     $statusName = $row->engineerStatus?->status?->name ?? 'Pending';
 
 
-                 
 
-              
 
-                    return '<span class="badge ' .$this->getStatusBadge($statusName). ' fw-bold px-4 py-3">' . e($status) . '</span>';
+
+
+                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
                 })
 
                 // Lawyer Status
@@ -228,7 +228,7 @@ class auditController extends Controller
                 $statusName = strtolower($status);
 
                 if (str_contains($statusName, 'reject')) {
-                    $color =  'badge-danger';
+                    $color = 'badge-danger';
                 } elseif (str_contains($statusName, 'accepted')) {
                     $color = 'badge-success';
                 } elseif (str_contains($statusName, 'review')) {
@@ -252,7 +252,7 @@ class auditController extends Controller
                 $statusName = strtolower($status);
 
                 if (str_contains($statusName, 'reject')) {
-                    $color =  'badge-danger';
+                    $color = 'badge-danger';
                 } elseif (str_contains($statusName, 'accepted')) {
                     $color = 'badge-success';
                 } elseif (str_contains($statusName, 'review')) {
@@ -274,7 +274,7 @@ class auditController extends Controller
                 $statusName = strtolower($status);
 
                 if (str_contains($statusName, 'reject')) {
-                    $color =  'badge-danger';
+                    $color = 'badge-danger';
                 } elseif (str_contains($statusName, 'accepted')) {
                     $color = 'badge-success';
                 } elseif (str_contains($statusName, 'review')) {
@@ -302,8 +302,8 @@ class auditController extends Controller
     {
         $request->validate([
             'globalid' => ['required', 'string'],
-            'status'   => ['required', 'in:rejected,accepted,need_review'],
-            'notes'    => ['nullable', 'string'],
+            'status' => ['required', 'in:rejected,accepted,need_review'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         DB::beginTransaction();
@@ -336,8 +336,8 @@ class auditController extends Controller
             $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
-                'rejected'    => 'rejected_by_' . $roleType,
-                'accepted'    => 'accepted_by_' . $roleType,
+                'rejected' => 'rejected_by_' . $roleType,
+                'accepted' => 'accepted_by_' . $roleType,
                 'need_review' => 'need_review',
             ];
 
@@ -355,44 +355,44 @@ class auditController extends Controller
             $buildingStatus = BuildingStatus::updateOrCreate(
                 [
                     'building_id' => $building->objectid,
-                    'type'       => $type,
+                    'type' => $type,
                 ],
                 [
                     'status_id' => $assessmentStatus->id,
-                    'user_id'   => Auth::id(),
-                    'notes'     => $request->notes,
+                    'user_id' => Auth::id(),
+                    'notes' => $request->notes,
                 ]
             );
 
             BuildingStatusHistory::create([
                 'building_id' => $building->objectid,
-                'status_id'   => $assessmentStatus->id,
-                'user_id'     => Auth::id(),
-                'notes'       => $request->notes,
-                'type'        => $type,
+                'status_id' => $assessmentStatus->id,
+                'user_id' => Auth::id(),
+                'notes' => $request->notes,
+                'type' => $type,
             ]);
 
             DB::commit();
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'تم تحديث حالة المبنى بنجاح',
-                'data'    => [
+                'data' => [
                     'building_objectid' => $building->objectid,
                     'building_globalid' => $building->globalid,
-                    'type'              => $type,
-                    'status_id'         => $assessmentStatus->id,
-                    'status_name'       => $assessmentStatus->name,
-                    'record_id'         => $buildingStatus->id,
+                    'type' => $type,
+                    'status_id' => $assessmentStatus->id,
+                    'status_name' => $assessmentStatus->name,
+                    'record_id' => $buildingStatus->id,
                 ]
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
 
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'حدث خطأ أثناء تحديث حالة المبنى',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -400,8 +400,8 @@ class auditController extends Controller
     {
         $request->validate([
             'globalid' => ['required', 'string'],
-            'status'   => ['required', 'in:rejected,accepted,need_review'],
-            'notes'    => ['nullable', 'string'],
+            'status' => ['required', 'in:rejected,accepted,need_review'],
+            'notes' => ['nullable', 'string'],
         ]);
 
 
@@ -435,8 +435,8 @@ class auditController extends Controller
             $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
-                'rejected'    => 'rejected_by_' . $roleType,
-                'accepted'    => 'accepted_by_' . $roleType,
+                'rejected' => 'rejected_by_' . $roleType,
+                'accepted' => 'accepted_by_' . $roleType,
                 'need_review' => 'need_review',
             ];
             $statusName = $statusMap[$request->status] ?? null;
@@ -453,20 +453,20 @@ class auditController extends Controller
             $housingStatus = HousingStatus::updateOrCreate(
                 [
                     'housing_id' => $housing->objectid,
-                    'type'       => $type,
+                    'type' => $type,
                 ],
                 [
                     'status_id' => $assessmentStatus->id,
-                    'user_id'   => Auth::id(),
-                    'notes'     => $request->notes,
+                    'user_id' => Auth::id(),
+                    'notes' => $request->notes,
                 ]
             );
 
             HousingStatusHistory::create([
                 'housing_id' => $housing->objectid,
-                'status_id'  => $assessmentStatus->id,
-                'user_id'    => Auth::id(),
-                'notes'      => $request->notes,
+                'status_id' => $assessmentStatus->id,
+                'user_id' => Auth::id(),
+                'notes' => $request->notes,
             ]);
 
 
@@ -474,24 +474,24 @@ class auditController extends Controller
             DB::commit();
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'تم تحديث حالة الوحدة بنجاح',
-                'data'    => [
+                'data' => [
                     'housing_objectid' => $housing->objectid,
                     'housing_globalid' => $housing->globalid,
-                    'type'             => $type,
-                    'status_id'        => $assessmentStatus->id,
-                    'status_name'      => $assessmentStatus->name,
-                    'record_id'        => $housingStatus->id,
+                    'type' => $type,
+                    'status_id' => $assessmentStatus->id,
+                    'status_name' => $assessmentStatus->name,
+                    'record_id' => $housingStatus->id,
                 ]
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
 
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'حدث خطأ أثناء تحديث حالة الوحدة',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -639,7 +639,7 @@ class auditController extends Controller
 
                     $status = $statusModel?->label_en ?? 'Pending';
                     $statusName = strtolower($statusModel?->name ?? 'pending');
-                  
+
 
                     return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
                 })
@@ -725,7 +725,7 @@ class auditController extends Controller
                 abort(403, 'Unauthorized');
             } */
 
-            $statusRelation = $type === 'eng' ? 'engineerStatus.status' : 'lawyerStatus.status';
+            $statusRelation = $type === 'QC/QA Engineer' ? 'engineerStatus.status' : 'lawyerStatus.status';
 
             $data = Building::with([
                 'assignedUsers.user',
@@ -756,7 +756,7 @@ class auditController extends Controller
                     $status = $statusModel?->label_en ?? 'Pending';
                     $statusName = strtolower($statusModel?->name ?? 'pending');
 
-                
+
 
                     return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
                 })
@@ -910,15 +910,15 @@ class auditController extends Controller
             ->latest()
             ->get()
             ->map(function ($item) {
-                $statusName  = $item->status->name ?? '-';
+                $statusName = $item->status->name ?? '-';
                 $statusLabel = $item->status->label_en ?? $statusName;
-                $roleName    = $item->user?->roles?->first()?->name ?? '-';
+                $roleName = $item->user?->roles?->first()?->name ?? '-';
 
                 return [
                     'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
-                    'user_name'   => $item->user->name ?? '-',
-                    'role_name'   => $roleName,
-                    'notes'       => $item->notes ?? '-',
+                    'user_name' => $item->user->name ?? '-',
+                    'role_name' => $roleName,
+                    'notes' => $item->notes ?? '-',
                     'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
                 ];
             });
@@ -937,15 +937,15 @@ class auditController extends Controller
             ->latest()
             ->get()
             ->map(function ($item) {
-                $statusName  = $item->assessment_status->name ?? '-';
+                $statusName = $item->assessment_status->name ?? '-';
                 $statusLabel = $item->assessment_status->label_en ?? $statusName;
-                $roleName    = $item->user?->roles?->first()?->name ?? '-';
+                $roleName = $item->user?->roles?->first()?->name ?? '-';
 
                 return [
                     'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
-                    'user_name'   => $item->user->name ?? '-',
-                    'role_name'   => $roleName,
-                    'notes'       => $item->notes ?? '-',
+                    'user_name' => $item->user->name ?? '-',
+                    'role_name' => $roleName,
+                    'notes' => $item->notes ?? '-',
                     'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
                 ];
             });
@@ -957,12 +957,12 @@ class auditController extends Controller
             'assigned_to_lawyer' => 'badge badge-light-primary fw-bold',
             'assigned_to_engineer' => 'badge badge-light-primary fw-bold',
             'accepted_by_engineer',
-            'accepted'             => 'badge badge-light-success fw-bold',
+            'accepted' => 'badge badge-light-success fw-bold',
             'rejected_by_engineer',
-            'rejected'             => 'badge badge-light-danger fw-bold',
-            'need_review'          => 'badge badge-light-warning fw-bold',
-            'legal_notes'          => 'badge badge-light-primary fw-bold',
-            default                => 'badge badge-light-secondary fw-bold',
+            'rejected' => 'badge badge-light-danger fw-bold',
+            'need_review' => 'badge badge-light-warning fw-bold',
+            'legal_notes' => 'badge badge-light-primary fw-bold',
+            default => 'badge badge-light-secondary fw-bold',
         };
     }
 }
