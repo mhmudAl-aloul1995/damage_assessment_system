@@ -65,7 +65,7 @@ class AttendanceController extends Controller
             ->addColumn('contract_type', fn($user) => $user->contract_type ?? '-')
             ->addColumn('region', fn($user) => $user->region ?? '-')
             ->addColumn('role', function ($user) {
-                return $user->roles->pluck('name')->implode(', ') ?: '-';
+                return $user->roles->pluck('name')->toArray();
             })
             ->addColumn('total', fn($user) => $user->total_present ?? 0);
 
