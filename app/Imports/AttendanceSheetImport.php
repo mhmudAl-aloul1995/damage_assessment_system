@@ -64,7 +64,7 @@ class AttendanceSheetImport implements ToCollection, WithTitle
             if ($idNo === '' && $nameEn === '')
                 continue;
 
-            $contractType = $contractRaw=='PDA- PHC'?'PHC':'MOPWH';
+            $contractType = $this->normalizeContract($contractRaw);
             $roleName = $this->normalizeRoleFromPosition($positionRaw);
             $region = $this->region;
             // =====================
@@ -180,17 +180,13 @@ class AttendanceSheetImport implements ToCollection, WithTitle
     // =====================
     protected function normalizeContract(?string $value): ?string
     {
-        $v = trim((string) $value);
+        $v = strtolower(trim((string) $value));
 
         return match (true) {
             str_contains($v, 'phc') => 'phc',
-            str_contains($v, 'PHC') => 'phc',
             str_contains($v, 'undp') => 'undp',
-            str_contains($v, 'UNDP') => 'undp',
             str_contains($v, 'mopwh') => 'mopwh',
-            str_contains($v, 'MOPWH') => 'mopwh',
             str_contains($v, 'pef') => 'pef',
-            str_contains($v, 'PEF') => 'pef',
             default => null,
         };
     }
