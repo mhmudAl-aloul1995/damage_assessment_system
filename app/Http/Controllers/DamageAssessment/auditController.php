@@ -731,8 +731,8 @@ class auditController extends Controller
                 'assignedUsers.user',
                 $statusRelation
             ])->whereHas('assignedUsers', function ($q) use ($type, $user) {
-                $q->where('type', $type)
-                    ->where('user_id', $user->id);
+                $q->where('type', $type);
+                   // ->where('user_id', $user->id);
             });
 
             return DataTables::of($data)
