@@ -60,7 +60,7 @@ return [
         'title' => 'التقارير',
         'icon' => 'ki-chart-line',
 
-        'roles' => ['Database Officer', 'Project Officer', 'Team Leader'],
+        'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
 
         'active_patterns' => [
             'reports*'
