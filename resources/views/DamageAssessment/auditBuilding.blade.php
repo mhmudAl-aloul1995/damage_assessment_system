@@ -38,7 +38,7 @@ $assignedColumnTitle = $isEngineer ? 'Engineer' : 'Lawyer';
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                         <th width="40">#</th>
                         <th>Building Name</th>
-                        <th>Owner</th>
+                        <th>Field Engineer</th>
                         <th>Municipality</th>
                         <th>Neighborhood</th>
                         <th>Status</th>
@@ -74,8 +74,8 @@ $assignedColumnTitle = $isEngineer ? 'Engineer' : 'Lawyer';
                 },
 
                 {
-                    data: 'owner_name',
-                    name: 'owner_name'
+                    data: 'assignedto',
+                    name: 'assignedto'
                 },
                 {
                     data: 'municipalitie',
