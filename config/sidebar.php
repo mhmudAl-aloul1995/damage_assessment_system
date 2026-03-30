@@ -7,7 +7,7 @@ return [
         'title' => 'حصر الأضرار',
         'icon' => 'ki-abstract-28',
 
-        'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
+        'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor','QC/QA Engineer'],
 
         'active_patterns' => [
             'damageAssessment*',
