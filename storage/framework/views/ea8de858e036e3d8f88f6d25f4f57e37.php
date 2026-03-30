@@ -164,35 +164,35 @@
                 </div>
 
                 <div class="card-body pt-4 pb-0">
-                        <form id="attendanceImportForm" enctype="multipart/form-data"
-                                            class="d-flex align-items-center gap-3 flex-wrap import-form-box">
-                                            <?php echo csrf_field(); ?>
-                                            <input type="file" name="file" accept=".xlsx,.xls" class="form-control form-control-solid w-250px"
-                                                required>
-                                            <select name="region" class="form-select form-select-solid w-150px" required>
-                                                <option value="">Select Region</option>
-                                                <option value="north">North</option>
-                                                <option value="south">South</option>
-                                            </select>
-                                            <button type="submit" class="btn btn-primary" id="btn_import_excel">
-                                                <span class="indicator-label">Import Excel</span>
-                                                <span class="indicator-progress">
-                                                    Importing...
-                                                    <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
-                                                </span>
-                                            </button>
+                    <!--   <form id="attendanceImportForm" enctype="multipart/form-data"
+                                                class="d-flex align-items-center gap-3 flex-wrap import-form-box">
+                                                <?php echo csrf_field(); ?>
+                                                <input type="file" name="file" accept=".xlsx,.xls" class="form-control form-control-solid w-250px"
+                                                    required>
+                                                <select name="region" class="form-select form-select-solid w-150px" required>
+                                                    <option value="">Select Region</option>
+                                                    <option value="north">North</option>
+                                                    <option value="south">South</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-primary" id="btn_import_excel">
+                                                    <span class="indicator-label">Import Excel</span>
+                                                    <span class="indicator-progress">
+                                                        Importing...
+                                                        <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                                                    </span>
+                                                </button>
 
-                                        </form>
-                                    </div>
-                                  <div class="w-100 mt-3" id="import_progress_wrapper" style="display:none;">
-                                        <div class="progress h-20px">
-                                            <div id="import_progress_bar" class="progress-bar progress-bar-striped progress-bar-animated"
-                                                role="progressbar" style="width: 0%">
-                                                0%
-                                            </div>
+                                            </form>
                                         </div>
-                                        <div class="text-muted mt-2" id="import_progress_text">Starting import...</div>
-                                    </div> -->
+                                      <div class="w-100 mt-3" id="import_progress_wrapper" style="display:none;">
+                                            <div class="progress h-20px">
+                                                <div id="import_progress_bar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                                    role="progressbar" style="width: 0%">
+                                                    0%
+                                                </div>
+                                            </div>
+                                            <div class="text-muted mt-2" id="import_progress_text">Starting import...</div>
+                                        </div> -->
                     <div class="card-body py-4">
                         <table class="table table-bordered align-middle fs-7 gy-2" id="kt_attendance_table">
                             <thead>
@@ -372,11 +372,11 @@
                             let nameEn = data ?? '-';
                             let nameAr = row.name ?? '';
                             return `
-                                                                                <div class="employee-name-box">
-                                                                                    <div class="name-en">${nameEn}</div>
-                                                                                    <div class="name-ar">${nameAr}</div>
-                                                                                </div>
-                                                                            `;
+                                                                                    <div class="employee-name-box">
+                                                                                        <div class="name-en">${nameEn}</div>
+                                                                                        <div class="name-ar">${nameAr}</div>
+                                                                                    </div>
+                                                                                `;
                         }
                     },
                     {
@@ -413,6 +413,7 @@
                                 if (role === 'Team Leader -INF') color = 'badge-light-primary';
                                 if (role === 'Area Manager') color = 'badge-light-warning';
                                 if (role === 'QC/QA Engineer') color = 'badge-light-info';
+                                if (role === 'Auditing Supervisor') color = 'badge-light-danger';
 
                                 return `<span class="badge ${color} me-1 text-uppercase">${role}</span>`;
                             }).join('');
@@ -460,7 +461,7 @@
                     },
 
                         <?php for($i = 1; $i <= 31; $i++): ?>
-                                                                                                                                                                        {
+                                                                                                                                                                                    {
                                 data: 'day_<?php echo e($i); ?>',
                                 name: 'day_<?php echo e($i); ?>',
                                 className: 'text-center day-column',
@@ -483,14 +484,14 @@
 
                                     if (cellDate > today) {
                                         return `
-                                                                                                                                                                                        <button type="button"
-                                                                                                                                                                                                class="btn btn-light-secondary btn-attendance"
-                                                                                                                                                                                                disabled
-                                                                                                                                                                                                data-bs-toggle="tooltip"
-                                                                                                                                                                                                title="Future date">
-                                                                                                                                                                                            <span>-</span>
-                                                                                                                                                                                        </button>
-                                                                                                                                                                                    `;
+                                                                                                                                                                                                    <button type="button"
+                                                                                                                                                                                                            class="btn btn-light-secondary btn-attendance"
+                                                                                                                                                                                                            disabled
+                                                                                                                                                                                                            data-bs-toggle="tooltip"
+                                                                                                                                                                                                            title="Future date">
+                                                                                                                                                                                                        <span>-</span>
+                                                                                                                                                                                                    </button>
+                                                                                                                                                                                                `;
                                     }
 
                                     let status = parseInt(data) === 1 ? 1 : 0;
@@ -499,20 +500,20 @@
                                     let title = (status === 1 ? 'Present' : 'Absent') + ' - ' + date;
 
                                     return `
-                                                                                                                                                                                    <button type="button"
-                                                                                                                                                                                            class="btn ${color} btn-attendance toggle-status"
-                                                                                                                                                                                            data-user="${row.id}"
-                                                                                                                                                                                            data-date="${date}"
-                                                                                                                                                                                            data-status="${status}"
-                                                                                                                                                                                            data-bs-toggle="tooltip"
-                                                                                                                                                                                            title="${title}">
-                                                                                                                                                                                        <span>${text}</span>
-                                                                                                                                                                                    </button>
-                                                                                                                                                                                `;
+                                                                                                                                                                                                <button type="button"
+                                                                                                                                                                                                        class="btn ${color} btn-attendance toggle-status"
+                                                                                                                                                                                                        data-user="${row.id}"
+                                                                                                                                                                                                        data-date="${date}"
+                                                                                                                                                                                                        data-status="${status}"
+                                                                                                                                                                                                        data-bs-toggle="tooltip"
+                                                                                                                                                                                                        title="${title}">
+                                                                                                                                                                                                    <span>${text}</span>
+                                                                                                                                                                                                </button>
+                                                                                                                                                                                            `;
                                 }
                             },
                         <?php endfor; ?>
-                                                                ]
+                                                                    ]
                 });
 
                 $('#filter_month, #filter_contract, #filter_region').on('change', function () {
@@ -792,8 +793,9 @@
 
                 initTooltips();
 
-
+                $("#kt_app_sidebar_toggle").click()
             });
+
         </script>
     <?php $__env->stopSection(); ?>
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/Attendance/attendance.blade.php ENDPATH**/ ?>

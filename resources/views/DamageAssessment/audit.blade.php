@@ -254,9 +254,9 @@
 					orderable: false,
 					searchable: false,
 					render: (data) => `<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-												<input class="form-check-input" type="checkbox" 
-													data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-											</div>`
+													<input class="form-check-input" type="checkbox" 
+														data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+												</div>`
 				},
 
 				{
@@ -296,6 +296,11 @@
 				},
 				createdRow: (row, data, index) => {
 					$(row).css('cursor', 'pointer')
+
+					if ($(e.target).closest('input[type="checkbox"]').length) {
+						return;
+					}
+
 					$(row).on('click', function (e) {
 						e.preventDefault()
 						var url_eng = "{{url('showAssessmentAudit/')  }}/" + data.globalid
