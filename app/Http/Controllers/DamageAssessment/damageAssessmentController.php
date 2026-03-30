@@ -257,7 +257,8 @@ class damageAssessmentController extends Controller
 
                 $originalValue = $filtersMap[$originalRawValue] ?? $originalRawValue;
                 $editedValue = $filtersMap[$editedRawValue] ?? $editedRawValue;
-
+                $originalValue = $this->updateValue($originalValue);
+                $editedValue = $this->updateValue($editedValue);
                 $editedBy = $lastEdit?->user?->name;
                 $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
 
