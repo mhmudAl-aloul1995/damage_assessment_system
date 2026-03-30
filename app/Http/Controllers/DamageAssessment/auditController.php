@@ -176,7 +176,12 @@ class auditController extends Controller
                 ->make(true);
         }
 
-        $users = User::where("id", '!=', Auth::user()->id)->get();
+        $users = User::where('id', '!=', Auth::id())
+            ->when(['Legal Auditor', 'QC/QA Engineer'], function ($query) {
+                $query->whereHas('roles', function ($q) {
+                    $q->whereIn('name', 'Legal Auditor', 'QC/QA Engineer');
+                });
+            })->get();
         $engineers = Building::distinct('assignedto')->select('assignedto')->get();
         $owners = Building::distinct('owner_name')->select('owner_name')->get();
         $municip = Building::distinct('municipalitie')->select('municipalitie')->get();
