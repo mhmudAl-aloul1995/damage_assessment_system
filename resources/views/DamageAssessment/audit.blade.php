@@ -300,7 +300,7 @@
 
 
 					$(row).on('click', function (e) {
-						if ($(e.target).closest('input[type="checkbox"]').length) {
+						if ($(e.target).closest('input[type="checkbox"],.ustify-content-end').length) {
 							return;
 						}
 						e.preventDefault()
