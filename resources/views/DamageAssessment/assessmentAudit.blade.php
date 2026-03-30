@@ -167,13 +167,13 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                     <table class="table align-middle table-row-bordered fs-6 table-rounded gs-7 gy-4"
                                         id="kt_table_building_assessment">
                                         <thead>
-                                            <tr class="fw-bold text-gray-800 border-bottom border-gray-300">
+                                            <tr class="fw-bold text-black-800 border-bottom border-gray-300">
                                                 <th class="px-6 py-4 min-w-300px">السؤال</th>
                                                 <th class="text-center px-6 py-4 min-w-250px">الجواب</th>
                                                 <th class="text-center px-6 py-4 min-w-300px">تعديل الإجابة</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="text-gray-600 fw-semibold"></tbody>
+                                        <tbody class="text-black-600 fw-semibold"></tbody>
                                     </table>
                                 </div>
                             </div>
@@ -211,7 +211,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                             <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                 id="housing_table">
                                 <thead>
-                                    <tr class="fw-bold fs-7 text-gray-800 border-bottom border-gray-300">
+                                    <tr class="fw-bold fs-7 text-black-800 border-bottom border-gray-300">
                                         <th class="px-6 py-4">نوع الوحدة</th>
                                         <th class="px-6 py-4">حالة الضرر</th>
                                         <th class="px-6 py-4">رقم الطابق</th>
@@ -252,7 +252,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                                     <select
                                         name="globalid"
                                         data-kt-globalid-table-filter="search"
-                                        class="form-select form-select-solid text-gray-800 fs-base fw-bold w-250px"
+                                        class="form-select form-select-solid text-black-800 fs-base fw-bold w-250px"
                                         data-control="select2"
                                         data-allow-clear="true"
                                         data-dropdown-css-class="w-250px"
@@ -324,13 +324,13 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                             <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                 id="kt_table_housing_assessment">
                                 <thead>
-                                    <tr class="fw-bold fs-6 text-gray-800 border-bottom border-gray-300">
+                                    <tr class="fw-bold fs-6 text-black-800 border-bottom border-gray-300">
                                         <th class="px-6 py-4 min-w-300px">السؤال</th>
                                         <th class="text-center px-6 py-4 min-w-250px">الجواب</th>
                                         <th class="text-center px-6 py-4 min-w-300px">تعديل الإجابة</th>
                                     </tr>
                                 </thead>
-                                <tbody class="text-gray-600 fw-semibold"></tbody>
+                                <tbody class="text-black-600 fw-semibold"></tbody>
                             </table>
                         </div>
                     </div>
@@ -364,7 +364,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                     <div class="table-responsive">
                         <table class="table table-row-bordered align-middle">
                             <thead>
-                                <tr class="fw-bold text-gray-800">
+                                <tr class="fw-bold text-black-800">
                                     <th>الحالة</th>
                                     <th>المستخدم</th>
                                     <th>الملاحظة</th>
@@ -373,7 +373,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                             </thead>
                             <tbody id="statusHistoryTable">
                                 <tr>
-                                    <td colspan="4" class="text-center ">
+                                    <td colspan="4" class="text-center text-muted">
                                         جاري التحميل...
                                     </td>
                                 </tr>
@@ -525,7 +525,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                 let rows = '';
 
                 if (!response.length) {
-                    rows = `<tr><td colspan="4" class="text-center ">لا يوجد سجل</td></tr>`;
+                    rows = `<tr><td colspan="4" class="text-center text-muted">لا يوجد سجل</td></tr>`;
                 } else {
                     response.forEach(item => {
                         rows += `
