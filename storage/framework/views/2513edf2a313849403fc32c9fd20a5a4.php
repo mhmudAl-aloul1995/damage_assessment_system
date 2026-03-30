@@ -143,7 +143,7 @@
 				<div class="card-body pt-0">
 					<table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_datatable_audits">
 						<thead>
-							<tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+							<tr class="text-start  fw-bold fs-7 text-uppercase gs-0">
 								<th class="w-10px pe-2">
 									<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
 										<input class="form-check-input" type="checkbox" data-kt-check="true"
@@ -254,9 +254,9 @@
 					orderable: false,
 					searchable: false,
 					render: (data) => `<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-												<input class="form-check-input" type="checkbox" 
-													data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-											</div>`
+														<input class="form-check-input" type="checkbox" 
+															data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+													</div>`
 				},
 
 				{
@@ -296,7 +296,13 @@
 				},
 				createdRow: (row, data, index) => {
 					$(row).css('cursor', 'pointer')
+
+
+
 					$(row).on('click', function (e) {
+						if ($(e.target).closest('input, button, a').length) {
+							return;
+						}
 						e.preventDefault()
 						var url_eng = "<?php echo e(url('showAssessmentAudit/')); ?>/" + data.globalid
 						window.open(url_eng, '_blank');

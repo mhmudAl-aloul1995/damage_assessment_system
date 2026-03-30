@@ -373,7 +373,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                             </thead>
                             <tbody id="statusHistoryTable">
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">
+                                    <td colspan="4" class="text-center ">
                                         جاري التحميل...
                                     </td>
                                 </tr>
@@ -525,7 +525,7 @@ $buildingCurrentStatus = $buildingCurrentStatus ?? null;
                 let rows = '';
 
                 if (!response.length) {
-                    rows = `<tr><td colspan="4" class="text-center text-muted">لا يوجد سجل</td></tr>`;
+                    rows = `<tr><td colspan="4" class="text-center ">لا يوجد سجل</td></tr>`;
                 } else {
                     response.forEach(item => {
                         rows += `
