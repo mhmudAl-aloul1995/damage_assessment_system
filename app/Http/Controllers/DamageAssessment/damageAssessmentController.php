@@ -29,19 +29,19 @@ use App\Services\ArcgisService;
 
 class damageAssessmentController extends Controller
 {
-    
-        function __construct()
-        {
-            //$this->middleware('role:Database Officer|Team Leader|Auditing Supervisor|Area Manager|Project Officer');
-         /*   $this->middleware('permission:user-create', ['only' => ['create', 'store']]);
-            $this->middleware('permission:user-edit', ['only' => ['edit', 'update']]);
-            $this->middleware('permission:user-delete', ['only' => ['destroy']]);*/
-        }
+
+    function __construct()
+    {
+        //$this->middleware('role:Database Officer|Team Leader|Auditing Supervisor|Area Manager|Project Officer');
+        /*   $this->middleware('permission:user-create', ['only' => ['create', 'store']]);
+           $this->middleware('permission:user-edit', ['only' => ['edit', 'update']]);
+           $this->middleware('permission:user-delete', ['only' => ['destroy']]);*/
+    }
 
     public function index($objectid = null)
     {
 
-   
+
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
 
@@ -213,17 +213,7 @@ class damageAssessmentController extends Controller
             ->addColumn('question', function ($row) {
                 return $row->label . '<br>' . $row->hint;
             })
-            ->addColumn('answer', function ($row) use (
-                $record,
-                $allEdits,
-                $model,
-                $attachments,
-                $token,
-                $arcgis,
-                $layerId,
-                $type,
-                $globalid
-            ) {
+            ->addColumn('answer', function ($row) use ($record, $allEdits, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid) {
                 if ($row->name === 'attachments') {
                     if (!$model || !$model->objectid || !$token || $attachments->isEmpty()) {
                         return '<span class="text-muted">لا يوجد مرفقات</span>';
@@ -257,11 +247,13 @@ class damageAssessmentController extends Controller
                     return $html . '</div>';
                 }
 
+                $row->value = $this->updateValue($row->value);
+                $row->name = $this->updateValue($row->name);
                 $fieldEdits = $allEdits->get($row->name, collect());
                 $lastEdit = $fieldEdits->first();
 
-                $originalValue = $record[$row->name] ?? null;
-                $editedValue = $lastEdit?->field_value;
+                $originalValue = $this->updateValue($record[$row->name]) ?? null;
+                $editedValue = $this->updateValue($lastEdit?->field_value);
                 $editedBy = $lastEdit?->user?->name;
                 $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
 
@@ -387,5 +379,23 @@ class damageAssessmentController extends Controller
             })
             ->rawColumns(['answer', 'question', 'editAnswer'])
             ->make(true);
+    }
+    private function updateValue($value)
+    {
+        return match ($value) {
+            'yes' => 'نعم',
+            'no' => 'لا',
+            'yes1' => 'نعم',
+            'no1' => 'لا',
+            'yes2' => 'نعم',
+            'no2' => 'لا',
+            'yes3' => 'نعم',
+            'no3' => 'لا',
+            'yes4' => 'نعم',
+            'no4' => 'لا',
+            'yes5' => 'نعم',
+            'no5' => 'لا',
+            default => $value,
+        };
     }
 }

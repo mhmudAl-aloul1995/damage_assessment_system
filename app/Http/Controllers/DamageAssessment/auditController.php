@@ -969,4 +969,6 @@ class auditController extends Controller
             default => 'badge badge-light-secondary fw-bold',
         };
     }
+
+ 
 }

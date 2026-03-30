@@ -29,20 +29,20 @@ return [
                 'title' => 'الإستبيانات',
                 'url' => 'assessmentAll',
                 'pattern' => 'assessmentAll*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor','QC/QA Engineer'],
             ],
             [
                 'title' => 'المباني',
                 'url' => 'building',
                 'pattern' => 'building*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor','QC/QA Engineer'],
             ],
 
             [
                 'title' => 'الوحدات السكنية',
                 'url' => 'housing',
                 'pattern' => 'housing*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor'],
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor','QC/QA Engineer'],
             ],
 
             [
