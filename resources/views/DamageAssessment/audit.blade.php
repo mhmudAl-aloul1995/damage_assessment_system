@@ -300,7 +300,7 @@
 
 
 					$(row).on('click', function (e) {
-						if ($(e.target).closest('input,.ustify-content-end').length) {
+						if ($(e.target).closest('input, button, a').length) {
 							return;
 						}
 						e.preventDefault()
