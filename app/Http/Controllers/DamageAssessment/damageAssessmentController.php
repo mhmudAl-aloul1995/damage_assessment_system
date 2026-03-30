@@ -247,13 +247,11 @@ class damageAssessmentController extends Controller
                     return $html . '</div>';
                 }
 
-                $row->value = $this->updateValue($row->value);
-                $row->name = $this->updateValue($row->name);
                 $fieldEdits = $allEdits->get($row->name, collect());
                 $lastEdit = $fieldEdits->first();
 
-                $originalValue = $this->updateValue($record[$row->name]) ?? null;
-                $editedValue = $this->updateValue($lastEdit?->field_value);
+                $originalValue = $record[$row->name] ?? null;
+                $editedValue = $lastEdit?->field_value;
                 $editedBy = $lastEdit?->user?->name;
                 $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
 
