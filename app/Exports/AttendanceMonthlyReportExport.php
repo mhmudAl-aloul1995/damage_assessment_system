@@ -41,7 +41,7 @@ class AttendanceMonthlyReportExport implements
             'ID No',
             'Phone',
             'Contract Type',
-            'region',
+            'Region',
             'Role',
             'Present Days',
             'Absent Days',
