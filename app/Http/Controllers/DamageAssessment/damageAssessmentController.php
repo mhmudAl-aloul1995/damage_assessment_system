@@ -418,6 +418,8 @@ class damageAssessmentController extends Controller
             'no4' => 'لا',
             'yes5' => 'نعم',
             'no5' => 'لا',
+            'Yes' => 'نعم',
+            'No' => 'لا',
             default => $value,
         };
     }
