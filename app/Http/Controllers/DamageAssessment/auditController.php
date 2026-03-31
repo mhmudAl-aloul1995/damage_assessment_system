@@ -3052,7 +3052,7 @@ class auditController extends Controller
                     $color = 'badge-secondary';
                 }
 
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span><br>' . $row->engineerStatus->created_at;
+                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span><br>';
             })
 
             // Lawyer Status

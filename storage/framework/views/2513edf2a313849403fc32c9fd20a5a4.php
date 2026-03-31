@@ -117,18 +117,19 @@
 								<option></option>
 								<option value="fully_damaged">Fully Damaged</option>
 								<option value="partially_damaged">Partially Damaged</option>
-								<option value="minor_damaged">Minor Damaged</option>
-								<option value="no_damage">No Damage</option>
+								<option value="committee_review">Committee Review </option>
 							</select>
 						</div>
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">من تاريخ الإنشاء</label>
-							<input type="date" id="filter_from_date" placehoder="من تاريخ الإنشاء" class="form-control form-control-solid">
+							<input type="date" id="filter_from_date" placehoder="من تاريخ الإنشاء"
+								class="form-control form-control-solid">
 						</div>
 
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">إلى تاريخ الإنشاء</label>
-							<input type="date" id="filter_to_date" placehoder="إلى تاريخ الإنشاء" class="form-control form-control-solid">
+							<input type="date" id="filter_to_date" placehoder="إلى تاريخ الإنشاء"
+								class="form-control form-control-solid">
 						</div>
 						<div class="col-md-3 d-flex align-items-end">
 							<button type="button" class="btn btn-primary w-100" id="applyFilters">
@@ -291,9 +292,9 @@
 					orderable: false,
 					searchable: false,
 					render: (data) => `<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																				<input class="form-check-input" type="checkbox" 
-																					data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																			</div>`
+																					<input class="form-check-input" type="checkbox" 
+																						data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																				</div>`
 				},
 
 				{
@@ -373,13 +374,16 @@
 
 			});
 			$('#resetFilters').on('click', function () {
-				$('#filter_building_name').val('');
+	/* 			$('#filter_building_name').val('');
 				$('#filter_engineer').val(null).trigger('change');
 				$('#filter_lawyer').val(null).trigger('change');
 				$('#filter_eng_status').val(null).trigger('change');
 				$('#filter_legal_status').val(null).trigger('change');
 				$('#filter_final_status').val(null).trigger('change');
-				$('#filter_area').val('');
+				$('#filter_area').val(''); */
+				$('select').val(null).trigger('change');
+				$('input').val('');
+
 
 			});
 			// Link custom search input
