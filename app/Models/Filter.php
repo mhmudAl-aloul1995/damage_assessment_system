@@ -25,6 +25,7 @@ class Filter extends Model
 
 	protected $fillable = [
 		'list_name',
+		'list_name_arabic',
 		'name',
 		'label'
 	];

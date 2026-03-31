@@ -39,7 +39,8 @@ class buildingController extends Controller
         $municip = Building::distinct('municipalitie')->select('municipalitie')->get();
         $neighborhoods = Building::distinct()->pluck('neighborhood');
         $assessments = Assessment::all();
-        $filterName = Filter::distinct('list_name')->pluck('list_name');
+        $filterName = Filter::distinct('list_name')->pluck('list_name','list_name_arabic');
+        
         $filters = Filter::all();
 
         return View::make('DamageAssessment.buildings', compact('neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments'));

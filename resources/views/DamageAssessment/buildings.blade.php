@@ -23,18 +23,18 @@
 				<div class="card-body">
 					<div class="row g-9 mb-8">
 						<!--begin::Col-->
-						@foreach ($filterName as $filter)
+						@foreach ($filterName as $filter=>$value)
 
-						@if (Schema::hasColumn('buildings', $filter))
+						@if (Schema::hasColumn('buildings', $value))
 
 						<div class="col-md-3 fv-row">
 							<label class="fs-6 fw-semibold mb-2">{{ $filter }}</label>
 							<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
 								data-hide-search="false" data-placeholder="{{ $filter }}"
-								name="{{ $filter }}">
+								name="{{ $value }}">
 
 								<option value=""></option>
-								@foreach (App\Models\Filter::where('list_name', $filter)->get() as $option)
+								@foreach (App\Models\Filter::where('list_name', $value)->get() as $option)
 								<option value="{{ $option->name }}">{{ $option->label }}</option>
 								@endforeach
 							</select>

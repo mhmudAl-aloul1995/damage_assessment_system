@@ -1,9 +1,8 @@
-@extends('layouts.app')
-@section('title', 'الوحدات السكنية')
-@section('pageName', 'الوحدات السكنية')
+<?php $__env->startSection('title', 'الوحدات السكنية'); ?>
+<?php $__env->startSection('pageName', 'الوحدات السكنية'); ?>
 
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 
 	<div class="card mb-12">
 		<div class="card shadow-sm">
@@ -44,33 +43,33 @@
 
 						</div>
 						<div class="row g-9 mb-8">
-							@foreach ($filterName as $filter=>$value)
+							<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $filterName; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $filter=>$value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
 
 
-								@if (Schema::hasColumn('housing_units', $value))
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(Schema::hasColumn('housing_units', $value)): ?>
 
-									@php
+									<?php
 									
 										if ($value == 'governorate' || $value == 'municipalitie' || $value == 'neighborhood' || $value == 'locality') {
 
 											continue;
 										}
-									@endphp
+									?>
 
 
 									<div class="col-md-3 fv-row">
-										<label class="fs-6 fw-semibold mb-2">{{ $filter }}</label>
+										<label class="fs-6 fw-semibold mb-2"><?php echo e($filter); ?></label>
 										<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-											data-hide-search="false" data-placeholder="{{ $filter }}" name="{{ $value }}">
+											data-hide-search="false" data-placeholder="<?php echo e($filter); ?>" name="<?php echo e($value); ?>">
 
 											<option value=""></option>
-											@foreach (App\Models\Filter::where('list_name', $value)->get() as $option)
-												<option value="{{ $option->name }}">{{ $option->label }}</option>
-											@endforeach
+											<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = App\Models\Filter::where('list_name', $value)->get(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $option): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+												<option value="<?php echo e($option->name); ?>"><?php echo e($option->label); ?></option>
+											<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 										</select>
 									</div>
-								@endif
-							@endforeach
+								<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+							<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 
 
 
@@ -184,7 +183,7 @@
 									<!--begin::Form-->
 									<form id="kt_modal_export_housing_form" class="form" action="#">
 										<input type="hidden" name="_method" value="get">
-										<input type="hidden" name="_token" value="{{csrf_token()}}">
+										<input type="hidden" name="_token" value="<?php echo e(csrf_token()); ?>">
 										<!--begin::Input group-->
 										<div class="fv-row mb-10">
 											<!--begin::Label-->
@@ -196,13 +195,14 @@
 												data-placeholder="تحديد الأعمدة" data-hide-search="false"
 												class="form-select form-select-solid fw-bold">
 												<option value=""></option>
-												@foreach ($assessments as $value)
-													@if(Schema::hasColumn('housing_units', $value->name))
-														<option value="{{ $value->name }}">
-															{{ $value->hint ? $value->hint : $value->label }}
+												<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $assessments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+													<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(Schema::hasColumn('housing_units', $value->name)): ?>
+														<option value="<?php echo e($value->name); ?>">
+															<?php echo e($value->hint ? $value->hint : $value->label); ?>
+
 														</option>
-													@endif
-												@endforeach
+													<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+												<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 
 											</select>
 											<!--end::Input-->
@@ -290,21 +290,21 @@
 		</div>
 	</div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
 
 
 
 
-@section('script')
+<?php $__env->startSection('script'); ?>
 
 
 
 	<script>
 
-		var url_phc = "{{ url('') }}";
-		var post_export_url = "{{ url('export_housings') }}" </script>
-	<script src="{{ url('') }}/assets/js/custom/DamageAssessment/export-housings.js"></script>
+		var url_phc = "<?php echo e(url('')); ?>";
+		var post_export_url = "<?php echo e(url('export_housings')); ?>" </script>
+	<script src="<?php echo e(url('')); ?>/assets/js/custom/DamageAssessment/export-housings.js"></script>
 
 	<script>
 		var KTHousingList = function () {
@@ -320,14 +320,14 @@
 			var initHousingTable = function () {
 				// Set date data order
 				const tableRows = table.querySelectorAll('tbody tr');
-				const globalid = '{{$globalid  }}';
+				const globalid = '<?php echo e($globalid); ?>';
 				var filterForm = document.getElementById('filter_housing_form');
 
 				// Init datatable --- more info on datatables: https://datatables.net/manual/
 				datatable = $(table).DataTable({
 					serverSide: true,
 					ajax: {
-						url: "{{url('housing/show')}}",
+						url: "<?php echo e(url('housing/show')); ?>",
 						data: function (d) {
 
 							if (filterForm) {
@@ -336,7 +336,7 @@
 									d[key] = value;
 								});
 							}
-							d.unit_support_needed = "{{ request('unit_support_needed') }}";
+							d.unit_support_needed = "<?php echo e(request('unit_support_needed')); ?>";
 							d.parentglobalid = globalid
 
 
@@ -466,4 +466,5 @@
 
 
 	</script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/housing.blade.php ENDPATH**/ ?>

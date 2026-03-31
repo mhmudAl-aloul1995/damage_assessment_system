@@ -40,7 +40,7 @@ class housingController extends Controller
         $municip = Building::distinct('municipalitie')->select('municipalitie')->get();
         $assessments = Assessment::all();
         $areas = Area::all();
-        $filterName = Filter::distinct('list_name')->pluck('list_name');
+        $filterName = Filter::distinct('list_name')->pluck('list_name','list_name_arabic');
         $filters = Filter::all();
 
 
