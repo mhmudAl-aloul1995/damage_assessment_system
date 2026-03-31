@@ -100,13 +100,35 @@
 								placeholder="المنطقة أو الحي" />
 						</div>
 						<div class="col-md-3">
+							<label class="form-label fw-semibold">المهندس الميداني </label>
+							<select id="filter_field_engineer" class="form-select form-select-solid" data-control="select2"
+								data-allow-clear="true" data-placeholder="اختر Field Engineer">
+								<option></option>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $assignedTo; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $eng): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+									<option value="<?php echo e($eng->assignedto); ?>"><?php echo e($eng->assignedto); ?></option>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+							</select>
+						</div>
+
+						<div class="col-md-3">
+							<label class="form-label fw-semibold">حالة الضرر</label>
+							<select id="filter_damage_status" class="form-select form-select-solid" data-control="select2"
+								data-allow-clear="true" data-placeholder="اختر الحالة">
+								<option></option>
+								<option value="fully_damaged">Fully Damaged</option>
+								<option value="partially_damaged">Partially Damaged</option>
+								<option value="minor_damaged">Minor Damaged</option>
+								<option value="no_damage">No Damage</option>
+							</select>
+						</div>
+						<div class="col-md-3">
 							<label class="form-label fw-semibold">من تاريخ الإنشاء</label>
-							<input type="date" id="filter_from_date" class="form-control form-control-solid">
+							<input type="date" id="filter_from_date" placehoder="من تاريخ الإنشاء" class="form-control form-control-solid">
 						</div>
 
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">إلى تاريخ الإنشاء</label>
-							<input type="date" id="filter_to_date" class="form-control form-control-solid">
+							<input type="date" id="filter_to_date" placehoder="إلى تاريخ الإنشاء" class="form-control form-control-solid">
 						</div>
 						<div class="col-md-3 d-flex align-items-end">
 							<button type="button" class="btn btn-primary w-100" id="applyFilters">
@@ -223,7 +245,15 @@
 
 	<script>
 		$(document).ready(function () {
+			flatpickr("#filter_from_date", {
+				dateFormat: "Y-m-d",
+				'placeholder': 'من تاريخ الإنشاء'
 
+			});
+			flatpickr("#filter_to_date", {
+				dateFormat: "Y-m-d",
+				'placeholder': 'إلى تاريخ الإنشاء'
+			});
 			var table = $('#kt_datatable_audits').DataTable({
 				processing: true,
 				serverSide: true,
@@ -239,6 +269,11 @@
 						d.legal_status = $('#filter_legal_status').val();
 						d.final_status = $('#filter_final_status').val();
 						d.area = $('#filter_area').val();
+						d.field_engineer = $('#filter_field_engineer').val();
+						d.damage_status = $('#filter_damage_status').val();
+						d.filter_from_date = $('#filter_from_date').val();
+						d.filter_to_date = $('#filter_to_date').val();
+
 					}
 				},
 
@@ -256,9 +291,9 @@
 					orderable: false,
 					searchable: false,
 					render: (data) => `<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-															<input class="form-check-input" type="checkbox" 
-																data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-														</div>`
+																				<input class="form-check-input" type="checkbox" 
+																					data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																			</div>`
 				},
 
 				{

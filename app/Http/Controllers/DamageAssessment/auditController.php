@@ -2811,6 +2811,12 @@ class auditController extends Controller
                 $query->where('neighborhood', 'like', '%' . $request->area . '%');
             }
 
+            if ($request->filled('damage_status')) {
+                $query->where('building_damage_status', $request->damage_status);
+            }
+            if ($request->filled('field_engineer')) {
+                $query->where('assignedto', $request->field_engineer);
+            }
             if ($request->filled('engineer_id')) {
                 $query->whereHas('engineerAssignment', function ($q) use ($request) {
                     $q->where('user_id', $request->engineer_id);
@@ -2847,6 +2853,15 @@ class auditController extends Controller
                 $query->whereHas('finalApproval.assessment_status', function ($q) use ($request) {
                     $q->where('name', $request->final_status);
                 });
+            }
+            // From Date
+            if ($request->filled('from_date')) {
+                $query->whereDate('creationdate', '>=', $request->from_date);
+            }
+
+            // To Date
+            if ($request->filled('to_date')) {
+                $query->whereDate('creationdate', '<=', $request->to_date);
             }
             return DataTables::of($query)
 
@@ -2940,7 +2955,7 @@ class auditController extends Controller
                 $q->whereIn('name', ['Legal Auditor', 'QC/QA Engineer']);
             });
         })->get();
-        $engineers = Building::distinct('assignedto')->select('assignedto')->get();
+        $assignedTo = Building::distinct('assignedto')->select('assignedto')->get();
         $owners = Building::distinct('owner_name')->select('owner_name')->get();
         $municip = Building::distinct('municipalitie')->select('municipalitie')->get();
         $neighborhoods = Building::distinct()->pluck('neighborhood');
@@ -2952,7 +2967,7 @@ class auditController extends Controller
 
         return View::make(
             'DamageAssessment.audit',
-            compact('engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments')
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments')
         );
     }
 
@@ -3037,7 +3052,7 @@ class auditController extends Controller
                     $color = 'badge-secondary';
                 }
 
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span><br>'.$row->engineerStatus->created_at;
+                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span><br>' . $row->engineerStatus->created_at;
             })
 
             // Lawyer Status
