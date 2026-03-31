@@ -920,28 +920,48 @@
 							<div class="cursor-pointer symbol symbol-35px"
 								data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
 								data-kt-menu-placement="bottom-end">
-								<img src="{{ asset('storage/' . Auth::user()->avatar) }}" class="rounded-3" alt="user" />
+								<img src="{{ asset('storage/' . Auth::user()->avatar) }}" class="rounded-3"
+									alt="user" />
 							</div>
 							<!--begin::User account menu-->
 							<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-275px"
 								data-kt-menu="true">
 								<!--begin::Menu item-->
 								<div class="menu-item px-3">
-									<div class="menu-content d-flex align-items-center px-3">
+									<div class="menu-content d-flex flex-column flex-sm-row align-items-center px-3 py-4"
+										dir="rtl">
 										<!--begin::Avatar-->
-										<div class="symbol symbol-50px me-5">
-											<img alt="Logo" src="{{ asset('storage/' . Auth::user()->avatar) }}" />
+										<div class="symbol symbol-50px ms-sm-4 mb-3 mb-sm-0 flex-shrink-0">
+											<img alt="Avatar"
+												src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('assets/media/avatars/blank.png') }}"
+												class="object-fit-cover" />
 										</div>
 										<!--end::Avatar-->
-										<!--begin::Username-->
-										<div class="d-flex flex-column">
-											<div class="fw-bold d-flex align-items-center fs-5">{{Auth::user()->name  }}
-												<span class="badge badge-light-success fw-bold fs-8 px-2 py-1 ms-2">{{ Auth::user()->getRoleNames()->first() }}</span>
+
+										<!--begin::User info-->
+										<div class="d-flex flex-column flex-grow-1 text-center text-sm-end w-100"
+											style="min-width: 0;">
+											<div
+												class="d-flex flex-column flex-sm-row align-items-center align-items-sm-start justify-content-sm-between gap-2">
+												<div class="fw-bold fs-5 text-gray-900 lh-lg"
+													style="min-width: 0; word-break: break-word;">
+													{{ Auth::user()->name }}
+												</div>
+
+												@if(Auth::user()->getRoleNames()->first())
+													<span class="badge badge-light-success fw-bold fs-8 px-3 py-2">
+														{{ Auth::user()->getRoleNames()->first() }}
+													</span>
+												@endif
 											</div>
-											<a href="#"
-												class="fw-semibold text-muted text-hover-primary fs-7">{{Auth::user()->email  }}</a>
+
+											<a href="mailto:{{ Auth::user()->email }}"
+												class="fw-semibold fs-7 text-muted text-hover-primary mt-1 d-block"
+												style="word-break: break-word; overflow-wrap: anywhere;">
+												{{ Auth::user()->email }}
+											</a>
 										</div>
-										<!--end::Username-->
+										<!--end::User info-->
 									</div>
 								</div>
 								<!--end::Menu item-->
@@ -1119,55 +1139,55 @@
 								id="kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="false">
 
 								@php
-    $user = auth()->user();
-@endphp
+									$user = auth()->user();
+								@endphp
 
-@foreach(config('sidebar') as $menu)
+								@foreach(config('sidebar') as $menu)
 
-    {{-- إظهار القسم فقط إذا كان للمستخدم أحد الأدوار المسموح بها --}}
-    @if($user->hasAnyRole($menu['roles'] ?? []))
+									{{-- إظهار القسم فقط إذا كان للمستخدم أحد الأدوار المسموح بها --}}
+									@if($user->hasAnyRole($menu['roles'] ?? []))
 
-        @php
-            $visibleItems = collect($menu['items'] ?? [])->filter(function ($item) use ($user) {
-                return $user->hasAnyRole($item['roles'] ?? []);
-            });
-        @endphp
+										@php
+											$visibleItems = collect($menu['items'] ?? [])->filter(function ($item) use ($user) {
+												return $user->hasAnyRole($item['roles'] ?? []);
+											});
+										@endphp
 
-        {{-- لا تعرض القسم إذا لم يكن فيه عناصر ظاهرة --}}
-        @if($visibleItems->isNotEmpty())
-            <div data-kt-menu-trigger="click"
-                 class="menu-item menu-accordion {{ request()->is(...($menu['active_patterns'] ?? [])) ? 'show' : '' }}">
+										{{-- لا تعرض القسم إذا لم يكن فيه عناصر ظاهرة --}}
+										@if($visibleItems->isNotEmpty())
+											<div data-kt-menu-trigger="click"
+												class="menu-item menu-accordion {{ request()->is(...($menu['active_patterns'] ?? [])) ? 'show' : '' }}">
 
-                <span class="menu-link">
-                    <span class="menu-icon">
-                        <i class="ki-duotone {{ $menu['icon'] }} fs-2">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                    </span>
+												<span class="menu-link">
+													<span class="menu-icon">
+														<i class="ki-duotone {{ $menu['icon'] }} fs-2">
+															<span class="path1"></span>
+															<span class="path2"></span>
+														</i>
+													</span>
 
-                    <span class="menu-title">{{ $menu['title'] }}</span>
-                    <span class="menu-arrow"></span>
-                </span>
+													<span class="menu-title">{{ $menu['title'] }}</span>
+													<span class="menu-arrow"></span>
+												</span>
 
-                <div class="menu-sub menu-sub-accordion">
-                    @foreach($visibleItems as $item)
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
-                               href="{{ url($item['url']) }}">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title">{{ $item['title'] }}</span>
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endif
+												<div class="menu-sub menu-sub-accordion">
+													@foreach($visibleItems as $item)
+														<div class="menu-item">
+															<a class="menu-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
+																href="{{ url($item['url']) }}">
+																<span class="menu-bullet">
+																	<span class="bullet bullet-dot"></span>
+																</span>
+																<span class="menu-title">{{ $item['title'] }}</span>
+															</a>
+														</div>
+													@endforeach
+												</div>
+											</div>
+										@endif
 
-    @endif
-@endforeach
+									@endif
+								@endforeach
 							</div>
 						</div>
 					</div>
@@ -1245,8 +1265,8 @@
 						</div>
 						<!--end::Copyright-->
 						<!--begin::Menu-->
-					 
-						</div>
+
+					</div>
 					<!--end::Footer container-->
 				</div>
 				<!--end::Footer-->
