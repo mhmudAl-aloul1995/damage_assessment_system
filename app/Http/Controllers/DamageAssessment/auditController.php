@@ -2964,11 +2964,22 @@ class auditController extends Controller
             $query->where('parentglobalid', $request->globalid);
         }
         $type = auth()->user()->roles->first()->name;
+        $filters = Filter::whereIn('list_name', [
+            'housing_unit_type',
+            'unit_damage_status',
+        ])->get()->groupBy('list_name');
 
         return DataTables::of($query->orderBy('floor_number', 'asc')
             ->orderBy('housing_unit_number', 'asc'))
 
 
+            ->editColumn('housing_unit_type', function ($row) use ($filters) {
+                return getFilterLabel($filters, 'housing_unit_type', $row->housing_unit_type);
+            })
+
+            ->editColumn('unit_damage_status', function ($row) use ($filters) {
+                return getFilterLabel($filters, 'unit_damage_status', $row->unit_damage_status);
+            })
             ->addColumn('current_status', function ($row) use ($type) {
                 return optional($row->statusByType($type)?->first()?->assessment_status)->name;
             })
