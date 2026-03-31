@@ -940,7 +940,8 @@
 
 										<!--begin::User info-->
 										<style>
-											.menu-content , .text-break-anywhere {
+											.menu-content,
+											.text-break-anywhere {
 												word-break: break-word;
 												overflow-wrap: anywhere;
 												white-space: normal;
@@ -950,8 +951,7 @@
 											style="min-width: 0;">
 											<div
 												class="d-flex flex-column flex-sm-row align-items-center align-items-sm-start justify-content-sm-between gap-2">
-												<div class="fw-bold fs-5 text-gray-900 lh-lg"
-													style="min-width: 0; word-break: break-word;">
+												<div class="fw-bold fs-5 text-gray-900 text-break-anywhere">
 													{{ Auth::user()->name }}
 												</div>
 
