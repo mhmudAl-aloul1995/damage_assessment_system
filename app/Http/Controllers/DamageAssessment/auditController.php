@@ -2856,12 +2856,12 @@ class auditController extends Controller
             }
             // From Date
             if ($request->filled('filter_from_date')) {
-                $query->whereDate('creationdate', '>=', $request->from_date);
+                $query->whereDate('creationdate', '>=', $request->filter_from_date);
             }
 
             // To Date
             if ($request->filled('filter_to_date')) {
-                $query->whereDate('creationdate', '<=', $request->to_date);
+                $query->whereDate('creationdate', '<=', $request->filter_to_date);
             }
             return DataTables::of($query)
 
