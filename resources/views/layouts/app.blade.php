@@ -924,47 +924,39 @@
 									alt="user" />
 							</div>
 							<!--begin::User account menu-->
-							<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-275px"
-								data-kt-menu="true">
+							<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-350px"
+								data-kt-menu="true" dir="rtl">
+
 								<!--begin::Menu item-->
 								<div class="menu-item px-3">
-									<div class="menu-content d-flex flex-column flex-sm-row align-items-center px-3 py-4"
-										dir="rtl">
+									<div class="menu-content d-flex align-items-start px-3 py-4 w-100">
 										<!--begin::Avatar-->
-										<div class="symbol symbol-50px ms-sm-4 mb-3 mb-sm-0 flex-shrink-0">
+										<div class="symbol symbol-50px ms-4 flex-shrink-0">
 											<img alt="Avatar"
 												src="{{ Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('assets/media/avatars/blank.png') }}"
-												class="object-fit-cover" />
+												class="object-fit-cover rounded" />
 										</div>
 										<!--end::Avatar-->
 
 										<!--begin::User info-->
-										<style>
-											.menu-content,
-											.text-break-anywhere {
-												word-break: break-word;
-												overflow-wrap: anywhere;
-												white-space: normal;
-											}
-										</style>
-										<div class="d-flex flex-column flex-grow-1 text-center text-sm-end w-100"
+										<div class="d-flex flex-column flex-grow-1 text-end w-100"
 											style="min-width: 0;">
-											<div
-												class="d-flex flex-column flex-sm-row align-items-center align-items-sm-start justify-content-sm-between gap-2">
-												<div class="fw-bold fs-5 text-gray-900 text-break-anywhere">
-													{{ Auth::user()->name }}
-												</div>
+											<div class="fw-bold fs-5 text-gray-900 mb-2"
+												style="white-space: normal; word-break: break-word; overflow-wrap: anywhere; line-height: 1.6;">
+												{{ Auth::user()->name }}
+											</div>
 
-												@if(Auth::user()->getRoleNames()->first())
+											@if(Auth::user()->getRoleNames()->first())
+												<div class="mb-2">
 													<span class="badge badge-light-success fw-bold fs-8 px-3 py-2">
 														{{ Auth::user()->getRoleNames()->first() }}
 													</span>
-												@endif
-											</div>
+												</div>
+											@endif
 
 											<a href="mailto:{{ Auth::user()->email }}"
-												class="fw-semibold fs-7 text-muted text-hover-primary mt-1 d-block"
-												style="word-break: break-word; overflow-wrap: anywhere;">
+												class="fw-semibold fs-7 text-muted text-hover-primary d-block"
+												style="word-break: break-word; overflow-wrap: anywhere; white-space: normal;">
 												{{ Auth::user()->email }}
 											</a>
 										</div>
@@ -972,22 +964,24 @@
 									</div>
 								</div>
 								<!--end::Menu item-->
+
 								<!--begin::Menu separator-->
 								<div class="separator my-2"></div>
 								<!--end::Menu separator-->
+
 								<!--begin::Menu item-->
 								<div class="menu-item px-5">
-									<a href="{{ route('profile.edit') }}" class="menu-link px-5">ملفي الشخصي
-									</a>
+									<a href="{{ route('profile.edit') }}" class="menu-link px-5">ملفي الشخصي</a>
 								</div>
 
 								<div class="separator my-2"></div>
-								<!--end::Menu separator-->
+
 								<!--begin::Menu item-->
 								<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
 									data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
 									<a href="#" class="menu-link px-5">
-										<span class="menu-title position-relative">الوضع الليلي
+										<span class="menu-title position-relative">
+											الوضع الليلي
 											<span class="ms-5 position-absolute translate-middle-y top-50 end-0">
 												<i class="ki-duotone ki-night-day theme-light-show fs-2">
 													<span class="path1"></span>
@@ -1005,11 +999,14 @@
 													<span class="path1"></span>
 													<span class="path2"></span>
 												</i>
-											</span></span>
+											</span>
+										</span>
 									</a>
+
 									<!--begin::Menu-->
 									<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-title-gray-700 menu-icon-gray-500 menu-active-bg menu-state-color fw-semibold py-4 fs-base w-150px"
 										data-kt-menu="true" data-kt-element="theme-mode-menu">
+
 										<!--begin::Menu item-->
 										<div class="menu-item px-3 my-0">
 											<a href="#" class="menu-link px-3 py-2" data-kt-element="mode"
@@ -1032,6 +1029,7 @@
 											</a>
 										</div>
 										<!--end::Menu item-->
+
 										<!--begin::Menu item-->
 										<div class="menu-item px-3 my-0">
 											<a href="#" class="menu-link px-3 py-2" data-kt-element="mode"
@@ -1045,18 +1043,20 @@
 												<span class="menu-title">قاتم</span>
 											</a>
 										</div>
+										<!--end::Menu item-->
 
 									</div>
 									<!--end::Menu-->
 								</div>
-
-
 								<!--end::Menu item-->
+
 								<!--begin::Menu item-->
-								<a href="#" class="menu-link px-5"
-									onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-									تسجيل خروج
-								</a>
+								<div class="menu-item px-5">
+									<a href="#" class="menu-link px-5"
+										onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+										تسجيل خروج
+									</a>
+								</div>
 
 								<!-- The hidden form -->
 								<form id="logout-form" action="{{ route('logout') }}" method="POST"
@@ -1064,6 +1064,7 @@
 									@csrf
 								</form>
 								<!--end::Menu item-->
+
 							</div>
 							<!--end::User account menu-->
 							<!--end::Menu wrapper-->
