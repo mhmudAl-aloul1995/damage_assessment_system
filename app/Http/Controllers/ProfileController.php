@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 use Storage;
+use App\Services\ImageService;
+use Illuminate\Support\Facades\DB;
 class ProfileController extends Controller
 {
     /**
@@ -24,27 +26,35 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request)
-    {
-        $user = $request->user();
-        $data = $request->validated();
 
-        // Handle File Upload manually
+
+public function update(ProfileUpdateRequest $request, ImageService $imageService)
+{
+    $user = $request->user();
+    $data = $request->validated();
+
+    DB::transaction(function () use ($request, $user, &$data, $imageService) {
         if ($request->hasFile('avatar')) {
-            // Delete old avatar if it exists
-            if ($user->avatar) {
+            if (!empty($user->avatar) && Storage::disk('public')->exists($user->avatar)) {
                 Storage::disk('public')->delete($user->avatar);
             }
-            // Store new file and get path
-            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+
+            $data['avatar'] = $imageService->processAvatar(
+                $request->file('avatar'),
+                $user->id
+            );
         }
 
         $user->fill($data);
         $user->save();
+    });
 
-        return response()->json(['status' => 'success']);
-    }
-
+    return response()->json([
+        'status' => 'success',
+        'message' => 'تم تحديث الملف الشخصي بنجاح',
+        'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+    ]);
+}
 
     /**
      * Delete the user's account.

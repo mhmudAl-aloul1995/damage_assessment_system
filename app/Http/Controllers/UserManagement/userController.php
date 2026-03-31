@@ -22,18 +22,21 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ImageService;
 
 class userController extends Controller
 {
 
+    protected ImageService $imageService;
 
-    function __construct()
+    public function __construct(ImageService $imageService)
     {
+        $this->imageService = $imageService;
         $this->middleware('role:Database Officer');
-        /*  $this->middleware('permission:user-create', ['only' => ['create', 'store']]);
-          $this->middleware('permission:user-edit', ['only' => ['edit', 'update']]);
-          $this->middleware('permission:user-delete', ['only' => ['destroy']]);*/
+
     }
+
+
 
 
     public function index()
@@ -137,32 +140,10 @@ class userController extends Controller
         $avatarPath = null;
         $user = null;
 
-        // =========================
-        // معالجة الصورة
-        // =========================
-        if ($request->hasFile('avatar')) {
-            $file = $request->file('avatar');
-
-            $fileName = 'avatar_' . time() . '_' . uniqid() . '.jpg';
-            $avatarPath = 'avatars/' . $fileName;
-
-            $image = Image::read($file)
-                ->cover(300, 300)   // قص + resize لمربع 300x300
-                ->toJpeg(85);       // تحويل إلى jpg بجودة 85
-
-            Storage::disk('public')->put($avatarPath, (string) $image);
-        }
-
-        // =========================
-        // password أرقام فقط
-        // =========================
         $randomPassword = (string) random_int(100000, 999999);
         $hashedPassword = Hash::make($randomPassword);
 
-        // =========================
-        // حفظ المستخدم + roles
-        // =========================
-        DB::transaction(function () use ($request, $hashedPassword, $avatarPath, &$user) {
+        DB::transaction(function () use ($request, &$avatarPath, &$user, $hashedPassword) {
             $user = User::create([
                 'name' => $request->name,
                 'name_en' => $request->name_en,
@@ -172,8 +153,19 @@ class userController extends Controller
                 'phone' => $request->phone,
                 'address' => $request->address,
                 'password' => $hashedPassword,
-                'avatar' => $avatarPath,
+                'avatar' => null,
             ]);
+
+            if ($request->hasFile('avatar')) {
+                $avatarPath = $this->imageService->processAvatar(
+                    $request->file('avatar'),
+                    $user->id
+                );
+
+                $user->update([
+                    'avatar' => $avatarPath
+                ]);
+            }
 
             $user->syncRoles($request->roles);
         });
@@ -183,8 +175,7 @@ class userController extends Controller
         );
 
         return response()->json([
-            'message' => 'تم إضافة المستخدم وتعيين دوره بنجاح',
-            'user' => $user,
+            'message' => 'تم إضافة المستخدم وتعيين دوره بنجاح'
         ]);
     }
 
@@ -200,7 +191,7 @@ class userController extends Controller
             'address' => 'required|string|max:255',
             'roles' => 'required|array|min:1',
             'roles.*' => 'required|string|exists:roles,name',
-            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
         $data = [
@@ -213,30 +204,124 @@ class userController extends Controller
             'address' => $request->address,
         ];
 
-        if ($request->hasFile('avatar')) {
-            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        $newPassword = null;
+
+        DB::transaction(function () use ($request, $user, &$data, &$newPassword) {
+            if ($request->hasFile('avatar')) {
+                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+
+                $data['avatar'] = $this->imageService->processAvatar(
+                    $request->file('avatar'),
+                    $user->id
+                );
+            }
+
+            $user->update($data);
+            $user->syncRoles($request->roles);
+
+            if ($request->filled('send_password') && $request->send_password == 'yes') {
+                $newPassword = (string) random_int(100000, 999999);
+
+                $user->update([
+                    'password' => Hash::make($newPassword)
+                ]);
+            }
+        });
+
+        if ($newPassword) {
+            Mail::to($user->email)->send(
+                new WelcomeUserMail($user->email, $newPassword)
+            );
         }
-
-        $user->update($data);
-        $roles = $request->roles; // array
-        $user->syncRoles($roles);
-
-        if ($request->filled('send_password') && $request->send_password == 'yes') {
-            // Generate a new temporary password
-            $randomPassword = (string) random_int(100000, 999999);
-            $user->update([
-                'password' => Hash::make($randomPassword)
-            ]);
-
-            Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
-        }
-
 
         return response()->json([
             'message' => 'تم تعديل المستخدم بنجاح'
         ]);
     }
+    private function processAvatar($file, $userId = null)
+    {
+        $realPath = $file->getRealPath();
+        $mime = $file->getMimeType();
 
+        // إنشاء الصورة حسب النوع
+        switch ($mime) {
+            case 'image/jpeg':
+            case 'image/jpg':
+                $sourceImage = imagecreatefromjpeg($realPath);
+                break;
+
+            case 'image/png':
+                $sourceImage = imagecreatefrompng($realPath);
+                break;
+
+            case 'image/webp':
+                if (!function_exists('imagecreatefromwebp')) {
+                    throw new \Exception('WEBP not supported');
+                }
+                $sourceImage = imagecreatefromwebp($realPath);
+                break;
+
+            default:
+                throw new \Exception('Unsupported image type');
+        }
+
+        if (!$sourceImage) {
+            throw new \Exception('Invalid image');
+        }
+
+        $srcWidth = imagesx($sourceImage);
+        $srcHeight = imagesy($sourceImage);
+
+        $targetSize = 300;
+
+        $srcRatio = $srcWidth / $srcHeight;
+
+        if ($srcRatio > 1) {
+            // قص عرض
+            $newHeight = $srcHeight;
+            $newWidth = $srcHeight;
+            $srcX = ($srcWidth - $newWidth) / 2;
+            $srcY = 0;
+        } else {
+            // قص ارتفاع
+            $newWidth = $srcWidth;
+            $newHeight = $srcWidth;
+            $srcX = 0;
+            $srcY = ($srcHeight - $newHeight) / 2;
+        }
+
+        $finalImage = imagecreatetruecolor($targetSize, $targetSize);
+
+        imagecopyresampled(
+            $finalImage,
+            $sourceImage,
+            0,
+            0,
+            $srcX,
+            $srcY,
+            $targetSize,
+            $targetSize,
+            $newWidth,
+            $newHeight
+        );
+
+        $fileName = 'avatar_' . ($userId ?? 'tmp') . '_' . time() . '_' . uniqid() . '.jpg';
+        $relativePath = 'avatars/' . $fileName;
+        $fullPath = storage_path('app/public/' . $relativePath);
+
+        if (!file_exists(dirname($fullPath))) {
+            mkdir(dirname($fullPath), 0755, true);
+        }
+
+        imagejpeg($finalImage, $fullPath, 85);
+
+        imagedestroy($sourceImage);
+        imagedestroy($finalImage);
+
+        return $relativePath;
+    }
     public function destroy(Request $request, $id)
     {
 

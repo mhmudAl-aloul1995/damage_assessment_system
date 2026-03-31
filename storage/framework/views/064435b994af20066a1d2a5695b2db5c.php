@@ -1,20 +1,18 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', 'الإستبيان'); ?>
+<?php $__env->startSection('pageName', 'الإستبيان'); ?>
 
-@section('title', 'الإستبيان')
-@section('pageName', 'الإستبيان')
-
-@section('content')
-    @php
+<?php $__env->startSection('content'); ?>
+    <?php
         $user = auth()->user();
-    @endphp
+    ?>
 
     <div class="card mb-5 mb-xl-10">
         <div class="card-body pt-9 pb-0">
             <div class="d-flex flex-wrap flex-sm-nowrap">
                 <div class="me-7 mb-4">
                     <div class="symbol symbol-100px symbol-lg-160px symbol-fixed position-relative">
-                        <img src="{{ $user->avatar ? asset('storage/' . $user->avatar) : asset('assets/media/avatars/blank.png') }}"
-                            alt="{{ $user->name }}" class="w-100px h-100px rounded" style="object-fit: cover;">
+                        <img src="<?php echo e($user->avatar ? asset('storage/' . $user->avatar) : asset('assets/media/avatars/blank.png')); ?>"
+                            alt="<?php echo e($user->name); ?>" class="w-100px h-100px rounded" style="object-fit: cover;">
                         <div
                             class="position-absolute translate-middle bottom-0 start-100 mb-6 bg-success rounded-circle border border-4 border-body h-20px w-20px">
                         </div>
@@ -27,7 +25,8 @@
                             <div class="d-flex align-items-center mb-2 min-w-0">
                                 <a href="#" class="text-gray-900 text-hover-primary fw-bold me-1 text-truncate fs-4 fs-md-2"
                                     style="max-width: 250px;">
-                                    {{ $user->name }}
+                                    <?php echo e($user->name); ?>
+
                                 </a>
 
                                 <a href="#">
@@ -45,7 +44,8 @@
                                         <span class="path2"></span>
                                         <span class="path3"></span>
                                     </i>
-                                    {{ $user->getRoleNames()->first() ?? 'No Role' }}
+                                    <?php echo e($user->getRoleNames()->first() ?? 'No Role'); ?>
+
                                 </a>
 
                                 <a href="#" class="d-flex align-items-center text-gray-400 text-hover-primary me-5 mb-2">
@@ -53,7 +53,8 @@
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                     </i>
-                                    {{ $user->address ?? '-' }}
+                                    <?php echo e($user->address ?? '-'); ?>
+
                                 </a>
 
                                 <a href="#"
@@ -62,7 +63,8 @@
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                     </i>
-                                    {{ $user->email }}
+                                    <?php echo e($user->email); ?>
+
                                 </a>
                             </div>
                         </div>
@@ -107,7 +109,7 @@
             <div class="row mb-7">
                 <label class="col-lg-4 fw-semibold text-muted">إسم المستخدم</label>
                 <div class="col-lg-8">
-                    <span class="fw-bold fs-6 text-gray-800">{{ $user->name }}</span>
+                    <span class="fw-bold fs-6 text-gray-800"><?php echo e($user->name); ?></span>
                 </div>
             </div>
 
@@ -115,7 +117,8 @@
                 <label class="col-lg-4 fw-semibold text-muted">الدور</label>
                 <div class="col-lg-8 fv-row">
                     <span class="fw-semibold text-gray-800 fs-6">
-                        {{ $user->getRoleNames()->first() ?? 'No Role' }}
+                        <?php echo e($user->getRoleNames()->first() ?? 'No Role'); ?>
+
                     </span>
                 </div>
             </div>
@@ -132,14 +135,14 @@
                     </span>
                 </label>
                 <div class="col-lg-8 d-flex align-items-center">
-                    <span class="fw-bold fs-6 text-gray-800 me-2">{{ $user->phone ?? '-' }}</span>
+                    <span class="fw-bold fs-6 text-gray-800 me-2"><?php echo e($user->phone ?? '-'); ?></span>
                 </div>
             </div>
 
             <div class="row mb-7">
                 <label class="col-lg-4 fw-semibold text-muted">البريد الإلكتروني</label>
                 <div class="col-lg-8">
-                    <a href="#" class="fw-semibold fs-6 text-gray-800 text-hover-primary">{{ $user->email }}</a>
+                    <a href="#" class="fw-semibold fs-6 text-gray-800 text-hover-primary"><?php echo e($user->email); ?></a>
                 </div>
             </div>
 
@@ -147,7 +150,8 @@
                 <label class="col-lg-4 fw-semibold text-muted">العنوان</label>
                 <div class="col-lg-8">
                     <a href="#" class="fw-semibold fs-6 text-gray-800 text-hover-primary">
-                        {{ $user->address ?? '-' }}
+                        <?php echo e($user->address ?? '-'); ?>
+
                     </a>
                 </div>
             </div>
@@ -164,19 +168,19 @@
         </div>
 
         <div id="kt_account_settings_profile_details" class="collapse show">
-            <form id="kt_account_profile_details_form" action="{{ route('profile.update') }}" method="POST"
+            <form id="kt_account_profile_details_form" action="<?php echo e(route('profile.update')); ?>" method="POST"
                 enctype="multipart/form-data" class="form">
-                @csrf
-                @method('PUT')
+                <?php echo csrf_field(); ?>
+                <?php echo method_field('PUT'); ?>
 
                 <div class="card-body border-top p-9">
                     <div class="row mb-6">
                         <label class="col-lg-4 col-form-label fw-semibold fs-6">الصورة الشخصية</label>
                         <div class="col-lg-8">
                             <div class="image-input image-input-outline" data-kt-image-input="true"
-                                style="background-image: url('{{ asset('assets/media/svg/avatars/blank.svg') }}')">
+                                style="background-image: url('<?php echo e(asset('assets/media/svg/avatars/blank.svg')); ?>')">
                                 <div class="image-input-wrapper w-125px h-125px"
-                                    style="background-image: url('{{ $user->avatar ? asset('storage/' . $user->avatar) : asset('assets/media/avatars/300-1.jpg') }}')">
+                                    style="background-image: url('<?php echo e($user->avatar ? asset('storage/' . $user->avatar) : asset('assets/media/avatars/300-1.jpg')); ?>')">
                                 </div>
 
                                 <label class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
@@ -216,7 +220,7 @@
                         <label class="col-lg-4 col-form-label required fw-semibold fs-6">الإسم بالكامل</label>
                         <div class="col-lg-8 fv-row">
                             <input type="text" name="name" class="form-control form-control-lg form-control-solid"
-                                placeholder="الاسم الكامل" value="{{ $user->name }}" />
+                                placeholder="الاسم الكامل" value="<?php echo e($user->name); ?>" />
                         </div>
                     </div>
 
@@ -224,7 +228,7 @@
                         <label class="col-lg-4 col-form-label fw-semibold fs-6">الدور</label>
                         <div class="col-lg-8 fv-row">
                             <input type="text" class="form-control form-control-lg form-control-solid"
-                                value="{{ $user->getRoleNames()->first() ?? 'No Role' }}" readonly />
+                                value="<?php echo e($user->getRoleNames()->first() ?? 'No Role'); ?>" readonly />
                         </div>
                     </div>
 
@@ -234,7 +238,7 @@
                         </label>
                         <div class="col-lg-8 fv-row">
                             <input type="tel" name="phone" class="form-control form-control-lg form-control-solid"
-                                placeholder="رقم الجوال" value="{{ $user->phone }}" />
+                                placeholder="رقم الجوال" value="<?php echo e($user->phone); ?>" />
                         </div>
                     </div>
 
@@ -242,7 +246,7 @@
                         <label class="col-lg-4 col-form-label fw-semibold fs-6">البريد الإلكتروني</label>
                         <div class="col-lg-8 fv-row">
                             <input type="text" name="email" class="form-control form-control-lg form-control-solid"
-                                placeholder="البريد الإلكتروني" value="{{ $user->email }}" />
+                                placeholder="البريد الإلكتروني" value="<?php echo e($user->email); ?>" />
                         </div>
                     </div>
 
@@ -250,7 +254,7 @@
                         <label class="col-lg-4 col-form-label fw-semibold fs-6">العنوان</label>
                         <div class="col-lg-8 fv-row">
                             <input type="text" name="address" class="form-control form-control-lg form-control-solid"
-                                placeholder="العنوان" value="{{ $user->address }}" />
+                                placeholder="العنوان" value="<?php echo e($user->address); ?>" />
                         </div>
                     </div>
                 </div>
@@ -264,9 +268,9 @@
             </form>
         </div>
     </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('script')
+<?php $__env->startSection('script'); ?>
     <script>
         "use strict";
 
@@ -402,4 +406,5 @@
             KTAccountSettingsProfileDetails.init();
         });
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/profile/edit.blade.php ENDPATH**/ ?>
