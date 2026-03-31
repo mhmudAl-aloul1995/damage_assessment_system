@@ -118,8 +118,7 @@
 								<option></option>
 								<option value="fully_damaged">Fully Damaged</option>
 								<option value="partially_damaged">Partially Damaged</option>
-								<option value="minor_damaged">Minor Damaged</option>
-								<option value="no_damage">No Damage</option>
+								<option value="committee_review">Committee Review </option>
 							</select>
 						</div>
 						<div class="col-md-3">
