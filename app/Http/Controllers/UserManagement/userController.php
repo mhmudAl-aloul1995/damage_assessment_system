@@ -137,7 +137,7 @@ class userController extends Controller
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
 
-        $randomPassword = Str::password(6, false, true, false, false);
+        $randomPassword = (string) random_int(100000, 999999);
         $hashedPassword = Hash::make($randomPassword);
 
         DB::transaction(function () use ($request, $hashedPassword, $avatarPath, &$user) {
@@ -200,8 +200,7 @@ class userController extends Controller
 
         if ($request->filled('send_password') && $request->send_password == 'yes') {
             // Generate a new temporary password
-            $randomPassword = Str::random(6);
-
+            $randomPassword = (string) random_int(100000, 999999);
             $user->update([
                 'password' => Hash::make($randomPassword)
             ]);
