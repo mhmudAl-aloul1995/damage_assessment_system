@@ -38,6 +38,13 @@ class auditController extends Controller
 
         if ($request->ajax()) {
 
+            $globalIds = DB::table('warda_buildings')
+                ->whereNotNull('globalid')
+                ->where('globalid', '!=', '')
+                ->distinct()
+                ->pluck('globalid')
+                ->toArray();
+                dd($globalIds);
             $query = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
@@ -970,5 +977,5 @@ class auditController extends Controller
         };
     }
 
- 
+
 }
