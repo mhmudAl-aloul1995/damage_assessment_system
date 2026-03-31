@@ -1,9 +1,8 @@
-@extends('layouts.app')
-@section('title', 'الإستبيان')
-@section('pageName', 'الإستبيان')
+<?php $__env->startSection('title', 'الإستبيان'); ?>
+<?php $__env->startSection('pageName', 'الإستبيان'); ?>
 
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 	<style>
 		/* Reduce the gap on the right of the text */
 		table.dataTable thead th.sorting,
@@ -43,9 +42,9 @@
 							<select id="filter_engineer" class="form-select form-select-solid" data-control="select2"
 								data-allow-clear="true" data-placeholder="اختر المهندس">
 								<option></option>
-								@foreach($engineers as $engineer)
-									<option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
-								@endforeach
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $engineers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $engineer): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+									<option value="<?php echo e($engineer->id); ?>"><?php echo e($engineer->name); ?></option>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 							</select>
 						</div>
 
@@ -54,9 +53,9 @@
 							<select id="filter_lawyer" class="form-select form-select-solid" data-control="select2"
 								data-allow-clear="true" data-placeholder="اختر المحامي">
 								<option></option>
-								@foreach($lawyers as $lawyer)
-									<option value="{{ $lawyer->id }}">{{ $lawyer->name }}</option>
-								@endforeach
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $lawyers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lawyer): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+									<option value="<?php echo e($lawyer->id); ?>"><?php echo e($lawyer->name); ?></option>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 							</select>
 						</div>
 
@@ -180,7 +179,8 @@
 						</div>
 					</div>
 
-					{{ csrf_field() }}
+					<?php echo e(csrf_field()); ?>
+
 					<div class="modal-body py-10 px-lg-17">
 						<input type="hidden" name="type" id="assign_type">
 						<input type="hidden" name="status_id" id="assign_status_id">
@@ -192,9 +192,9 @@
 							<select name="user_id" class="form-select form-select-solid" data-control="select2"
 								data-placeholder="إختر الإسم..." data-dropdown-parent="#kt_modal_assign">
 								<option></option>
-								@foreach($users as $user)
-									<option value="{{ $user->id }}">{{ $user->name }}</option>
-								@endforeach
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+									<option value="<?php echo e($user->id); ?>"><?php echo e($user->name); ?></option>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 							</select>
 						</div>
 					</div>
@@ -210,13 +210,13 @@
 		</div>
 	</div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
 
 
 
 
-@section('script')
+<?php $__env->startSection('script'); ?>
 
 
 
@@ -230,7 +230,7 @@
 
 
 				ajax: {
-					url: "{{ route('audit.index') }}",
+					url: "<?php echo e(route('audit.index')); ?>",
 					data: function (d) {
 						d.building_name = $('#filter_building_name').val();
 						d.engineer_id = $('#filter_engineer').val();
@@ -313,7 +313,7 @@
 							return;
 						}
 						e.preventDefault()
-						var url_eng = "{{url('showAssessmentAudit/')  }}/" + data.globalid
+						var url_eng = "<?php echo e(url('showAssessmentAudit/')); ?>/" + data.globalid
 						window.open(url_eng, '_blank');
 
 
@@ -438,7 +438,7 @@
 				submitButton.prop('disabled', true);
 
 				$.ajax({
-					url: "{{route('audit.assign')  }}",
+					url: "<?php echo e(route('audit.assign')); ?>",
 					method: 'POST',
 					data: form.serialize(),
 					success: function (response) {
@@ -499,4 +499,5 @@
 			KTMenu.createInstances();
 		});
 	</script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/audit.blade.php ENDPATH**/ ?>
