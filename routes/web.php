@@ -110,12 +110,12 @@ Route::middleware('auth')->group(function () {
             'output' => $outputs,
         ]);
     });
-    Route::get('/deleteUsers', function () {
+/*     Route::get('/deleteUsers', function () {
         user::where('id', '>', '3')->delete();
         AttendanceImportLog::where('id','>','0')->delete();
         Attendance::where('id','>','0')->delete();
 
-    });
+    }); */
 
     Route::prefix('user-management/user')->group(function () {
 
