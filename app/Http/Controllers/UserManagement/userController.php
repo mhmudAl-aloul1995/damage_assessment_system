@@ -20,6 +20,8 @@ use App\Models\HousingUnit;
 use App\Mail\WelcomeUserMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Intervention\Image\Laravel\Facades\Image;
+use Illuminate\Support\Facades\Storage;
 
 class userController extends Controller
 {
@@ -116,6 +118,7 @@ class userController extends Controller
             'roles' => $user->roles->pluck('name')->toArray()
         ]);
     }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -128,18 +131,37 @@ class userController extends Controller
             'address' => 'required|string|max:255',
             'roles' => 'required|array|min:1',
             'roles.*' => 'required|string|exists:roles,name',
-            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
         $avatarPath = null;
+        $user = null;
 
+        // =========================
+        // معالجة الصورة
+        // =========================
         if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+            $file = $request->file('avatar');
+
+            $fileName = 'avatar_' . time() . '_' . uniqid() . '.jpg';
+            $avatarPath = 'avatars/' . $fileName;
+
+            $image = Image::read($file)
+                ->cover(300, 300)   // قص + resize لمربع 300x300
+                ->toJpeg(85);       // تحويل إلى jpg بجودة 85
+
+            Storage::disk('public')->put($avatarPath, (string) $image);
         }
 
+        // =========================
+        // password أرقام فقط
+        // =========================
         $randomPassword = (string) random_int(100000, 999999);
         $hashedPassword = Hash::make($randomPassword);
 
+        // =========================
+        // حفظ المستخدم + roles
+        // =========================
         DB::transaction(function () use ($request, $hashedPassword, $avatarPath, &$user) {
             $user = User::create([
                 'name' => $request->name,
@@ -153,17 +175,18 @@ class userController extends Controller
                 'avatar' => $avatarPath,
             ]);
 
-            $roles = $request->roles; // array
-            $user->syncRoles($roles);
+            $user->syncRoles($request->roles);
         });
 
-        Mail::to($user->email)->send(new WelcomeUserMail($user->email, $randomPassword));
+        Mail::to($user->email)->send(
+            new WelcomeUserMail($user->email, $randomPassword)
+        );
 
         return response()->json([
-            'message' => 'تم إضافة المستخدم وتعيين دوره بنجاح'
+            'message' => 'تم إضافة المستخدم وتعيين دوره بنجاح',
+            'user' => $user,
         ]);
     }
-
 
     public function update(Request $request, User $user)
     {
