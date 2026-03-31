@@ -939,6 +939,13 @@
 										<!--end::Avatar-->
 
 										<!--begin::User info-->
+										<style>
+											.menu-content , .text-break-anywhere {
+												word-break: break-word;
+												overflow-wrap: anywhere;
+												white-space: normal;
+											}
+										</style>
 										<div class="d-flex flex-column flex-grow-1 text-center text-sm-end w-100"
 											style="min-width: 0;">
 											<div
