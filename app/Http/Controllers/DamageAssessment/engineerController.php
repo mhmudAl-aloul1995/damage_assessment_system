@@ -119,13 +119,14 @@ class engineerController extends Controller
     }
     public function showAssessment(Request $request)
     {
-        $globalid = $request->globalid;
+        $housingGlobalid = $request->housingGlobalid;
+        $buildingGlobalid = $request->buildingGlobalid;
 
         $building = Building::where('globalid', $request->globalid)->first();
         $HousingUnit = HousingUnit::where('parentglobalid', $request->globalid)->get();
         $assessments = Assessment::all();
 
-        return View::make('DamageAssessment.assessment', compact('globalid', 'building', 'assessments', 'HousingUnit'));
+        return View::make('DamageAssessment.assessment', compact('buildingGlobalid','housingGlobalid', 'building', 'assessments', 'HousingUnit'));
 
     }
     public function show(Request $request)
