@@ -3482,7 +3482,7 @@ class auditController extends Controller
     public function showAssessmentAudit(Request $request)
     {
 
-    
+
         $buildingGlobalid = $request->buildingGlobalid;
         $housingGlobalid = $request->housingGlobalid;
 
@@ -3495,7 +3495,7 @@ class auditController extends Controller
             })
             ->first()?->status?->name;
 
-        return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'housingGlobalid','buildingGlobalid', 'building', 'assessments', 'HousingUnit'));
+        return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit'));
     }
 
     public function auditBuilding(Request $request)
@@ -3753,6 +3753,180 @@ class auditController extends Controller
             'legal_notes' => 'badge badge-light-primary fw-bold',
             default => 'badge badge-light-secondary fw-bold',
         };
+    }
+    public function getEditableNote(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|in:building,housing',
+            'globalid' => 'required|string',
+            'note_id' => 'nullable|integer',
+        ]);
+
+        $type = $request->type;
+        $globalid = $request->globalid;
+        $noteId = $request->note_id;
+
+        if ($type === 'building') {
+            $building = Building::where('globalid', $globalid)->first();
+
+            if (!$building) {
+                return response()->json([
+                    'message' => 'المبنى غير موجود'
+                ], 404);
+            }
+
+            $hasFinalApprove = BuildingStatusHistory::where('building_id', $building->objectid)
+                ->whereHas('status', function ($q) {
+                    $q->where('name', 'final_approval');
+                })
+                ->exists();
+
+            $query = BuildingStatusHistory::with(['status', 'user'])
+                ->where('building_id', $building->objectid)
+                ->whereNotNull('notes')
+                ->where('notes', '!=', '');
+
+            if ($noteId) {
+                $query->where('id', $noteId);
+            } else {
+                $query->latest('id');
+            }
+
+            $note = $query->first();
+
+            if (!$note) {
+                return response()->json([
+                    'message' => 'لا توجد ملاحظة متاحة'
+                ], 404);
+            }
+
+            return response()->json([
+                'id' => $note->id,
+                'notes' => $note->notes,
+                'has_final_approve' => $hasFinalApprove,
+                'status_name' => optional($note->status)->label ?? optional($note->status)->name ?? '-',
+                'user_name' => optional($note->user)->name ?? '-',
+                'created_at' => optional($note->created_at)?->format('Y-m-d H:i'),
+            ]);
+        }
+
+        if ($type === 'housing') {
+            $housing = HousingUnit::where('globalid', $globalid)->first();
+
+            if (!$housing) {
+                return response()->json([
+                    'message' => 'الوحدة السكنية غير موجودة'
+                ], 404);
+            }
+
+            $hasFinalApprove = HousingStatusHistory::where('housing_id', $housing->objectid)
+                ->whereHas('status', function ($q) {
+                    $q->where('name', 'final_approval');
+                })
+                ->exists();
+
+            $query = HousingStatusHistory::with(['status', 'user'])
+                ->where('housing_id', $housing->objectid)
+                ->whereNotNull('notes')
+                ->where('notes', '!=', '');
+
+            if ($noteId) {
+                $query->where('id', $noteId);
+            } else {
+                $query->latest('id');
+            }
+
+            $note = $query->first();
+
+            if (!$note) {
+                return response()->json([
+                    'message' => 'لا توجد ملاحظة متاحة'
+                ], 404);
+            }
+
+            return response()->json([
+                'id' => $note->id,
+                'notes' => $note->notes,
+                'has_final_approve' => $hasFinalApprove,
+                'status_name' => optional($note->status)->label ?? optional($note->status)->name ?? '-',
+                'user_name' => optional($note->user)->name ?? '-',
+                'created_at' => optional($note->created_at)?->format('Y-m-d H:i'),
+            ]);
+        }
+    }
+
+    /**
+     * تحديث الملاحظة بعد التحقق من عدم وجود final approval
+     */
+    public function updateNote(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer',
+            'type' => 'required|in:building,housing',
+            'notes' => 'nullable|string',
+        ]);
+
+        $id = $request->id;
+        $type = $request->type;
+        $notes = trim((string) $request->notes);
+
+        if ($type === 'building') {
+            $note = BuildingStatusHistory::find($id);
+
+            if (!$note) {
+                return response()->json([
+                    'message' => 'الملاحظة غير موجودة'
+                ], 404);
+            }
+
+            $hasFinalApprove = BuildingStatusHistory::where('building_id', $note->building_id)
+                ->whereHas('status', function ($q) {
+                    $q->where('name', 'final_approval');
+                })
+                ->exists();
+
+            if ($hasFinalApprove) {
+                return response()->json([
+                    'message' => 'لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود'
+                ], 422);
+            }
+
+            $note->notes = $notes;
+            $note->save();
+
+            return response()->json([
+                'message' => 'تم تحديث ملاحظة المبنى بنجاح'
+            ]);
+        }
+
+        if ($type === 'housing') {
+            $note = HousingStatusHistory::find($id);
+
+            if (!$note) {
+                return response()->json([
+                    'message' => 'الملاحظة غير موجودة'
+                ], 404);
+            }
+
+            $hasFinalApprove = HousingStatusHistory::where('housing_id', $note->housing_id)
+                ->whereHas('status', function ($q) {
+                    $q->where('name', 'final_approval');
+                })
+                ->exists();
+
+            if ($hasFinalApprove) {
+                return response()->json([
+                    'message' => 'لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود'
+                ], 422);
+            }
+
+            $note->notes = $notes;
+            $note->save();
+
+            return response()->json([
+                'message' => 'تم تحديث ملاحظة الوحدة بنجاح'
+            ]);
+        }
     }
 
 

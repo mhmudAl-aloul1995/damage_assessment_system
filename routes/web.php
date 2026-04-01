@@ -244,6 +244,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('audit/housing-status-history', [auditController::class, 'housingHistory'])
         ->name('housing.status.history');
+    Route::get('assessment/notes/edit-data', [AuditController::class, 'getEditableNote'])
+        ->name('assessment.notes.edit.data');
+
+    Route::post('assessment/notes/update', [AuditController::class, 'updateNote'])
+        ->name('assessment.notes.update');
 });
 
 require __DIR__ . '/auth.php';
