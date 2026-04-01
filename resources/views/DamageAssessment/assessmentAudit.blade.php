@@ -548,8 +548,8 @@
 
         function loadStatusHistory(type, globalid) {
             $('#statusHistoryTable').html(`
-                                                <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
-                                            `);
+                                                    <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
+                                                `);
 
             $.ajax({
                 url: type === 'building' ?
@@ -568,13 +568,13 @@
                     } else {
                         response.forEach(item => {
                             rows += `
-                                                                <tr>
-                                                                    <td>${item.status_name}</td>
-                                                                    <td>${item.user_name}</td>
-                                                                    <td>${item.notes ?? '-'}</td>
-                                                                    <td>${item.created_at}</td>
-                                                                </tr>
-                                                            `;
+                                                                    <tr>
+                                                                        <td>${item.status_name}</td>
+                                                                        <td>${item.user_name}</td>
+                                                                        <td>${item.notes ?? '-'}</td>
+                                                                        <td>${item.created_at}</td>
+                                                                    </tr>
+                                                                `;
                         });
                     }
 
@@ -582,8 +582,8 @@
                 },
                 error: function () {
                     $('#statusHistoryTable').html(`
-                                                        <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
-                                                    `);
+                                                            <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
+                                                        `);
                 }
             });
         }
@@ -1099,7 +1099,6 @@
             KTHousingAssessmentList.init();
             initInlineEditors();
 
-            reloadBuildingAssessmentTable();
 
             setActiveStatusButton(
                 '.building-status-btn',
@@ -1113,6 +1112,7 @@
                 }).columns.adjust();
 
                 initInlineEditors();
+                selectInitialHousingOption();
             });
 
             $('#housing_table tbody').on('click', 'tr', function () {
@@ -1164,6 +1164,7 @@
 
             }
             selectInitialHousingOption();
+            reloadBuildingAssessmentTable();
 
 
         });
