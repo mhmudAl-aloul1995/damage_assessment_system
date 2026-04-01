@@ -1212,110 +1212,110 @@
 				<!--begin::Content wrapper-->
 				<div class="d-flex flex-column flex-column-fluid">
 					<!--begin::Toolbar-->
-						<!--begin::Toolbar container-->
-						<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(request()->is('damageAssessment') || request()->is('damageAssessment/*')): ?>
-							<div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
-								<!--begin::Toolbar container-->
-								<div id="kt_app_toolbar_container"
-									class="app-container container-fluid d-flex flex-stack flex-wrap flex-md-nowrap">
+					<!--begin::Toolbar container-->
+					<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(request()->is('damageAssessment') || request()->is('damageAssessment/*')): ?>
+						<div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
+							<!--begin::Toolbar container-->
+							<div id="kt_app_toolbar_container"
+								class="app-container container-fluid d-flex flex-stack flex-wrap flex-md-nowrap">
 
-									<!--begin::Page title-->
-									<div data-kt-swapper="true" data-kt-swapper-mode="{default: 'prepend', lg: 'prepend'}"
-										data-kt-swapper-parent="{default: '#kt_app_content_container', lg: '#kt_app_toolbar_container'}"
-										class="page-title d-flex flex-column justify-content-center flex-wrap me-3 mb-5 mb-lg-0">
+								<!--begin::Page title-->
+								<div data-kt-swapper="true" data-kt-swapper-mode="{default: 'prepend', lg: 'prepend'}"
+									data-kt-swapper-parent="{default: '#kt_app_content_container', lg: '#kt_app_toolbar_container'}"
+									class="page-title d-flex flex-column justify-content-center flex-wrap me-3 mb-5 mb-lg-0">
 
-										<h1
-											class="page-heading d-flex text-dark fw-bold fs-3 flex-column justify-content-center my-0">
-											الرئيسية
-										</h1>
-
-										<ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
-											<li class="breadcrumb-item text-muted">
-												<a href="<?php echo e(url('')); ?>" class="text-muted text-hover-primary"></a>
-											</li>
-											<li class="breadcrumb-item">
-												<span class="bullet bg-gray-400 w-5px h-2px"></span>
-											</li>
-											<li class="breadcrumb-item text-muted"></li>
-										</ul>
-									</div>
-									<!--end::Page title-->
-
-									<!--begin::Action group-->
-									<div class="d-flex align-items-center overflow-auto">
-										<div class="d-flex align-items-center flex-shrink-0">
-											<span class="fs-7 fw-bold text-gray-700 flex-shrink-0 pe-4 d-none d-md-block">
-												Filter By:
-											</span>
-
-											<div class="flex-shrink-0">
-												<ul class="nav">
-													<li class="nav-item">
-														<a class="nav-link btn btn-sm btn-color-muted btn-active-color-primary btn-active-light active fw-semibold fs-7 px-4 me-1"
-															data-bs-toggle="tab" href="#">
-															Today
-														</a>
-													</li>
-													<li class="nav-item">
-														<a class="nav-link btn btn-sm btn-color-muted btn-active-color-primary btn-active-light fw-semibold fs-7 px-4 me-1"
-															data-bs-toggle="tab" href="#">
-															Week
-														</a>
-													</li>
-													<li class="nav-item">
-														<a class="nav-link btn btn-sm btn-color-muted btn-active-color-primary btn-active-light fw-semibold fs-7 px-4"
-															data-bs-toggle="tab" href="#">
-															Day
-														</a>
-													</li>
-												</ul>
-											</div>
-										</div>
-
-										<div class="bullet bg-secondary h-35px w-1px mx-5"></div>
-
-										<div class="d-flex align-items-center">
-											<span class="fs-7 fw-bold text-gray-700 flex-shrink-0 pe-4 d-none d-md-block">
-												Sort By:
-											</span>
-
-											<select class="form-select form-select-sm w-md-125px form-select-solid"
-												data-control="select2" data-placeholder="Latest" data-hide-search="true">
-												<option value=""></option>
-												<option value="1" selected="selected">Latest</option>
-												<option value="2">In Progress</option>
-												<option value="3">Done</option>
-											</select>
-
-										
-										</div>
-									</div>
-									<!--end::Action group-->
-								</div>
-								<!--end::Toolbar container-->
-							</div>
-					
-							<?php else: ?>
-							<div id="kt_app_toolbar_container" class="app-container container-fluid d-flex flex-stack">
-								<div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
 									<h1
 										class="page-heading d-flex text-dark fw-bold fs-3 flex-column justify-content-center my-0">
-										<?php echo $__env->yieldContent('title'); ?>
+										الرئيسية
 									</h1>
 
 									<ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
 										<li class="breadcrumb-item text-muted">
-											<a href="<?php echo e(url('')); ?>" class="text-muted text-hover-primary">الرئيسية</a>
+											<a href="<?php echo e(url('')); ?>" class="text-muted text-hover-primary"></a>
 										</li>
 										<li class="breadcrumb-item">
 											<span class="bullet bg-gray-400 w-5px h-2px"></span>
 										</li>
-										<li class="breadcrumb-item text-muted"><?php echo $__env->yieldContent('pageName'); ?></li>
+										<li class="breadcrumb-item text-muted"></li>
 									</ul>
 								</div>
+								<!--end::Page title-->
+
+								<!--begin::Action group-->
+								<div class="d-flex align-items-center overflow-auto">
+									<div class="d-flex align-items-center flex-shrink-0">
+										<span class="fs-7 fw-bold text-gray-700 flex-shrink-0 pe-4 d-none d-md-block">
+											Filter By:
+										</span>
+
+										<div class="flex-shrink-0">
+											<ul class="nav">
+												<li class="nav-item">
+													<a class="nav-link btn btn-sm btn-color-muted btn-active-color-primary btn-active-light active fw-semibold fs-7 px-4 me-1"
+														data-bs-toggle="tab" href="#">
+														Today
+													</a>
+												</li>
+												<li class="nav-item">
+													<a class="nav-link btn btn-sm btn-color-muted btn-active-color-primary btn-active-light fw-semibold fs-7 px-4 me-1"
+														data-bs-toggle="tab" href="#">
+														Week
+													</a>
+												</li>
+												<li class="nav-item">
+													<a class="nav-link btn btn-sm btn-color-muted btn-active-color-primary btn-active-light fw-semibold fs-7 px-4"
+														data-bs-toggle="tab" href="#">
+														Day
+													</a>
+												</li>
+											</ul>
+										</div>
+									</div>
+
+									<div class="bullet bg-secondary h-35px w-1px mx-5"></div>
+
+									<div class="d-flex align-items-center">
+										<span class="fs-7 fw-bold text-gray-700 flex-shrink-0 pe-4 d-none d-md-block">
+											Sort By:
+										</span>
+
+										<select class="form-select form-select-sm w-md-125px form-select-solid"
+											data-control="select2" data-placeholder="Latest" data-hide-search="true">
+											<option value=""></option>
+											<option value="1" selected="selected">Latest</option>
+											<option value="2">In Progress</option>
+											<option value="3">Done</option>
+										</select>
+
+
+									</div>
+								</div>
+								<!--end::Action group-->
 							</div>
-						<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-						<!--end::Toolbar container-->
+							<!--end::Toolbar container-->
+						</div>
+
+					<?php else: ?>
+						<div id="kt_app_toolbar_container" class="app-container container-fluid d-flex flex-stack">
+							<div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
+								<h1
+									class="page-heading d-flex text-dark fw-bold fs-3 flex-column justify-content-center my-0">
+									<?php echo $__env->yieldContent('title'); ?>
+								</h1>
+
+								<ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
+									<li class="breadcrumb-item text-muted">
+										<a href="<?php echo e(url('')); ?>" class="text-muted text-hover-primary">الرئيسية</a>
+									</li>
+									<li class="breadcrumb-item">
+										<span class="bullet bg-gray-400 w-5px h-2px"></span>
+									</li>
+									<li class="breadcrumb-item text-muted"><?php echo $__env->yieldContent('pageName'); ?></li>
+								</ul>
+							</div>
+						</div>
+					<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+					<!--end::Toolbar container-->
 					<!--end::Toolbar-->
 					<!--begin::Content-->
 					<div id="kt_app_content" class="app-content flex-column-fluid">
