@@ -1105,11 +1105,17 @@
 						<img style="width: 230px; height: auto;;" alt="Logo"
 							src="{{ asset('assets/media/logos/LogoGaza2.jpeg') }}"
 							class="h-65px app-sidebar-logo-default" />
+						<style>
+							.app-sidebar-minimize  {
+								max-width: 58px;
+							}
 
+						
+						</style>
 						<!-- Minimized Logo (visible when sidebar is closed) -->
 						<!-- Pro-tip: Use a small square icon here -->
-						<img alt="Logo" src="{{ asset('assets/media/logos/LogoGaza-small.png') }}"
-							class="h-25px app-sidebar-logo-minimize" />
+						<img alt="Logo" src="{{ asset('assets/media/logos/logo_64.png') }}"
+							class="h-40px app-sidebar-minimize app-sidebar-logo-minimize" />
 
 					</a>
 					<!--end::Logo image-->
