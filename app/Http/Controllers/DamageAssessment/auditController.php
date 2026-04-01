@@ -3820,12 +3820,12 @@ class auditController extends Controller
             }
 
             $hasFinalApprove = HousingStatusHistory::where('housing_id', $housing->objectid)
-                ->whereHas('status', function ($q) {
+                ->whereHas('assessment_status', function ($q) {
                     $q->where('name', 'final_approval');
                 })
                 ->exists();
 
-            $query = HousingStatusHistory::with(['status', 'user'])
+            $query = HousingStatusHistory::with(['assessment_status', 'user'])
                 ->where('housing_id', $housing->objectid)
                 ->whereNotNull('notes')
                 ->where('notes', '!=', '');
