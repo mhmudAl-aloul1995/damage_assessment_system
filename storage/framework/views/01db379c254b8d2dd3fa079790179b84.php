@@ -1118,7 +1118,7 @@
 						<!-- Minimized Logo (visible when sidebar is closed) -->
 						<!-- Pro-tip: Use a small square icon here -->
 						<img alt="Logo" src="<?php echo e(asset('assets/media/logos/logo_64.png')); ?>"
-							class="h-50px app-sidebar-minimize app-sidebar-logo-minimize" />
+							class="h-40px app-sidebar-minimize app-sidebar-logo-minimize" />
 
 					</a>
 					<!--end::Logo image-->

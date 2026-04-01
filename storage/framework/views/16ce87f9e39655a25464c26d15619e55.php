@@ -3,6 +3,7 @@
 
 <?php
     $buildingCurrentStatus = $buildingCurrentStatus ?? null;
+    $housingGlobalid = $housingGlobalid ?? null;
 ?>
 
 <?php $__env->startSection('content'); ?>
@@ -49,9 +50,13 @@
             cursor: not-allowed;
             opacity: 0.8;
         }
+
+        #housing_table tbody tr.selected {
+            background-color: rgba(0, 158, 247, 0.12) !important;
+        }
     </style>
 
-    <div class="card  card-flush mb-7">
+    <div class="card card-flush mb-7">
         <div class="card-header pt-7">
             <div class="card-title">
                 <h2>الإستبيان</h2>
@@ -363,8 +368,14 @@
 
 <?php $__env->startSection('script'); ?>
     <script>
-        let notesContext = null; // building | housing
-        let pendingStatus = null; // accepted | rejected | need_review | null
+        let notesContext = null;
+        let pendingStatus = null;
+
+        let urlHousingGlobalId = <?php echo json_encode($housingGlobalid ?? null, 15, 512) ?>;
+        let initialHousingSelectionDone = false;
+        let pendingHousingGlobalId = null;
+
+
 
         function initInlineEditors() {
             $('.inline-edit-select').each(function () {
@@ -405,6 +416,81 @@
                 .prop('disabled', true);
         }
 
+        function getFirstHousingOptionValue() {
+            return $('[name="globalid"]').find('option').eq(1).val() || null;
+        }
+
+        function selectInitialHousingOption() {
+            let select = $('[name="globalid"]');
+            if (!select.length) return null;
+
+            let valueToSelect = null;
+
+            if (urlHousingGlobalId && select.find('option[value="' + urlHousingGlobalId + '"]').length) {
+                valueToSelect = urlHousingGlobalId;
+            } else {
+                valueToSelect = getFirstHousingOptionValue();
+            }
+
+            if (valueToSelect) {
+                pendingHousingGlobalId = valueToSelect;
+                select.val(valueToSelect).trigger('change.select2');
+            }
+
+            return valueToSelect;
+        }
+
+        function highlightHousingRowByGlobalId(datatable, globalid) {
+            let targetRow = null;
+
+            $('#housing_table tbody tr').removeClass('selected');
+
+            $('#housing_table tbody tr').each(function () {
+                let rowData = datatable.row(this).data();
+
+                if (rowData && rowData.globalid == globalid) {
+                    targetRow = $(this);
+                    return false;
+                }
+            });
+
+            if (targetRow && targetRow.length) {
+                targetRow.addClass('selected');
+                return targetRow;
+            }
+
+            return null;
+        }
+
+        function autoSelectAndClickHousingRow(datatable) {
+            let selectedId = pendingHousingGlobalId || $('[name="globalid"]').val();
+
+            if (!selectedId) {
+                selectedId = getFirstHousingOptionValue();
+                if (selectedId) {
+                    $('[name="globalid"]').val(selectedId).trigger('change.select2');
+                    pendingHousingGlobalId = selectedId;
+                }
+            }
+
+            let targetRow = highlightHousingRowByGlobalId(datatable, selectedId);
+
+            if (targetRow && targetRow.length) {
+                targetRow.trigger('click');
+                initialHousingSelectionDone = true;
+                pendingHousingGlobalId = null;
+                return;
+            }
+
+            let firstRow = $('#housing_table tbody tr:first');
+            if (firstRow.length) {
+                firstRow.addClass('selected');
+                firstRow.trigger('click');
+                initialHousingSelectionDone = true;
+                pendingHousingGlobalId = null;
+            }
+        }
+
         function openNotesModal(type, mode = 'history', status = null) {
             notesContext = type;
             pendingStatus = status;
@@ -414,7 +500,7 @@
             let globalid = null;
 
             if (type === 'building') {
-                globalid = '<?php echo e($globalid); ?>';
+                globalid = '<?php echo e($buildingGlobalid); ?>';
 
                 if (!globalid) {
                     toastr.warning('لا يوجد مبنى محدد');
@@ -462,13 +548,13 @@
 
         function loadStatusHistory(type, globalid) {
             $('#statusHistoryTable').html(`
-                        <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
-                    `);
+                                                <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
+                                            `);
 
             $.ajax({
-                url: type === 'building'
-                    ? "<?php echo e(route('building.status.history')); ?>"
-                    : "<?php echo e(route('housing.status.history')); ?>",
+                url: type === 'building' ?
+                    "<?php echo e(route('building.status.history')); ?>" :
+                    "<?php echo e(route('housing.status.history')); ?>",
                 method: "GET",
                 data: {
                     globalid: globalid
@@ -477,17 +563,18 @@
                     let rows = '';
 
                     if (!response.length) {
-                        rows = `<tr><td colspan="4" class="text-center text-muted">لا يوجد سجل</td></tr>`;
+                        rows =
+                            `<tr><td colspan="4" class="text-center text-muted">لا يوجد سجل</td></tr>`;
                     } else {
                         response.forEach(item => {
                             rows += `
-                                        <tr>
-                                            <td>${item.status_name}</td>
-                                            <td>${item.user_name}</td>
-                                            <td>${item.notes ?? '-'}</td>
-                                            <td>${item.created_at}</td>
-                                        </tr>
-                                    `;
+                                                                <tr>
+                                                                    <td>${item.status_name}</td>
+                                                                    <td>${item.user_name}</td>
+                                                                    <td>${item.notes ?? '-'}</td>
+                                                                    <td>${item.created_at}</td>
+                                                                </tr>
+                                                            `;
                         });
                     }
 
@@ -495,8 +582,8 @@
                 },
                 error: function () {
                     $('#statusHistoryTable').html(`
-                                <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
-                            `);
+                                                        <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
+                                                    `);
                 }
             });
         }
@@ -548,7 +635,7 @@
         }
 
         function setBuildingStatus(status) {
-            let globalid = '<?php echo e($globalid); ?>';
+            let globalid = '<?php echo e($buildingGlobalid); ?>';
 
             if (!globalid) {
                 toastr.warning('لا يوجد مبنى محدد');
@@ -583,7 +670,7 @@
             }
 
             if (notesContext === 'building') {
-                let globalid = '<?php echo e($globalid); ?>';
+                let globalid = '<?php echo e($buildingGlobalid); ?>';
 
                 if (!globalid) {
                     toastr.warning('لا يوجد مبنى محدد');
@@ -722,13 +809,13 @@
             var table = document.getElementById('kt_table_building_assessment');
             var datatable;
 
-            var initEngineerTable = function () {
+            var initBuildingTable = function () {
                 datatable = $(table).DataTable({
                     serverSide: true,
                     ajax: {
                         url: "<?php echo e(url('showBuildings')); ?>",
                         data: function (d) {
-                            d.globalid = '<?php echo e($globalid); ?>';
+                            d.globalid = '<?php echo e($buildingGlobalid); ?>';
                         },
                     },
                     info: false,
@@ -791,7 +878,7 @@
             return {
                 init: function () {
                     if (!table) return;
-                    initEngineerTable();
+                    initBuildingTable();
                     handleSearchDatatable();
                 }
             };
@@ -814,7 +901,7 @@
                     ajax: {
                         url: "<?php echo e(route('housing.units.by.building')); ?>",
                         data: function (d) {
-                            d.globalid = '<?php echo e($globalid); ?>';
+                            d.globalid = '<?php echo e($buildingGlobalid); ?>';
                         }
                     },
                     columns: [{
@@ -872,6 +959,12 @@
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
+
+                    if (!initialHousingSelectionDone || pendingHousingGlobalId) {
+                        setTimeout(function () {
+                            autoSelectAndClickHousingRow(datatable);
+                        }, 150);
+                    }
                 });
             };
 
@@ -893,7 +986,7 @@
                     ajax: {
                         url: "<?php echo e(url('showHousings')); ?>",
                         data: function (d) {
-                            d.parentglobalid = '<?php echo e($globalid); ?>';
+                            d.parentglobalid = '<?php echo e($buildingGlobalid); ?>';
                             d.globalid = $("[name='globalid']").val();
                         },
                     },
@@ -955,9 +1048,9 @@
             };
 
             var handleChangeHousingUnit = function () {
-                const filterSearch = $('[name="globalid"]');
+                const filterSelect = $('[name="globalid"]');
 
-                filterSearch.on("change", function () {
+                filterSelect.on("change", function () {
                     datatable.ajax.reload(null, false);
                 });
             };
@@ -972,13 +1065,42 @@
             };
         }();
 
+        let lastPageScroll = 0;
+        let lastTableScroll = 0;
+
+        function reloadTableFixed(tableInstance) {
+            lastPageScroll = $(window).scrollTop();
+
+            if ($('.dataTables_scrollBody').length) {
+                lastTableScroll = $('.dataTables_scrollBody').scrollTop();
+            }
+
+            if (tableInstance) {
+                tableInstance.ajax.reload(null, false);
+            }
+        }
+
+        $('#kt_table_building_assessment').on('draw.dt', function () {
+            $(window).scrollTop(lastPageScroll);
+
+            if ($('.dataTables_scrollBody').length) {
+                $('.dataTables_scrollBody').scrollTop(lastTableScroll);
+            }
+        });
+
         KTUtil.onDOMContentLoaded(function () {
-            $("#kt_app_sidebar_toggle").click()
+            $("#kt_app_sidebar_toggle").click();
+
+            // 1) اختَر قيمة الـ select من الرابط أو أول عنصر
+
+            // 2) init tables
             KTBuildingAssessmentList.init();
             KTBuildingUnitsList.init();
             KTHousingAssessmentList.init();
             initInlineEditors();
-            reloadBuildingAssessmentTable()
+
+            reloadBuildingAssessmentTable();
+
             setActiveStatusButton(
                 '.building-status-btn',
                 normalizeStatus(<?php echo json_encode($buildingCurrentStatus, 15, 512) ?>)
@@ -1008,43 +1130,43 @@
 
                 if (data.current_status) {
                     setActiveStatusButton('.housing-status-btn', normalizeStatus(data.current_status));
+                } else {
+                    setActiveStatusButton('.housing-status-btn', null);
                 }
 
                 reloadHousingAssessmentTable();
             });
+            $('#housing_table tbody').on('dblclick', 'tr', function () {
 
-            let lastPageScroll = 0;
-            let lastTableScroll = 0;
+                let table = $('#housing_table').DataTable();
+                let data = table.row(this).data();
+
+                if (!data || !data.globalid) return;
+
+                let buildingGlobalId = "<?php echo e($buildingGlobalid); ?>";
+                let housingGlobalId = data.globalid;
+
+                let url = `<?php echo e(url('')); ?>/showAssessmentAudit/${buildingGlobalId}/${housingGlobalId}`;
+
+                // 🔥 فتح في تبويب جديد
+                window.open(url, '_blank');
+
+            });
+
+
+            if (urlHousingGlobalId) {
+
+                let housingTab = document.querySelector('a[href="#tab_housing"]');
+
+                if (housingTab) {
+                    bootstrap.Tab.getOrCreateInstance(housingTab).show();
+                }
+
+            }
+            selectInitialHousingOption();
+
 
         });
-
-        // before reload
-        function reloadTableFixed() {
-
-            // save scroll positions
-            lastPageScroll = $(window).scrollTop();
-
-            if ($('.dataTables_scrollBody').length) {
-                lastTableScroll = $('.dataTables_scrollBody').scrollTop();
-            }
-
-            // reload WITHOUT reset paging
-            table.ajax.reload(null, false);
-        }
-
-        // after DataTable redraw
-        $('#kt_table_building_assessment').on('draw.dt', function () {
-
-            // restore page scroll
-            $(window).scrollTop(lastPageScroll);
-
-            // restore table scroll (if scrollY used)
-            if ($('.dataTables_scrollBody').length) {
-                $('.dataTables_scrollBody').scrollTop(lastTableScroll);
-            }
-        });
-
-
     </script>
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/assessmentAudit.blade.php ENDPATH**/ ?>

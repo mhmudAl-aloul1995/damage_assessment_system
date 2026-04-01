@@ -2983,7 +2983,6 @@ class auditController extends Controller
             'housing_unit_type',
             'unit_damage_status',
         ])->get()->groupBy('list_name');
-
         return DataTables::of($query->orderBy('floor_number', 'asc')
             ->orderBy('housing_unit_number', 'asc'))
 
@@ -3483,19 +3482,20 @@ class auditController extends Controller
     public function showAssessmentAudit(Request $request)
     {
 
+    
+        $buildingGlobalid = $request->buildingGlobalid;
+        $housingGlobalid = $request->housingGlobalid;
 
-        $globalid = $request->globalid;
-
-        $building = Building::where('globalid', $request->globalid)->first();
-        $HousingUnit = HousingUnit::where('parentglobalid', $request->globalid)->get();
+        $building = Building::where('globalid', $request->buildingGlobalid)->first();
+        $HousingUnit = HousingUnit::where('parentglobalid', $request->buildingGlobalid)->get();
         $assessments = Assessment::all();
         $buildingCurrentStatus = BuildingStatus::with('status')
-            ->whereHas('building', function ($q) use ($globalid) {
-                $q->where('globalid', $globalid);
+            ->whereHas('building', function ($q) use ($buildingGlobalid) {
+                $q->where('globalid', $buildingGlobalid);
             })
             ->first()?->status?->name;
 
-        return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'globalid', 'building', 'assessments', 'HousingUnit'));
+        return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'housingGlobalid','buildingGlobalid', 'building', 'assessments', 'HousingUnit'));
     }
 
     public function auditBuilding(Request $request)

@@ -110,12 +110,12 @@ Route::middleware('auth')->group(function () {
             'output' => $outputs,
         ]);
     });
-/*     Route::get('/deleteUsers', function () {
-        user::where('id', '>', '3')->delete();
-        AttendanceImportLog::where('id','>','0')->delete();
-        Attendance::where('id','>','0')->delete();
+    /*     Route::get('/deleteUsers', function () {
+            user::where('id', '>', '3')->delete();
+            AttendanceImportLog::where('id','>','0')->delete();
+            Attendance::where('id','>','0')->delete();
 
-    }); */
+        }); */
 
     Route::prefix('user-management/user')->group(function () {
 
@@ -226,7 +226,8 @@ Route::middleware('auth')->group(function () {
 
     // assessmentAudit
 
-    Route::get('showAssessmentAudit/{globalid}', action: [auditController::class, 'showAssessmentAudit']);
+    Route::get('showAssessmentAudit/{buildingGlobalid}/{housingGlobalid?}', [auditController::class, 'showAssessmentAudit']);
+
     Route::post('/assessment/inline-update', [auditController::class, 'updateInlineAssessment'])
         ->name('assessment.inline.update');
 
