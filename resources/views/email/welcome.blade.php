@@ -18,7 +18,7 @@
                         <td
                             style="padding: 30px; background-color: #004a99; text-align: center; border-radius: 8px 8px 0 0;">
                             <!-- PROJECT LOGO -->
-                            <img src="https://213.6.135.115/damage_assessment_system/logo-email.jpg" alt="Damage Assessment Project"
+                            <img src="{{ asset('storage/logo-email.jpg')  }}" alt="Damage Assessment Project"
                                 width="300px" style="display: block; margin: 0 auto 10px auto; border: 0;">
                             <h2 style="margin: 0; color: #ffffff; font-size: 20px; letter-spacing: 1px;">Damage
                                 Assessment Project</h2>
@@ -45,7 +45,7 @@
                             <table border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0;">
                                 <tr>
                                     <td align="center" style="border-radius: 5px;" bgcolor="#004a99">
-                                        <a href="https://213.6.135.115/damage_assessment_system" target="_blank"
+                                        <a href="{{ url('damageAssessment')  }}" target="_blank"
                                             style="font-size: 16px; font-family: Arial, sans-serif; color: #ffffff; text-decoration: none; border-radius: 5px; padding: 12px 25px; border: 1px solid #004a99; display: inline-block; font-weight: bold;">
                                             Login to Dashboard
                                         </a>
@@ -79,7 +79,7 @@
                                     </td>
                                     <!-- Signature Small Logo -->
                                     <td align="right" valign="middle">
-                                        <img src="https://213.6.135.115/damage_assessment_system/logo-email.jpg" alt="Project Icon" width="200"
+                                        <img src="{{ asset('storage/logo-email.jpg')  }}" alt="Project Icon" width="200"
                                             style="display: block; opacity: 0.8;">
                                     </td>
                                 </tr>
