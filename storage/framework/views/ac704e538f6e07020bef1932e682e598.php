@@ -18,7 +18,7 @@
                         <td
                             style="padding: 30px; background-color: #004a99; text-align: center; border-radius: 8px 8px 0 0;">
                             <!-- PROJECT LOGO -->
-                            <img src="<?php echo e(url('logo-email.jpg')); ?>" alt="Damage Assessment Project"
+                            <img src="https://213.6.135.115/damage_assessment_system/logo-email.jpg" alt="Damage Assessment Project"
                                 width="300px" style="display: block; margin: 0 auto 10px auto; border: 0;">
                             <h2 style="margin: 0; color: #ffffff; font-size: 20px; letter-spacing: 1px;">Damage
                                 Assessment Project</h2>
@@ -79,7 +79,7 @@
                                     </td>
                                     <!-- Signature Small Logo -->
                                     <td align="right" valign="middle">
-                                        <img src="<?php echo e(url('logo-email.jpg')); ?>" alt="Project Icon" width="200"
+                                        <img src="https://213.6.135.115/damage_assessment_system/logo-email.jpg" alt="Project Icon" width="200"
                                             style="display: block; opacity: 0.8;">
                                     </td>
                                 </tr>
