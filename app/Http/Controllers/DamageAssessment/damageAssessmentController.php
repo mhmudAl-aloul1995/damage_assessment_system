@@ -61,7 +61,7 @@ class damageAssessmentController extends Controller
         COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
         COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris
     ")
-                ->whereBetween('editdate', [$startDate, $endDate])
+                ->whereBetween('creationdate', [$startDate, $endDate])
                 ->first(),
 
             'units' => HousingUnit::selectRaw("
@@ -75,7 +75,7 @@ class damageAssessmentController extends Controller
         COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,
         COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed
     ")
-                ->whereBetween('editdate', [$startDate, $endDate])
+                ->whereBetween('creationdate', [$startDate, $endDate])
                 ->first()
         ];
 
