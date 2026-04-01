@@ -462,8 +462,8 @@
 
         function loadStatusHistory(type, globalid) {
             $('#statusHistoryTable').html(`
-                <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
-            `);
+                        <tr><td colspan="4" class="text-center">جاري التحميل...</td></tr>
+                    `);
 
             $.ajax({
                 url: type === 'building'
@@ -481,13 +481,13 @@
                     } else {
                         response.forEach(item => {
                             rows += `
-                                <tr>
-                                    <td>${item.status_name}</td>
-                                    <td>${item.user_name}</td>
-                                    <td>${item.notes ?? '-'}</td>
-                                    <td>${item.created_at}</td>
-                                </tr>
-                            `;
+                                        <tr>
+                                            <td>${item.status_name}</td>
+                                            <td>${item.user_name}</td>
+                                            <td>${item.notes ?? '-'}</td>
+                                            <td>${item.created_at}</td>
+                                        </tr>
+                                    `;
                         });
                     }
 
@@ -495,8 +495,8 @@
                 },
                 error: function () {
                     $('#statusHistoryTable').html(`
-                        <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
-                    `);
+                                <tr><td colspan="4" class="text-center text-danger">فشل التحميل</td></tr>
+                            `);
                 }
             });
         }
@@ -1012,6 +1012,38 @@
 
                 reloadHousingAssessmentTable();
             });
+
+            let lastPageScroll = 0;
+            let lastTableScroll = 0;
+
         });
+
+        // before reload
+        function reloadTableFixed() {
+
+            // save scroll positions
+            lastPageScroll = $(window).scrollTop();
+
+            if ($('.dataTables_scrollBody').length) {
+                lastTableScroll = $('.dataTables_scrollBody').scrollTop();
+            }
+
+            // reload WITHOUT reset paging
+            table.ajax.reload(null, false);
+        }
+
+        // after DataTable redraw
+        $('#kt_table_building_assessment').on('draw.dt', function () {
+
+            // restore page scroll
+            $(window).scrollTop(lastPageScroll);
+
+            // restore table scroll (if scrollY used)
+            if ($('.dataTables_scrollBody').length) {
+                $('.dataTables_scrollBody').scrollTop(lastTableScroll);
+            }
+        });
+
+
     </script>
 @endsection

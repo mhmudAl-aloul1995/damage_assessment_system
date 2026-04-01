@@ -920,48 +920,71 @@
 							<div class="cursor-pointer symbol symbol-35px"
 								data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
 								data-kt-menu-placement="bottom-end">
-								<img src="<?php echo e(asset('storage/' . Auth::user()->avatar)); ?>" class="rounded-3" alt="user" />
+								<img src="<?php echo e(asset('storage/' . Auth::user()->avatar)); ?>" class="rounded-3"
+									alt="user" />
 							</div>
 							<!--begin::User account menu-->
-							<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-275px"
-								data-kt-menu="true">
+							<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-350px"
+								data-kt-menu="true" dir="rtl">
+
 								<!--begin::Menu item-->
 								<div class="menu-item px-3">
-									<div class="menu-content d-flex align-items-center px-3">
+									<div class="menu-content d-flex align-items-start px-3 py-4 w-100">
 										<!--begin::Avatar-->
-										<div class="symbol symbol-50px me-5">
-											<img alt="Logo" src="<?php echo e(asset('storage/' . Auth::user()->avatar)); ?>" />
+										<div class="symbol symbol-50px ms-4 flex-shrink-0">
+											<img alt="Avatar"
+												src="<?php echo e(Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('assets/media/avatars/blank.png')); ?>"
+												class="object-fit-cover rounded" />
 										</div>
 										<!--end::Avatar-->
-										<!--begin::Username-->
-										<div class="d-flex flex-column">
-											<div class="fw-bold d-flex align-items-center fs-5"><?php echo e(Auth::user()->name); ?>
 
-												<span class="badge badge-light-success fw-bold fs-8 px-2 py-1 ms-2"><?php echo e(Auth::user()->getRoleNames()->first()); ?></span>
+										<!--begin::User info-->
+										<div class="d-flex flex-column flex-grow-1 text-end w-100"
+											style="min-width: 0;">
+											<div class="fw-bold fs-5 text-gray-900 mb-2"
+												style="white-space: normal; word-break: break-word; overflow-wrap: anywhere; line-height: 1.6;">
+												<?php echo e(Auth::user()->name); ?>
+
 											</div>
-											<a href="#"
-												class="fw-semibold text-muted text-hover-primary fs-7"><?php echo e(Auth::user()->email); ?></a>
+
+											<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(Auth::user()->getRoleNames()->first()): ?>
+												<div class="mb-2">
+													<span class="badge badge-light-success fw-bold fs-8 px-3 py-2">
+														<?php echo e(Auth::user()->getRoleNames()->first()); ?>
+
+													</span>
+												</div>
+											<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+											<a href="mailto:<?php echo e(Auth::user()->email); ?>"
+												class="fw-semibold fs-7 text-muted text-hover-primary d-block"
+												style="word-break: break-word; overflow-wrap: anywhere; white-space: normal;">
+												<?php echo e(Auth::user()->email); ?>
+
+											</a>
 										</div>
-										<!--end::Username-->
+										<!--end::User info-->
 									</div>
 								</div>
 								<!--end::Menu item-->
+
 								<!--begin::Menu separator-->
 								<div class="separator my-2"></div>
 								<!--end::Menu separator-->
+
 								<!--begin::Menu item-->
 								<div class="menu-item px-5">
-									<a href="<?php echo e(route('profile.edit')); ?>" class="menu-link px-5">ملفي الشخصي
-									</a>
+									<a href="<?php echo e(route('profile.edit')); ?>" class="menu-link px-5">ملفي الشخصي</a>
 								</div>
 
 								<div class="separator my-2"></div>
-								<!--end::Menu separator-->
+
 								<!--begin::Menu item-->
 								<div class="menu-item px-5" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
 									data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
 									<a href="#" class="menu-link px-5">
-										<span class="menu-title position-relative">الوضع الليلي
+										<span class="menu-title position-relative">
+											الوضع الليلي
 											<span class="ms-5 position-absolute translate-middle-y top-50 end-0">
 												<i class="ki-duotone ki-night-day theme-light-show fs-2">
 													<span class="path1"></span>
@@ -979,11 +1002,14 @@
 													<span class="path1"></span>
 													<span class="path2"></span>
 												</i>
-											</span></span>
+											</span>
+										</span>
 									</a>
+
 									<!--begin::Menu-->
 									<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-title-gray-700 menu-icon-gray-500 menu-active-bg menu-state-color fw-semibold py-4 fs-base w-150px"
 										data-kt-menu="true" data-kt-element="theme-mode-menu">
+
 										<!--begin::Menu item-->
 										<div class="menu-item px-3 my-0">
 											<a href="#" class="menu-link px-3 py-2" data-kt-element="mode"
@@ -1006,6 +1032,7 @@
 											</a>
 										</div>
 										<!--end::Menu item-->
+
 										<!--begin::Menu item-->
 										<div class="menu-item px-3 my-0">
 											<a href="#" class="menu-link px-3 py-2" data-kt-element="mode"
@@ -1019,18 +1046,20 @@
 												<span class="menu-title">قاتم</span>
 											</a>
 										</div>
+										<!--end::Menu item-->
 
 									</div>
 									<!--end::Menu-->
 								</div>
-
-
 								<!--end::Menu item-->
+
 								<!--begin::Menu item-->
-								<a href="#" class="menu-link px-5"
-									onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-									تسجيل خروج
-								</a>
+								<div class="menu-item px-5">
+									<a href="#" class="menu-link px-5"
+										onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+										تسجيل خروج
+									</a>
+								</div>
 
 								<!-- The hidden form -->
 								<form id="logout-form" action="<?php echo e(route('logout')); ?>" method="POST"
@@ -1038,6 +1067,7 @@
 									<?php echo csrf_field(); ?>
 								</form>
 								<!--end::Menu item-->
+
 							</div>
 							<!--end::User account menu-->
 							<!--end::Menu wrapper-->
@@ -1120,55 +1150,55 @@
 								id="kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="false">
 
 								<?php
-    $user = auth()->user();
-?>
+									$user = auth()->user();
+								?>
 
-<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = config('sidebar'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $menu): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = config('sidebar'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $menu): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
 
-    
-    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($user->hasAnyRole($menu['roles'] ?? [])): ?>
+									
+									<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($user->hasAnyRole($menu['roles'] ?? [])): ?>
 
-        <?php
-            $visibleItems = collect($menu['items'] ?? [])->filter(function ($item) use ($user) {
-                return $user->hasAnyRole($item['roles'] ?? []);
-            });
-        ?>
+										<?php
+											$visibleItems = collect($menu['items'] ?? [])->filter(function ($item) use ($user) {
+												return $user->hasAnyRole($item['roles'] ?? []);
+											});
+										?>
 
-        
-        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($visibleItems->isNotEmpty()): ?>
-            <div data-kt-menu-trigger="click"
-                 class="menu-item menu-accordion <?php echo e(request()->is(...($menu['active_patterns'] ?? [])) ? 'show' : ''); ?>">
+										
+										<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($visibleItems->isNotEmpty()): ?>
+											<div data-kt-menu-trigger="click"
+												class="menu-item menu-accordion <?php echo e(request()->is(...($menu['active_patterns'] ?? [])) ? 'show' : ''); ?>">
 
-                <span class="menu-link">
-                    <span class="menu-icon">
-                        <i class="ki-duotone <?php echo e($menu['icon']); ?> fs-2">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                    </span>
+												<span class="menu-link">
+													<span class="menu-icon">
+														<i class="ki-duotone <?php echo e($menu['icon']); ?> fs-2">
+															<span class="path1"></span>
+															<span class="path2"></span>
+														</i>
+													</span>
 
-                    <span class="menu-title"><?php echo e($menu['title']); ?></span>
-                    <span class="menu-arrow"></span>
-                </span>
+													<span class="menu-title"><?php echo e($menu['title']); ?></span>
+													<span class="menu-arrow"></span>
+												</span>
 
-                <div class="menu-sub menu-sub-accordion">
-                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $visibleItems; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
-                        <div class="menu-item">
-                            <a class="menu-link <?php echo e(request()->is($item['pattern']) ? 'active' : ''); ?>"
-                               href="<?php echo e(url($item['url'])); ?>">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title"><?php echo e($item['title']); ?></span>
-                            </a>
-                        </div>
-                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
-                </div>
-            </div>
-        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+												<div class="menu-sub menu-sub-accordion">
+													<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $visibleItems; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+														<div class="menu-item">
+															<a class="menu-link <?php echo e(request()->is($item['pattern']) ? 'active' : ''); ?>"
+																href="<?php echo e(url($item['url'])); ?>">
+																<span class="menu-bullet">
+																	<span class="bullet bullet-dot"></span>
+																</span>
+																<span class="menu-title"><?php echo e($item['title']); ?></span>
+															</a>
+														</div>
+													<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+												</div>
+											</div>
+										<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+									<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 							</div>
 						</div>
 					</div>
@@ -1246,8 +1276,8 @@
 						</div>
 						<!--end::Copyright-->
 						<!--begin::Menu-->
-					 
-						</div>
+
+					</div>
 					<!--end::Footer container-->
 				</div>
 				<!--end::Footer-->

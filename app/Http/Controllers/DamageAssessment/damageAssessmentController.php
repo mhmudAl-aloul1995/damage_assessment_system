@@ -45,8 +45,8 @@ class damageAssessmentController extends Controller
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
 
-        $startDate = '2026-01-20';
-        $endDate = Carbon::today()->toDateString();
+        $startDate = '2026-03-01';
+        $endDate = '2026-03-31';//Carbon::today()->toDateString();
 
         $data = [
             'buildings' => Building::selectRaw("
@@ -61,7 +61,7 @@ class damageAssessmentController extends Controller
         COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
         COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris
     ")
-                //   ->whereBetween('editdate', [$startDate, $endDate])
+                ->whereBetween('creationdate', [$startDate, $endDate])
                 ->first(),
 
             'units' => HousingUnit::selectRaw("
@@ -75,7 +75,7 @@ class damageAssessmentController extends Controller
         COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,
         COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed
     ")
-                //   ->whereBetween('creationdate', [$startDate, $endDate])
+                ->whereBetween('creationdate', [$startDate, $endDate])
                 ->first()
         ];
 
