@@ -67,8 +67,7 @@ class buildingController extends Controller
                 $query->where($key, $value);
             }
         }
-        $query->orderBy('owner_name', 'desc');
-        $query->orderBy('neighborhood', 'asc');
+      
 
         // 4. Let Datatables handle Pagination and AJAX processing
         return Datatables::of($query)
