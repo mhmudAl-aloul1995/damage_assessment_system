@@ -249,7 +249,7 @@ class damageAssessmentController extends Controller
 
 
                 if (
-                    in_array($row->name, ['dm7', 'dm8', 'dm12'], true) &&
+                    in_array($row->name, ['dm6', 'dm7', 'dm12'], true) &&
                     $floorNumber > 0 &&
                     is_numeric($value) &&
                     (float) $value > 0
