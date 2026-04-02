@@ -79,8 +79,7 @@
 								<option></option>
 								<option value="pending">Pending</option>
 								<option value="accepted_by_lawyer">Accepted By Lawyer</option>
-								<option value="rejected_by_lawyer">Rejected By Lawyer</option>
-								<option value="assigned_to_lawyer">Assigned To Lawyer</option>
+								<option value="legal_notes">Legal Notes</option>
 							</select>
 						</div>
 
