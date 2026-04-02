@@ -165,11 +165,9 @@ class damageAssessmentController extends Controller
         $record = $model?->toArray() ?? [];
 
         $fillable = (new $modelClass())->getFillable();
+        $assessments = Assessment::query()->whereIn('name', $fillable);
 
-        // ✅ جلب criteria
-        $assessments = Assessment::query()
-            ->select('name', 'label', 'hint', 'criteria')
-            ->whereIn('name', $fillable);
+        $allEdits = collect();
 
         if (!empty(request()->search['value'])) {
             $search = request()->search['value'];
@@ -180,7 +178,6 @@ class damageAssessmentController extends Controller
             });
         }
 
-        // edits
         $edits = collect();
         $allEdits = collect();
 
@@ -201,20 +198,20 @@ class damageAssessmentController extends Controller
                 ->groupBy('field_name');
         }
 
+
         $layerId = $arcgis->getLayerId($modelClass);
 
         $attachments = collect();
+
         if ($model && $model->objectid && $token) {
             $attachments = collect(
                 $arcgis->getAttachments($model->objectid, $layerId, $token)
             );
         }
-
         $filtersMap = Filter::pluck('label', 'name');
 
         return DataTables::of($assessments)
 
-            // 🔥🔥🔥 أهم جزء: تلوين الصف
             ->setRowClass(function ($row) use ($record, $allEdits) {
 
                 $original = $record[$row->name] ?? null;
@@ -271,23 +268,24 @@ class damageAssessmentController extends Controller
 
                 return '';
             })
-
             ->addColumn('question', function ($row) {
                 return $row->label . '<br>' . $row->hint;
             })
-
-            ->addColumn('answer', function ($row) use ($record, $allEdits, $model, $attachments, $token, $arcgis, $layerId, $filtersMap) {
-
+            ->addColumn('answer', function ($row) use ($record, $allEdits, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersMap) {
+                // attachments
                 if ($row->name === 'attachments') {
                     if (!$model || !$model->objectid || !$token || $attachments->isEmpty()) {
                         return '<span class="text-muted">لا يوجد مرفقات</span>';
                     }
 
                     $html = '<div class="d-flex flex-wrap gap-2">';
+
                     foreach ($attachments as $a) {
                         $attachmentId = $a['id'] ?? null;
-                        if (!$attachmentId)
+
+                        if (!$attachmentId) {
                             continue;
+                        }
 
                         $url = $arcgis->buildUrl(
                             $model->objectid,
@@ -301,49 +299,165 @@ class damageAssessmentController extends Controller
                         <img src="' . e($url) . '"
                              style="width:100px;height:100px;object-fit:cover"
                              class="rounded border">
-                    </a>';
+                    </a>
+                ';
                     }
 
                     return $html . '</div>';
                 }
 
-                $lastEdit = $allEdits->get($row->name)?->first();
+                $fieldEdits = $allEdits->get($row->name, collect());
+                $lastEdit = $fieldEdits->first();
 
-                $originalRaw = $record[$row->name] ?? null;
-                $editedRaw = $lastEdit?->field_value;
+                $originalRawValue = $record[$row->name] ?? null;
+                $editedRawValue = $lastEdit?->field_value;
 
-                $original = $filtersMap[$originalRaw] ?? $originalRaw;
-                $edited = $filtersMap[$editedRaw] ?? $editedRaw;
+                $originalValue = $filtersMap[$originalRawValue] ?? $originalRawValue;
+                $editedValue = $filtersMap[$editedRawValue] ?? $editedRawValue;
+                $originalValue = $this->updateValue($originalValue);
+                $editedValue = $this->updateValue($editedValue);
+                $editedBy = $lastEdit?->user?->name;
+                $editedAt = $lastEdit?->updated_at?->format('Y-m-d h:i A');
 
-                if ((is_null($original) || $original === '') && !$lastEdit) {
+                $canViewHistory = auth()->user()->hasAnyRole([
+                    'Database Officer',
+                    'Project Officer',
+                    'QC/QA Engineer',
+                    'Legal Auditor',
+                    'Auditing Supervisor'
+                ]);
+
+                if ((is_null($originalValue) || $originalValue === '') && $fieldEdits->isEmpty()) {
                     return '<span class="text-muted">-</span>';
                 }
 
-                return e($edited ?? $original ?? '-');
-            })
+                if ($fieldEdits->isEmpty() || !$canViewHistory) {
+                    return e($originalValue ?? '-');
+                }
 
-            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
+                $historyHtml = '';
+                $collapseId = 'history_' . md5($type . '_' . $globalid . '_' . $row->name);
 
-                if ($row->name === 'attachments')
-                    return '';
+                foreach ($fieldEdits as $edit) {
+                    $historyValue = $filtersMap[$edit->field_value] ?? $edit->field_value;
 
-                $lastEdit = $edits->get($row->name);
-                $edited = $lastEdit?->field_value;
-                $original = $record[$row->name] ?? '';
+                    $historyHtml .= '
+                <div class="border rounded p-2 mb-2 bg-light-info">
+                    <div>
+                        <small class="text-muted">القيمة:</small>
+                        <span class="fw-semibold">' . e($historyValue ?? '-') . '</span>
+                    </div>
+                    <div>
+                        <small class="text-muted">بواسطة:</small>
+                        ' . e($edit->user?->name ?? '-') . '
+                    </div>
+                    <div>
+                        <small class="text-muted">الوقت:</small>
+                        ' . e(optional($edit->updated_at)->format('Y-m-d h:i A') ?? '-') . '
+                    </div>
+                </div>
+            ';
+                }
 
-                $value = ($edited !== null && $edited !== '') ? $edited : $original;
+                $historyHtml = '
+            <div class="mt-3">
+                <button class="btn btn-sm btn-light-primary" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#' . $collapseId . '"
+                        aria-expanded="false">
+                    عرض سجل التعديلات (' . $fieldEdits->count() . ')
+                </button>
+
+                <div class="collapse mt-2" id="' . $collapseId . '">
+                    ' . $historyHtml . '
+                </div>
+            </div>
+        ';
 
                 return '
-                <input type="text"
-                    class="form-control form-control-sm inline-edit-input"
-                    value="' . e($value) . '"
-                    data-field="' . e($row->name) . '"
-                    data-globalid="' . e($globalid) . '"
-                    data-type="' . e($type) . '">
-            ';
+            <div class="border rounded p-3 bg-light-warning">
+                <div class="mb-2">
+                    <small class="text-muted d-block">الأصل</small>
+                    <span class="text-gray-700">' . e($originalValue ?? '-') . '</span>
+                </div>
+
+                <div class="mb-2">
+                    <small class="text-warning d-block fw-bold">آخر تعديل</small>
+                    <span class="text-gray-900 fw-bold">' . e($editedValue ?? '-') . '</span>
+                </div>
+
+                <div class="mb-1">
+                    <small class="text-info d-block fw-bold">اسم المعدّل</small>
+                    <span class="text-gray-800">' . e($editedBy ?? '-') . '</span>
+                </div>
+
+                <div>
+                    <small class="text-primary d-block fw-bold">وقت التعديل</small>
+                    <span class="text-gray-600">' . e($editedAt ?? '-') . '</span>
+                </div>
+
+                ' . $historyHtml . '
+            </div>
+        ';
             })
 
-            ->rawColumns(['question', 'answer', 'editAnswer'])
+
+            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
+                if ($row->name === 'attachments') {
+                    return;
+                }
+                $lastEdit = $edits->get($row->name);
+                $editedValue = $lastEdit?->field_value;
+                $originalValue = $record[$row->name] ?? '';
+                $value = ($editedValue !== null && $editedValue !== '') ? $editedValue : $originalValue;
+
+                $filters = Filter::where('list_name', $row->name)->get();
+
+                if ($filters->count() > 0) {
+                    $selectedValues = array_filter(array_map('trim', explode(',', (string) $value)));
+
+                    $html = '<select
+                    class="form-select form-select-sm form-select-solid inline-edit-select"
+                    data-field="' . e($row->name) . '"
+                    data-globalid="' . e($globalid) . '"
+                    data-type="' . e($type) . '"
+                    data-control="select2"
+                    data-close-on-select="true"
+                    data-placeholder="اختر">';
+
+                    $html .= '<option value=""></option>';
+
+                    foreach ($filters as $option) {
+                        $selected = in_array($option->name, $selectedValues) ? 'selected' : '';
+                        $html .= '<option value="' . e($option->name) . '" ' . $selected . '>' . e($option->label) . '</option>';
+                    }
+
+                    $html .= '</select>';
+
+                    return $html;
+                }
+
+                return '
+                <div class="d-flex gap-2 align-items-center justify-content-center">
+                    <input
+                        type="text"
+                        class="form-control form-control-sm form-control-solid inline-edit-input"
+                        value="' . e($value) . '"
+                        data-field="' . e($row->name) . '"
+                        data-globalid="' . e($globalid) . '"
+                        data-type="' . e($type) . '"
+                    >
+                    <button type="button"
+                        class="btn btn-sm btn-light-primary inline-save-btn"
+                        data-field="' . e($row->name) . '"
+                        data-globalid="' . e($globalid) . '"
+                        data-type="' . e($type) . '">
+                        حفظ
+                    </button>
+                </div>
+            ';
+            })
+            ->rawColumns(['answer', 'question', 'editAnswer'])
             ->make(true);
     }
     private function updateValue($value)
