@@ -3093,6 +3093,7 @@ class auditController extends Controller
             'status' => ['required', 'in:rejected,accepted,need_review,legal_notes'],
             'notes' => ['nullable', 'string'],
         ]);
+        dd($request->all());
 
         DB::beginTransaction();
 
