@@ -235,10 +235,7 @@ class damageAssessmentController extends Controller
                     'dm12'
                 ];
 
-                // فقط الحقول المطلوبة
-                if (!in_array($row->name, $fields, true)) {
-                    return '';
-                }
+               
 
                 $sizeOfUnit = (float) ($record['damaged_area_m2'] ?? 0);
                 $floorNumber = (float) ($record['floor_number'] ?? 0);
@@ -258,7 +255,7 @@ class damageAssessmentController extends Controller
                 }
 
 
-                if (
+                if (in_array($row->name, $fields)&&
                     is_numeric($value) &&
                     $newCriteria > 0 &&
                     (float) $value > $newCriteria
