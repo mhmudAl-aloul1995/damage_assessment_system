@@ -745,7 +745,7 @@
 						</thead>
 						<tbody>
 							@php
-							$totalAssessed = $buildingStats['fully_damaged'] + $buildingStats['partially_damaged'] + $buildingStats['committee_review'] + $buildingStats['security_unsafe'];
+							$totalAssessed = $buildingStats['fully_damaged'] + $buildingStats['partially_damaged'] + $buildingStats['committee_review'];
 
 							function getPercent($val, $total)
 							{
