@@ -211,6 +211,28 @@ class damageAssessmentController extends Controller
         $filtersMap = Filter::pluck('label', 'name');
 
         return DataTables::of($assessments)
+
+            // ✅ 🔥 إضافة row class (هنا الحل)
+           /*  ->setRowClass(function ($row) use ($record, $allEdits) {
+
+                $original = $record[$row->name] ?? null;
+
+                $lastEdit = $allEdits->get($row->name)?->first();
+                $edited = $lastEdit?->field_value;
+
+                $value = ($edited !== null && $edited !== '') ? $edited : $original;
+
+
+                // فقط للأرقام
+                if ((float) $value > (float) $row->criteria) {
+
+                    return 'table-danger'; // 🔴
+                    dd(5);  
+    
+                }
+
+                return '';
+            }) */
             ->addColumn('question', function ($row) {
                 return $row->label . '<br>' . $row->hint;
             })
