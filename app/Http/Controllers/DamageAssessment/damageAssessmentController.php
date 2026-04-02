@@ -243,7 +243,7 @@ class damageAssessmentController extends Controller
 
 
                 $newCriteria = ($sizeOfUnit * $criteria) / 100;
-
+dd($newCriteria);
 
                 if (
                     in_array($row->name, ['dm6', 'dm7', 'dm12'], true) &&
