@@ -235,7 +235,7 @@ class damageAssessmentController extends Controller
                     'dm12'
                 ];
 
-               
+
 
                 $sizeOfUnit = (float) ($record['damaged_area_m2'] ?? 0);
                 $floorNumber = (float) ($record['floor_number'] ?? 0);
@@ -254,8 +254,9 @@ class damageAssessmentController extends Controller
                     return 'table-danger';
                 }
 
-
-                if (in_array($row->name, $fields)&&
+                dd(in_array($row->name, $fields), $newCriteria, $value);
+                if (
+                    in_array($row->name, $fields) &&
                     is_numeric($value) &&
                     $newCriteria > 0 &&
                     (float) $value > $newCriteria
