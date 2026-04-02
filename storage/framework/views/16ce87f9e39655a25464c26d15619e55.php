@@ -101,31 +101,31 @@
                                         <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap"
                                             data-kt-Building-table-toolbar="base">
                                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
-                                                <button type="button" class="btn btn-sm btn-light-success building-status-btn"
-                                                    data-status="accepted" onclick="setBuildingStatus('accepted')">
-                                                    مقبول
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
-                                                    data-status="legal_notes" onclick="setBuildingStatus('legal_notes')">
-                                                    ملاحظات قانونية
-                                                </button>
+                                            <button type="button" class="btn btn-sm btn-light-success building-status-btn"
+                                                data-status="accepted" onclick="setBuildingStatus('accepted')">
+                                                مقبول
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
+                                                data-status="legal_notes" onclick="setBuildingStatus('legal_notes')">
+                                                ملاحظات قانونية
+                                            </button>
                                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'QC/QA Engineer')): ?>
-                                                <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
-                                                    data-status="rejected" onclick="setBuildingStatus('rejected')">
-                                                    مرفوض
-                                                </button>
+                                            <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
+                                                data-status="rejected" onclick="setBuildingStatus('rejected')">
+                                                مرفوض
+                                            </button>
 
-                                                <button type="button" class="btn btn-sm btn-light-success building-status-btn"
-                                                    data-status="accepted" onclick="setBuildingStatus('accepted')">
-                                                    مقبول
-                                                </button>
+                                            <button type="button" class="btn btn-sm btn-light-success building-status-btn"
+                                                data-status="accepted" onclick="setBuildingStatus('accepted')">
+                                                مقبول
+                                            </button>
 
-                                                <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
-                                                    data-status="need_review" onclick="setBuildingStatus('need_review')">
-                                                    بحاجة لمراجعة
-                                                </button>
+                                            <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
+                                                data-status="need_review" onclick="setBuildingStatus('need_review')">
+                                                بحاجة لمراجعة
+                                            </button>
                                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                                             <button type="button" class="btn btn-sm btn-light-dark"
@@ -235,8 +235,8 @@
                                         data-kt-HousingAssessment-table-toolbar="base">
                                         <select name="globalid" data-kt-globalid-table-filter="search"
                                             class="form-select form-select-solid text-black-800 fs-base fw-bold w-250px"
-                                            data-control="select2" data-allow-clear="true"
-                                            data-dropdown-css-class="w-250px" data-placeholder="إختر الوحدة">
+                                            data-control="select2" data-allow-clear="true" data-dropdown-css-class="w-250px"
+                                            data-placeholder="إختر الوحدة">
                                             <option value=""></option>
                                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $HousingUnit; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
                                                 <option value="<?php echo e($value->globalid); ?>">
@@ -248,31 +248,31 @@
                                     </div>
 
                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
-                                        <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                            data-status="accepted" onclick="setHousingStatus('accepted')">
-                                            مقبول
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                            data-status="legal_notes" onclick="setHousingStatus('legal_notes')">
-                                            بحاجة لمراجعة
-                                        </button>
+                                    <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
+                                        data-status="accepted" onclick="setHousingStatus('accepted')">
+                                        مقبول
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
+                                        data-status="legal_notes" onclick="setHousingStatus('legal_notes')">
+                                        بحاجة لمراجعة
+                                    </button>
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'QC/QA Engineer')): ?>
-                                        <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
-                                            data-status="rejected" onclick="setHousingStatus('rejected')">
-                                            مرفوض
-                                        </button>
+                                    <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
+                                        data-status="rejected" onclick="setHousingStatus('rejected')">
+                                        مرفوض
+                                    </button>
 
-                                        <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                            data-status="accepted" onclick="setHousingStatus('accepted')">
-                                            مقبول
-                                        </button>
+                                    <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
+                                        data-status="accepted" onclick="setHousingStatus('accepted')">
+                                        مقبول
+                                    </button>
 
-                                        <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                            data-status="need_review" onclick="setHousingStatus('need_review')">
-                                            بحاجة لمراجعة
-                                        </button>
+                                    <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
+                                        data-status="need_review" onclick="setHousingStatus('need_review')">
+                                        بحاجة لمراجعة
+                                    </button>
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                                     <button type="button" class="btn btn-sm btn-light-dark"
@@ -394,7 +394,7 @@
         let pendingHousingGlobalId = null;
 
         function initInlineEditors() {
-            $('.inline-edit-select').each(function() {
+            $('.inline-edit-select').each(function () {
                 if (!$(this).hasClass('select2-hidden-accessible')) {
                     $(this).select2({
                         minimumResultsForSearch: 0,
@@ -461,7 +461,7 @@
 
             $('#housing_table tbody tr').removeClass('selected');
 
-            $('#housing_table tbody tr').each(function() {
+            $('#housing_table tbody tr').each(function () {
                 let rowData = datatable.row(this).data();
 
                 if (rowData && rowData.globalid == globalid) {
@@ -578,8 +578,8 @@
 
         function loadStatusHistory(type, globalid) {
             $('#statusHistoryTable').html(`
-                <tr><td colspan="5" class="text-center">جاري التحميل...</td></tr>
-            `);
+                        <tr><td colspan="5" class="text-center">جاري التحميل...</td></tr>
+                    `);
 
             $.ajax({
                 url: type === 'building' ?
@@ -589,7 +589,7 @@
                 data: {
                     globalid: globalid
                 },
-                success: function(response) {
+                success: function (response) {
                     let rows = '';
 
                     if (!response.length) {
@@ -600,33 +600,33 @@
 
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                    <button type="button" class="btn btn-sm btn-light-info"
-                                        onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                        تعديل
-                                    </button>
-                                `;
+                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                تعديل
+                                            </button>
+                                        `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
 
                             rows += `
-                                <tr>
-                                    <td>${item.status_name ?? '-'}</td>
-                                    <td>${item.user_name ?? '-'}</td>
-                                    <td>${item.notes ?? '-'}</td>
-                                    <td>${item.created_at ?? '-'}</td>
-                                    <td class="text-center">${editBtn}</td>
-                                </tr>
-                            `;
+                                        <tr>
+                                            <td>${item.status_name ?? '-'}</td>
+                                            <td>${item.user_name ?? '-'}</td>
+                                            <td>${item.notes ?? '-'}</td>
+                                            <td>${item.created_at ?? '-'}</td>
+                                            <td class="text-center">${editBtn}</td>
+                                        </tr>
+                                    `;
                         });
                     }
 
                     $('#statusHistoryTable').html(rows);
                 },
-                error: function() {
+                error: function () {
                     $('#statusHistoryTable').html(`
-                        <tr><td colspan="5" class="text-center text-danger">فشل التحميل</td></tr>
-                    `);
+                                <tr><td colspan="5" class="text-center text-danger">فشل التحميل</td></tr>
+                            `);
                 }
             });
         }
@@ -643,7 +643,7 @@
                     type: type,
                     globalid: globalid
                 },
-                success: function(response) {
+                success: function (response) {
                     noteEditMode = true;
                     currentNoteRecordId = response.id ?? null;
                     currentApprovalLocked = !!response.has_final_approve;
@@ -662,7 +662,7 @@
                         $('#notesLockText').hide();
                     }
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     $('#notesInput').val('').prop('readonly', true);
                     $('#notesSaveBtn').prop('disabled', true);
 
@@ -703,7 +703,7 @@
                     globalid: globalid,
                     note_id: noteId
                 },
-                success: function(response) {
+                success: function (response) {
                     currentNoteRecordId = response.id ?? noteId;
                     currentApprovalLocked = !!response.has_final_approve;
 
@@ -720,7 +720,7 @@
                         $('#notesSaveBtn').prop('disabled', false);
                     }
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     let message = 'تعذر تحميل الملاحظة';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         message = xhr.responseJSON.message;
@@ -753,10 +753,10 @@
                     notes: notes,
                     type: notesContext
                 },
-                beforeSend: function() {
+                beforeSend: function () {
                     $('#notesSaveBtn').prop('disabled', true);
                 },
-                success: function(response) {
+                success: function (response) {
                     toastr.success(response.message || 'تم تحديث الملاحظة بنجاح');
                     closeNotesModal();
 
@@ -768,7 +768,7 @@
                         reloadBuildingUnitsTable();
                     }
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     let message = 'حدث خطأ أثناء تحديث الملاحظة';
 
                     if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -777,7 +777,7 @@
 
                     toastr.error(message);
                 },
-                complete: function() {
+                complete: function () {
                     if (!currentApprovalLocked) {
                         $('#notesSaveBtn').prop('disabled', false);
                     }
@@ -796,7 +796,7 @@
                     type: type,
                     value: value
                 },
-                success: function(response) {
+                success: function (response) {
                     if (typeof toastr !== 'undefined') {
                         toastr.success(response.message || 'تم الحفظ بنجاح');
                     }
@@ -811,7 +811,7 @@
                         reloadHousingAssessmentTable();
                     }
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     let message = 'حدث خطأ أثناء الحفظ';
 
                     if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -883,17 +883,17 @@
                         status: pendingStatus,
                         notes: notes
                     },
-                    beforeSend: function() {
+                    beforeSend: function () {
                         $('.building-status-btn').prop('disabled', true);
                     },
-                    success: function(response) {
+                    success: function (response) {
                         toastr.success(response.message || 'تم تحديث حالة المبنى');
                         setActiveStatusButton('.building-status-btn', pendingStatus);
                         reloadBuildingAssessmentTable();
                         reloadBuildingUnitsTable();
                         closeNotesModal();
                     },
-                    error: function(xhr) {
+                    error: function (xhr) {
                         let message = 'حدث خطأ أثناء تحديث الحالة';
 
                         if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -902,7 +902,7 @@
 
                         toastr.error(message);
                     },
-                    complete: function() {
+                    complete: function () {
                         $('.building-status-btn').not('.is-active').prop('disabled', false);
                     }
                 });
@@ -925,17 +925,17 @@
                         status: pendingStatus,
                         notes: notes
                     },
-                    beforeSend: function() {
+                    beforeSend: function () {
                         $('.housing-status-btn').prop('disabled', true);
                     },
-                    success: function(response) {
+                    success: function (response) {
                         toastr.success(response.message || 'تم تحديث الحالة بنجاح');
                         setActiveStatusButton('.housing-status-btn', pendingStatus);
                         reloadHousingAssessmentTable();
                         reloadBuildingUnitsTable();
                         closeNotesModal();
                     },
-                    error: function(xhr) {
+                    error: function (xhr) {
                         let message = 'حدث خطأ أثناء تحديث الحالة';
 
                         if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -944,14 +944,14 @@
 
                         toastr.error(message);
                     },
-                    complete: function() {
+                    complete: function () {
                         $('.housing-status-btn').not('.is-active').prop('disabled', false);
                     }
                 });
             }
         }
 
-        $(document).on('click', '.inline-save-btn', function() {
+        $(document).on('click', '.inline-save-btn', function () {
             let btn = $(this);
             let wrapper = btn.closest('.d-flex');
             let input = wrapper.find('.inline-edit-input');
@@ -963,12 +963,12 @@
 
             btn.prop('disabled', true).html('...');
 
-            saveInlineValue(field, globalid, type, value, function() {
+            saveInlineValue(field, globalid, type, value, function () {
                 btn.prop('disabled', false).html('حفظ');
             });
         });
 
-        $(document).on('change', '.inline-edit-select', function() {
+        $(document).on('change', '.inline-edit-select', function () {
             let select = $(this);
 
             let field = select.data('field');
@@ -1002,16 +1002,16 @@
             reloadHousingAssessmentTable();
         }
 
-        var KTBuildingAssessmentList = function() {
+        var KTBuildingAssessmentList = function () {
             var table = document.getElementById('kt_table_building_assessment');
             var datatable;
 
-            var initBuildingTable = function() {
+            var initBuildingTable = function () {
                 datatable = $(table).DataTable({
                     serverSide: true,
                     ajax: {
                         url: "<?php echo e(url('showBuildings')); ?>",
-                        data: function(d) {
+                        data: function (d) {
                             d.globalid = '<?php echo e($buildingGlobalid); ?>';
                         },
                     },
@@ -1020,28 +1020,28 @@
                     pageLength: 200,
                     processing: true,
                     columns: [{
-                            className: 'text-start px-6 py-4 min-w-300px',
-                            data: 'question',
-                            name: 'question',
-                            searchable: false,
-                            orderable: false
-                        },
-                        {
-                            className: 'text-center px-6 py-4 min-w-250px',
-                            data: 'answer',
-                            name: 'answer',
-                            searchable: false,
-                            orderable: false
-                        },
-                        {
-                            className: 'text-center px-6 py-4 min-w-300px',
-                            data: 'editAnswer',
-                            name: 'editAnswer',
-                            searchable: false,
-                            orderable: false
-                        },
+                        className: 'text-start px-6 py-4 min-w-300px',
+                        data: 'question',
+                        name: 'question',
+                        searchable: false,
+                        orderable: false
+                    },
+                    {
+                        className: 'text-center px-6 py-4 min-w-250px',
+                        data: 'answer',
+                        name: 'answer',
+                        searchable: false,
+                        orderable: false
+                    },
+                    {
+                        className: 'text-center px-6 py-4 min-w-300px',
+                        data: 'editAnswer',
+                        name: 'editAnswer',
+                        searchable: false,
+                        orderable: false
+                    },
                     ],
-                    createdRow: function(row, data) {
+                    createdRow: function (row, data) {
                         $(row).css('cursor', 'default');
                         var text = $('<div>').html(data.answer).text().trim();
 
@@ -1051,7 +1051,7 @@
                     }
                 });
 
-                datatable.on('draw', function() {
+                datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
@@ -1059,12 +1059,12 @@
                 });
             };
 
-            var handleSearchDatatable = function() {
+            var handleSearchDatatable = function () {
                 const filterSearch = document.querySelector('[data-kt-buildingAssessment-table-filter="search"]');
 
                 if (!filterSearch) return;
 
-                filterSearch.addEventListener('keydown', function(e) {
+                filterSearch.addEventListener('keydown', function (e) {
                     if (e.which == 13) {
                         e.preventDefault();
                         datatable.search(e.target.value).draw();
@@ -1073,7 +1073,7 @@
             };
 
             return {
-                init: function() {
+                init: function () {
                     if (!table) return;
                     initBuildingTable();
                     handleSearchDatatable();
@@ -1081,11 +1081,11 @@
             };
         }();
 
-        var KTBuildingUnitsList = function() {
+        var KTBuildingUnitsList = function () {
             var table = document.getElementById('housing_table');
             var datatable;
 
-            var initTable = function() {
+            var initTable = function () {
                 datatable = $(table).DataTable({
                     processing: true,
                     serverSide: true,
@@ -1097,68 +1097,68 @@
                     pageLength: 25,
                     ajax: {
                         url: "<?php echo e(route('housing.units.by.building')); ?>",
-                        data: function(d) {
+                        data: function (d) {
                             d.globalid = '<?php echo e($buildingGlobalid); ?>';
                         }
                     },
                     columns: [{
-                            data: 'housing_unit_type',
-                            name: 'housing_unit_type',
-                            className: 'text-start px-6 py-4'
-                        },
-                        {
-                            data: 'unit_damage_status',
-                            name: 'unit_damage_status',
-                            className: 'text-center px-6 py-4'
-                        },
-                        {
-                            data: 'floor_number',
-                            name: 'floor_number',
-                            className: 'text-center px-6 py-4'
-                        },
-                        {
-                            data: 'housing_unit_number',
-                            name: 'housing_unit_number',
-                            className: 'text-center px-6 py-4'
-                        },
-                        {
-                            data: 'owner_name',
-                            name: 'owner_name',
-                            className: 'text-start px-6 py-4 min-w-280px'
-                        },
-                        {
-                            data: 'unit_direction',
-                            name: 'unit_direction',
-                            className: 'text-center px-6 py-4'
-                        },
-                        {
-                            data: 'legal_audit_status',
-                            name: 'legal_audit_status',
-                            className: 'text-center px-6 py-4'
-                        },
-                        {
-                            data: 'engineering_audit_status',
-                            name: 'engineering_audit_status',
-                            className: 'text-center px-6 py-4'
-                        },
-                        {
-                            data: 'final_approval_status',
-                            name: 'final_approval_status',
-                            className: 'text-center px-6 py-4'
-                        }
+                        data: 'housing_unit_type',
+                        name: 'housing_unit_type',
+                        className: 'text-start px-6 py-4'
+                    },
+                    {
+                        data: 'unit_damage_status',
+                        name: 'unit_damage_status',
+                        className: 'text-center px-6 py-4'
+                    },
+                    {
+                        data: 'floor_number',
+                        name: 'floor_number',
+                        className: 'text-center px-6 py-4'
+                    },
+                    {
+                        data: 'housing_unit_number',
+                        name: 'housing_unit_number',
+                        className: 'text-center px-6 py-4'
+                    },
+                    {
+                        data: 'owner_name',
+                        name: 'owner_name',
+                        className: 'text-start px-6 py-4 min-w-280px'
+                    },
+                    {
+                        data: 'unit_direction',
+                        name: 'unit_direction',
+                        className: 'text-center px-6 py-4'
+                    },
+                    {
+                        data: 'legal_audit_status',
+                        name: 'legal_audit_status',
+                        className: 'text-center px-6 py-4'
+                    },
+                    {
+                        data: 'engineering_audit_status',
+                        name: 'engineering_audit_status',
+                        className: 'text-center px-6 py-4'
+                    },
+                    {
+                        data: 'final_approval_status',
+                        name: 'final_approval_status',
+                        className: 'text-center px-6 py-4'
+                    }
                     ],
-                    createdRow: function(row) {
+                    createdRow: function (row) {
                         $(row).css('cursor', 'pointer');
                     }
                 });
 
-                datatable.on('draw', function() {
+                datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
 
                     if (!initialHousingSelectionDone || pendingHousingGlobalId) {
-                        setTimeout(function() {
+                        setTimeout(function () {
                             autoSelectAndClickHousingRow(datatable);
                         }, 150);
                     }
@@ -1166,23 +1166,23 @@
             };
 
             return {
-                init: function() {
+                init: function () {
                     if (!table) return;
                     initTable();
                 }
             };
         }();
 
-        var KTHousingAssessmentList = function() {
+        var KTHousingAssessmentList = function () {
             var table = document.getElementById('kt_table_housing_assessment');
             var datatable;
 
-            var initHousingTable = function() {
+            var initHousingTable = function () {
                 datatable = $(table).DataTable({
                     serverSide: true,
                     ajax: {
                         url: "<?php echo e(url('showHousings')); ?>",
-                        data: function(d) {
+                        data: function (d) {
                             d.parentglobalid = '<?php echo e($buildingGlobalid); ?>';
                             d.globalid = $("[name='globalid']").val();
                         },
@@ -1192,28 +1192,28 @@
                     pageLength: 500,
                     processing: true,
                     columns: [{
-                            className: 'text-start px-6 py-4 min-w-300px',
-                            data: 'question',
-                            name: 'question',
-                            searchable: false,
-                            orderable: false
-                        },
-                        {
-                            className: 'text-center px-6 py-4 min-w-250px',
-                            data: 'answer',
-                            name: 'answer',
-                            searchable: false,
-                            orderable: false
-                        },
-                        {
-                            className: 'text-center px-6 py-4 min-w-300px',
-                            data: 'editAnswer',
-                            name: 'editAnswer',
-                            searchable: false,
-                            orderable: false
-                        },
+                        className: 'text-start px-6 py-4 min-w-300px',
+                        data: 'question',
+                        name: 'question',
+                        searchable: false,
+                        orderable: false
+                    },
+                    {
+                        className: 'text-center px-6 py-4 min-w-250px',
+                        data: 'answer',
+                        name: 'answer',
+                        searchable: false,
+                        orderable: false
+                    },
+                    {
+                        className: 'text-center px-6 py-4 min-w-300px',
+                        data: 'editAnswer',
+                        name: 'editAnswer',
+                        searchable: false,
+                        orderable: false
+                    },
                     ],
-                    createdRow: function(row, data) {
+                    createdRow: function (row, data) {
                         $(row).css('cursor', 'default');
                         var text = $('<div>').html(data.answer).text().trim();
 
@@ -1223,7 +1223,7 @@
                     }
                 });
 
-                datatable.on('draw', function() {
+                datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
@@ -1231,12 +1231,12 @@
                 });
             };
 
-            var handleSearchDatatable = function() {
+            var handleSearchDatatable = function () {
                 const filterSearch = document.querySelector('[data-kt-HousingAssessment-table-filter="search"]');
 
                 if (!filterSearch) return;
 
-                filterSearch.addEventListener('keydown', function(e) {
+                filterSearch.addEventListener('keydown', function (e) {
                     if (e.which == 13) {
                         e.preventDefault();
                         datatable.search(e.target.value).draw();
@@ -1244,16 +1244,16 @@
                 });
             };
 
-            var handleChangeHousingUnit = function() {
+            var handleChangeHousingUnit = function () {
                 const filterSelect = $('[name="globalid"]');
 
-                filterSelect.on("change", function() {
+                filterSelect.on("change", function () {
                     datatable.ajax.reload(null, false);
                 });
             };
 
             return {
-                init: function() {
+                init: function () {
                     if (!table) return;
                     initHousingTable();
                     handleSearchDatatable();
@@ -1277,7 +1277,7 @@
             }
         }
 
-        $('#kt_table_building_assessment').on('draw.dt', function() {
+        $('#kt_table_building_assessment').on('draw.dt', function () {
             $(window).scrollTop(lastPageScroll);
 
             if ($('.dataTables_scrollBody').length) {
@@ -1285,7 +1285,49 @@
             }
         });
 
-        KTUtil.onDOMContentLoaded(function() {
+
+        $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function () {
+            $.fn.dataTable.tables({
+                visible: true,
+                api: true
+            }).columns.adjust();
+
+            initInlineEditors();
+            selectInitialHousingOption();
+        });
+
+        $('#housing_table tbody').on('click', 'tr', function () {
+            let table = $('#housing_table').DataTable();
+            let data = table.row(this).data();
+
+            if (!data) return;
+
+            $('#housing_table tbody tr').removeClass('selected');
+            $(this).addClass('selected');
+
+            if (!data.globalid) return;
+
+            $('[name="globalid"]').val(data.globalid).trigger('change');
+
+            if (data.current_status) {
+                setActiveStatusButton('.housing-status-btn', normalizeStatus(data.current_status));
+            } else {
+                setActiveStatusButton('.housing-status-btn', null);
+            }
+        });
+
+        $('#housing_table tbody').on('dblclick', 'tr', function () {
+            let table = $('#housing_table').DataTable();
+            let data = table.row(this).data();
+
+            if (!data || !data.globalid) return;
+
+            let buildingGlobal = <?php echo json_encode($buildingGlobalid, 15, 512) ?>;
+            let url = "<?php echo e(url('showAssessmentAudit')); ?>/" + buildingGlobal + "/" + data.globalid;
+            window.open(url, '_blank');
+        });
+
+        KTUtil.onDOMContentLoaded(function () {
             $("#kt_app_sidebar_toggle").click();
 
             KTBuildingAssessmentList.init();
@@ -1308,48 +1350,10 @@
 
             selectInitialHousingOption();
             reloadBuildingAssessmentTable();
+            reloadBuildingAssessmentTable();
+
         });
 
-        $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function() {
-            $.fn.dataTable.tables({
-                visible: true,
-                api: true
-            }).columns.adjust();
-
-            initInlineEditors();
-            selectInitialHousingOption();
-        });
-
-        $('#housing_table tbody').on('click', 'tr', function() {
-            let table = $('#housing_table').DataTable();
-            let data = table.row(this).data();
-
-            if (!data) return;
-
-            $('#housing_table tbody tr').removeClass('selected');
-            $(this).addClass('selected');
-
-            if (!data.globalid) return;
-
-            $('[name="globalid"]').val(data.globalid).trigger('change');
-
-            if (data.current_status) {
-                setActiveStatusButton('.housing-status-btn', normalizeStatus(data.current_status));
-            } else {
-                setActiveStatusButton('.housing-status-btn', null);
-            }
-        });
-
-        $('#housing_table tbody').on('dblclick', 'tr', function() {
-            let table = $('#housing_table').DataTable();
-            let data = table.row(this).data();
-
-            if (!data || !data.globalid) return;
-
-            let buildingGlobal = <?php echo json_encode($buildingGlobalid, 15, 512) ?>;
-            let url = "<?php echo e(url('showAssessmentAudit')); ?>/" + buildingGlobal + "/" + data.globalid;
-            window.open(url, '_blank');
-        });
     </script>
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/assessmentAudit.blade.php ENDPATH**/ ?>

@@ -3798,12 +3798,12 @@ class auditController extends Controller
 
             $note = $query->first();
 
-            if (!$note) {
+           /*  if (!$note) {
                 return response()->json([
                     'message' => 'لا توجد ملاحظة متاحة'
                 ], 404);
             }
-
+ */
             return response()->json([
                 'id' => $note->id,
                 'notes' => $note->notes,
