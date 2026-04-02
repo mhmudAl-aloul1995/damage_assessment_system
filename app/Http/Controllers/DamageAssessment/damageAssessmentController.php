@@ -254,7 +254,7 @@ class damageAssessmentController extends Controller
                     return 'table-danger';
                 }
 
-dd(in_array($row->name, $fields));
+
                 if (in_array($row->name, $fields)&&
                     is_numeric($value) &&
                     $newCriteria > 0 &&
