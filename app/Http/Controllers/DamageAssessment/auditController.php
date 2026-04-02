@@ -3090,7 +3090,7 @@ class auditController extends Controller
     {
         $request->validate([
             'globalid' => ['required', 'string'],
-            'status' => ['required', 'in:rejected,accepted,need_review'],
+            'status' => ['required', 'in:rejected,accepted,need_review,legal_notes'],
             'notes' => ['nullable', 'string'],
         ]);
 
