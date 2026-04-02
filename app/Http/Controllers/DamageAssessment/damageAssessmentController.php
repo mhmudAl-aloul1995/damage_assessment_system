@@ -257,7 +257,7 @@ class damageAssessmentController extends Controller
                     in_array($row->name, ['dm2'], true)
                 ) {
 
-                    dd(in_array($row->name, $fields), $newCriteria, $value);
+                    dd(in_array($row->name, $fields),$criteria, $newCriteria, $value);
 
                 }
                 if (
