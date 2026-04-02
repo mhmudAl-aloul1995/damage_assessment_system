@@ -26,6 +26,7 @@ class Assessment extends Model
 	protected $fillable = [
 		'name',
 		'label',
-		'hint'
+		'hint',
+		'criteria',
 	];
 }
