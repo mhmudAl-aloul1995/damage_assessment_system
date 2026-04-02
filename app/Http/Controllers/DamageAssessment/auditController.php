@@ -3190,9 +3190,10 @@ class auditController extends Controller
     {
         $request->validate([
             'globalid' => ['required', 'string'],
-            'status' => ['required', 'in:rejected,accepted,need_review'],
+            'status' => ['required', 'in:rejected,accepted,need_review,legal_notes'],
             'notes' => ['nullable', 'string'],
         ]);
+
 
 
         DB::beginTransaction();
@@ -3228,6 +3229,7 @@ class auditController extends Controller
                 'rejected' => 'rejected_by_' . $roleType,
                 'accepted' => 'accepted_by_' . $roleType,
                 'need_review' => 'need_review',
+                'legal_notes' => 'legal_notes'
             ];
             $statusName = $statusMap[$request->status] ?? null;
 
