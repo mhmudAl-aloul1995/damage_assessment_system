@@ -257,8 +257,6 @@
 			var table = $('#kt_datatable_audits').DataTable({
 				processing: true,
 				serverSide: true,
-
-
 				ajax: {
 					url: "<?php echo e(route('audit.index')); ?>",
 					data: function (d) {
@@ -273,89 +271,54 @@
 						d.damage_status = $('#filter_damage_status').val();
 						d.filter_from_date = $('#filter_from_date').val();
 						d.filter_to_date = $('#filter_to_date').val();
-
 					}
 				},
-
+				lengthMenu: [[10, 20, 25, 50, -1], [10, 20, 25, 50, "All"]],
+				pageLength: 20,
 				columnDefs: [{
-					targets: 0, // Targets the first column (checkboxes)
-					orderable: false, // Disables the sorting arrow
+					targets: 0,
+					orderable: false,
 					searchable: false
 				}],
-				order: [
-					[1, 'desc']
-				],
-				columns: [{
-					data: 'objectid',
-					name: 'objectid',
-					orderable: false,
-					searchable: false,
-					render: (data) => `<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																					<input class="form-check-input" type="checkbox" 
-																						data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																				</div>`
-				},
-
-				{
-					data: 'building_name',
-					name: 'building_name'
-				},
-				{
-					data: 'assignedto',
-					name: 'assignedto'
-				},
-				{
-					data: 'engineer',
-					name: 'engineer',
-					searchable: false
-				},
-				{
-					data: 'lawyer',
-					name: 'lawyer',
-					searchable: false
-				},
-				{
-					data: 'eng_status',
-					name: 'eng_status'
-				},
-				{
-					data: 'law_status',
-					name: 'law_status'
-				},
-				{
-					data: 'finalApproval',
-					//render: () => '<span class="badge badge-light-warning">Pending</span>'
-				},
-				{
-					data: 'creationdate'
-				},
-				{
-
-					data: 'actions'
-
-				}
+				order: [[1, 'desc']],
+				columns: [
+					{
+						data: 'objectid',
+						name: 'objectid',
+						orderable: false,
+						searchable: false,
+						render: (data) => `
+						<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+							<input class="form-check-input" type="checkbox"
+								data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+						</div>`
+					},
+					{ data: 'building_name', name: 'building_name' },
+					{ data: 'assignedto', name: 'assignedto' },
+					{ data: 'engineer', name: 'engineer', searchable: false },
+					{ data: 'lawyer', name: 'lawyer', searchable: false },
+					{ data: 'eng_status', name: 'eng_status' },
+					{ data: 'law_status', name: 'law_status' },
+					{ data: 'finalApproval' },
+					{ data: 'creationdate' },
+					{ data: 'actions' }
 				],
 				language: {
-					url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' // لتعريب الجدول
+					url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json'
 				},
 				createdRow: (row, data, index) => {
-					$(row).css('cursor', 'pointer')
-
-
+					$(row).css('cursor', 'pointer');
 
 					$(row).on('click', function (e) {
 						if ($(e.target).closest('input, button, a').length) {
 							return;
 						}
-						e.preventDefault()
-						var url_eng = "<?php echo e(url('showAssessmentAudit/')); ?>/" + data.globalid
+						e.preventDefault();
+						var url_eng = "<?php echo e(url('showAssessmentAudit/')); ?>/" + data.globalid;
 						window.open(url_eng, '_blank');
-
-
 					});
-
 				},
-				dom: "<'row'<'col-sm-12'tr>><'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+			
 			});
 
 			$('#applyFilters').on('click', function () {
@@ -373,13 +336,13 @@
 
 			});
 			$('#resetFilters').on('click', function () {
-	/* 			$('#filter_building_name').val('');
-				$('#filter_engineer').val(null).trigger('change');
-				$('#filter_lawyer').val(null).trigger('change');
-				$('#filter_eng_status').val(null).trigger('change');
-				$('#filter_legal_status').val(null).trigger('change');
-				$('#filter_final_status').val(null).trigger('change');
-				$('#filter_area').val(''); */
+				/* 			$('#filter_building_name').val('');
+							$('#filter_engineer').val(null).trigger('change');
+							$('#filter_lawyer').val(null).trigger('change');
+							$('#filter_eng_status').val(null).trigger('change');
+							$('#filter_legal_status').val(null).trigger('change');
+							$('#filter_final_status').val(null).trigger('change');
+							$('#filter_area').val(''); */
 				$('select').val(null).trigger('change');
 				$('input').val('');
 
