@@ -338,7 +338,6 @@
                                         <th>المستخدم</th>
                                         <th>الملاحظة</th>
                                         <th>التاريخ</th>
-                                        <th class="text-center">إجراء</th>
                                     </tr>
                                 </thead>
                                 <tbody id="statusHistoryTable">
@@ -635,7 +634,6 @@
                     history.forEach(function (item) {
                         let editBtn = '-';
 
-                        // فقط إذا كانت البيانات القديمة فيها id و has_final_approve
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
@@ -655,7 +653,6 @@
                             <td>${escapeHtml(item.user_name ?? '-')}</td>
                             <td>${escapeHtml(item.notes ?? '-')}</td>
                             <td>${escapeHtml(item.created_at ?? '-')}</td>
-                            <td class="text-center">${editBtn}</td>
                         </tr>
                                 `;
                     });
