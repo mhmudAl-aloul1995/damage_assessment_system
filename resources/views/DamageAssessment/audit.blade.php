@@ -232,7 +232,7 @@
 		</div>
 	</div>
 	<div class="modal fade" id="notesHistoryModal" tabindex="-1" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered mw-1300px">
+		<div class="modal-dialog modal-dialog-centered modal-lg">
 			<div class="modal-content">
 				<div class="modal-header">
 					<h2 class="fw-bold" id="notesHistoryModalTitle">سجل الحالات</h2>
