@@ -249,7 +249,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('assessment/notes/update', [AuditController::class, 'updateNote'])
         ->name('assessment.notes.update');
-    Route::get('audit/building-history/{globalid}', [auditController::class, 'buildingHistory'])
+    Route::get('audit/building-history', [auditController::class, 'buildingHistory'])
         ->name('audit.building.history');
 });
 
