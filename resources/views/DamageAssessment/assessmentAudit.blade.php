@@ -313,7 +313,7 @@
 
     {{-- Modal الملاحظات / سجل الحالات --}}
     <div class="modal fade" id="notesModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered mw-1300px">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
 
                 <div class="modal-header">
