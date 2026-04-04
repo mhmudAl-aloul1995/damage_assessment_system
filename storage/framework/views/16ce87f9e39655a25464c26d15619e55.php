@@ -313,7 +313,7 @@
 
     
     <div class="modal fade" id="notesModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered mw-800px">
+        <div class="modal-dialog modal-dialog-centered mw-1000px mw-lg-1400px">
             <div class="modal-content">
 
                 <div class="modal-header">
@@ -338,7 +338,6 @@
                                         <th>المستخدم</th>
                                         <th>الملاحظة</th>
                                         <th>التاريخ</th>
-                                        <th class="text-center">إجراء</th>
                                     </tr>
                                 </thead>
                                 <tbody id="statusHistoryTable">
@@ -576,26 +575,26 @@
 
         function renderHistoryLoading() {
             $('#statusHistoryTable').html(`
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
-                    </tr>
-                `);
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                        </tr>
+                    `);
         }
 
         function renderHistoryEmpty() {
             $('#statusHistoryTable').html(`
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-                    </tr>
-                `);
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                        </tr>
+                    `);
         }
 
         function renderHistoryError() {
             $('#statusHistoryTable').html(`
-                    <tr>
-                        <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
-                    </tr>
-                `);
+                        <tr>
+                            <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                        </tr>
+                    `);
         }
 
         function escapeHtml(text) {
@@ -635,29 +634,27 @@
                     history.forEach(function (item) {
                         let editBtn = '-';
 
-                        // فقط إذا كانت البيانات القديمة فيها id و has_final_approve
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                        <button type="button" class="btn btn-sm btn-light-info"
-                                            onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                            تعديل
-                                        </button>
-                                    `;
+                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                تعديل
+                                            </button>
+                                        `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
                         }
 
                         rows += `
-                    <tr>
-                        <td>${item.status_name ?? '-'}</td>
-                        <td>${escapeHtml(item.user_name ?? '-')}</td>
-                        <td>${escapeHtml(item.notes ?? '-')}</td>
-                        <td>${escapeHtml(item.created_at ?? '-')}</td>
-                        <td class="text-center">${editBtn}</td>
-                    </tr>
-                            `;
+                        <tr>
+                            <td>${item.status_name ?? '-'}</td>
+                            <td>${escapeHtml(item.user_name ?? '-')}</td>
+                            <td>${escapeHtml(item.notes ?? '-')}</td>
+                            <td>${escapeHtml(item.created_at ?? '-')}</td>
+                        </tr>
+                                `;
                     });
 
                     $('#statusHistoryTable').html(rows);
