@@ -69,6 +69,7 @@
 								<option value="accepted_by_engineer">Accepted By Engineer</option>
 								<option value="rejected_by_engineer">Rejected By Engineer</option>
 								<option value="assigned_to_engineer">Assigned To Engineer</option>
+								<option value="need_review">Need Review</option>
 							</select>
 						</div>
 
