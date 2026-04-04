@@ -249,6 +249,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('assessment/notes/update', [AuditController::class, 'updateNote'])
         ->name('assessment.notes.update');
+    Route::get('audit/building-history/{globalid}', [auditController::class, 'buildingHistory'])
+        ->name('audit.building.history');
 });
 
 require __DIR__ . '/auth.php';

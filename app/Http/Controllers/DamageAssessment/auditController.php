@@ -2927,23 +2927,32 @@ class auditController extends Controller
                     $assessmentUrl = url("/showAssessmentAudit/{$row->globalid}");
 
                     return '
-    <div class="d-flex justify-content-end">
-        <button class="btn btn-light btn-sm"
-            data-kt-menu-trigger="click"
-            data-kt-menu-placement="bottom-end">
-            إجراءات
-        </button>
+<div class="d-flex justify-content-end">
+    <button class="btn btn-light btn-sm"
+        data-kt-menu-trigger="click"
+        data-kt-menu-placement="bottom-end">
+        إجراءات
+    </button>
 
-        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4"
-             data-kt-menu="true">
+    <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4"
+         data-kt-menu="true">
 
-            <div class="menu-item px-3">
-                <a target="_blank" href="' . $assessmentUrl . '" class="menu-link px-3">الإستبيان</a>
-            </div>
-         
+        <div class="menu-item px-3">
+            <a target="_blank" href="' . $assessmentUrl . '" class="menu-link px-3">الإستبيان</a>
         </div>
+
+        <div class="menu-item px-3">
+            <a href="javascript:void(0)" 
+               class="menu-link btn-show-history"
+               data-globalid="' . $row->globalid . '"
+               data-building-name="' . e($row->building_name) . '">
+               ملاحظات
+            </a>
+        </div>
+
     </div>
-    ';
+</div>
+';
                 })
 
                 ->rawColumns(['building_name', 'eng_status', 'law_status', 'actions', 'finalApproval'])
@@ -3798,12 +3807,12 @@ class auditController extends Controller
 
             $note = $query->first();
 
-           /*  if (!$note) {
-                return response()->json([
-                    'message' => 'لا توجد ملاحظة متاحة'
-                ], 404);
-            }
- */
+            /*  if (!$note) {
+                 return response()->json([
+                     'message' => 'لا توجد ملاحظة متاحة'
+                 ], 404);
+             }
+  */
             return response()->json([
                 'id' => $note->id,
                 'notes' => $note->notes,

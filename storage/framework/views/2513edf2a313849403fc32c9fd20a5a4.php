@@ -231,7 +231,47 @@
 			</div>
 		</div>
 	</div>
+	<div class="modal fade" id="notesHistoryModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="fw-bold" id="notesHistoryModalTitle">سجل حالات المبنى</h2>
+					<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+						<i class="ki-duotone ki-cross fs-1"></i>
+					</div>
+				</div>
 
+				<div class="modal-body">
+					<div id="historyLoading" class="text-center py-10 d-none">
+						<div class="spinner-border text-primary" role="status"></div>
+						<div class="mt-3">جاري تحميل السجل...</div>
+					</div>
+
+					<div class="table-responsive">
+						<table class="table table-row-bordered table-striped gy-5 gs-7">
+							<thead>
+								<tr class="fw-bold fs-6 text-gray-800">
+									<th>الحالة</th>
+									<th>المستخدم</th>
+									<th>الملاحظات</th>
+									<th>التاريخ</th>
+								</tr>
+							</thead>
+							<tbody id="buildingHistoryTableBody">
+								<tr>
+									<td colspan="4" class="text-center text-muted">لا توجد بيانات</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-light" data-bs-dismiss="modal">إغلاق</button>
+				</div>
+			</div>
+		</div>
+	</div>
 <?php $__env->stopSection(); ?>
 
 
@@ -288,10 +328,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-						<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-							<input class="form-check-input" type="checkbox"
-								data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-						</div>`
+								<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+									<input class="form-check-input" type="checkbox"
+										data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+								</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'assignedto', name: 'assignedto' },
@@ -318,7 +358,7 @@
 						window.open(url_eng, '_blank');
 					});
 				},
-			
+
 			});
 
 			$('#applyFilters').on('click', function () {
@@ -481,7 +521,58 @@
 					}
 				});
 			});
+			$(document).on('click', '.btn-show-history', function (e) {
+				e.preventDefault();
+				e.stopPropagation();
 
+				let globalid = $(this).data('globalid');
+				let buildingName = $(this).data('building-name') || 'المبنى';
+
+				$('#notesHistoryModalTitle').text('سجل الحالات - ' + buildingName);
+				$('#buildingHistoryTableBody').html('');
+				$('#historyLoading').removeClass('d-none');
+
+				$('#notesHistoryModal').modal('show');
+
+				$.ajax({
+					url: "<?php echo e(url('audit/building-history')); ?>/" + globalid,
+					type: "GET",
+					success: function (response) {
+						$('#historyLoading').addClass('d-none');
+
+						let rows = '';
+
+						if (response.status && response.history.length > 0) {
+							response.history.forEach(function (item) {
+								rows += `
+							<tr>
+								<td>${item.status_name ?? '-'}</td>
+								<td>${item.user_name ?? '-'}</td>
+								<td>${item.notes ?? '-'}</td>
+								<td>${item.created_at ?? '-'}</td>
+							</tr>
+						`;
+							});
+						} else {
+							rows = `
+						<tr>
+							<td colspan="4" class="text-center text-muted">لا يوجد سجل حالات لهذا المبنى</td>
+						</tr>
+					`;
+						}
+
+						$('#buildingHistoryTableBody').html(rows);
+					},
+					error: function () {
+						$('#historyLoading').addClass('d-none');
+						$('#buildingHistoryTableBody').html(`
+					<tr>
+						<td colspan="4" class="text-center text-danger">حدث خطأ أثناء تحميل السجل</td>
+					</tr>
+				`);
+					}
+				});
+			});
 
 		});
 
