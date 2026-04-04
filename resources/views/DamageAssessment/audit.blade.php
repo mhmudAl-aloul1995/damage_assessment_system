@@ -324,10 +324,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-													<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-														<input class="form-check-input" type="checkbox"
-															data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-													</div>`
+														<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+															<input class="form-check-input" type="checkbox"
+																data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+														</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'assignedto', name: 'assignedto' },
@@ -527,15 +527,15 @@
 
 				$('#notesHistoryModalTitle').text('سجل الحالات - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-							<tr>
-								<td colspan="5" class="text-center">جاري التحميل...</td>
-							</tr>
-						`);
+			<tr>
+				<td colspan="5" class="text-center">جاري التحميل...</td>
+			</tr>
+		`);
 
 				$('#notesHistoryModal').modal('show');
 
 				$.ajax({
-					url: "{{ url('audit/building-history') }}/" + globalid,
+					url: "{{ route('audit.building.history') }}",
 					type: "GET",
 					data: { globalid: globalid },
 					success: function (response) {
@@ -544,31 +544,31 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-											<tr>
-												<td>${item.status_name}</td>
-												<td>${item.user_name}</td>
-												<td>${item.role_name}</td>
-												<td>${item.notes}</td>
-												<td>${item.created_at}</td>
-											</tr>
-										`;
+							<tr>
+								<td>${item.status_name}</td>
+								<td>${item.user_name}</td>
+								<td>${item.role_name}</td>
+								<td>${item.notes}</td>
+								<td>${item.created_at}</td>
+							</tr>
+						`;
 							});
 						} else {
 							rows = `
-										<tr>
-											<td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-										</tr>
-									`;
+						<tr>
+							<td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+						</tr>
+					`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-									<tr>
-										<td colspan="5" class="text-center text-danger">تعذر تحميل السجل</td>
-									</tr>
-								`);
+					<tr>
+						<td colspan="5" class="text-center text-danger">تعذر تحميل السجل</td>
+					</tr>
+				`);
 					}
 				});
 			});

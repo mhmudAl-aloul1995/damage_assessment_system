@@ -3699,32 +3699,41 @@ class auditController extends Controller
             ->make(true);
     }
 
+
     public function buildingHistory(Request $request)
-    {
-        $building = Building::where('globalid', $request->globalid)->first();
+{
+    $building = Building::where('globalid', $request->globalid)->first();
 
-        if (!$building) {
-            return [];
-        }
-
-        return BuildingStatusHistory::with(['user.roles', 'status'])
-            ->where('building_id', $building->objectid)
-            ->latest()
-            ->get()
-            ->map(function ($item) {
-                $statusName = $item->status->name ?? '-';
-                $statusLabel = $item->status->label_en ?? $statusName;
-                $roleName = $item->user?->roles?->first()?->name ?? '-';
-
-                return [
-                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
-                    'user_name' => $item->user->name ?? '-',
-                    'role_name' => $roleName,
-                    'notes' => $item->notes ?? '-',
-                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                ];
-            });
+    if (!$building) {
+        return response()->json([
+            'status' => false,
+            'history' => []
+        ]);
     }
+
+    $history = BuildingStatusHistory::with(['user.roles', 'status'])
+        ->where('building_id', $building->objectid)
+        ->latest()
+        ->get()
+        ->map(function ($item) {
+            $statusName = $item->status->name ?? '-';
+            $statusLabel = $item->status->label_en ?? $statusName;
+            $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+            return [
+                'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                'user_name' => $item->user->name ?? '-',
+                'role_name' => $roleName,
+                'notes' => $item->notes ?? '-',
+                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+            ];
+        });
+
+    return response()->json([
+        'status' => true,
+        'history' => $history
+    ]);
+}
 
     public function housingHistory(Request $request)
     {
