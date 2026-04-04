@@ -384,11 +384,9 @@
     <script>
         let notesContext = null;
         let pendingStatus = null;
-
         let noteEditMode = false;
         let currentNoteRecordId = null;
         let currentApprovalLocked = false;
-
         let urlHousingGlobalId = <?php echo json_encode($housingGlobalid ?? null, 15, 512) ?>;
         let initialHousingSelectionDone = false;
         let pendingHousingGlobalId = null;
@@ -516,51 +514,49 @@
 
             $('#noteId').val('');
             $('#notesInput').val('').prop('readonly', false);
-            $('#notesSaveBtn').hide().text('حفظ').prop('disabled', false).attr('onclick', 'submitStatusWithNotes()');
+            $('#notesSaveBtn')
+                .hide()
+                .text('حفظ')
+                .prop('disabled', false)
+                .attr('onclick', 'submitStatusWithNotes()');
+
             $('#notesLockText').hide();
-            $('#historyWrapper').show();
+            $('#historyWrapper').hide();
             $('#notesInputWrapper').hide();
 
-            let globalid = null;
+            let globalid = getSelectedGlobalId(type);
 
-            if (type === 'building') {
-                globalid = '<?php echo e($buildingGlobalid); ?>';
-
-                if (!globalid) {
-                    toastr.warning('لا يوجد مبنى محدد');
-                    return;
-                }
-            } else {
-                globalid = $("[name='globalid']").val();
-
-                if (!globalid) {
-                    toastr.warning('يرجى اختيار الوحدة أولاً');
-                    return;
-                }
+            if (!globalid) {
+                toastr.warning(type === 'building' ? 'لا يوجد مبنى محدد' : 'يرجى اختيار الوحدة أولاً');
+                return;
             }
 
             if (mode === 'history') {
                 $('#notesModalTitle').text(type === 'building' ? 'سجل حالات المبنى' : 'سجل حالات الوحدة');
-
                 $('#historyWrapper').show();
                 $('#notesInputWrapper').hide();
                 $('#notesSaveBtn').hide();
 
+                renderHistoryLoading();
                 loadStatusHistory(type, globalid);
             } else if (mode === 'note') {
                 $('#notesModalTitle').text(type === 'building' ? 'إضافة ملاحظة للمبنى' : 'إضافة ملاحظة للوحدة');
-
                 $('#historyWrapper').hide();
                 $('#notesInputWrapper').show();
-                $('#notesSaveBtn').show().text('حفظ').prop('disabled', false).attr('onclick',
-                    'submitStatusWithNotes()');
+                $('#notesSaveBtn')
+                    .show()
+                    .text('حفظ')
+                    .prop('disabled', false)
+                    .attr('onclick', 'submitStatusWithNotes()');
             } else if (mode === 'edit_note') {
                 $('#notesModalTitle').text(type === 'building' ? 'تعديل ملاحظة المبنى' : 'تعديل ملاحظة الوحدة');
-
                 $('#historyWrapper').hide();
                 $('#notesInputWrapper').show();
-                $('#notesSaveBtn').show().text('تحديث').prop('disabled', true).attr('onclick',
-                    'updateExistingNote()');
+                $('#notesSaveBtn')
+                    .show()
+                    .text('تحديث')
+                    .prop('disabled', true)
+                    .attr('onclick', 'updateExistingNote()');
 
                 loadEditableNote(type, globalid);
             }
@@ -570,66 +566,119 @@
             modal.show();
         }
 
+        function getSelectedGlobalId(type) {
+            if (type === 'building') {
+                return <?php echo json_encode($buildingGlobalid, 15, 512) ?>;
+            }
+
+            return $("[name='globalid']").val() || null;
+        }
+
+        function renderHistoryLoading() {
+            $('#statusHistoryTable').html(`
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                    </tr>
+                `);
+        }
+
+        function renderHistoryEmpty() {
+            $('#statusHistoryTable').html(`
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                    </tr>
+                `);
+        }
+
+        function renderHistoryError() {
+            $('#statusHistoryTable').html(`
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                    </tr>
+                `);
+        }
+
+        function escapeHtml(text) {
+            if (text === null || text === undefined || text === '') return '-';
+            return $('<div>').text(text).html();
+        }
+
+        function loadStatusHistory(type, globalid) {
+            let url = type === 'building'
+                ? "<?php echo e(route('building.status.history')); ?>"
+                : "<?php echo e(route('housing.status.history')); ?>";
+
+            $.ajax({
+                url: url,
+                method: "GET",
+                data: { globalid: globalid },
+                success: function (response) {
+                    let history = [];
+
+                    // يدعم الشكل الجديد من controller:
+                    // {status: true, history: [...] }
+                    if (response && response.status !== undefined && Array.isArray(response.history)) {
+                        history = response.history;
+                    }
+                    // ويدعم الشكل القديم لو كان route ثاني يرجع array مباشرة
+                    else if (Array.isArray(response)) {
+                        history = response;
+                    }
+
+                    if (!history.length) {
+                        renderHistoryEmpty();
+                        return;
+                    }
+
+                    let rows = '';
+
+                    history.forEach(function (item) {
+                        let editBtn = '-';
+
+                        // فقط إذا كانت البيانات القديمة فيها id و has_final_approve
+                        if (item.id !== undefined) {
+                            if (!item.has_final_approve) {
+                                editBtn = `
+                                        <button type="button" class="btn btn-sm btn-light-info"
+                                            onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                            تعديل
+                                        </button>
+                                    `;
+                            } else {
+                                editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
+                            }
+                        }
+
+                        rows += `
+                    <tr>
+                        <td>${item.status_name ?? '-'}</td>
+                        <td>${escapeHtml(item.user_name ?? '-')}</td>
+                        <td>${escapeHtml(item.notes ?? '-')}</td>
+                        <td>${escapeHtml(item.created_at ?? '-')}</td>
+                        <td class="text-center">${editBtn}</td>
+                    </tr>
+                            `;
+                    });
+
+                    $('#statusHistoryTable').html(rows);
+                },
+                error: function (xhr) {
+                    console.error('History load error:', xhr);
+                    renderHistoryError();
+                }
+            });
+        }
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '-';
+
+            return $('<div>').text(text).html();
+        }
         function closeNotesModal() {
             const modalEl = document.getElementById('notesModal');
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.hide();
         }
 
-        function loadStatusHistory(type, globalid) {
-            $('#statusHistoryTable').html(`
-                                <tr><td colspan="5" class="text-center">جاري التحميل...</td></tr>
-                            `);
-
-            $.ajax({
-                url: type === 'building' ?
-                    "<?php echo e(route('building.status.history')); ?>" :
-                    "<?php echo e(route('housing.status.history')); ?>",
-                method: "GET",
-                data: {
-                    globalid: globalid
-                },
-                success: function (response) {
-                    let rows = '';
-
-                    if (!response.length) {
-                        rows = `<tr><td colspan="5" class="text-center text-muted">لا يوجد سجل</td></tr>`;
-                    } else {
-                        response.forEach(item => {
-                            let editBtn = '';
-
-                            if (!item.has_final_approve) {
-                                editBtn = `
-                                                    <button type="button" class="btn btn-sm btn-light-info"
-                                                        onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                        تعديل
-                                                    </button>
-                                                `;
-                            } else {
-                                editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
-                            }
-
-                            rows += `
-                                                <tr>
-                                                    <td>${item.status_name ?? '-'}</td>
-                                                    <td>${item.user_name ?? '-'}</td>
-                                                    <td>${item.notes ?? '-'}</td>
-                                                    <td>${item.created_at ?? '-'}</td>
-                                                    <td class="text-center">${editBtn}</td>
-                                                </tr>
-                                            `;
-                        });
-                    }
-
-                    $('#statusHistoryTable').html(rows);
-                },
-                error: function () {
-                    $('#statusHistoryTable').html(`
-                                        <tr><td colspan="5" class="text-center text-danger">فشل التحميل</td></tr>
-                                    `);
-                }
-            });
-        }
 
         function loadEditableNote(type, globalid) {
             $('#notesInput').val('جاري التحميل...').prop('readonly', true);
@@ -986,14 +1035,16 @@
         }
 
         function reloadHousingAssessmentTable() {
+
             if ($.fn.DataTable.isDataTable('#kt_table_housing_assessment')) {
-                $('#kt_table_housing_assessment').DataTable().ajax.reload(null, false);
+                reloadTableWithoutScroll('#kt_table_housing_assessment');
             }
         }
 
         function reloadBuildingUnitsTable() {
+
             if ($.fn.DataTable.isDataTable('#housing_table')) {
-                $('#housing_table').DataTable().ajax.reload(null, false);
+                reloadTableWithoutScroll('#housing_table');
             }
         }
 
