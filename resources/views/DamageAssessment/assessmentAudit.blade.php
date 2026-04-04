@@ -578,8 +578,8 @@
 
         function loadStatusHistory(type, globalid) {
             $('#statusHistoryTable').html(`
-                        <tr><td colspan="5" class="text-center">جاري التحميل...</td></tr>
-                    `);
+                                        <tr><td colspan="5" class="text-center">جاري التحميل...</td></tr>
+                                    `);
 
             $.ajax({
                 url: type === 'building' ?
@@ -600,24 +600,24 @@
 
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                            <button type="button" class="btn btn-sm btn-light-info"
-                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                تعديل
-                                            </button>
-                                        `;
+                                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                                تعديل
+                                                            </button>
+                                                        `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
 
                             rows += `
-                                        <tr>
-                                            <td>${item.status_name ?? '-'}</td>
-                                            <td>${item.user_name ?? '-'}</td>
-                                            <td>${item.notes ?? '-'}</td>
-                                            <td>${item.created_at ?? '-'}</td>
-                                            <td class="text-center">${editBtn}</td>
-                                        </tr>
-                                    `;
+                                                        <tr>
+                                                            <td>${item.status_name ?? '-'}</td>
+                                                            <td>${item.user_name ?? '-'}</td>
+                                                            <td>${item.notes ?? '-'}</td>
+                                                            <td>${item.created_at ?? '-'}</td>
+                                                            <td class="text-center">${editBtn}</td>
+                                                        </tr>
+                                                    `;
                         });
                     }
 
@@ -625,8 +625,8 @@
                 },
                 error: function () {
                     $('#statusHistoryTable').html(`
-                                <tr><td colspan="5" class="text-center text-danger">فشل التحميل</td></tr>
-                            `);
+                                                <tr><td colspan="5" class="text-center text-danger">فشل التحميل</td></tr>
+                                            `);
                 }
             });
         }
@@ -981,19 +981,21 @@
 
         function reloadBuildingAssessmentTable() {
             if ($.fn.DataTable.isDataTable('#kt_table_building_assessment')) {
-                $('#kt_table_building_assessment').DataTable().ajax.reload(null, false);
+                reloadTableWithoutScroll('#kt_table_building_assessment');
             }
         }
 
         function reloadHousingAssessmentTable() {
+
             if ($.fn.DataTable.isDataTable('#kt_table_housing_assessment')) {
-                $('#kt_table_housing_assessment').DataTable().ajax.reload(null, false);
+                reloadTableWithoutScroll('#kt_table_housing_assessment');
             }
         }
 
         function reloadBuildingUnitsTable() {
+
             if ($.fn.DataTable.isDataTable('#housing_table')) {
-                $('#housing_table').DataTable().ajax.reload(null, false);
+                reloadTableWithoutScroll('#housing_table');
             }
         }
 
@@ -1353,6 +1355,13 @@
             reloadBuildingAssessmentTable();
 
         });
+        function reloadTableWithoutScroll(tableId) {
+            let scrollTop = $(window).scrollTop();
 
+            let table = $(tableId).DataTable();
+            table.ajax.reload(function () {
+                $(window).scrollTop(scrollTop);
+            }, false);
+        }
     </script>
 @endsection
