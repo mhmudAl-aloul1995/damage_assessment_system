@@ -276,7 +276,8 @@
 
 					}
 				},
-
+				"pageLength": 20,
+				"lengthChange": true,
 				columnDefs: [{
 					targets: 0, // Targets the first column (checkboxes)
 					orderable: false, // Disables the sorting arrow
@@ -291,9 +292,9 @@
 					orderable: false,
 					searchable: false,
 					render: (data) => `<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																					<input class="form-check-input" type="checkbox" 
-																						data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																				</div>`
+																						<input class="form-check-input" type="checkbox" 
+																							data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																					</div>`
 				},
 
 				{
@@ -373,13 +374,13 @@
 
 			});
 			$('#resetFilters').on('click', function () {
-	/* 			$('#filter_building_name').val('');
-				$('#filter_engineer').val(null).trigger('change');
-				$('#filter_lawyer').val(null).trigger('change');
-				$('#filter_eng_status').val(null).trigger('change');
-				$('#filter_legal_status').val(null).trigger('change');
-				$('#filter_final_status').val(null).trigger('change');
-				$('#filter_area').val(''); */
+				/* 			$('#filter_building_name').val('');
+							$('#filter_engineer').val(null).trigger('change');
+							$('#filter_lawyer').val(null).trigger('change');
+							$('#filter_eng_status').val(null).trigger('change');
+							$('#filter_legal_status').val(null).trigger('change');
+							$('#filter_final_status').val(null).trigger('change');
+							$('#filter_area').val(''); */
 				$('select').val(null).trigger('change');
 				$('input').val('');
 
