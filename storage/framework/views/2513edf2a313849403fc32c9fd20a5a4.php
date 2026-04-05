@@ -12,9 +12,7 @@
 			/* Adjust this value as needed */
 		}
 	</style>
-	<?php
-		$canDeleteHistory = auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor']);
-	?>
+
 	<div class="row mb-5">
 		<div class="col-md-12">
 			<div class="card card-flush shadow-sm">

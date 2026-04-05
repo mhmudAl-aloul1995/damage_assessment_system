@@ -3435,8 +3435,26 @@ class auditController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        $rejectedBuildings = [];
+
         try {
-            DB::transaction(function () use ($request) {
+
+            // ✅ load new status once (performance)
+            $newStatus = AssessmentStatus::find($request->status_id);
+
+            $newStatusName = strtolower(trim($newStatus->name ?? ''));
+            $newStatusName = str_replace(['_', '-'], ' ', $newStatusName);
+
+            // ✅ all assigned variations
+            $assignedStatuses = [
+                'assignedto',
+                'assigned to',
+                'assigned to engineer',
+                'assigned to lawyer',
+            ];
+
+            DB::transaction(function () use ($request, &$rejectedBuildings, $newStatusName, $assignedStatuses) {
+
                 foreach ($request->building_ids as $buildingId) {
 
                     $building = Building::where('objectid', $buildingId)->first();
@@ -3445,6 +3463,26 @@ class auditController extends Controller
                         continue;
                     }
 
+                    // ✅ last status
+                    $lastHistory = BuildingStatusHistory::with('status')
+                        ->where('building_id', $buildingId)
+                        ->where('type', $request->type)
+                        ->latest('id')
+                        ->first();
+
+                    $lastStatusName = strtolower(trim($lastHistory->status->name ?? ''));
+                    $lastStatusName = str_replace(['_', '-'], ' ', $lastStatusName);
+
+                    // 🚫 prevent duplicate assigned
+                    if (
+                        in_array($newStatusName, $assignedStatuses) &&
+                        in_array($lastStatusName, $assignedStatuses)
+                    ) {
+                        $rejectedBuildings[] = $buildingId;
+                        continue;
+                    }
+
+                    // ✅ assign user
                     AssignedAssessmentUser::updateOrCreate(
                         [
                             'building_id' => $buildingId,
@@ -3457,10 +3495,12 @@ class auditController extends Controller
                         ]
                     );
 
+                    // skip if no status
                     if (!$request->filled('status_id')) {
                         continue;
                     }
 
+                    // ✅ building status
                     $buildingStatus = BuildingStatus::firstOrNew([
                         'building_id' => $buildingId,
                         'type' => $request->type,
@@ -3476,6 +3516,7 @@ class auditController extends Controller
                     $buildingStatus->type = $request->type;
                     $buildingStatus->save();
 
+                    // ✅ history
                     if ($statusChanged) {
                         BuildingStatusHistory::create([
                             'building_id' => $buildingId,
@@ -3486,16 +3527,19 @@ class auditController extends Controller
                         ]);
                     }
 
+                    // ✅ housing sync
                     $housings = HousingUnit::where('parentglobalid', $building->globalid)->get();
 
-
                     foreach ($housings as $housing) {
+
                         $housingStatus = HousingStatus::firstOrNew([
                             'housing_id' => $housing->objectid,
                             'type' => $request->type,
                         ]);
 
-                        $housingStatusChanged = !$housingStatus->exists || (int) $housingStatus->status_id !== (int) $request->status_id;
+                        $housingStatusChanged =
+                            !$housingStatus->exists ||
+                            (int) $housingStatus->status_id !== (int) $request->status_id;
 
                         $housingStatus->status_id = $request->status_id;
                         $housingStatus->user_id = $request->user_id;
@@ -3517,16 +3561,21 @@ class auditController extends Controller
             });
 
             return response()->json([
-                'message' => 'Assignment completed successfully.',
+                'status' => true,
+                'message' => count($rejectedBuildings)
+                    ? 'تم التعيين مع استثناء بعض المباني لأن آخر حالة لها Assigned'
+                    : 'Assignment completed successfully.',
+                'rejected_buildings' => $rejectedBuildings,
             ]);
+
         } catch (\Throwable $e) {
             return response()->json([
+                'status' => false,
                 'message' => 'Something went wrong.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
-
     public function assessmentAudit(Request $request)
     {
         if ($request->ajax()) {
