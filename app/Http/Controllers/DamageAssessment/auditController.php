@@ -2996,7 +2996,25 @@ class auditController extends Controller
                 $q->where('type', $type)
                     ->where('user_id', $user->id);
             });
+            if ($request->filled('eng_status')) {
+                if ($request->eng_status === 'pending') {
+                    $query->whereDoesntHave('engineerStatus');
+                } else {
+                    $query->whereHas('engineerStatus.assessment_status', function ($q) use ($request) {
+                        $q->where('name', $request->eng_status);
+                    });
+                }
+            }
 
+            if ($request->filled('legal_status')) {
+                if ($request->legal_status === 'pending') {
+                    $query->whereDoesntHave('lawyerStatus');
+                } else {
+                    $query->whereHas('lawyerStatus.assessment_status', function ($q) use ($request) {
+                        $q->where('name', $request->legal_status);
+                    });
+                }
+            }
             if ($request->filled('damage_status')) {
                 $query->where('building_damage_status', $request->damage_status);
             }
