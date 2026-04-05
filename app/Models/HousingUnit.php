@@ -354,30 +354,36 @@ class HousingUnit extends Model
      */
 
     protected $fillable = [
-        'attachments',
+
         'objectid',
         'globalid',
+        'attachments',
         'housing_unit_type',
         'unit_damage_status',
         'floor_number',
         'housing_unit_number',
         'unit_direction',
         'damaged_area_m2',
+
         'infra_type2',
         'house_unit_ownership',
         'other_ownership',
         'occupied',
         'number_of_rooms',
+
         'identity_type1',
         'id_number1',
         'passport1',
         'other_id1',
+
         'unit_owner',
         'agreement_duration',
+
         'q_9_3_1_first_name',
         'q_9_3_2_second_name__father',
         'q_9_3_3_third_name__grandfather',
         'q_9_3_4_last_name',
+
         'sex',
         'mobile_number',
         'additional_mobile',
@@ -385,6 +391,7 @@ class HousingUnit extends Model
         'other_job',
         'age',
         'marital_status',
+
         'empty_land_rhu',
         'no_spouses',
         'spouse1',
@@ -395,86 +402,110 @@ class HousingUnit extends Model
         'spouse3_id',
         'spouse4',
         'spouse4_id',
+
         'are_there_people_with_disability',
         'number_of_people_with_disability',
         'handicapped_type',
         'other_handicapped',
+
         'is_refugee',
         'unrwa_registration_number',
         'number_of_nuclear_families',
+
         'mchildren_001',
         'myoung',
         'melderly',
         'fchildren',
         'fyoung_001',
         'felderly',
+
         'pregnant',
         'lactating',
+
         'the_unit_resident',
         'current_address',
         'current_residence',
         'current_residence_other',
+
         'shelter_name',
         'shelter_type',
         'shelter_type_other',
+
         'governorate',
         'locality',
         'neighborhood',
         'street',
+
         'closest_facility2',
+
         'identity_type2',
         'rentee_id_passport_number',
         'rentee_resident_full_name',
+
         'q_13_3_1_first_name',
         'q_13_3_2_second_name__father',
         'q_13_3_3_third_name__grandfather',
         'q_13_3_4_last_name__family',
+
         'rentee_mobile_number',
+
         'work_type',
         'other_work',
+
         'land_location_details',
+
         'external_finishing_of_the_unit',
         'other_external_finishing',
         'is_finished',
         'finishing_extent',
         'internal_finishing_of_the_unit',
         'finishing_partial_types',
+
         'has_fire',
         'fire_extent',
         'fire_severity',
         'fire_locations',
         'fire_rooms_count',
         'fire_area',
+
         'furniture_ownership',
         'tenant_name',
         'percentage_of_damaged_furniture',
+
         'unit_stripping',
         'unit_stripping_details',
         'stripping_area',
         'stripping_locations',
+
         'rubble_removal_is_needed',
         'activation_of_uxo_ha_d_material_clearance',
         'unit_support_needed',
+
         'is_the_housing_unit_or_living_habitable',
+
         'mhpss_experinced',
         'other_mhpss_exp',
         'mhpss_support',
         'other_mhpss_support',
+
         'community_participation',
+
         'ce1',
         'prefab_moving',
         'prefab_moving_maybe',
         'prefab_types',
         'other_prefab_types',
         'prefab_pref',
+
         'ce2',
         'reh_kitchen',
         'reh_bathroom',
         'reh_type',
+
         'ce3',
         'additional_comments',
 
-        // DM
+        // 🔥 damage matrix
         'dm1',
         'dm2',
         'dm3',
@@ -488,13 +519,13 @@ class HousingUnit extends Model
         'dm11',
         'dm12',
 
-        // BL
+        // 🔥 building logic
         'bl2',
         'bl3',
         'bl4',
         'bl5',
 
-        // CO
+        // 🔥 concrete
         'co2',
         'co3',
         'co4',
@@ -505,7 +536,7 @@ class HousingUnit extends Model
         'co9',
         'co10',
 
-        // FN
+        // 🔥 finishing
         'fn1',
         'fn2',
         'fn3',
@@ -537,7 +568,7 @@ class HousingUnit extends Model
         'fn30',
         'fn31',
 
-        // AL
+        // 🔥 aluminum
         'al1',
         'al2',
         'al3',
@@ -549,7 +580,7 @@ class HousingUnit extends Model
         'al9',
         'al10',
 
-        // WD
+        // 🔥 wood
         'wd1',
         'wd3',
         'wd4',
@@ -562,7 +593,7 @@ class HousingUnit extends Model
         'wd11',
         'wd12',
 
-        // MT
+        // 🔥 metal
         'mt1',
         'mt2',
         'mt3',
@@ -582,7 +613,7 @@ class HousingUnit extends Model
         'mt17',
         'mt19',
 
-        // CM
+        // 🔥 ceramic
         'cm1',
         'cm2',
         'cm3',
@@ -595,7 +626,7 @@ class HousingUnit extends Model
         'cm10',
         'cm11',
 
-        // PM
+        // 🔥 plumbing
         'pm1',
         'pm2',
         'pm101',
@@ -636,7 +667,7 @@ class HousingUnit extends Model
         'pm38',
         'pm39',
 
-        // EL
+        // 🔥 electrical
         'el1',
         'el2',
         'el3',
@@ -668,7 +699,7 @@ class HousingUnit extends Model
         'el29',
         'el30',
 
-        // PV
+        // 🔥 PV
         'pv_note',
         'pv1',
         'pv2',
@@ -683,7 +714,7 @@ class HousingUnit extends Model
         'pv11',
         'pv12',
 
-        // Items
+        // 🔥 items
         'item1',
         'quant1',
         'item2',
@@ -696,6 +727,24 @@ class HousingUnit extends Model
         'quant5',
 
         'final_comments',
+        'parentglobalid',
+
+        'creationdate',
+        'creator',
+        'editdate',
+        'editor',
+
+        'al11',
+        'cm12',
+        'cm13',
+        'pm40',
+
+        'security_situation_unit',
+        'security_unit_info',
+
+        'cm14',
+        'cm15',
+        'cm16',
     ];
     /*     protected $fillable = [
             'id',
@@ -922,7 +971,6 @@ class HousingUnit extends Model
             'cm9',
             'cm10',
             'cm11',
-            cm14,
             'pm1',
             'pm2',
             'pm101',

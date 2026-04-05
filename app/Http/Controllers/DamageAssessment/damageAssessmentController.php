@@ -256,7 +256,7 @@ class damageAssessmentController extends Controller
 
 
                 if (
-                    in_array($row->name, $fields, true) &&
+                    ($row->type === 1) &&
                     is_numeric($value) &&
                     $newCriteria > 0 &&
                     (float) $value > $newCriteria
