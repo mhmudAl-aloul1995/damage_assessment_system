@@ -13,7 +13,9 @@
 			/* Adjust this value as needed */
 		}
 	</style>
-
+	@php
+		$canDeleteHistory = auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor']);
+	@endphp
 	<div class="row mb-5">
 		<div class="col-md-12">
 			<div class="card card-flush shadow-sm">
@@ -252,11 +254,13 @@
 									<th>الدور</th>
 									<th>الملاحظات</th>
 									<th>التاريخ</th>
+									<th>إجراءات</th>
+
 								</tr>
 							</thead>
 							<tbody id="buildingHistoryTableBody">
 								<tr>
-									<td colspan="5" class="text-center text-muted">لا توجد بيانات</td>
+									<td colspan="6" class="text-center text-muted">لا توجد بيانات</td>
 								</tr>
 							</tbody>
 						</table>
@@ -331,10 +335,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																	<input class="form-check-input" type="checkbox"
-																		data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																</div>`
+																					<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																						<input class="form-check-input" type="checkbox"
+																							data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																					</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'assignedto', name: 'assignedto' },
@@ -525,6 +529,7 @@
 				});
 			});
 
+
 			$(document).on('click', '.btn-show-history', function (e) {
 				e.preventDefault();
 				e.stopPropagation();
@@ -534,10 +539,10 @@
 
 				$('#notesHistoryModalTitle').text('سجل الحالات - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-					<tr>
-						<td colspan="5" class="text-center">جاري التحميل...</td>
-					</tr>
-				`);
+						<tr>
+							<td colspan="6" class="text-center">جاري التحميل...</td>
+						</tr>
+					`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -551,31 +556,84 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-									<tr>
-										<td>${item.status_name}</td>
-										<td>${item.user_name}</td>
-										<td>${item.role_name}</td>
-										<td>${item.notes}</td>
-										<td>${item.created_at}</td>
-									</tr>
-								`;
+										<tr>
+											<td>${item.status_name}</td>
+											<td>${item.user_name}</td>
+											<td>${item.role_name}</td>
+											<td>${item.notes}</td>
+											<td>${item.created_at}</td>
+											<td>
+												${item.can_delete ? `
+													<button type="button"
+														class="btn btn-sm btn-light-danger btn-delete-history"
+														data-id="${item.id}">
+														حذف
+													</button>
+												` : '-'}
+											</td>
+										</tr>
+									`;
 							});
 						} else {
 							rows = `
-								<tr>
-									<td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-								</tr>
-							`;
+									<tr>
+										<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
+									</tr>
+								`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-							<tr>
-								<td colspan="5" class="text-center text-danger">تعذر تحميل السجل</td>
-							</tr>
-						`);
+								<tr>
+									<td colspan="6" class="text-center text-danger">تعذر تحميل السجل</td>
+								</tr>
+							`);
+					}
+				});
+			});
+
+
+			$(document).on('click', '.btn-delete-history', function () {
+				let id = $(this).data('id');
+				let button = $(this);
+
+				if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) {
+					return;
+				}
+
+				$.ajax({
+					url: "{{ route('audit.building.history.delete') }}",
+					type: "POST",
+					data: {
+						_token: "{{ csrf_token() }}",
+						id: id
+					},
+					success: function (response) {
+						if (response.status) {
+							toastr.success(response.message || 'تم حذف السجل بنجاح');
+							button.closest('tr').remove();
+
+							if ($('#buildingHistoryTableBody tr').length === 0) {
+								$('#buildingHistoryTableBody').html(`
+								<tr>
+									<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
+								</tr>
+							`);
+							}
+						} else {
+							toastr.error(response.message || 'فشل حذف السجل');
+						}
+					},
+					error: function (xhr) {
+						let message = 'تعذر حذف السجل';
+
+						if (xhr.responseJSON && xhr.responseJSON.message) {
+							message = xhr.responseJSON.message;
+						}
+
+						toastr.error(message);
 					}
 				});
 			});

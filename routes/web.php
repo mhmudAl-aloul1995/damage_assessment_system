@@ -251,6 +251,9 @@ Route::middleware('auth')->group(function () {
         ->name('assessment.notes.update');
     Route::get('audit/building-history', [auditController::class, 'buildingHistory'])
         ->name('audit.building.history');
+
+    Route::post('audit/building-history/delete', [auditController::class, 'deleteHistory'])
+        ->name('audit.building.history.delete');
 });
 
 require __DIR__ . '/auth.php';

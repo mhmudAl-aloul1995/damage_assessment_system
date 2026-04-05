@@ -3751,21 +3751,25 @@ class auditController extends Controller
             ]);
         }
 
+        $canDelete = auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor']);
+
         $history = BuildingStatusHistory::with(['user.roles', 'status'])
             ->where('building_id', $building->objectid)
             ->latest()
             ->get()
-            ->map(function ($item) {
+            ->map(function ($item) use ($canDelete) {
                 $statusName = $item->status->name ?? '-';
                 $statusLabel = $item->status->label_en ?? $statusName;
                 $roleName = $item->user?->roles?->first()?->name ?? '-';
 
                 return [
+                    'id' => $item->id,
                     'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
                     'notes' => $item->notes ?? '-',
-                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                    'created_at' => $item->created_at ? $item->created_at->format('Y-m-d h:i A') : '-',
+                    'can_delete' => $canDelete,
                 ];
             });
 
@@ -3917,7 +3921,7 @@ class auditController extends Controller
         }
     }
 
-    
+
     public function updateNote(Request $request)
     {
         $request->validate([
@@ -3988,6 +3992,48 @@ class auditController extends Controller
             ]);
         }
     }
+    public function deleteHistory(Request $request)
+    {
+        $history = BuildingStatusHistory::with('status')->find($request->id);
 
+        if (!$history) {
+            return response()->json([
+                'status' => false,
+                'message' => 'السجل غير موجود'
+            ]);
+        }
+
+        // السماح فقط لهذين الدورين
+        if (!auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'غير مصرح لك بحذف هذا السجل'
+            ], 403);
+        }
+
+        // اختياري: منع حذف آخر حالة
+        $isLast = BuildingStatusHistory::where('building_id', $history->building_id)->count() <= 1;
+        if ($isLast) {
+            return response()->json([
+                'status' => false,
+                'message' => 'لا يمكن حذف آخر حالة'
+            ]);
+        }
+
+        // اختياري: منع حذف الحالة النهائية
+        if (in_array($history->status->name ?? '', ['final_approval', 'final_rejected'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'لا يمكن حذف الحالة النهائية'
+            ]);
+        }
+
+        $history->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم حذف السجل بنجاح'
+        ]);
+    }
 
 }
