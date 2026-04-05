@@ -3917,9 +3917,7 @@ class auditController extends Controller
         }
     }
 
-    /**
-     * تحديث الملاحظة بعد التحقق من عدم وجود final approval
-     */
+    
     public function updateNote(Request $request)
     {
         $request->validate([

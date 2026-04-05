@@ -10,9 +10,9 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('assessments', function (Blueprint $table) {
-            $table->string('criteria ')->nullable()->after('hint');
-        });
+       /*  Schema::table('assessments', function (Blueprint $table) {
+            $table->string('criteria')->nullable()->after('hint');
+        }); */
     }
 
     /**
@@ -20,8 +20,8 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('assessments', function (Blueprint $table) {
+       /*  Schema::table('assessments', function (Blueprint $table) {
             //
-        });
+        }); */
     }
 };
