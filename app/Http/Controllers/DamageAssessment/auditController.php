@@ -3751,7 +3751,7 @@ class auditController extends Controller
             ]);
         }
 
-        $canDelete = auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor']);
+        $canDelete = auth()->user()->hasAnyRole([ 'Auditing Supervisor']);
 
         $history = BuildingStatusHistory::with(['user.roles', 'status'])
             ->where('building_id', $building->objectid)
