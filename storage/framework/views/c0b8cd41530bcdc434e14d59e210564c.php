@@ -90,13 +90,13 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">من تاريخ الإنشاء</label>
-                            <input type="date" id="filter_from_date" placehoder="من تاريخ الإنشاء"
+                            <input type="date" id="filter_from_date" placeholder="من تاريخ الإنشاء"
                                 class="form-control form-control-solid">
                         </div>
 
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">إلى تاريخ الإنشاء</label>
-                            <input type="date" id="filter_to_date" placehoder="إلى تاريخ الإنشاء"
+                            <input type="date" id="filter_to_date" placeholder="إلى تاريخ الإنشاء"
                                 class="form-control form-control-solid">
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
@@ -156,14 +156,20 @@
 
 <?php $__env->startSection('script'); ?>
     <script>
-        flatpickr("#filter_from_date", {
+        let fromPicker = flatpickr("#filter_from_date", {
             dateFormat: "Y-m-d",
-            'placeholder': 'من تاريخ الإنشاء'
-
+            allowInput: true,
+            onChange: function (selectedDates) {
+                toPicker.set('minDate', selectedDates[0]);
+            }
         });
-        flatpickr("#filter_to_date", {
+
+        let toPicker = flatpickr("#filter_to_date", {
             dateFormat: "Y-m-d",
-            'placeholder': 'إلى تاريخ الإنشاء'
+            allowInput: true,
+            onChange: function (selectedDates) {
+                fromPicker.set('maxDate', selectedDates[0]);
+            }
         });
         $(function () {
             let table = $('#auditTable').DataTable({
