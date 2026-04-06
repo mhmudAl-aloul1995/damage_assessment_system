@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Services\ArcgisService;
 
 class damageAssessmentController extends Controller
-{
+{//unit_damage_status , sex , are_there_people_with_disability, mchildren_001 ,fchildren , melderly , fchildren
 
     function __construct()
     {
@@ -45,8 +45,8 @@ class damageAssessmentController extends Controller
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
 
-        $startDate = '2026-01-01';
-        $endDate = Carbon::today()->toDateString();
+        $startDate = '2026-01-20';
+        $endDate = '2026-03-31';//Carbon::today()->toDateString();
 
         $data = [
             'buildings' => Building::selectRaw("
@@ -61,7 +61,7 @@ class damageAssessmentController extends Controller
         COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
         COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris
     ")
-                //   ->whereBetween('editdate', [$startDate, $endDate])
+                   ->whereBetween('creationdate', [$startDate, $endDate])
                 ->first(),
 
             'units' => HousingUnit::selectRaw("
@@ -75,7 +75,7 @@ class damageAssessmentController extends Controller
         COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,
         COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed
     ")
-                //   ->whereBetween('creationdate', [$startDate, $endDate])
+                   ->whereBetween('creationdate', [$startDate, $endDate])
                 ->first()
         ];
 
