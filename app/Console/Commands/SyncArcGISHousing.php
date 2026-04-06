@@ -15,7 +15,7 @@ class SyncArcGISHousing extends Command
     {
         // 1. Remove the 120s time limit
         set_time_limit(0);
-        $no_day = 10;
+        $no_day = 1000;
         $target_date_string = date('m-d-Y', strtotime("-" . $no_day . " days")) . ' 12:00:00 AM';
         $where_clause = "editdate >= '" . $target_date_string . "'";
 
