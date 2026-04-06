@@ -2808,7 +2808,7 @@ class auditController extends Controller
                 ->whereIn('objectid', function ($q) {
                     $q->select('building_id')
                         ->from('building_status_histories')
-                        ->where('status_id', 4)
+                        ->where('status_id', 2)
                         ->groupBy('building_id', 'type') // مهم جداً
                         ->havingRaw('COUNT(*) > 1');
                 });
