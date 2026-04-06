@@ -26,7 +26,6 @@ use App\Models\Filter;
 use App\Models\EditAssessment;
 use Illuminate\Support\Facades\Auth;
 use App\Services\ArcgisService;
-use Illuminate\Support\Facades\Schema;
 
 class damageAssessmentController extends Controller
 {//unit_damage_status , sex , are_there_people_with_disability, mchildren_001 ,fchildren , melderly , fchildren
@@ -165,13 +164,9 @@ class damageAssessmentController extends Controller
         $model = $modelClass::where('globalid', $globalid)->first();
         $record = $model?->toArray() ?? [];
 
+        $fillable = (new $modelClass())->getFillable();
+        $assessments = Assessment::query()->whereIn('name', $fillable);
 
-        $table = (new $modelClass())->getTable();
-
-        $columns = Schema::getColumnListing($table);
-
-        $assessments = Assessment::query()
-            ->whereIn('name', $columns);
         $allEdits = collect();
 
         if (!empty(request()->search['value'])) {
