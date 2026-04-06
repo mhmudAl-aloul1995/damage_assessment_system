@@ -2802,8 +2802,16 @@ class auditController extends Controller
                 'lawyerStatus.status'
             ])
                 ->whereNotIn('globalid', $globalids)
-                ->where('field_status', 'COMPLETED');
+                ->where('field_status', 'COMPLETED')
 
+                // ✅ هذا هو المهم
+                ->whereIn('objectid', function ($q) {
+                    $q->select('building_id')
+                        ->from('building_status_histories')
+                        ->where('status_id', 4)
+                        ->groupBy('building_id', 'type') // مهم جداً
+                        ->havingRaw('COUNT(*) > 1');
+                });
 
             if ($request->filled('engineer_id')) {
                 $query->whereHas('engineerAssignment', function ($q) use ($request) {
