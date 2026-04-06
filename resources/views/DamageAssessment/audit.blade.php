@@ -79,6 +79,7 @@
 								data-allow-clear="true" data-placeholder="اختر الحالة">
 								<option></option>
 								<option value="pending">Pending</option>
+								<option value="assigned_to_lawyer">Assigned To Lawyer</option>
 								<option value="accepted_by_lawyer">Accepted By Lawyer</option>
 								<option value="legal_notes">Legal Notes</option>
 							</select>
@@ -333,10 +334,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																					<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																						<input class="form-check-input" type="checkbox"
-																							data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																					</div>`
+																						<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																							<input class="form-check-input" type="checkbox"
+																								data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																						</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'assignedto', name: 'assignedto' },
@@ -537,10 +538,10 @@
 
 				$('#notesHistoryModalTitle').text('سجل الحالات - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-						<tr>
-							<td colspan="6" class="text-center">جاري التحميل...</td>
-						</tr>
-					`);
+							<tr>
+								<td colspan="6" class="text-center">جاري التحميل...</td>
+							</tr>
+						`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -554,40 +555,40 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-										<tr>
-											<td>${item.status_name}</td>
-											<td>${item.user_name}</td>
-											<td>${item.role_name}</td>
-											<td>${item.notes}</td>
-											<td>${item.created_at}</td>
-											<td>
-												${item.can_delete ? `
-													<button type="button"
-														class="btn btn-sm btn-light-danger btn-delete-history"
-														data-id="${item.id}">
-														حذف
-													</button>
-												` : '-'}
-											</td>
-										</tr>
-									`;
+											<tr>
+												<td>${item.status_name}</td>
+												<td>${item.user_name}</td>
+												<td>${item.role_name}</td>
+												<td>${item.notes}</td>
+												<td>${item.created_at}</td>
+												<td>
+													${item.can_delete ? `
+														<button type="button"
+															class="btn btn-sm btn-light-danger btn-delete-history"
+															data-id="${item.id}">
+															حذف
+														</button>
+													` : '-'}
+												</td>
+											</tr>
+										`;
 							});
 						} else {
 							rows = `
-									<tr>
-										<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
-									</tr>
-								`;
+										<tr>
+											<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
+										</tr>
+									`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-								<tr>
-									<td colspan="6" class="text-center text-danger">تعذر تحميل السجل</td>
-								</tr>
-							`);
+									<tr>
+										<td colspan="6" class="text-center text-danger">تعذر تحميل السجل</td>
+									</tr>
+								`);
 					}
 				});
 			});
@@ -615,10 +616,10 @@
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
-								<tr>
-									<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
-								</tr>
-							`);
+									<tr>
+										<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
+									</tr>
+								`);
 							}
 						} else {
 							toastr.error(response.message || 'فشل حذف السجل');
