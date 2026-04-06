@@ -10,8 +10,8 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('buildings', function (Blueprint $table) {
-            $table->string('building_services_notes_v1')->nullable()->after('id');
+        Schema::table('housing_units', function (Blueprint $table) {
+            $table->text('building_services_notes_v1')->nullable()->after('id');
 
         });
     }
@@ -21,7 +21,7 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('buildings', function (Blueprint $table) {
+        Schema::table('housing_units', function (Blueprint $table) {
             $table->dropColumn('building_services_notes_v1');
 
         });
