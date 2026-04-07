@@ -273,7 +273,7 @@
                     resetUserForm();
 
                     const user = response.user;
-
+                    $('#roles_select').val(null).trigger('change');
                     $('#user_modal_title').text('تعديل مستخدم');
                     $('#user_id').val(user.id);
                     $('#kt_modal_user_form input[name="name"]').val(user.name ?? '');
@@ -284,7 +284,7 @@
                     $('#kt_modal_user_form input[name="phone"]').val(user.phone ?? '');
                     $('#kt_modal_user_form input[name="address"]').val(user.address ?? '');
                     $('#kt_modal_user_form select[name="region"]').val(user.region ?? '');
-                    $('#roles_select').val(null).trigger('change');
+
 
                     if (response.roles && response.roles.length > 0) {
                         $('#roles_select').val(response.roles).trigger('change');
