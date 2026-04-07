@@ -59,6 +59,19 @@
 											</select>
 										</div>
 									<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+									<div class="col-md-4 mb-4">
+										<label class="form-label fw-bold">عدد أفراد الأسرة من</label>
+										<input type="number" name="family_members_from"
+											class="form-control form-control-solid" min="0"
+											value="<?php echo e(old('family_members_from')); ?>">
+									</div>
+
+									<div class="col-md-4 mb-4">
+										<label class="form-label fw-bold">عدد أفراد الأسرة إلى</label>
+										<input type="number" name="family_members_to"
+											class="form-control form-control-solid" min="0"
+											value="<?php echo e(old('family_members_to')); ?>">
+									</div>
 								</div>
 							</div>
 						</div>

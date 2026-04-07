@@ -63,11 +63,17 @@ class ExportDataController extends Controller
                 'housing_columns' => ['nullable', 'array'],
                 'housing_columns.*' => ['string'],
                 'filters' => ['nullable', 'array'],
+                'family_members_from' => ['nullable', 'numeric', 'min:0'],
+                'family_members_to' => ['nullable', 'numeric', 'min:0'],
             ]);
+
             $buildingColumns = $request->input('building_columns', []);
             $housingColumns = $request->input('housing_columns', []);
             $selectedFilters = $request->input('filters', []);
+            $familyMembersFrom = $request->input('family_members_from');
+            $familyMembersTo = $request->input('family_members_to');
 
+            
             if (empty($buildingColumns) && empty($housingColumns)) {
                 return back()->with('error', 'يرجى اختيار عمود واحد على الأقل للتصدير.');
             }
@@ -101,7 +107,34 @@ class ExportDataController extends Controller
                 $housingJoined = true;
             }
 
+            // إذا كان عندك فلتر أفراد الأسرة أو فلتر على أعمدة housing
+            $needsHousingJoinForFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
+            if ($needsHousingJoinForFamily && !$housingJoined) {
+                $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
+                $housingJoined = true;
+            }
+
+            // select columns
             $query->selectRaw(implode(', ', $selects));
+
+            // family members total expression
+            $familyMembersExpression = "
+            (
+                COALESCE(CAST(NULLIF(h.mchildren_001, '') AS UNSIGNED), 0) +
+                COALESCE(CAST(NULLIF(h.melderly, '') AS UNSIGNED), 0) +
+                COALESCE(CAST(NULLIF(h.myoung, '') AS UNSIGNED), 0) +
+                COALESCE(CAST(NULLIF(h.fchildren, '') AS UNSIGNED), 0) +
+                COALESCE(CAST(NULLIF(h.fyoung_001, '') AS UNSIGNED), 0) +
+                COALESCE(CAST(NULLIF(h.felderly, '') AS UNSIGNED), 0)
+            )
+        ";
+
+            // لو تريد أيضًا تصدير العدد نفسه كعمود
+            if ($needsHousingJoinForFamily) {
+                $query->addSelect(DB::raw("$familyMembersExpression as family_members_total"));
+
+            }
+
 
             foreach ($selectedFilters as $field => $values) {
                 $values = array_filter((array) $values, fn($v) => $v !== null && $v !== '');
@@ -120,6 +153,15 @@ class ExportDataController extends Controller
 
                     $query->whereIn("h.$field", $values);
                 }
+            }
+
+            // فلتر عدد أفراد الأسرة
+            if (!is_null($familyMembersFrom)) {
+                $query->having('family_members_total', '>=', (int) $familyMembersFrom);
+            }
+
+            if (!is_null($familyMembersTo)) {
+                $query->having('family_members_total', '<=', (int) $familyMembersTo);
             }
 
             $rows = $query->get();

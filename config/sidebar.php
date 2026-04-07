@@ -81,6 +81,12 @@ return [
                 'pattern' => 'reports/productivity*',
                 'roles' => ['Database Officer', 'Project Officer', 'Area Manager']
             ],
+             [
+                'title' => 'تصدير البيانات',
+                'url' => 'export-data',
+                'pattern' => 'export-data*',
+                'roles' => ['Database Officer', 'Project Officer']
+            ],
 
         ]
 

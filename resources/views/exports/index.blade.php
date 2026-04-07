@@ -58,6 +58,19 @@
 											</select>
 										</div>
 									@endforeach
+									<div class="col-md-4 mb-4">
+										<label class="form-label fw-bold">عدد أفراد الأسرة من</label>
+										<input type="number" name="family_members_from"
+											class="form-control form-control-solid" min="0"
+											value="{{ old('family_members_from') }}">
+									</div>
+
+									<div class="col-md-4 mb-4">
+										<label class="form-label fw-bold">عدد أفراد الأسرة إلى</label>
+										<input type="number" name="family_members_to"
+											class="form-control form-control-solid" min="0"
+											value="{{ old('family_members_to') }}">
+									</div>
 								</div>
 							</div>
 						</div>
