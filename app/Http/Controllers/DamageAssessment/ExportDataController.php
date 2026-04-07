@@ -208,7 +208,7 @@ class ExportDataController extends Controller
                     'headers' => $headers,
                 ])->render();
 
-                $mpdf = new Mpdf([
+                $mpdf = new \Mpdf\Mpdf([
                     'mode' => 'utf-8',
                     'format' => 'A4-L',
                     'default_font' => 'dejavusans',
@@ -306,7 +306,7 @@ class ExportDataController extends Controller
             'headers' => $headers,
         ])->render();
 
-        $mpdf = new Mpdf([
+        $mpdf = new \Mpdf\Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4-L',
             'default_font' => 'dejavusans',
