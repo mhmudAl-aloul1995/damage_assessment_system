@@ -161,7 +161,7 @@
                             </div>
 
                             <div class="fv-row mb-7">
-                                <label class="required fw-semibold fs-6 mb-2">العنوان</label>
+                                <label class=" fw-semibold fs-6 mb-2">العنوان</label>
                                 <input type="text" name="address" class="form-control form-control-solid"
                                     placeholder="العنوان" />
                             </div>
