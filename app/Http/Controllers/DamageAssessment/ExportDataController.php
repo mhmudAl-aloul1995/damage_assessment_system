@@ -5,7 +5,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 class ExportDataController extends Controller
 {
     public function index()
@@ -54,6 +58,8 @@ class ExportDataController extends Controller
         ]);
     }
 
+
+
     public function export(Request $request)
     {
         try {
@@ -73,7 +79,6 @@ class ExportDataController extends Controller
             $familyMembersFrom = $request->input('family_members_from');
             $familyMembersTo = $request->input('family_members_to');
 
-            
             if (empty($buildingColumns) && empty($housingColumns)) {
                 return back()->with('error', 'يرجى اختيار عمود واحد على الأقل للتصدير.');
             }
@@ -107,17 +112,14 @@ class ExportDataController extends Controller
                 $housingJoined = true;
             }
 
-            // إذا كان عندك فلتر أفراد الأسرة أو فلتر على أعمدة housing
             $needsHousingJoinForFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
             if ($needsHousingJoinForFamily && !$housingJoined) {
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
                 $housingJoined = true;
             }
 
-            // select columns
             $query->selectRaw(implode(', ', $selects));
 
-            // family members total expression
             $familyMembersExpression = "
             (
                 COALESCE(CAST(NULLIF(h.mchildren_001, '') AS UNSIGNED), 0) +
@@ -129,12 +131,9 @@ class ExportDataController extends Controller
             )
         ";
 
-            // لو تريد أيضًا تصدير العدد نفسه كعمود
             if ($needsHousingJoinForFamily) {
                 $query->addSelect(DB::raw("$familyMembersExpression as family_members_total"));
-
             }
-
 
             foreach ($selectedFilters as $field => $values) {
                 $values = array_filter((array) $values, fn($v) => $v !== null && $v !== '');
@@ -155,7 +154,6 @@ class ExportDataController extends Controller
                 }
             }
 
-            // فلتر عدد أفراد الأسرة
             if (!is_null($familyMembersFrom)) {
                 $query->having('family_members_total', '>=', (int) $familyMembersFrom);
             }
@@ -166,23 +164,87 @@ class ExportDataController extends Controller
 
             $rows = $query->get();
 
-            $fileName = 'export_buildings_housing_' . now()->format('Y_m_d_H_i_s') . '.csv';
-            $path = storage_path('app/public/' . $fileName);
-
-            $handle = fopen($path, 'w');
-            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Export');
 
             if ($rows->count() > 0) {
-                fputcsv($handle, array_keys((array) $rows->first()));
+                $headers = array_keys((array) $rows->first());
 
-                foreach ($rows as $row) {
-                    fputcsv($handle, (array) $row);
+                // Header row
+                foreach ($headers as $index => $header) {
+                    $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1);
+                    $sheet->setCellValue($columnLetter . '1', $header);
                 }
+
+                // Data rows
+                $rowNumber = 2;
+                foreach ($rows as $row) {
+                    $rowData = array_values((array) $row);
+                    foreach ($rowData as $index => $value) {
+                        $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1);
+                        $sheet->setCellValue($columnLetter . $rowNumber, $value);
+                    }
+                    $rowNumber++;
+                }
+
+                $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+                $lastRow = $rows->count() + 1;
+
+                // Header style
+                $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['rgb' => 'FFFFFF'],
+                        'size' => 12,
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => '1F4E78'],
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                        ],
+                    ],
+                ]);
+
+                // All cells style
+                $sheet->getStyle("A1:{$lastColumn}{$lastRow}")->applyFromArray([
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                        ],
+                    ],
+                ]);
+
+                // Auto size columns
+                for ($i = 1; $i <= count($headers); $i++) {
+                    $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
+                    $sheet->getColumnDimension($columnLetter)->setAutoSize(true);
+                }
+
+                // Auto filter
+                $sheet->setAutoFilter("A1:{$lastColumn}{$lastRow}");
+
+                // Freeze header
+                $sheet->freezePane('A2');
             } else {
-                fputcsv($handle, ['No Data']);
+                $sheet->setCellValue('A1', 'No Data');
             }
 
-            fclose($handle);
+            $fileName = 'export_buildings_housing_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
+            $path = storage_path('app/public/' . $fileName);
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($path);
 
             return response()->download($path)->deleteFileAfterSend(true);
 
