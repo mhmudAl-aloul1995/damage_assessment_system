@@ -263,6 +263,8 @@
         function openUserModalForCreate() {
             resetUserForm();
             bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_user')).show();
+            $('#roles_select').val(null).trigger('change');
+
         }
 
         function showUser(id) {
