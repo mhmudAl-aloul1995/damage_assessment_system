@@ -17,7 +17,7 @@
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "*",
-        "mpdf/mpdf": "*",
+        "mpdf/mpdf": "^8.3",
         "spatie/laravel-pdf": "^2.2",
         "spatie/laravel-permission": "^6.24",
         "yajra/laravel-datatables": "^12",
