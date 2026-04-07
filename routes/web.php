@@ -21,6 +21,7 @@ use App\Http\Controllers\Attendance\AttendanceController;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Artisan;
 use App\Models\AttendanceImportLog;
+use App\Http\Controllers\DamageAssessment\ExportDataController;
 
 
 Route::get('/', function () {
@@ -254,6 +255,11 @@ Route::middleware('auth')->group(function () {
 
     Route::post('audit/building-history/delete', [auditController::class, 'deleteHistory'])
         ->name('audit.building.history.delete');
+
+
+    Route::get('/export-data', [ExportDataController::class, 'index'])->name('export.data.index');
+    Route::post('/export-data', [ExportDataController::class, 'export'])->name('export.data.download');
+    
 });
 
 require __DIR__ . '/auth.php';

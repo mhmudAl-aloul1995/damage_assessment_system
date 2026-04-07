@@ -100,7 +100,7 @@
                                     <div class="card-toolbar">
                                         <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap"
                                             data-kt-Building-table-toolbar="base">
-                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor|Database Officer')): ?>
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" onclick="setBuildingStatus('accepted')">
                                                 مقبول
@@ -111,7 +111,7 @@
                                             </button>
                                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'QC/QA Engineer')): ?>
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'QC/QA Engineer|Database Officer')): ?>
                                             <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                 data-status="rejected" onclick="setBuildingStatus('rejected')">
                                                 مرفوض
