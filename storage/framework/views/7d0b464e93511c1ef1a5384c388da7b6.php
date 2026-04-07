@@ -1,9 +1,22 @@
 <?php $__env->startSection('content'); ?>
+	<style>
+		.card-toolbar .dropdown-menu .dropdown-item {
+			font-size: 13px;
+			padding: 0.65rem 1rem;
+			transition: 0.2s ease;
+		}
+
+		.card-toolbar .dropdown-menu .dropdown-item:hover {
+			background-color: #f8f9fa;
+		}
+	</style>
 	<div class="container py-4">
 
 		<div class="card shadow-sm">
 			<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
 				<h3 class="mb-0">تصدير بيانات المباني والوحدات السكنية</h3>
+
+
 			</div>
 
 			<div class="card-body">
@@ -14,7 +27,7 @@
 					</div>
 				<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-				<form action="<?php echo e(route('export.data.download')); ?>" method="POST">
+				<form id="exportForm" action="<?php echo e(route('export.data.download')); ?>" method="POST">
 					<?php echo csrf_field(); ?>
 
 					
@@ -27,22 +40,77 @@
 									data-bs-target="#filtersCollapse" aria-expanded="true" aria-controls="filtersCollapse"
 									id="toggleFiltersBtn">
 									<i class="fas fa-chevron-down me-1"></i>
-									عرض
+									إظهار
 								</button>
 
 								<button type="button" class="btn btn-sm btn-light-danger" onclick="resetFilters()">
 									<i class="fas fa-times me-1"></i>
 									مسح الفلاتر
 								</button>
+								<button type="button"
+									class="btn btn-light-primary btn-sm dropdown-toggle d-flex align-items-center gap-1"
+									data-bs-toggle="dropdown" aria-expanded="false">
+
+									<i class="ki-duotone ki-exit-down fs-5">
+										<span class="path1"></span>
+										<span class="path2"></span>
+									</i>
+									تصدير
+								</button>
+
+								<div class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="submit"
+										form="exportForm" name="export_type" value="excel">
+										<i class="ki-duotone ki-file-down fs-4 text-success">
+											<span class="path1"></span>
+											<span class="path2"></span>
+										</i>
+										<span>Excel (.xlsx)</span>
+									</button>
+
+									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="submit"
+										form="exportForm" name="export_type" value="pdf">
+										<i class="ki-duotone ki-file-down fs-4 text-danger">
+											<span class="path1"></span>
+											<span class="path2"></span>
+										</i>
+										<span>PDF (.pdf)</span>
+									</button>
+								</div>
 							</div>
+
 						</div>
 
-						<div class="collapse " id="filtersCollapse">
+						<div class="collapse" id="filtersCollapse">
 							<div class="card-body">
-								<div class="row">
+
+								<div class="mb-5">
+									<div class="input-group">
+										<span class="input-group-text">
+											<i class="fas fa-search"></i>
+										</span>
+
+										<input type="text" id="filterSearch" class="form-control form-control-solid"
+											placeholder="ابحث عن الفلتر... مثل neighborhood أو locality"
+											onkeyup="filterFilterCards()">
+
+										<button type="button" class="btn btn-light" onclick="clearFilterSearch()">
+											مسح
+										</button>
+									</div>
+
+									<div class="text-muted fs-7 mt-2">
+										عدد الفلاتر الظاهرة:
+										<span id="filterCardsCounter"><?php echo e(count($filters)); ?></span>
+										/ <?php echo e(count($filters)); ?>
+
+									</div>
+								</div>
+
+								<div class="row" id="filtersCardsList">
 									<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $filters; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $listName => $items): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
-										<div class="col-md-4 mb-4">
-											<label class="form-label fw-bold">
+										<div class="col-md-4 mb-4 filter-card-item">
+											<label class="form-label fw-bold searchable-filter-name">
 												<?php echo e(ucwords(str_replace('_', ' ', $listName))); ?>
 
 											</label>
@@ -59,16 +127,18 @@
 											</select>
 										</div>
 									<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
-									<div class="col-md-4 mb-4">
-										<label class="form-label fw-bold">عدد أفراد الأسرة من</label>
+
+									<div class="col-md-4 mb-4 filter-card-item static-filter-card">
+										<label class="form-label fw-bold searchable-filter-name">عدد أفراد الأسرة من</label>
 										<input type="number" name="family_members_from"
-											class="form-control form-control-solid" min="0"
+											class="form-control form-control-solid" min="0" placeholder="عدد أفراد الأسرة من"
 											value="<?php echo e(old('family_members_from')); ?>">
 									</div>
 
-									<div class="col-md-4 mb-4">
-										<label class="form-label fw-bold">عدد أفراد الأسرة إلى</label>
-										<input type="number" name="family_members_to"
+									<div class="col-md-4 mb-4 filter-card-item static-filter-card">
+										<label class="form-label fw-bold searchable-filter-name">عدد أفراد الأسرة
+											إلى</label>
+										<input type="number" name="family_members_to" placeholder="عدد أفراد الأسرة إلى"
 											class="form-control form-control-solid" min="0"
 											value="<?php echo e(old('family_members_to')); ?>">
 									</div>
@@ -79,6 +149,7 @@
 
 					<div class="row">
 						
+
 						<div class="col-lg-6 mb-4">
 							<div class="card card-bordered h-100">
 								<div class="card-header border-0 pt-4">
@@ -251,11 +322,7 @@
 						</div>
 					</div>
 
-					<div class="d-flex justify-content-end mt-4">
-						<button type="submit" class="btn btn-success">
-							تصدير CSV
-						</button>
-					</div>
+
 				</form>
 			</div>
 		</div>
@@ -312,10 +379,10 @@
 			filterColumns(inputId, listId, counterId);
 			input.focus();
 		}
-
 		document.addEventListener('DOMContentLoaded', function () {
 			filterColumns('buildingSearch', 'buildingColumnsList', 'buildingCounter');
 			filterColumns('housingSearch', 'housingColumnsList', 'housingCounter');
+			filterFilterCards();
 
 			$('.filter-select2').select2({
 				width: '100%',
@@ -329,14 +396,41 @@
 
 			if (collapse && btn) {
 				collapse.addEventListener('shown.bs.collapse', function () {
-					btn.innerHTML = '<i class="fas fa-chevron-down me-1"></i> عرض';
+					btn.innerHTML = '<i class="fas fa-chevron-down me-1"></i> إخفاء';
 				});
 
 				collapse.addEventListener('hidden.bs.collapse', function () {
-					btn.innerHTML = '<i class="fas fa-chevron-left me-1"></i> عرض';
+					btn.innerHTML = '<i class="fas fa-chevron-left me-1"></i> إظهار';
 				});
 			}
 		});
+		function filterFilterCards() {
+			const input = document.getElementById('filterSearch');
+			const filter = input.value.toLowerCase().trim();
+			const items = document.querySelectorAll('#filtersCardsList .filter-card-item');
+
+			let visibleCount = 0;
+
+			items.forEach(function (item) {
+				const text = item.innerText.toLowerCase();
+
+				if (text.includes(filter)) {
+					item.style.display = '';
+					visibleCount++;
+				} else {
+					item.style.display = 'none';
+				}
+			});
+
+			document.getElementById('filterCardsCounter').innerText = visibleCount;
+		}
+
+		function clearFilterSearch() {
+			const input = document.getElementById('filterSearch');
+			input.value = '';
+			filterFilterCards();
+			input.focus();
+		}
 	</script>
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/exports/index.blade.php ENDPATH**/ ?>

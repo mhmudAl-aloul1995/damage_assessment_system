@@ -10,6 +10,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use Barryvdh\DomPDF\Facade\Pdf;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 class ExportDataController extends Controller
 {
     public function index()
@@ -60,6 +62,7 @@ class ExportDataController extends Controller
 
 
 
+
     public function export(Request $request)
     {
         try {
@@ -71,6 +74,7 @@ class ExportDataController extends Controller
                 'filters' => ['nullable', 'array'],
                 'family_members_from' => ['nullable', 'numeric', 'min:0'],
                 'family_members_to' => ['nullable', 'numeric', 'min:0'],
+                'export_type' => ['required', 'in:excel,pdf'],
             ]);
 
             $buildingColumns = $request->input('building_columns', []);
@@ -78,6 +82,7 @@ class ExportDataController extends Controller
             $selectedFilters = $request->input('filters', []);
             $familyMembersFrom = $request->input('family_members_from');
             $familyMembersTo = $request->input('family_members_to');
+            $exportType = $request->input('export_type', 'excel');
 
             if (empty($buildingColumns) && empty($housingColumns)) {
                 return back()->with('error', 'يرجى اختيار عمود واحد على الأقل للتصدير.');
@@ -104,7 +109,6 @@ class ExportDataController extends Controller
             }
 
             $query = DB::table('buildings as b');
-
             $housingJoined = false;
 
             if (!empty($housingColumns)) {
@@ -164,81 +168,83 @@ class ExportDataController extends Controller
 
             $rows = $query->get();
 
+            if ($rows->isEmpty()) {
+                return back()->with('error', 'لا يوجد بيانات للتصدير.');
+            }
+
+            $headers = array_keys((array) $rows->first());
+
+            if ($exportType === 'pdf') {
+                $pdf = Pdf::loadView('exports.buildings_pdf', [
+                    'rows' => $rows,
+                    'headers' => $headers,
+                ])->setPaper('a4', 'landscape');
+
+                return $pdf->download('export_buildings_housing_' . now()->format('Y_m_d_H_i_s') . '.pdf');
+            }
+
+            // Excel
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Export');
 
-            if ($rows->count() > 0) {
-                $headers = array_keys((array) $rows->first());
-
-                // Header row
-                foreach ($headers as $index => $header) {
-                    $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1);
-                    $sheet->setCellValue($columnLetter . '1', $header);
-                }
-
-                // Data rows
-                $rowNumber = 2;
-                foreach ($rows as $row) {
-                    $rowData = array_values((array) $row);
-                    foreach ($rowData as $index => $value) {
-                        $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1);
-                        $sheet->setCellValue($columnLetter . $rowNumber, $value);
-                    }
-                    $rowNumber++;
-                }
-
-                $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
-                $lastRow = $rows->count() + 1;
-
-                // Header style
-                $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'color' => ['rgb' => 'FFFFFF'],
-                        'size' => 12,
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => '1F4E78'],
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                        ],
-                    ],
-                ]);
-
-                // All cells style
-                $sheet->getStyle("A1:{$lastColumn}{$lastRow}")->applyFromArray([
-                    'alignment' => [
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                        ],
-                    ],
-                ]);
-
-                // Auto size columns
-                for ($i = 1; $i <= count($headers); $i++) {
-                    $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
-                    $sheet->getColumnDimension($columnLetter)->setAutoSize(true);
-                }
-
-                // Auto filter
-                $sheet->setAutoFilter("A1:{$lastColumn}{$lastRow}");
-
-                // Freeze header
-                $sheet->freezePane('A2');
-            } else {
-                $sheet->setCellValue('A1', 'No Data');
+            foreach ($headers as $index => $header) {
+                $columnLetter = Coordinate::stringFromColumnIndex($index + 1);
+                $sheet->setCellValue($columnLetter . '1', $header);
             }
+
+            $rowNumber = 2;
+            foreach ($rows as $row) {
+                $rowData = array_values((array) $row);
+                foreach ($rowData as $index => $value) {
+                    $columnLetter = Coordinate::stringFromColumnIndex($index + 1);
+                    $sheet->setCellValue($columnLetter . $rowNumber, $value);
+                }
+                $rowNumber++;
+            }
+
+            $lastColumn = Coordinate::stringFromColumnIndex(count($headers));
+            $lastRow = $rows->count() + 1;
+
+            $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'color' => ['rgb' => 'FFFFFF'],
+                    'size' => 12,
+                ],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '1F4E78'],
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                    ],
+                ],
+            ]);
+
+            $sheet->getStyle("A1:{$lastColumn}{$lastRow}")->applyFromArray([
+                'alignment' => [
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                    ],
+                ],
+            ]);
+
+            for ($i = 1; $i <= count($headers); $i++) {
+                $columnLetter = Coordinate::stringFromColumnIndex($i);
+                $sheet->getColumnDimension($columnLetter)->setAutoSize(true);
+            }
+
+            $sheet->setAutoFilter("A1:{$lastColumn}{$lastRow}");
+            $sheet->freezePane('A2');
 
             $fileName = 'export_buildings_housing_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
             $path = storage_path('app/public/' . $fileName);
