@@ -52,7 +52,7 @@
     </div>
 
     <div class="modal fade" id="kt_modal_user" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered mw-650px">
+        <div class="modal-dialog modal-dialog-centered  mw-lg-800px mw-650px">
             <div class="modal-content">
                 <div class="modal-header" id="kt_modal_user_header">
                     <h2 class="fw-bold" id="user_modal_title">إضافة مستخدم</h2>
