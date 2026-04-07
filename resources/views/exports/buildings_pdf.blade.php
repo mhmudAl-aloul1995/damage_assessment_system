@@ -1,44 +1,47 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+ q<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Export PDF</title>
     <style>
-        @page {
-            margin: 20px;
-        }
-
         body {
             font-family: DejaVu Sans, sans-serif;
-            direction: rtl;
-            unicode-bidi: embed;
-            text-align: right;
             font-size: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 12px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed;
-            direction: rtl;
-        }
-
-        th, td {
-            border: 1px solid #ccc;
-            padding: 4px;
-            text-align: right;
-            vertical-align: middle;
-            word-wrap: break-word;
+            table-layout: auto;
         }
 
         th {
-            background: #e9ecef;
-            font-weight: bold;
+            background-color: #1F4E78;
+            color: #fff;
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: center;
+        }
+
+        td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: center;
+            word-wrap: break-word;
+        }
+
+        tr:nth-child(even) {
+            background: #f5f5f5;
         }
     </style>
 </head>
 <body>
-    <h3 style="text-align:center;">تصدير البيانات</h3>
+    <h2>Buildings & Housing Export</h2>
 
     <table>
         <thead>
@@ -51,7 +54,7 @@
         <tbody>
             @foreach($rows as $row)
                 <tr>
-                    @foreach($row as $value)
+                    @foreach((array) $row as $value)
                         <td>{{ $value }}</td>
                     @endforeach
                 </tr>
