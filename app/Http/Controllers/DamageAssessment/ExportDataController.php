@@ -12,7 +12,6 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use Mpdf\Mpdf;  
 class ExportDataController extends Controller
 {
     public function index()
