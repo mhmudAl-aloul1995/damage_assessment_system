@@ -183,7 +183,7 @@ class ExportDataController extends Controller
                     return back()->with('error', 'PDF مناسب لعدد أعمدة قليل فقط. استخدم Excel.');
                 }
 
-                $rows = $query->limit(150)->get();
+                $rows = $query->get();
 
                 if ($rows->isEmpty()) {
                     return back()->with('error', 'لا يوجد بيانات للتصدير.');
@@ -209,7 +209,7 @@ class ExportDataController extends Controller
                     'headers' => $headers,
                 ])->render();
 
-                $mpdf = new \Mpdf\Mpdf([
+                $mpdf = new Mpdf([
                     'mode' => 'utf-8',
                     'format' => 'A4-L',
                     'default_font' => 'dejavusans',
@@ -307,7 +307,7 @@ class ExportDataController extends Controller
             'headers' => $headers,
         ])->render();
 
-        $mpdf = new \Mpdf\Mpdf([
+        $mpdf = new Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4-L',
             'default_font' => 'dejavusans',
