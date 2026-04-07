@@ -84,6 +84,7 @@ class ExportDataController extends Controller
             $familyMembersTo = $request->input('family_members_to');
             $exportType = $request->input('export_type', 'excel');
 
+
             if (empty($buildingColumns) && empty($housingColumns)) {
                 return back()->with('error', 'يرجى اختيار عمود واحد على الأقل للتصدير.');
             }
@@ -175,6 +176,7 @@ class ExportDataController extends Controller
             $headers = array_keys((array) $rows->first());
 
             if ($exportType === 'pdf') {
+                $rows = $query->limit(200);
                 $pdf = Pdf::loadView('exports.buildings_pdf', [
                     'rows' => $rows,
                     'headers' => $headers,
