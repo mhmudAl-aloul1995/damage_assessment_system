@@ -101,7 +101,7 @@
                                     <div class="card-toolbar">
                                         <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap"
                                             data-kt-Building-table-toolbar="base">
-                                            @role('Legal Auditor|Database Officer')
+                                            @role('Legal Auditor')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" onclick="setBuildingStatus('accepted')">
                                                 مقبول
@@ -112,7 +112,7 @@
                                             </button>
                                             @endrole
 
-                                            @role('QC/QA Engineer|Database Officer')
+                                            @role('QC/QA Engineer')
                                             <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                 data-status="rejected" onclick="setBuildingStatus('rejected')">
                                                 مرفوض
