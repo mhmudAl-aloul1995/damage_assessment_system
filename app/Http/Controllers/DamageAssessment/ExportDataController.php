@@ -209,12 +209,28 @@ class ExportDataController extends Controller
                     'headers' => $headers,
                 ])->render();
 
-                $mpdf = new Mpdf([
+                $mpdf = new \Mpdf\Mpdf([
                     'mode' => 'utf-8',
                     'format' => 'A4-L',
                     'default_font' => 'dejavusans',
                     'directionality' => 'rtl',
+                    'autoScriptToLang' => true,
+                    'autoLangToFont' => true,
+                    'margin_top' => 28,
+                    'margin_bottom' => 18,
+                    'margin_left' => 8,
+                    'margin_right' => 8,
                 ]);
+
+                $mpdf->SetTitle('Damage Assessment Report');
+                $mpdf->SetAuthor(config('app.name'));
+                $mpdf->SetHTMLFooter('
+    <div style="border-top:1px solid #999; font-size:10px; padding-top:6px; text-align:center; color:#666;">
+        <span>تاريخ التصدير: ' . now()->format('Y-m-d H:i') . '</span>
+        &nbsp; | &nbsp;
+        <span>الصفحة {PAGENO} من {nbpg}</span>
+    </div>
+');
 
                 $mpdf->WriteHTML($html);
 
