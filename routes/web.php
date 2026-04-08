@@ -202,7 +202,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('damageAssessment', controller: damageAssessmentController::class);
     Route::get('/showBuildings', action: [damageAssessmentController::class, 'showBuildings']);
     Route::get('/showHousings', action: [damageAssessmentController::class, 'showHousings']);
-
+    Route::get('/housing-units-map', [damageAssessmentController::class, 'housingUnitsMap'])
+        ->name('housing-units-map');
     // Reports
 
     Route::get('reports/productivity', action: [reportController::class, 'productivity']);

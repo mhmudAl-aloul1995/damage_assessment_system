@@ -257,7 +257,7 @@ class damageAssessmentController extends Controller
                 if (
                     ($row->type == 2) &&
                     is_numeric($value) &&
-                  
+
                     $value < $criteria
                 ) {
                     return 'table-danger';
@@ -484,5 +484,85 @@ class damageAssessmentController extends Controller
             'No' => 'لا',
             default => $value,
         };
+    }
+
+
+
+    public function housingUnitsMap(Request $request)
+    {
+        $query = HousingUnit::query()
+            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
+            ->select([
+                'housing_units.id',
+                'housing_units.globalid as housing_globalid',
+                'buildings.globalid as building_globalid',
+                'buildings.objectid',
+                'buildings.building_name as building_name',
+                'buildings.neighborhood as neighborhood',
+                'housing_units.unit_damage_status',
+                DB::raw("
+                TRIM(CONCAT_WS(' ',
+                    housing_units.q_9_3_1_first_name,
+                    housing_units.q_9_3_4_last_name
+                )) as full_name1
+            "),
+            ]);
+
+        return DataTables::of($query)
+
+
+            ->filterColumn('full_name1', function ($query, $keyword) {
+                $query->whereRaw("
+                CONCAT_WS(' ',
+                    housing_units.q_9_3_1_first_name,
+                    housing_units.q_9_3_4_last_name
+                ) LIKE ?
+            ", ["%{$keyword}%"]);
+            })
+            ->editColumn('unit_damage_status', function ($row) {
+
+                return match ($row->unit_damage_status) {
+                    'fully_damaged2' => '<span class="badge badge-light-danger fw-bold">Fully</span>',
+                    'partially_damaged2' => '<span class="badge badge-light-success fw-bold">Partially</span>',
+                    'committe_review2' => '<span class="badge badge-light-warning fw-bold">Commitee</span>',
+                    default => '-',
+                };
+            })
+            ->rawColumns(['unit_damage_status'])
+
+            ->filterColumn('building_name', function ($query, $keyword) {
+                $query->where('buildings.building_name', 'like', "%{$keyword}%");
+            })
+
+            ->filterColumn('neighborhood', function ($query, $keyword) {
+                $query->where('buildings.neighborhood', 'like', "%{$keyword}%");
+            })
+
+            ->filterColumn('unit_damage_status', function ($query, $keyword) {
+                $query->where('housing_units.unit_damage_status', 'like', "%{$keyword}%");
+            })
+
+            ->orderColumn('building_name', function ($query, $order) {
+                $query->orderBy('buildings.building_name', $order);
+            })
+
+            ->orderColumn('neighborhood', function ($query, $order) {
+                $query->orderBy('buildings.neighborhood', $order);
+            })
+
+            ->orderColumn('unit_damage_status', function ($query, $order) {
+                $query->orderBy('housing_units.unit_damage_status', $order);
+            })
+
+            ->orderColumn('full_name', function ($query, $order) {
+                $query->orderByRaw("
+                CONCAT_WS(' ',
+                    housing_units.q_9_3_1_first_name,
+                    housing_units.q_9_3_4_last_name
+                ) {$order}
+            ");
+            })
+
+            ->make(true);
     }
 }
