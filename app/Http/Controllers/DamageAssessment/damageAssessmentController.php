@@ -524,7 +524,7 @@ class damageAssessmentController extends Controller
                 return match ($row->unit_damage_status) {
                     'fully_damaged2' => '<span class="badge badge-light-danger fw-bold">Fully</span>',
                     'partially_damaged2' => '<span class="badge badge-light-success fw-bold">Partially</span>',
-                    'committe_review2' => '<span class="badge badge-light-warning fw-bold">Commitee</span>',
+                    'committee_review2' => '<span class="badge badge-light-warning fw-bold">Commitee</span>',
                     default => '-',
                 };
             })
