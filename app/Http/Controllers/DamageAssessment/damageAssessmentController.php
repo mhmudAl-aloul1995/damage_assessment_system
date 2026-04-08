@@ -244,6 +244,14 @@ class damageAssessmentController extends Controller
 
                 $newCriteria = ($sizeOfUnit * $criteria) / 100;
 
+                if (
+                    in_array($row->name, ['mt7', 'mt8'], true) &&
+
+                    is_numeric($value) &&
+                    (float) $value < 1
+                ) {
+                    return 'table-danger';
+                }
 
                 if (
                     in_array($row->name, ['dm6', 'dm7', 'dm12'], true) &&
