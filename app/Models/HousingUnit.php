@@ -681,7 +681,8 @@ class HousingUnit extends Model
             'cm12',
             'cm13',
             'pm40',
-            'security_situation_unit'
+            'security_situation_unit',
+            'final_comments'
         ]; 
 
     /**

@@ -242,7 +242,7 @@ class damageAssessmentController extends Controller
                 $criteria = (float) ($row->criteria ?? 0);
 
 
-                $newCriteria = ($sizeOfUnit * $criteria);
+                $newCriteria = ($sizeOfUnit * $criteria) / 100;
 
 
                 if (
@@ -254,12 +254,19 @@ class damageAssessmentController extends Controller
                     return 'table-danger';
                 }
 
-
                 if (
-                    ($row->type === 1) &&
+                    ($row->type == 2) &&
+                    is_numeric($value) &&
+                  
+                    $value < $criteria
+                ) {
+                    return 'table-danger';
+                }
+                if (
+                    ($row->type == 1) &&
                     is_numeric($value) &&
                     $newCriteria > 0 &&
-                    (float) $value > $newCriteria
+                    $value > $newCriteria
                 ) {
                     return 'table-danger';
                 }
