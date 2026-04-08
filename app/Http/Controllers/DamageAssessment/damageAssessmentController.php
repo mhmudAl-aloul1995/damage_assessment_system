@@ -494,7 +494,6 @@ class damageAssessmentController extends Controller
             ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
             ->select([
                 'housing_units.id',
-                'housing_units.globalid as housing_globalid',
                 'buildings.globalid as building_globalid',
                 'buildings.objectid',
                 'buildings.building_name as building_name',
