@@ -1,13 +1,12 @@
-@extends('layouts.app')
-@section('title', 'الإستبيان')
-@section('pageName', 'الإستبيان')
+<?php $__env->startSection('title', 'الإستبيان'); ?>
+<?php $__env->startSection('pageName', 'الإستبيان'); ?>
 
-@php
+<?php
     $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     $housingGlobalid = $housingGlobalid ?? null;
-@endphp
+?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
     <style>
         .building-status-btn,
         .housing-status-btn {
@@ -81,7 +80,7 @@
 
             <div class="tab-content">
 
-                {{-- تبويب المبنى --}}
+                
                 <div class="tab-pane fade show active" id="tab_building" role="tabpanel">
                     <div class="row">
                         <div class="col-md-12">
@@ -101,7 +100,7 @@
                                     <div class="card-toolbar">
                                         <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap"
                                             data-kt-Building-table-toolbar="base">
-                                            @role('Legal Auditor')
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" onclick="setBuildingStatus('accepted')">
                                                 مقبول
@@ -110,9 +109,9 @@
                                                 data-status="legal_notes" onclick="setBuildingStatus('legal_notes')">
                                                 ملاحظات قانونية
                                             </button>
-                                            @endrole
+                                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-                                            @role('QC/QA Engineer')
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'QC/QA Engineer')): ?>
                                             <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                 data-status="rejected" onclick="setBuildingStatus('rejected')">
                                                 مرفوض
@@ -127,7 +126,7 @@
                                                 data-status="need_review" onclick="setBuildingStatus('need_review')">
                                                 بحاجة لمراجعة
                                             </button>
-                                            @endrole
+                                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('building', 'history')">
@@ -171,10 +170,10 @@
                     </div>
                 </div>
 
-                {{-- تبويب الوحدة السكنية --}}
+                
                 <div class="tab-pane fade" id="tab_housing" role="tabpanel">
 
-                    {{-- جدول الوحدات --}}
+                    
                     <div class="card card-flush mb-7 shadow-sm border-0">
                         <div class="card-header pt-6 pb-4 border-0">
                             <div class="card-title">
@@ -216,7 +215,7 @@
                         </div>
                     </div>
 
-                    {{-- جدول تقييم الوحدة --}}
+                    
                     <div class="card card-flush shadow-sm border-0">
                         <div class="card-header border-0 pt-6 pb-4">
                             <div class="card-title">
@@ -239,15 +238,16 @@
                                             data-control="select2" data-allow-clear="true" data-dropdown-css-class="w-250px"
                                             data-placeholder="إختر الوحدة">
                                             <option value=""></option>
-                                            @foreach ($HousingUnit as $value)
-                                                <option value="{{ $value->globalid }}">
-                                                    {{ $value->objectid . '--' . $value->full_name }}
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $HousingUnit; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                                <option value="<?php echo e($value->globalid); ?>">
+                                                    <?php echo e($value->objectid . '--' . $value->full_name); ?>
+
                                                 </option>
-                                            @endforeach
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                                         </select>
                                     </div>
 
-                                    @role('Legal Auditor')
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'Legal Auditor')): ?>
                                     <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                         data-status="accepted" onclick="setHousingStatus('accepted')">
                                         مقبول
@@ -256,9 +256,9 @@
                                         data-status="legal_notes" onclick="setHousingStatus('legal_notes')">
                                         بحاجة لمراجعة
                                     </button>
-                                    @endrole
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-                                    @role('QC/QA Engineer')
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if (\Illuminate\Support\Facades\Blade::check('role', 'QC/QA Engineer')): ?>
                                     <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
                                         data-status="rejected" onclick="setHousingStatus('rejected')">
                                         مرفوض
@@ -273,7 +273,7 @@
                                         data-status="need_review" onclick="setHousingStatus('need_review')">
                                         بحاجة لمراجعة
                                     </button>
-                                    @endrole
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                                     <button type="button" class="btn btn-sm btn-light-dark"
                                         onclick="openNotesModal('housing', 'history')">
@@ -311,7 +311,7 @@
         </div>
     </div>
 
-    {{-- Modal الملاحظات / سجل الحالات --}}
+    
     <div class="modal fade" id="notesModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered mw-1000px mw-lg-1400px">
             <div class="modal-content">
@@ -326,7 +326,7 @@
 
                 <div class="modal-body">
 
-                    {{-- سجل الحالات --}}
+                    
                     <div class="mb-5" id="historyWrapper">
                         <h5 class="fw-bold mb-3">سجل الحالات</h5>
 
@@ -351,7 +351,7 @@
                         </div>
                     </div>
 
-                    {{-- إدخال / تعديل ملاحظة --}}
+                    
                     <div id="notesInputWrapper" style="display:none;">
                         <input type="hidden" id="noteId">
                         <textarea id="notesInput" class="form-control form-control-solid" rows="5"
@@ -377,16 +377,16 @@
             </div>
         </div>
     </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('script')
+<?php $__env->startSection('script'); ?>
     <script>
         let notesContext = null;
         let pendingStatus = null;
         let noteEditMode = false;
         let currentNoteRecordId = null;
         let currentApprovalLocked = false;
-        let urlHousingGlobalId = @json($housingGlobalid ?? null);
+        let urlHousingGlobalId = <?php echo json_encode($housingGlobalid ?? null, 15, 512) ?>;
         let initialHousingSelectionDone = false;
         let pendingHousingGlobalId = null;
 
@@ -567,7 +567,7 @@
 
         function getSelectedGlobalId(type) {
             if (type === 'building') {
-                return @json($buildingGlobalid);
+                return <?php echo json_encode($buildingGlobalid, 15, 512) ?>;
             }
 
             return $("[name='globalid']").val() || null;
@@ -575,26 +575,26 @@
 
         function renderHistoryLoading() {
             $('#statusHistoryTable').html(`
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
-                                            </tr>
-                                        `);
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                                        </tr>
+                                    `);
         }
 
         function renderHistoryEmpty() {
             $('#statusHistoryTable').html(`
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-                                            </tr>
-                                        `);
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                                        </tr>
+                                    `);
         }
 
         function renderHistoryError() {
             $('#statusHistoryTable').html(`
-                                            <tr>
-                                                <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
-                                            </tr>
-                                        `);
+                                        <tr>
+                                            <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                                        </tr>
+                                    `);
         }
 
         function escapeHtml(text) {
@@ -604,8 +604,8 @@
 
         function loadStatusHistory(type, globalid) {
             let url = type === 'building'
-                ? "{{ route('building.status.history') }}"
-                : "{{ route('housing.status.history') }}";
+                ? "<?php echo e(route('building.status.history')); ?>"
+                : "<?php echo e(route('housing.status.history')); ?>";
 
             $.ajax({
                 url: url,
@@ -637,24 +637,24 @@
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                                                <button type="button" class="btn btn-sm btn-light-info"
-                                                                    onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                                    تعديل
-                                                                </button>
-                                                            `;
+                                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                                تعديل
+                                                            </button>
+                                                        `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
                         }
 
                         rows += `
-                                            <tr>
-                                                <td>${item.status_name ?? '-'}</td>
-                                                <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                            </tr>
-                                                    `;
+                                        <tr>
+                                            <td>${item.status_name ?? '-'}</td>
+                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                            <td>${escapeHtml(item.notes ?? '-')}</td>
+                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                        </tr>
+                                                `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -683,7 +683,7 @@
             $('#notesLockText').hide();
 
             $.ajax({
-                url: "{{ route('assessment.notes.edit.data') }}",
+                url: "<?php echo e(route('assessment.notes.edit.data')); ?>",
                 method: "GET",
                 data: {
                     type: type,
@@ -742,7 +742,7 @@
             modal.show();
 
             $.ajax({
-                url: "{{ route('assessment.notes.edit.data') }}",
+                url: "<?php echo e(route('assessment.notes.edit.data')); ?>",
                 method: "GET",
                 data: {
                     type: type,
@@ -791,10 +791,10 @@
             }
 
             $.ajax({
-                url: "{{ route('assessment.notes.update') }}",
+                url: "<?php echo e(route('assessment.notes.update')); ?>",
                 method: "POST",
                 data: {
-                    _token: "{{ csrf_token() }}",
+                    _token: "<?php echo e(csrf_token()); ?>",
                     id: noteId,
                     notes: notes,
                     type: notesContext
@@ -833,10 +833,10 @@
 
         function saveInlineValue(field, globalid, type, value, callback = null) {
             $.ajax({
-                url: "{{ route('assessment.inline.update') }}",
+                url: "<?php echo e(route('assessment.inline.update')); ?>",
                 method: "POST",
                 data: {
-                    _token: "{{ csrf_token() }}",
+                    _token: "<?php echo e(csrf_token()); ?>",
                     field: field,
                     globalid: globalid,
                     type: type,
@@ -878,7 +878,7 @@
         }
 
         function setBuildingStatus(status) {
-            let globalid = '{{ $buildingGlobalid }}';
+            let globalid = '<?php echo e($buildingGlobalid); ?>';
 
             if (!globalid) {
                 toastr.warning('لا يوجد مبنى محدد');
@@ -901,7 +901,7 @@
 
         function submitStatusWithNotes() {
             let notes = $('#notesInput').val();
-
+alert(pendingStatus)
 
             if (notesContext === 'building' && !pendingStatus) {
                 toastr.warning('اختر حالة أولاً');
@@ -913,8 +913,8 @@
                 return;
             }
             if (!notes || notes.trim() === '') {
-
-                if (pendingStatus1 != 'accepted') {
+                
+                if (pendingStatus1 != 4 || pendingStatus != 8) {
 
                     toastr.warning('يرجى إدخال الملاحظة');
                     $('#notesInput').focus();
@@ -922,7 +922,7 @@
                 }
             }
             if (notesContext === 'building') {
-                let globalid = '{{ $buildingGlobalid }}';
+                let globalid = '<?php echo e($buildingGlobalid); ?>';
 
                 if (!globalid) {
                     toastr.warning('لا يوجد مبنى محدد');
@@ -930,10 +930,10 @@
                 }
 
                 $.ajax({
-                    url: "{{ route('building.assessment.set.status') }}",
+                    url: "<?php echo e(route('building.assessment.set.status')); ?>",
                     method: "POST",
                     data: {
-                        _token: "{{ csrf_token() }}",
+                        _token: "<?php echo e(csrf_token()); ?>",
                         globalid: globalid,
                         status: pendingStatus,
                         notes: notes
@@ -972,10 +972,10 @@
                 }
 
                 $.ajax({
-                    url: "{{ route('housing.assessment.set.status') }}",
+                    url: "<?php echo e(route('housing.assessment.set.status')); ?>",
                     method: "POST",
                     data: {
-                        _token: "{{ csrf_token() }}",
+                        _token: "<?php echo e(csrf_token()); ?>",
                         globalid: globalid,
                         status: pendingStatus,
                         notes: notes
@@ -1067,9 +1067,9 @@
                 datatable = $(table).DataTable({
                     serverSide: true,
                     ajax: {
-                        url: "{{ url('showBuildings') }}",
+                        url: "<?php echo e(url('showBuildings')); ?>",
                         data: function (d) {
-                            d.globalid = '{{ $buildingGlobalid }}';
+                            d.globalid = '<?php echo e($buildingGlobalid); ?>';
                         },
                     },
                     info: false,
@@ -1153,9 +1153,9 @@
                     order: [],
                     pageLength: 25,
                     ajax: {
-                        url: "{{ route('housing.units.by.building') }}",
+                        url: "<?php echo e(route('housing.units.by.building')); ?>",
                         data: function (d) {
-                            d.globalid = '{{ $buildingGlobalid }}';
+                            d.globalid = '<?php echo e($buildingGlobalid); ?>';
                         }
                     },
                     columns: [{
@@ -1238,9 +1238,9 @@
                 datatable = $(table).DataTable({
                     serverSide: true,
                     ajax: {
-                        url: "{{ url('showHousings') }}",
+                        url: "<?php echo e(url('showHousings')); ?>",
                         data: function (d) {
-                            d.parentglobalid = '{{ $buildingGlobalid }}';
+                            d.parentglobalid = '<?php echo e($buildingGlobalid); ?>';
                             d.globalid = $("[name='globalid']").val();
                         },
                     },
@@ -1379,8 +1379,8 @@
 
             if (!data || !data.globalid) return;
 
-            let buildingGlobal = @json($buildingGlobalid);
-            let url = "{{ url('showAssessmentAudit') }}/" + buildingGlobal + "/" + data.globalid;
+            let buildingGlobal = <?php echo json_encode($buildingGlobalid, 15, 512) ?>;
+            let url = "<?php echo e(url('showAssessmentAudit')); ?>/" + buildingGlobal + "/" + data.globalid;
             window.open(url, '_blank');
         });
 
@@ -1394,7 +1394,7 @@
 
             setActiveStatusButton(
                 '.building-status-btn',
-                normalizeStatus(@json($buildingCurrentStatus))
+                normalizeStatus(<?php echo json_encode($buildingCurrentStatus, 15, 512) ?>)
             );
 
             if (urlHousingGlobalId) {
@@ -1419,4 +1419,5 @@
             }, false);
         }
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/assessmentAudit.blade.php ENDPATH**/ ?>

@@ -43,9 +43,9 @@
                                 data-allow-clear="true" data-placeholder="اختر الحالة">
                                 <option></option>
                                 <option value="pending">Pending</option>
+                                <option value="assigned_to_engineer">Assigned To Engineer</option>
                                 <option value="accepted_by_engineer">Accepted By Engineer</option>
                                 <option value="rejected_by_engineer">Rejected By Engineer</option>
-                                <option value="assigned_to_engineer">Assigned To Engineer</option>
                                 <option value="need_review">Need Review</option>
                             </select>
                         </div>
@@ -56,6 +56,7 @@
                                 data-allow-clear="true" data-placeholder="اختر الحالة">
                                 <option></option>
                                 <option value="pending">Pending</option>
+                                <option value="assigned_to_lawyer">Assigned To Lawyer</option>
                                 <option value="accepted_by_lawyer">Accepted By Lawyer</option>
                                 <option value="legal_notes">Legal Notes</option>
                             </select>
