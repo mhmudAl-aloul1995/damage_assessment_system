@@ -1465,7 +1465,7 @@
 					createdRow: function (row, data, index) {
 						$(row).css('cursor', 'pointer');
 						if (data.building_globalid) {
-							$(row).attr('id', data.globalid);
+							$(row).attr('id', data.building_globalid);
 						}
 					}
 				});
