@@ -914,7 +914,7 @@
             }
             if (!notes || notes.trim() === '') {
 
-                if (pendingStatus1 != 'accepted') {
+                if (pendingStatus != 'accepted') {
 
                     toastr.warning('يرجى إدخال الملاحظة');
                     $('#notesInput').focus();
