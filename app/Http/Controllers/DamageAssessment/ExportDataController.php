@@ -226,7 +226,7 @@ class ExportDataController extends Controller
                 $mpdf->SetAuthor(config('app.name'));
                 $mpdf->SetHTMLFooter('
     <div style="border-top:1px solid #999; font-size:10px; padding-top:6px; text-align:center; color:#666;">
-        <span>تdاريخ التصدير: ' . now()->format('Y-m-d H:i') . '</span>
+        <span>تاريخ التصدير: ' . now()->format('Y-m-d H:i') . '</span>
         &nbsp; | &nbsp;
         <span>الصفحة {PAGENO} من {nbpg}</span>
     </div>
