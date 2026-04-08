@@ -3822,11 +3822,15 @@ class auditController extends Controller
         $building = Building::where('globalid', $request->buildingGlobalid)->first();
         $HousingUnit = HousingUnit::where('parentglobalid', $request->buildingGlobalid)->get();
         $assessments = Assessment::all();
+
+        $buildingId = Building::where('globalid', $buildingGlobalid)->value('objectid');
+
         $buildingCurrentStatus = BuildingStatus::with('status')
-            ->whereHas('building', function ($q) use ($buildingGlobalid) {
-                $q->where('globalid', $buildingGlobalid);
-            })
+            ->where('building_id', $buildingId)
+            ->where('user_id', auth()->id())
+            ->latest()
             ->first()?->status?->name;
+       
 
         return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit'));
     }
