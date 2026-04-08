@@ -228,7 +228,8 @@ Route::middleware('auth')->group(function () {
     // assessmentAudit
 
     Route::get('showAssessmentAudit/{buildingGlobalid}/{housingGlobalid?}', [auditController::class, 'showAssessmentAudit']);
-
+    Route::post('audit/building/final-approve', [auditController::class, 'finalApproveSelected'])
+        ->name('audit.building.finalApprove');
     Route::post('/assessment/inline-update', [auditController::class, 'updateInlineAssessment'])
         ->name('assessment.inline.update');
 
@@ -259,7 +260,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/export-data', [ExportDataController::class, 'index'])->name('export.data.index');
     Route::post('/export-data', [ExportDataController::class, 'export'])->name('export.data.download');
-    
 });
 
 require __DIR__ . '/auth.php';

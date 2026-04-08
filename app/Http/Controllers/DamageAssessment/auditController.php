@@ -3222,7 +3222,136 @@ class auditController extends Controller
             ->make(true);
     }
 
+    public function finalApproveSelected(Request $request)
+    {
+        $request->validate([
+            'building_ids' => ['required', 'array'],
+            'building_ids.*' => ['required', 'exists:buildings,objectid'],
+        ]);
 
+        DB::beginTransaction();
+
+        try {
+            $user = Auth::user();
+
+            $finalStatus = AssessmentStatus::whereRaw('LOWER(TRIM(name)) = ?', ['final_approval'])->first();
+
+            if (!$finalStatus) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'حالة final_approval غير موجودة في جدول assessment_statuses.'
+                ], 422);
+            }
+
+            $updated = 0;
+            $skipped = [];
+            $blockedBuildings = [];
+
+            foreach ($request->building_ids as $buildingId) {
+                $building = Building::where('objectid', $buildingId)->first();
+
+                if (!$building) {
+                    continue;
+                }
+
+                $engineerStatus = BuildingStatus::with('status')
+                    ->where('building_id', $building->objectid)
+                    ->where('type', 'QC/QA Engineer')
+                    ->orderByDesc('id')
+                    ->first();
+
+                $lawyerStatus = BuildingStatus::with('status')
+                    ->where('building_id', $building->objectid)
+                    ->where('type', 'Legal Auditor')
+                    ->orderByDesc('id')
+                    ->first();
+
+                $finalCurrentStatus = BuildingStatus::with('status')
+                    ->where('building_id', $building->objectid)
+                    ->where('type', 'final')
+                    ->orderByDesc('id')
+                    ->first();
+
+                $engineerStatusName = strtolower(trim($engineerStatus->status->name ?? ''));
+                $lawyerStatusName = strtolower(trim($lawyerStatus->status->name ?? ''));
+                $finalCurrentName = strtolower(trim($finalCurrentStatus->status->name ?? ''));
+                $newStatusName = strtolower(trim($finalStatus->name ?? ''));
+
+                $allowedEngineerStatuses = [
+                    'accepted_by_engineer',
+                    'rejected_by_engineer',
+                ];
+
+                $allowedLawyerStatuses = [
+                    'accepted_by_lawyer',
+                    'rejected_by_lawyer',
+                    'legal_notes',
+                ];
+                // لا تعتمد نهائي إلا إذا كانت آخر حالة للمهندس والمحامي ضمن الحالات المسموحة
+                if (
+                    !in_array($engineerStatusName, $allowedEngineerStatuses) ||
+                    !in_array($lawyerStatusName, $allowedLawyerStatuses)
+                ) {
+
+                    $blockedBuildings[] = [
+                        'building_id' => $building->objectid,
+                        'engineer_status' => $engineerStatusName ?: null,
+                        'lawyer_status' => $lawyerStatusName ?: null,
+                    ];
+                    continue;
+                }
+
+                // إذا already final approved
+                if ($finalCurrentName === $newStatusName) {
+                    $skipped[] = $building->objectid;
+                    continue;
+                }
+
+                BuildingStatus::updateOrCreate(
+                    [
+                        'building_id' => $building->objectid,
+                        'type' => 'final',
+                    ],
+                    [
+                        'status_id' => $finalStatus->id,
+                        'user_id' => $user->id,
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ]
+                );
+
+                BuildingStatusHistory::create([
+                    'building_id' => $building->objectid,
+                    'status_id' => $finalStatus->id,
+                    'user_id' => $user->id,
+                    'notes' => 'Final Approved',
+                    'type' => 'final',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $updated++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => $updated > 0
+                    ? "تم اعتماد {$updated} مبنى نهائياً بنجاح."
+                    : "لم يتم اعتماد أي مبنى.",
+                'skipped' => $skipped,
+                'blocked_buildings' => $blockedBuildings,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
     public function setStatus(Request $request)
     {
         $request->validate([
@@ -3434,7 +3563,21 @@ class auditController extends Controller
             'status_id' => ['nullable', 'exists:assessment_statuses,id'],
             'notes' => ['nullable', 'string'],
         ]);
+        $user = User::findOrFail($request->user_id);
 
+        if ($request->type === 'QC/QA Engineer' && !$user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المستخدم المختار ليس مهندساً.'
+            ], 422);
+        }
+
+        if ($request->type === 'Legal Auditor' && !$user->hasRole('Legal Auditor')) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المستخدم المختار ليس محامياً.'
+            ], 422);
+        }
         $rejectedBuildings = [];
 
         try {

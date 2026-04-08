@@ -575,26 +575,26 @@
 
         function renderHistoryLoading() {
             $('#statusHistoryTable').html(`
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
-                                        </tr>
-                                    `);
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                                            </tr>
+                                        `);
         }
 
         function renderHistoryEmpty() {
             $('#statusHistoryTable').html(`
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-                                        </tr>
-                                    `);
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                                            </tr>
+                                        `);
         }
 
         function renderHistoryError() {
             $('#statusHistoryTable').html(`
-                                        <tr>
-                                            <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
-                                        </tr>
-                                    `);
+                                            <tr>
+                                                <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                                            </tr>
+                                        `);
         }
 
         function escapeHtml(text) {
@@ -637,24 +637,24 @@
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                                            <button type="button" class="btn btn-sm btn-light-info"
-                                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                                تعديل
-                                                            </button>
-                                                        `;
+                                                                <button type="button" class="btn btn-sm btn-light-info"
+                                                                    onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                                    تعديل
+                                                                </button>
+                                                            `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
                         }
 
                         rows += `
-                                        <tr>
-                                            <td>${item.status_name ?? '-'}</td>
-                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                            <td>${escapeHtml(item.notes ?? '-')}</td>
-                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                        </tr>
-                                                `;
+                                            <tr>
+                                                <td>${item.status_name ?? '-'}</td>
+                                                <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                            </tr>
+                                                    `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -901,7 +901,7 @@
 
         function submitStatusWithNotes() {
             let notes = $('#notesInput').val();
-alert(pendingStatus)
+
 
             if (notesContext === 'building' && !pendingStatus) {
                 toastr.warning('اختر حالة أولاً');
@@ -913,8 +913,8 @@ alert(pendingStatus)
                 return;
             }
             if (!notes || notes.trim() === '') {
-                
-                if (pendingStatus1 != 4 || pendingStatus != 8) {
+
+                if (pendingStatus != 'accepted') {
 
                     toastr.warning('يرجى إدخال الملاحظة');
                     $('#notesInput').focus();

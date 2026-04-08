@@ -384,7 +384,7 @@ class Building extends Model
     public function finalApproval()
     {
         return $this->hasOne(BuildingStatus::class,'building_id','objectid')
-            ->where('status_id', 19);
+            ->where('status_id', 9);
     }
     public function lawyerStatus()
     {

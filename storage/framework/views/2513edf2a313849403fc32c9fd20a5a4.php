@@ -155,12 +155,21 @@
 						</div>
 					</div>
 					<div class="card-toolbar gap-3">
-						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">تحديث <i
-								class="ki-duotone ki-update-file"></i></button>
-						<button id="btn_assign_to_lawyer" class="btn btn-primary btn-sm">تعيين للمحامي <i
-								class="ki-duotone ki-plus"></i></button>
-						<button id="btn_assign_to_engineer" class="btn btn-info btn-sm">تعيين للمهندس <i
-								class="ki-duotone ki-plus"></i></button>
+						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
+							تحديث <i class="ki-duotone ki-update-file"></i>
+						</button>
+
+						<button id="btn_final_approve" class="btn btn-warning btn-sm">
+							اعتماد نهائي <i class="ki-duotone ki-check-circle"></i>
+						</button>
+
+						<button id="btn_assign_to_lawyer" class="btn btn-primary btn-sm">
+							تعيين للمحامي <i class="ki-duotone ki-plus"></i>
+						</button>
+
+						<button id="btn_assign_to_engineer" class="btn btn-info btn-sm">
+							تعيين للمهندس <i class="ki-duotone ki-plus"></i>
+						</button>
 					</div>
 				</div>
 
@@ -212,15 +221,19 @@
 						<div id="selected_buildings_container"></div>
 
 						<div class="fv-row mb-7">
-							<label id="user_label" class="required fs-6 fw-semibold mb-2">إختر المهندس </label>
-							<select name="user_id" class="form-select form-select-solid" data-control="select2"
-								data-placeholder="إختر الإسم..." data-dropdown-parent="#kt_modal_assign">
+							<label id="user_label" class="required fs-6 fw-semibold mb-2">إختر المهندس</label>
+
+							<select name="user_id" id="assign_user_id" class="form-select form-select-solid"
+								data-control="select2" data-placeholder="إختر الإسم..."
+								data-dropdown-parent="#kt_modal_assign">
 								<option></option>
-								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
-									<option value="<?php echo e($user->id); ?>"><?php echo e($user->name); ?></option>
-								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 							</select>
 						</div>
+
+						<script>
+							const assignEngineers = <?php echo json_encode($assignEngineers ?? $engineers, 15, 512) ?>;
+							const assignLawyers = <?php echo json_encode($assignLawyers ?? $lawyers, 15, 512) ?>;
+						</script>
 					</div>
 
 					<div class="modal-footer flex-center">
@@ -334,10 +347,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																						<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																							<input class="form-check-input" type="checkbox"
-																								data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																						</div>`
+																																<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																																	<input class="form-check-input" type="checkbox"
+																																		data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																																</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'assignedto', name: 'assignedto' },
@@ -398,13 +411,9 @@
 			$('#tableSearch').keyup(function () {
 				table.search($(this).val()).draw();
 			});
-
-
-			// Function to handle the button click
 			$('#btn_assign_to_engineer').on('click', function () {
 				const selectedIds = [];
 
-				// 1. Get all checked IDs from the datatable
 				$('#kt_datatable_audits tbody input[type="checkbox"]:checked').each(function () {
 					selectedIds.push($(this).val());
 				});
@@ -422,25 +431,25 @@
 					return;
 				}
 
-				// 2. Set Modal Details
-				$('#modal_title,#user_label').text('تعيين للمهندس');
+				$('#modal_title').text('تعيين للمهندس');
 				$('#assign_type').val('QC/QA Engineer');
 				$('#assign_status_id').val(2);
 
 				const container = $('#selected_buildings_container');
 				container.empty();
+
 				selectedIds.forEach(id => {
 					container.append(`<input type="hidden" name="building_ids[]" value="${id}">`);
 				});
 
-				// 4. Show the Modal
+				loadAssignUsers('QC/QA Engineer');
+
 				$('#kt_modal_assign').modal('show');
 			});
 
 			$('#btn_assign_to_lawyer').on('click', function () {
 				const selectedIds = [];
 
-				// 1. Get all checked IDs from the datatable
 				$('#kt_datatable_audits tbody input[type="checkbox"]:checked').each(function () {
 					selectedIds.push($(this).val());
 				});
@@ -458,21 +467,22 @@
 					return;
 				}
 
-				// 2. Set Modal Details
-				$('#modal_title,#user_label').text('تعيين للمحامي');
-				$('#assign_type').val('Legal Auditor'); // Hidden input to tell backend the role
+				$('#modal_title').text('تعيين للمحامي');
+				$('#assign_type').val('Legal Auditor');
 				$('#assign_status_id').val(6);
 
-				// 3. Clear and Fill IDs in a hidden container inside the form
 				const container = $('#selected_buildings_container');
 				container.empty();
+
 				selectedIds.forEach(id => {
 					container.append(`<input type="hidden" name="building_ids[]" value="${id}">`);
 				});
 
-				// 4. Show the Modal
+				loadAssignUsers('Legal Auditor');
+
 				$('#kt_modal_assign').modal('show');
 			});
+
 
 			$('#kt_modal_assign_form').on('submit', function (e) {
 				e.preventDefault(); // منع الصفحة من التحديث
@@ -538,10 +548,10 @@
 
 				$('#notesHistoryModalTitle').text('سجل الحالات - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-							<tr>
-								<td colspan="6" class="text-center">جاري التحميل...</td>
-							</tr>
-						`);
+																	<tr>
+																		<td colspan="6" class="text-center">جاري التحميل...</td>
+																	</tr>
+																`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -555,40 +565,40 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-											<tr>
-												<td>${item.status_name}</td>
-												<td>${item.user_name}</td>
-												<td>${item.role_name}</td>
-												<td>${item.notes}</td>
-												<td>${item.created_at}</td>
-												<td>
-													${item.can_delete ? `
-														<button type="button"
-															class="btn btn-sm btn-light-danger btn-delete-history"
-															data-id="${item.id}">
-															حذف
-														</button>
-													` : '-'}
-												</td>
-											</tr>
-										`;
+																					<tr>
+																						<td>${item.status_name}</td>
+																						<td>${item.user_name}</td>
+																						<td>${item.role_name}</td>
+																						<td>${item.notes}</td>
+																						<td>${item.created_at}</td>
+																						<td>
+																							${item.can_delete ? `
+																								<button type="button"
+																									class="btn btn-sm btn-light-danger btn-delete-history"
+																									data-id="${item.id}">
+																									حذف
+																								</button>
+																							` : '-'}
+																						</td>
+																					</tr>
+																				`;
 							});
 						} else {
 							rows = `
-										<tr>
-											<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
-										</tr>
-									`;
+																				<tr>
+																					<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
+																				</tr>
+																			`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-									<tr>
-										<td colspan="6" class="text-center text-danger">تعذر تحميل السجل</td>
-									</tr>
-								`);
+																			<tr>
+																				<td colspan="6" class="text-center text-danger">تعذر تحميل السجل</td>
+																			</tr>
+																		`);
 					}
 				});
 			});
@@ -616,10 +626,10 @@
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
-									<tr>
-										<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
-									</tr>
-								`);
+																			<tr>
+																				<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
+																			</tr>
+																		`);
 							}
 						} else {
 							toastr.error(response.message || 'فشل حذف السجل');
@@ -636,8 +646,109 @@
 					}
 				});
 			});
-		});
+			$('#btn_final_approve').on('click', function () {
+				const selectedIds = [];
 
+				$('#kt_datatable_audits tbody input[type="checkbox"]:checked').each(function () {
+					selectedIds.push($(this).val());
+				});
+
+				if (selectedIds.length === 0) {
+					Swal.fire({
+						text: "يرجى اختيار مبنى واحد على الأقل.",
+						icon: "warning",
+						buttonsStyling: false,
+						confirmButtonText: "موافق",
+						customClass: {
+							confirmButton: "btn btn-primary"
+						}
+					});
+					return;
+				}
+
+				Swal.fire({
+					title: 'اعتماد نهائي',
+					text: 'هل أنت متأكد من اعتماد المباني المحددة نهائياً؟',
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonText: 'نعم، اعتماد',
+					cancelButtonText: 'إلغاء',
+					buttonsStyling: false,
+					customClass: {
+						confirmButton: "btn btn-warning",
+						cancelButton: "btn btn-light"
+					}
+				}).then(function (result) {
+					if (!result.isConfirmed) return;
+
+					$.ajax({
+						url: "<?php echo e(route('audit.building.finalApprove')); ?>",
+						type: "POST",
+						data: {
+							_token: "<?php echo e(csrf_token()); ?>",
+							building_ids: selectedIds
+						},
+						beforeSend: function () {
+							$('#btn_final_approve').attr('data-kt-indicator', 'on');
+							$('#btn_final_approve').prop('disabled', true);
+						},
+						success: function (response) {
+							Swal.fire({
+								text: response.message || "تم الاعتماد النهائي بنجاح.",
+								icon: "success",
+								buttonsStyling: false,
+								confirmButtonText: "موافق",
+								customClass: {
+									confirmButton: "btn btn-primary"
+								}
+							}).then(function () {
+								$('#kt_datatable_audits').DataTable().ajax.reload(null, false);
+								$("[type='checkbox']").prop('checked', false);
+							});
+						},
+						error: function (xhr) {
+							let message = "حدث خطأ أثناء الاعتماد النهائي.";
+
+							if (xhr.responseJSON && xhr.responseJSON.message) {
+								message = xhr.responseJSON.message;
+							}
+
+							Swal.fire({
+								text: message,
+								icon: "error",
+								buttonsStyling: false,
+								confirmButtonText: "حسناً",
+								customClass: {
+									confirmButton: "btn btn-primary"
+								}
+							});
+						},
+						complete: function () {
+							$('#btn_final_approve').removeAttr('data-kt-indicator');
+							$('#btn_final_approve').prop('disabled', false);
+						}
+					});
+				});
+			});
+
+		});
+		function filterAssignUsers(roleType) {
+			let $select = $('#assign_user_id');
+
+			$select.val('').trigger('change');
+
+			$select.find('option').each(function () {
+				let optionRole = $(this).data('role');
+
+				if (!optionRole || optionRole === roleType) {
+					$(this).prop('hidden', false);
+				} else {
+					$(this).prop('hidden', true);
+				}
+			});
+
+			$select.trigger('change.select2');
+		}
 		function refreshTable(refresh) {
 
 			$('#kt_datatable_audits').DataTable().ajax.reload()
@@ -652,6 +763,30 @@
 		$('#kt_datatable_audits').on('draw.dt', function () {
 			KTMenu.createInstances();
 		});
+
+		function loadAssignUsers(type) {
+			let users = [];
+			let label = 'إختر المستخدم';
+
+			if (type === 'QC/QA Engineer') {
+				users = assignEngineers;
+				label = 'إختر المهندس';
+			} else if (type === 'Legal Auditor') {
+				users = assignLawyers;
+				label = 'إختر المحامي';
+			}
+
+			$('#user_label').text(label);
+
+			const $select = $('#assign_user_id');
+			$select.empty().append('<option></option>');
+
+			users.forEach(user => {
+				$select.append(`<option value="${user.id}">${user.name}</option>`);
+			});
+
+			$select.val(null).trigger('change');
+		}
 	</script>
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/audit.blade.php ENDPATH**/ ?>
