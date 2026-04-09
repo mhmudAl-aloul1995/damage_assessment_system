@@ -53,7 +53,7 @@ class ExportDataController extends Controller
             ->orderBy('label')
             ->get()
             ->groupBy('list_name');
-        $assessmentLabels =Assessment::pluck('label', 'name');
+        $assessmentLabels = Assessment::pluck('label', 'name');
         return view('exports.index', [
             'assessmentLabels' => $assessmentLabels,
             'buildingColumns' => $buildingColumns,
@@ -62,8 +62,6 @@ class ExportDataController extends Controller
             'filters' => $filters,
         ]);
     }
-
-
 
 
     public function export(Request $request)
@@ -105,6 +103,17 @@ class ExportDataController extends Controller
                 return back()->with('error', 'الأعمدة المختارة غير صالحة.');
             }
 
+            /*
+            |--------------------------------------------------
+            | labels from assessments table
+            | IMPORTANT: trim name to avoid mismatch
+            |--------------------------------------------------
+            */
+            $assessmentLabels = DB::table('assessments')
+                ->selectRaw('TRIM(name) as name, COALESCE(NULLIF(TRIM(label), ""), TRIM(name)) as label')
+                ->pluck('label', 'name')
+                ->toArray();
+
             $selects = [];
 
             foreach ($buildingColumns as $column) {
@@ -124,6 +133,7 @@ class ExportDataController extends Controller
             }
 
             $needsHousingJoinForFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
+
             if ($needsHousingJoinForFamily && !$housingJoined) {
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
                 $housingJoined = true;
@@ -132,14 +142,14 @@ class ExportDataController extends Controller
             $query->selectRaw(implode(', ', $selects));
 
             $familyMembersExpression = "
-            (
-                COALESCE(CAST(NULLIF(h.mchildren_001, '') AS UNSIGNED), 0) +
-                COALESCE(CAST(NULLIF(h.melderly, '') AS UNSIGNED), 0) +
-                COALESCE(CAST(NULLIF(h.myoung, '') AS UNSIGNED), 0) +
-                COALESCE(CAST(NULLIF(h.fchildren, '') AS UNSIGNED), 0) +
-                COALESCE(CAST(NULLIF(h.fyoung_001, '') AS UNSIGNED), 0) +
-                COALESCE(CAST(NULLIF(h.felderly, '') AS UNSIGNED), 0)
-            )
+        (
+            COALESCE(CAST(NULLIF(h.mchildren_001, '') AS UNSIGNED), 0) +
+            COALESCE(CAST(NULLIF(h.melderly, '') AS UNSIGNED), 0) +
+            COALESCE(CAST(NULLIF(h.myoung, '') AS UNSIGNED), 0) +
+            COALESCE(CAST(NULLIF(h.fchildren, '') AS UNSIGNED), 0) +
+            COALESCE(CAST(NULLIF(h.fyoung_001, '') AS UNSIGNED), 0) +
+            COALESCE(CAST(NULLIF(h.felderly, '') AS UNSIGNED), 0)
+        )
         ";
 
             if ($needsHousingJoinForFamily) {
@@ -149,8 +159,9 @@ class ExportDataController extends Controller
             foreach ($selectedFilters as $field => $values) {
                 $values = array_filter((array) $values, fn($v) => $v !== null && $v !== '');
 
-                if (empty($values))
+                if (empty($values)) {
                     continue;
+                }
 
                 if (in_array($field, $validBuildingColumns)) {
                     $query->whereIn("b.$field", $values);
@@ -172,46 +183,58 @@ class ExportDataController extends Controller
                 $query->having('family_members_total', '<=', (int) $familyMembersTo);
             }
 
+            $rows = $query->get();
+
+            if ($rows->isEmpty()) {
+                return back()->with('error', 'لا يوجد بيانات للتصدير.');
+            }
+
             /*
-            |--------------------------------------------------------------------------
+            |--------------------------------------------------
+            | RAW HEADERS + DISPLAY HEADERS
+            |--------------------------------------------------
+            */
+            $rawHeaders = array_keys((array) $rows->first());
+
+            $displayHeaders = [];
+            foreach ($rawHeaders as $rawHeader) {
+                $cleanHeader = str_replace(['building_', 'housing_'], '', $rawHeader);
+                $cleanHeader = trim($cleanHeader);
+
+                $displayHeaders[$rawHeader] = $assessmentLabels[$cleanHeader] ?? $cleanHeader;
+            }
+
+            // optional custom label
+            if (isset($displayHeaders['family_members_total'])) {
+                $displayHeaders['family_members_total'] = 'إجمالي عدد أفراد الأسرة';
+            }
+
+            /*
+            |--------------------------------------------------
             | PDF EXPORT
-            |--------------------------------------------------------------------------
+            |--------------------------------------------------
             */
             if ($exportType === 'pdf') {
 
-                $totalColumns = count($buildingColumns) + count($housingColumns);
-
-                if ($totalColumns > 15) {
+                if (count($displayHeaders) > 15) {
                     return back()->with('error', 'PDF مناسب لعدد أعمدة قليل فقط. استخدم Excel.');
                 }
 
-                $rows = $query->get();
-
-                if ($rows->isEmpty()) {
-                    return back()->with('error', 'لا يوجد بيانات للتصدير.');
-                }
-
-                // تنظيف البيانات
-                $rows = $rows->map(function ($row) {
+                $pdfRows = $rows->map(function ($row) {
                     $clean = [];
-
                     foreach ((array) $row as $key => $value) {
-                        $clean[$key] = is_scalar($value) || is_null($value)
-                            ? (string) $value
-                            : '';
+                        $clean[$key] = is_scalar($value) || is_null($value) ? (string) $value : '';
                     }
-
                     return $clean;
                 });
 
-                $headers = array_keys($rows->first());
-
                 $html = view('exports.buildings_pdf', [
-                    'rows' => $rows,
-                    'headers' => $headers,
+                    'rows' => $pdfRows,
+                    'rawHeaders' => $rawHeaders,
+                    'displayHeaders' => $displayHeaders,
                 ])->render();
 
-                $mpdf = new Mpdf([
+                $mpdf = new \Mpdf\Mpdf([
                     'mode' => 'utf-8',
                     'format' => 'A4-L',
                     'default_font' => 'dejavusans',
@@ -227,62 +250,55 @@ class ExportDataController extends Controller
                 $mpdf->SetTitle('Damage Assessment Report');
                 $mpdf->SetAuthor(config('app.name'));
                 $mpdf->SetHTMLFooter('
-    <div style="border-top:1px solid #999; font-size:10px; padding-top:6px; text-align:center; color:#666;">
-        <span>تاريخ التصدير: ' . now()->format('Y-m-d H:i') . '</span>
-        &nbsp; | &nbsp;
-        <span>الصفحة {PAGENO} من {nbpg}</span>
-    </div>
-');
+                <div style="border-top:1px solid #999; font-size:10px; padding-top:6px; text-align:center; color:#666;">
+                    <span>تاريخ التصدير: ' . now()->format('Y-m-d H:i') . '</span>
+                    &nbsp; | &nbsp;
+                    <span>الصفحة {PAGENO} من {nbpg}</span>
+                </div>
+            ');
 
                 $mpdf->WriteHTML($html);
 
                 return response($mpdf->Output('export.pdf', 'S'))
                     ->header('Content-Type', 'application/pdf')
-                    ->header('Content-Disposition', 'attachment; filename="export_' . now()->format('Y_m_d_H_i_s') . '.pdf"')
-                ;
+                    ->header('Content-Disposition', 'attachment; filename="export_' . now()->format('Y_m_d_H_i_s') . '.pdf"');
             }
 
             /*
-            |--------------------------------------------------------------------------
+            |--------------------------------------------------
             | EXCEL EXPORT
-            |--------------------------------------------------------------------------
+            |--------------------------------------------------
             */
-
-            $rows = $query->get();
-
-            if ($rows->isEmpty()) {
-                return back()->with('error', 'لا يوجد بيانات للتصدير.');
-            }
-
-            $headers = array_keys((array) $rows->first());
-
             $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Export');
 
-            // headers
-            foreach ($headers as $index => $header) {
-                $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1);
-                $sheet->setCellValue($columnLetter . '1', $header);
+            // write display headers
+            $headerIndex = 1;
+            foreach ($rawHeaders as $rawHeader) {
+                $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($headerIndex);
+                $sheet->setCellValue($columnLetter . '1', $displayHeaders[$rawHeader] ?? $rawHeader);
+                $headerIndex++;
             }
 
-            // data
+            // write row data in same order as raw headers
             $rowNumber = 2;
             foreach ($rows as $row) {
-                $rowData = array_values((array) $row);
+                $rowArray = (array) $row;
 
-                foreach ($rowData as $index => $value) {
-                    $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1);
-                    $sheet->setCellValue($columnLetter . $rowNumber, $value);
+                $colIndex = 1;
+                foreach ($rawHeaders as $rawHeader) {
+                    $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+                    $sheet->setCellValue($columnLetter . $rowNumber, $rowArray[$rawHeader] ?? '');
+                    $colIndex++;
                 }
 
                 $rowNumber++;
             }
 
-            $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+            $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($rawHeaders));
             $lastRow = $rows->count() + 1;
 
-            // style header
             $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
                 'font' => [
                     'bold' => true,
@@ -295,13 +311,12 @@ class ExportDataController extends Controller
                 ],
             ]);
 
-            // borders
             $sheet->getStyle("A1:{$lastColumn}{$lastRow}")
-                ->getBorders()->getAllBorders()
+                ->getBorders()
+                ->getAllBorders()
                 ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
-            // auto width
-            for ($i = 1; $i <= count($headers); $i++) {
+            for ($i = 1; $i <= count($rawHeaders); $i++) {
                 $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
                 $sheet->getColumnDimension($col)->setAutoSize(true);
             }
@@ -317,25 +332,5 @@ class ExportDataController extends Controller
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
-    }
-    public function exportPdfArabic($rows, $headers)
-    {
-        $html = view('exports.buildings_pdf', [
-            'rows' => $rows,
-            'headers' => $headers,
-        ])->render();
-
-        $mpdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4-L',
-            'default_font' => 'dejavusans',
-            'directionality' => 'rtl',
-        ]);
-
-        $mpdf->WriteHTML($html);
-
-        return response($mpdf->Output('export.pdf', 'S'))
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="export.pdf"');
     }
 }

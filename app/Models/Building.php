@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Carbon\Carbon;
 use App\Models\HousingUnit;
-
+use App\Models\EditAssessment;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Class Building
  *
@@ -366,7 +367,49 @@ class Building extends Model
     /**
      * @return array<string, string>
      */
+    protected array $editedFieldsCache = [];
 
+    public function edits(): HasMany
+    {
+        return $this->hasMany(EditAssessment::class, 'global_id', 'globalid')
+            ->where('type', 'building_table');
+    }
+
+    protected function getEditedFieldsMap(): array
+    {
+        if (!empty($this->editedFieldsCache)) {
+            return $this->editedFieldsCache;
+        }
+
+        $edits = $this->relationLoaded('edits')
+            ? $this->getRelation('edits')
+            : $this->edits()->get();
+
+        $this->editedFieldsCache = $edits
+            ->sortByDesc('id')
+            ->unique('field_name')
+            ->mapWithKeys(fn($edit) => [$edit->field_name => $edit->field_value])
+            ->toArray();
+
+        return $this->editedFieldsCache;
+    }
+
+    public function getAttributeValue($key): mixed
+    {
+        $value = parent::getAttributeValue($key);
+
+        if (!array_key_exists($key, $this->attributes)) {
+            return $value;
+        }
+
+        $editedFields = $this->getEditedFieldsMap();
+
+        if (array_key_exists($key, $editedFields)) {
+            return $editedFields[$key];
+        }
+
+        return $value;
+    }
     public function housing_unit()
     {
         return $this->hasMany(HousingUnit::class, 'parentglobalid', 'globalid');
@@ -378,35 +421,35 @@ class Building extends Model
 
     public function engineerStatus()
     {
-        return $this->hasOne(BuildingStatus::class,'building_id','objectid')
+        return $this->hasOne(BuildingStatus::class, 'building_id', 'objectid')
             ->where('type', 'QC/QA Engineer');
     }
     public function finalApproval()
     {
-        return $this->hasOne(BuildingStatus::class,'building_id','objectid')
+        return $this->hasOne(BuildingStatus::class, 'building_id', 'objectid')
             ->where('status_id', 9);
     }
     public function lawyerStatus()
     {
-        return $this->hasOne(BuildingStatus::class,'building_id','objectid')
+        return $this->hasOne(BuildingStatus::class, 'building_id', 'objectid')
             ->where('type', 'Legal Auditor');
     }
     public function assignedUsers()
-{
-    return $this->hasMany(AssignedAssessmentUser::class,'building_id','objectid');
-}
+    {
+        return $this->hasMany(AssignedAssessmentUser::class, 'building_id', 'objectid');
+    }
 
 
-public function lawyerAssignment()
-{
-    return $this->hasOne(AssignedAssessmentUser::class, 'building_id', 'objectid')
-        ->where('type', 'Legal Auditor');
-}
-public function engineerAssignment()
-{
-    return $this->hasOne(AssignedAssessmentUser::class, 'building_id', 'objectid')
-        ->where('type', 'QC/QA Engineer');
-}
+    public function lawyerAssignment()
+    {
+        return $this->hasOne(AssignedAssessmentUser::class, 'building_id', 'objectid')
+            ->where('type', 'Legal Auditor');
+    }
+    public function engineerAssignment()
+    {
+        return $this->hasOne(AssignedAssessmentUser::class, 'building_id', 'objectid')
+            ->where('type', 'QC/QA Engineer');
+    }
 
 
 }

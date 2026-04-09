@@ -111,13 +111,13 @@
 									<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $filters; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $listName => $items): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
 										<div class="col-md-4 mb-4 filter-card-item">
 											<label class="form-label fw-bold searchable-filter-name">
-												<?php echo e(ucwords(str_replace('_', ' ', $listName))); ?>
+												<?php echo e($assessmentLabels[$listName] ?? ucwords(str_replace('_', ' ', $listName))); ?>
 
 											</label>
 
 											<select name="filters[<?php echo e($listName); ?>][]"
 												class="form-select form-select-solid filter-select2" multiple
-												data-placeholder="اختر <?php echo e(ucwords(str_replace('_', ' ', $listName))); ?>">
+												data-placeholder="اختر <?php echo e($assessmentLabels[$listName] ?? ucwords(str_replace('_', ' ', $listName))); ?>">
 												<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $items; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
 													<option value="<?php echo e($item->name); ?>">
 														<?php echo e($item->label ?? $item->name); ?>
