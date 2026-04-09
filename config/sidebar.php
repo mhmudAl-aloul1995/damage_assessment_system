@@ -60,7 +60,7 @@ return [
         'title' => 'التقارير',
         'icon' => 'ki-chart-line',
 
-        'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
+        'roles' => ['Database Officer', 'Project Officer', 'Area Manager','QC/QA Engineer'],
 
         'active_patterns' => [
             'reports*'
@@ -85,7 +85,7 @@ return [
                 'title' => 'تصدير البيانات',
                 'url' => 'export-data',
                 'pattern' => 'export-data*',
-                'roles' => ['Database Officer', 'Project Officer']
+                'roles' => ['Database Officer', 'Project Officer','QC/QA Engineer']
             ],
 
         ]
