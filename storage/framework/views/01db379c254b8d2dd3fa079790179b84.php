@@ -920,7 +920,7 @@
 							<div class="cursor-pointer symbol symbol-35px"
 								data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
 								data-kt-menu-placement="bottom-end">
-								<img src="<?php echo e(asset('storage/' . Auth::user()->avatar)); ?>" class="rounded-3"
+								<img src="<?php echo e(Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('assets/media/avatars/blank.png')); ?>" class="rounded-3"
 									alt="user" />
 							</div>
 							<!--begin::User account menu-->
