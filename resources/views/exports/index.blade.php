@@ -111,12 +111,12 @@
 									@foreach($filters as $listName => $items)
 										<div class="col-md-4 mb-4 filter-card-item">
 											<label class="form-label fw-bold searchable-filter-name">
-												{{ ucwords(str_replace('_', ' ', $listName)) }}
+												{{ $assessmentLabels[$listName] ?? ucwords(str_replace('_', ' ', $listName)) }}
 											</label>
 
 											<select name="filters[{{ $listName }}][]"
 												class="form-select form-select-solid filter-select2" multiple
-												data-placeholder="اختر {{ ucwords(str_replace('_', ' ', $listName)) }}">
+												data-placeholder="اختر {{ $assessmentLabels[$listName] ?? ucwords(str_replace('_', ' ', $listName)) }}">
 												@foreach($items as $item)
 													<option value="{{ $item->name }}">
 														{{ $item->label ?? $item->name }}

@@ -17,7 +17,7 @@
 	<meta property="og:url" content="https://keenthemes.com/metronic" />
 	<meta property="og:site_name" content="Keenthemes | Metronic" />
 	<link rel="canonical" href="https://preview.keenthemes.com/metronic8" />
-	<link rel="shortcut icon" href="<?php echo e(asset('assets/media/logos/logo_64.png')); ?>" />
+	<link rel="shortcut icon" href="<?php echo e(asset('assets/media/logos/logo_641.png')); ?>" />
 	<!--begin::Fonts(mandatory for all pages)-->
 	<!--end::Fonts-->
 	<!--begin::Vendor Stylesheets(used for this page only)-->

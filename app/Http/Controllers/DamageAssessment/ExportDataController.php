@@ -13,6 +13,7 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Mpdf\Mpdf;
+use App\Models\Assessment;
 class ExportDataController extends Controller
 {
     public function index()
@@ -52,8 +53,9 @@ class ExportDataController extends Controller
             ->orderBy('label')
             ->get()
             ->groupBy('list_name');
-
+        $assessmentLabels =Assessment::pluck('label', 'name');
         return view('exports.index', [
+            'assessmentLabels' => $assessmentLabels,
             'buildingColumns' => $buildingColumns,
             'housingColumns' => $housingColumns,
             'assessmentMeta' => $assessmentMeta,
