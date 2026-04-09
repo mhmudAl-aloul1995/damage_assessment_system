@@ -110,7 +110,7 @@ class ExportDataController extends Controller
             |--------------------------------------------------
             */
             $assessmentLabels = DB::table('assessments')
-                ->selectRaw('TRIM(name) as name, COALESCE(NULLIF(TRIM(hint), ""), TRIM(name)) as label')
+                ->selectRaw('TRIM(name) as name, COALESCE(NULLIF(TRIM(hint), ""), TRIM(name)) as hint')
                 ->pluck('hint', 'name')
                 ->toArray();
 
