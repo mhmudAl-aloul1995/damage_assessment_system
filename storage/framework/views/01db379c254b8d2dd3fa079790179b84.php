@@ -920,8 +920,8 @@
 							<div class="cursor-pointer symbol symbol-35px"
 								data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
 								data-kt-menu-placement="bottom-end">
-								<img src="<?php echo e(Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('assets/media/avatars/blank.png')); ?>" class="rounded-3"
-									alt="user" />
+								<img src="<?php echo e(Auth::user()->avatar ? asset('storage/' . Auth::user()->avatar) : asset('assets/media/avatars/blank.png')); ?>"
+									class="rounded-3" alt="user" />
 							</div>
 							<!--begin::User account menu-->
 							<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-350px"
@@ -1108,11 +1108,15 @@
 						<img style="width: 230px; height: auto;;" alt="Logo"
 							src="<?php echo e(asset('assets/media/logos/LogoGaza2.jpeg')); ?>"
 							class="h-65px app-sidebar-logo-default" />
-
+						<style>
+							.app-sidebar-minimize {
+								max-width: 58px;
+							}
+						</style>
 						<!-- Minimized Logo (visible when sidebar is closed) -->
 						<!-- Pro-tip: Use a small square icon here -->
-						<img alt="Logo" src="<?php echo e(asset('assets/media/logos/LogoGaza-small.png')); ?>"
-							class="h-25px app-sidebar-logo-minimize" />
+						<img alt="Logo" src="<?php echo e(asset('assets/media/logos/logo_64.png')); ?>"
+							class="h-40px app-sidebar-minimize app-sidebar-logo-minimize" />
 
 					</a>
 					<!--end::Logo image-->
