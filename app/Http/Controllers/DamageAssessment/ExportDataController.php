@@ -174,9 +174,9 @@ class ExportDataController extends Controller
 
             foreach ($rawHeaders as $h) {
                 $clean = str_replace(['building_', 'housing_'], '', $h);
-                $label = $assessmentLabels[$clean] ?? $clean;   
+                $label = $assessmentLabels[$clean] ?? $clean;
 
-               
+
                 $displayHeaders[$h] = $label;
             }
 
@@ -204,7 +204,7 @@ class ExportDataController extends Controller
     }
     private function exportWithAutoSize($query, $rawHeaders, $displayHeaders)
     {
-        dd(5);  
+
         $rows = $query->limit(3000)->get();
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
@@ -277,34 +277,48 @@ class ExportDataController extends Controller
     // ✅ ولازم هذه أيضًا
     private function exportFast($query, $rawHeaders, $displayHeaders)
     {
-        dd(6);
         $fileName = 'exports/export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
         $fullPath = storage_path('app/public/' . $fileName);
 
         $generator = function () use ($query, $rawHeaders, $displayHeaders) {
-            foreach ($query->cursor() as $row) {
 
-                $row = (array) $row;
-                $out = [];
+            $offset = 0;
+            $limit = 1000;
 
-                foreach ($rawHeaders as $h) {
-                    $label = $displayHeaders[$h];
-                    $val = $row[$h] ?? '';
+            while (true) {
 
-                    if (is_bool($val)) {
-                        $val = $val ? 1 : 0;
-                    } elseif (is_array($val) || is_object($val) || is_null($val)) {
-                        $val = '';
-                    }
+                $rows = (clone $query)->offset($offset)->limit($limit)->get();
 
-                    $out[$label] = $val;
+                if ($rows->isEmpty()) {
+                    break;
                 }
 
-                yield $out;
+                foreach ($rows as $row) {
+
+                    $row = (array) $row;
+                    $out = [];
+
+                    foreach ($rawHeaders as $h) {
+                        $label = $displayHeaders[$h];
+                        $val = $row[$h] ?? '';
+
+                        if (is_bool($val)) {
+                            $val = $val ? 1 : 0;
+                        } elseif (is_array($val) || is_object($val) || is_null($val)) {
+                            $val = '';
+                        }
+
+                        $out[$label] = $val;
+                    }
+
+                    yield $out;
+                }
+
+                $offset += $limit;
             }
         };
 
-        (new \Rap2hpoutre\FastExcel\FastExcel($generator()))->export($fullPath);
+        (new FastExcel($generator()))->export($fullPath);
 
         return response()->download($fullPath)->deleteFileAfterSend(true);
     }
