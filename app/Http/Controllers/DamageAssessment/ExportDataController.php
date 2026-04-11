@@ -176,13 +176,7 @@ class ExportDataController extends Controller
                 $clean = str_replace(['building_', 'housing_'], '', $h);
                 $label = $assessmentLabels[$clean] ?? $clean;
 
-                if (str_starts_with($h, 'building_')) {
-                    $label = '🏢 ' . $label;
-                } elseif (str_starts_with($h, 'housing_')) {
-                    $label = '🏠 ' . $label;
-                } elseif ($h === 'family_members_total') {
-                    $label = '👨‍👩‍👧‍👦 عدد أفراد الأسرة';
-                }
+        
 
                 if (mb_strlen($label) > 40) {
                     $label = mb_substr($label, 0, 40) . '...';
@@ -198,7 +192,7 @@ class ExportDataController extends Controller
             */
             $count = (clone $query)->limit(5000)->count();
 
-            if ($count <= 3000) {
+            if ($count <= 15000) {
                 return $this->exportWithAutoSize($query, $rawHeaders, $displayHeaders);
             }
 
