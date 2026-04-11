@@ -277,6 +277,7 @@ class ExportDataController extends Controller
     // ✅ ولازم هذه أيضًا
     private function exportFast($query, $rawHeaders, $displayHeaders)
     {
+        dd(6);
         $fileName = 'exports/export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
         $fullPath = storage_path('app/public/' . $fileName);
 
