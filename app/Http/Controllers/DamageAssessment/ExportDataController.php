@@ -185,9 +185,7 @@ class ExportDataController extends Controller
             | HYBRID DECISION
             |--------------------------------------------------------------------------
             */
-            $count = (clone $query)->limit(5000)->count();
-
-            if ($count <= 7000) {
+            if (count($rawHeaders) <= 25) {
                 return $this->exportWithAutoSize($query, $rawHeaders, $displayHeaders);
             }
 
@@ -274,7 +272,6 @@ class ExportDataController extends Controller
         return response()->download($path)->deleteFileAfterSend(true);
     }
 
-    // ✅ ولازم هذه أيضًا
     private function exportFast($query, $rawHeaders, $displayHeaders)
     {
         $fileName = 'exports/export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
@@ -282,12 +279,16 @@ class ExportDataController extends Controller
 
         $generator = function () use ($query, $rawHeaders, $displayHeaders) {
 
-            $offset = 0;
+            $lastId = 0;
             $limit = 1000;
 
             while (true) {
 
-                $rows = (clone $query)->offset($offset)->limit($limit)->get();
+                $rows = (clone $query)
+                    ->where('b.id', '>', $lastId)
+                    ->orderBy('b.id')
+                    ->limit($limit)
+                    ->get();
 
                 if ($rows->isEmpty()) {
                     break;
@@ -312,13 +313,13 @@ class ExportDataController extends Controller
                     }
 
                     yield $out;
-                }
 
-                $offset += $limit;
+                    $lastId = $row['id']; // 🔥 مهم
+                }
             }
         };
 
-        (new FastExcel($generator()))->export($fullPath);
+        (new \Rap2hpoutre\FastExcel\FastExcel($generator()))->export($fullPath);
 
         return response()->download($fullPath)->deleteFileAfterSend(true);
     }
