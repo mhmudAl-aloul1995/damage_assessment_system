@@ -187,7 +187,7 @@ class ExportDataController extends Controller
             */
             $count = (clone $query)->limit(5000)->count();
 
-            if ($count <= 15000) {
+            if ($count <= 7000) {
                 return $this->exportWithAutoSize($query, $rawHeaders, $displayHeaders);
             }
 
