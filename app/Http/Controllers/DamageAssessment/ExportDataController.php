@@ -204,6 +204,7 @@ class ExportDataController extends Controller
     }
     private function exportWithAutoSize($query, $rawHeaders, $displayHeaders)
     {
+        dd(5);  
         $rows = $query->limit(3000)->get();
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
