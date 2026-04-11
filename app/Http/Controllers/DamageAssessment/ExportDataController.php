@@ -280,15 +280,16 @@ class ExportDataController extends Controller
                     ->header('Content-Disposition', 'attachment; filename="export_' . now()->format('Y_m_d_H_i_s') . '.pdf"');
             }
 
+
             /*
             |--------------------------------------------------------------------------
-            | EXCEL EXPORT - FASTEXCEL + CURSOR
+            | EXCEL EXPORT - FASTEXCEL + GENERATOR
             |--------------------------------------------------------------------------
             */
             $fileName = 'export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
 
-            return (new FastExcel(
-                $query->orderBy('b.id')->cursor()->map(function ($row) use ($rawHeaders, $displayHeaders) {
+            $generator = function () use ($query, $rawHeaders, $displayHeaders) {
+                foreach ($query->orderBy('b.id')->cursor() as $row) {
                     $rowArray = (array) $row;
                     $exportRow = [];
 
@@ -300,14 +301,18 @@ class ExportDataController extends Controller
                             $value = $value ? 1 : 0;
                         } elseif (is_array($value) || is_object($value)) {
                             $value = '';
+                        } elseif (is_null($value)) {
+                            $value = '';
                         }
 
                         $exportRow[$label] = $value;
                     }
 
-                    return $exportRow;
-                })
-            ))->download($fileName);
+                    yield $exportRow;
+                }
+            };
+
+            return (new FastExcel($generator()))->download($fileName);
 
         } catch (\Throwable $e) {
             \Log::error('Export failed', [
