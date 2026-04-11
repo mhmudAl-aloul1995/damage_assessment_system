@@ -98,7 +98,7 @@ class ExportDataController extends Controller
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
             }
 
-           
+
 
             $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
 
@@ -220,6 +220,7 @@ class ExportDataController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
+        // headers
         $colIndex = 1;
         foreach ($rawHeaders as $header) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
@@ -227,6 +228,33 @@ class ExportDataController extends Controller
             $colIndex++;
         }
 
+        // 🔥 تحديد آخر عمود
+        $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($rawHeaders));
+
+        // 🔥 STYLE HEADER
+        $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'], // أبيض
+                'size' => 11,
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => [
+                    'rgb' => '4472C4', // 🔵 أزرق احترافي
+                ],
+            ],
+        ]);
+
+        // 🔥 ارتفاع الهيدر
+        $sheet->getRowDimension(1)->setRowHeight(30);
+
+        // data
         $rowNumber = 2;
         foreach ($rows as $row) {
             $colIndex = 1;
@@ -243,6 +271,9 @@ class ExportDataController extends Controller
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
             $sheet->getColumnDimension($colLetter)->setAutoSize(true);
         }
+
+        // freeze header
+        $sheet->freezePane('A2');
 
         $fileName = 'export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
         $path = storage_path('app/public/' . $fileName);
