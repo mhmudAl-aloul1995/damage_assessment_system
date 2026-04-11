@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Rap2hpoutre\FastExcel\FastExcel;
 use Mpdf\Mpdf;
+use App\Models\Assessment;
+
 class ExportDataController extends Controller
 {
     public function index()
@@ -46,7 +48,9 @@ class ExportDataController extends Controller
             ->orderBy('label')
             ->get()
             ->groupBy('list_name');
+
         $assessmentLabels = Assessment::pluck('label', 'name');
+
         return view('exports.index', [
             'assessmentLabels' => $assessmentLabels,
             'buildingColumns' => $buildingColumns,
@@ -57,12 +61,9 @@ class ExportDataController extends Controller
     }
 
 
-    use Illuminate\Http\Request;
-    use Illuminate\Support\Facades\DB;
-    use Rap2hpoutre\FastExcel\FastExcel;
-    use Mpdf\Mpdf;
 
-    public function export(Request $request)
+
+    function export(Request $request)
     {
         try {
             ini_set('memory_limit', '1024M');
