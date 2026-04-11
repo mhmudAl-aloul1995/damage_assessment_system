@@ -1,19 +1,12 @@
 <?php
-namespace App\Http\Controllers\DamageAssessment;
-use App\Http\Controllers\Controller;
 
+namespace App\Http\Controllers\DamageAssessment;
+
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use Barryvdh\DomPDF\Facade\Pdf;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use Rap2hpoutre\FastExcel\FastExcel;
 use Mpdf\Mpdf;
-use App\Models\Assessment;
 class ExportDataController extends Controller
 {
     public function index()
