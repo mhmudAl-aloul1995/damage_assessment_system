@@ -174,14 +174,9 @@ class ExportDataController extends Controller
 
             foreach ($rawHeaders as $h) {
                 $clean = str_replace(['building_', 'housing_'], '', $h);
-                $label = $assessmentLabels[$clean] ?? $clean;
+                $label = $assessmentLabels[$clean] ?? $clean;   
 
-        
-
-                if (mb_strlen($label) > 40) {
-                    $label = mb_substr($label, 0, 40) . '...';
-                }
-
+               
                 $displayHeaders[$h] = $label;
             }
 
