@@ -142,12 +142,7 @@ class ExportDataController extends Controller
                 $clean = str_replace(['building_', 'housing_'], '', $h);
                 $label = $assessmentLabels[$clean] ?? $clean;
 
-                // accessories 🔥
-                if (str_starts_with($h, 'building_')) {
-                    $label = '🏢 ' . $label;
-                } elseif (str_starts_with($h, 'housing_')) {
-                    $label = '🏠 ' . $label;
-                }
+               
 
                 $displayHeaders[$h] = $label;
             }
