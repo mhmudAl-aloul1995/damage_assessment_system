@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Rap2hpoutre\FastExcel\FastExcel;
-use Mpdf\Mpdf;
 use App\Models\Assessment;
 
 class ExportDataController extends Controller
@@ -53,69 +52,66 @@ class ExportDataController extends Controller
 
         return view('exports.index', [
             'assessmentLabels' => $assessmentLabels,
-            'buildingColumns' => $buildingColumns,
-            'housingColumns' => $housingColumns,
-            'assessmentMeta' => $assessmentMeta,
-            'filters' => $filters,
+            'buildingColumns'   => $buildingColumns,
+            'housingColumns'    => $housingColumns,
+            'assessmentMeta'    => $assessmentMeta,
+            'filters'           => $filters,
         ]);
     }
-
 
     public function export(Request $request)
     {
         try {
             ini_set('memory_limit', '1024M');
-            ini_set('max_execution_time', 600);
+            ini_set('max_execution_time', '600');
 
             $buildingColumns = $request->input('building_columns', []);
-            $housingColumns = $request->input('housing_columns', []);
-            $filters = $request->input('filters', []);
+            $housingColumns  = $request->input('housing_columns', []);
+            $filters         = $request->input('filters', []);
 
             $familyMembersFrom = $request->input('family_members_from');
-            $familyMembersTo = $request->input('family_members_to');
+            $familyMembersTo   = $request->input('family_members_to');
 
             if (empty($buildingColumns) && empty($housingColumns)) {
                 return back()->with('error', 'يرجى اختيار عمود واحد على الأقل.');
             }
 
             $validBuildingColumns = DB::getSchemaBuilder()->getColumnListing('buildings');
-            $validHousingColumns = DB::getSchemaBuilder()->getColumnListing('housing_units');
+            $validHousingColumns  = DB::getSchemaBuilder()->getColumnListing('housing_units');
 
             $buildingColumns = array_values(array_intersect($buildingColumns, $validBuildingColumns));
-            $housingColumns = array_values(array_intersect($housingColumns, $validHousingColumns));
+            $housingColumns  = array_values(array_intersect($housingColumns, $validHousingColumns));
 
-            // labels
+            if (empty($buildingColumns) && empty($housingColumns)) {
+                return back()->with('error', 'الأعمدة المختارة غير صالحة.');
+            }
+
             $assessmentLabels = DB::table('assessments')
                 ->selectRaw('TRIM(name) as name, COALESCE(NULLIF(TRIM(hint), ""), TRIM(name)) as hint')
                 ->pluck('hint', 'name')
                 ->toArray();
 
-            // base query
             $query = DB::table('buildings as b');
 
-            // join housing if needed
             if (!empty($housingColumns)) {
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
             }
 
-
-
             $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
 
             if ($needsFamily) {
-
                 $familySub = DB::table('housing_units as hf')
                     ->selectRaw("
-                    hf.parentglobalid,
-                    (
-                        COALESCE(CAST(NULLIF(hf.mchildren_001, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.melderly, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.myoung, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.fchildren, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.fyoung_001, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.felderly, '') AS UNSIGNED), 0)
-                    ) as family_members_total
-                ");
+                        hf.parentglobalid,
+                        (
+                            COALESCE(CAST(NULLIF(hf.mchildren_001, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.melderly, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.myoung, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.fchildren, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.fyoung_001, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.felderly, '') AS UNSIGNED), 0)
+                        ) as family_members_total
+                    ");
 
                 $query->leftJoinSub($familySub, 'fam', function ($join) {
                     $join->on('b.globalid', '=', 'fam.parentglobalid');
@@ -130,8 +126,10 @@ class ExportDataController extends Controller
                 }
             }
 
-            // select
-            $selects = [];
+            // مهم جدًا: نضيف objectid داخليًا للتصفح فقط
+            $selects = [
+                'b.objectid as export_row_id',
+            ];
 
             foreach ($buildingColumns as $c) {
                 $selects[] = "b.`$c` as `building_$c`";
@@ -145,29 +143,34 @@ class ExportDataController extends Controller
                 $selects[] = "fam.family_members_total as family_members_total";
             }
 
-            $query->selectRaw(implode(',', $selects));
+            $query->selectRaw(implode(', ', $selects));
 
-            // filters
             foreach ($filters as $field => $values) {
-                $values = array_filter((array) $values);
+                $values = array_filter((array) $values, fn ($v) => $v !== null && $v !== '');
 
-                if (in_array($field, $validBuildingColumns)) {
+                if (empty($values)) {
+                    continue;
+                }
+
+                if (in_array($field, $validBuildingColumns, true)) {
                     $query->whereIn("b.$field", $values);
-                } elseif (in_array($field, $validHousingColumns)) {
+                } elseif (in_array($field, $validHousingColumns, true)) {
                     $query->whereIn("h.$field", $values);
                 }
             }
 
-            // headers
             $rawHeaders = [];
 
-            foreach ($buildingColumns as $c)
+            foreach ($buildingColumns as $c) {
                 $rawHeaders[] = "building_$c";
-            foreach ($housingColumns as $c)
+            }
+
+            foreach ($housingColumns as $c) {
                 $rawHeaders[] = "housing_$c";
+            }
 
             if ($needsFamily) {
-                $rawHeaders[] = "family_members_total";
+                $rawHeaders[] = 'family_members_total';
             }
 
             $displayHeaders = [];
@@ -176,39 +179,38 @@ class ExportDataController extends Controller
                 $clean = str_replace(['building_', 'housing_'], '', $h);
                 $label = $assessmentLabels[$clean] ?? $clean;
 
+                if ($h === 'family_members_total') {
+                    $label = 'عدد أفراد الأسرة';
+                }
 
                 $displayHeaders[$h] = $label;
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | HYBRID DECISION
-            |--------------------------------------------------------------------------
-            */
+            // قرار hybrid بدون count ثقيل
             if (count($rawHeaders) <= 25) {
                 return $this->exportWithAutoSize($query, $rawHeaders, $displayHeaders);
             }
 
             return $this->exportFast($query, $rawHeaders, $displayHeaders);
-
         } catch (\Throwable $e) {
-
             \Log::error('Export failed', [
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
+                'line'    => $e->getLine(),
+                'file'    => $e->getFile(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', 'فشل التصدير: ' . $e->getMessage());
         }
     }
+
     private function exportWithAutoSize($query, $rawHeaders, $displayHeaders)
     {
-
         $rows = $query->limit(3000)->get();
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // headers
         $colIndex = 1;
         foreach ($rawHeaders as $header) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
@@ -216,33 +218,27 @@ class ExportDataController extends Controller
             $colIndex++;
         }
 
-        // 🔥 تحديد آخر عمود
         $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($rawHeaders));
 
-        // 🔥 STYLE HEADER
         $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
             'font' => [
-                'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'], // أبيض
-                'size' => 11,
+                'bold'  => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size'  => 11,
             ],
             'alignment' => [
                 'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-                'wrapText' => true,
+                'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'wrapText'   => true,
             ],
             'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => [
-                    'rgb' => '4472C4', // 🔵 أزرق احترافي
-                ],
+                'fillType'   => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4472C4'],
             ],
         ]);
 
-        // 🔥 ارتفاع الهيدر
         $sheet->getRowDimension(1)->setRowHeight(30);
 
-        // data
         $rowNumber = 2;
         foreach ($rows as $row) {
             $colIndex = 1;
@@ -254,13 +250,11 @@ class ExportDataController extends Controller
             $rowNumber++;
         }
 
-        // auto size
         for ($i = 1; $i <= count($rawHeaders); $i++) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
             $sheet->getColumnDimension($colLetter)->setAutoSize(true);
         }
 
-        // freeze header
         $sheet->freezePane('A2');
 
         $fileName = 'export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
@@ -278,15 +272,13 @@ class ExportDataController extends Controller
         $fullPath = storage_path('app/public/' . $fileName);
 
         $generator = function () use ($query, $rawHeaders, $displayHeaders) {
-
-            $lastId = 0;
+            $lastObjectId = 0;
             $limit = 1000;
 
             while (true) {
-
                 $rows = (clone $query)
-                    ->where('b.id', '>', $lastId)
-                    ->orderBy('b.id')
+                    ->where('b.objectid', '>', $lastObjectId)
+                    ->orderBy('b.objectid')
                     ->limit($limit)
                     ->get();
 
@@ -295,13 +287,12 @@ class ExportDataController extends Controller
                 }
 
                 foreach ($rows as $row) {
-
                     $row = (array) $row;
                     $out = [];
 
                     foreach ($rawHeaders as $h) {
                         $label = $displayHeaders[$h];
-                        $val = $row[$h] ?? '';
+                        $val   = $row[$h] ?? '';
 
                         if (is_bool($val)) {
                             $val = $val ? 1 : 0;
@@ -314,12 +305,17 @@ class ExportDataController extends Controller
 
                     yield $out;
 
-                    $lastId = $row['id']; // 🔥 مهم
+                    // نقرأ objectid الداخلي فقط للتصفح
+                    $lastObjectId = (int) ($row['export_row_id'] ?? 0);
+                }
+
+                if ($lastObjectId === 0) {
+                    break;
                 }
             }
         };
 
-        (new \Rap2hpoutre\FastExcel\FastExcel($generator()))->export($fullPath);
+        (new FastExcel($generator()))->export($fullPath);
 
         return response()->download($fullPath)->deleteFileAfterSend(true);
     }
