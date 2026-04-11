@@ -67,7 +67,7 @@ class ExportDataController extends Controller
     {
         try {
             ini_set('memory_limit', '1024M');
-            ini_set('max_execution_time', 600);
+            ini_set('max_execution_time', -1);
 
             $request->validate([
                 'building_columns' => ['nullable', 'array'],
