@@ -61,25 +61,15 @@ class ExportDataController extends Controller
     }
 
 
-
-
     public function export(Request $request)
     {
         try {
             ini_set('memory_limit', '1024M');
             ini_set('max_execution_time', 600);
 
-            $request->validate([
-                'building_columns' => ['nullable', 'array'],
-                'housing_columns' => ['nullable', 'array'],
-                'filters' => ['nullable', 'array'],
-                'export_type' => ['required', 'in:excel,pdf'],
-            ]);
-
             $buildingColumns = $request->input('building_columns', []);
             $housingColumns = $request->input('housing_columns', []);
-            $selectedFilters = $request->input('filters', []);
-            $exportType = $request->input('export_type', 'excel');
+            $filters = $request->input('filters', []);
 
             if (empty($buildingColumns) && empty($housingColumns)) {
                 return back()->with('error', 'يرجى اختيار عمود واحد على الأقل.');
@@ -88,8 +78,8 @@ class ExportDataController extends Controller
             $validBuildingColumns = DB::getSchemaBuilder()->getColumnListing('buildings');
             $validHousingColumns = DB::getSchemaBuilder()->getColumnListing('housing_units');
 
-            $buildingColumns = array_intersect($buildingColumns, $validBuildingColumns);
-            $housingColumns = array_intersect($housingColumns, $validHousingColumns);
+            $buildingColumns = array_values(array_intersect($buildingColumns, $validBuildingColumns));
+            $housingColumns = array_values(array_intersect($housingColumns, $validHousingColumns));
 
             // labels
             $assessmentLabels = DB::table('assessments')
@@ -104,21 +94,21 @@ class ExportDataController extends Controller
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
             }
 
-            // selects
+            // select
             $selects = [];
 
-            foreach ($buildingColumns as $col) {
-                $selects[] = "b.`$col` as `building_$col`";
+            foreach ($buildingColumns as $c) {
+                $selects[] = "b.`$c` as `building_$c`";
             }
 
-            foreach ($housingColumns as $col) {
-                $selects[] = "h.`$col` as `housing_$col`";
+            foreach ($housingColumns as $c) {
+                $selects[] = "h.`$c` as `housing_$c`";
             }
 
             $query->selectRaw(implode(',', $selects));
 
             // filters
-            foreach ($selectedFilters as $field => $values) {
+            foreach ($filters as $field => $values) {
                 $values = array_filter((array) $values);
 
                 if (in_array($field, $validBuildingColumns)) {
@@ -142,87 +132,110 @@ class ExportDataController extends Controller
                 $clean = str_replace(['building_', 'housing_'], '', $h);
                 $label = $assessmentLabels[$clean] ?? $clean;
 
-               
+              
+
+                // shorten long labels
+                if (mb_strlen($label) > 40) {
+                    $label = mb_substr($label, 0, 40) . '...';
+                }
 
                 $displayHeaders[$h] = $label;
             }
 
             /*
             |--------------------------------------------------------------------------
-            | EXCEL EXPORT (FAST + SAFE)
+            | Decide small vs large
             |--------------------------------------------------------------------------
             */
+            $count = (clone $query)->limit(5000)->count();
 
-            if ($exportType === 'excel') {
-
-                $fileName = 'exports/export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
-                $fullPath = storage_path('app/public/' . $fileName);
-
-                // generator
-                $generator = function () use ($query, $rawHeaders, $displayHeaders) {
-                    foreach ($query->cursor() as $row) {
-
-                        $row = (array) $row;
-                        $out = [];
-
-                        foreach ($rawHeaders as $h) {
-                            $label = $displayHeaders[$h];
-                            $val = $row[$h] ?? '';
-
-                            if (is_bool($val)) {
-                                $val = $val ? 1 : 0;
-                            } elseif (is_array($val) || is_object($val) || is_null($val)) {
-                                $val = '';
-                            }
-
-                            $out[$label] = $val;
-                        }
-
-                        yield $out;
-                    }
-                };
-
-                // save file instead of streaming
-                (new FastExcel($generator()))->export($fullPath);
-
-                return response()->download($fullPath)->deleteFileAfterSend(true);
+            if ($count <= 3000) {
+                return $this->exportWithAutoSize($query, $rawHeaders, $displayHeaders);
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | PDF (small only)
-            |--------------------------------------------------------------------------
-            */
-
-            if ($exportType === 'pdf') {
-
-                $rows = $query->limit(3000)->get();
-
-                $html = view('exports.buildings_pdf', [
-                    'rows' => $rows,
-                    'rawHeaders' => $rawHeaders,
-                    'displayHeaders' => $displayHeaders,
-                ])->render();
-
-                $mpdf = new \Mpdf\Mpdf([
-                    'mode' => 'utf-8',
-                    'format' => 'A4-L',
-                    'default_font' => 'dejavusans',
-                ]);
-
-                $mpdf->WriteHTML($html);
-
-                return response($mpdf->Output('export.pdf', 'S'))
-                    ->header('Content-Type', 'application/pdf');
-            }
+            return $this->exportFast($query, $rawHeaders, $displayHeaders);
 
         } catch (\Throwable $e) {
 
             \Log::error('Export failed', [
-                'message' => $e->getMessage(),
+                'message' => $e->getMessage()
             ]);
 
-            return back()->with('error', 'فشل التصدير: ' . $e->getMessage());
+            return back()->with('error', $e->getMessage());
         }
+    }
+    // ✅ لازم تضيف هذه
+    private function exportWithAutoSize($query, $rawHeaders, $displayHeaders)
+    {
+        $rows = $query->limit(3000)->get();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $colIndex = 1;
+        foreach ($rawHeaders as $header) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+            $sheet->setCellValue($colLetter . '1', $displayHeaders[$header]);
+            $colIndex++;
+        }
+
+        $rowNumber = 2;
+        foreach ($rows as $row) {
+            $colIndex = 1;
+            foreach ($rawHeaders as $header) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+                $sheet->setCellValue($colLetter . $rowNumber, $row->$header ?? '');
+                $colIndex++;
+            }
+            $rowNumber++;
+        }
+
+        // auto size
+        for ($i = 1; $i <= count($rawHeaders); $i++) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+        }
+
+        $fileName = 'export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
+        $path = storage_path('app/public/' . $fileName);
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($path);
+
+        return response()->download($path)->deleteFileAfterSend(true);
+    }
+
+    // ✅ ولازم هذه أيضًا
+    private function exportFast($query, $rawHeaders, $displayHeaders)
+    {
+        $fileName = 'exports/export_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
+        $fullPath = storage_path('app/public/' . $fileName);
+
+        $generator = function () use ($query, $rawHeaders, $displayHeaders) {
+            foreach ($query->cursor() as $row) {
+
+                $row = (array) $row;
+                $out = [];
+
+                foreach ($rawHeaders as $h) {
+                    $label = $displayHeaders[$h];
+                    $val = $row[$h] ?? '';
+
+                    if (is_bool($val)) {
+                        $val = $val ? 1 : 0;
+                    } elseif (is_array($val) || is_object($val) || is_null($val)) {
+                        $val = '';
+                    }
+
+                    $out[$label] = $val;
+                }
+
+                yield $out;
+            }
+        };
+
+        (new \Rap2hpoutre\FastExcel\FastExcel($generator()))->export($fullPath);
+
+        return response()->download($fullPath)->deleteFileAfterSend(true);
     }
 }
