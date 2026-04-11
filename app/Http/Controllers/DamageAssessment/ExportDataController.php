@@ -71,6 +71,9 @@ class ExportDataController extends Controller
             $housingColumns = $request->input('housing_columns', []);
             $filters = $request->input('filters', []);
 
+            $familyMembersFrom = $request->input('family_members_from');
+            $familyMembersTo = $request->input('family_members_to');
+
             if (empty($buildingColumns) && empty($housingColumns)) {
                 return back()->with('error', 'يرجى اختيار عمود واحد على الأقل.');
             }
@@ -87,11 +90,44 @@ class ExportDataController extends Controller
                 ->pluck('hint', 'name')
                 ->toArray();
 
-            // query
+            // base query
             $query = DB::table('buildings as b');
 
+            // join housing if needed
             if (!empty($housingColumns)) {
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
+            }
+
+           
+
+            $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
+
+            if ($needsFamily) {
+
+                $familySub = DB::table('housing_units as hf')
+                    ->selectRaw("
+                    hf.parentglobalid,
+                    (
+                        COALESCE(CAST(NULLIF(hf.mchildren_001, '') AS UNSIGNED), 0) +
+                        COALESCE(CAST(NULLIF(hf.melderly, '') AS UNSIGNED), 0) +
+                        COALESCE(CAST(NULLIF(hf.myoung, '') AS UNSIGNED), 0) +
+                        COALESCE(CAST(NULLIF(hf.fchildren, '') AS UNSIGNED), 0) +
+                        COALESCE(CAST(NULLIF(hf.fyoung_001, '') AS UNSIGNED), 0) +
+                        COALESCE(CAST(NULLIF(hf.felderly, '') AS UNSIGNED), 0)
+                    ) as family_members_total
+                ");
+
+                $query->leftJoinSub($familySub, 'fam', function ($join) {
+                    $join->on('b.globalid', '=', 'fam.parentglobalid');
+                });
+
+                if (!is_null($familyMembersFrom)) {
+                    $query->where('fam.family_members_total', '>=', (int) $familyMembersFrom);
+                }
+
+                if (!is_null($familyMembersTo)) {
+                    $query->where('fam.family_members_total', '<=', (int) $familyMembersTo);
+                }
             }
 
             // select
@@ -103,6 +139,10 @@ class ExportDataController extends Controller
 
             foreach ($housingColumns as $c) {
                 $selects[] = "h.`$c` as `housing_$c`";
+            }
+
+            if ($needsFamily) {
+                $selects[] = "fam.family_members_total as family_members_total";
             }
 
             $query->selectRaw(implode(',', $selects));
@@ -126,15 +166,24 @@ class ExportDataController extends Controller
             foreach ($housingColumns as $c)
                 $rawHeaders[] = "housing_$c";
 
+            if ($needsFamily) {
+                $rawHeaders[] = "family_members_total";
+            }
+
             $displayHeaders = [];
 
             foreach ($rawHeaders as $h) {
                 $clean = str_replace(['building_', 'housing_'], '', $h);
                 $label = $assessmentLabels[$clean] ?? $clean;
 
-              
+                if (str_starts_with($h, 'building_')) {
+                    $label = '🏢 ' . $label;
+                } elseif (str_starts_with($h, 'housing_')) {
+                    $label = '🏠 ' . $label;
+                } elseif ($h === 'family_members_total') {
+                    $label = '👨‍👩‍👧‍👦 عدد أفراد الأسرة';
+                }
 
-                // shorten long labels
                 if (mb_strlen($label) > 40) {
                     $label = mb_substr($label, 0, 40) . '...';
                 }
@@ -144,7 +193,7 @@ class ExportDataController extends Controller
 
             /*
             |--------------------------------------------------------------------------
-            | Decide small vs large
+            | HYBRID DECISION
             |--------------------------------------------------------------------------
             */
             $count = (clone $query)->limit(5000)->count();
@@ -164,7 +213,6 @@ class ExportDataController extends Controller
             return back()->with('error', $e->getMessage());
         }
     }
-    // ✅ لازم تضيف هذه
     private function exportWithAutoSize($query, $rawHeaders, $displayHeaders)
     {
         $rows = $query->limit(3000)->get();
