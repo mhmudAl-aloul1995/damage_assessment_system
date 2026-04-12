@@ -24,14 +24,10 @@ class ExportDataJob implements ShouldQueue
     public int $tries = 3;
     public int $timeout = 0;
 
-    public function __construct(public int $exportId)
-    {
-    }
+    public function __construct(public int $exportId) {}
 
     public function handle(): void
     {
-      
-
         $export = Export::find($this->exportId);
 
         if (!$export || $export->status === 'cancelled') {
@@ -41,6 +37,8 @@ class ExportDataJob implements ShouldQueue
         try {
             ini_set('memory_limit', '1024M');
             set_time_limit(0);
+
+            \Log::info('Export started', ['id' => $export->id]);
 
             $export->update([
                 'status' => 'processing',
@@ -97,8 +95,8 @@ class ExportDataJob implements ShouldQueue
 
             $selects = [
                 $paginateByHousing
-                ? 'h.objectid as export_row_id'
-                : 'b.objectid as export_row_id',
+                    ? 'h.objectid as export_row_id'
+                    : 'b.objectid as export_row_id',
             ];
 
             foreach ($buildingColumns as $column) {
@@ -116,11 +114,9 @@ class ExportDataJob implements ShouldQueue
             $query->selectRaw(implode(', ', $selects));
 
             foreach ($filters as $field => $values) {
-                $values = array_filter((array) $values, fn($value) => $value !== null && $value !== '');
+                $values = array_filter((array) $values);
 
-                if (empty($values)) {
-                    continue;
-                }
+                if (empty($values)) continue;
 
                 if (Schema::hasColumn('buildings', $field)) {
                     $query->whereIn("b.$field", $values);
@@ -129,85 +125,64 @@ class ExportDataJob implements ShouldQueue
                 }
             }
 
+            // 🔥 Debug SQL
+            \Log::info('Export Query', [
+                'sql' => $query->toSql(),
+                'bindings' => $query->getBindings(),
+            ]);
+
             $hasData = (clone $query)->exists();
 
             if (!$hasData) {
                 $export->update([
-                    'status' => 'failed',
-                    'progress' => 0,
+                    'status' => 'done',
+                    'progress' => 100,
                     'processed' => 0,
+                    'file_name' => null,
                 ]);
 
-                \Log::warning('Export has no matching rows', [
-                    'export_id' => $this->exportId,
-                ]);
-
+                \Log::warning('No data for export', ['id' => $export->id]);
                 return;
             }
 
             $fileName = 'exports/export_' . now()->timestamp . '.xlsx';
             $fullPath = storage_path('app/public/' . $fileName);
 
-            $directory = dirname($fullPath);
-            if (!is_dir($directory)) {
-                mkdir($directory, 0777, true);
+            if (!is_dir(dirname($fullPath))) {
+                mkdir(dirname($fullPath), 0777, true);
             }
 
-            $generator = function () use ($query, $paginateByHousing) {
+            $generator = function () use ($query, $paginateByHousing, $export) {
+
                 $lastId = 0;
-                $loopCount = 0;
                 $limit = 200;
 
                 while (true) {
-                    $loopCount++;
 
-                    if ($loopCount > 10000) {
-                        throw new \RuntimeException('Infinite loop detected during export.');
+                    $export->refresh();
+                    if ($export->status === 'cancelled') {
+                        \Log::warning('Export cancelled mid-process');
+                        return;
                     }
 
                     $batchQuery = clone $query;
 
                     if ($paginateByHousing) {
                         $batchQuery->where('h.objectid', '>', $lastId)
-                            ->orderBy('h.objectid');
+                                   ->orderBy('h.objectid');
                     } else {
                         $batchQuery->where('b.objectid', '>', $lastId)
-                            ->orderBy('b.objectid');
+                                   ->orderBy('b.objectid');
                     }
 
                     $rows = $batchQuery->limit($limit)->get();
 
-                    if ($rows->isEmpty()) {
-                        break;
-                    }
-
-                    $newLastId = $lastId;
+                    if ($rows->isEmpty()) break;
 
                     foreach ($rows as $row) {
-                        if (!isset($row->export_row_id) || !$row->export_row_id) {
-                            continue;
-                        }
-
                         yield (array) $row;
-
-                        if ((int) $row->export_row_id > $newLastId) {
-                            $newLastId = (int) $row->export_row_id;
-                        }
+                        $lastId = max($lastId, (int) $row->export_row_id);
                     }
-
-                    if ($newLastId === $lastId) {
-                        throw new \RuntimeException('Stuck loop detected: export_row_id not changing.');
-                    }
-
-                    $lastId = $newLastId;
-
-                    \Log::info('Export batch processed', [
-                        'export_id' => $this->exportId,
-                        'last_id' => $lastId,
-                        'rows' => $rows->count(),
-                        'loop' => $loopCount,
-                        'mode' => $paginateByHousing ? 'housing_objectid' : 'building_objectid',
-                    ]);
                 }
             };
 
@@ -218,42 +193,18 @@ class ExportDataJob implements ShouldQueue
             $rowNumber = 1;
             $processed = 0;
             $headersWritten = false;
-            $lastColLetter = 'A';
 
             foreach ($generator() as $row) {
+
                 $processed++;
 
                 if (!$headersWritten) {
                     $colIndex = 1;
-
                     foreach (array_keys($row) as $header) {
                         $colLetter = Coordinate::stringFromColumnIndex($colIndex);
                         $sheet->setCellValue($colLetter . '1', $header);
                         $colIndex++;
                     }
-
-                    $lastCol = $colIndex - 1;
-                    $lastColLetter = Coordinate::stringFromColumnIndex($lastCol);
-
-                    $sheet->getStyle("A1:{$lastColLetter}1")->applyFromArray([
-                        'font' => [
-                            'bold' => true,
-                            'size' => 13,
-                            'color' => ['rgb' => 'FFFFFF'],
-                        ],
-                        'fill' => [
-                            'fillType' => Fill::FILL_SOLID,
-                            'startColor' => ['rgb' => '2C3E50'],
-                        ],
-                        'alignment' => [
-                            'horizontal' => Alignment::HORIZONTAL_CENTER,
-                            'vertical' => Alignment::VERTICAL_CENTER,
-                        ],
-                    ]);
-
-                    $sheet->freezePane('A2');
-                    $sheet->setAutoFilter("A1:{$lastColLetter}1");
-
                     $headersWritten = true;
                     $rowNumber++;
                 }
@@ -265,42 +216,17 @@ class ExportDataJob implements ShouldQueue
                     $colIndex++;
                 }
 
-                if ($rowNumber % 2 === 0) {
-                    $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")
-                        ->getFill()
-                        ->setFillType(Fill::FILL_SOLID)
-                        ->getStartColor()
-                        ->setRGB('F4F6F7');
-                }
-
                 if ($processed % 200 === 0) {
-                    $progress = min(95, max(1, (int) floor($processed / 100)));
-
                     $export->update([
-                        'progress' => $progress,
+                        'progress' => min(95, $processed / 10),
                         'processed' => $processed,
                     ]);
                 }
 
                 $rowNumber++;
-
-                if ($rowNumber % 1000 === 0) {
-                    $spreadsheet->garbageCollect();
-                }
             }
 
-            for ($i = 1; $i <= Coordinate::columnIndexFromString($lastColLetter); $i++) {
-                $colLetter = Coordinate::stringFromColumnIndex($i);
-                $sheet->getColumnDimension($colLetter)->setAutoSize(true);
-            }
-
-            $sheet->getStyle("A1:{$lastColLetter}" . ($rowNumber - 1))
-                ->getBorders()
-                ->getAllBorders()
-                ->setBorderStyle(Border::BORDER_THIN);
-
-            $writer = new Xlsx($spreadsheet);
-            $writer->save($fullPath);
+            (new Xlsx($spreadsheet))->save($fullPath);
 
             $export->update([
                 'status' => 'done',
@@ -308,17 +234,15 @@ class ExportDataJob implements ShouldQueue
                 'processed' => $processed,
                 'file_name' => $fileName,
             ]);
-        } catch (\Throwable $e) {
-            $export->update([
-                'status' => 'failed',
-            ]);
 
-            \Log::error('Export Job Failed', [
-                'export_id' => $this->exportId,
+            \Log::info('Export finished', ['id' => $export->id]);
+
+        } catch (\Throwable $e) {
+
+            $export->update(['status' => 'failed']);
+
+            \Log::error('Export failed', [
                 'message' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             throw $e;
