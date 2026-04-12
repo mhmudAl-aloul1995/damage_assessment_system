@@ -74,9 +74,7 @@ class ExportDataController extends Controller
         ]);
     }
 
-    use Illuminate\Http\Request;
-    use App\Models\Export;
-    use App\Jobs\ExportDataJob;
+ 
 
     public function export(Request $request)
     {
