@@ -81,12 +81,12 @@ class ExportDataController extends Controller
         try {
             Export::where('status', 'pending')
                 ->whereNull('file_name')
-                ->where('updated_at', '<', now()->subMinutes(10))
+                ->where('updated_at', '<', now()->subMinutes(100))
                 ->update(['status' => 'failed']);
 
             Export::where('status', 'processing')
                 ->whereNull('file_name')
-                ->where('updated_at', '<', now()->subMinutes(10))
+                ->where('updated_at', '<', now()->subMinutes(100))
                 ->update(['status' => 'failed']);
             $hasRunning = Export::whereIn('status', ['pending', 'processing'])->exists();
 
