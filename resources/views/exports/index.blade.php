@@ -610,7 +610,7 @@
 							}).then((result) => {
 								if (result.isConfirmed) {
 									$.ajax({
-										url: "/exports/" + res.running_export.id + "/cancel",
+										url: "{{ url('') }}/exports/" + res.running_export.id + "/cancel",
 										type: "POST",
 										data: {
 											_token: "{{ csrf_token() }}"
