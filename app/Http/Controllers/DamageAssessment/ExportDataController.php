@@ -88,13 +88,14 @@ class ExportDataController extends Controller
 
     public function export(Request $request)
     {
+        Artisan::call('queue:work', [
+            '--tries' => 3,
+            '--timeout' => 300,
+        ]);
         try {
 
 
-            Artisan::call('queue:work', [
-                '--tries' => 3,
-                '--timeout' => 300,
-            ]);
+
             // تنظيف السجلات العالقة القديمة
             Export::where('user_id', auth()->id())
                 ->whereIn('status', ['pending', 'processing'])
