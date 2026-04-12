@@ -11,7 +11,7 @@
 		}
 	</style>
 	<div class="container py-4">
-
+		<div id="exportResult" class="mt-4"></div>
 		<div class="card shadow-sm">
 			<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
 				<h3 class="mb-0">تصدير بيانات المباني والوحدات السكنية</h3>
@@ -322,7 +322,7 @@
 						</div>
 					</div>
 
-					<div id="exportResult" class="mt-4"></div>
+
 
 				</form>
 			</div>
@@ -428,10 +428,10 @@
 
 		function showError(message) {
 			$('#exportResult').html(`
-				<div class="alert alert-danger text-center">
-					${message}
-				</div>
-			`);
+					<div class="alert alert-danger text-center">
+						${message}
+					</div>
+				`);
 
 			$('.export-btn').prop('disabled', false);
 
@@ -486,23 +486,23 @@
 				}
 
 				$('#exportResult').html(`
-					<div class="card p-4 text-center">
-						<h5 class="mb-3">
-							⏳ جاري تجهيز الملف...
-							<span class="spinner-border spinner-border-sm ms-2"></span>
-						</h5>
+						<div class="card p-4 text-center">
+							<h5 class="mb-3">
+								⏳ جاري تجهيز الملف...
+								<span class="spinner-border spinner-border-sm ms-2"></span>
+							</h5>
 
-						<div class="progress mb-3" style="height: 25px;">
-							<div id="progressBar"
-								 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-								 style="width: 0%">
-								0%
+							<div class="progress mb-3" style="height: 25px;">
+								<div id="progressBar"
+									 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+									 style="width: 0%">
+									0%
+								</div>
 							</div>
-						</div>
 
-						<div id="processedCount" class="text-muted small mt-2"></div>
-					</div>
-				`);
+							<div id="processedCount" class="text-muted small mt-2"></div>
+						</div>
+					`);
 
 				$.ajax({
 					url: "<?php echo e(route('export.start')); ?>",
@@ -526,8 +526,8 @@
 									.text(progress + '%');
 
 								$('#processedCount').html(`
-									تمت معالجة <b>${processed.toLocaleString()}</b> صف
-								`);
+										تمت معالجة <b>${processed.toLocaleString()}</b> صف
+									`);
 
 								if (progress < 30) {
 									$('#progressBar').attr('class', 'progress-bar bg-danger progress-bar-striped progress-bar-animated');
@@ -552,10 +552,10 @@
 										.text('100%');
 
 									$('#exportResult').append(`
-										<div class="alert alert-success mt-3">
-											✅ تم إنشاء الملف بنجاح
-										</div>
-									`);
+											<div class="alert alert-success mt-3">
+												✅ تم إنشاء الملف بنجاح
+											</div>
+										`);
 
 									setTimeout(() => {
 										const link = document.createElement('a');
