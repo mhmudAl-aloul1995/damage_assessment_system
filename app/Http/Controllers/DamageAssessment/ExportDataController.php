@@ -64,16 +64,24 @@ class ExportDataController extends Controller
 
     public function check($id)
     {
-        $export = Export::findOrFail($id);
+        // تنظيف السجلات العالقة القديمة لنفس المستخدم
+        Export::where('user_id', auth()->id())
+            ->whereIn('status', ['pending', 'processing'])
+            ->whereNull('file_name')
+            ->where('updated_at', '<', now()->subMinutes(10))
+            ->update([
+                'status' => 'failed',
+            ]);
+
+        $export = Export::where('user_id', auth()->id())->findOrFail($id);
 
         return response()->json([
             'status' => $export->status,
-            'progress' => $export->progress,
-            'processed' => $export->processed,
+            'progress' => $export->progress ?? 0,
+            'processed' => $export->processed ?? 0,
             'file' => $export->file_name ? asset('storage/' . $export->file_name) : null,
         ]);
     }
-
 
 
     public function export(Request $request)
