@@ -28,7 +28,7 @@
 					</div>
 				@endif
 
-				<form id="exportForm" action="{{ route('export.data.download') }}" method="POST">
+				<form id="exportForm" method="POST">
 					@csrf
 
 					{{-- FILTERS --}}
@@ -60,8 +60,8 @@
 								</button>
 
 								<div class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="submit"
-										form="exportForm" name="export_type" value="excel">
+									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
+										data-type="excel">
 										<i class="ki-duotone ki-file-down fs-4 text-success">
 											<span class="path1"></span>
 											<span class="path2"></span>
@@ -69,8 +69,8 @@
 										<span>Excel (.xlsx)</span>
 									</button>
 
-									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="submit"
-										form="exportForm" name="export_type" value="pdf">
+									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
+										data-type="pdf">
 										<i class="ki-duotone ki-file-down fs-4 text-danger">
 											<span class="path1"></span>
 											<span class="path2"></span>
@@ -129,8 +129,8 @@
 									<div class="col-md-4 mb-4 filter-card-item static-filter-card">
 										<label class="form-label fw-bold searchable-filter-name">عدد أفراد الأسرة من</label>
 										<input type="number" name="family_members_from"
-											class="form-control form-control-solid" min="0" placeholder="عدد أفراد الأسرة من"
-											value="{{ old('family_members_from') }}">
+											class="form-control form-control-solid" min="0"
+											placeholder="عدد أفراد الأسرة من" value="{{ old('family_members_from') }}">
 									</div>
 
 									<div class="col-md-4 mb-4 filter-card-item static-filter-card">
@@ -312,6 +312,7 @@
 						</div>
 					</div>
 
+					<div id="exportResult" class="mt-4"></div>
 
 				</form>
 			</div>
@@ -369,31 +370,7 @@
 			filterColumns(inputId, listId, counterId);
 			input.focus();
 		}
-		document.addEventListener('DOMContentLoaded', function () {
-			filterColumns('buildingSearch', 'buildingColumnsList', 'buildingCounter');
-			filterColumns('housingSearch', 'housingColumnsList', 'housingCounter');
-			filterFilterCards();
 
-			$('.filter-select2').select2({
-				width: '100%',
-				dir: 'rtl',
-				closeOnSelect: false,
-				placeholder: 'اختر القيم'
-			});
-
-			const collapse = document.getElementById('filtersCollapse');
-			const btn = document.getElementById('toggleFiltersBtn');
-
-			if (collapse && btn) {
-				collapse.addEventListener('shown.bs.collapse', function () {
-					btn.innerHTML = '<i class="fas fa-chevron-down me-1"></i> إخفاء';
-				});
-
-				collapse.addEventListener('hidden.bs.collapse', function () {
-					btn.innerHTML = '<i class="fas fa-chevron-left me-1"></i> إظهار';
-				});
-			}
-		});
 		function filterFilterCards() {
 			const input = document.getElementById('filterSearch');
 			const filter = input.value.toLowerCase().trim();
@@ -421,5 +398,93 @@
 			filterFilterCards();
 			input.focus();
 		}
+
+		document.addEventListener('DOMContentLoaded', function () {
+			filterColumns('buildingSearch', 'buildingColumnsList', 'buildingCounter');
+			filterColumns('housingSearch', 'housingColumnsList', 'housingCounter');
+			filterFilterCards();
+
+			$('.filter-select2').select2({
+				width: '100%',
+				dir: 'rtl',
+				closeOnSelect: false,
+				placeholder: 'اختر القيم'
+			});
+
+			const collapse = document.getElementById('filtersCollapse');
+			const btn = document.getElementById('toggleFiltersBtn');
+
+			if (collapse && btn) {
+				collapse.addEventListener('shown.bs.collapse', function () {
+					btn.innerHTML = '<i class="fas fa-chevron-down me-1"></i> إخفاء';
+				});
+
+				collapse.addEventListener('hidden.bs.collapse', function () {
+					btn.innerHTML = '<i class="fas fa-chevron-left me-1"></i> إظهار';
+				});
+			}
+
+			$('.export-btn').on('click', function (e) {
+				e.preventDefault();
+
+				const exportType = $(this).data('type');
+				const formData = $('#exportForm').serializeArray();
+				formData.push({ name: 'export_type', value: exportType });
+
+				$('#exportResult').html(`
+								<div class="alert alert-info">
+									⏳ جاري إنشاء الملف...
+								</div>
+							`);
+
+				$.ajax({
+					url: "{{ route('export.start') }}",
+					method: "POST",
+					data: formData,
+					success: function (res) {
+						if (!res.status) {
+							$('#exportResult').html(`
+											<div class="alert alert-danger">❌ خطأ في بدء التصدير</div>
+										`);
+							return;
+						}
+
+						const exportId = res.export_id;
+						let interval = setInterval(function () {
+
+							$.get('{{ url('export/status') }}/' + exportId, function (data) {
+
+								let progress = data.progress ?? 0;
+
+								$('#exportResult').html(`
+						<div class="progress mb-3">
+							<div class="progress-bar" role="progressbar"
+								style="width: ${progress}%">
+								${progress}%
+							</div>
+						</div>
+					`);
+
+								if (data.status === 'done') {
+
+									clearInterval(interval);
+									$('.progress-bar').addClass('progress-bar-striped progress-bar-animated');
+									window.location.href = data.file; // 🔥 تحميل مباشر
+								}
+
+							});
+
+						}, 2000);
+
+
+					},
+					error: function () {
+						$('#exportResult').html(`
+										<div class="alert alert-danger">❌ حدث خطأ أثناء إرسال الطلب</div>
+									`);
+					}
+				});
+			});
+		});
 	</script>
 @endsection

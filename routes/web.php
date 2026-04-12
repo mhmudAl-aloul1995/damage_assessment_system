@@ -261,6 +261,12 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/export-data', [ExportDataController::class, 'index'])->name('export.data.index');
     Route::post('/export-data', [ExportDataController::class, 'export'])->name('export.data.download');
+
+    Route::post('/export/start', [ExportDataController::class, 'export'])->name('export.start');
+    Route::get('/export/status/{id}', [ExportDataController::class, 'check'])
+    ->name('export.status');
+
+    
 });
 
 require __DIR__ . '/auth.php';
