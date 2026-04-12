@@ -424,6 +424,7 @@
 				});
 			}
 
+
 			$('.export-btn').on('click', function (e) {
 				e.preventDefault();
 
@@ -431,60 +432,113 @@
 				const formData = $('#exportForm').serializeArray();
 				formData.push({ name: 'export_type', value: exportType });
 
+				// 🔥 تعطيل الأزرار
+				$('.export-btn').prop('disabled', true);
+
 				$('#exportResult').html(`
-								<div class="alert alert-info">
-									⏳ جاري إنشاء الملف...
-								</div>
-							`);
+			<div class="card p-4 text-center">
+				<h5 class="mb-3">⏳ جاري تجهيز الملف...</h5>
+
+				<div class="progress mb-3" style="height: 25px;">
+					<div id="progressBar"
+						 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+						 style="width: 0%">
+						0%
+					</div>
+				</div>
+
+				<small class="text-muted">قد يستغرق ذلك بعض الوقت حسب حجم البيانات</small>
+			</div>
+		`);
 
 				$.ajax({
 					url: "{{ route('export.start') }}",
 					method: "POST",
 					data: formData,
+
 					success: function (res) {
+
 						if (!res.status) {
-							$('#exportResult').html(`
-											<div class="alert alert-danger">❌ خطأ في بدء التصدير</div>
-										`);
+							showError("❌ فشل بدء التصدير");
 							return;
 						}
 
 						const exportId = res.export_id;
+
 						let interval = setInterval(function () {
 
 							$.get('{{ url('export/status') }}/' + exportId, function (data) {
 
 								let progress = data.progress ?? 0;
 
-								$('#exportResult').html(`
-						<div class="progress mb-3">
-							<div class="progress-bar" role="progressbar"
-								style="width: ${progress}%">
-								${progress}%
-							</div>
-						</div>
-					`);
+								$('#progressBar')
+									.css('width', progress + '%')
+									.text(progress + '%');
 
+								// 🔥 smooth color change
+								if (progress < 30) {
+									$('#progressBar').removeClass().addClass('progress-bar bg-danger progress-bar-striped progress-bar-animated');
+								} else if (progress < 70) {
+									$('#progressBar').removeClass().addClass('progress-bar bg-warning progress-bar-striped progress-bar-animated');
+								} else {
+									$('#progressBar').removeClass().addClass('progress-bar bg-success progress-bar-striped progress-bar-animated');
+								}
+
+								// 🔥 DONE
 								if (data.status === 'done') {
 
 									clearInterval(interval);
-									$('.progress-bar').addClass('progress-bar-striped progress-bar-animated');
-									window.location.href = data.file; // 🔥 تحميل مباشر
+
+									$('#progressBar')
+										.removeClass('progress-bar-animated')
+										.addClass('bg-success')
+										.css('width', '100%')
+										.text('100%');
+
+									$('#exportResult').append(`
+								<div class="alert alert-success mt-3">
+									✅ تم إنشاء الملف بنجاح
+								</div>
+							`);
+
+									// 🔥 تحميل مباشر
+									setTimeout(() => {
+										window.location.href = data.file;
+									}, 1000);
+
+									// 🔥 إعادة تفعيل الأزرار
+									$('.export-btn').prop('disabled', false);
+								}
+
+								// ❌ FAILED
+								if (data.status === 'failed') {
+									clearInterval(interval);
+									showError("❌ فشل التصدير");
 								}
 
 							});
 
 						}, 2000);
 
-
 					},
+
 					error: function () {
-						$('#exportResult').html(`
-										<div class="alert alert-danger">❌ حدث خطأ أثناء إرسال الطلب</div>
-									`);
+						showError("❌ خطأ في الاتصال بالسيرفر");
 					}
 				});
 			});
+
+			// 🔥 helper
+			function showError(message) {
+				$('#exportResult').html(`
+			<div class="alert alert-danger text-center">
+				${message}
+			</div>
+		`);
+
+				$('.export-btn').prop('disabled', false);
+			}
+
 		});
 	</script>
 @endsection
