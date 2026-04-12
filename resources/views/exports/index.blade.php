@@ -418,10 +418,10 @@
 
 		function showError(message) {
 			$('#exportResult').html(`
-						<div class="alert alert-danger text-center">
-							${message}
-						</div>
-					`);
+							<div class="alert alert-danger text-center">
+								${message}
+							</div>
+						`);
 
 			$('.export-btn').prop('disabled', false);
 
@@ -476,26 +476,26 @@
 				}
 
 				$('#exportResult').html(`
-							<div class="card p-4 text-center">
-								<h5 class="mb-3">
-									⏳ جاري تجهيز الملف...
-									<span class="spinner-border spinner-border-sm ms-2"></span>
-								</h5>
+								<div class="card p-4 text-center">
+									<h5 class="mb-3">
+										⏳ جاري تجهيز الملف...
+										<span class="spinner-border spinner-border-sm ms-2"></span>
+									</h5>
 
-								<div class="progress mb-3" style="height: 25px;">
-									<div id="progressBar"
-										 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-										 style="width: 0%">
-										0%
+									<div class="progress mb-3" style="height: 25px;">
+										<div id="progressBar"
+											 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+											 style="width: 0%">
+											0%
+										</div>
 									</div>
-								</div>
 
-								<div id="processedCount" class="text-muted small mt-2"></div>
-							</div>
-						`);
+									<div id="processedCount" class="text-muted small mt-2"></div>
+								</div>
+							`);
 
 				$.ajax({
-					url: "{{ route('exports.export') }}",
+					url: "{{ route('exports.start') }}",
 					type: "POST",
 					data: formData,
 					success: function (response) {
@@ -511,11 +511,11 @@
 							Swal.fire({
 								title: 'يوجد تصدير جارٍ',
 								html: `
-						<div class="text-center">
-							<p>${res.message}</p>
-							<p>التقدم الحالي: ${res.running_export.progress}%</p>
-						</div>
-					`,
+							<div class="text-center">
+								<p>${res.message}</p>
+								<p>التقدم الحالي: ${res.running_export.progress}%</p>
+							</div>
+						`,
 								icon: 'warning',
 								showCancelButton: true,
 								confirmButtonText: 'إلغاء التصدير القديم وبدء الجديد',
