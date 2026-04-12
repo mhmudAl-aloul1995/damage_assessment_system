@@ -79,16 +79,18 @@ class ExportDataController extends Controller
     public function export(Request $request)
     {
         try {
-            Export::where('status', 'pending')
+            // تنظيف السجلات العالقة القديمة
+            Export::where('user_id', auth()->id())
+                ->whereIn('status', ['pending', 'processing'])
                 ->whereNull('file_name')
-                ->where('updated_at', '<', now()->subMinutes(100))
+                ->where('updated_at', '<', now()->subMinutes(10))
                 ->update(['status' => 'failed']);
 
-            Export::where('status', 'processing')
-                ->whereNull('file_name')
-                ->where('updated_at', '<', now()->subMinutes(100))
-                ->update(['status' => 'failed']);
-            $hasRunning = Export::whereIn('status', ['pending', 'processing'])->exists();
+            // التحقق من وجود تصدير جارٍ فعلاً
+            $hasRunning = Export::where('user_id', auth()->id())
+                ->whereIn('status', ['pending', 'processing'])
+                ->where('updated_at', '>=', now()->subMinutes(10))
+                ->exists();
 
             if ($hasRunning) {
                 return response()->json([
