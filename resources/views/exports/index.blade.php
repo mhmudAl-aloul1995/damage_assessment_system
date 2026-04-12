@@ -496,7 +496,7 @@
 
 			exportInterval = setInterval(function () {
 				$.ajax({
-					url: "/exports/check/" + exportId,
+					url: "{{ url('') }}/exports/check/" + exportId,
 					type: "GET",
 					success: function (response) {
 						updateProgress(response.progress, response.processed);
