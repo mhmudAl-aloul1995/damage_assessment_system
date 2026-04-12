@@ -533,7 +533,7 @@
 
 											// أعد إرسال الطلب بعد الإلغاء
 											$.ajax({
-												url: "{{ route('exports.export') }}",
+												url: "{{ route('exports.start') }}",
 												type: "POST",
 												data: formData,
 												success: function (newRes) {
