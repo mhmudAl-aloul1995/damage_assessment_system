@@ -434,31 +434,31 @@
 
 		function showPreparingCard() {
 			$('#exportResult').html(`
-				<div class="card p-4 text-center">
-					<h5 class="mb-3">
-						⏳ جاري تجهيز الملف...
-						<span class="spinner-border spinner-border-sm ms-2"></span>
-					</h5>
+					<div class="card p-4 text-center">
+						<h5 class="mb-3">
+							⏳ جاري تجهيز الملف...
+							<span class="spinner-border spinner-border-sm ms-2"></span>
+						</h5>
 
-					<div class="progress mb-3" style="height: 25px;">
-						<div id="progressBar"
-							 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-							 style="width: 0%">
-							0%
+						<div class="progress mb-3" style="height: 25px;">
+							<div id="progressBar"
+								 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+								 style="width: 0%">
+								0%
+							</div>
 						</div>
-					</div>
 
-					<div id="processedCount" class="text-muted small mt-2"></div>
-				</div>
-			`);
+						<div id="processedCount" class="text-muted small mt-2"></div>
+					</div>
+				`);
 		}
 
 		function showError(message) {
 			$('#exportResult').html(`
-				<div class="alert alert-danger text-center">
-					${message}
-				</div>
-			`);
+					<div class="alert alert-danger text-center">
+						${message}
+					</div>
+				`);
 
 			enableExportButtons();
 			stopExportInterval();
@@ -467,13 +467,13 @@
 
 		function showSuccess(fileUrl) {
 			$('#exportResult').html(`
-				<div class="alert alert-success text-center">
-					<div class="mb-3">✅ تم تجهيز الملف بنجاح</div>
-					<a href="${fileUrl}" class="btn btn-success" target="_blank">
-						تحميل الملف
-					</a>
-				</div>
-			`);
+					<div class="alert alert-success text-center">
+						<div class="mb-3">✅ تم تجهيز الملف بنجاح</div>
+						<a href="${fileUrl}" class="btn btn-success" target="_blank">
+							تحميل الملف
+						</a>
+					</div>
+				`);
 
 			enableExportButtons();
 			stopExportInterval();
@@ -507,6 +507,11 @@
 							showError('فشل التصدير.');
 						} else if (response.status === 'cancelled') {
 							showError('تم إلغاء التصدير.');
+						}
+						if (response.status === 'done' && response.file && !isDownloaded) {
+							isDownloaded = true;
+							window.open(response.file, '_blank');
+							showSuccess(response.file);
 						}
 					},
 					error: function () {
@@ -598,11 +603,11 @@
 							Swal.fire({
 								title: 'يوجد تصدير جارٍ',
 								html: `
-									<div class="text-center">
-										<p>${res.message}</p>
-										<p>التقدم الحالي: ${res.running_export.progress ?? 0}%</p>
-									</div>
-								`,
+										<div class="text-center">
+											<p>${res.message}</p>
+											<p>التقدم الحالي: ${res.running_export.progress ?? 0}%</p>
+										</div>
+									`,
 								icon: 'warning',
 								showCancelButton: true,
 								confirmButtonText: 'إلغاء التصدير القديم وبدء الجديد',

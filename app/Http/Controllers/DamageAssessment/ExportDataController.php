@@ -9,6 +9,7 @@ use Rap2hpoutre\FastExcel\FastExcel;
 use App\Models\Assessment;
 use App\Models\Export;
 use App\Jobs\ExportDataJob;
+use Symfony\Component\Process\Process;
 
 class ExportDataController extends Controller
 {
@@ -87,6 +88,17 @@ class ExportDataController extends Controller
     public function export(Request $request)
     {
         try {
+
+            $process = new Process([
+                'php',
+                'artisan',
+                'queue:work',
+                '--tries=3',
+                '--timeout=300',
+                '--sleep=3'
+            ]);
+
+            $process->start();
             // تنظيف السجلات العالقة القديمة
             Export::where('user_id', auth()->id())
                 ->whereIn('status', ['pending', 'processing'])
