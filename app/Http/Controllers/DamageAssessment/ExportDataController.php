@@ -72,6 +72,7 @@ class ExportDataController extends Controller
             'file' => $export->file_name
                 ? asset('storage/' . $export->file_name)
                 : null,
+            'processed' => $export->processed_rows
         ]);
     }
     public function export(Request $request)
