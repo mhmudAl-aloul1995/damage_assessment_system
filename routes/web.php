@@ -268,6 +268,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/exports/{id}/cancel', [ExportDataController::class, 'cancel'])
         ->name('exports.cancel');
 
+    Route::post('/exports/start', [ExportDataController::class, 'export']);
+    Route::get('/exports/check/{id}', [ExportDataController::class, 'check']);
+    Route::post('/exports/{id}/cancel', [ExportDataController::class, 'cancel']);
+
 });
 
 require __DIR__ . '/auth.php';
