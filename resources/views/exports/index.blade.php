@@ -324,6 +324,7 @@
 
 @section('script')
 
+
 	<script>
 		let exportInterval = null;
 		let isDownloaded = false;
@@ -416,21 +417,124 @@
 			input.focus();
 		}
 
-		function showError(message) {
-			$('#exportResult').html(`
-								<div class="alert alert-danger text-center">
-									${message}
-								</div>
-							`);
-
-			$('.export-btn').prop('disabled', false);
-
+		function stopExportInterval() {
 			if (exportInterval) {
 				clearInterval(exportInterval);
 				exportInterval = null;
 			}
+		}
 
+		function enableExportButtons() {
+			$('.export-btn').prop('disabled', false);
+		}
+
+		function disableExportButtons() {
+			$('.export-btn').prop('disabled', true);
+		}
+
+		function showPreparingCard() {
+			$('#exportResult').html(`
+				<div class="card p-4 text-center">
+					<h5 class="mb-3">
+						⏳ جاري تجهيز الملف...
+						<span class="spinner-border spinner-border-sm ms-2"></span>
+					</h5>
+
+					<div class="progress mb-3" style="height: 25px;">
+						<div id="progressBar"
+							 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+							 style="width: 0%">
+							0%
+						</div>
+					</div>
+
+					<div id="processedCount" class="text-muted small mt-2"></div>
+				</div>
+			`);
+		}
+
+		function showError(message) {
+			$('#exportResult').html(`
+				<div class="alert alert-danger text-center">
+					${message}
+				</div>
+			`);
+
+			enableExportButtons();
+			stopExportInterval();
 			isDownloaded = false;
+		}
+
+		function showSuccess(fileUrl) {
+			$('#exportResult').html(`
+				<div class="alert alert-success text-center">
+					<div class="mb-3">✅ تم تجهيز الملف بنجاح</div>
+					<a href="${fileUrl}" class="btn btn-success" target="_blank">
+						تحميل الملف
+					</a>
+				</div>
+			`);
+
+			enableExportButtons();
+			stopExportInterval();
+			isDownloaded = true;
+		}
+
+		function updateProgress(progress, processed) {
+			progress = parseInt(progress || 0);
+			processed = parseInt(processed || 0);
+
+			$('#progressBar')
+				.css('width', progress + '%')
+				.text(progress + '%');
+
+			$('#processedCount').text('عدد السجلات المعالجة: ' + processed);
+		}
+
+		function startCheckingExport(exportId) {
+			stopExportInterval();
+
+			exportInterval = setInterval(function () {
+				$.ajax({
+					url: "/exports/check/" + exportId,
+					type: "GET",
+					success: function (response) {
+						updateProgress(response.progress, response.processed);
+
+						if (response.status === 'finished' && response.file) {
+							showSuccess(response.file);
+						} else if (response.status === 'failed') {
+							showError('فشل التصدير.');
+						} else if (response.status === 'cancelled') {
+							showError('تم إلغاء التصدير.');
+						}
+					},
+					error: function () {
+						showError('تعذر التحقق من حالة التصدير.');
+					}
+				});
+			}, 2000);
+		}
+
+		function restartExport(formData) {
+			$.ajax({
+				url: "{{ url('exports/start') }}",
+				type: "POST",
+				data: formData,
+				success: function (newRes) {
+					if (newRes.status) {
+						toastr.success(newRes.message || 'تم بدء التصدير');
+						startCheckingExport(newRes.export_id);
+					} else {
+						enableExportButtons();
+						toastr.error(newRes.message || 'فشل بدء التصدير');
+					}
+				},
+				error: function (xhr) {
+					enableExportButtons();
+					toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء إعادة بدء التصدير');
+				}
+			});
 		}
 
 		document.addEventListener('DOMContentLoaded', function () {
@@ -467,32 +571,10 @@
 				const formData = $('#exportForm').serializeArray();
 				formData.push({ name: 'export_type', value: exportType });
 
-				$('.export-btn').prop('disabled', true);
+				disableExportButtons();
 				isDownloaded = false;
-
-				if (exportInterval) {
-					clearInterval(exportInterval);
-					exportInterval = null;
-				}
-
-				$('#exportResult').html(`
-									<div class="card p-4 text-center">
-										<h5 class="mb-3">
-											⏳ جاري تجهيز الملف...
-											<span class="spinner-border spinner-border-sm ms-2"></span>
-										</h5>
-
-										<div class="progress mb-3" style="height: 25px;">
-											<div id="progressBar"
-												 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-												 style="width: 0%">
-												0%
-											</div>
-										</div>
-
-										<div id="processedCount" class="text-muted small mt-2"></div>
-									</div>
-								`);
+				stopExportInterval();
+				showPreparingCard();
 
 				$.ajax({
 					url: "{{ url('exports/start') }}",
@@ -500,22 +582,27 @@
 					data: formData,
 					success: function (response) {
 						if (response.status) {
-							toastr.success(response.message);
+							toastr.success(response.message || 'تم بدء التصدير');
 							startCheckingExport(response.export_id);
+						} else {
+							enableExportButtons();
+							toastr.error(response.message || 'فشل بدء التصدير');
 						}
 					},
 					error: function (xhr) {
 						const res = xhr.responseJSON;
 
-						if (xhr.status === 409 && res.needs_cancel) {
+						if (xhr.status === 409 && res?.needs_cancel) {
+							stopExportInterval();
+
 							Swal.fire({
 								title: 'يوجد تصدير جارٍ',
 								html: `
-								<div class="text-center">
-									<p>${res.message}</p>
-									<p>التقدم الحالي: ${res.running_export.progress}%</p>
-								</div>
-							`,
+									<div class="text-center">
+										<p>${res.message}</p>
+										<p>التقدم الحالي: ${res.running_export.progress ?? 0}%</p>
+									</div>
+								`,
 								icon: 'warning',
 								showCancelButton: true,
 								confirmButtonText: 'إلغاء التصدير القديم وبدء الجديد',
@@ -528,29 +615,29 @@
 										data: {
 											_token: "{{ csrf_token() }}"
 										},
+										beforeSend: function () {
+											Swal.showLoading();
+										},
 										success: function (cancelRes) {
-											toastr.success(cancelRes.message);
-
-											// أعد إرسال الطلب بعد الإلغاء
-											$.ajax({
-												url: "{{ url('exports/start') }}",
-												type: "POST",
-												data: formData,
-												success: function (newRes) {
-													if (newRes.status) {
-														toastr.success(newRes.message);
-														startCheckingExport(newRes.export_id);
-													}
-												}
-											});
+											toastr.success(cancelRes.message || 'تم إلغاء التصدير القديم');
+											showPreparingCard();
+											restartExport(formData);
+										},
+										error: function (cancelXhr) {
+											enableExportButtons();
+											toastr.error(cancelXhr.responseJSON?.message || 'فشل إلغاء التصدير القديم');
 										}
 									});
+								} else {
+									enableExportButtons();
+									$('#exportResult').html('');
 								}
 							});
 
 							return;
 						}
 
+						enableExportButtons();
 						toastr.error(res?.message || 'حدث خطأ غير متوقع');
 					}
 				});
