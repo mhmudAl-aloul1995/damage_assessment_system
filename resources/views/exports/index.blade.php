@@ -418,10 +418,10 @@
 
 		function showError(message) {
 			$('#exportResult').html(`
-					<div class="alert alert-danger text-center">
-						${message}
-					</div>
-				`);
+						<div class="alert alert-danger text-center">
+							${message}
+						</div>
+					`);
 
 			$('.export-btn').prop('disabled', false);
 
@@ -476,99 +476,82 @@
 				}
 
 				$('#exportResult').html(`
-						<div class="card p-4 text-center">
-							<h5 class="mb-3">
-								⏳ جاري تجهيز الملف...
-								<span class="spinner-border spinner-border-sm ms-2"></span>
-							</h5>
+							<div class="card p-4 text-center">
+								<h5 class="mb-3">
+									⏳ جاري تجهيز الملف...
+									<span class="spinner-border spinner-border-sm ms-2"></span>
+								</h5>
 
-							<div class="progress mb-3" style="height: 25px;">
-								<div id="progressBar"
-									 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-									 style="width: 0%">
-									0%
+								<div class="progress mb-3" style="height: 25px;">
+									<div id="progressBar"
+										 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+										 style="width: 0%">
+										0%
+									</div>
 								</div>
-							</div>
 
-							<div id="processedCount" class="text-muted small mt-2"></div>
-						</div>
-					`);
+								<div id="processedCount" class="text-muted small mt-2"></div>
+							</div>
+						`);
 
 				$.ajax({
-					url: "{{ route('export.start') }}",
-					method: "POST",
+					url: "{{ route('exports.export') }}",
+					type: "POST",
 					data: formData,
-					success: function (res) {
-						if (!res.status) {
-							showError("❌ فشل بدء التصدير");
+					success: function (response) {
+						if (response.status) {
+							toastr.success(response.message);
+							startCheckingExport(response.export_id);
+						}
+					},
+					error: function (xhr) {
+						const res = xhr.responseJSON;
+
+						if (xhr.status === 409 && res.needs_cancel) {
+							Swal.fire({
+								title: 'يوجد تصدير جارٍ',
+								html: `
+						<div class="text-center">
+							<p>${res.message}</p>
+							<p>التقدم الحالي: ${res.running_export.progress}%</p>
+						</div>
+					`,
+								icon: 'warning',
+								showCancelButton: true,
+								confirmButtonText: 'إلغاء التصدير القديم وبدء الجديد',
+								cancelButtonText: 'إغلاق'
+							}).then((result) => {
+								if (result.isConfirmed) {
+									$.ajax({
+										url: "/exports/" + res.running_export.id + "/cancel",
+										type: "POST",
+										data: {
+											_token: "{{ csrf_token() }}"
+										},
+										success: function (cancelRes) {
+											toastr.success(cancelRes.message);
+
+											// أعد إرسال الطلب بعد الإلغاء
+											$.ajax({
+												url: "{{ route('exports.export') }}",
+												type: "POST",
+												data: formData,
+												success: function (newRes) {
+													if (newRes.status) {
+														toastr.success(newRes.message);
+														startCheckingExport(newRes.export_id);
+													}
+												}
+											});
+										}
+									});
+								}
+							});
+
 							return;
 						}
 
-						const exportId = res.export_id;
-
-						exportInterval = setInterval(function () {
-							$.get('{{ url('export/status') }}/' + exportId, function (data) {
-								let progress = data.progress ?? 0;
-								let processed = data.processed ?? 0;
-
-								$('#progressBar')
-									.css('width', progress + '%')
-									.text(progress + '%');
-
-								$('#processedCount').html(`
-										تمت معالجة <b>${processed.toLocaleString()}</b> صف
-									`);
-
-								if (progress < 30) {
-									$('#progressBar').attr('class', 'progress-bar bg-danger progress-bar-striped progress-bar-animated');
-								} else if (progress < 70) {
-									$('#progressBar').attr('class', 'progress-bar bg-warning progress-bar-striped progress-bar-animated');
-								} else {
-									$('#progressBar').attr('class', 'progress-bar bg-success progress-bar-striped progress-bar-animated');
-								}
-
-								if (data.status === 'done' && !isDownloaded) {
-									isDownloaded = true;
-
-									if (exportInterval) {
-										clearInterval(exportInterval);
-										exportInterval = null;
-									}
-
-									$('#progressBar')
-										.removeClass('progress-bar-animated')
-										.addClass('bg-success')
-										.css('width', '100%')
-										.text('100%');
-
-									$('#exportResult').append(`
-											<div class="alert alert-success mt-3">
-												✅ تم إنشاء الملف بنجاح
-											</div>
-										`);
-
-									setTimeout(() => {
-										const link = document.createElement('a');
-										link.href = data.file;
-										link.download = '';
-										document.body.appendChild(link);
-										link.click();
-										document.body.removeChild(link);
-
-										$('.export-btn').prop('disabled', false);
-									}, 800);
-								}
-
-								if (data.status === 'failed') {
-									showError("❌ فشل التصدير");
-								}
-							}).fail(function () {
-								showError("❌ تعذر التحقق من حالة التصدير");
-							});
-						}, 1000);
-					},
-					error: function () {
-						showError("❌ خطأ في الاتصال بالسيرفر");
+						toastr.error(res?.message || 'حدث خطأ غير متوقع');
 					}
 				});
 			});

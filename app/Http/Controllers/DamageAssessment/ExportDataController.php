@@ -92,19 +92,29 @@ class ExportDataController extends Controller
                 ->whereIn('status', ['pending', 'processing'])
                 ->whereNull('file_name')
                 ->where('updated_at', '<', now()->subMinutes(10))
-                ->update(['status' => 'failed']);
+                ->update([
+                    'status' => 'failed',
+                ]);
 
-            // التحقق من وجود تصدير جارٍ فعلاً
-            $hasRunning = Export::where('user_id', auth()->id())
+            // هل يوجد تصدير حالي؟
+            $runningExport = Export::where('user_id', auth()->id())
                 ->whereIn('status', ['pending', 'processing'])
                 ->where('updated_at', '>=', now()->subMinutes(10))
-                ->exists();
+                ->latest('id')
+                ->first();
 
-            if ($hasRunning) {
+            if ($runningExport) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'يوجد تصدير جارٍ بالفعل. يرجى الانتظار حتى ينتهي.'
-                ], 422);
+                    'needs_cancel' => true,
+                    'message' => 'يوجد تصدير جارٍ بالفعل.',
+                    'running_export' => [
+                        'id' => $runningExport->id,
+                        'status' => $runningExport->status,
+                        'progress' => $runningExport->progress ?? 0,
+                        'processed' => $runningExport->processed ?? 0,
+                    ],
+                ], 409);
             }
 
             $export = Export::create([
@@ -135,6 +145,29 @@ class ExportDataController extends Controller
                 'message' => 'فشل بدء التصدير: ' . $e->getMessage(),
             ], 500);
         }
+
+
+    }
+
+    public function cancel($id)
+    {
+        $export = Export::where('user_id', auth()->id())->findOrFail($id);
+
+        if (!in_array($export->status, ['pending', 'processing'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'لا يمكن إلغاء هذا التصدير.'
+            ], 422);
+        }
+
+        $export->update([
+            'status' => 'cancelled',
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم إلغاء التصدير السابق بنجاح.'
+        ]);
     }
     /*     public function export(Request $request)
         {

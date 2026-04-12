@@ -30,9 +30,11 @@ class ExportDataJob implements ShouldQueue
 
     public function handle(): void
     {
+      
+
         $export = Export::find($this->exportId);
 
-        if (!$export) {
+        if (!$export || $export->status === 'cancelled') {
             return;
         }
 
@@ -95,8 +97,8 @@ class ExportDataJob implements ShouldQueue
 
             $selects = [
                 $paginateByHousing
-                    ? 'h.objectid as export_row_id'
-                    : 'b.objectid as export_row_id',
+                ? 'h.objectid as export_row_id'
+                : 'b.objectid as export_row_id',
             ];
 
             foreach ($buildingColumns as $column) {
