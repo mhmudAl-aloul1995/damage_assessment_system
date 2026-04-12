@@ -15,6 +15,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use Illuminate\Support\Facades\Schema;
 class ExportDataJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -24,20 +25,24 @@ class ExportDataJob implements ShouldQueue
     }
 
 
+
     public function handle()
     {
         $export = Export::find($this->exportId);
 
-        if (!$export)
+        if (!$export) {
             return;
+        }
 
         try {
-
-            // 🔥 مهم
             ini_set('memory_limit', '1024M');
             set_time_limit(0);
 
-            $export->update(['status' => 'processing']);
+            $export->update([
+                'status' => 'processing',
+                'progress' => 0,
+                'processed' => 0,
+            ]);
 
             $params = json_decode($export->filters, true);
 
@@ -57,7 +62,6 @@ class ExportDataJob implements ShouldQueue
             $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
 
             if ($needsFamily) {
-
                 $familySub = DB::table('housing_units as hf')
                     ->selectRaw("
                     hf.parentglobalid,
@@ -91,41 +95,53 @@ class ExportDataJob implements ShouldQueue
                 ? 'h.objectid as export_row_id'
                 : 'b.objectid as export_row_id'
             ];
+
             foreach ($buildingColumns as $c) {
-                $selects[] = "b.$c as building_$c";
+                $selects[] = "b.`$c` as `building_$c`";
             }
 
             foreach ($housingColumns as $c) {
-                $selects[] = "h.$c as housing_$c";
+                $selects[] = "h.`$c` as `housing_$c`";
             }
 
             if ($needsFamily) {
                 $selects[] = "fam.family_members_total as family_members_total";
             }
 
-            $query->selectRaw(implode(',', $selects));
+            $query->selectRaw(implode(', ', $selects));
 
-            // 🔥 مهم جدًا
+            foreach ($filters as $field => $values) {
+                $values = array_filter((array) $values, fn($v) => $v !== null && $v !== '');
+
+                if (empty($values)) {
+                    continue;
+                }
+
+                if (Schema::hasColumn('buildings', $field)) {
+                    $query->whereIn("b.$field", $values);
+                } elseif (Schema::hasColumn('housing_units', $field)) {
+                    $query->whereIn("h.$field", $values);
+                }
+            }
+
             $fileName = 'exports/export_' . now()->timestamp . '.xlsx';
             $fullPath = storage_path('app/public/' . $fileName);
 
-            // تأكد المجلد موجود
             if (!file_exists(dirname($fullPath))) {
                 mkdir(dirname($fullPath), 0777, true);
             }
 
-
-            $totalProcessed = 0;
-
-            $generator = function () use ($query, $paginateByHousing, $export, &$totalProcessed) {
-
+            $generator = function () use ($query, $paginateByHousing) {
                 $lastId = 0;
                 $loopCount = 0;
                 $limit = 200;
 
                 while (true) {
-
                     $loopCount++;
+
+                    if ($loopCount > 10000) {
+                        throw new \Exception('Infinite loop detected');
+                    }
 
                     $batchQuery = clone $query;
 
@@ -139,43 +155,53 @@ class ExportDataJob implements ShouldQueue
 
                     $rows = $batchQuery->limit($limit)->get();
 
-                    if ($rows->isEmpty())
+                    if ($rows->isEmpty()) {
                         break;
+                    }
+
+                    $newLastId = $lastId;
 
                     foreach ($rows as $row) {
-
-                        if (!isset($row->export_row_id))
+                        if (!isset($row->export_row_id) || !$row->export_row_id) {
                             continue;
+                        }
 
                         yield (array) $row;
 
-                        $lastId = $row->export_row_id;
-                        $totalProcessed++;
+                        if ((int) $row->export_row_id > $newLastId) {
+                            $newLastId = (int) $row->export_row_id;
+                        }
                     }
 
-                    // 🔥 تحديث progress كل batch
-                    $progress = min(95, intval($totalProcessed / 100)); // fake % بسيط
+                    if ($newLastId === $lastId) {
+                        throw new \Exception('Stuck loop detected: export_row_id not changing');
+                    }
 
-                    $export->update([
-                        'progress' => $progress
+                    $lastId = $newLastId;
+
+                    \Log::info('Export progress', [
+                        'export_id' => $this->exportId,
+                        'lastId' => $lastId,
+                        'rows' => $rows->count(),
+                        'loop' => $loopCount,
+                        'mode' => $paginateByHousing ? 'housing_objectid' : 'building_objectid',
                     ]);
                 }
             };
 
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
-
-            // 🔥 RTL
             $sheet->setRightToLeft(true);
 
             $rowNumber = 1;
+            $processed = 0;
             $headersWritten = false;
+            $lastColLetter = 'A';
 
             foreach ($generator() as $row) {
+                $processed++; // ✅ هنا الصحيح
 
-                // ✅ HEADER
                 if (!$headersWritten) {
-
                     $colIndex = 1;
 
                     foreach (array_keys($row) as $header) {
@@ -187,7 +213,6 @@ class ExportDataJob implements ShouldQueue
                     $lastCol = $colIndex - 1;
                     $lastColLetter = Coordinate::stringFromColumnIndex($lastCol);
 
-                    // 🎨 HEADER STYLE
                     $sheet->getStyle("A1:{$lastColLetter}1")->applyFromArray([
                         'font' => [
                             'bold' => true,
@@ -204,33 +229,21 @@ class ExportDataJob implements ShouldQueue
                         ],
                     ]);
 
-                    // 🔥 Freeze header
                     $sheet->freezePane('A2');
-
-                    // 🔥 Auto filter
                     $sheet->setAutoFilter("A1:{$lastColLetter}1");
-
-                    // 🔥 Auto size
-                    for ($i = 1; $i <= $lastCol; $i++) {
-                        $colLetter = Coordinate::stringFromColumnIndex($i);
-                        $sheet->getColumnDimension($colLetter)->setAutoSize(true);
-                    }
 
                     $headersWritten = true;
                     $rowNumber++;
                 }
 
-                // ✅ DATA
                 $colIndex = 1;
-
                 foreach ($row as $value) {
                     $colLetter = Coordinate::stringFromColumnIndex($colIndex);
                     $sheet->setCellValue($colLetter . $rowNumber, $value);
                     $colIndex++;
                 }
 
-                // 🎨 Zebra Rows
-                if ($rowNumber % 2 == 0) {
+                if ($rowNumber % 2 === 0) {
                     $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")
                         ->getFill()
                         ->setFillType(Fill::FILL_SOLID)
@@ -238,38 +251,45 @@ class ExportDataJob implements ShouldQueue
                         ->setRGB('F4F6F7');
                 }
 
+                // تحديث progress كل 200 صف
+                if ($processed % 200 === 0) {
+                    $progress = min(95, max(1, (int) floor($processed / 100)));
+
+                    $export->update([
+                        'progress' => $progress,
+                        'processed' => $processed,
+                    ]);
+                }
+
                 $rowNumber++;
 
-                // 🔥 memory protection
                 if ($rowNumber % 1000 === 0) {
                     $spreadsheet->garbageCollect();
                 }
             }
 
-            // 🔥 Borders
+            for ($i = 1; $i <= Coordinate::columnIndexFromString($lastColLetter); $i++) {
+                $colLetter = Coordinate::stringFromColumnIndex($i);
+                $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+            }
+
             $sheet->getStyle("A1:{$lastColLetter}" . ($rowNumber - 1))
                 ->getBorders()
                 ->getAllBorders()
                 ->setBorderStyle(Border::BORDER_THIN);
 
-            // 🔥 Save
             $writer = new Xlsx($spreadsheet);
             $writer->save($fullPath);
 
-            // 🔥 save file
-            $writer = new Xlsx($spreadsheet);
-            $writer->save($fullPath);
             $export->update([
                 'status' => 'done',
                 'progress' => 100,
-                'file_name' => $fileName
+                'processed' => $processed,
+                'file_name' => $fileName,
             ]);
-
         } catch (\Throwable $e) {
-
-            // ❌ الفشل
             $export->update([
-                'status' => 'failed'
+                'status' => 'failed',
             ]);
 
             \Log::error('Export Job Failed', [
@@ -277,6 +297,7 @@ class ExportDataJob implements ShouldQueue
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             throw $e;

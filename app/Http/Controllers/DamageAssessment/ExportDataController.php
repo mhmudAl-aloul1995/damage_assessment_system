@@ -69,10 +69,8 @@ class ExportDataController extends Controller
         return response()->json([
             'status' => $export->status,
             'progress' => $export->progress,
-            'file' => $export->file_name
-                ? asset('storage/' . $export->file_name)
-                : null,
-            'processed' => $export->processed_rows
+            'processed' => $export->processed,
+            'file' => $export->file_name ? asset('storage/' . $export->file_name) : null,
         ]);
     }
     public function export(Request $request)

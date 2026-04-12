@@ -10,6 +10,8 @@ class Export extends Model
         'file_name',
         'status',
         'filters',
-        'user_id'
+        'user_id',
+        'progress',
+        'processed',
     ];
 }

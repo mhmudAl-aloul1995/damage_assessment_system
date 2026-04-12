@@ -333,13 +333,19 @@
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('script'); ?>
+
 	<script>
+		let exportInterval = null;
+		let isDownloaded = false;
+
 		function resetFilters() {
 			$('.filter-select2').val(null).trigger('change');
 		}
 
 		function toggleVisibleGroup(listId, inputName, checked) {
 			const list = document.getElementById(listId);
+			if (!list) return;
+
 			const visibleItems = list.querySelectorAll('.column-item');
 
 			visibleItems.forEach(function (item) {
@@ -354,8 +360,12 @@
 
 		function filterColumns(inputId, listId, counterId) {
 			const input = document.getElementById(inputId);
-			const filter = input.value.toLowerCase().trim();
 			const list = document.getElementById(listId);
+			const counter = document.getElementById(counterId);
+
+			if (!input || !list || !counter) return;
+
+			const filter = input.value.toLowerCase().trim();
 			const items = list.querySelectorAll('.column-item');
 
 			let visibleCount = 0;
@@ -371,11 +381,13 @@
 				}
 			});
 
-			document.getElementById(counterId).innerText = visibleCount;
+			counter.innerText = visibleCount;
 		}
 
 		function clearSearch(inputId, listId, counterId) {
 			const input = document.getElementById(inputId);
+			if (!input) return;
+
 			input.value = '';
 			filterColumns(inputId, listId, counterId);
 			input.focus();
@@ -383,6 +395,9 @@
 
 		function filterFilterCards() {
 			const input = document.getElementById('filterSearch');
+			const counter = document.getElementById('filterCardsCounter');
+			if (!input || !counter) return;
+
 			const filter = input.value.toLowerCase().trim();
 			const items = document.querySelectorAll('#filtersCardsList .filter-card-item');
 
@@ -399,14 +414,33 @@
 				}
 			});
 
-			document.getElementById('filterCardsCounter').innerText = visibleCount;
+			counter.innerText = visibleCount;
 		}
 
 		function clearFilterSearch() {
 			const input = document.getElementById('filterSearch');
+			if (!input) return;
+
 			input.value = '';
 			filterFilterCards();
 			input.focus();
+		}
+
+		function showError(message) {
+			$('#exportResult').html(`
+				<div class="alert alert-danger text-center">
+					${message}
+				</div>
+			`);
+
+			$('.export-btn').prop('disabled', false);
+
+			if (exportInterval) {
+				clearInterval(exportInterval);
+				exportInterval = null;
+			}
+
+			isDownloaded = false;
 		}
 
 		document.addEventListener('DOMContentLoaded', function () {
@@ -437,15 +471,38 @@
 			$('.export-btn').on('click', function (e) {
 				e.preventDefault();
 
+				if ($('.export-btn').prop('disabled')) return;
+
 				const exportType = $(this).data('type');
 				const formData = $('#exportForm').serializeArray();
 				formData.push({ name: 'export_type', value: exportType });
 
+				$('.export-btn').prop('disabled', true);
+				isDownloaded = false;
+
+				if (exportInterval) {
+					clearInterval(exportInterval);
+					exportInterval = null;
+				}
+
 				$('#exportResult').html(`
-								<div class="alert alert-info">
-									⏳ جاري إنشاء الملف...
-								</div>
-							`);
+					<div class="card p-4 text-center">
+						<h5 class="mb-3">
+							⏳ جاري تجهيز الملف...
+							<span class="spinner-border spinner-border-sm ms-2"></span>
+						</h5>
+
+						<div class="progress mb-3" style="height: 25px;">
+							<div id="progressBar"
+								 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+								 style="width: 0%">
+								0%
+							</div>
+						</div>
+
+						<div id="processedCount" class="text-muted small mt-2"></div>
+					</div>
+				`);
 
 				$.ajax({
 					url: "<?php echo e(route('export.start')); ?>",
@@ -453,45 +510,75 @@
 					data: formData,
 					success: function (res) {
 						if (!res.status) {
-							$('#exportResult').html(`
-											<div class="alert alert-danger">❌ خطأ في بدء التصدير</div>
-										`);
+							showError("❌ فشل بدء التصدير");
 							return;
 						}
 
 						const exportId = res.export_id;
-						let interval = setInterval(function () {
 
+						exportInterval = setInterval(function () {
 							$.get('<?php echo e(url('export/status')); ?>/' + exportId, function (data) {
-
 								let progress = data.progress ?? 0;
+								let processed = data.processed ?? 0;
 
-								$('#exportResult').html(`
-						<div class="progress mb-3">
-							<div class="progress-bar" role="progressbar"
-								style="width: ${progress}%">
-								${progress}%
-							</div>
-						</div>
-					`);
+								$('#progressBar')
+									.css('width', progress + '%')
+									.text(progress + '%');
 
-								if (data.status === 'done') {
+								$('#processedCount').html(`
+									تمت معالجة <b>${processed.toLocaleString()}</b> صف
+								`);
 
-									clearInterval(interval);
-									$('.progress-bar').addClass('progress-bar-striped progress-bar-animated');
-									window.location.href = data.file; // 🔥 تحميل مباشر
+								if (progress < 30) {
+									$('#progressBar').attr('class', 'progress-bar bg-danger progress-bar-striped progress-bar-animated');
+								} else if (progress < 70) {
+									$('#progressBar').attr('class', 'progress-bar bg-warning progress-bar-striped progress-bar-animated');
+								} else {
+									$('#progressBar').attr('class', 'progress-bar bg-success progress-bar-striped progress-bar-animated');
 								}
 
+								if (data.status === 'done' && !isDownloaded) {
+									isDownloaded = true;
+
+									if (exportInterval) {
+										clearInterval(exportInterval);
+										exportInterval = null;
+									}
+
+									$('#progressBar')
+										.removeClass('progress-bar-animated')
+										.addClass('bg-success')
+										.css('width', '100%')
+										.text('100%');
+
+									$('#exportResult').append(`
+										<div class="alert alert-success mt-3">
+											✅ تم إنشاء الملف بنجاح
+										</div>
+									`);
+
+									setTimeout(() => {
+										const link = document.createElement('a');
+										link.href = data.file;
+										link.download = '';
+										document.body.appendChild(link);
+										link.click();
+										document.body.removeChild(link);
+
+										$('.export-btn').prop('disabled', false);
+									}, 800);
+								}
+
+								if (data.status === 'failed') {
+									showError("❌ فشل التصدير");
+								}
+							}).fail(function () {
+								showError("❌ تعذر التحقق من حالة التصدير");
 							});
-
-						}, 2000);
-
-
+						}, 1000);
 					},
 					error: function () {
-						$('#exportResult').html(`
-										<div class="alert alert-danger">❌ حدث خطأ أثناء إرسال الطلب</div>
-									`);
+						showError("❌ خطأ في الاتصال بالسيرفر");
 					}
 				});
 			});

@@ -323,13 +323,19 @@
 @endsection
 
 @section('script')
+
 	<script>
+		let exportInterval = null;
+		let isDownloaded = false;
+
 		function resetFilters() {
 			$('.filter-select2').val(null).trigger('change');
 		}
 
 		function toggleVisibleGroup(listId, inputName, checked) {
 			const list = document.getElementById(listId);
+			if (!list) return;
+
 			const visibleItems = list.querySelectorAll('.column-item');
 
 			visibleItems.forEach(function (item) {
@@ -344,8 +350,12 @@
 
 		function filterColumns(inputId, listId, counterId) {
 			const input = document.getElementById(inputId);
-			const filter = input.value.toLowerCase().trim();
 			const list = document.getElementById(listId);
+			const counter = document.getElementById(counterId);
+
+			if (!input || !list || !counter) return;
+
+			const filter = input.value.toLowerCase().trim();
 			const items = list.querySelectorAll('.column-item');
 
 			let visibleCount = 0;
@@ -361,11 +371,13 @@
 				}
 			});
 
-			document.getElementById(counterId).innerText = visibleCount;
+			counter.innerText = visibleCount;
 		}
 
 		function clearSearch(inputId, listId, counterId) {
 			const input = document.getElementById(inputId);
+			if (!input) return;
+
 			input.value = '';
 			filterColumns(inputId, listId, counterId);
 			input.focus();
@@ -373,6 +385,9 @@
 
 		function filterFilterCards() {
 			const input = document.getElementById('filterSearch');
+			const counter = document.getElementById('filterCardsCounter');
+			if (!input || !counter) return;
+
 			const filter = input.value.toLowerCase().trim();
 			const items = document.querySelectorAll('#filtersCardsList .filter-card-item');
 
@@ -389,14 +404,33 @@
 				}
 			});
 
-			document.getElementById('filterCardsCounter').innerText = visibleCount;
+			counter.innerText = visibleCount;
 		}
 
 		function clearFilterSearch() {
 			const input = document.getElementById('filterSearch');
+			if (!input) return;
+
 			input.value = '';
 			filterFilterCards();
 			input.focus();
+		}
+
+		function showError(message) {
+			$('#exportResult').html(`
+				<div class="alert alert-danger text-center">
+					${message}
+				</div>
+			`);
+
+			$('.export-btn').prop('disabled', false);
+
+			if (exportInterval) {
+				clearInterval(exportInterval);
+				exportInterval = null;
+			}
+
+			isDownloaded = false;
 		}
 
 		document.addEventListener('DOMContentLoaded', function () {
@@ -424,40 +458,47 @@
 				});
 			}
 
-
 			$('.export-btn').on('click', function (e) {
 				e.preventDefault();
+
+				if ($('.export-btn').prop('disabled')) return;
 
 				const exportType = $(this).data('type');
 				const formData = $('#exportForm').serializeArray();
 				formData.push({ name: 'export_type', value: exportType });
 
-				// 🔥 تعطيل الأزرار
 				$('.export-btn').prop('disabled', true);
+				isDownloaded = false;
+
+				if (exportInterval) {
+					clearInterval(exportInterval);
+					exportInterval = null;
+				}
 
 				$('#exportResult').html(`
-			<div class="card p-4 text-center">
-				<h5 class="mb-3">⏳ جاري تجهيز الملف...</h5>
+					<div class="card p-4 text-center">
+						<h5 class="mb-3">
+							⏳ جاري تجهيز الملف...
+							<span class="spinner-border spinner-border-sm ms-2"></span>
+						</h5>
 
-				<div class="progress mb-3" style="height: 25px;">
-					<div id="progressBar"
-						 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-						 style="width: 0%">
-						0%
+						<div class="progress mb-3" style="height: 25px;">
+							<div id="progressBar"
+								 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+								 style="width: 0%">
+								0%
+							</div>
+						</div>
+
+						<div id="processedCount" class="text-muted small mt-2"></div>
 					</div>
-				</div>
-
-				<small class="text-muted">قد يستغرق ذلك بعض الوقت حسب حجم البيانات</small>
-			</div>
-		`);
+				`);
 
 				$.ajax({
 					url: "{{ route('export.start') }}",
 					method: "POST",
 					data: formData,
-
 					success: function (res) {
-
 						if (!res.status) {
 							showError("❌ فشل بدء التصدير");
 							return;
@@ -465,29 +506,34 @@
 
 						const exportId = res.export_id;
 
-						let interval = setInterval(function () {
-
+						exportInterval = setInterval(function () {
 							$.get('{{ url('export/status') }}/' + exportId, function (data) {
-
 								let progress = data.progress ?? 0;
+								let processed = data.processed ?? 0;
 
 								$('#progressBar')
 									.css('width', progress + '%')
 									.text(progress + '%');
 
-								// 🔥 smooth color change
+								$('#processedCount').html(`
+									تمت معالجة <b>${processed.toLocaleString()}</b> صف
+								`);
+
 								if (progress < 30) {
-									$('#progressBar').removeClass().addClass('progress-bar bg-danger progress-bar-striped progress-bar-animated');
+									$('#progressBar').attr('class', 'progress-bar bg-danger progress-bar-striped progress-bar-animated');
 								} else if (progress < 70) {
-									$('#progressBar').removeClass().addClass('progress-bar bg-warning progress-bar-striped progress-bar-animated');
+									$('#progressBar').attr('class', 'progress-bar bg-warning progress-bar-striped progress-bar-animated');
 								} else {
-									$('#progressBar').removeClass().addClass('progress-bar bg-success progress-bar-striped progress-bar-animated');
+									$('#progressBar').attr('class', 'progress-bar bg-success progress-bar-striped progress-bar-animated');
 								}
 
-								// 🔥 DONE
-								if (data.status === 'done') {
+								if (data.status === 'done' && !isDownloaded) {
+									isDownloaded = true;
 
-									clearInterval(interval);
+									if (exportInterval) {
+										clearInterval(exportInterval);
+										exportInterval = null;
+									}
 
 									$('#progressBar')
 										.removeClass('progress-bar-animated')
@@ -496,49 +542,36 @@
 										.text('100%');
 
 									$('#exportResult').append(`
-								<div class="alert alert-success mt-3">
-									✅ تم إنشاء الملف بنجاح
-								</div>
-							`);
+										<div class="alert alert-success mt-3">
+											✅ تم إنشاء الملف بنجاح
+										</div>
+									`);
 
-									// 🔥 تحميل مباشر
 									setTimeout(() => {
-										window.location.href = data.file;
-									}, 1000);
+										const link = document.createElement('a');
+										link.href = data.file;
+										link.download = '';
+										document.body.appendChild(link);
+										link.click();
+										document.body.removeChild(link);
 
-									// 🔥 إعادة تفعيل الأزرار
-									$('.export-btn').prop('disabled', false);
+										$('.export-btn').prop('disabled', false);
+									}, 800);
 								}
 
-								// ❌ FAILED
 								if (data.status === 'failed') {
-									clearInterval(interval);
 									showError("❌ فشل التصدير");
 								}
-
+							}).fail(function () {
+								showError("❌ تعذر التحقق من حالة التصدير");
 							});
-
-						}, 2000);
-
+						}, 1000);
 					},
-
 					error: function () {
 						showError("❌ خطأ في الاتصال بالسيرفر");
 					}
 				});
 			});
-
-			// 🔥 helper
-			function showError(message) {
-				$('#exportResult').html(`
-			<div class="alert alert-danger text-center">
-				${message}
-			</div>
-		`);
-
-				$('.export-btn').prop('disabled', false);
-			}
-
 		});
 	</script>
 @endsection
