@@ -518,7 +518,7 @@
 
 		function restartExport(formData) {
 			$.ajax({
-				url: "{{ route('exports/start') }}",
+				url: "{{ url('exports/start') }}",
 				type: "POST",
 				data: formData,
 				success: function (newRes) {
