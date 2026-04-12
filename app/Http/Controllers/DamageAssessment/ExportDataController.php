@@ -74,32 +74,48 @@ class ExportDataController extends Controller
         ]);
     }
 
+    use Illuminate\Http\Request;
+    use App\Models\Export;
+    use App\Jobs\ExportDataJob;
+
     public function export(Request $request)
     {
         try {
+            $hasRunning = Export::whereIn('status', ['pending', 'processing'])->exists();
+
+            if ($hasRunning) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'يوجد تصدير جارٍ بالفعل. يرجى الانتظار حتى ينتهي.'
+                ], 422);
+            }
+
             $export = Export::create([
                 'status' => 'pending',
                 'filters' => json_encode($request->all(), JSON_UNESCAPED_UNICODE),
                 'user_id' => auth()->id(),
                 'progress' => 0,
                 'processed' => 0,
+                'file_name' => null,
             ]);
 
-            ExportDataJob::dispatchSync($export->id);
-
-            $export->refresh();
+            ExportDataJob::dispatch($export->id);
 
             return response()->json([
                 'status' => true,
-                'message' => 'تم تنفيذ التصدير',
+                'message' => 'تم بدء التصدير',
                 'export_id' => $export->id,
-                'job_status' => $export->status,
-                'file' => $export->file_name ? asset('storage/' . $export->file_name) : null,
             ]);
         } catch (\Throwable $e) {
+            \Log::error('Export start failed', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => 'فشل بدء التصدير: ' . $e->getMessage(),
             ], 500);
         }
     }
