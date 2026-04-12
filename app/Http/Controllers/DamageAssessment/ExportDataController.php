@@ -73,30 +73,60 @@ class ExportDataController extends Controller
             'file' => $export->file_name ? asset('storage/' . $export->file_name) : null,
         ]);
     }
+
     public function export(Request $request)
     {
         try {
-
             $export = Export::create([
                 'status' => 'pending',
-                'filters' => json_encode($request->all()),
-                'user_id' => auth()->id()
+                'filters' => json_encode($request->all(), JSON_UNESCAPED_UNICODE),
+                'user_id' => auth()->id(),
+                'progress' => 0,
+                'processed' => 0,
             ]);
 
-            ExportDataJob::dispatch($export->id);
+            ExportDataJob::dispatchSync($export->id);
+
+            $export->refresh();
 
             return response()->json([
                 'status' => true,
-                'message' => 'تم بدء التصدير',
-                'export_id' => $export->id
+                'message' => 'تم تنفيذ التصدير',
+                'export_id' => $export->id,
+                'job_status' => $export->status,
+                'file' => $export->file_name ? asset('storage/' . $export->file_name) : null,
             ]);
-
         } catch (\Throwable $e) {
-
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage()
-            ]);
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
+    /*     public function export(Request $request)
+        {
+            try {
+
+                $export = Export::create([
+                    'status' => 'pending',
+                    'filters' => json_encode($request->all()),
+                    'user_id' => auth()->id()
+                ]);
+
+                ExportDataJob::dispatch($export->id);
+
+                return response()->json([
+                    'status' => true,
+                    'message' => 'تم بدء التصدير',
+                    'export_id' => $export->id
+                ]);
+
+            } catch (\Throwable $e) {
+
+                return response()->json([
+                    'status' => false,
+                    'message' => $e->getMessage()
+                ]);
+            }
+        } */
 }

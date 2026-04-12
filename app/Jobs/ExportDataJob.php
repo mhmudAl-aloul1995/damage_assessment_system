@@ -1,32 +1,34 @@
 <?php
+
 namespace App\Jobs;
 
+use App\Models\Export;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Export;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
-
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use Illuminate\Support\Facades\Schema;
+
 class ExportDataJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public $exportId)
+    public int $tries = 3;
+    public int $timeout = 0;
+
+    public function __construct(public int $exportId)
     {
     }
 
-
-
-    public function handle()
+    public function handle(): void
     {
         $export = Export::find($this->exportId);
 
@@ -42,12 +44,13 @@ class ExportDataJob implements ShouldQueue
                 'status' => 'processing',
                 'progress' => 0,
                 'processed' => 0,
+                'file_name' => null,
             ]);
 
-            $params = json_decode($export->filters, true);
+            $params = json_decode($export->filters, true) ?: [];
 
-            $buildingColumns = $params['building_columns'] ?? [];
-            $housingColumns = $params['housing_columns'] ?? [];
+            $buildingColumns = array_values($params['building_columns'] ?? []);
+            $housingColumns = array_values($params['housing_columns'] ?? []);
             $filters = $params['filters'] ?? [];
 
             $familyMembersFrom = $params['family_members_from'] ?? null;
@@ -64,16 +67,16 @@ class ExportDataJob implements ShouldQueue
             if ($needsFamily) {
                 $familySub = DB::table('housing_units as hf')
                     ->selectRaw("
-                    hf.parentglobalid,
-                    (
-                        COALESCE(CAST(NULLIF(hf.mchildren_001, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.melderly, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.myoung, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.fchildren, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.fyoung_001, '') AS UNSIGNED), 0) +
-                        COALESCE(CAST(NULLIF(hf.felderly, '') AS UNSIGNED), 0)
-                    ) as family_members_total
-                ");
+                        hf.parentglobalid,
+                        (
+                            COALESCE(CAST(NULLIF(hf.mchildren_001, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.melderly, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.myoung, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.fchildren, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.fyoung_001, '') AS UNSIGNED), 0) +
+                            COALESCE(CAST(NULLIF(hf.felderly, '') AS UNSIGNED), 0)
+                        ) as family_members_total
+                    ");
 
                 $query->leftJoinSub($familySub, 'fam', function ($join) {
                     $join->on('b.globalid', '=', 'fam.parentglobalid');
@@ -92,26 +95,26 @@ class ExportDataJob implements ShouldQueue
 
             $selects = [
                 $paginateByHousing
-                ? 'h.objectid as export_row_id'
-                : 'b.objectid as export_row_id'
+                    ? 'h.objectid as export_row_id'
+                    : 'b.objectid as export_row_id',
             ];
 
-            foreach ($buildingColumns as $c) {
-                $selects[] = "b.`$c` as `building_$c`";
+            foreach ($buildingColumns as $column) {
+                $selects[] = "b.`{$column}` as `building_{$column}`";
             }
 
-            foreach ($housingColumns as $c) {
-                $selects[] = "h.`$c` as `housing_$c`";
+            foreach ($housingColumns as $column) {
+                $selects[] = "h.`{$column}` as `housing_{$column}`";
             }
 
             if ($needsFamily) {
-                $selects[] = "fam.family_members_total as family_members_total";
+                $selects[] = 'fam.family_members_total as family_members_total';
             }
 
             $query->selectRaw(implode(', ', $selects));
 
             foreach ($filters as $field => $values) {
-                $values = array_filter((array) $values, fn($v) => $v !== null && $v !== '');
+                $values = array_filter((array) $values, fn($value) => $value !== null && $value !== '');
 
                 if (empty($values)) {
                     continue;
@@ -124,11 +127,28 @@ class ExportDataJob implements ShouldQueue
                 }
             }
 
+            $hasData = (clone $query)->exists();
+
+            if (!$hasData) {
+                $export->update([
+                    'status' => 'failed',
+                    'progress' => 0,
+                    'processed' => 0,
+                ]);
+
+                \Log::warning('Export has no matching rows', [
+                    'export_id' => $this->exportId,
+                ]);
+
+                return;
+            }
+
             $fileName = 'exports/export_' . now()->timestamp . '.xlsx';
             $fullPath = storage_path('app/public/' . $fileName);
 
-            if (!file_exists(dirname($fullPath))) {
-                mkdir(dirname($fullPath), 0777, true);
+            $directory = dirname($fullPath);
+            if (!is_dir($directory)) {
+                mkdir($directory, 0777, true);
             }
 
             $generator = function () use ($query, $paginateByHousing) {
@@ -140,7 +160,7 @@ class ExportDataJob implements ShouldQueue
                     $loopCount++;
 
                     if ($loopCount > 10000) {
-                        throw new \Exception('Infinite loop detected');
+                        throw new \RuntimeException('Infinite loop detected during export.');
                     }
 
                     $batchQuery = clone $query;
@@ -174,14 +194,14 @@ class ExportDataJob implements ShouldQueue
                     }
 
                     if ($newLastId === $lastId) {
-                        throw new \Exception('Stuck loop detected: export_row_id not changing');
+                        throw new \RuntimeException('Stuck loop detected: export_row_id not changing.');
                     }
 
                     $lastId = $newLastId;
 
-                    \Log::info('Export progress', [
+                    \Log::info('Export batch processed', [
                         'export_id' => $this->exportId,
-                        'lastId' => $lastId,
+                        'last_id' => $lastId,
                         'rows' => $rows->count(),
                         'loop' => $loopCount,
                         'mode' => $paginateByHousing ? 'housing_objectid' : 'building_objectid',
@@ -199,7 +219,7 @@ class ExportDataJob implements ShouldQueue
             $lastColLetter = 'A';
 
             foreach ($generator() as $row) {
-                $processed++; // ✅ هنا الصحيح
+                $processed++;
 
                 if (!$headersWritten) {
                     $colIndex = 1;
@@ -251,7 +271,6 @@ class ExportDataJob implements ShouldQueue
                         ->setRGB('F4F6F7');
                 }
 
-                // تحديث progress كل 200 صف
                 if ($processed % 200 === 0) {
                     $progress = min(95, max(1, (int) floor($processed / 100)));
 
