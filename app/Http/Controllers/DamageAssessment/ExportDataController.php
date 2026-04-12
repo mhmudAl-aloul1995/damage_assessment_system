@@ -88,13 +88,16 @@ class ExportDataController extends Controller
 
     public function export(Request $request)
     {
-        Artisan::call('queue:work', [
-            '--tries' => 3,
-            '--timeout' => 300,
-        ]);
+
+
         try {
 
+            if (!file_exists(storage_path('queue-worker.lock'))) {
 
+                file_put_contents(storage_path('queue-worker.lock'), 'running');
+
+                pclose(popen("start /B php artisan queue:work --tries=3 --timeout=300", "r"));
+            }
 
             // تنظيف السجلات العالقة القديمة
             Export::where('user_id', auth()->id())
