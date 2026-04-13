@@ -10,4 +10,7 @@ return [
     'database' => env('DB_BACKUP_DATABASE'),
     'username' => env('DB_BACKUP_USERNAME'),
     'password' => env('DB_BACKUP_PASSWORD'),
+    'mysqldump_binary' => env('DB_BACKUP_MYSQLDUMP_BINARY'),
+    'mariadb_dump_binary' => env('DB_BACKUP_MARIADB_DUMP_BINARY'),
+    'pg_dump_binary' => env('DB_BACKUP_PG_DUMP_BINARY'),
 ];

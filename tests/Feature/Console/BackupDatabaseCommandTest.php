@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\BackupDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -26,6 +27,18 @@ it('creates a sqlite database backup file', function () {
 
     File::deleteDirectory($backupPath);
     File::delete($databasePath);
+});
+
+it('prefers the configured mariadb dump binary path even for mysql driver', function () {
+    config()->set('database_backup.mariadb_dump_binary', 'C:\\Program Files\\MariaDB 12.1\\bin\\mariadb-dump.exe');
+    config()->set('database_backup.mysqldump_binary', 'C:\\mysql\\bin\\mysqldump.exe');
+
+    $command = app(BackupDatabase::class);
+    $method = new ReflectionMethod($command, 'resolveMySqlDumpBinary');
+    $method->setAccessible(true);
+
+    expect($method->invoke($command, 'mysql'))->toBe('C:\\Program Files\\MariaDB 12.1\\bin\\mariadb-dump.exe');
+    expect($method->invoke($command, 'mariadb'))->toBe('C:\\Program Files\\MariaDB 12.1\\bin\\mariadb-dump.exe');
 });
 
 it('returns a failure code when the dump process fails', function () {

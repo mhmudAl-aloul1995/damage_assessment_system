@@ -23,6 +23,8 @@ class BackupDatabase extends Command
             return self::FAILURE;
         }
 
+        $connection = $this->resolveBackupConnection($connection);
+
         $backupDirectory = storage_path(trim(config('database_backup.path', 'backups/database'), '/\\'));
         File::ensureDirectoryExists($backupDirectory);
 
@@ -47,6 +49,19 @@ class BackupDatabase extends Command
         return self::SUCCESS;
     }
 
+    private function resolveBackupConnection(array $connection): array
+    {
+        foreach (['host', 'port', 'database', 'username', 'password'] as $key) {
+            $override = config("database_backup.{$key}");
+
+            if ($override !== null && $override !== '') {
+                $connection[$key] = $override;
+            }
+        }
+
+        return $connection;
+    }
+
     private function backupSqlite(array $connection, string $connectionName, string $backupDirectory, string $timestamp): string
     {
         $databasePath = $connection['database'] ?? null;
@@ -67,7 +82,8 @@ class BackupDatabase extends Command
 
     private function backupMySql(array $connection, string $connectionName, string $backupDirectory, string $timestamp, string $driver): string
     {
-        $dumpBinary = $driver === 'mariadb' ? 'mariadb-dump' : 'mysqldump';
+        $dumpBinary = $this->resolveMySqlDumpBinary($driver);
+
         $backupPath = $backupDirectory.DIRECTORY_SEPARATOR."{$connectionName}_{$timestamp}.sql";
 
         $arguments = [
@@ -92,12 +108,25 @@ class BackupDatabase extends Command
         return $backupPath;
     }
 
+    private function resolveMySqlDumpBinary(string $driver): string
+    {
+        $mariaDumpBinary = $this->resolveBinaryPath('mariadb_dump_binary');
+        $mysqlDumpBinary = $this->resolveBinaryPath('mysqldump_binary');
+
+        if ($driver === 'mariadb') {
+            return $mariaDumpBinary ?? 'mariadb-dump';
+        }
+
+        return $mariaDumpBinary ?? $mysqlDumpBinary ?? 'mysqldump';
+    }
+
     private function backupPostgres(array $connection, string $connectionName, string $backupDirectory, string $timestamp): string
     {
         $backupPath = $backupDirectory.DIRECTORY_SEPARATOR."{$connectionName}_{$timestamp}.sql";
+        $dumpBinary = $this->resolveBinaryPath('pg_dump_binary') ?? 'pg_dump';
 
         $arguments = [
-            'pg_dump',
+            $dumpBinary,
             '--host='.($connection['host'] ?? '127.0.0.1'),
             '--port='.($connection['port'] ?? '5432'),
             '--username='.($connection['username'] ?? 'postgres'),
@@ -118,5 +147,16 @@ class BackupDatabase extends Command
         $result->throw();
 
         return $backupPath;
+    }
+
+    private function resolveBinaryPath(string $configKey): ?string
+    {
+        $binary = config("database_backup.{$configKey}");
+
+        if (! is_string($binary) || trim($binary) === '') {
+            return null;
+        }
+
+        return trim($binary);
     }
 }
