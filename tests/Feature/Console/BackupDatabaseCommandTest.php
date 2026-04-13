@@ -29,6 +29,18 @@ it('creates a sqlite database backup file', function () {
     File::delete($databasePath);
 });
 
+it('uses mariadb-dump as the default dump binary for mysql connections', function () {
+    config()->set('database_backup.mariadb_dump_binary', null);
+    config()->set('database_backup.mysqldump_binary', null);
+
+    $command = app(BackupDatabase::class);
+    $method = new ReflectionMethod($command, 'resolveMySqlDumpBinary');
+    $method->setAccessible(true);
+
+    expect($method->invoke($command, 'mysql'))->toBe('mariadb-dump');
+    expect($method->invoke($command, 'mariadb'))->toBe('mariadb-dump');
+});
+
 it('prefers the configured mariadb dump binary path even for mysql driver', function () {
     config()->set('database_backup.mariadb_dump_binary', 'C:\\Program Files\\MariaDB 12.1\\bin\\mariadb-dump.exe');
     config()->set('database_backup.mysqldump_binary', 'C:\\mysql\\bin\\mysqldump.exe');

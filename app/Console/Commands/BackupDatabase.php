@@ -113,11 +113,15 @@ class BackupDatabase extends Command
         $mariaDumpBinary = $this->resolveBinaryPath('mariadb_dump_binary');
         $mysqlDumpBinary = $this->resolveBinaryPath('mysqldump_binary');
 
-        if ($driver === 'mariadb') {
-            return $mariaDumpBinary ?? 'mariadb-dump';
+        if ($mariaDumpBinary !== null) {
+            return $mariaDumpBinary;
         }
 
-        return $mariaDumpBinary ?? $mysqlDumpBinary ?? 'mysqldump';
+        if ($driver === 'mariadb') {
+            return 'mariadb-dump';
+        }
+
+        return $mysqlDumpBinary ?? 'mariadb-dump';
     }
 
     private function backupPostgres(array $connection, string $connectionName, string $backupDirectory, string $timestamp): string
