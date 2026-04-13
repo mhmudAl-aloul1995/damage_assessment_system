@@ -4211,79 +4211,54 @@ class auditController extends Controller
         $startDate = Carbon::parse($request->input('start_date', now()->subDays(29)->toDateString()))->startOfDay();
         $endDate = Carbon::parse($request->input('end_date', now()->toDateString()))->endOfDay();
 
-        $engineeringStatuses = [
+        $engineerStatuses = [
             'assigned_to_engineer' => 'Assigned',
             'accepted_by_engineer' => 'Accepted',
             'rejected_by_engineer' => 'Rejected',
             'need_review' => 'Need Review',
         ];
 
-        $trackedAuditedStatuses = [
-            'accepted_by_engineer',
-            'rejected_by_engineer',
-            'need_review',
+        $lawyerStatuses = [
+            'assigned_to_lawyer' => 'Assigned',
+            'accepted_by_lawyer' => 'Accepted',
+            'legal_notes' => 'Legal Notes',
         ];
-
-        $buildingStatusRaw = BuildingStatus::query()
-            ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('building_statuses.type', 'QC/QA Engineer')
-            ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
-            ->whereIn('assessment_statuses.name', array_keys($engineeringStatuses))
-            ->selectRaw('assessment_statuses.name as status_name, COUNT(*) as total')
-            ->groupBy('assessment_statuses.name')
-            ->pluck('total', 'status_name');
-
-        $housingStatusRaw = HousingStatus::query()
-            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('housing_statuses.type', 'QC/QA Engineer')
-            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
-            ->whereIn('assessment_statuses.name', array_keys($engineeringStatuses))
-            ->selectRaw('assessment_statuses.name as status_name, COUNT(*) as total')
-            ->groupBy('assessment_statuses.name')
-            ->pluck('total', 'status_name');
-
-        $auditedBuildingsCount = BuildingStatus::query()
-            ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('building_statuses.type', 'QC/QA Engineer')
-            ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
-            ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
-            ->distinct('building_statuses.building_id')
-            ->count('building_statuses.building_id');
-
-        $auditedHousingUnitsCount = HousingStatus::query()
-            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('housing_statuses.type', 'QC/QA Engineer')
-            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
-            ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
-            ->distinct('housing_statuses.housing_id')
-            ->count('housing_statuses.housing_id');
 
         $totalBuildingsCount = Building::query()->count();
         $totalHousingUnitsCount = HousingUnit::query()->count();
 
+        $engineerMetrics = $this->buildAuditDashboardMetrics(
+            type: 'QC/QA Engineer',
+            buildingStatuses: $engineerStatuses,
+            housingStatuses: $engineerStatuses,
+            trackedAuditedStatuses: ['accepted_by_engineer', 'rejected_by_engineer', 'need_review'],
+            totalBuildingsCount: $totalBuildingsCount,
+            totalHousingUnitsCount: $totalHousingUnitsCount,
+            startDate: $startDate,
+            endDate: $endDate,
+        );
+
+        $lawyerMetrics = $this->buildAuditDashboardMetrics(
+            type: 'Legal Auditor',
+            buildingStatuses: $lawyerStatuses,
+            housingStatuses: $lawyerStatuses,
+            trackedAuditedStatuses: ['accepted_by_lawyer', 'legal_notes'],
+            totalBuildingsCount: $totalBuildingsCount,
+            totalHousingUnitsCount: $totalHousingUnitsCount,
+            startDate: $startDate,
+            endDate: $endDate,
+        );
+
         $summaryMetrics = [
             'total_buildings_count' => $totalBuildingsCount,
             'total_housing_units_count' => $totalHousingUnitsCount,
-            'audited_buildings_count' => $auditedBuildingsCount,
-            'audited_housing_units_count' => $auditedHousingUnitsCount,
-            'audited_buildings_percentage' => $totalBuildingsCount > 0 ? round(($auditedBuildingsCount / $totalBuildingsCount) * 100, 1) : 0,
-            'audited_housing_units_percentage' => $totalHousingUnitsCount > 0 ? round(($auditedHousingUnitsCount / $totalHousingUnitsCount) * 100, 1) : 0,
+            'engineer' => $engineerMetrics['summary'],
+            'lawyer' => $lawyerMetrics['summary'],
         ];
 
         $chartData = [
-            'building_status_labels' => array_values($engineeringStatuses),
-            'building_status_series' => collect(array_keys($engineeringStatuses))
-                ->map(fn ($statusName) => (int) ($buildingStatusRaw[$statusName] ?? 0))
-                ->values()
-                ->all(),
-            'housing_status_labels' => array_values($engineeringStatuses),
-            'housing_status_series' => collect(array_keys($engineeringStatuses))
-                ->map(fn ($statusName) => (int) ($housingStatusRaw[$statusName] ?? 0))
-                ->values()
-                ->all(),
-            'comparison_categories' => ['Buildings', 'Housing Units'],
-            'comparison_audited_series' => [$auditedBuildingsCount, $auditedHousingUnitsCount],
-            'comparison_total_series' => [$totalBuildingsCount, $totalHousingUnitsCount],
+            'engineer' => $engineerMetrics['charts'],
+            'lawyer' => $lawyerMetrics['charts'],
         ];
 
         $startDateValue = $startDate->toDateString();
@@ -4295,5 +4270,74 @@ class auditController extends Controller
             'startDateValue',
             'endDateValue'
         ));
+    }
+
+    private function buildAuditDashboardMetrics(
+        string $type,
+        array $buildingStatuses,
+        array $housingStatuses,
+        array $trackedAuditedStatuses,
+        int $totalBuildingsCount,
+        int $totalHousingUnitsCount,
+        Carbon $startDate,
+        Carbon $endDate,
+    ): array {
+        $buildingStatusRaw = BuildingStatus::query()
+            ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('building_statuses.type', $type)
+            ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', array_keys($buildingStatuses))
+            ->selectRaw('assessment_statuses.name as status_name, COUNT(*) as total')
+            ->groupBy('assessment_statuses.name')
+            ->pluck('total', 'status_name');
+
+        $housingStatusRaw = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', $type)
+            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', array_keys($housingStatuses))
+            ->selectRaw('assessment_statuses.name as status_name, COUNT(*) as total')
+            ->groupBy('assessment_statuses.name')
+            ->pluck('total', 'status_name');
+
+        $auditedBuildingsCount = BuildingStatus::query()
+            ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('building_statuses.type', $type)
+            ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
+            ->distinct('building_statuses.building_id')
+            ->count('building_statuses.building_id');
+
+        $auditedHousingUnitsCount = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', $type)
+            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
+            ->distinct('housing_statuses.housing_id')
+            ->count('housing_statuses.housing_id');
+
+        return [
+            'summary' => [
+                'audited_buildings_count' => $auditedBuildingsCount,
+                'audited_housing_units_count' => $auditedHousingUnitsCount,
+                'audited_buildings_percentage' => $totalBuildingsCount > 0 ? round(($auditedBuildingsCount / $totalBuildingsCount) * 100, 1) : 0,
+                'audited_housing_units_percentage' => $totalHousingUnitsCount > 0 ? round(($auditedHousingUnitsCount / $totalHousingUnitsCount) * 100, 1) : 0,
+            ],
+            'charts' => [
+                'building_status_labels' => array_values($buildingStatuses),
+                'building_status_series' => collect(array_keys($buildingStatuses))
+                    ->map(fn ($statusName) => (int) ($buildingStatusRaw[$statusName] ?? 0))
+                    ->values()
+                    ->all(),
+                'housing_status_labels' => array_values($housingStatuses),
+                'housing_status_series' => collect(array_keys($housingStatuses))
+                    ->map(fn ($statusName) => (int) ($housingStatusRaw[$statusName] ?? 0))
+                    ->values()
+                    ->all(),
+                'comparison_categories' => ['Buildings', 'Housing Units'],
+                'comparison_audited_series' => [$auditedBuildingsCount, $auditedHousingUnitsCount],
+                'comparison_total_series' => [$totalBuildingsCount, $totalHousingUnitsCount],
+            ],
+        ];
     }
 }

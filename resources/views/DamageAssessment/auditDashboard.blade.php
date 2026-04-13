@@ -30,7 +30,7 @@
     </div>
 
     <div class="row g-5 mb-5">
-        <div class="col-md-3">
+        <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
                     <span class="fs-6 text-muted mb-2">Total Buildings</span>
@@ -38,16 +38,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card card-flush h-md-100 border border-gray-200">
-                <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <span class="fs-6 text-muted mb-2">Audited Buildings</span>
-                    <span class="fs-2hx fw-bold text-primary">{{ $summaryMetrics['audited_buildings_count'] }}</span>
-                    <span class="text-muted">{{ $summaryMetrics['audited_buildings_percentage'] }}% of total</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
                     <span class="fs-6 text-muted mb-2">Total Housing Units</span>
@@ -55,45 +46,88 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <span class="fs-6 text-muted mb-2">Audited Housing Units</span>
-                    <span class="fs-2hx fw-bold text-success">{{ $summaryMetrics['audited_housing_units_count'] }}</span>
-                    <span class="text-muted">{{ $summaryMetrics['audited_housing_units_percentage'] }}% of total</span>
+                    <span class="fs-6 text-muted mb-2">Engineer Audited Buildings</span>
+                    <span class="fs-2hx fw-bold text-primary">{{ $summaryMetrics['engineer']['audited_buildings_count'] }}</span>
+                    <span class="text-muted">{{ $summaryMetrics['engineer']['audited_buildings_percentage'] }}% of total</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card card-flush h-md-100 border border-gray-200">
+                <div class="card-body d-flex flex-column justify-content-center text-center">
+                    <span class="fs-6 text-muted mb-2">Lawyer Audited Buildings</span>
+                    <span class="fs-2hx fw-bold text-info">{{ $summaryMetrics['lawyer']['audited_buildings_count'] }}</span>
+                    <span class="text-muted">{{ $summaryMetrics['lawyer']['audited_buildings_percentage'] }}% of total</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-5 mb-8">
+        <div class="col-md-6 col-xl-3">
+            <div class="card card-flush h-md-100 border border-gray-200">
+                <div class="card-body d-flex flex-column justify-content-center text-center">
+                    <span class="fs-6 text-muted mb-2">Engineer Audited Housing Units</span>
+                    <span class="fs-2hx fw-bold text-success">{{ $summaryMetrics['engineer']['audited_housing_units_count'] }}</span>
+                    <span class="text-muted">{{ $summaryMetrics['engineer']['audited_housing_units_percentage'] }}% of total</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card card-flush h-md-100 border border-gray-200">
+                <div class="card-body d-flex flex-column justify-content-center text-center">
+                    <span class="fs-6 text-muted mb-2">Lawyer Audited Housing Units</span>
+                    <span class="fs-2hx fw-bold text-warning">{{ $summaryMetrics['lawyer']['audited_housing_units_count'] }}</span>
+                    <span class="text-muted">{{ $summaryMetrics['lawyer']['audited_housing_units_percentage'] }}% of total</span>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row g-5 mb-5">
-        <div class="col-lg-4">
-            <div class="card card-flush shadow-sm h-md-100">
+        <div class="col-12">
+            <div class="card card-flush shadow-sm">
                 <div class="card-header pt-6">
-                    <h3 class="card-title">Buildings Engineering Status</h3>
+                    <h3 class="card-title">Engineering Audit</h3>
                 </div>
                 <div class="card-body">
-                    <div id="audit_buildings_status_chart" style="height: 340px;"></div>
+                    <div class="row g-5">
+                        <div class="col-lg-4">
+                            <div id="audit_engineer_buildings_status_chart" style="height: 340px;"></div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div id="audit_engineer_housing_status_chart" style="height: 340px;"></div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div id="audit_engineer_comparison_chart" style="height: 340px;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-4">
-            <div class="card card-flush shadow-sm h-md-100">
+    </div>
+
+    <div class="row g-5 mb-5">
+        <div class="col-12">
+            <div class="card card-flush shadow-sm">
                 <div class="card-header pt-6">
-                    <h3 class="card-title">Housing Units Engineering Status</h3>
+                    <h3 class="card-title">Legal Audit</h3>
                 </div>
                 <div class="card-body">
-                    <div id="audit_housing_status_chart" style="height: 340px;"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card card-flush shadow-sm h-md-100">
-                <div class="card-header pt-6">
-                    <h3 class="card-title">Audited vs Total</h3>
-                </div>
-                <div class="card-body">
-                    <div id="audit_comparison_chart" style="height: 340px;"></div>
+                    <div class="row g-5">
+                        <div class="col-lg-4">
+                            <div id="audit_lawyer_buildings_status_chart" style="height: 340px;"></div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div id="audit_lawyer_housing_status_chart" style="height: 340px;"></div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div id="audit_lawyer_comparison_chart" style="height: 340px;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -134,45 +168,73 @@
                 };
             };
 
-            new ApexCharts(document.querySelector('#audit_buildings_status_chart'), donutOptions(
-                @json($chartData['building_status_labels']),
-                @json($chartData['building_status_series']),
+            const comparisonOptions = function (categories, auditedSeries, totalSeries, primaryColor) {
+                return {
+                    chart: {
+                        type: 'bar',
+                        height: 340,
+                        toolbar: { show: false }
+                    },
+                    series: [
+                        {
+                            name: 'Audited',
+                            data: auditedSeries
+                        },
+                        {
+                            name: 'Total',
+                            data: totalSeries
+                        }
+                    ],
+                    xaxis: {
+                        categories: categories
+                    },
+                    colors: [primaryColor, '#E4E6EF'],
+                    dataLabels: {
+                        enabled: true
+                    },
+                    legend: {
+                        position: 'top'
+                    }
+                };
+            };
+
+            new ApexCharts(document.querySelector('#audit_engineer_buildings_status_chart'), donutOptions(
+                @json($chartData['engineer']['building_status_labels']),
+                @json($chartData['engineer']['building_status_series']),
                 ['#7239EA', '#50CD89', '#F1416C', '#FFAD0F']
             )).render();
 
-            new ApexCharts(document.querySelector('#audit_housing_status_chart'), donutOptions(
-                @json($chartData['housing_status_labels']),
-                @json($chartData['housing_status_series']),
+            new ApexCharts(document.querySelector('#audit_engineer_housing_status_chart'), donutOptions(
+                @json($chartData['engineer']['housing_status_labels']),
+                @json($chartData['engineer']['housing_status_series']),
                 ['#009EF7', '#50CD89', '#F1416C', '#FFAD0F']
             )).render();
 
-            new ApexCharts(document.querySelector('#audit_comparison_chart'), {
-                chart: {
-                    type: 'bar',
-                    height: 340,
-                    toolbar: { show: false }
-                },
-                series: [
-                    {
-                        name: 'Audited',
-                        data: @json($chartData['comparison_audited_series'])
-                    },
-                    {
-                        name: 'Total',
-                        data: @json($chartData['comparison_total_series'])
-                    }
-                ],
-                xaxis: {
-                    categories: @json($chartData['comparison_categories'])
-                },
-                colors: ['#009EF7', '#E4E6EF'],
-                dataLabels: {
-                    enabled: true
-                },
-                legend: {
-                    position: 'top'
-                }
-            }).render();
+            new ApexCharts(document.querySelector('#audit_engineer_comparison_chart'), comparisonOptions(
+                @json($chartData['engineer']['comparison_categories']),
+                @json($chartData['engineer']['comparison_audited_series']),
+                @json($chartData['engineer']['comparison_total_series']),
+                '#009EF7'
+            )).render();
+
+            new ApexCharts(document.querySelector('#audit_lawyer_buildings_status_chart'), donutOptions(
+                @json($chartData['lawyer']['building_status_labels']),
+                @json($chartData['lawyer']['building_status_series']),
+                ['#3F4254', '#50CD89', '#FFAD0F']
+            )).render();
+
+            new ApexCharts(document.querySelector('#audit_lawyer_housing_status_chart'), donutOptions(
+                @json($chartData['lawyer']['housing_status_labels']),
+                @json($chartData['lawyer']['housing_status_series']),
+                ['#3F4254', '#50CD89', '#FFAD0F']
+            )).render();
+
+            new ApexCharts(document.querySelector('#audit_lawyer_comparison_chart'), comparisonOptions(
+                @json($chartData['lawyer']['comparison_categories']),
+                @json($chartData['lawyer']['comparison_audited_series']),
+                @json($chartData['lawyer']['comparison_total_series']),
+                '#7239EA'
+            )).render();
         });
     </script>
 @endsection
