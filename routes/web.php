@@ -35,6 +35,7 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/gitPush', [engineerController::class, 'gitPush']);
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -263,6 +264,10 @@ Route::middleware('auth')->group(function () {
 
 });
 use Spatie\Browsershot\Browsershot;
+
+
+
+
 
 Route::get('/debug-pdf', function () {
 

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\View;
 use Spatie\Browsershot\Browsershot;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Yajra\Datatables\Datatables;
-
+use Illuminate\Support\Facades\Process;
 class engineerController extends Controller
 {
     /*
@@ -119,15 +119,12 @@ class engineerController extends Controller
         return View::make('DamageAssessment.assessment', compact('globalid', 'building', 'buildingTitle', 'assessments', 'HousingUnit'));
     }
 
-    public function exportAssessmentPdf(string $globalid)
-    {
-        $building = Building::query()
-            ->where('globalid', $globalid)
-            ->firstOrFail();
 
-        $housingUnits = HousingUnit::query()
-            ->where('parentglobalid', $globalid)
-            ->get();
+
+    public function exportAssessmentPdf(string $globalid)
+    {/**d */
+        $building = Building::query()->where('globalid', $globalid)->firstOrFail();
+        $housingUnits = HousingUnit::query()->where('parentglobalid', $globalid)->get();
 
         $buildingTitle = $this->resolveBuildingTitle($building);
         $buildingRows = $this->buildAssessmentRows($building, 'building_table');
@@ -146,13 +143,13 @@ class engineerController extends Controller
             'housingSections'
         ))
             ->format('a4')
-            ->name('assessment-'.($building->objectid ?? $building->globalid).'.pdf')
+            ->name('assessment-' . ($building->objectid ?? $building->globalid) . '.pdf')
             ->withBrowsershot(function (Browsershot $browsershot) {
                 $browsershot
                     ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
                     ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
                     ->setNodeModulePath(base_path('node_modules'))
-                    ->setChromePath('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe')
+                    ->setChromePath('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe')
                     ->showBackground()
                     ->addChromiumArguments([
                         '--no-sandbox',
@@ -184,7 +181,7 @@ class engineerController extends Controller
 															<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
 																<!--begin::Menu item-->
 																<div class="menu-item px-3">
-																	<a onclick="showModal(`user`,'.$ctr->id.')" href="javascript:;" class="menu-link px-3">تعديل</a>
+																	<a onclick="showModal(`user`,' . $ctr->id . ')" href="javascript:;" class="menu-link px-3">تعديل</a>
 																</div>
 																<!--end::Menu item-->
 																<!--begin::Menu item-->
@@ -201,7 +198,7 @@ class engineerController extends Controller
     private function resolveBuildingTitle(Building $building): string
     {
         return $building->building_name
-            ?: 'Building #'.($building->objectid ?? $building->globalid);
+            ?: 'Building #' . ($building->objectid ?? $building->globalid);
     }
 
     private function resolveHousingTitle(HousingUnit $housingUnit): string
@@ -209,14 +206,14 @@ class engineerController extends Controller
         $fullName = trim((string) ($housingUnit->full_name ?? ''));
 
         if ($fullName !== '') {
-            return 'Housing Unit - '.$fullName;
+            return 'Housing Unit - ' . $fullName;
         }
 
-        if (! empty($housingUnit->objectid)) {
-            return 'Housing Unit #'.$housingUnit->objectid;
+        if (!empty($housingUnit->objectid)) {
+            return 'Housing Unit #' . $housingUnit->objectid;
         }
 
-        return 'Housing Unit - '.$housingUnit->globalid;
+        return 'Housing Unit - ' . $housingUnit->globalid;
     }
 
     private function buildAssessmentRows(Model $model, string $type): Collection
@@ -260,5 +257,135 @@ class engineerController extends Controller
             'no', 'no1', 'no2', 'no3', 'no4', 'no5', 'No' => 'لا',
             default => $value,
         };
+    }
+
+
+    public function gitPush(Request $request)
+    {
+        $repoPath = 'D:/myProjects/phc';
+        $commitMessage = trim($request->input('message', 'update from system'));
+
+        try {
+            if (!is_dir($repoPath . '/.git')) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Git repository not found.',
+                ], 404);
+            }
+
+            // 1) git status
+            $statusResult = Process::path($repoPath)
+                ->timeout(120)
+                ->run('cmd /c git -c safe.directory="' . $repoPath . '" status --short');
+
+            if ($statusResult->failed()) {
+                return response()->json([
+                    'status' => false,
+                    'step' => 'status',
+                    'message' => 'Failed to get git status.',
+                    'output' => $statusResult->output(),
+                    'error' => $statusResult->errorOutput(),
+                ], 500);
+            }
+
+            $statusOutput = trim($statusResult->output());
+
+            if ($statusOutput === '') {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'No changes to commit.',
+                    'steps' => [
+                        'status' => 'clean',
+                    ],
+                ]);
+            }
+
+            // 2) git add .
+            $addResult = Process::path($repoPath)
+                ->timeout(120)
+                ->run('cmd /c git -c safe.directory="' . $repoPath . '" add .');
+
+            if ($addResult->failed()) {
+                return response()->json([
+                    'status' => false,
+                    'step' => 'add',
+                    'message' => 'Failed to add files.',
+                    'output' => $addResult->output(),
+                    'error' => $addResult->errorOutput(),
+                ], 500);
+            }
+
+            // 3) git commit
+            $commitCommand = 'cmd /c git -c safe.directory="' . $repoPath . '" commit -m "' . addslashes($commitMessage) . '"';
+
+            $commitResult = Process::path($repoPath)
+                ->timeout(120)
+                ->run($commitCommand);
+
+            $commitOutput = trim($commitResult->output() . "\n" . $commitResult->errorOutput());
+
+            // إذا لا يوجد شيء للـ commit بعد add
+            if (
+                str_contains(strtolower($commitOutput), 'nothing to commit') ||
+                str_contains(strtolower($commitOutput), 'working tree clean')
+            ) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'No changes to commit after git add.',
+                    'steps' => [
+                        'status' => $statusOutput,
+                        'add' => 'done',
+                        'commit' => 'nothing to commit',
+                    ],
+                    'output' => $commitOutput,
+                ]);
+            }
+
+            if ($commitResult->failed()) {
+                return response()->json([
+                    'status' => false,
+                    'step' => 'commit',
+                    'message' => 'Failed to commit changes.',
+                    'output' => $commitResult->output(),
+                    'error' => $commitResult->errorOutput(),
+                ], 500);
+            }
+
+            // 4) git push
+            $pushResult = Process::path($repoPath)
+                ->timeout(300) // أو forever() إذا الريبو كبير
+                ->run('cmd /c git -c safe.directory="' . $repoPath . '" push');
+
+            if ($pushResult->failed()) {
+                return response()->json([
+                    'status' => false,
+                    'step' => 'push',
+                    'message' => 'Failed to push changes.',
+                    'output' => $pushResult->output(),
+                    'error' => $pushResult->errorOutput(),
+                ], 500);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Git push completed successfully.',
+                'steps' => [
+                    'status' => 'done',
+                    'add' => 'done',
+                    'commit' => 'done',
+                    'push' => 'done',
+                ],
+                'status_output' => $statusOutput,
+                'commit_output' => $commitResult->output(),
+                'push_output' => $pushResult->output(),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ], 500);
+        }
     }
 }
