@@ -3,14 +3,11 @@
 namespace App\Http\Controllers\DamageAssessment;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Rap2hpoutre\FastExcel\FastExcel;
+use App\Jobs\ExportDataJob;
 use App\Models\Assessment;
 use App\Models\Export;
-use App\Jobs\ExportDataJob;
-use Symfony\Component\Process\Process;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ExportDataController extends Controller
 {
@@ -30,7 +27,7 @@ class ExportDataController extends Controller
                     $name => [
                         'label' => trim($item->label ?? ''),
                         'hint' => trim($item->hint ?? ''),
-                    ]
+                    ],
                 ];
             })
             ->toArray();
@@ -52,6 +49,17 @@ class ExportDataController extends Controller
             ->get()
             ->groupBy('list_name');
 
+        $buildingUnitsCountColumn = 'housing_units_count';
+
+        $assessmentMeta[$buildingUnitsCountColumn] = [
+            'label' => 'عدد الوحدات للمبنى',
+            'hint' => 'حقل مخصص يعرض عدد الوحدات السكنية المرتبطة بالمبنى',
+        ];
+
+        if (! in_array($buildingUnitsCountColumn, $buildingColumns, true)) {
+            $buildingColumns[] = $buildingUnitsCountColumn;
+        }
+
         $assessmentLabels = Assessment::pluck('label', 'name');
 
         return view('exports.index', [
@@ -63,10 +71,8 @@ class ExportDataController extends Controller
         ]);
     }
 
-
     public function check($id)
     {
-        // تنظيف السجلات العالقة القديمة لنفس المستخدم
         Export::where('user_id', auth()->id())
             ->whereIn('status', ['pending', 'processing'])
             ->whereNull('file_name')
@@ -81,25 +87,14 @@ class ExportDataController extends Controller
             'status' => $export->status,
             'progress' => $export->progress ?? 0,
             'processed' => $export->processed ?? 0,
-            'file' => $export->file_name ? asset('storage/' . $export->file_name) : null,
+            'file' => $export->file_name ? asset('storage/'.$export->file_name) : null,
         ]);
     }
 
-
     public function export(Request $request)
     {
-
-
         try {
 
-            if (!file_exists(storage_path('queue-worker.lock'))) {
-
-                file_put_contents(storage_path('queue-worker.lock'), 'running');
-
-                pclose(popen("start /B php artisan queue:work --tries=3 --timeout=300", "r"));
-            }
-
-            // تنظيف السجلات العالقة القديمة
             Export::where('user_id', auth()->id())
                 ->whereIn('status', ['pending', 'processing'])
                 ->whereNull('file_name')
@@ -108,7 +103,6 @@ class ExportDataController extends Controller
                     'status' => 'failed',
                 ]);
 
-            // هل يوجد تصدير حالي؟
             $runningExport = Export::where('user_id', auth()->id())
                 ->whereIn('status', ['pending', 'processing'])
                 ->where('updated_at', '>=', now()->subMinutes(10))
@@ -154,21 +148,19 @@ class ExportDataController extends Controller
 
             return response()->json([
                 'status' => false,
-                'message' => 'فشل بدء التصدير: ' . $e->getMessage(),
+                'message' => 'فشل بدء التصدير: '.$e->getMessage(),
             ], 500);
         }
-
-
     }
 
     public function cancel($id)
     {
         $export = Export::where('user_id', auth()->id())->findOrFail($id);
 
-        if (!in_array($export->status, ['pending', 'processing'])) {
+        if (! in_array($export->status, ['pending', 'processing'])) {
             return response()->json([
                 'status' => false,
-                'message' => 'لا يمكن إلغاء هذا التصدير.'
+                'message' => 'لا يمكن إلغاء هذا التصدير.',
             ], 422);
         }
 
@@ -178,33 +170,7 @@ class ExportDataController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'تم إلغاء التصدير السابق بنجاح.'
+            'message' => 'تم إلغاء التصدير السابق بنجاح.',
         ]);
     }
-    /*     public function export(Request $request)
-        {
-            try {
-
-                $export = Export::create([
-                    'status' => 'pending',
-                    'filters' => json_encode($request->all()),
-                    'user_id' => auth()->id()
-                ]);
-
-                ExportDataJob::dispatch($export->id);
-
-                return response()->json([
-                    'status' => true,
-                    'message' => 'تم بدء التصدير',
-                    'export_id' => $export->id
-                ]);
-
-            } catch (\Throwable $e) {
-
-                return response()->json([
-                    'status' => false,
-                    'message' => $e->getMessage()
-                ]);
-            }
-        } */
 }

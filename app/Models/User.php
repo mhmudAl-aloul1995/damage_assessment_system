@@ -10,11 +10,14 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     protected $table = 'users';
+
     protected $connection = 'mysql';
+
     protected $primaryKey = 'id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -38,6 +41,15 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function getConnectionName(): ?string
+    {
+        if (app()->environment('testing')) {
+            return config('database.default');
+        }
+
+        return $this->connection;
+    }
 
     protected function casts(): array
     {

@@ -10,18 +10,16 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class ExportDataJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $timeout = 0;
 
     public function __construct(public int $exportId) {}
@@ -30,7 +28,7 @@ class ExportDataJob implements ShouldQueue
     {
         $export = Export::find($this->exportId);
 
-        if (!$export || $export->status === 'cancelled') {
+        if (! $export || $export->status === 'cancelled') {
             return;
         }
 
@@ -55,14 +53,26 @@ class ExportDataJob implements ShouldQueue
 
             $familyMembersFrom = $params['family_members_from'] ?? null;
             $familyMembersTo = $params['family_members_to'] ?? null;
+            $buildingUnitsCountColumn = 'housing_units_count';
+            $needsHousingUnitsCount = in_array($buildingUnitsCountColumn, $buildingColumns, true);
 
             $query = DB::table('buildings as b');
 
-            if (!empty($housingColumns)) {
+            if (! empty($housingColumns)) {
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
             }
 
-            $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
+            $needsFamily = ! is_null($familyMembersFrom) || ! is_null($familyMembersTo);
+
+            if ($needsHousingUnitsCount) {
+                $housingUnitsCountSub = DB::table('housing_units as hu_count')
+                    ->selectRaw('hu_count.parentglobalid, COUNT(*) as housing_units_count')
+                    ->groupBy('hu_count.parentglobalid');
+
+                $query->leftJoinSub($housingUnitsCountSub, 'housing_counts', function ($join) {
+                    $join->on('b.globalid', '=', 'housing_counts.parentglobalid');
+                });
+            }
 
             if ($needsFamily) {
                 $familySub = DB::table('housing_units as hf')
@@ -82,16 +92,16 @@ class ExportDataJob implements ShouldQueue
                     $join->on('b.globalid', '=', 'fam.parentglobalid');
                 });
 
-                if (!is_null($familyMembersFrom)) {
+                if (! is_null($familyMembersFrom)) {
                     $query->where('fam.family_members_total', '>=', (int) $familyMembersFrom);
                 }
 
-                if (!is_null($familyMembersTo)) {
+                if (! is_null($familyMembersTo)) {
                     $query->where('fam.family_members_total', '<=', (int) $familyMembersTo);
                 }
             }
 
-            $paginateByHousing = !empty($housingColumns);
+            $paginateByHousing = ! empty($housingColumns);
 
             $selects = [
                 $paginateByHousing
@@ -100,6 +110,12 @@ class ExportDataJob implements ShouldQueue
             ];
 
             foreach ($buildingColumns as $column) {
+                if ($column === $buildingUnitsCountColumn) {
+                    $selects[] = 'COALESCE(housing_counts.housing_units_count, 0) as `building_housing_units_count`';
+
+                    continue;
+                }
+
                 $selects[] = "b.`{$column}` as `building_{$column}`";
             }
 
@@ -116,7 +132,9 @@ class ExportDataJob implements ShouldQueue
             foreach ($filters as $field => $values) {
                 $values = array_filter((array) $values);
 
-                if (empty($values)) continue;
+                if (empty($values)) {
+                    continue;
+                }
 
                 if (Schema::hasColumn('buildings', $field)) {
                     $query->whereIn("b.$field", $values);
@@ -125,7 +143,6 @@ class ExportDataJob implements ShouldQueue
                 }
             }
 
-            // 🔥 Debug SQL
             \Log::info('Export Query', [
                 'sql' => $query->toSql(),
                 'bindings' => $query->getBindings(),
@@ -133,7 +150,7 @@ class ExportDataJob implements ShouldQueue
 
             $hasData = (clone $query)->exists();
 
-            if (!$hasData) {
+            if (! $hasData) {
                 $export->update([
                     'status' => 'done',
                     'progress' => 100,
@@ -142,26 +159,27 @@ class ExportDataJob implements ShouldQueue
                 ]);
 
                 \Log::warning('No data for export', ['id' => $export->id]);
+
                 return;
             }
 
-            $fileName = 'exports/export_' . now()->timestamp . '.xlsx';
-            $fullPath = storage_path('app/public/' . $fileName);
+            $fileName = 'exports/export_'.now()->timestamp.'.xlsx';
+            $fullPath = storage_path('app/public/'.$fileName);
 
-            if (!is_dir(dirname($fullPath))) {
+            if (! is_dir(dirname($fullPath))) {
                 mkdir(dirname($fullPath), 0777, true);
             }
 
             $generator = function () use ($query, $paginateByHousing, $export) {
-
                 $lastId = 0;
                 $limit = 200;
 
                 while (true) {
-
                     $export->refresh();
+
                     if ($export->status === 'cancelled') {
                         \Log::warning('Export cancelled mid-process');
+
                         return;
                     }
 
@@ -169,15 +187,17 @@ class ExportDataJob implements ShouldQueue
 
                     if ($paginateByHousing) {
                         $batchQuery->where('h.objectid', '>', $lastId)
-                                   ->orderBy('h.objectid');
+                            ->orderBy('h.objectid');
                     } else {
                         $batchQuery->where('b.objectid', '>', $lastId)
-                                   ->orderBy('b.objectid');
+                            ->orderBy('b.objectid');
                     }
 
                     $rows = $batchQuery->limit($limit)->get();
 
-                    if ($rows->isEmpty()) break;
+                    if ($rows->isEmpty()) {
+                        break;
+                    }
 
                     foreach ($rows as $row) {
                         yield (array) $row;
@@ -186,7 +206,7 @@ class ExportDataJob implements ShouldQueue
                 }
             };
 
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setRightToLeft(true);
 
@@ -195,24 +215,26 @@ class ExportDataJob implements ShouldQueue
             $headersWritten = false;
 
             foreach ($generator() as $row) {
-
                 $processed++;
 
-                if (!$headersWritten) {
+                if (! $headersWritten) {
                     $colIndex = 1;
+
                     foreach (array_keys($row) as $header) {
                         $colLetter = Coordinate::stringFromColumnIndex($colIndex);
-                        $sheet->setCellValue($colLetter . '1', $header);
+                        $sheet->setCellValue($colLetter.'1', $header);
                         $colIndex++;
                     }
+
                     $headersWritten = true;
                     $rowNumber++;
                 }
 
                 $colIndex = 1;
+
                 foreach ($row as $value) {
                     $colLetter = Coordinate::stringFromColumnIndex($colIndex);
-                    $sheet->setCellValue($colLetter . $rowNumber, $value);
+                    $sheet->setCellValue($colLetter.$rowNumber, $value);
                     $colIndex++;
                 }
 
@@ -236,9 +258,7 @@ class ExportDataJob implements ShouldQueue
             ]);
 
             \Log::info('Export finished', ['id' => $export->id]);
-
         } catch (\Throwable $e) {
-
             $export->update(['status' => 'failed']);
 
             \Log::error('Export failed', [
