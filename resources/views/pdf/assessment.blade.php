@@ -25,8 +25,21 @@
             background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
             color: #ffffff;
             border-radius: 14px;
-            padding: 20px 22px;
+            padding: 18px 22px 20px;
             margin-bottom: 18px;
+        }
+
+        .report-brand {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .report-logo {
+            max-width: 100%;
+            width: 420px;
+            max-height: 120px;
+            object-fit: contain;
+            display: inline-block;
         }
 
         .report-kicker {
@@ -34,18 +47,21 @@
             letter-spacing: 0.8px;
             opacity: 0.85;
             margin-bottom: 6px;
+            text-align: center;
         }
 
         .report-title {
             font-size: 24px;
             font-weight: 700;
             margin: 0 0 8px;
+            text-align: center;
         }
 
         .report-subtitle {
             font-size: 12px;
             opacity: 0.92;
             margin: 0;
+            text-align: center;
         }
 
         .meta-grid {
@@ -273,8 +289,20 @@
     </style>
 </head>
 <body>
+    @php
+        $logoPath = base_path('assets/media/logos/LogoGaza2.jpeg');
+        $logoDataUri = file_exists($logoPath)
+            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
+            : null;
+    @endphp
+
     <div class="report-shell">
         <div class="report-header">
+            @if ($logoDataUri)
+                <div class="report-brand">
+                    <img src="{{ $logoDataUri }}" alt="PHC Logo" class="report-logo">
+                </div>
+            @endif
             <div class="report-kicker">DAMAGE ASSESSMENT REPORT</div>
             <h1 class="report-title">{{ $buildingTitle }}</h1>
             <p class="report-subtitle">Assessment summary for the building and all linked housing units.</p>
