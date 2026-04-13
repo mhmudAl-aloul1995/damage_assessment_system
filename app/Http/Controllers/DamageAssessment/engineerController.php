@@ -122,7 +122,7 @@ class engineerController extends Controller
 
 
     public function exportAssessmentPdf(string $globalid)
-    {/**d */
+    {
         $building = Building::query()->where('globalid', $globalid)->firstOrFail();
         $housingUnits = HousingUnit::query()->where('parentglobalid', $globalid)->get();
 
