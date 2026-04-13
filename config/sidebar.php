@@ -85,7 +85,7 @@ return [
                 'title' => 'تصدير البيانات',
                 'url' => 'export-data',
                 'pattern' => 'export-data*',
-                'roles' => ['Database Officer', 'Project Officer','QC/QA Engineer']
+                'roles' => ['Database Officer', 'Project Officer','QC/QA Engineer','Area Manager']
             ],
 
         ]
