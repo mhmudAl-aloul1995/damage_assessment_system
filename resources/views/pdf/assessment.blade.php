@@ -315,8 +315,8 @@
                     <span class="meta-value">{{ $building->objectid ?? '-' }}</span>
                 </td>
                 <td class="meta-card">
-                    <span class="meta-label">GLOBAL ID</span>
-                    <span class="meta-value">{{ $building->globalid }}</span>
+                    <span class="meta-label">BUILDING DAMAGE STATUS</span>
+                    <span class="meta-value">{{ match($building->building_damage_status) { 'fully_damaged' => 'Fully Damaged', 'partially_damaged' => 'Partially Damaged', 'committee_review' => 'Committee Review', default => 'Not Specified', } }}</span>
                 </td>
             </tr>
         </table>
