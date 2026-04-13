@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ExportDataJob implements ShouldQueue
@@ -19,7 +22,6 @@ class ExportDataJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
-
     public int $timeout = 0;
 
     public function __construct(public int $exportId) {}
@@ -53,8 +55,19 @@ class ExportDataJob implements ShouldQueue
 
             $familyMembersFrom = $params['family_members_from'] ?? null;
             $familyMembersTo = $params['family_members_to'] ?? null;
+
             $buildingUnitsCountColumn = 'housing_units_count';
             $needsHousingUnitsCount = in_array($buildingUnitsCountColumn, $buildingColumns, true);
+
+            // labels for headers
+            $assessmentLabels = DB::table('assessments')
+                ->whereNotNull('name')
+                ->select('name', 'label')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    return [trim($item->name) => trim($item->label ?? '')];
+                })
+                ->toArray();
 
             $query = DB::table('buildings as b');
 
@@ -112,7 +125,6 @@ class ExportDataJob implements ShouldQueue
             foreach ($buildingColumns as $column) {
                 if ($column === $buildingUnitsCountColumn) {
                     $selects[] = 'COALESCE(housing_counts.housing_units_count, 0) as `building_housing_units_count`';
-
                     continue;
                 }
 
@@ -130,7 +142,7 @@ class ExportDataJob implements ShouldQueue
             $query->selectRaw(implode(', ', $selects));
 
             foreach ($filters as $field => $values) {
-                $values = array_filter((array) $values);
+                $values = array_filter((array) $values, fn ($value) => $value !== null && $value !== '');
 
                 if (empty($values)) {
                     continue;
@@ -159,12 +171,11 @@ class ExportDataJob implements ShouldQueue
                 ]);
 
                 \Log::warning('No data for export', ['id' => $export->id]);
-
                 return;
             }
 
-            $fileName = 'exports/export_'.now()->timestamp.'.xlsx';
-            $fullPath = storage_path('app/public/'.$fileName);
+            $fileName = 'exports/export_' . now()->timestamp . '.xlsx';
+            $fullPath = storage_path('app/public/' . $fileName);
 
             if (! is_dir(dirname($fullPath))) {
                 mkdir(dirname($fullPath), 0777, true);
@@ -179,7 +190,6 @@ class ExportDataJob implements ShouldQueue
 
                     if ($export->status === 'cancelled') {
                         \Log::warning('Export cancelled mid-process');
-
                         return;
                     }
 
@@ -206,13 +216,15 @@ class ExportDataJob implements ShouldQueue
                 }
             };
 
-            $spreadsheet = new Spreadsheet;
+            $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setRightToLeft(true);
+            $sheet->setTitle('Export');
 
             $rowNumber = 1;
             $processed = 0;
             $headersWritten = false;
+            $lastColLetter = 'A';
 
             foreach ($generator() as $row) {
                 $processed++;
@@ -221,26 +233,98 @@ class ExportDataJob implements ShouldQueue
                     $colIndex = 1;
 
                     foreach (array_keys($row) as $header) {
+                        $label = $header;
+
+                        if (str_starts_with($header, 'building_')) {
+                            $field = str_replace('building_', '', $header);
+                        } elseif (str_starts_with($header, 'housing_')) {
+                            $field = str_replace('housing_', '', $header);
+                        } else {
+                            $field = $header;
+                        }
+
+                        if ($field === 'housing_units_count') {
+                            $label = 'عدد الوحدات للمبنى';
+                        } elseif ($field === 'family_members_total') {
+                            $label = 'عدد أفراد الأسرة';
+                        } else {
+                            $label = $assessmentLabels[$field] ?? ucwords(str_replace('_', ' ', $field));
+                        }
+
                         $colLetter = Coordinate::stringFromColumnIndex($colIndex);
-                        $sheet->setCellValue($colLetter.'1', $header);
+                        $sheet->setCellValue($colLetter . '1', $label);
                         $colIndex++;
                     }
+
+                    $lastCol = $colIndex - 1;
+                    $lastColLetter = Coordinate::stringFromColumnIndex($lastCol);
+
+                    // Header styling
+                    $sheet->getStyle("A1:{$lastColLetter}1")->applyFromArray([
+                        'font' => [
+                            'bold' => true,
+                            'size' => 12,
+                            'color' => ['rgb' => 'FFFFFF'],
+                        ],
+                        'fill' => [
+                            'fillType' => Fill::FILL_SOLID,
+                            'startColor' => ['rgb' => '1F4E78'],
+                        ],
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_CENTER,
+                            'vertical' => Alignment::VERTICAL_CENTER,
+                            'wrapText' => true,
+                        ],
+                        'borders' => [
+                            'allBorders' => [
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => ['rgb' => 'D9D9D9'],
+                            ],
+                        ],
+                    ]);
+
+                    $sheet->getRowDimension(1)->setRowHeight(28);
+                    $sheet->freezePane('A2');
+                    $sheet->setAutoFilter("A1:{$lastColLetter}1");
 
                     $headersWritten = true;
                     $rowNumber++;
                 }
 
                 $colIndex = 1;
-
                 foreach ($row as $value) {
                     $colLetter = Coordinate::stringFromColumnIndex($colIndex);
-                    $sheet->setCellValue($colLetter.$rowNumber, $value);
+                    $sheet->setCellValue($colLetter . $rowNumber, $value);
                     $colIndex++;
+                }
+
+                // Data row styling
+                $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")->applyFromArray([
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                        'wrapText' => true,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => 'E5E7EB'],
+                        ],
+                    ],
+                ]);
+
+                // Alternate row color
+                if ($rowNumber % 2 === 0) {
+                    $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")
+                        ->getFill()
+                        ->setFillType(Fill::FILL_SOLID)
+                        ->getStartColor()
+                        ->setRGB('F8F9FA');
                 }
 
                 if ($processed % 200 === 0) {
                     $export->update([
-                        'progress' => min(95, $processed / 10),
+                        'progress' => min(95, max(1, (int) floor($processed / 100))),
                         'processed' => $processed,
                     ]);
                 }
@@ -248,7 +332,20 @@ class ExportDataJob implements ShouldQueue
                 $rowNumber++;
             }
 
-            (new Xlsx($spreadsheet))->save($fullPath);
+            // Auto size all columns
+            for ($i = 1; $i <= Coordinate::columnIndexFromString($lastColLetter); $i++) {
+                $colLetter = Coordinate::stringFromColumnIndex($i);
+                $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+            }
+
+            // Final table border
+            $sheet->getStyle("A1:{$lastColLetter}" . ($rowNumber - 1))
+                ->getBorders()
+                ->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($fullPath);
 
             $export->update([
                 'status' => 'done',
@@ -259,10 +356,16 @@ class ExportDataJob implements ShouldQueue
 
             \Log::info('Export finished', ['id' => $export->id]);
         } catch (\Throwable $e) {
-            $export->update(['status' => 'failed']);
+            $export->update([
+                'status' => 'failed',
+            ]);
 
             \Log::error('Export failed', [
+                'export_id' => $this->exportId,
                 'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             throw $e;
