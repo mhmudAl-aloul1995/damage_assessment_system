@@ -1,3 +1,4 @@
+
 <?php $__env->startSection('title', 'الإستبيان'); ?>
 <?php $__env->startSection('pageName', 'الإستبيان'); ?>
 
@@ -6,7 +7,13 @@
 <div class="card card-flush mb-7">
     <div class="card-header pt-7">
         <div class="card-title">
-            <h2>الإستبيان</h2>
+            <h2><?php echo e($buildingTitle); ?></h2>
+        </div>
+        <div class="card-toolbar">
+            <a href="<?php echo e(route('assessment.pdf', $globalid)); ?>" target="_blank" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-file-down fs-4 me-1"></i>
+                PDF
+            </a>
         </div>
     </div>
 
@@ -361,4 +368,5 @@
     });
 </script>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/assessment.blade.php ENDPATH**/ ?>

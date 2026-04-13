@@ -19,6 +19,7 @@
         "maatwebsite/excel": "*",
         "mpdf/mpdf": "^8.3",
         "rap2hpoutre/fast-excel": "^5.7",
+        "spatie/browsershot": "^5.2",
         "spatie/laravel-pdf": "^2.2",
         "spatie/laravel-permission": "^6.24",
         "yajra/laravel-datatables": "^12",

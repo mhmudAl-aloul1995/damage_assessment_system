@@ -1,20 +1,20 @@
 <?php
+
 namespace App\Http\Controllers\DamageAssessment;
+
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
-use App\Models\Buildings;
-use Illuminate\Http\Request;
-use Yajra\Datatables\Datatables;
-use Yajra\Datatables\Enginges\EloquentEngine;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Builder;
-use App\Models\HousingUnit;
 use App\Models\Building;
-use App\Exports\BuildingExport;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Models\EditAssessment;
+use App\Models\Filter;
+use App\Models\HousingUnit;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\View;
+use Spatie\Browsershot\Browsershot;
 use Spatie\LaravelPdf\Facades\Pdf;
+use Yajra\Datatables\Datatables;
 
 class engineerController extends Controller
 {
@@ -32,7 +32,6 @@ class engineerController extends Controller
         $engineers = Building::distinct('assignedto')->select(columns: 'assignedto')->get();
 
         return View::make('DamageAssessment.engineers', compact('engineers'));
-
     }
 
     public function engineerAssessments(Request $request)
@@ -50,19 +49,16 @@ class engineerController extends Controller
         $completion = intval($completion);
         $assignedto = $request->assignedto;
 
-
-
         return View::make('DamageAssessment.engineerAssessments', compact('assignedto', 'completion', 'completed', 'notCompleted'));
     }
+
     public function assessmentAll(Request $request)
     {
-
         return View::make('DamageAssessment.assessmentAll');
     }
 
     public function filter(Request $request)
     {
-
         $status = $request->status;
         $assignedto = $request->assignedto;
         $search = $request->search;
@@ -76,12 +72,10 @@ class engineerController extends Controller
                 'assignedto',
                 'owner_name',
                 'building_name',
-                'globalid'
+                'globalid',
             ]);
         if ($request->assignedto != null) {
-
             $query->where('assignedto', $assignedto);
-
         }
 
         if ($status != 'all') {
@@ -90,55 +84,90 @@ class engineerController extends Controller
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-
                 $q->where('owner_name', 'like', "%$search%")
                     ->orWhere('building_name', 'like', "%$search%")
                     ->orWhere('objectid', 'like', "%$search%");
-
             });
         }
 
         $engineers = $query->paginate(9)->appends([
             'status' => $status,
             'assignedto' => $assignedto,
-            'search' => $search
+            'search' => $search,
         ]);
 
         $building_damage_ststus = [
             'fully_damaged' => 'ضرر كلي',
             'partially_damaged' => 'ضرر جزئي',
             'committee_review' => 'مراجعة لجنة',
-            '' => 'غير محدد'
+            '' => 'غير محدد',
         ];
 
         return view(
             'DamageAssessment.partials.engineers_cards',
             compact('engineers', 'building_damage_ststus')
         )->render();
-
     }
-    public function showAssessment(Request $request)
+
+    public function showAssessment(string $globalid)
     {
-        $globalid = $request->globalid;
-
-        $building = Building::where('globalid', $request->globalid)->first();
-        $HousingUnit = HousingUnit::where('parentglobalid', $request->globalid)->get();
+        $building = Building::query()->where('globalid', $globalid)->firstOrFail();
+        $HousingUnit = HousingUnit::query()->where('parentglobalid', $globalid)->get();
         $assessments = Assessment::all();
+        $buildingTitle = $this->resolveBuildingTitle($building);
 
-        return View::make('DamageAssessment.assessment', compact('globalid', 'building', 'assessments', 'HousingUnit'));
-
+        return View::make('DamageAssessment.assessment', compact('globalid', 'building', 'buildingTitle', 'assessments', 'HousingUnit'));
     }
+
+    public function exportAssessmentPdf(string $globalid)
+    {
+        $building = Building::query()
+            ->where('globalid', $globalid)
+            ->firstOrFail();
+
+        $housingUnits = HousingUnit::query()
+            ->where('parentglobalid', $globalid)
+            ->get();
+
+        $buildingTitle = $this->resolveBuildingTitle($building);
+        $buildingRows = $this->buildAssessmentRows($building, 'building_table');
+
+        $housingSections = $housingUnits->map(function (HousingUnit $housingUnit) {
+            return [
+                'title' => $this->resolveHousingTitle($housingUnit),
+                'rows' => $this->buildAssessmentRows($housingUnit, 'housing_table'),
+            ];
+        });
+
+        return Pdf::view('pdf.assessment', compact(
+            'building',
+            'buildingTitle',
+            'buildingRows',
+            'housingSections'
+        ))
+            ->format('a4')
+            ->name('assessment-'.($building->objectid ?? $building->globalid).'.pdf')
+            ->withBrowsershot(function (Browsershot $browsershot) {
+                $browsershot
+                    ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
+                    ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
+                    ->setNodeModulePath(base_path('node_modules'))
+                    ->setChromePath('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe')
+                    ->showBackground()
+                    ->addChromiumArguments([
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                    ]);
+            });
+    }
+
     public function show(Request $request)
     {
         $data = $request->all();
 
-
         $engineers = Building::distinct('assignedto')->select('assignedto');
 
-
         return Datatables::of($engineers)
-
-
             ->addColumn('all', function ($ctr) {
                 return $ctr->where(['assignedto' => $ctr->assignedto])->count();
             })
@@ -148,16 +177,14 @@ class engineerController extends Controller
             ->addColumn('in_complete', function ($ctr) {
                 return $ctr->where(['field_status' => 'NOT_COMPLETED', 'assignedto' => $ctr->assignedto])->count();
             })
-
             ->addColumn('action', function ($ctr) {
-
                 return '<a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">إجراءات
 															<i class="ki-duotone ki-down fs-5 ms-1"></i></a>
 															<!--begin::Menu-->
 															<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
 																<!--begin::Menu item-->
 																<div class="menu-item px-3">
-																	<a onclick="showModal(`user`,' . $ctr->id . ')" href="javascript:;" class="menu-link px-3">تعديل</a>
+																	<a onclick="showModal(`user`,'.$ctr->id.')" href="javascript:;" class="menu-link px-3">تعديل</a>
 																</div>
 																<!--end::Menu item-->
 																<!--begin::Menu item-->
@@ -171,5 +198,67 @@ class engineerController extends Controller
             ->make(true);
     }
 
+    private function resolveBuildingTitle(Building $building): string
+    {
+        return $building->building_name
+            ?: 'Building #'.($building->objectid ?? $building->globalid);
+    }
 
+    private function resolveHousingTitle(HousingUnit $housingUnit): string
+    {
+        $fullName = trim((string) ($housingUnit->full_name ?? ''));
+
+        if ($fullName !== '') {
+            return 'Housing Unit - '.$fullName;
+        }
+
+        if (! empty($housingUnit->objectid)) {
+            return 'Housing Unit #'.$housingUnit->objectid;
+        }
+
+        return 'Housing Unit - '.$housingUnit->globalid;
+    }
+
+    private function buildAssessmentRows(Model $model, string $type): Collection
+    {
+        $record = $model->toArray();
+        $fillable = (new $model)->getFillable();
+        $filtersMap = Filter::query()->pluck('label', 'name');
+        $latestEdits = EditAssessment::query()
+            ->where('type', $type)
+            ->where('global_id', $model->globalid)
+            ->orderByDesc('updated_at')
+            ->get()
+            ->unique('field_name')
+            ->keyBy('field_name');
+
+        return Assessment::query()
+            ->whereIn('name', $fillable)
+            ->orderBy('id')
+            ->get(['name', 'label', 'hint'])
+            ->map(function (Assessment $assessment) use ($record, $filtersMap, $latestEdits) {
+                $editedValue = $latestEdits->get($assessment->name)?->field_value;
+                $rawValue = ($editedValue !== null && $editedValue !== '')
+                    ? $editedValue
+                    : ($record[$assessment->name] ?? null);
+
+                $mappedValue = $filtersMap[$rawValue] ?? $rawValue;
+                $answer = $this->normalizeAssessmentValue($mappedValue);
+
+                return [
+                    'label' => $assessment->label,
+                    'hint' => $assessment->hint,
+                    'answer' => filled((string) $answer) ? $answer : '-',
+                ];
+            });
+    }
+
+    private function normalizeAssessmentValue(mixed $value): mixed
+    {
+        return match ($value) {
+            'yes', 'yes1', 'yes2', 'yes3', 'yes4', 'yes5', 'Yes' => 'نعم',
+            'no', 'no1', 'no2', 'no3', 'no4', 'no5', 'No' => 'لا',
+            default => $value,
+        };
+    }
 }

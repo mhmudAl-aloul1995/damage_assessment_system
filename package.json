@@ -21,6 +21,6 @@
     "dependencies": {
         "@arcgis/core": "^4.34.8",
         "esri-loader": "^3.7.0",
-        "puppeteer": "^24.37.5"
+        "puppeteer": "^24.40.0"
     }
 }

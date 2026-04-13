@@ -7,7 +7,13 @@
 <div class="card card-flush mb-7">
     <div class="card-header pt-7">
         <div class="card-title">
-            <h2>الإستبيان</h2>
+            <h2>{{ $buildingTitle }}</h2>
+        </div>
+        <div class="card-toolbar">
+            <a href="{{ route('assessment.pdf', $globalid) }}" target="_blank" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-file-down fs-4 me-1"></i>
+                PDF
+            </a>
         </div>
     </div>
 

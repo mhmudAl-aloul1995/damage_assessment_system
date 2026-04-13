@@ -183,7 +183,8 @@ Route::middleware('auth')->group(function () {
     // engineers
     Route::resource('engineer', controller: engineerController::class);
     Route::get('engineerAssessments/{assignedto}', [engineerController::class, 'engineerAssessments']);
-    Route::get('assessment/{globalid}', action: [engineerController::class, 'showAssessment']);
+    Route::get('assessment/{globalid}', action: [engineerController::class, 'showAssessment'])->name('assessment.show');
+    Route::get('assessment/{globalid}/pdf', action: [engineerController::class, 'exportAssessmentPdf'])->name('assessment.pdf');
     Route::get('/engineers/filter', [EngineerController::class, 'filter'])->name('engineers.filter');
     Route::get('/assessmentAll', [EngineerController::class, 'assessmentAll'])->name('engineers.assessmentAll');
     // Assessment
@@ -261,5 +262,29 @@ Route::middleware('auth')->group(function () {
     Route::post('/exports/{id}/cancel', [ExportDataController::class, 'cancel']);
 
 });
+use Spatie\Browsershot\Browsershot;
 
+Route::get('/debug-pdf', function () {
+
+    $pdfPath = storage_path('app/public/debug.pdf');
+
+    Browsershot::html('
+        <html lang="ar" dir="rtl">
+        <head><meta charset="UTF-8"></head>
+        <body>
+            <h1>نجح التصدير ✅</h1>
+            <p>Browsershot يعمل باستخدام Edge</p>
+        </body>
+        </html>
+    ')
+        ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
+        ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
+        ->setNodeModulePath(base_path('node_modules'))
+        ->setChromePath('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe')
+        ->format('A4')
+        ->showBackground()
+        ->save($pdfPath);
+
+    return response()->download($pdfPath);
+});
 require __DIR__.'/auth.php';
