@@ -1,28 +1,24 @@
 <?php
 
-use App\Http\Controllers\auditContoller;
-use App\Models\Attendance;
-use App\Models\User;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\UserManagement\userController;
-use App\Http\Controllers\UserManagement\roleController;
-use App\Http\Controllers\UserManagement\PermissionController;
-use App\Http\Controllers\DamageAssessment\ArcGISController;
-use App\Http\Controllers\DamageAssessment\buildingController;
-use App\Http\Controllers\DamageAssessment\housingController;
-use App\Http\Controllers\DamageAssessment\engineerController;
-use App\Http\Controllers\DamageAssessment\damageAssessmentController;
-use App\Http\Controllers\Report\reportController;
-use Carbon\Carbon;
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\DamageAssessment\auditController;
 use App\Http\Controllers\Attendance\AttendanceController;
-use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Facades\Artisan;
-use App\Models\AttendanceImportLog;
+use App\Http\Controllers\DamageAssessment\ArcGISController;
+use App\Http\Controllers\DamageAssessment\auditController;
+use App\Http\Controllers\DamageAssessment\buildingController;
+use App\Http\Controllers\DamageAssessment\damageAssessmentController;
+use App\Http\Controllers\DamageAssessment\engineerController;
 use App\Http\Controllers\DamageAssessment\ExportDataController;
-
+use App\Http\Controllers\DamageAssessment\housingController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Report\reportController;
+use App\Http\Controllers\UserManagement\PermissionController;
+use App\Http\Controllers\UserManagement\roleController;
+use App\Http\Controllers\UserManagement\userController;
+use App\Models\Attendance;
+use App\Models\AttendanceImportLog;
+use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
 
@@ -38,7 +34,6 @@ Route::get('/dashboard', function () {
     return redirect('damageAssessment');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -49,11 +44,10 @@ Route::middleware('auth')->group(function () {
             '--force' => true, // Required for running in production environments
         ]);
 
-        return $exitCode === 0 ? "Migration successful!" : "Migration failed.";
+        return $exitCode === 0 ? 'Migration successful!' : 'Migration failed.';
     });
 
     Route::resource('sync', controller: ArcGISController::class);
-
 
     Route::get('/pull', function () {
         // Run the git pull command in the project root
@@ -72,10 +66,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="' . $safeRepo . '" add .',
-            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
-            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
-            'git -c safe.directory="' . $safeRepo . '" push',
+            'git -c safe.directory="'.$safeRepo.'" add .',
+            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
+            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
+            'git -c safe.directory="'.$safeRepo.'" push',
         ];
 
         $outputs = [];
@@ -91,10 +85,11 @@ Route::middleware('auth')->group(function () {
                         'output' => ['No changes to commit.'],
                     ]);
                 }
+
                 continue;
             }
 
-            if (!$result->successful()) {
+            if (! $result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -145,8 +140,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
     });
 
-
-
     Route::prefix('user-management/permissions')->name('permissions.')->group(function () {
         Route::get('/', [PermissionController::class, 'index'])->name('index');
         Route::get('/data', [PermissionController::class, 'data'])->name('data');
@@ -173,15 +166,11 @@ Route::middleware('auth')->group(function () {
             ->name('export-monthly-report');
     });
 
-
     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);
     Route::get('/create_housing_data/{token}', [ArcGISController::class, 'create_housing_data']);
 
     Route::get('/sync_housings/{no_day}', [ArcGISController::class, 'sync_housings']);
     Route::get('/sync_buildings/{no_day}', [ArcGISController::class, 'sync_buildings']);
-
-
-
 
     // building
     Route::resource('building', controller: buildingController::class);
@@ -191,14 +180,13 @@ Route::middleware('auth')->group(function () {
     Route::resource('housing', controller: housingController::class);
     Route::get('/showHousing/{globalid}', action: [housingController::class, 'index']);
 
-
-    //engineers
+    // engineers
     Route::resource('engineer', controller: engineerController::class);
     Route::get('engineerAssessments/{assignedto}', [engineerController::class, 'engineerAssessments']);
     Route::get('assessment/{globalid}', action: [engineerController::class, 'showAssessment']);
     Route::get('/engineers/filter', [EngineerController::class, 'filter'])->name('engineers.filter');
     Route::get('/assessmentAll', [EngineerController::class, 'assessmentAll'])->name('engineers.assessmentAll');
-    //Assessment
+    // Assessment
     Route::resource('damageAssessment', controller: damageAssessmentController::class);
     Route::get('/showBuildings', action: [damageAssessmentController::class, 'showBuildings']);
     Route::get('/showHousings', action: [damageAssessmentController::class, 'showHousings']);
@@ -213,8 +201,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('reports/commulative/export', [ReportController::class, 'exportCommulative'])->name('reports.commulative.export');
     Route::get('reports/commulative', action: [reportController::class, 'commulative'])->name('reports.commulative');
-
-
+    Route::get('reports/auditors-daily', [reportController::class, 'auditorsDailyAchievement'])->name('reports.auditors-daily');
 
     // Ensure this matches your URL: phc/audit
     Route::get('/audit', [auditController::class, 'index'])->name('audit.index');
@@ -223,8 +210,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/engineer-table', [AuditController::class, 'engineerTable']);
     Route::get('/lawyer-table', [AuditController::class, 'lawyerTable']);
 
-    //attendence
-
+    // attendence
 
     // assessmentAudit
 
@@ -258,7 +244,6 @@ Route::middleware('auth')->group(function () {
     Route::post('audit/building-history/delete', [auditController::class, 'deleteHistory'])
         ->name('audit.building.history.delete');
 
-
     Route::get('/export-data', [ExportDataController::class, 'index'])->name('export.data.index');
     Route::post('/export-data', [ExportDataController::class, 'export'])->name('export.data.download');
 
@@ -274,4 +259,4 @@ Route::middleware('auth')->group(function () {
 
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

@@ -7,7 +7,7 @@ return [
         'title' => 'حصر الأضرار',
         'icon' => 'ki-abstract-28',
 
-        'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor','QC/QA Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
 
         'active_patterns' => [
             'damageAssessment*',
@@ -29,20 +29,20 @@ return [
                 'title' => 'الإستبيانات',
                 'url' => 'assessmentAll',
                 'pattern' => 'assessmentAll*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor','QC/QA Engineer'],
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
             ],
             [
                 'title' => 'المباني',
                 'url' => 'building',
                 'pattern' => 'building*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor','QC/QA Engineer'],
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
             ],
 
             [
                 'title' => 'الوحدات السكنية',
                 'url' => 'housing',
                 'pattern' => 'housing*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor','QC/QA Engineer'],
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
             ],
 
             [
@@ -54,16 +54,15 @@ return [
 
         ],
 
-
     ],
     [
         'title' => 'التقارير',
         'icon' => 'ki-chart-line',
 
-        'roles' => ['Database Officer', 'Project Officer', 'Area Manager','QC/QA Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'QC/QA Engineer'],
 
         'active_patterns' => [
-            'reports*'
+            'reports*',
         ],
 
         'items' => [
@@ -72,23 +71,29 @@ return [
                 'title' => 'إنتاجية المناطق',
                 'url' => 'reports/commulative',
                 'pattern' => 'reports/commulative*',
-                'roles' => ['Database Officer', 'Project Officer', 'Area Manager']
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
             ],
 
             [
                 'title' => 'إنتاجية المهندسين',
                 'url' => 'reports/productivity',
                 'pattern' => 'reports/productivity*',
-                'roles' => ['Database Officer', 'Project Officer', 'Area Manager']
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
             ],
-             [
+            [
+                'title' => 'Auditors Daily Achievement',
+                'url' => 'reports/auditors-daily',
+                'pattern' => 'reports/auditors-daily*',
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'Auditing Supervisor'],
+            ],
+            [
                 'title' => 'تصدير البيانات',
                 'url' => 'export-data',
                 'pattern' => 'export-data*',
-                'roles' => ['Database Officer', 'Project Officer','QC/QA Engineer','Area Manager']
+                'roles' => ['Database Officer', 'Project Officer', 'QC/QA Engineer', 'Area Manager'],
             ],
 
-        ]
+        ],
 
     ],
 
@@ -99,7 +104,7 @@ return [
         'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer'],
 
         'active_patterns' => [
-            'audit*'
+            'audit*',
         ],
 
         'items' => [
@@ -117,7 +122,7 @@ return [
                 'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer'],
             ],
 
-        ]
+        ],
 
     ],
     [
@@ -127,11 +132,10 @@ return [
         'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
 
         'active_patterns' => [
-            'attendance*'
+            'attendance*',
         ],
 
         'items' => [
-
 
             [
                 'title' => 'حضور/غياب',
@@ -146,7 +150,7 @@ return [
                 'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
             ],
 
-        ]
+        ],
 
     ],
     [
@@ -156,7 +160,7 @@ return [
         'roles' => ['Database Officer'],
 
         'active_patterns' => [
-            'user*'
+            'user*',
         ],
 
         'items' => [
@@ -165,30 +169,29 @@ return [
                 'title' => 'المستخدمين',
                 'url' => 'user-management/user',
                 'pattern' => 'user',
-                'roles' => ['Database Officer']
+                'roles' => ['Database Officer'],
             ],
             [
                 'title' => 'حضور/غياب',
                 'url' => 'Attendance/attendance',
                 'pattern' => 'attendance',
-                'roles' => ['Database Officer', 'Area Manager']
+                'roles' => ['Database Officer', 'Area Manager'],
             ],
             [
                 'title' => 'الأدوار',
                 'url' => 'user-management/roles',
                 'pattern' => 'user',
-                'roles' => ['Database Officer']
+                'roles' => ['Database Officer'],
             ],
             [
                 'title' => 'الصلاحيات',
                 'url' => 'user-management/permissions',
                 'pattern' => 'user',
-                'roles' => ['Database Officer']
+                'roles' => ['Database Officer'],
             ],
 
-        ]
+        ],
 
     ],
-
 
 ];

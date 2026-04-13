@@ -2,30 +2,20 @@
 
 namespace App\Http\Controllers\Report;
 
+use App\Exports\AreaProductivityExport;
+use App\Exports\ProductivityExport;
 use App\Http\Controllers\Controller;
-use App\Models\Assessment;
-use App\Models\Buildings;
-use Illuminate\Http\Request;
-use phpDocumentor\Reflection\Project;
-use Yajra\Datatables\Datatables;
-use Rap2hpoutre\FastExcel\FastExcel;
-use Yajra\Datatables\Enginges\EloquentEngine;
-use Illuminate\Support\Facades\DB;
-use View;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Builder;
-use Hash;
-use Spatie\Permission\Models\Role;
-use App\Models\HousingUnit;
 use App\Models\Building;
-use App\Exports\BuildingExport;
-use Maatwebsite\Excel\Facades\Excel;
-use Spatie\LaravelPdf\Facades\Pdf;
+use App\Models\Buildings;
+use App\Models\HousingStatus;
+use App\Models\HousingUnit;
+use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
-use App\Exports\ProductivityExport;
-use DateTime;
-use App\Exports\AreaProductivityExport;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use View;
 
 class reportController extends Controller
 {
@@ -38,20 +28,14 @@ class reportController extends Controller
             $this->middleware('permission:user-delete', ['only' => ['destroy']]);
         }*/
 
-    function __construct()
+    public function __construct()
     {
         $this->middleware('role:Database Officer|Project Officer|Auditing Supervisor|Area Manager');
     }
 
-
-
-
-
     public function export_productivity(Request $request)
     {
         $data = $request->all();
-
-
 
         $minDate = $data['minDate'];
         $maxDate = $data['maxDate'];
@@ -71,7 +55,6 @@ class reportController extends Controller
             $end = $data['maxDate'];
         }
         $period = CarbonPeriod::create($start, 'P1D', $end);
-
 
         $stats = Building::whereIn('assignedto', $assignedto)
             ->whereBetween('creationdate', [$start, $end])
@@ -96,13 +79,9 @@ class reportController extends Controller
                 ];
             });
 
-
-
-
-
-
         return Excel::download(new ProductivityExport($assignedto, $period, $stats), 'productivity.xlsx');
     }
+
     public function commulative(Request $request)
     {
         $startDate = $request->input('start_date', Carbon::now()->subDays(30)->toDateString());
@@ -112,7 +91,7 @@ class reportController extends Controller
             'buildings.governorate',
             'buildings.municipalitie',
             'buildings.neighborhood',
-            DB::raw("COUNT(DISTINCT CASE WHEN DATE(buildings.creationdate) BETWEEN ? AND ? THEN buildings.assignedto END) as no_eng"),
+            DB::raw('COUNT(DISTINCT CASE WHEN DATE(buildings.creationdate) BETWEEN ? AND ? THEN buildings.assignedto END) as no_eng'),
             DB::raw("COUNT(CASE WHEN housing_units.unit_damage_status = 'fully_damaged2' AND DATE(housing_units.creationdate) BETWEEN ? AND ? THEN 1 END) as tda_range"),
             DB::raw("COUNT(CASE WHEN housing_units.unit_damage_status = 'partially_damaged2' AND DATE(housing_units.creationdate) BETWEEN ? AND ? THEN 1 END) as pda_range"),
             DB::raw("COUNT(CASE WHEN housing_units.unit_damage_status = 'committee_review2' AND DATE(housing_units.creationdate) BETWEEN ? AND ? THEN 1 END) as cra_range")
@@ -130,8 +109,8 @@ class reportController extends Controller
                 $endDate,
                 $startDate,
                 $endDate,
-                //'',            // for neighborhood != ?
-                'COMPLETED'    // for field_status = ?
+                // '',            // for neighborhood != ?
+                'COMPLETED',    // for field_status = ?
             ])
             ->groupBy('buildings.neighborhood')
             ->get();
@@ -148,7 +127,7 @@ class reportController extends Controller
             'buildings.governorate',
             'buildings.municipalitie',
             'buildings.neighborhood',
-            DB::raw("COUNT(DISTINCT CASE WHEN DATE(buildings.creationdate) BETWEEN ? AND ? THEN buildings.assignedto END) as no_eng"),
+            DB::raw('COUNT(DISTINCT CASE WHEN DATE(buildings.creationdate) BETWEEN ? AND ? THEN buildings.assignedto END) as no_eng'),
             DB::raw("COUNT(CASE WHEN housing_units.unit_damage_status = 'fully_damaged2' AND DATE(housing_units.creationdate) BETWEEN ? AND ? THEN 1 END) as tda_range"),
             DB::raw("COUNT(CASE WHEN housing_units.unit_damage_status = 'partially_damaged2' AND DATE(housing_units.creationdate) BETWEEN ? AND ? THEN 1 END) as pda_range"),
             DB::raw("COUNT(CASE WHEN housing_units.unit_damage_status = 'committee_review2' AND DATE(housing_units.creationdate) BETWEEN ? AND ? THEN 1 END) as cra_range")
@@ -158,9 +137,8 @@ class reportController extends Controller
             ->groupBy('buildings.neighborhood')
             ->get();
 
-        return Excel::download(new AreaProductivityExport($data, $startDate, $endDate), "Report.xlsx");
+        return Excel::download(new AreaProductivityExport($data, $startDate, $endDate), 'Report.xlsx');
     }
-
 
     public function productivity(Request $request)
     {
@@ -211,5 +189,67 @@ class reportController extends Controller
             });
 
         return View::make('DamageAssessment.Reports.productivity', compact('period', 'assignedto', 'stats'));
+    }
+
+    public function auditorsDailyAchievement(Request $request)
+    {
+        $startDate = Carbon::parse($request->input('start_date', now()->toDateString()))->startOfDay();
+        $endDate = Carbon::parse($request->input('end_date', $startDate->toDateString()))->endOfDay();
+
+        $auditors = User::role('QC/QA Engineer')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $statusCounts = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', 'QC/QA Engineer')
+            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', [
+                'accepted_by_engineer',
+                'rejected_by_engineer',
+                'need_review',
+            ])
+            ->select(
+                'housing_statuses.user_id',
+                DB::raw("SUM(CASE WHEN assessment_statuses.name = 'accepted_by_engineer' THEN 1 ELSE 0 END) as accepted_count"),
+                DB::raw("SUM(CASE WHEN assessment_statuses.name = 'rejected_by_engineer' THEN 1 ELSE 0 END) as rejected_count"),
+                DB::raw("SUM(CASE WHEN assessment_statuses.name = 'need_review' THEN 1 ELSE 0 END) as need_review_count")
+            )
+            ->groupBy('housing_statuses.user_id')
+            ->get()
+            ->keyBy('user_id');
+
+        $rows = $auditors->map(function ($auditor) use ($statusCounts) {
+            $counts = $statusCounts->get($auditor->id);
+
+            $acceptedCount = (int) ($counts->accepted_count ?? 0);
+            $rejectedCount = (int) ($counts->rejected_count ?? 0);
+            $needReviewCount = (int) ($counts->need_review_count ?? 0);
+
+            return [
+                'name' => $auditor->name,
+                'accepted_count' => $acceptedCount,
+                'rejected_count' => $rejectedCount,
+                'need_review_count' => $needReviewCount,
+                'total_count' => $acceptedCount + $rejectedCount + $needReviewCount,
+            ];
+        });
+
+        $totals = [
+            'accepted_count' => $rows->sum('accepted_count'),
+            'rejected_count' => $rows->sum('rejected_count'),
+            'need_review_count' => $rows->sum('need_review_count'),
+            'total_count' => $rows->sum('total_count'),
+        ];
+
+        $startDateValue = $startDate->toDateString();
+        $endDateValue = $endDate->toDateString();
+
+        return View::make('DamageAssessment.Reports.auditors_daily_achievement', compact(
+            'rows',
+            'totals',
+            'startDateValue',
+            'endDateValue'
+        ));
     }
 }
