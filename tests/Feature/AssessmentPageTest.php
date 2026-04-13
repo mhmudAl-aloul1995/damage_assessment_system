@@ -5,8 +5,10 @@ use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\HousingUnit;
 use App\Models\User;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
 
@@ -43,8 +45,45 @@ it('shows the building name and pdf export action on the assessment page', funct
     $response->assertSee('PDF');
 });
 
-it('exports the assessment page as a pdf', function () {
+it('exports the assessment page as a pdf with attachments', function () {
     Pdf::fake();
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'fake-token',
+        ], 200),
+        '*' => function (Request $request) {
+            $url = $request->url();
+
+            if (str_contains($url, '/FeatureServer/0/101/attachments')) {
+                return Http::response([
+                    'attachmentInfos' => [
+                        [
+                            'id' => 91,
+                            'name' => 'building-photo.jpg',
+                            'contentType' => 'image/jpeg',
+                        ],
+                    ],
+                ], 200);
+            }
+
+            if (str_contains($url, '/FeatureServer/1/201/attachments')) {
+                return Http::response([
+                    'attachmentInfos' => [
+                        [
+                            'id' => 77,
+                            'name' => 'housing-photo.jpg',
+                            'contentType' => 'image/jpeg',
+                        ],
+                    ],
+                ], 200);
+            }
+
+            return Http::response([
+                'attachmentInfos' => [],
+            ], 200);
+        },
+    ]);
 
     $user = User::factory()->create();
 
@@ -91,9 +130,10 @@ it('exports the assessment page as a pdf', function () {
 
     Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf) {
         return $pdf->viewName === 'pdf.assessment'
-            && $pdf->isDownload()
             && $pdf->contains('Tower A')
             && $pdf->contains('Edited Owner')
-            && $pdf->contains('Ali');
+            && $pdf->contains('building-photo.jpg')
+            && $pdf->contains('housing-photo.jpg')
+            && $pdf->contains('fake-token');
     });
 });

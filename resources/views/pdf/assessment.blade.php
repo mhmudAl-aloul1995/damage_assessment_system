@@ -177,6 +177,93 @@
             border-color: #e5e7eb;
         }
 
+        .gallery-section {
+            margin-top: 18px;
+            page-break-inside: avoid;
+        }
+
+        .gallery-section.break-before {
+            page-break-before: always;
+        }
+
+        .gallery-wrap {
+            padding: 14px;
+            background: #f8fafc;
+            border: 1px solid #dbe4ea;
+            border-radius: 12px;
+        }
+
+        .gallery-title {
+            margin: 0 0 6px;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .gallery-note {
+            margin: 0 0 12px;
+            color: #64748b;
+            font-size: 10px;
+        }
+
+        .gallery-grid {
+            font-size: 0;
+        }
+
+        .gallery-item {
+            display: inline-block;
+            width: 48%;
+            margin-left: 4%;
+            margin-bottom: 14px;
+            vertical-align: top;
+            page-break-inside: avoid;
+        }
+
+        .gallery-item:nth-child(2n) {
+            margin-left: 0;
+        }
+
+        .gallery-frame {
+            border: 1px solid #dbe4ea;
+            border-radius: 12px;
+            background: #ffffff;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+        }
+
+        .gallery-image {
+            display: block;
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #e5e7eb;
+        }
+
+        .gallery-meta {
+            padding: 10px 12px;
+            font-size: 10px;
+            color: #475569;
+            word-break: break-word;
+        }
+
+        .gallery-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .gallery-type {
+            display: inline-block;
+            background: #ecfeff;
+            color: #0f766e;
+            border: 1px solid #b6ece7;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
         .footer-note {
             margin-top: 14px;
             text-align: center;
@@ -237,6 +324,30 @@
             </table>
         </div>
 
+        @if ($buildingAttachments->isNotEmpty())
+            <div class="gallery-section break-before">
+                <div class="section-header">
+                    <h2 class="section-title">Building Attachments</h2>
+                    <p class="section-note">Visual record of the building attachments included with the assessment.</p>
+                </div>
+                <div class="gallery-wrap">
+                    <div class="gallery-grid">
+                        @foreach ($buildingAttachments as $attachment)
+                            <div class="gallery-item">
+                                <div class="gallery-frame">
+                                    <img src="{{ $attachment['url'] }}" alt="{{ $attachment['name'] }}" class="gallery-image">
+                                    <div class="gallery-meta">
+                                        <div class="gallery-name">{{ $attachment['name'] }}</div>
+                                        <span class="gallery-type">{{ $attachment['content_type'] ?: 'Attachment' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @foreach ($housingSections as $section)
             <div class="section">
                 <div class="section-header">
@@ -267,6 +378,28 @@
                         @endforeach
                     </tbody>
                 </table>
+
+                @if (collect($section['attachments'])->isNotEmpty())
+                    <div class="gallery-section">
+                        <div class="gallery-wrap">
+                            <h3 class="gallery-title">Housing Unit Attachments</h3>
+                            <p class="gallery-note">Supporting images linked to this housing unit.</p>
+                            <div class="gallery-grid">
+                                @foreach ($section['attachments'] as $attachment)
+                                    <div class="gallery-item">
+                                        <div class="gallery-frame">
+                                            <img src="{{ $attachment['url'] }}" alt="{{ $attachment['name'] }}" class="gallery-image">
+                                            <div class="gallery-meta">
+                                                <div class="gallery-name">{{ $attachment['name'] }}</div>
+                                                <span class="gallery-type">{{ $attachment['content_type'] ?: 'Attachment' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         @endforeach
 
