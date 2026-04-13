@@ -192,7 +192,35 @@ class reportController extends Controller
         return View::make('DamageAssessment.Reports.productivity', compact('period', 'assignedto', 'stats'));
     }
 
+    public function dailyAchievement(Request $request)
+    {
+        return $this->renderDailyAchievementReport($request, $request->input('tab', 'engineers'));
+    }
+
     public function auditorsDailyAchievement(Request $request)
+    {
+        return $this->renderDailyAchievementReport($request, 'engineers');
+    }
+
+    public function lawyersDailyAchievement(Request $request)
+    {
+        return $this->renderDailyAchievementReport($request, 'lawyers');
+    }
+
+    private function renderDailyAchievementReport(Request $request, string $tab)
+    {
+        $activeTab = $tab === 'lawyers' ? 'lawyers' : 'engineers';
+
+        $reportData = $activeTab === 'lawyers'
+            ? $this->getLawyersDailyAchievementData($request)
+            : $this->getEngineersDailyAchievementData($request);
+
+        return View::make('DamageAssessment.Reports.daily_achievement', array_merge($reportData, [
+            'activeTab' => $activeTab,
+        ]));
+    }
+
+    private function getEngineersDailyAchievementData(Request $request): array
     {
         $startDate = Carbon::parse($request->input('start_date', now()->toDateString()))->startOfDay();
         $endDate = Carbon::parse($request->input('end_date', $startDate->toDateString()))->endOfDay();
@@ -249,9 +277,117 @@ class reportController extends Controller
             'need_review',
         ];
 
+        return [
+            'reportTitle' => 'Daily Achievement Report For Auditing Engineers',
+            'reportRoute' => route('reports.daily-achievement'),
+            'startDateValue' => $startDate->toDateString(),
+            'endDateValue' => $endDate->toDateString(),
+            'rows' => $rows,
+            'totals' => $totals,
+            'chartMetrics' => $this->buildChartMetrics('QC/QA Engineer', $trackedStatusNames, $startDate, $endDate),
+            'summaryCards' => [
+                ['label' => 'Accepted', 'value' => $totals['accepted_count'], 'class' => 'success'],
+                ['label' => 'Rejected', 'value' => $totals['rejected_count'], 'class' => 'danger'],
+                ['label' => 'Need Review', 'value' => $totals['need_review_count'], 'class' => 'warning'],
+                ['label' => 'Total', 'value' => $totals['total_count'], 'class' => 'primary'],
+            ],
+            'tableTitle' => 'Auditor Name',
+            'tableColumns' => [
+                ['label' => 'Accepted Units', 'key' => 'accepted_count', 'class' => 'success'],
+                ['label' => 'Rejected Units', 'key' => 'rejected_count', 'class' => 'danger'],
+                ['label' => 'Need Review', 'key' => 'need_review_count', 'class' => 'warning'],
+                ['label' => 'Total', 'key' => 'total_count', 'class' => 'primary'],
+            ],
+            'emptyMessage' => 'No auditors found.',
+        ];
+    }
+
+    private function getLawyersDailyAchievementData(Request $request): array
+    {
+        $startDate = Carbon::parse($request->input('start_date', now()->toDateString()))->startOfDay();
+        $endDate = Carbon::parse($request->input('end_date', $startDate->toDateString()))->endOfDay();
+
+        $lawyers = User::role('Legal Auditor')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $statusCounts = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', 'Legal Auditor')
+            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', [
+                'assigned_to_lawyer',
+                'accepted_by_lawyer',
+                'legal_notes',
+            ])
+            ->select(
+                'housing_statuses.user_id',
+                DB::raw("SUM(CASE WHEN assessment_statuses.name = 'assigned_to_lawyer' THEN 1 ELSE 0 END) as assigned_count"),
+                DB::raw("SUM(CASE WHEN assessment_statuses.name = 'accepted_by_lawyer' THEN 1 ELSE 0 END) as accepted_count"),
+                DB::raw("SUM(CASE WHEN assessment_statuses.name = 'legal_notes' THEN 1 ELSE 0 END) as legal_notes_count")
+            )
+            ->groupBy('housing_statuses.user_id')
+            ->get()
+            ->keyBy('user_id');
+
+        $rows = $lawyers->map(function ($lawyer) use ($statusCounts) {
+            $counts = $statusCounts->get($lawyer->id);
+
+            $assignedCount = (int) ($counts->assigned_count ?? 0);
+            $acceptedCount = (int) ($counts->accepted_count ?? 0);
+            $legalNotesCount = (int) ($counts->legal_notes_count ?? 0);
+
+            return [
+                'name' => $lawyer->name,
+                'assigned_count' => $assignedCount,
+                'accepted_count' => $acceptedCount,
+                'legal_notes_count' => $legalNotesCount,
+                'total_count' => $assignedCount + $acceptedCount + $legalNotesCount,
+            ];
+        });
+
+        $totals = [
+            'assigned_count' => $rows->sum('assigned_count'),
+            'accepted_count' => $rows->sum('accepted_count'),
+            'legal_notes_count' => $rows->sum('legal_notes_count'),
+            'total_count' => $rows->sum('total_count'),
+        ];
+
+        $trackedStatusNames = [
+            'accepted_by_lawyer',
+            'legal_notes',
+        ];
+
+        return [
+            'reportTitle' => 'Daily Achievement Report For Auditing Lawyers',
+            'reportRoute' => route('reports.daily-achievement'),
+            'startDateValue' => $startDate->toDateString(),
+            'endDateValue' => $endDate->toDateString(),
+            'rows' => $rows,
+            'totals' => $totals,
+            'chartMetrics' => $this->buildChartMetrics('Legal Auditor', $trackedStatusNames, $startDate, $endDate),
+            'summaryCards' => [
+                ['label' => 'Assigned', 'value' => $totals['assigned_count'], 'class' => 'info'],
+                ['label' => 'Accepted', 'value' => $totals['accepted_count'], 'class' => 'success'],
+                ['label' => 'Legal Notes', 'value' => $totals['legal_notes_count'], 'class' => 'warning'],
+                ['label' => 'Total', 'value' => $totals['total_count'], 'class' => 'primary'],
+            ],
+            'tableTitle' => 'Lawyer Name',
+            'tableColumns' => [
+                ['label' => 'Assigned Units', 'key' => 'assigned_count', 'class' => 'info'],
+                ['label' => 'Accepted Units', 'key' => 'accepted_count', 'class' => 'success'],
+                ['label' => 'Legal Notes', 'key' => 'legal_notes_count', 'class' => 'warning'],
+                ['label' => 'Total', 'key' => 'total_count', 'class' => 'primary'],
+            ],
+            'emptyMessage' => 'No lawyers found.',
+        ];
+    }
+
+    private function buildChartMetrics(string $type, array $trackedStatusNames, Carbon $startDate, Carbon $endDate): array
+    {
         $auditedBuildingsCount = BuildingStatus::query()
             ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('building_statuses.type', 'QC/QA Engineer')
+            ->where('building_statuses.type', $type)
             ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', $trackedStatusNames)
             ->distinct('building_statuses.building_id')
@@ -259,7 +395,7 @@ class reportController extends Controller
 
         $auditedHousingUnitsCount = HousingStatus::query()
             ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('housing_statuses.type', 'QC/QA Engineer')
+            ->where('housing_statuses.type', $type)
             ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', $trackedStatusNames)
             ->distinct('housing_statuses.housing_id')
@@ -268,7 +404,7 @@ class reportController extends Controller
         $totalBuildingsCount = Building::query()->count();
         $totalHousingUnitsCount = HousingUnit::query()->count();
 
-        $chartMetrics = [
+        return [
             'buildings' => [
                 'label' => 'Audited Buildings',
                 'audited_count' => $auditedBuildingsCount,
@@ -284,16 +420,5 @@ class reportController extends Controller
                 'percentage' => $totalHousingUnitsCount > 0 ? round(($auditedHousingUnitsCount / $totalHousingUnitsCount) * 100, 1) : 0,
             ],
         ];
-
-        $startDateValue = $startDate->toDateString();
-        $endDateValue = $endDate->toDateString();
-
-        return View::make('DamageAssessment.Reports.auditors_daily_achievement', compact(
-            'rows',
-            'totals',
-            'chartMetrics',
-            'startDateValue',
-            'endDateValue'
-        ));
     }
 }

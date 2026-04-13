@@ -3,9 +3,14 @@
 use App\Models\AssessmentStatus;
 use App\Models\HousingStatus;
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 it('shows daily auditor achievement counts grouped by auditing engineer', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
     $viewerRole = Role::query()->create([
         'name' => 'Database Officer',
         'guard_name' => 'web',
