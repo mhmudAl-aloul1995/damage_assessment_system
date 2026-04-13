@@ -81,7 +81,7 @@ return [
                 'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
             ],
             [
-                'title' => 'Auditors Daily Achievement',
+                'title' => 'Auditors Daily Achievements',
                 'url' => 'reports/auditors-daily',
                 'pattern' => 'reports/auditors-daily*',
                 'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'Auditing Supervisor'],
