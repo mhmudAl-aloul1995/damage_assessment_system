@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 
 it('creates a sqlite database backup file', function () {
     $databasePath = storage_path('framework/testing/backup-test.sqlite');
@@ -25,6 +26,27 @@ it('creates a sqlite database backup file', function () {
 
     File::deleteDirectory($backupPath);
     File::delete($databasePath);
+});
+
+it('returns a failure code when the dump process fails', function () {
+    Process::fake([
+        '*' => Process::result('', 'dump failed', 1),
+    ]);
+
+    config()->set('database_backup.connection', 'mysql');
+    config()->set('database.connections.mysql', [
+        'driver' => 'mysql',
+        'host' => '127.0.0.1',
+        'port' => '3306',
+        'database' => 'phc',
+        'username' => 'root',
+        'password' => 'secret',
+    ]);
+
+    $exitCode = Artisan::call('app:backup-database');
+
+    expect($exitCode)->toBe(1);
+    expect(Artisan::output())->toContain('dump failed');
 });
 
 it('registers the database backup command in the scheduler', function () {

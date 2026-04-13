@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
-use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class BackupDatabase extends Command
 {
@@ -88,10 +87,7 @@ class BackupDatabase extends Command
         }
 
         $result = Process::timeout(300)->run($arguments);
-
-        if ($result->failed()) {
-            throw new ProcessFailedException($result);
-        }
+        $result->throw();
 
         return $backupPath;
     }
@@ -119,9 +115,7 @@ class BackupDatabase extends Command
             ->env($environment)
             ->run($arguments);
 
-        if ($result->failed()) {
-            throw new ProcessFailedException($result);
-        }
+        $result->throw();
 
         return $backupPath;
     }
