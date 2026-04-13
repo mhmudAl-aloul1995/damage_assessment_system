@@ -40,6 +40,56 @@
 
                 <div class="card-body py-4">
                     <div class="row g-5 mb-8">
+                        <div class="col-md-6">
+                            <div class="card card-flush h-md-100 border border-gray-200">
+                                <div class="card-header pt-6">
+                                    <div class="card-title d-flex flex-column">
+                                        <span class="fs-2 fw-bold text-gray-900">{{ $chartMetrics['buildings']['percentage'] }}%</span>
+                                        <span class="text-muted pt-1 fw-semibold fs-6">Audited buildings from total buildings</span>
+                                    </div>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-center">
+                                    <div id="audited_buildings_chart" style="height: 320px;"></div>
+                                    <div class="d-flex justify-content-center gap-10 flex-wrap mt-4">
+                                        <div class="text-center">
+                                            <div class="fs-3 fw-bold text-primary">{{ $chartMetrics['buildings']['audited_count'] }}</div>
+                                            <div class="text-muted">Audited</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="fs-3 fw-bold text-gray-700">{{ $chartMetrics['buildings']['total_count'] }}</div>
+                                            <div class="text-muted">Total</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card card-flush h-md-100 border border-gray-200">
+                                <div class="card-header pt-6">
+                                    <div class="card-title d-flex flex-column">
+                                        <span class="fs-2 fw-bold text-gray-900">{{ $chartMetrics['housing_units']['percentage'] }}%</span>
+                                        <span class="text-muted pt-1 fw-semibold fs-6">Audited housing units from total housing units</span>
+                                    </div>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-center">
+                                    <div id="audited_housing_units_chart" style="height: 320px;"></div>
+                                    <div class="d-flex justify-content-center gap-10 flex-wrap mt-4">
+                                        <div class="text-center">
+                                            <div class="fs-3 fw-bold text-success">{{ $chartMetrics['housing_units']['audited_count'] }}</div>
+                                            <div class="text-muted">Audited</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="fs-3 fw-bold text-gray-700">{{ $chartMetrics['housing_units']['total_count'] }}</div>
+                                            <div class="text-muted">Total</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-5 mb-8">
                         <div class="col-md-3">
                             <div class="border border-gray-300 border-dashed rounded p-6 text-center h-100">
                                 <div class="text-muted mb-2">Accepted</div>
@@ -126,6 +176,53 @@
                 $('#start_date').val(start.format('YYYY-MM-DD'));
                 $('#end_date').val(end.format('YYYY-MM-DD'));
             });
+
+            const chartOptions = function (series, colors) {
+                return {
+                    series: series,
+                    chart: {
+                        type: 'donut',
+                        height: 320,
+                    },
+                    labels: ['Audited', 'Remaining'],
+                    colors: colors,
+                    legend: {
+                        position: 'bottom',
+                    },
+                    stroke: {
+                        width: 0,
+                    },
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function (value) {
+                            return value.toFixed(1) + '%';
+                        }
+                    },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                size: '62%',
+                            }
+                        }
+                    }
+                };
+            };
+
+            new ApexCharts(
+                document.querySelector('#audited_buildings_chart'),
+                chartOptions([
+                    {{ $chartMetrics['buildings']['audited_count'] }},
+                    {{ $chartMetrics['buildings']['remaining_count'] }}
+                ], ['#009ef7', '#e4e6ef'])
+            ).render();
+
+            new ApexCharts(
+                document.querySelector('#audited_housing_units_chart'),
+                chartOptions([
+                    {{ $chartMetrics['housing_units']['audited_count'] }},
+                    {{ $chartMetrics['housing_units']['remaining_count'] }}
+                ], ['#50cd89', '#e4e6ef'])
+            ).render();
         });
     </script>
 @endsection

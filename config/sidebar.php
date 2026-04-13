@@ -110,6 +110,12 @@ return [
         'items' => [
 
             [
+                'title' => 'Audit Dashboard',
+                'url' => 'audit/dashboard',
+                'pattern' => 'audit/dashboard',
+                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer'],
+            ],
+            [
                 'title' => 'الرئيسية',
                 'url' => 'audit',
                 'pattern' => 'audit',

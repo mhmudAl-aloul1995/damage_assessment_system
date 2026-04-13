@@ -7,6 +7,7 @@ use App\Exports\ProductivityExport;
 use App\Http\Controllers\Controller;
 use App\Models\Building;
 use App\Models\Buildings;
+use App\Models\BuildingStatus;
 use App\Models\HousingStatus;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -242,12 +243,55 @@ class reportController extends Controller
             'total_count' => $rows->sum('total_count'),
         ];
 
+        $trackedStatusNames = [
+            'accepted_by_engineer',
+            'rejected_by_engineer',
+            'need_review',
+        ];
+
+        $auditedBuildingsCount = BuildingStatus::query()
+            ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('building_statuses.type', 'QC/QA Engineer')
+            ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', $trackedStatusNames)
+            ->distinct('building_statuses.building_id')
+            ->count('building_statuses.building_id');
+
+        $auditedHousingUnitsCount = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', 'QC/QA Engineer')
+            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', $trackedStatusNames)
+            ->distinct('housing_statuses.housing_id')
+            ->count('housing_statuses.housing_id');
+
+        $totalBuildingsCount = Building::query()->count();
+        $totalHousingUnitsCount = HousingUnit::query()->count();
+
+        $chartMetrics = [
+            'buildings' => [
+                'label' => 'Audited Buildings',
+                'audited_count' => $auditedBuildingsCount,
+                'remaining_count' => max($totalBuildingsCount - $auditedBuildingsCount, 0),
+                'total_count' => $totalBuildingsCount,
+                'percentage' => $totalBuildingsCount > 0 ? round(($auditedBuildingsCount / $totalBuildingsCount) * 100, 1) : 0,
+            ],
+            'housing_units' => [
+                'label' => 'Audited Housing Units',
+                'audited_count' => $auditedHousingUnitsCount,
+                'remaining_count' => max($totalHousingUnitsCount - $auditedHousingUnitsCount, 0),
+                'total_count' => $totalHousingUnitsCount,
+                'percentage' => $totalHousingUnitsCount > 0 ? round(($auditedHousingUnitsCount / $totalHousingUnitsCount) * 100, 1) : 0,
+            ],
+        ];
+
         $startDateValue = $startDate->toDateString();
         $endDateValue = $endDate->toDateString();
 
         return View::make('DamageAssessment.Reports.auditors_daily_achievement', compact(
             'rows',
             'totals',
+            'chartMetrics',
             'startDateValue',
             'endDateValue'
         ));

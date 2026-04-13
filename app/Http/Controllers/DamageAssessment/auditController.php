@@ -2,34 +2,24 @@
 
 namespace App\Http\Controllers\DamageAssessment;
 
-use App\Exports\TableExport;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
-use App\Models\Buildings;
-use Illuminate\Http\Request;
-use phpDocumentor\Reflection\Project;
-use Yajra\Datatables\Datatables;
-use Rap2hpoutre\FastExcel\FastExcel;
-use Yajra\Datatables\Enginges\EloquentEngine;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\View;
-use Illuminate\Database\Eloquent\Builder;
-use Hash;
-use Spatie\Permission\Models\Role;
-use App\Models\HousingUnit;
-use App\Models\Building;
-use Maatwebsite\Excel\Facades\Excel;
-use Spatie\LaravelPdf\Facades\Pdf;
-use function Spatie\LaravelPdf\Support\pdf;
-use App\Models\Filter;
-use App\Models\User;
+use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
-use App\Models\BuildingStatusHistory;
+use App\Models\Building;
 use App\Models\BuildingStatus;
+use App\Models\BuildingStatusHistory;
+use App\Models\Filter;
 use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
-use App\Models\AssessmentStatus;
+use App\Models\HousingUnit;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\View;
+use Yajra\Datatables\Datatables;
 
 class auditController extends Controller
 {
@@ -2799,11 +2789,10 @@ class auditController extends Controller
             $query = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
-                'lawyerStatus.status'
+                'lawyerStatus.status',
             ])
                 ->whereNotIn('globalid', $globalids)
                 ->where('field_status', 'COMPLETED');
-
 
             if ($request->filled('engineer_id')) {
                 $query->whereHas('engineerAssignment', function ($q) use ($request) {
@@ -2849,11 +2838,11 @@ class auditController extends Controller
                 });
             }
             if ($request->filled('building_name')) {
-                $query->where('building_name', 'like', '%' . $request->building_name . '%');
+                $query->where('building_name', 'like', '%'.$request->building_name.'%');
             }
 
             if ($request->filled('area')) {
-                $query->where('neighborhood', 'like', '%' . $request->area . '%');
+                $query->where('neighborhood', 'like', '%'.$request->area.'%');
             }
             // From Date
             if ($request->filled('filter_from_date')) {
@@ -2864,19 +2853,17 @@ class auditController extends Controller
             if ($request->filled('filter_to_date')) {
                 $query->whereDate('creationdate', '<=', $request->filter_to_date);
             }
-            return DataTables::of($query)
 
+            return DataTables::of($query)
 
                 // Building Name
                 ->editColumn(
                     'building_name',
-                    fn($row) =>
-                    '<span class="text-gray-800 fw-bold">' . $row->building_name . '</span>'
+                    fn ($row) => '<span class="text-gray-800 fw-bold">'.$row->building_name.'</span>'
                 )
 
                 // Engineer Name
                 ->addColumn('engineer', function ($row) {
-
 
                     return $row->assignedUsers
                         ->where('type', 'QC/QA Engineer')
@@ -2889,7 +2876,7 @@ class auditController extends Controller
                         ->where('type', 'Legal Auditor')
                         ->first()?->user?->name ?? '-';
                 })
-                // finalApproval 
+                // finalApproval
                 ->addColumn('finalApproval', function ($row) {
 
                     $status = $row->finalApproval?->status?->label_en ?? 'Pending';
@@ -2898,17 +2885,16 @@ class auditController extends Controller
                         ? 'badge-light-danger'
                         : 'badge-light-success';
 
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    return '<span class="badge '.$color.' fw-bold px-4 py-3">'.$status.'</span>';
                 })
 
                 // Engineer Status
                 ->addColumn('eng_status', function ($row) {
 
-
                     $status = $row->engineerStatus?->status?->label_en ?? 'Pending';
                     $statusName = $row->engineerStatus?->status?->name ?? 'Pending';
 
-                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return '<span class="badge '.$this->getStatusBadge($statusName).' fw-bold px-4 py-3">'.e($status).'</span>';
                 })
 
                 // Lawyer Status
@@ -2917,7 +2903,7 @@ class auditController extends Controller
                     $status = $row->lawyerStatus?->status?->label_en ?? 'Pending';
                     $statusName = $row->engineerStatus?->status?->name ?? 'Pending';
 
-                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    return '<span class="badge '.$this->getStatusBadge($statusName).' fw-bold px-4 py-3">'.$status.'</span>';
                 })
                 ->addColumn('actions', function ($row) {
                     $assessmentUrl = url("/showAssessmentAudit/{$row->globalid}");
@@ -2934,14 +2920,14 @@ class auditController extends Controller
          data-kt-menu="true">
 
         <div class="menu-item px-3">
-            <a target="_blank" href="' . $assessmentUrl . '" class="menu-link px-3">الإستبيان</a>
+            <a target="_blank" href="'.$assessmentUrl.'" class="menu-link px-3">الإستبيان</a>
         </div>
 
         <div class="menu-item px-3">
             <a href="javascript:void(0)" 
                class="menu-link btn-show-history"
-               data-globalid="' . $row->globalid . '"
-               data-building-name="' . e($row->building_name) . '">
+               data-globalid="'.$row->globalid.'"
+               data-building-name="'.e($row->building_name).'">
                ملاحظات
             </a>
         </div>
@@ -2980,18 +2966,15 @@ class auditController extends Controller
     {
         if ($request->ajax()) {
 
-
             $user = Auth::user();
 
             $type = $user->hasRole('QC/QA Engineer') ? 'QC/QA Engineer' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
-
-
 
             $statusRelation = $type === 'QC/QA Engineer' ? 'engineerStatus.status' : 'lawyerStatus.status';
 
             $query = Building::with([
                 'assignedUsers.user',
-                $statusRelation
+                $statusRelation,
             ])->whereHas('assignedUsers', function ($q) use ($type, $user) {
                 $q->where('type', $type)
                     ->where('user_id', $user->id);
@@ -3027,11 +3010,11 @@ class auditController extends Controller
                 });
             }
             if ($request->filled('building_name')) {
-                $query->where('building_name', 'like', '%' . $request->building_name . '%');
+                $query->where('building_name', 'like', '%'.$request->building_name.'%');
             }
 
             if ($request->filled('area')) {
-                $query->where('neighborhood', 'like', '%' . $request->area . '%');
+                $query->where('neighborhood', 'like', '%'.$request->area.'%');
             }
             // From Date
             if ($request->filled('filter_from_date')) {
@@ -3047,7 +3030,7 @@ class auditController extends Controller
                 ->addIndexColumn()
 
                 ->editColumn('building_name', function ($row) {
-                    return '<span class="text-gray-800 fw-bold">' . ($row->building_name ?? '-') . '</span>';
+                    return '<span class="text-gray-800 fw-bold">'.($row->building_name ?? '-').'</span>';
                 })
 
                 ->addColumn('assigned_user', function ($row) use ($type) {
@@ -3064,9 +3047,7 @@ class auditController extends Controller
                     $status = $statusModel?->label_en ?? 'Pending';
                     $statusName = strtolower($statusModel?->name ?? 'pending');
 
-
-
-                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return '<span class="badge '.$this->getStatusBadge($statusName).' fw-bold px-4 py-3">'.e($status).'</span>';
                 })
                 ->editColumn('actions', function ($ctr) {
                     // Using route() helpers is cleaner than url()
@@ -3078,7 +3059,7 @@ class auditController extends Controller
                 <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
                     
                     <div class="menu-item px-3">
-                        <a class="menu-link px-3" target="_blank" href="' . $assessmentUrl . '">الإستبيان</a>
+                        <a class="menu-link px-3" target="_blank" href="'.$assessmentUrl.'">الإستبيان</a>
                     </div>
                 </div>';
                 })
@@ -3108,6 +3089,7 @@ class auditController extends Controller
             'assessments'
         ));
     }
+
     public function housingUnitsByBuilding(Request $request)
     {
         $query = HousingUnit::query();
@@ -3120,9 +3102,9 @@ class auditController extends Controller
             'housing_unit_type',
             'unit_damage_status',
         ])->get()->groupBy('list_name');
+
         return DataTables::of($query->orderBy('floor_number', 'asc')
             ->orderBy('housing_unit_number', 'asc'))
-
 
             ->editColumn('housing_unit_type', function ($row) use ($filters) {
                 return getFilterLabel($filters, 'housing_unit_type', $row->housing_unit_type);
@@ -3144,8 +3126,7 @@ class auditController extends Controller
                 return $row->unit_direction ?? '-';
             })
 
-
-            // finalApproval 
+            // finalApproval
             ->addColumn('final_approval_status', function ($row) {
 
                 $status = $row->finalApproval?->assessment_status?->label_en ?? 'Pending';
@@ -3164,15 +3145,13 @@ class auditController extends Controller
                     $color = 'badge-secondary';
                 }
 
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                return '<span class="badge '.$color.' fw-bold px-4 py-3">'.e($status).'</span>';
             })
 
             // Engineer Status
             ->addColumn('engineering_audit_status', function ($row) {
 
                 $status = $row->engineerStatus?->assessment_status?->label_en ?? 'Pending';
-
-
 
                 $statusName = strtolower($status);
 
@@ -3188,7 +3167,7 @@ class auditController extends Controller
                     $color = 'badge-secondary';
                 }
 
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span><br>';
+                return '<span class="badge '.$color.' fw-bold px-4 py-3">'.e($status).'</span><br>';
             })
 
             // Lawyer Status
@@ -3210,13 +3189,13 @@ class auditController extends Controller
                     $color = 'badge-secondary';
                 }
 
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                return '<span class="badge '.$color.' fw-bold px-4 py-3">'.e($status).'</span>';
             })
 
             ->rawColumns([
                 'legal_audit_status',
                 'engineering_audit_status',
-                'final_approval_status'
+                'final_approval_status',
             ])
 
             ->make(true);
@@ -3236,10 +3215,10 @@ class auditController extends Controller
 
             $finalStatus = AssessmentStatus::whereRaw('LOWER(TRIM(name)) = ?', ['final_approval'])->first();
 
-            if (!$finalStatus) {
+            if (! $finalStatus) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'حالة final_approval غير موجودة في جدول assessment_statuses.'
+                    'message' => 'حالة final_approval غير موجودة في جدول assessment_statuses.',
                 ], 422);
             }
 
@@ -3250,7 +3229,7 @@ class auditController extends Controller
             foreach ($request->building_ids as $buildingId) {
                 $building = Building::where('objectid', $buildingId)->first();
 
-                if (!$building) {
+                if (! $building) {
                     continue;
                 }
 
@@ -3289,8 +3268,8 @@ class auditController extends Controller
                 ];
                 // لا تعتمد نهائي إلا إذا كانت آخر حالة للمهندس والمحامي ضمن الحالات المسموحة
                 if (
-                    !in_array($engineerStatusName, $allowedEngineerStatuses) ||
-                    !in_array($lawyerStatusName, $allowedLawyerStatuses)
+                    ! in_array($engineerStatusName, $allowedEngineerStatuses) ||
+                    ! in_array($lawyerStatusName, $allowedLawyerStatuses)
                 ) {
 
                     $blockedBuildings[] = [
@@ -3298,12 +3277,14 @@ class auditController extends Controller
                         'engineer_status' => $engineerStatusName ?: null,
                         'lawyer_status' => $lawyerStatusName ?: null,
                     ];
+
                     continue;
                 }
 
                 // إذا already final approved
                 if ($finalCurrentName === $newStatusName) {
                     $skipped[] = $building->objectid;
+
                     continue;
                 }
 
@@ -3339,7 +3320,7 @@ class auditController extends Controller
                 'status' => true,
                 'message' => $updated > 0
                     ? "تم اعتماد {$updated} مبنى نهائياً بنجاح."
-                    : "لم يتم اعتماد أي مبنى.",
+                    : 'لم يتم اعتماد أي مبنى.',
                 'skipped' => $skipped,
                 'blocked_buildings' => $blockedBuildings,
             ]);
@@ -3352,6 +3333,7 @@ class auditController extends Controller
             ], 500);
         }
     }
+
     public function setStatus(Request $request)
     {
         $request->validate([
@@ -3360,7 +3342,6 @@ class auditController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-
         DB::beginTransaction();
 
         try {
@@ -3368,7 +3349,7 @@ class auditController extends Controller
 
             $building = Building::where('globalid', $request->globalid)->first();
 
-            if (!$building) {
+            if (! $building) {
                 return response()->json([
                     'status' => false,
                     'message' => 'المبنى غير موجود',
@@ -3391,17 +3372,17 @@ class auditController extends Controller
             $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
-                'rejected' => 'rejected_by_' . $roleType,
-                'accepted' => 'accepted_by_' . $roleType,
+                'rejected' => 'rejected_by_'.$roleType,
+                'accepted' => 'accepted_by_'.$roleType,
                 'need_review' => 'need_review',
-                'legal_notes' => 'legal_notes'
+                'legal_notes' => 'legal_notes',
             ];
 
             $statusName = $statusMap[$request->status] ?? null;
 
             $assessmentStatus = AssessmentStatus::where('name', $statusName)->first();
 
-            if (!$assessmentStatus) {
+            if (! $assessmentStatus) {
                 return response()->json([
                     'status' => false,
                     'message' => 'الحالة غير موجودة في جدول AssessmentStatus',
@@ -3440,7 +3421,7 @@ class auditController extends Controller
                     'status_id' => $assessmentStatus->id,
                     'status_name' => $assessmentStatus->name,
                     'record_id' => $buildingStatus->id,
-                ]
+                ],
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -3452,6 +3433,7 @@ class auditController extends Controller
             ], 500);
         }
     }
+
     public function setHousingStatus(Request $request)
     {
         $request->validate([
@@ -3460,8 +3442,6 @@ class auditController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-
-
         DB::beginTransaction();
 
         try {
@@ -3469,7 +3449,7 @@ class auditController extends Controller
 
             $housing = HousingUnit::where('globalid', $request->globalid)->first();
 
-            if (!$housing) {
+            if (! $housing) {
                 return response()->json([
                     'status' => false,
                     'message' => 'الوحدة السكنية غير موجودة',
@@ -3492,16 +3472,16 @@ class auditController extends Controller
             $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
-                'rejected' => 'rejected_by_' . $roleType,
-                'accepted' => 'accepted_by_' . $roleType,
+                'rejected' => 'rejected_by_'.$roleType,
+                'accepted' => 'accepted_by_'.$roleType,
                 'need_review' => 'need_review',
-                'legal_notes' => 'legal_notes'
+                'legal_notes' => 'legal_notes',
             ];
             $statusName = $statusMap[$request->status] ?? null;
 
             $assessmentStatus = AssessmentStatus::where('name', $statusName)->first();
 
-            if (!$assessmentStatus) {
+            if (! $assessmentStatus) {
                 return response()->json([
                     'status' => false,
                     'message' => 'الحالة غير موجودة في جدول AssessmentStatus',
@@ -3527,8 +3507,6 @@ class auditController extends Controller
                 'notes' => $request->notes,
             ]);
 
-
-
             DB::commit();
 
             return response()->json([
@@ -3541,7 +3519,7 @@ class auditController extends Controller
                     'status_id' => $assessmentStatus->id,
                     'status_name' => $assessmentStatus->name,
                     'record_id' => $housingStatus->id,
-                ]
+                ],
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -3553,6 +3531,7 @@ class auditController extends Controller
             ], 500);
         }
     }
+
     public function assign(Request $request)
     {
         $request->validate([
@@ -3565,17 +3544,17 @@ class auditController extends Controller
         ]);
         $user = User::findOrFail($request->user_id);
 
-        if ($request->type === 'QC/QA Engineer' && !$user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
+        if ($request->type === 'QC/QA Engineer' && ! $user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
             return response()->json([
                 'status' => false,
-                'message' => 'المستخدم المختار ليس مهندساً.'
+                'message' => 'المستخدم المختار ليس مهندساً.',
             ], 422);
         }
 
-        if ($request->type === 'Legal Auditor' && !$user->hasRole('Legal Auditor')) {
+        if ($request->type === 'Legal Auditor' && ! $user->hasRole('Legal Auditor')) {
             return response()->json([
                 'status' => false,
-                'message' => 'المستخدم المختار ليس محامياً.'
+                'message' => 'المستخدم المختار ليس محامياً.',
             ], 422);
         }
         $rejectedBuildings = [];
@@ -3602,7 +3581,7 @@ class auditController extends Controller
 
                     $building = Building::where('objectid', $buildingId)->first();
 
-                    if (!$building) {
+                    if (! $building) {
                         continue;
                     }
 
@@ -3622,6 +3601,7 @@ class auditController extends Controller
                         in_array($lastStatusName, $assignedStatuses)
                     ) {
                         $rejectedBuildings[] = $buildingId;
+
                         continue;
                     }
 
@@ -3639,7 +3619,7 @@ class auditController extends Controller
                     );
 
                     // skip if no status
-                    if (!$request->filled('status_id')) {
+                    if (! $request->filled('status_id')) {
                         continue;
                     }
 
@@ -3650,7 +3630,7 @@ class auditController extends Controller
                     ]);
 
                     $statusChanged =
-                        !$buildingStatus->exists ||
+                        ! $buildingStatus->exists ||
                         (int) $buildingStatus->status_id !== (int) $request->status_id;
 
                     $buildingStatus->status_id = $request->status_id;
@@ -3681,7 +3661,7 @@ class auditController extends Controller
                         ]);
 
                         $housingStatusChanged =
-                            !$housingStatus->exists ||
+                            ! $housingStatus->exists ||
                             (int) $housingStatus->status_id !== (int) $request->status_id;
 
                         $housingStatus->status_id = $request->status_id;
@@ -3719,18 +3699,18 @@ class auditController extends Controller
             ], 500);
         }
     }
+
     public function assessmentAudit(Request $request)
     {
         if ($request->ajax()) {
 
-
             $user = Auth::user();
             $type = $user->hasRole('QC/QA Engineer') ? 'QC/QA Engineer' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
 
-            if (!$type) {
+            if (! $type) {
                 abort(403, 'Unauthorized');
             }
-            if (!in_array($type, ['eng', 'lawyer'])) {
+            if (! in_array($type, ['eng', 'lawyer'])) {
                 abort(403, 'Unauthorized');
             }
 
@@ -3738,7 +3718,7 @@ class auditController extends Controller
 
             $data = Building::with([
                 'assignedUsers.user',
-                $statusRelation
+                $statusRelation,
             ])->whereHas('assignedUsers', function ($q) use ($type, $user) {
                 $q->where('type', $type)
                     ->where('user_id', $user->id);
@@ -3748,10 +3728,8 @@ class auditController extends Controller
                 ->addIndexColumn()
 
                 ->editColumn('building_name', function ($row) {
-                    return '<span class="text-gray-800 fw-bold">' . ($row->building_name ?? '-') . '</span>';
+                    return '<span class="text-gray-800 fw-bold">'.($row->building_name ?? '-').'</span>';
                 })
-
-
 
                 ->addColumn('status', function ($row) use ($type) {
                     $statusModel = $type === 'eng'
@@ -3761,8 +3739,7 @@ class auditController extends Controller
                     $status = $statusModel?->label_en ?? 'Pending';
                     $statusName = strtolower($statusModel?->name ?? 'pending');
 
-
-                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return '<span class="badge '.$this->getStatusBadge($statusName).' fw-bold px-4 py-3">'.e($status).'</span>';
                 })
 
                 ->addColumn('actions', function ($row) {
@@ -3780,7 +3757,7 @@ class auditController extends Controller
              data-kt-menu="true">
 
             <div class="menu-item px-3">
-                <a target="_blank" href="' . $assessmentUrl . '" class="menu-link px-3">الإستبيان</a>
+                <a target="_blank" href="'.$assessmentUrl.'" class="menu-link px-3">الإستبيان</a>
             </div>
          
         </div>
@@ -3815,7 +3792,6 @@ class auditController extends Controller
     public function showAssessmentAudit(Request $request)
     {
 
-
         $buildingGlobalid = $request->buildingGlobalid;
         $housingGlobalid = $request->housingGlobalid;
 
@@ -3830,11 +3806,9 @@ class auditController extends Controller
             ->where('user_id', auth()->id())
             ->latest()
             ->first()?->status?->name;
-       
 
         return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit'));
     }
-
 
     public function updateInlineAssessment(Request $request)
     {
@@ -3849,12 +3823,12 @@ class auditController extends Controller
             ? \App\Models\Building::class
             : \App\Models\HousingUnit::class;
 
-        $fillable = (new $modelClass())->getFillable();
+        $fillable = (new $modelClass)->getFillable();
 
-        if (!in_array($request->field, $fillable)) {
+        if (! in_array($request->field, $fillable)) {
             return response()->json([
                 'status' => false,
-                'message' => 'هذا الحقل غير قابل للتعديل'
+                'message' => 'هذا الحقل غير قابل للتعديل',
             ], 422);
         }
 
@@ -3878,7 +3852,7 @@ class auditController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'تم حفظ التعديل بنجاح'
+            'message' => 'تم حفظ التعديل بنجاح',
         ]);
     }
 
@@ -3897,10 +3871,10 @@ class auditController extends Controller
                 $status = $row->legal_audit_status ?? '-';
 
                 if ($status === 'Rejected By Lawyer') {
-                    return '<span class="badge badge-light-danger w-100 d-inline-block py-3">' . $status . '</span>';
+                    return '<span class="badge badge-light-danger w-100 d-inline-block py-3">'.$status.'</span>';
                 }
 
-                return '<span class="badge badge-light-warning">' . $status . '</span>';
+                return '<span class="badge badge-light-warning">'.$status.'</span>';
             })
 
             ->addColumn('engineering_audit_status', function ($row) {
@@ -3935,15 +3909,14 @@ class auditController extends Controller
             ->make(true);
     }
 
-
     public function buildingHistory(Request $request)
     {
         $building = Building::where('globalid', $request->globalid)->first();
 
-        if (!$building) {
+        if (! $building) {
             return response()->json([
                 'status' => false,
-                'history' => []
+                'history' => [],
             ]);
         }
 
@@ -3960,7 +3933,7 @@ class auditController extends Controller
 
                 return [
                     'id' => $item->id,
-                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                    'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
                     'notes' => $item->notes ?? '-',
@@ -3971,7 +3944,7 @@ class auditController extends Controller
 
         return response()->json([
             'status' => true,
-            'history' => $history
+            'history' => $history,
         ]);
     }
 
@@ -3979,7 +3952,7 @@ class auditController extends Controller
     {
         $housing = HousingUnit::where('globalid', $request->globalid)->first();
 
-        if (!$housing) {
+        if (! $housing) {
             return [];
         }
 
@@ -3993,7 +3966,7 @@ class auditController extends Controller
                 $roleName = $item->user?->roles?->first()?->name ?? '-';
 
                 return [
-                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                    'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
                     'notes' => $item->notes ?? '-',
@@ -4016,6 +3989,7 @@ class auditController extends Controller
             default => 'badge badge-light-secondary fw-bold',
         };
     }
+
     public function getEditableNote(Request $request)
     {
         $request->validate([
@@ -4031,9 +4005,9 @@ class auditController extends Controller
         if ($type === 'building') {
             $building = Building::where('globalid', $globalid)->first();
 
-            if (!$building) {
+            if (! $building) {
                 return response()->json([
-                    'message' => 'المبنى غير موجود'
+                    'message' => 'المبنى غير موجود',
                 ], 404);
             }
 
@@ -4075,9 +4049,9 @@ class auditController extends Controller
         if ($type === 'housing') {
             $housing = HousingUnit::where('globalid', $globalid)->first();
 
-            if (!$housing) {
+            if (! $housing) {
                 return response()->json([
-                    'message' => 'الوحدة السكنية غير موجودة'
+                    'message' => 'الوحدة السكنية غير موجودة',
                 ], 404);
             }
 
@@ -4100,9 +4074,9 @@ class auditController extends Controller
 
             $note = $query->first();
 
-            if (!$note) {
+            if (! $note) {
                 return response()->json([
-                    'message' => 'لا توجد ملاحظة متاحة'
+                    'message' => 'لا توجد ملاحظة متاحة',
                 ], 404);
             }
 
@@ -4116,7 +4090,6 @@ class auditController extends Controller
             ]);
         }
     }
-
 
     public function updateNote(Request $request)
     {
@@ -4133,9 +4106,9 @@ class auditController extends Controller
         if ($type === 'building') {
             $note = BuildingStatusHistory::find($id);
 
-            if (!$note) {
+            if (! $note) {
                 return response()->json([
-                    'message' => 'الملاحظة غير موجودة'
+                    'message' => 'الملاحظة غير موجودة',
                 ], 404);
             }
 
@@ -4147,7 +4120,7 @@ class auditController extends Controller
 
             if ($hasFinalApprove) {
                 return response()->json([
-                    'message' => 'لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود'
+                    'message' => 'لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود',
                 ], 422);
             }
 
@@ -4155,16 +4128,16 @@ class auditController extends Controller
             $note->save();
 
             return response()->json([
-                'message' => 'تم تحديث ملاحظة المبنى بنجاح'
+                'message' => 'تم تحديث ملاحظة المبنى بنجاح',
             ]);
         }
 
         if ($type === 'housing') {
             $note = HousingStatusHistory::find($id);
 
-            if (!$note) {
+            if (! $note) {
                 return response()->json([
-                    'message' => 'الملاحظة غير موجودة'
+                    'message' => 'الملاحظة غير موجودة',
                 ], 404);
             }
 
@@ -4176,7 +4149,7 @@ class auditController extends Controller
 
             if ($hasFinalApprove) {
                 return response()->json([
-                    'message' => 'لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود'
+                    'message' => 'لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود',
                 ], 422);
             }
 
@@ -4184,26 +4157,27 @@ class auditController extends Controller
             $note->save();
 
             return response()->json([
-                'message' => 'تم تحديث ملاحظة الوحدة بنجاح'
+                'message' => 'تم تحديث ملاحظة الوحدة بنجاح',
             ]);
         }
     }
+
     public function deleteHistory(Request $request)
     {
         $history = BuildingStatusHistory::with('status')->find($request->id);
 
-        if (!$history) {
+        if (! $history) {
             return response()->json([
                 'status' => false,
-                'message' => 'السجل غير موجود'
+                'message' => 'السجل غير موجود',
             ]);
         }
 
         // السماح فقط لهذين الدورين
-        if (!auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+        if (! auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
             return response()->json([
                 'status' => false,
-                'message' => 'غير مصرح لك بحذف هذا السجل'
+                'message' => 'غير مصرح لك بحذف هذا السجل',
             ], 403);
         }
 
@@ -4212,7 +4186,7 @@ class auditController extends Controller
         if ($isLast) {
             return response()->json([
                 'status' => false,
-                'message' => 'لا يمكن حذف آخر حالة'
+                'message' => 'لا يمكن حذف آخر حالة',
             ]);
         }
 
@@ -4220,7 +4194,7 @@ class auditController extends Controller
         if (in_array($history->status->name ?? '', ['final_approval', 'final_rejected'])) {
             return response()->json([
                 'status' => false,
-                'message' => 'لا يمكن حذف الحالة النهائية'
+                'message' => 'لا يمكن حذف الحالة النهائية',
             ]);
         }
 
@@ -4228,8 +4202,98 @@ class auditController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'تم حذف السجل بنجاح'
+            'message' => 'تم حذف السجل بنجاح',
         ]);
     }
 
+    public function dashboard(Request $request)
+    {
+        $startDate = Carbon::parse($request->input('start_date', now()->subDays(29)->toDateString()))->startOfDay();
+        $endDate = Carbon::parse($request->input('end_date', now()->toDateString()))->endOfDay();
+
+        $engineeringStatuses = [
+            'assigned_to_engineer' => 'Assigned',
+            'accepted_by_engineer' => 'Accepted',
+            'rejected_by_engineer' => 'Rejected',
+            'need_review' => 'Need Review',
+        ];
+
+        $trackedAuditedStatuses = [
+            'accepted_by_engineer',
+            'rejected_by_engineer',
+            'need_review',
+        ];
+
+        $buildingStatusRaw = BuildingStatus::query()
+            ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('building_statuses.type', 'QC/QA Engineer')
+            ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', array_keys($engineeringStatuses))
+            ->selectRaw('assessment_statuses.name as status_name, COUNT(*) as total')
+            ->groupBy('assessment_statuses.name')
+            ->pluck('total', 'status_name');
+
+        $housingStatusRaw = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', 'QC/QA Engineer')
+            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', array_keys($engineeringStatuses))
+            ->selectRaw('assessment_statuses.name as status_name, COUNT(*) as total')
+            ->groupBy('assessment_statuses.name')
+            ->pluck('total', 'status_name');
+
+        $auditedBuildingsCount = BuildingStatus::query()
+            ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('building_statuses.type', 'QC/QA Engineer')
+            ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
+            ->distinct('building_statuses.building_id')
+            ->count('building_statuses.building_id');
+
+        $auditedHousingUnitsCount = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', 'QC/QA Engineer')
+            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
+            ->distinct('housing_statuses.housing_id')
+            ->count('housing_statuses.housing_id');
+
+        $totalBuildingsCount = Building::query()->count();
+        $totalHousingUnitsCount = HousingUnit::query()->count();
+
+        $summaryMetrics = [
+            'total_buildings_count' => $totalBuildingsCount,
+            'total_housing_units_count' => $totalHousingUnitsCount,
+            'audited_buildings_count' => $auditedBuildingsCount,
+            'audited_housing_units_count' => $auditedHousingUnitsCount,
+            'audited_buildings_percentage' => $totalBuildingsCount > 0 ? round(($auditedBuildingsCount / $totalBuildingsCount) * 100, 1) : 0,
+            'audited_housing_units_percentage' => $totalHousingUnitsCount > 0 ? round(($auditedHousingUnitsCount / $totalHousingUnitsCount) * 100, 1) : 0,
+        ];
+
+        $chartData = [
+            'building_status_labels' => array_values($engineeringStatuses),
+            'building_status_series' => collect(array_keys($engineeringStatuses))
+                ->map(fn ($statusName) => (int) ($buildingStatusRaw[$statusName] ?? 0))
+                ->values()
+                ->all(),
+            'housing_status_labels' => array_values($engineeringStatuses),
+            'housing_status_series' => collect(array_keys($engineeringStatuses))
+                ->map(fn ($statusName) => (int) ($housingStatusRaw[$statusName] ?? 0))
+                ->values()
+                ->all(),
+            'comparison_categories' => ['Buildings', 'Housing Units'],
+            'comparison_audited_series' => [$auditedBuildingsCount, $auditedHousingUnitsCount],
+            'comparison_total_series' => [$totalBuildingsCount, $totalHousingUnitsCount],
+        ];
+
+        $startDateValue = $startDate->toDateString();
+        $endDateValue = $endDate->toDateString();
+
+        return View::make('DamageAssessment.auditDashboard', compact(
+            'summaryMetrics',
+            'chartData',
+            'startDateValue',
+            'endDateValue'
+        ));
+    }
 }
