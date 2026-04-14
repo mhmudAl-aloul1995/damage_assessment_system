@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Audit Dashboard')
-@section('pageName', 'Audit Dashboard')
+@section('pageName', 'لوحة معلومات التدقيق')
 
 @section('content')
     <div class="row mb-5">
@@ -8,7 +8,7 @@
             <div class="card card-flush shadow-sm">
                 <div class="card-header pt-6">
                     <div class="card-title">
-                        <h3 class="fw-bold m-0">Audit Dashboard</h3>
+                        <h3 class="fw-bold m-0">لوحة معلومات التدقيق</h3>
                     </div>
                     <div class="card-toolbar">
                         <form action="{{ route('audit.dashboard') }}" method="GET" id="audit_dashboard_filter_form">
