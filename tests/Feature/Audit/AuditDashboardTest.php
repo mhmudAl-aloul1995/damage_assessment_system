@@ -212,7 +212,7 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
     $response->assertSee('Audit Dashboard');
     $response->assertSee('Engineering Audit');
     $response->assertSee('Legal Audit');
-    $response->assertSee('Daily Audited Housing Units');
+    $response->assertSee('Cumulative Audited Housing Units');
     $response->assertViewHas('summaryMetrics', function (array $summaryMetrics) {
         return $summaryMetrics['total_buildings_count'] === 2
             && $summaryMetrics['total_housing_units_count'] === 3
@@ -231,8 +231,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             && $chartData['engineer']['comparison_audited_series'] === [1, 2]
             && $chartData['engineer']['comparison_total_series'] === [2, 3]
             && $chartData['engineer']['daily_housing_achievement_start_date'] === '2026-02-20'
-            && $chartData['engineer']['daily_housing_achievement_labels'] === ['2026-02-20', '2026-02-21', '2026-02-22']
-            && $chartData['engineer']['daily_housing_achievement_series'] === [1, 1, 0]
+            && $chartData['engineer']['daily_housing_achievement_labels'] === ['2026-02-20', '2026-02-21']
+            && $chartData['engineer']['daily_housing_achievement_series'] === [1, 2]
             && $chartData['lawyer']['building_status_series'] === [0, 1, 1]
             && $chartData['lawyer']['housing_status_series'] === [1, 1, 1]
             && $chartData['lawyer']['comparison_audited_series'] === [2, 2]

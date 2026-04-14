@@ -107,7 +107,7 @@
                             <div class="border border-gray-200 rounded p-5">
                                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
                                     <div>
-                                        <h4 class="fw-bold mb-1">Daily Audited Housing Units</h4>
+                                        <h4 class="fw-bold mb-1">Cumulative Audited Housing Units</h4>
                                         <div class="text-muted">Trend starting from <?php echo e($chartData['engineer']['daily_housing_achievement_start_date']); ?></div>
                                     </div>
                                 </div>
@@ -218,7 +218,7 @@
                     },
                     series: [
                         {
-                            name: 'Audited Housing Units',
+                            name: 'Cumulative Audited Housing Units',
                             data: series
                         }
                     ],
@@ -252,7 +252,7 @@
                     tooltip: {
                         y: {
                             formatter: function (value) {
-                                return value + ' units';
+                                return value + ' cumulative units';
                             }
                         }
                     }
@@ -305,6 +305,7 @@
         });
     </script>
 <?php $__env->stopSection(); ?>
+
 
 
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/auditDashboard.blade.php ENDPATH**/ ?>

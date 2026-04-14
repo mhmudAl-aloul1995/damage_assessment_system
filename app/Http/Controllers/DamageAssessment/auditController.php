@@ -4331,14 +4331,21 @@ class auditController extends Controller
 
         $dailyHousingAchievementDates = [];
         $dailyHousingAchievementSeries = [];
+        $cumulativeDailyHousingAchievementTotal = 0;
 
         if ($dailyHousingAchievementStartDate->lte($endDate)) {
             $cursorDate = $dailyHousingAchievementStartDate->copy();
 
             while ($cursorDate->lte($endDate)) {
                 $dateKey = $cursorDate->toDateString();
-                $dailyHousingAchievementDates[] = $dateKey;
-                $dailyHousingAchievementSeries[] = (int) ($dailyHousingAchievementRaw[$dateKey] ?? 0);
+                $dailyAchievementTotal = (int) ($dailyHousingAchievementRaw[$dateKey] ?? 0);
+
+                if ($dailyAchievementTotal > 0) {
+                    $cumulativeDailyHousingAchievementTotal += $dailyAchievementTotal;
+                    $dailyHousingAchievementDates[] = $dateKey;
+                    $dailyHousingAchievementSeries[] = $cumulativeDailyHousingAchievementTotal;
+                }
+
                 $cursorDate->addDay();
             }
         }
