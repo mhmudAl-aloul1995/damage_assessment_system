@@ -4226,7 +4226,7 @@ class auditController extends Controller
 
         $totalBuildingsCount = Building::query()->count();
         $totalHousingUnitsCount = HousingUnit::query()->count();
-        $dailyHousingAchievementStartDate = Carbon::create(2026, 2, 20)->startOfDay();
+        $dailyHousingAchievementStartDate = Carbon::create(2026, 3, 20)->startOfDay();
 
         $engineerMetrics = $this->buildAuditDashboardMetrics(
             type: 'QC/QA Engineer',
