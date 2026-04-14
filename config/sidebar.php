@@ -65,7 +65,7 @@ return [
                 'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
             ],
             [
-                'title' => 'Daily Achievements',
+                'title' => 'إنجاز التدقيق اليومي',
                 'url' => 'reports/daily-achievement',
                 'pattern' => 'reports/daily-achievement*',
                 'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'Auditing Supervisor'],
@@ -87,7 +87,7 @@ return [
         ],
         'items' => [
             [
-                'title' => 'Audit Dashboard',
+                'title' => 'لوحة معلومات التدقيق',
                 'url' => 'audit/dashboard',
                 'pattern' => 'audit/dashboard',
                 'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer'],
