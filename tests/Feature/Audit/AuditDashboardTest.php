@@ -6,6 +6,7 @@ use App\Models\BuildingStatus;
 use App\Models\HousingStatus;
 use App\Models\HousingUnit;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
@@ -22,6 +23,11 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
 
     $viewer = User::factory()->create();
     $viewer->assignRole($viewerRole);
+
+    $acceptedDay = Carbon::parse('2026-02-21 10:00:00');
+    $assignedDay = Carbon::parse('2026-02-22 11:00:00');
+    $trendStartDay = Carbon::parse('2026-02-20 09:00:00');
+    $oldDay = Carbon::parse('2026-01-10 08:00:00');
 
     $assignedToEngineerStatus = AssessmentStatus::query()->create([
         'name' => 'assigned_to_engineer',
@@ -106,8 +112,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'QC/QA Engineer',
             'notes' => 'accepted building',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $acceptedDay,
+            'updated_at' => $acceptedDay,
         ],
         [
             'building_id' => 102,
@@ -115,8 +121,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'QC/QA Engineer',
             'notes' => 'assigned building',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $assignedDay,
+            'updated_at' => $assignedDay,
         ],
         [
             'building_id' => 101,
@@ -124,8 +130,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'Legal Auditor',
             'notes' => 'accepted legal building',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $acceptedDay,
+            'updated_at' => $acceptedDay,
         ],
         [
             'building_id' => 102,
@@ -133,8 +139,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'Legal Auditor',
             'notes' => 'legal notes building',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $assignedDay,
+            'updated_at' => $assignedDay,
         ],
     ]);
 
@@ -145,8 +151,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'QC/QA Engineer',
             'notes' => 'accepted housing',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $trendStartDay,
+            'updated_at' => $trendStartDay,
         ],
         [
             'housing_id' => 202,
@@ -154,8 +160,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'QC/QA Engineer',
             'notes' => 'review housing',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $acceptedDay,
+            'updated_at' => $acceptedDay,
         ],
         [
             'housing_id' => 203,
@@ -163,8 +169,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'QC/QA Engineer',
             'notes' => 'old housing',
-            'created_at' => now()->subDays(40),
-            'updated_at' => now()->subDays(40),
+            'created_at' => $oldDay,
+            'updated_at' => $oldDay,
         ],
         [
             'housing_id' => 201,
@@ -172,8 +178,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'Legal Auditor',
             'notes' => 'assigned legal housing',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $trendStartDay,
+            'updated_at' => $trendStartDay,
         ],
         [
             'housing_id' => 202,
@@ -181,8 +187,8 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'Legal Auditor',
             'notes' => 'accepted legal housing',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $acceptedDay,
+            'updated_at' => $acceptedDay,
         ],
         [
             'housing_id' => 203,
@@ -190,22 +196,23 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'user_id' => $viewer->id,
             'type' => 'Legal Auditor',
             'notes' => 'legal notes housing',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_at' => $assignedDay,
+            'updated_at' => $assignedDay,
         ],
     ]);
 
     $response = $this
         ->actingAs($viewer)
         ->get(route('audit.dashboard', [
-            'start_date' => now()->subDays(29)->toDateString(),
-            'end_date' => now()->toDateString(),
+            'start_date' => '2026-02-20',
+            'end_date' => '2026-02-22',
         ]));
 
     $response->assertOk();
     $response->assertSee('Audit Dashboard');
     $response->assertSee('Engineering Audit');
     $response->assertSee('Legal Audit');
+    $response->assertSee('Daily Audited Housing Units');
     $response->assertViewHas('summaryMetrics', function (array $summaryMetrics) {
         return $summaryMetrics['total_buildings_count'] === 2
             && $summaryMetrics['total_housing_units_count'] === 3
@@ -223,6 +230,9 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             && $chartData['engineer']['housing_status_series'] === [0, 1, 0, 1]
             && $chartData['engineer']['comparison_audited_series'] === [1, 2]
             && $chartData['engineer']['comparison_total_series'] === [2, 3]
+            && $chartData['engineer']['daily_housing_achievement_start_date'] === '2026-02-20'
+            && $chartData['engineer']['daily_housing_achievement_labels'] === ['2026-02-20', '2026-02-21', '2026-02-22']
+            && $chartData['engineer']['daily_housing_achievement_series'] === [1, 1, 0]
             && $chartData['lawyer']['building_status_series'] === [0, 1, 1]
             && $chartData['lawyer']['housing_status_series'] === [1, 1, 1]
             && $chartData['lawyer']['comparison_audited_series'] === [2, 2]

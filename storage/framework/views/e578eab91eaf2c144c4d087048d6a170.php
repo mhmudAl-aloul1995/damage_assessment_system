@@ -1,8 +1,7 @@
-@extends('layouts.app')
-@section('title', 'Audit Dashboard')
-@section('pageName', 'Audit Dashboard')
+<?php $__env->startSection('title', 'Audit Dashboard'); ?>
+<?php $__env->startSection('pageName', 'Audit Dashboard'); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="card card-flush shadow-sm">
@@ -11,9 +10,9 @@
                         <h3 class="fw-bold m-0">Audit Dashboard</h3>
                     </div>
                     <div class="card-toolbar">
-                        <form action="{{ route('audit.dashboard') }}" method="GET" id="audit_dashboard_filter_form">
-                            <input type="hidden" name="start_date" id="start_date" value="{{ $startDateValue }}">
-                            <input type="hidden" name="end_date" id="end_date" value="{{ $endDateValue }}">
+                        <form action="<?php echo e(route('audit.dashboard')); ?>" method="GET" id="audit_dashboard_filter_form">
+                            <input type="hidden" name="start_date" id="start_date" value="<?php echo e($startDateValue); ?>">
+                            <input type="hidden" name="end_date" id="end_date" value="<?php echo e($endDateValue); ?>">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="input-group w-md-300px">
                                     <input class="form-control form-control-solid" placeholder="Select date range"
@@ -34,7 +33,7 @@
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
                     <span class="fs-6 text-muted mb-2">Total Buildings</span>
-                    <span class="fs-2hx fw-bold text-gray-900">{{ $summaryMetrics['total_buildings_count'] }}</span>
+                    <span class="fs-2hx fw-bold text-gray-900"><?php echo e($summaryMetrics['total_buildings_count']); ?></span>
                 </div>
             </div>
         </div>
@@ -42,7 +41,7 @@
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
                     <span class="fs-6 text-muted mb-2">Total Housing Units</span>
-                    <span class="fs-2hx fw-bold text-gray-900">{{ $summaryMetrics['total_housing_units_count'] }}</span>
+                    <span class="fs-2hx fw-bold text-gray-900"><?php echo e($summaryMetrics['total_housing_units_count']); ?></span>
                 </div>
             </div>
         </div>
@@ -50,8 +49,8 @@
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
                     <span class="fs-6 text-muted mb-2">Engineer Audited Buildings</span>
-                    <span class="fs-2hx fw-bold text-primary">{{ $summaryMetrics['engineer']['audited_buildings_count'] }}</span>
-                    <span class="text-muted">{{ $summaryMetrics['engineer']['audited_buildings_percentage'] }}% of total</span>
+                    <span class="fs-2hx fw-bold text-primary"><?php echo e($summaryMetrics['engineer']['audited_buildings_count']); ?></span>
+                    <span class="text-muted"><?php echo e($summaryMetrics['engineer']['audited_buildings_percentage']); ?>% of total</span>
                 </div>
             </div>
         </div>
@@ -59,8 +58,8 @@
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
                     <span class="fs-6 text-muted mb-2">Lawyer Audited Buildings</span>
-                    <span class="fs-2hx fw-bold text-info">{{ $summaryMetrics['lawyer']['audited_buildings_count'] }}</span>
-                    <span class="text-muted">{{ $summaryMetrics['lawyer']['audited_buildings_percentage'] }}% of total</span>
+                    <span class="fs-2hx fw-bold text-info"><?php echo e($summaryMetrics['lawyer']['audited_buildings_count']); ?></span>
+                    <span class="text-muted"><?php echo e($summaryMetrics['lawyer']['audited_buildings_percentage']); ?>% of total</span>
                 </div>
             </div>
         </div>
@@ -71,8 +70,8 @@
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
                     <span class="fs-6 text-muted mb-2">Engineer Audited Housing Units</span>
-                    <span class="fs-2hx fw-bold text-success">{{ $summaryMetrics['engineer']['audited_housing_units_count'] }}</span>
-                    <span class="text-muted">{{ $summaryMetrics['engineer']['audited_housing_units_percentage'] }}% of total</span>
+                    <span class="fs-2hx fw-bold text-success"><?php echo e($summaryMetrics['engineer']['audited_housing_units_count']); ?></span>
+                    <span class="text-muted"><?php echo e($summaryMetrics['engineer']['audited_housing_units_percentage']); ?>% of total</span>
                 </div>
             </div>
         </div>
@@ -80,8 +79,8 @@
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
                     <span class="fs-6 text-muted mb-2">Lawyer Audited Housing Units</span>
-                    <span class="fs-2hx fw-bold text-warning">{{ $summaryMetrics['lawyer']['audited_housing_units_count'] }}</span>
-                    <span class="text-muted">{{ $summaryMetrics['lawyer']['audited_housing_units_percentage'] }}% of total</span>
+                    <span class="fs-2hx fw-bold text-warning"><?php echo e($summaryMetrics['lawyer']['audited_housing_units_count']); ?></span>
+                    <span class="text-muted"><?php echo e($summaryMetrics['lawyer']['audited_housing_units_percentage']); ?>% of total</span>
                 </div>
             </div>
         </div>
@@ -109,7 +108,7 @@
                                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
                                     <div>
                                         <h4 class="fw-bold mb-1">Daily Audited Housing Units</h4>
-                                        <div class="text-muted">Trend starting from {{ $chartData['engineer']['daily_housing_achievement_start_date'] }}</div>
+                                        <div class="text-muted">Trend starting from <?php echo e($chartData['engineer']['daily_housing_achievement_start_date']); ?></div>
                                     </div>
                                 </div>
                                 <div id="audit_engineer_daily_housing_achievement_chart" style="height: 360px;"></div>
@@ -143,14 +142,14 @@
             </div>
         </div>
     </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('script')
+<?php $__env->startSection('script'); ?>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             $('#audit_dashboard_daterangepicker').daterangepicker({
-                startDate: moment("{{ $startDateValue }}"),
-                endDate: moment("{{ $endDateValue }}"),
+                startDate: moment("<?php echo e($startDateValue); ?>"),
+                endDate: moment("<?php echo e($endDateValue); ?>"),
                 ranges: {
                     'Today': [moment(), moment()],
                     'Last 7 Days': [moment().subtract(6, 'days'), moment()],
@@ -261,49 +260,51 @@
             };
 
             new ApexCharts(document.querySelector('#audit_engineer_buildings_status_chart'), donutOptions(
-                @json($chartData['engineer']['building_status_labels']),
-                @json($chartData['engineer']['building_status_series']),
+                <?php echo json_encode($chartData['engineer']['building_status_labels'], 15, 512) ?>,
+                <?php echo json_encode($chartData['engineer']['building_status_series'], 15, 512) ?>,
                 ['#7239EA', '#50CD89', '#F1416C', '#FFAD0F']
             )).render();
 
             new ApexCharts(document.querySelector('#audit_engineer_housing_status_chart'), donutOptions(
-                @json($chartData['engineer']['housing_status_labels']),
-                @json($chartData['engineer']['housing_status_series']),
+                <?php echo json_encode($chartData['engineer']['housing_status_labels'], 15, 512) ?>,
+                <?php echo json_encode($chartData['engineer']['housing_status_series'], 15, 512) ?>,
                 ['#009EF7', '#50CD89', '#F1416C', '#FFAD0F']
             )).render();
 
             new ApexCharts(document.querySelector('#audit_engineer_comparison_chart'), comparisonOptions(
-                @json($chartData['engineer']['comparison_categories']),
-                @json($chartData['engineer']['comparison_audited_series']),
-                @json($chartData['engineer']['comparison_total_series']),
+                <?php echo json_encode($chartData['engineer']['comparison_categories'], 15, 512) ?>,
+                <?php echo json_encode($chartData['engineer']['comparison_audited_series'], 15, 512) ?>,
+                <?php echo json_encode($chartData['engineer']['comparison_total_series'], 15, 512) ?>,
                 '#009EF7'
             )).render();
 
             new ApexCharts(document.querySelector('#audit_engineer_daily_housing_achievement_chart'), lineOptions(
-                @json($chartData['engineer']['daily_housing_achievement_labels']),
-                @json($chartData['engineer']['daily_housing_achievement_series']),
+                <?php echo json_encode($chartData['engineer']['daily_housing_achievement_labels'], 15, 512) ?>,
+                <?php echo json_encode($chartData['engineer']['daily_housing_achievement_series'], 15, 512) ?>,
                 '#50CD89'
             )).render();
 
             new ApexCharts(document.querySelector('#audit_lawyer_buildings_status_chart'), donutOptions(
-                @json($chartData['lawyer']['building_status_labels']),
-                @json($chartData['lawyer']['building_status_series']),
+                <?php echo json_encode($chartData['lawyer']['building_status_labels'], 15, 512) ?>,
+                <?php echo json_encode($chartData['lawyer']['building_status_series'], 15, 512) ?>,
                 ['#3F4254', '#50CD89', '#FFAD0F']
             )).render();
 
             new ApexCharts(document.querySelector('#audit_lawyer_housing_status_chart'), donutOptions(
-                @json($chartData['lawyer']['housing_status_labels']),
-                @json($chartData['lawyer']['housing_status_series']),
+                <?php echo json_encode($chartData['lawyer']['housing_status_labels'], 15, 512) ?>,
+                <?php echo json_encode($chartData['lawyer']['housing_status_series'], 15, 512) ?>,
                 ['#3F4254', '#50CD89', '#FFAD0F']
             )).render();
 
             new ApexCharts(document.querySelector('#audit_lawyer_comparison_chart'), comparisonOptions(
-                @json($chartData['lawyer']['comparison_categories']),
-                @json($chartData['lawyer']['comparison_audited_series']),
-                @json($chartData['lawyer']['comparison_total_series']),
+                <?php echo json_encode($chartData['lawyer']['comparison_categories'], 15, 512) ?>,
+                <?php echo json_encode($chartData['lawyer']['comparison_audited_series'], 15, 512) ?>,
+                <?php echo json_encode($chartData['lawyer']['comparison_total_series'], 15, 512) ?>,
                 '#7239EA'
             )).render();
         });
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
 
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/auditDashboard.blade.php ENDPATH**/ ?>

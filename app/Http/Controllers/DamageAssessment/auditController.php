@@ -4226,6 +4226,7 @@ class auditController extends Controller
 
         $totalBuildingsCount = Building::query()->count();
         $totalHousingUnitsCount = HousingUnit::query()->count();
+        $dailyHousingAchievementStartDate = Carbon::create(2026, 2, 20)->startOfDay();
 
         $engineerMetrics = $this->buildAuditDashboardMetrics(
             type: 'QC/QA Engineer',
@@ -4236,6 +4237,7 @@ class auditController extends Controller
             totalHousingUnitsCount: $totalHousingUnitsCount,
             startDate: $startDate,
             endDate: $endDate,
+            dailyHousingAchievementStartDate: $dailyHousingAchievementStartDate,
         );
 
         $lawyerMetrics = $this->buildAuditDashboardMetrics(
@@ -4247,6 +4249,7 @@ class auditController extends Controller
             totalHousingUnitsCount: $totalHousingUnitsCount,
             startDate: $startDate,
             endDate: $endDate,
+            dailyHousingAchievementStartDate: $dailyHousingAchievementStartDate,
         );
 
         $summaryMetrics = [
@@ -4281,6 +4284,7 @@ class auditController extends Controller
         int $totalHousingUnitsCount,
         Carbon $startDate,
         Carbon $endDate,
+        Carbon $dailyHousingAchievementStartDate,
     ): array {
         $buildingStatusRaw = BuildingStatus::query()
             ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
@@ -4316,6 +4320,29 @@ class auditController extends Controller
             ->distinct('housing_statuses.housing_id')
             ->count('housing_statuses.housing_id');
 
+        $dailyHousingAchievementRaw = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', $type)
+            ->whereBetween('housing_statuses.updated_at', [$dailyHousingAchievementStartDate, $endDate])
+            ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
+            ->selectRaw('DATE(housing_statuses.updated_at) as achievement_date, COUNT(DISTINCT housing_statuses.housing_id) as total')
+            ->groupBy('achievement_date')
+            ->pluck('total', 'achievement_date');
+
+        $dailyHousingAchievementDates = [];
+        $dailyHousingAchievementSeries = [];
+
+        if ($dailyHousingAchievementStartDate->lte($endDate)) {
+            $cursorDate = $dailyHousingAchievementStartDate->copy();
+
+            while ($cursorDate->lte($endDate)) {
+                $dateKey = $cursorDate->toDateString();
+                $dailyHousingAchievementDates[] = $dateKey;
+                $dailyHousingAchievementSeries[] = (int) ($dailyHousingAchievementRaw[$dateKey] ?? 0);
+                $cursorDate->addDay();
+            }
+        }
+
         return [
             'summary' => [
                 'audited_buildings_count' => $auditedBuildingsCount,
@@ -4337,6 +4364,9 @@ class auditController extends Controller
                 'comparison_categories' => ['Buildings', 'Housing Units'],
                 'comparison_audited_series' => [$auditedBuildingsCount, $auditedHousingUnitsCount],
                 'comparison_total_series' => [$totalBuildingsCount, $totalHousingUnitsCount],
+                'daily_housing_achievement_start_date' => $dailyHousingAchievementStartDate->toDateString(),
+                'daily_housing_achievement_labels' => $dailyHousingAchievementDates,
+                'daily_housing_achievement_series' => $dailyHousingAchievementSeries,
             ],
         ];
     }
