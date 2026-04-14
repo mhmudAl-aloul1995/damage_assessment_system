@@ -162,12 +162,41 @@
                 $('#end_date').val(end.format('YYYY-MM-DD'));
             });
 
+            const exportTools = {
+                download: true,
+                selection: false,
+                zoom: false,
+                zoomin: false,
+                zoomout: false,
+                pan: false,
+                reset: false,
+            };
+
+            const exportConfig = {
+                csv: {
+                    filename: undefined,
+                    columnDelimiter: ',',
+                    headerCategory: 'Category',
+                    headerValue: 'Value'
+                },
+                svg: {
+                    filename: undefined,
+                },
+                png: {
+                    filename: undefined,
+                }
+            };
+
             const donutOptions = function (labels, series, colors) {
                 return {
                     chart: {
                         type: 'donut',
                         height: 340,
-                        toolbar: { show: false }
+                        toolbar: {
+                            show: true,
+                            tools: exportTools,
+                            export: exportConfig
+                        }
                     },
                     labels: labels,
                     series: series,
@@ -183,7 +212,11 @@
                     chart: {
                         type: 'bar',
                         height: 340,
-                        toolbar: { show: false }
+                        toolbar: {
+                            show: true,
+                            tools: exportTools,
+                            export: exportConfig
+                        }
                     },
                     series: [
                         {
@@ -213,7 +246,11 @@
                     chart: {
                         type: 'line',
                         height: 360,
-                        toolbar: { show: false },
+                        toolbar: {
+                            show: true,
+                            tools: exportTools,
+                            export: exportConfig
+                        },
                         zoom: { enabled: false }
                     },
                     series: [
@@ -305,6 +342,7 @@
         });
     </script>
 <?php $__env->stopSection(); ?>
+
 
 
 
