@@ -10,11 +10,11 @@ use Yajra\DataTables\Facades\DataTables;
 
 class PermissionController extends Controller
 {
-
-    function __construct()
+    public function __construct()
     {
         $this->middleware('role:Database Officer');
     }
+
     public function index()
     {
         return view('UserManagement.permissions');
@@ -27,7 +27,7 @@ class PermissionController extends Controller
         return DataTables::of($permissions)
             ->addColumn('assigned_to', function ($permission) {
                 if ($permission->roles->isEmpty()) {
-                    return '<span class="text-muted">Not assigned</span>';
+                    return '<span class="text-muted">'.e(__('ui.permissions.not_assigned')).'</span>';
                 }
 
                 $colors = [
@@ -42,7 +42,7 @@ class PermissionController extends Controller
 
                 foreach ($permission->roles as $index => $role) {
                     $color = $colors[$index % count($colors)];
-                    $html .= '<span class="badge ' . $color . ' fs-7 m-1">' . $role->name . '</span>';
+                    $html .= '<span class="badge '.$color.' fs-7 m-1">'.e($role->name).'</span>';
                 }
 
                 return $html;
@@ -56,7 +56,7 @@ class PermissionController extends Controller
                         <button
                             class="btn btn-icon btn-active-light-primary w-30px h-30px me-3 btn-edit-permission"
                             type="button"
-                            data-id="' . $permission->id . '"
+                            data-id="'.$permission->id.'"
                         >
                             <i class="ki-duotone ki-setting-3 fs-3">
                                 <span class="path1"></span>
@@ -70,8 +70,8 @@ class PermissionController extends Controller
                         <button
                             class="btn btn-icon btn-active-light-primary w-30px h-30px btn-delete-permission"
                             type="button"
-                            data-id="' . $permission->id . '"
-                            data-name="' . $permission->name . '"
+                            data-id="'.$permission->id.'"
+                            data-name="'.e($permission->name).'"
                         >
                             <i class="ki-duotone ki-trash fs-3">
                                 <span class="path1"></span>
@@ -94,13 +94,13 @@ class PermissionController extends Controller
             'name' => 'required|string|max:255|unique:permissions,name',
         ]);
 
-        $permission = Permission::create([
+        Permission::create([
             'name' => $request->name,
             'guard_name' => 'web',
         ]);
 
         return response()->json([
-            'message' => 'تم إنشاء الصلاحية بنجاح',
+            'message' => __('ui.permissions.saved'),
         ]);
     }
 
@@ -125,7 +125,7 @@ class PermissionController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'تم تحديث الصلاحية بنجاح',
+            'message' => __('ui.permissions.updated'),
         ]);
     }
 
@@ -134,7 +134,7 @@ class PermissionController extends Controller
         $permission->delete();
 
         return response()->json([
-            'message' => 'تم حذف الصلاحية بنجاح',
+            'message' => __('ui.permissions.deleted'),
         ]);
     }
 }

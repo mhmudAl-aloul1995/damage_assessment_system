@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
@@ -16,8 +15,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         User::factory()->create([
             'name' => 'mhmudAloul',
             'email' => 'mhmudaloul@gmail.com',
@@ -28,11 +25,10 @@ class DatabaseSeeder extends Seeder
             AssessmentsSqlSeeder::class,
             AssessmentStatusSeeder::class,
             FilterSeeder::class,
+            PublicBuildingFilterSeeder::class,
             RolesAndPermissionsSeeder::class,
             BuildingSeeder::class,
-            HousingSeeder::class,//55
-
-
+            HousingSeeder::class,
         ]);
     }
 }

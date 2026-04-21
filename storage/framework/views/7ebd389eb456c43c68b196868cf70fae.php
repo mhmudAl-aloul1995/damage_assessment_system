@@ -1,9 +1,8 @@
-@extends('layouts.app')
-@section('title', 'الوحدات السكنية')
-@section('pageName', 'الوحدات السكنية')
+<?php $__env->startSection('title', 'الوحدات السكنية'); ?>
+<?php $__env->startSection('pageName', 'الوحدات السكنية'); ?>
 
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 
 	<div class="card mb-12">
 		<div class="card shadow-sm">
@@ -44,129 +43,43 @@
 
 						</div>
 						<div class="row g-9 mb-8">
-
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2">رقم المبنى</label>
-								<input type="number" class="form-control form-control-solid" placeholder="رقم المبنى"
-									name="objectid">
-							</div>
+							<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $filterName; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $filter=>$value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
 
 
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2">رقم الزون</label>
-								<input type="text" class="form-control form-control-solid" placeholder="رقم الزون"
-									name="zone_code">
-							</div>
-							<!--begin::Col-->
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2">نوع الوحدة السكنية</label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder="نوع الوحدة السكنية" name="housing_unit_type">
-									<option value=""></option>
-									<option value="basement">بدروم / basement</option>
-									<option value="apartment">شقة / apartment</option>
-									<option value="roof">لروف / roof</option>
-									<option value="warehouse">لحاصل / warehouse</option>
-									<option value="canopy2">لمظلة / canopy</option>
-									<option value="mezzanine">سدة / mezzanine</option>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(Schema::hasColumn('housing_units', $value)): ?>
 
-								</select>
-							</div>
-							<!--end::Col-->
-							<!--begin::Col-->
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2">حالة الضرر</label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder="حالة الضرر" name="unit_damage_status">
-									<option value=""></option>
-									<option value="no_damage"> No damage لا يوجد ضرر</option>
-									<option value="damaged">Damaged يوجد ضرر</option>
+									<?php
+									
+										if ($value == 'governorate' || $value == 'municipalitie' || $value == 'neighborhood' || $value == 'locality') {
 
-								</select>
-							</div>
-							<!--end::Col-->
+											continue;
+										}
+									?>
+
+
+									<div class="col-md-3 fv-row">
+										<label class="fs-6 fw-semibold mb-2"><?php echo e($filter); ?></label>
+										<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
+											data-hide-search="false" data-placeholder="<?php echo e($filter); ?>" name="<?php echo e($value); ?>">
+
+											<option value=""></option>
+											<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = ($groupedFilters[$value] ?? collect()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $option): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+												<option value="<?php echo e($option->name); ?>"><?php echo e($option->label); ?></option>
+											<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+										</select>
+									</div>
+								<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+							<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+
+
+
+
+
 
 
 						</div>
-						<div class="row g-9 mb-8">
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2"> وظيفة المالك </label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder=" وظيفة المالك" name="owner_job">
-									<option value=""></option>
-									<option value="employed"> موظف / Employed</option>
-									<option value="freelancer"> عمل حر / Freelancer</option>
-									<option value="unemployed2">غير موظف / Unemployed</option>
-									<option value="other_job"> أخرى / Other</option>
-
-								</select>
-							</div>
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2"> الحالة الاجتماعية للمالك</label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder="الحالة الاجتماعية للمالك"
-									name="marital_status">
-									<option value=""></option>
-									<option value="Single2"> Single / أعزب</option>
-									<option value="Divorced">Divorced / مطلق/ة</option>
-									<option value="Widow">Widow / أرمل/ة</option>
-									<option value="Married">Married / متزوج/ة</option>
-								</select>
-							</div>
-							<!--begin::Col-->
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2"> محل الإقامة الحالي</label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder="محل الإقامة الحالي" name="current_residence">
-									<option value=""></option>
-									<option value="rented2">Rented accommodation سكن مستأجر</option>
-									<option value="hosted2">With relatives / hosted عند أقارب / مستضاف</option>
-									<option value="tent2">Tent خيمة</option>
-									<option value="collective_shelter2">Collective shelter مركز إيواء جماعي</option>
-									<option value="public_facility2">Public facility مرفق عام</option>
-									<option value="informal2">Informal shelter سكن غير رسمي</option>
-									<option value="other_current2">Other أخرى</option>
-								</select>
-							</div>
-							<!--end::Col-->
-
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2"> نوع استخدام الوحدة المتضررة</label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder=" نوع استخدام الوحدة المتضررة"
-									name="infra_type2">
-									<option value=""></option>
-									<option value="Housing"> Housing سكني</option>
-									<option value="Economic">Economic اقتصادي</option>
-									<option value="Social">Social اجتماعي</option>
 
 
-								</select>
-							</div>
-
-
-						</div>
-						<div class="row g-9 mb-8">
-
-							<div class="col-md-3 fv-row">
-								<label class="required fs-6 fw-semibold mb-2">نوع المأوى</label>
-								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder=" نوع المأوى" name="shelter_type">
-									<option value=""></option>
-									<option value="school"> School مدرسة</option>
-									<option value="public_building">Public building مبنى عام</option>
-									<option value="hospital">Hospital مستشفى</option>
-									<option value="public_service_facility">Public service facility مرافق عامة</option>
-									<option value="park">Park حديقة</option>
-									<option value="Private_Land"> أرض خاصة / Private Land</option>
-									<option value="playground">Playground ملعب</option>
-									<option value="camp"> مخيم / Camp</option>
-									<option value="other_shelter">Other أخرى</option>
-
-								</select>
-							</div>
-							
-						</div>
 					</form>
 				</div>
 				<div class="card-footer">
@@ -228,8 +141,8 @@
 						<!--end::Export-->
 						<!--begin::Add Building-->
 						<!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" onclick="resetFormValidation()"
-																																																																													data-bs-target="#kt_modal_Building">
-																																																																													<i class="ki-duotone ki-plus fs-2"></i> إضافة جديد</button> -->
+																																																																																								data-bs-target="#kt_modal_Building">
+																																																																																								<i class="ki-duotone ki-plus fs-2"></i> إضافة جديد</button> -->
 						<!--end::Add Building-->
 					</div>
 					<!--end::Toolbar-->
@@ -270,7 +183,7 @@
 									<!--begin::Form-->
 									<form id="kt_modal_export_housing_form" class="form" action="#">
 										<input type="hidden" name="_method" value="get">
-										<input type="hidden" name="_token" value="{{csrf_token()}}">
+										<input type="hidden" name="_token" value="<?php echo e(csrf_token()); ?>">
 										<!--begin::Input group-->
 										<div class="fv-row mb-10">
 											<!--begin::Label-->
@@ -282,13 +195,14 @@
 												data-placeholder="تحديد الأعمدة" data-hide-search="false"
 												class="form-select form-select-solid fw-bold">
 												<option value=""></option>
-												@foreach ($assessments as $value)
-													@if(Schema::hasColumn('housing_units', $value->name))
-														<option value="{{ $value->name }}">
-															{{ $value->hint ? $value->hint : $value->label }}
+												<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $assessments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+													<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(Schema::hasColumn('housing_units', $value->name)): ?>
+														<option value="<?php echo e($value->name); ?>">
+															<?php echo e($value->hint ? $value->hint : $value->label); ?>
+
 														</option>
-													@endif
-												@endforeach
+													<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+												<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
 
 											</select>
 											<!--end::Input-->
@@ -351,7 +265,7 @@
 					<thead>
 						<tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
 
-							<th class="min-w-10px">إسم الباحث  </th>
+							<th class="min-w-10px">إسم الباحث </th>
 							<th class="min-w-10px">رقم المبنى </th>
 							<th class="min-w-70px">إسم المالك </th>
 							<th class="min-w-70px">نوع الوحدة السكنية</th>
@@ -362,7 +276,7 @@
 							<th class="min-w-100px">مساحة الوحدة المتضررة</th>
 							<th class="min-w-100px">نوع استخدام الوحدة المتضررة </th>
 							<th class="min-w-100px">نوع ملكية الوحدة المتضررة </th>
-							<th class="text-end min-w-100px">  الإجراءات</th>
+							<th class="text-end min-w-100px"> الإجراءات</th>
 						</tr>
 					</thead>
 					<tbody class="text-gray-600 fw-semibold"></tbody>
@@ -376,21 +290,21 @@
 		</div>
 	</div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
 
 
 
 
-@section('script')
+<?php $__env->startSection('script'); ?>
 
 
 
 	<script>
 
-		var url_phc = "{{ url('') }}";
-		var post_export_url = "{{ url('export_housings') }}" </script>
-	<script src="{{ url('') }}/assets/js/custom/DamageAssessment/export-housings.js"></script>
+		var url_phc = "<?php echo e(url('')); ?>";
+		var post_export_url = "<?php echo e(url('export_housings')); ?>" </script>
+	<script src="<?php echo e(url('')); ?>/assets/js/custom/DamageAssessment/export-housings.js"></script>
 
 	<script>
 		var KTHousingList = function () {
@@ -406,32 +320,46 @@
 			var initHousingTable = function () {
 				// Set date data order
 				const tableRows = table.querySelectorAll('tbody tr');
-				const globalid = '{{$globalid  }}';
+				const globalid = '<?php echo e($globalid); ?>';
+				var filterForm = document.getElementById('filter_housing_form');
+				const initialQueryParams = new URLSearchParams(window.location.search);
 
+				if (filterForm) {
+					initialQueryParams.forEach((value, key) => {
+						if (key === 'search') {
+							return;
+						}
+
+						const field = filterForm.querySelector(`[name="${key}"]`);
+
+						if (field) {
+							field.value = value;
+							return;
+						}
+
+						const hiddenInput = document.createElement('input');
+						hiddenInput.type = 'hidden';
+						hiddenInput.name = key;
+						hiddenInput.value = value;
+						filterForm.appendChild(hiddenInput);
+					});
+				}
 
 				// Init datatable --- more info on datatables: https://datatables.net/manual/
 				datatable = $(table).DataTable({
 					serverSide: true,
 					ajax: {
-						url: "{{url('housing/show')}}",
+						url: "<?php echo e(url('housing/show')); ?>",
 						data: function (d) {
-							d.housing_unit_type = $("[name='housing_unit_type']").val()
-							d.unit_damage_status = $("[name='unit_damage_status']").val()
-							d.infra_type2 = $("[name='infra_type2']").val()
-							d.owner_job = $("[name='owner_job']").val()
-							d.marital_status = $("[name='marital_status']").val()
-							d.locality = $("[name='locality']").val()
-							d.current_residence = $("[name='current_residence']").val()
-							d.governorate = $("[name='governorate']").val()
-							d.neighborhood = $("[name='neighborhood']").val()
-							d.objectid = $("[name='objectid']").val()
-							d.parentglobalid = globalid 
-							d.zone_code = $("[name='zone_code']").val()
-							d.shelter_type = $("[name='shelter_type']").val()
-							d.q_9_3_1_first_name = $("[name='q_9_3_1_first_name']").val()
-							d.q_9_3_2_second_name__father = $("[name='q_9_3_2_second_name__father']").val()
-							d.q_9_3_3_third_name__grandfather = $("[name='q_9_3_3_third_name__grandfather']").val()
-							d.q_9_3_4_last_name = $("[name='q_9_3_4_last_name']").val()
+
+							if (filterForm) {
+								const formData = new FormData(filterForm);
+								formData.forEach((value, key) => {
+									d[key] = value;
+								});
+							}
+							d.unit_support_needed = "<?php echo e(request('unit_support_needed')); ?>";
+							d.parentglobalid = globalid
 
 
 
@@ -464,6 +392,18 @@
 					KTMenu.createInstances(); // For Metronic		
 
 				});
+
+				const initialSearch = initialQueryParams.get('search');
+
+				if (initialSearch) {
+					const searchInput = document.querySelector('[data-kt-Housing-table-filter="search"]');
+
+					if (searchInput) {
+						searchInput.value = initialSearch;
+					}
+
+					datatable.search(initialSearch).draw();
+				}
 			}
 
 
@@ -560,4 +500,8 @@
 
 
 	</script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/housing.blade.php ENDPATH**/ ?>

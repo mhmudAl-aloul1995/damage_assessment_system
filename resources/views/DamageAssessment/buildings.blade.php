@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('title', 'المباني')
-@section('pageName', 'المباني')
+@section('title', __('ui.buildings_page.title'))
+@section('pageName', __('ui.buildings_page.title'))
 
 
 @section('content')
@@ -10,7 +10,7 @@
 		<div class="card shadow-sm">
 			<div class="card-header collapsible cursor-pointer rotate" data-bs-toggle="collapse"
 				data-bs-target="#kt_building_filter">
-				<h3 class="card-title">فلتر</h3>
+				<h3 class="card-title">{{ __('ui.buildings_page.filter') }}</h3>
 				<div class="card-toolbar rotate-180">
 					<i class="ki-duotone ki-down fs-1"></i>
 				</div>
@@ -33,7 +33,7 @@
 											data-hide-search="false" data-placeholder="{{ $filter }}" name="{{ $value }}">
 
 											<option value=""></option>
-											@foreach (App\Models\Filter::where('list_name', $value)->get() as $option)
+											@foreach (($groupedFilters[$value] ?? collect()) as $option)
 												<option value="{{ $option->name }}">{{ $option->label }}</option>
 											@endforeach
 										</select>
@@ -42,9 +42,9 @@
 							@endforeach
 							<div class="col-md-3 fv-row">
 
-								<label class="fs-6 fw-semibold mb-2">neighborhood</label>
+								<label class="fs-6 fw-semibold mb-2">{{ __('ui.buildings_page.neighborhood') }}</label>
 								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder="neighborhood" name="neighborhood">
+									data-hide-search="false" data-placeholder="{{ __('ui.buildings_page.neighborhood') }}" name="neighborhood">
 
 									<option value=""></option>
 									@foreach ($neighborhoods as $value)
@@ -59,12 +59,11 @@
 					</div>
 					<div class="card-footer">
 						<div class="text-center">
-							<button type="reset" class="btn btn-light me-3" data-kt-Buildings-filter-action="reset">إعادة
-								تعيين</button>
+							<button type="reset" class="btn btn-light me-3" data-kt-Buildings-filter-action="reset">{{ __('ui.buildings_page.reset') }}</button>
 							<button onclick="$('#kt_table_Building').DataTable().ajax.reload()" type="submit"
 								class="btn btn-primary" data-kt-Building-table-filter="filter">
-								<span class="indicator-label">بحث</span>
-								<span class="indicator-progress">يرجى الإنتظار...
+								<span class="indicator-label">{{ __('ui.buildings_page.search') }}</span>
+								<span class="indicator-progress">{{ __('ui.buildings_page.please_wait') }}
 									<span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
 							</button>
 						</div>
@@ -88,7 +87,7 @@
 							<span class="path2"></span>
 						</i>
 						<input type="text" data-kt-Building-table-filter="search"
-							class="form-control form-control-solid w-250px ps-13" placeholder="بحث" />
+							class="form-control form-control-solid w-250px ps-13" placeholder="{{ __('ui.buildings_page.search') }}" />
 					</div>
 					<!--end::Search-->
 				</div>
@@ -104,7 +103,7 @@
 								<span class="path1"></span>
 								<span class="path2"></span>
 							</i>
-							تحديث</button>
+							{{ __('ui.buildings_page.refresh') }}</button>
 						<!--begin::Menu 1-->
 
 						<!--begin::Export-->
@@ -113,7 +112,7 @@
 							<i class="ki-duotone ki-exit-up fs-2">
 								<span class="path1"></span>
 								<span class="path2"></span>
-							</i>تصدير</button>
+							</i>{{ __('ui.buildings_page.export') }}</button>
 						<!--end::Export-->
 						<!--begin::Add Building-->
 						<!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" onclick="resetFormValidation()"
@@ -128,8 +127,7 @@
 						<div class="fw-bold me-5">
 							<span class="me-2" data-kt-Building-table-select="selected_count"></span>Selected
 						</div>
-						<button type="button" class="btn btn-danger" data-kt-Building-table-select="delete_selected">حذف
-							المحدد</button>
+						<button type="button" class="btn btn-danger" data-kt-Building-table-select="delete_selected">{{ __('ui.buildings_page.delete_selected') }}</button>
 					</div>
 					<!--end::Group actions-->
 					<!--begin::Modal - Adjust Balance-->
@@ -141,7 +139,7 @@
 								<!--begin::Modal header-->
 								<div class="modal-header">
 									<!--begin::Modal title-->
-									<h2 class="fw-bold">تصدير المباني </h2>
+									<h2 class="fw-bold">{{ __('ui.buildings_page.export_buildings') }}</h2>
 									<!--end::Modal title-->
 									<!--begin::Close-->
 									<div class="btn btn-icon btn-sm btn-active-icon-primary"
@@ -163,12 +161,12 @@
 										<!--begin::Input group-->
 										<div class="fv-row mb-10">
 											<!--begin::Label-->
-											<label class="fs-6 fw-semibold form-label mb-2"> تحديد الأعمدة </label>
+											<label class="fs-6 fw-semibold form-label mb-2">{{ __('ui.buildings_page.select_columns') }}</label>
 											<!--end::Label-->
 											<!--begin::Input-->
 											<select multiple data-allow-clear="true" data-close-on-select="false"
 												name="building_columns[]" data-control="select2"
-												data-placeholder="تحديد الأعمدة" data-hide-search="false"
+												data-placeholder="{{ __('ui.buildings_page.select_columns') }}" data-hide-search="false"
 												class="form-select form-select-solid fw-bold">
 												<option value=""></option>
 												@foreach ($assessments as $value)
@@ -187,11 +185,11 @@
 										<div class="fv-row mb-10">
 											<!--begin::Label-->
 											<label class="required fs-6 fw-semibold form-label mb-2">
-												تحديد شكل التصدير:</label>
+												{{ __('ui.buildings_page.export_format') }}:</label>
 											<!--end::Label-->
 											<!--begin::Input-->
 											<select name="format" data-control="select2"
-												data-placeholder="تحديد شكل التصدير" data-hide-search="false"
+												data-placeholder="{{ __('ui.buildings_page.export_format') }}" data-hide-search="false"
 												class="form-select form-select-solid fw-bold">
 												<option></option>
 												<option value="XLSX">Excel</option>
@@ -204,11 +202,11 @@
 										<!--begin::Actions-->
 										<div class="text-center">
 											<button type="reset" class="btn btn-light me-3"
-												data-kt-buildings-modal-action="close">إلغاء</button>
+												data-kt-buildings-modal-action="close">{{ __('ui.buildings_page.cancel') }}</button>
 											<button type="submit" class="btn btn-primary"
 												data-kt-buildings-modal-action="submit">
-												<span class="indicator-label">تصدير</span>
-												<span class="indicator-progress">يرجى الإنتظار...
+												<span class="indicator-label">{{ __('ui.buildings_page.export') }}</span>
+												<span class="indicator-progress">{{ __('ui.buildings_page.please_wait') }}
 													<span
 														class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
 											</button>
@@ -240,16 +238,16 @@
 					<thead>
 						<tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
 
-							<th class="min-w-70px"> إسم الباحث</th>
-							<th class="min-w-70px"> حالط الاستبيان </th>
-							<th class="min-w-70px">رقم المبنى </th>
-							<th class="min-w-70px">اسم المبنى </th>
-							<th class="min-w-70px">رقم الزون </th>
-							<th class="min-w-70px">عدد الوحدات المتضررة </th>
-							<th class="min-w-70px">البلدية </th>
-							<th class="min-w-70px">الحي </th>
-							<th class="min-w-70px">تاريخ التعديل </th>
-							<th class="text-end min-w-100px">إجراء</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.researcher_name') }}</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.survey_status') }}</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.building_number') }}</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.building_name') }}</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.zone_number') }}</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.damaged_units_count') }}</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.municipality') }}</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.district') }}</th>
+							<th class="min-w-70px">{{ __('ui.buildings_page.updated_at') }}</th>
+							<th class="text-end min-w-100px">{{ __('ui.buildings_page.action') }}</th>
 						</tr>
 					</thead>
 					<tbody class="text-gray-600 fw-semibold"></tbody>
@@ -284,6 +282,28 @@
 			var table = document.getElementById('kt_table_Building');
 			var datatable;
 			const filterForm = document.querySelector('[data-kt-Building-table-filter="form"]');
+			const initialQueryParams = new URLSearchParams(window.location.search);
+
+			if (filterForm) {
+				initialQueryParams.forEach((value, key) => {
+					if (key === 'search') {
+						return;
+					}
+
+					const field = filterForm.querySelector(`[name="${key}"]`);
+
+					if (field) {
+						field.value = value;
+						return;
+					}
+
+					const hiddenInput = document.createElement('input');
+					hiddenInput.type = 'hidden';
+					hiddenInput.name = key;
+					hiddenInput.value = value;
+					filterForm.appendChild(hiddenInput);
+				});
+			}
 
 			var initBuildingTable = function () {
 				if (!table) return;
@@ -355,6 +375,18 @@
 				datatable.on('draw', function () {
 					KTMenu.createInstances(); // Vital for Metronic dropdowns
 				});
+
+				const initialSearch = initialQueryParams.get('search');
+
+				if (initialSearch) {
+					const searchInput = document.querySelector('[data-kt-Building-table-filter="search"]');
+
+					if (searchInput) {
+						searchInput.value = initialSearch;
+					}
+
+					datatable.search(initialSearch).draw();
+				}
 			};
 
 			var handleSearchDatatable = () => {
@@ -422,3 +454,5 @@
 		});
 	</script>
 @endsection
+
+

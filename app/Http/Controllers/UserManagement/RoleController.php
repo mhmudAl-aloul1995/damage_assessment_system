@@ -5,17 +5,16 @@ namespace App\Http\Controllers\UserManagement;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
-    
-        function __construct()
-        {
-            $this->middleware('role:Database Officer');
-        
-        }
+    public function __construct()
+    {
+        $this->middleware('role:Database Officer');
+    }
+
     public function index()
     {
         $roles = Role::with('permissions')
@@ -23,6 +22,7 @@ class RoleController extends Controller
             ->get()
             ->map(function ($role) {
                 $role->users_count = $role->users()->count();
+
                 return $role;
             });
 
@@ -49,13 +49,13 @@ class RoleController extends Controller
         $role->users_count = $role->users()->count();
 
         return response()->json([
-            'message' => 'تم إنشاء الدور بنجاح',
+            'message' => __('ui.roles.saved'),
             'role' => [
                 'id' => $role->id,
                 'name' => $role->name,
                 'permissions' => $role->permissions->pluck('name')->values(),
                 'users_count' => $role->users_count,
-            ]
+            ],
         ]);
     }
 
@@ -68,7 +68,7 @@ class RoleController extends Controller
                 'id' => $role->id,
                 'name' => $role->name,
                 'permissions' => $role->permissions->pluck('name')->values(),
-            ]
+            ],
         ]);
     }
 
@@ -94,13 +94,13 @@ class RoleController extends Controller
         $role->users_count = $role->users()->count();
 
         return response()->json([
-            'message' => 'تم تعديل الدور بنجاح',
+            'message' => __('ui.roles.updated'),
             'role' => [
                 'id' => $role->id,
                 'name' => $role->name,
                 'permissions' => $role->permissions->pluck('name')->values(),
                 'users_count' => $role->users_count,
-            ]
+            ],
         ]);
     }
 
@@ -109,7 +109,7 @@ class RoleController extends Controller
         $role->delete();
 
         return response()->json([
-            'message' => 'تم حذف الدور بنجاح'
+            'message' => __('ui.roles.deleted'),
         ]);
     }
 }

@@ -15,7 +15,7 @@
     }
 </style>
 
-<h2>نسيت كلمة المرور البريد الإلكتروني</h2>
+<h2>{{ __('ui.mail.forgot_password_title') }}</h2>
 
-<p>يمكنك إعادة تعيين كلمة المرور من الرابط أدناه:</p>
-<a href="{{ route('reset.password.get', $token) }}">إعادة تعيين كلمة المرور</a>
+<p>{{ __('ui.mail.forgot_password_text') }}</p>
+<a href="{{ route('reset.password.get', $token) }}">{{ __('ui.mail.reset_password') }}</a>

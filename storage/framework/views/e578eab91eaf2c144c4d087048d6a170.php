@@ -1,5 +1,5 @@
-<?php $__env->startSection('title', 'Audit Dashboard'); ?>
-<?php $__env->startSection('pageName', 'Audit Dashboard'); ?>
+<?php $__env->startSection('title', __('ui.audit_dashboard.title')); ?>
+<?php $__env->startSection('pageName', __('ui.audit_dashboard.title')); ?>
 
 <?php $__env->startSection('content'); ?>
     <div class="row mb-5">
@@ -7,7 +7,7 @@
             <div class="card card-flush shadow-sm">
                 <div class="card-header pt-6">
                     <div class="card-title">
-                        <h3 class="fw-bold m-0">Audit Dashboard</h3>
+                        <h3 class="fw-bold m-0"><?php echo e(__('ui.audit_dashboard.title')); ?></h3>
                     </div>
                     <div class="card-toolbar">
                         <form action="<?php echo e(route('audit.dashboard')); ?>" method="GET" id="audit_dashboard_filter_form">
@@ -15,11 +15,11 @@
                             <input type="hidden" name="end_date" id="end_date" value="<?php echo e($endDateValue); ?>">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="input-group w-md-300px">
-                                    <input class="form-control form-control-solid" placeholder="Select date range"
+                                    <input class="form-control form-control-solid" placeholder="<?php echo e(__('ui.audit_dashboard.select_date_range')); ?>"
                                         id="audit_dashboard_daterangepicker" readonly />
                                     <span class="input-group-text"><i class="ki-duotone ki-calendar fs-2"></i></span>
                                 </div>
-                                <button type="submit" class="btn btn-primary">Filter</button>
+                                <button type="submit" class="btn btn-primary"><?php echo e(__('ui.audit_dashboard.filter')); ?></button>
                             </div>
                         </form>
                     </div>
@@ -32,7 +32,7 @@
         <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <span class="fs-6 text-muted mb-2">Total Buildings</span>
+                    <span class="fs-6 text-muted mb-2"><?php echo e(__('ui.audit_dashboard.total_buildings')); ?></span>
                     <span class="fs-2hx fw-bold text-gray-900"><?php echo e($summaryMetrics['total_buildings_count']); ?></span>
                 </div>
             </div>
@@ -40,7 +40,7 @@
         <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <span class="fs-6 text-muted mb-2">Total Housing Units</span>
+                    <span class="fs-6 text-muted mb-2"><?php echo e(__('ui.audit_dashboard.total_housing_units')); ?></span>
                     <span class="fs-2hx fw-bold text-gray-900"><?php echo e($summaryMetrics['total_housing_units_count']); ?></span>
                 </div>
             </div>
@@ -48,18 +48,18 @@
         <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <span class="fs-6 text-muted mb-2">Engineer Audited Buildings</span>
+                    <span class="fs-6 text-muted mb-2"><?php echo e(__('ui.audit_dashboard.engineer_audited_buildings')); ?></span>
                     <span class="fs-2hx fw-bold text-primary"><?php echo e($summaryMetrics['engineer']['audited_buildings_count']); ?></span>
-                    <span class="text-muted"><?php echo e($summaryMetrics['engineer']['audited_buildings_percentage']); ?>% of total</span>
+                    <span class="text-muted"><?php echo e(__('ui.audit_dashboard.of_total', ['percentage' => $summaryMetrics['engineer']['audited_buildings_percentage']])); ?></span>
                 </div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <span class="fs-6 text-muted mb-2">Lawyer Audited Buildings</span>
+                    <span class="fs-6 text-muted mb-2"><?php echo e(__('ui.audit_dashboard.lawyer_audited_buildings')); ?></span>
                     <span class="fs-2hx fw-bold text-info"><?php echo e($summaryMetrics['lawyer']['audited_buildings_count']); ?></span>
-                    <span class="text-muted"><?php echo e($summaryMetrics['lawyer']['audited_buildings_percentage']); ?>% of total</span>
+                    <span class="text-muted"><?php echo e(__('ui.audit_dashboard.of_total', ['percentage' => $summaryMetrics['lawyer']['audited_buildings_percentage']])); ?></span>
                 </div>
             </div>
         </div>
@@ -69,18 +69,18 @@
         <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <span class="fs-6 text-muted mb-2">Engineer Audited Housing Units</span>
+                    <span class="fs-6 text-muted mb-2"><?php echo e(__('ui.audit_dashboard.engineer_audited_housing_units')); ?></span>
                     <span class="fs-2hx fw-bold text-success"><?php echo e($summaryMetrics['engineer']['audited_housing_units_count']); ?></span>
-                    <span class="text-muted"><?php echo e($summaryMetrics['engineer']['audited_housing_units_percentage']); ?>% of total</span>
+                    <span class="text-muted"><?php echo e(__('ui.audit_dashboard.of_total', ['percentage' => $summaryMetrics['engineer']['audited_housing_units_percentage']])); ?></span>
                 </div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card card-flush h-md-100 border border-gray-200">
                 <div class="card-body d-flex flex-column justify-content-center text-center">
-                    <span class="fs-6 text-muted mb-2">Lawyer Audited Housing Units</span>
+                    <span class="fs-6 text-muted mb-2"><?php echo e(__('ui.audit_dashboard.lawyer_audited_housing_units')); ?></span>
                     <span class="fs-2hx fw-bold text-warning"><?php echo e($summaryMetrics['lawyer']['audited_housing_units_count']); ?></span>
-                    <span class="text-muted"><?php echo e($summaryMetrics['lawyer']['audited_housing_units_percentage']); ?>% of total</span>
+                    <span class="text-muted"><?php echo e(__('ui.audit_dashboard.of_total', ['percentage' => $summaryMetrics['lawyer']['audited_housing_units_percentage']])); ?></span>
                 </div>
             </div>
         </div>
@@ -90,7 +90,7 @@
         <div class="col-12">
             <div class="card card-flush shadow-sm">
                 <div class="card-header pt-6">
-                    <h3 class="card-title">Engineering Audit</h3>
+                    <h3 class="card-title"><?php echo e(__('ui.audit_dashboard.engineering_audit')); ?></h3>
                 </div>
                 <div class="card-body">
                     <div class="row g-5">
@@ -107,8 +107,8 @@
                             <div class="border border-gray-200 rounded p-5">
                                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
                                     <div>
-                                        <h4 class="fw-bold mb-1">Cumulative Audited Housing Units</h4>
-                                        <div class="text-muted">Trend starting from <?php echo e($chartData['engineer']['daily_housing_achievement_start_date']); ?></div>
+                                        <h4 class="fw-bold mb-1"><?php echo e(__('ui.audit_dashboard.cumulative_audited_housing_units')); ?></h4>
+                                        <div class="text-muted"><?php echo e(__('ui.audit_dashboard.trend_starting_from', ['date' => $chartData['engineer']['daily_housing_achievement_start_date']])); ?></div>
                                     </div>
                                 </div>
                                 <div id="audit_engineer_daily_housing_achievement_chart" style="height: 360px;"></div>
@@ -124,7 +124,7 @@
         <div class="col-12">
             <div class="card card-flush shadow-sm">
                 <div class="card-header pt-6">
-                    <h3 class="card-title">Legal Audit</h3>
+                    <h3 class="card-title"><?php echo e(__('ui.audit_dashboard.legal_audit')); ?></h3>
                 </div>
                 <div class="card-body">
                     <div class="row g-5">
@@ -151,10 +151,10 @@
                 startDate: moment("<?php echo e($startDateValue); ?>"),
                 endDate: moment("<?php echo e($endDateValue); ?>"),
                 ranges: {
-                    'Today': [moment(), moment()],
-                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-                    'This Month': [moment().startOf('month'), moment().endOf('month')]
+                    <?php echo json_encode(__('ui.audit_dashboard.today'), 15, 512) ?>: [moment(), moment()],
+                    <?php echo json_encode(__('ui.audit_dashboard.last_7_days'), 15, 512) ?>: [moment().subtract(6, 'days'), moment()],
+                    <?php echo json_encode(__('ui.audit_dashboard.last_30_days'), 15, 512) ?>: [moment().subtract(29, 'days'), moment()],
+                    <?php echo json_encode(__('ui.audit_dashboard.this_month'), 15, 512) ?>: [moment().startOf('month'), moment().endOf('month')]
                 }
             }, function (start, end) {
                 $('#audit_dashboard_daterangepicker').val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
@@ -176,8 +176,8 @@
                 csv: {
                     filename: undefined,
                     columnDelimiter: ',',
-                    headerCategory: 'Category',
-                    headerValue: 'Value'
+                    headerCategory: <?php echo json_encode(__('ui.audit_dashboard.category'), 15, 512) ?>,
+                    headerValue: <?php echo json_encode(__('ui.audit_dashboard.value'), 15, 512) ?>
                 },
                 svg: {
                     filename: undefined,
@@ -220,11 +220,11 @@
                     },
                     series: [
                         {
-                            name: 'Audited',
+                            name: <?php echo json_encode(__('ui.audit_dashboard.audited'), 15, 512) ?>,
                             data: auditedSeries
                         },
                         {
-                            name: 'Total',
+                            name: <?php echo json_encode(__('ui.audit_dashboard.total'), 15, 512) ?>,
                             data: totalSeries
                         }
                     ],
@@ -255,7 +255,7 @@
                     },
                     series: [
                         {
-                            name: 'Cumulative Audited Housing Units',
+                            name: <?php echo json_encode(__('ui.audit_dashboard.cumulative_audited_housing_units'), 15, 512) ?>,
                             data: series
                         }
                     ],
@@ -289,7 +289,7 @@
                     tooltip: {
                         y: {
                             formatter: function (value) {
-                                return value + ' cumulative units';
+                                return <?php echo json_encode(__('ui.audit_dashboard.cumulative_units', ['value' => '__VALUE__']), 512) ?>.replace('__VALUE__', value);
                             }
                         }
                     }
@@ -342,7 +342,6 @@
         });
     </script>
 <?php $__env->stopSection(); ?>
-
 
 
 

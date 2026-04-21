@@ -64,7 +64,7 @@
 											data-hide-search="false" data-placeholder="{{ $filter }}" name="{{ $value }}">
 
 											<option value=""></option>
-											@foreach (App\Models\Filter::where('list_name', $value)->get() as $option)
+											@foreach (($groupedFilters[$value] ?? collect()) as $option)
 												<option value="{{ $option->name }}">{{ $option->label }}</option>
 											@endforeach
 										</select>
@@ -322,6 +322,28 @@
 				const tableRows = table.querySelectorAll('tbody tr');
 				const globalid = '{{$globalid  }}';
 				var filterForm = document.getElementById('filter_housing_form');
+				const initialQueryParams = new URLSearchParams(window.location.search);
+
+				if (filterForm) {
+					initialQueryParams.forEach((value, key) => {
+						if (key === 'search') {
+							return;
+						}
+
+						const field = filterForm.querySelector(`[name="${key}"]`);
+
+						if (field) {
+							field.value = value;
+							return;
+						}
+
+						const hiddenInput = document.createElement('input');
+						hiddenInput.type = 'hidden';
+						hiddenInput.name = key;
+						hiddenInput.value = value;
+						filterForm.appendChild(hiddenInput);
+					});
+				}
 
 				// Init datatable --- more info on datatables: https://datatables.net/manual/
 				datatable = $(table).DataTable({
@@ -370,6 +392,18 @@
 					KTMenu.createInstances(); // For Metronic		
 
 				});
+
+				const initialSearch = initialQueryParams.get('search');
+
+				if (initialSearch) {
+					const searchInput = document.querySelector('[data-kt-Housing-table-filter="search"]');
+
+					if (searchInput) {
+						searchInput.value = initialSearch;
+					}
+
+					datatable.search(initialSearch).draw();
+				}
 			}
 
 
@@ -467,3 +501,5 @@
 
 	</script>
 @endsection
+
+

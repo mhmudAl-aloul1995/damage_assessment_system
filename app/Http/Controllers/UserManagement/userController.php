@@ -3,105 +3,88 @@
 namespace App\Http\Controllers\UserManagement;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\Request;
-use phpDocumentor\Reflection\Project;
-use Yajra\Datatables\Datatables;
-use Rap2hpoutre\FastExcel\FastExcel;
-use Yajra\Datatables\Enginges\EloquentEngine;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Builder;
-use Hash;
-use Spatie\Permission\Models\Role;
-use App\Models\Builing;
-use App\Models\HousingUnit;
 use App\Mail\WelcomeUserMail;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
-use Intervention\Image\Laravel\Facades\Image;
-use Illuminate\Support\Facades\Storage;
+use App\Models\User;
 use App\Services\ImageService;
+use Hash;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
+use Spatie\Permission\Models\Role;
+use Yajra\DataTables\DataTables;
 
 class userController extends Controller
 {
-
     protected ImageService $imageService;
 
     public function __construct(ImageService $imageService)
     {
         $this->imageService = $imageService;
         $this->middleware('role:Database Officer');
-
     }
-
-
-
 
     public function index()
     {
-
-
-
         $data['user'] = User::all();
         $data['roles'] = Role::all();
+
         return View::make('UserManagement.users', $data);
     }
 
     public function showRoles()
     {
-
-
-
         $data['user'] = User::all();
-        /*  $data['roles'] = Role::all(); */
+
         return View::make('UserManagement.roles', $data);
     }
 
     public function show(Request $request)
     {
         $users = User::with('roles')->where('id', '!=', Auth::id());
-        return DataTables::of(User::query())
+
+        return DataTables::of($users)
             ->addColumn('checkbox', function ($user) {
                 return '<div class="form-check form-check-sm form-check-custom form-check-solid">
-                    <input class="form-check-input" type="checkbox" value="' . $user->id . '" />
+                    <input class="form-check-input" type="checkbox" value="'.$user->id.'" />
                 </div>';
             })
-            ->editColumn('name', fn($user) => $user->name ?? '-')
-            ->editColumn('name_en', fn($user) => $user->name_en ?? '-')
-            ->editColumn('email', fn($user) => $user->email ?? '-')
-            ->editColumn('id_no', fn($user) => $user->id_no ?? '-')
-            ->editColumn('contract_type', fn($user) => strtoupper($user->contract_type ?? '-'))
-            ->editColumn('phone', fn($user) => $user->phone ?? '-')
-            ->editColumn('created_at', fn($user) => optional($user->created_at)->format('Y-m-d h:i A'))
+            ->editColumn('name', fn ($user) => $user->name ?? '-')
+            ->editColumn('name_en', fn ($user) => $user->name_en ?? '-')
+            ->editColumn('email', fn ($user) => $user->email ?? '-')
+            ->editColumn('id_no', fn ($user) => $user->id_no ?? '-')
+            ->editColumn('contract_type', fn ($user) => strtoupper($user->contract_type ?? '-'))
+            ->editColumn('phone', fn ($user) => $user->phone ?? '-')
+            ->editColumn('created_at', fn ($user) => optional($user->created_at)->format('Y-m-d h:i A'))
             ->addColumn('action', function ($user) {
                 return '
         <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
-            إجراءات
+            '.e(__('ui.users.actions')).'
             <i class="ki-duotone ki-down fs-5 ms-1"></i>
         </a>
         <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
             <div class="menu-item px-3">
-                <a href="javascript:;" onclick="showUser(' . $user->id . ')" class="menu-link px-3">تعديل</a>
+                <a href="javascript:;" onclick="showUser('.$user->id.')" class="menu-link px-3">'.e(__('ui.buttons.edit')).'</a>
             </div>
             <div class="menu-item px-3">
-                <a href="javascript:;" class="menu-link px-3">حذف</a>
+                <a href="javascript:;" class="menu-link px-3">'.e(__('ui.buttons.delete')).'</a>
             </div>
         </div>
     ';
             })
-
             ->rawColumns(['checkbox', 'action'])
             ->make(true);
     }
+
     public function edit($id)
     {
         $user = User::with('roles')->find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
-                'message' => 'المستخدم غير موجود'
+                'message' => __('ui.users.not_found'),
             ], 404);
         }
 
@@ -115,10 +98,10 @@ class userController extends Controller
                 'contract_type' => $user->contract_type,
                 'phone' => $user->phone,
                 'address' => $user->address,
-                'avatar_url' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                'region' => $user->region
+                'avatar_url' => $user->avatar ? asset('storage/'.$user->avatar) : null,
+                'region' => $user->region,
             ],
-            'roles' => $user->roles->pluck('name')->toArray()
+            'roles' => $user->roles->pluck('name')->toArray(),
         ]);
     }
 
@@ -131,7 +114,6 @@ class userController extends Controller
             'id_no' => 'nullable|string|max:255|unique:users,id_no',
             'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
             'phone' => 'required|string|max:255',
-           // 'address' => 'required|string|max:255',
             'roles' => 'required|array|min:1',
             'roles.*' => 'required|string|exists:roles,name',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
@@ -163,7 +145,7 @@ class userController extends Controller
                 );
 
                 $user->update([
-                    'avatar' => $avatarPath
+                    'avatar' => $avatarPath,
                 ]);
             }
 
@@ -175,7 +157,7 @@ class userController extends Controller
         );
 
         return response()->json([
-            'message' => 'تم إضافة المستخدم وتعيين دوره بنجاح'
+            'message' => __('ui.users.saved'),
         ]);
     }
 
@@ -184,11 +166,10 @@ class userController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'name_en' => 'nullable|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'id_no' => 'nullable|string|max:255|unique:users,id_no,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'id_no' => 'nullable|string|max:255|unique:users,id_no,'.$user->id,
             'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
             'phone' => 'required|string|max:255',
-           // 'address' => 'required|string|max:255',
             'roles' => 'required|array|min:1',
             'roles.*' => 'required|string|exists:roles,name',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
@@ -221,11 +202,11 @@ class userController extends Controller
             $user->update($data);
             $user->syncRoles($request->roles);
 
-            if ($request->filled('send_password') && $request->send_password == 'yes') {
+            if ($request->filled('send_password') && $request->send_password === 'yes') {
                 $newPassword = (string) random_int(100000, 999999);
 
                 $user->update([
-                    'password' => Hash::make($newPassword)
+                    'password' => Hash::make($newPassword),
                 ]);
             }
         });
@@ -237,15 +218,15 @@ class userController extends Controller
         }
 
         return response()->json([
-            'message' => 'تم تعديل المستخدم بنجاح'
+            'message' => __('ui.users.saved'),
         ]);
     }
+
     private function processAvatar($file, $userId = null)
     {
         $realPath = $file->getRealPath();
         $mime = $file->getMimeType();
 
-        // إنشاء الصورة حسب النوع
         switch ($mime) {
             case 'image/jpeg':
             case 'image/jpg':
@@ -257,9 +238,10 @@ class userController extends Controller
                 break;
 
             case 'image/webp':
-                if (!function_exists('imagecreatefromwebp')) {
+                if (! function_exists('imagecreatefromwebp')) {
                     throw new \Exception('WEBP not supported');
                 }
+
                 $sourceImage = imagecreatefromwebp($realPath);
                 break;
 
@@ -267,25 +249,21 @@ class userController extends Controller
                 throw new \Exception('Unsupported image type');
         }
 
-        if (!$sourceImage) {
+        if (! $sourceImage) {
             throw new \Exception('Invalid image');
         }
 
         $srcWidth = imagesx($sourceImage);
         $srcHeight = imagesy($sourceImage);
-
         $targetSize = 300;
-
         $srcRatio = $srcWidth / $srcHeight;
 
         if ($srcRatio > 1) {
-            // قص عرض
             $newHeight = $srcHeight;
             $newWidth = $srcHeight;
             $srcX = ($srcWidth - $newWidth) / 2;
             $srcY = 0;
         } else {
-            // قص ارتفاع
             $newWidth = $srcWidth;
             $newHeight = $srcWidth;
             $srcX = 0;
@@ -307,11 +285,11 @@ class userController extends Controller
             $newHeight
         );
 
-        $fileName = 'avatar_' . ($userId ?? 'tmp') . '_' . time() . '_' . uniqid() . '.jpg';
-        $relativePath = 'avatars/' . $fileName;
-        $fullPath = storage_path('app/public/' . $relativePath);
+        $fileName = 'avatar_'.($userId ?? 'tmp').'_'.time().'_'.uniqid().'.jpg';
+        $relativePath = 'avatars/'.$fileName;
+        $fullPath = storage_path('app/public/'.$relativePath);
 
-        if (!file_exists(dirname($fullPath))) {
+        if (! file_exists(dirname($fullPath))) {
             mkdir(dirname($fullPath), 0755, true);
         }
 
@@ -322,16 +300,16 @@ class userController extends Controller
 
         return $relativePath;
     }
+
     public function destroy(Request $request, $id)
     {
-
-        if (user::find($id)->delete()) {
+        if (User::find($id)?->delete()) {
             return response()->json([
-                'message' => 'تمت العملية بنجاح',
-                'success' => true
+                'message' => __('ui.users.deleted'),
+                'success' => true,
             ]);
         }
 
-        return response(['message' => 'فشلت العملية'], 500);
+        return response(['message' => __('ui.users.delete_failed')], 500);
     }
 }

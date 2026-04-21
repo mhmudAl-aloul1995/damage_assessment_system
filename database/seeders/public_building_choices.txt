@@ -1,0 +1,260 @@
+list_name | name | label | gov | order | sector
+list_name | name | label |  |  |
+security | Safe | Safe |  |  |
+security | Unsafe | Unsafe |  |  |
+infra_type | Housing | Housing |  |  |
+infra_type | Social_Infrastructure | Social Infrastructure |  |  |
+infra_type | Economic_Infrastructure | Economic Infrastructure |  |  |
+governorate | North | North |  |  |
+governorate | Gaza | Gaza |  |  |
+governorate | Middle_Area | Middle Area |  |  |
+governorate | Khan_Younis | Khan Younis |  |  |
+governorate | Rafah | Rafah | North |  |
+locality | Um_AlNasser | Um_AlNasser | North |  |
+locality | Bait_Hanoun | Bait_Hanoun | North |  |
+locality | Jabalia | Jabalia | North |  |
+locality | Bait_Lahia | Bait_Lahia | Gaza |  |
+locality | Gaza | Gaza | Gaza |  |
+locality | Juhr_Aldeek | Juhr_Aldeek | Gaza |  |
+locality | Almughraqa | Almughraqa | Gaza |  |
+locality | Alzahra | Alzahra | Middle_Area |  |
+locality | AlNusairat | AlNusairat | Middle_Area |  |
+locality | Alburaje | Alburaje | Middle_Area |  |
+locality | AlMaghazi | AlMaghazi | Middle_Area |  |
+locality | AlMusadar | AlMusadar | Middle_Area |  |
+locality | Wadi_Alsalqa | Wadi_Alsalqa | Middle_Area |  |
+locality | Dair_Albalah | Dair_Albalah | Middle_Area |  |
+locality | Alzawayda | Alzawayda | Khan_Younis |  |
+locality | Khanyounis | Khanyounis | Khan_Younis |  |
+locality | Alqarara | Alqarara | Khan_Younis |  |
+locality | Bani_Sohaila | Bani_Sohaila | Khan_Younis |  |
+locality | Abasan_AlJadida | Abasan_AlJadida | Khan_Younis |  |
+locality | Abasan_alkabeira | Abasan_alkabeira | Khan_Younis |  |
+locality | Khuzaa | Khuzaa | Khan_Younis |  |
+locality | AlFukhari | AlFukhari | Rafah |  |
+locality | Rafah | Rafah | Rafah |  |
+locality | AlNasser | AlNasser | Rafah |  |
+locality | AlShuka | AlShuka |  |  |
+sex | Male | Male |  |  |
+sex | Female | Female |  |  |
+unit_type | flat | Flat |  |  |
+unit_type | house | House |  |  |
+unit_type | shelter | Shelter |  |  |
+|  |  |  |  |
+unit_ownership | owned | Owned |  |  |
+unit_ownership | rented | Rented |  |  |
+unit_ownership | squaterd | Squaterd |  |  |
+unit_ownership | shared | Shared |  |  |
+unit_ownership | other_ownership | Other |  |  |
+|  |  |  |  |
+handicapped | Wheelchair | Wheelchair |  |  |
+handicapped | Blind | Blind |  |  |
+handicapped | Physically | Physically disabled |  |  |
+handicapped | Elderly | Elderly |  |  |
+handicapped | Mental | Mental |  |  |
+handicapped | other_handicapped | Other |  |  |
+yes_no | Yes | Yes |  |  |
+yes_no | No | No |  |  |
+building_material | Concrete_Building | Concrete Building |  |  |
+building_material | Eternite_Sheets | Eternite Sheets |  |  |
+building_material | Iron_Sheets | Iron Sheets |  |  |
+building_material | Concrete_Eternite | Concrete/Eternite |  |  |
+building_material | Concrete_Iron | Concrete/Iron |  |  |
+building_material | other_building_material | other |  |  |
+type_damage | Completely | Completely |  | 1 |
+type_damage | partially | Partially |  |  |
+weather | fine | Fine |  |  |
+weather | windy | Windy |  |  |
+weather | rainy | Rainy |  |  |
+job | employed | Employed |  |  |
+job | freelancer | Freelancer |  |  |
+job | unemployed | Unemployed |  |  |
+job | other_job | Other |  |  |
+marital_status | Single | Single |  |  |
+marital_status | Divorced | Divorced |  |  |
+marital_status | Widow | Widow |  |  |
+marital_status | Married | Married |  |  |
+building_age | years0_5 | 0-5 years |  |  |
+building_age | years6_10 | 6-10 years |  |  |
+building_age | years11_20 | 11-20 years |  |  |
+building_age | years21_50 | 21-50 years |  |  |
+building_age | years51_100 | 51-100 years |  |  |
+building_age | years101more | 101+ years |  |  |
+building_age | not_sure | Not sure |  |  |
+identity_type | idd | ID |  |  |
+identity_type | passport | Passport |  |  |
+identity_type | other_id | Other |  |  |
+|  |  |  |  |
+building_type | stan_alone_building | Stand alone building |  |  |
+building_type | apartment | Apartment |  |  |
+building_type | other | Other |  |  |
+|  |  |  |  |
+sector | health | Health |  |  |
+sector | education | Education |  |  |
+sector | cultural | Cultural |  |  |
+sector | environmental | Environmental |  |  |
+sector | governmental_municipal | Governmental/Municipal |  |  |
+sector | religional | Religional |  |  |
+sector | recreational | Recreational |  |  |
+sector | other_sector | Other |  |  |
+|  |  |  |  |
+facility_type | hospital | ?????? / Hospital |  |  | health
+facility_type | primary_clinic | ????? ????? / Primary Clinic |  |  | health
+facility_type | emergency_aids | ??????? ????? / Emergency aids |  |  | health
+facility_type | labs | ??????? / Labs |  |  | health
+facility_type | other_health | ????? ???? ???? / Other health  |  |  | health
+facility_type | other_education | ????? ??????? ???? / other education |  |  | health
+facility_type | university | ????? / University |  |  | education
+facility_type | college | ???? / College |  |  | education
+facility_type | training_center | ???? ????? / Training Center |  |  | education
+facility_type | cemetery | ????? / School |  |  | education
+facility_type | other_education | ????? ??????? ????  |  |  | education
+|  |  |  |  |
+facility_type | admin_building1 | ???? ????? / Admin. Building |  |  | governmental_municipal
+facility_type | municipality | ????? / Municipality |  |  | governmental_municipal
+facility_type | justice | ??? (?????) / Justice |  |  | governmental_municipal
+facility_type | security | ??? / Security |  |  | governmental_municipal
+facility_type | general_admin. | ????? ???? / General admin. |  |  | governmental_municipal
+facility_type | admin_building2 | ????? / cemetery |  |  | governmental_municipal
+facility_type | other_governmental | ????? ????? ????  |  |  | governmental_municipal
+|  |  |  |  |
+facility_type | heritage_site | ???? ????? / Heritage Site |  |  | cultural
+facility_type | cultural_center | ???? ????? / Cultural Center |  |  | cultural
+facility_type | other_culture | ????? ?????? ???? / other culture |  |  | cultural
+|  |  |  |  |
+facility_type | waste_collection_disposal | ???/???? ?? ???????? / Waste Collection/Disposal |  |  | environmental
+facility_type | green_areas | ????? ????? / Green Areas |  |  | environmental
+facility_type | pv_panels_plants | ?????/????? ???? ????? / PV Panels / Plants |  |  | environmental
+facility_type | other_environmental | ????? ????? ????  / other environmental |  |  | environmental
+|  |  |  |  |
+facility_type | playground | ???? / Playground |  |  | recreational
+facility_type | gym | ???? ????? / GYM |  |  | recreational
+facility_type | other_recreational | ????? ??????? ????  |  |  | recreational
+|  |  |  |  |
+facility_type | mosque | ???? / Mosque |  |  | religional
+facility_type | other_regional | ????? ???? / other regional |  |  | religional
+|  |  |  |  |
+|  |  |  |  |
+|  |  |  |  |
+beneficiaries_type | children | Children |  |  |
+beneficiaries_type | youth | Youth |  |  |
+beneficiaries_type | women | Women |  |  |
+beneficiaries_type | disable | Disable |  |  |
+beneficiaries_type | all | All |  |  |
+beneficiaries_type | other_benef | Other |  |  |
+|  |  |  |  |
+owning_entity | government | Government ??????? |  |  |
+owning_entity | municipality | Municipality ??????? |  |  |
+owning_entity | Ministry_Endowments | Ministry of Endowments ????? ??????? |  |  |
+|  |  |  |  |
+building_damage_status | fully_damaged | Totally Damaged |  |  |
+building_damage_status | partially_damaged | Partially Damaged |  |  |
+building_damage_status | committee_review | Committee Review |  |  |
+|  |  |  |  |
+building_visit_Status | 1 | Safe/ ??? ?? ???? ???  |  |  |
+building_visit_Status | 2 | Not Safe / ??? ??? |  |  |
+building_visit_Status | 3 | ????? ??? ????? ??? ??? /Part  removed   |  |  |
+building_visit_Status | 4 | ????? ????? ???? / Debris removal  |  |  |
+|  |  |  |  |
+building_use | residential | Residential |  |  |
+building_use | work | Work |  |  |
+building_use | combined | Combined |  |  |
+building_use | resort | Resort |  |  |
+building_use | other | Other |  |  |
+|  |  |  |  |
+land_ownership | 1 | Owned / ??? |  |  |
+land_ownership | 2 | Governmental/ ????? |  |  |
+land_ownership | 3 | Awqaf / ????? |  |  |
+|  |  |  |  |
+building_status | stand_tobe_removed_totally | Stand But Needs To Be Totally Removed | ???? ?????? ????? ??????? |  |
+building_status | stand_tobe_removed_partially | Stand But Needs To Be Partially Removed | ???? ?????? ????? ??? ??? |  |
+building_status | dangerous | Dangerous | ???? ??? ??? ????????? |  |
+building_status | rubble | Rubble | ???? |  |
+building_status | removed | Removed | ??? ??????? |  |
+building_status | stand_minor_ damage | Stand minor partial damage | ???? ??? ???? ???? |  |
+building_status | other | Other | ???? |  |
+|  |  |  |  |
+roof_type | clay_tile | Clay Tile | ????? |  |
+roof_type | concrete | Concrete | ????? |  |
+roof_type | asbestos | Asbestos | ????? |  |
+roof_type | secorite | Iron Sheets (Secorite) | ??? |  |
+roof_type | other | Other | ???? |  |
+|  |  |  |  |
+|  |  |  |  |
+service_status | functional | Functional  ???? |  |  |
+service_status | partially_damaged3 | Partially damaged  ????? ?????? |  |  |
+service_status | fully_damaged3 | Fully damaged  ????? ????? |  |  |
+service_status | not_usable | Not usable  ??? ???? ????????? |  |  |
+|  |  |  |  |
+damage_status | no_damage | No damage ?? ???? ??? |  |  |
+damage_status | damaged | Damaged ???? ??? |  |  |
+|  |  |  |  |
+finishing | not_finished | Unfinished | ??? ???? |  |
+finishing | super_lux | Super Lux | ???? |  |
+finishing | normal | Normal | ????? |  |
+finishing | sub_normal | Sub_Normal | ??? ??????? |  |
+|  |  |  |  |
+basement_use | residential | Residential | ????? |  |
+basement_use | work | Work | ????? |  |
+basement_use | combined | Combined | ????? ?????? |  |
+basement_use | unoccupied | Unoccupied | ???? |  |
+basement_use | other | Other | ???? |  |
+|  |  |  |  |
+|  |  |  |  |
+ground_floor_use | residential | Residential | ????? |  |
+ground_floor_use | work | Work | ????? |  |
+ground_floor_use | arch_canopy | Architectural Canopy | ???? |  |
+ground_floor_use | other | Other | ???? |  |
+|  |  |  |  |
+work_area_use | used_by_owner | Utilized By Owner | ?????? ?? ??? ?????? |  |
+work_area_use | unoccupied | Unoccupied | ????? |  |
+work_area_use | rented | Rented | ??????? |  |
+|  |  |  |  |
+work_area_finishing | unfinished | Unfinished | ??? ???? |  |
+work_area_finishing | super_lux | Super Lux | ???? |  |
+work_area_finishing | normal | Normal | ????? |  |
+work_area_finishing | sub_normal | Sub_Normal | ??? ??????? |  |
+|  |  |  |  |
+building_documents | idd | Id | ???? ?????? |  |
+building_documents | ownership | Ownership_Document | ?????  ????? ?????/????? |  |
+building_documents | permit | Permit | ???? ??????? |  |
+building_documents | other | Other | ???? |  |
+|  |  |  |  |
+resident_in_building | owner | Owner | ?????? |  |
+resident_in_building | rentee | Rentee | ?????? |  |
+resident_in_building | hosted_resident | Hosted Resident | ???? ???? ????? |  |
+resident_in_building | unoccupied | Unoccupied | ????? |  |
+|  |  |  |  |
+current_residence | other_building | Other Building | ???? ??? ?????? |  |
+current_residence | rented_apartment | Rented Apartment | ??? ??????? |  |
+current_residence | relative | Relative | ??? ??????? |  |
+current_residence | tent | Tent | ???? |  |
+current_residence | caravan | Caravan | ?????? |  |
+current_residence | other | Other | ???? |  |
+|  |  |  |  |
+rentee_job | employee | Employee | ???? |  |
+rentee_job | businessman | Businessman | ???? |  |
+rentee_job | technical | Technical | ???? |  |
+rentee_job | unemployed | Unemployed | ?????? |  |
+rentee_job | other | Other | ???? |  |
+|  |  |  |  |
+external_finishing | west_bank_stone | West Bank Stone | ??? ???? |  |
+external_finishing | Italian_plastering | Italian Plastering | ????? ??????? |  |
+external_finishing | free_lime_plastering | Free Lime Plastering | ????? ????? |  |
+external_finishing | plastering | Plastering | ????? ????? |  |
+external_finishing | tyroleen | Tyroleen | ????? ?? ???? |  |
+external_finishing | painted_tyrloeen | Painted Tyroleen | ????? ???? ?? ???? |  |
+external_finishing | painted_plastering | Painted Plastering | ????? ????? ?? ???? |  |
+external_finishing | unfinished | Unfinished | ???? ????? |  |
+external_finishing | other | Other | ???? |  |
+|  |  |  |  |
+internal_finishing | unfinished | Unfinished | ??? ???? |  |
+internal_finishing | super_lux | Super Lux | ???? |  |
+internal_finishing | normal | Normal | ????? |  |
+internal_finishing | sub_normal | Sub_Normal | ??? ??????? |  |
+|  |  |  |  |
+|  |  |  |  |
+occupied_by | 1 | ?????? |  |  |
+occupied_by | 2 | ?????? |  |  |
+occupied_by | 3 | ???????? |  |  |
+|  |  |  |  |

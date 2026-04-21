@@ -29,6 +29,20 @@ Schedule::command('sync:housing')
     ->appendOutputTo(storage_path('logs/schedule.log'))
     ->runInBackground();
 
+Schedule::command('sync:public-building-survey')
+    ->everyTenMinutes()
+    ->withoutOverlapping()
+    ->emailOutputOnFailure('mhmudaloul@gmail.com')
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/schedule.log'))
+    ->runInBackground();
+Schedule::command('sync:road-facility-survey')
+    ->everyTenMinutes()
+    ->withoutOverlapping()
+    ->emailOutputOnFailure('mhmudaloul@gmail.com')
+    ->onOneServer()
+    ->appendOutputTo(storage_path('logs/schedule.log'))
+    ->runInBackground();
 Schedule::command('app:backup-database')
     ->dailyAt(config('database_backup.schedule_time', '00:00'))
     ->withoutOverlapping()

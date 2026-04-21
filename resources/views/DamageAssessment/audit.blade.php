@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('title', 'الإستبيان')
-@section('pageName', 'الإستبيان')
+@section('title', __('ui.audit.title'))
+@section('pageName', __('ui.audit.title'))
 
 
 @section('content')
@@ -20,12 +20,12 @@
 				<div class="card-header pt-6">
 					<div class="card-title">
 						<i class="ki-duotone ki-filter fs-1 me-3 text-primary"></i>
-						<h3 class="fw-bold m-0">الفلاتر</h3>
+						<h3 class="fw-bold m-0">{{ __('ui.audit.filters') }}</h3>
 					</div>
 
 					<div class="card-toolbar">
 						<button type="button" class="btn btn-sm btn-light-danger" id="resetFilters">
-							إعادة تعيين
+							{{ __('ui.audit.reset') }}
 						</button>
 					</div>
 				</div>
@@ -33,15 +33,15 @@
 				<div class="card-body">
 					<div class="row g-5">
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">بحث باسم المبنى</label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.search_building_name') }}</label>
 							<input type="text" id="filter_building_name" class="form-control form-control-solid"
-								placeholder="اسم المبنى" />
+								placeholder="{{ __('ui.audit.building_name_placeholder') }}" />
 						</div>
 
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">المهندس</label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.engineer') }}</label>
 							<select id="filter_engineer" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="اختر المهندس">
+								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_engineer') }}">
 								<option></option>
 								@foreach($engineers as $engineer)
 									<option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
@@ -50,9 +50,9 @@
 						</div>
 
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">المحامي</label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.lawyer') }}</label>
 							<select id="filter_lawyer" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="اختر المحامي">
+								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_lawyer') }}">
 								<option></option>
 								@foreach($lawyers as $lawyer)
 									<option value="{{ $lawyer->id }}">{{ $lawyer->name }}</option>
@@ -61,9 +61,9 @@
 						</div>
 
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">الحالة الهندسية</label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.engineering_status') }}</label>
 							<select id="filter_eng_status" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="اختر الحالة">
+								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option></option>
 								<option value="pending">Pending</option>
 								<option value="accepted_by_engineer">Accepted By Engineer</option>
@@ -74,9 +74,9 @@
 						</div>
 
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">الحالة القانونية</label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.legal_status') }}</label>
 							<select id="filter_legal_status" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="اختر الحالة">
+								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option></option>
 								<option value="pending">Pending</option>
 								<option value="assigned_to_lawyer">Assigned To Lawyer</option>
@@ -86,9 +86,9 @@
 						</div>
 
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">الاعتماد النهائي</label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.final_approval') }}</label>
 							<select id="filter_final_status" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="اختر الحالة">
+								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option></option>
 								<option value="pending">Pending</option>
 								<option value="approved">Approved</option>
@@ -97,14 +97,14 @@
 						</div>
 
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">منطقة/حي</label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.area') }}</label>
 							<input type="text" id="filter_area" class="form-control form-control-solid"
-								placeholder="المنطقة أو الحي" />
+								placeholder="{{ __('ui.audit.area_placeholder') }}" />
 						</div>
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">المهندس الميداني </label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.field_engineer') }}</label>
 							<select id="filter_field_engineer" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="اختر Field Engineer">
+								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_field_engineer') }}">
 								<option></option>
 								@foreach($assignedTo as $eng)
 									<option value="{{ $eng->assignedto }}">{{ $eng->assignedto }}</option>
@@ -113,9 +113,9 @@
 						</div>
 
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">حالة الضرر</label>
+							<label class="form-label fw-semibold">{{ __('ui.audit.damage_status') }}</label>
 							<select id="filter_damage_status" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="اختر الحالة">
+								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option></option>
 								<option value="fully_damaged">Fully Damaged</option>
 								<option value="partially_damaged">Partially Damaged</option>
@@ -123,19 +123,19 @@
 							</select>
 						</div>
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">من تاريخ الإنشاء</label>
-							<input type="date" id="filter_from_date" placeholder="من تاريخ الإنشاء"
+							<label class="form-label fw-semibold">{{ __('ui.audit.from_creation_date') }}</label>
+							<input type="date" id="filter_from_date" placeholder="{{ __('ui.audit.from_creation_date') }}"
 								class="form-control form-control-solid">
 						</div>
 
 						<div class="col-md-3">
-							<label class="form-label fw-semibold">إلى تاريخ الإنشاء</label>
-							<input type="date" id="filter_to_date" placeholder="إلى تاريخ الإنشاء"
+							<label class="form-label fw-semibold">{{ __('ui.audit.to_creation_date') }}</label>
+							<input type="date" id="filter_to_date" placeholder="{{ __('ui.audit.to_creation_date') }}"
 								class="form-control form-control-solid">
 						</div>
 						<div class="col-md-3 d-flex align-items-end">
 							<button type="button" class="btn btn-primary w-100" id="applyFilters">
-								تطبيق الفلاتر
+								{{ __('ui.audit.apply_filters') }}
 							</button>
 						</div>
 					</div>
@@ -152,24 +152,24 @@
 						<div class="d-flex align-items-center position-relative my-1">
 							<i class="ki-duotone ki-magnifier fs-3 position-absolute ms-4"></i>
 							<input type="text" id="tableSearch" class="form-control form-control-solid w-250px ps-12"
-								placeholder="بحث المباني" />
+								placeholder="{{ __('ui.audit.search_buildings') }}" />
 						</div>
 					</div>
 					<div class="card-toolbar gap-3">
 						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
-							تحديث <i class="ki-duotone ki-update-file"></i>
+							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
 						</button>
 
 						<button id="btn_final_approve" class="btn btn-warning btn-sm">
-							اعتماد نهائي <i class="ki-duotone ki-check-circle"></i>
+							{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
 						</button>
 
 						<button id="btn_assign_to_lawyer" class="btn btn-primary btn-sm">
-							تعيين للمحامي <i class="ki-duotone ki-plus"></i>
+							{{ __('ui.audit.assign_to_lawyer') }} <i class="ki-duotone ki-plus"></i>
 						</button>
 
 						<button id="btn_assign_to_engineer" class="btn btn-info btn-sm">
-							تعيين للمهندس <i class="ki-duotone ki-plus"></i>
+							{{ __('ui.audit.assign_to_engineer') }} <i class="ki-duotone ki-plus"></i>
 						</button>
 					</div>
 				</div>
@@ -207,7 +207,7 @@
 			<div class="modal-content">
 				<form id="kt_modal_assign_form">
 					<div class="modal-header">
-						<h2 class="fw-bold" id="modal_title">تعيين المباني</h2>
+						<h2 class="fw-bold" id="modal_title">{{ __('ui.audit.assign_buildings') }}</h2>
 						<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
 							<i class="ki-duotone ki-cross fs-1"></i>
 						</div>
@@ -221,10 +221,10 @@
 						<div id="selected_buildings_container"></div>
 
 						<div class="fv-row mb-7">
-							<label id="user_label" class="required fs-6 fw-semibold mb-2">إختر المهندس</label>
+							<label id="user_label" class="required fs-6 fw-semibold mb-2">{{ __('ui.audit.select_engineer') }}</label>
 
 							<select name="user_id" id="assign_user_id" class="form-select form-select-solid"
-								data-control="select2" data-placeholder="إختر الإسم..."
+								data-control="select2" data-placeholder="{{ __('ui.audit.select_user') }}"
 								data-dropdown-parent="#kt_modal_assign">
 								<option></option>
 							</select>
@@ -237,9 +237,9 @@
 					</div>
 
 					<div class="modal-footer flex-center">
-						<button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">إلغاء</button>
+						<button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('ui.buttons.cancel') }}</button>
 						<button type="submit" class="btn btn-primary" id="kt_modal_assign_submit">
-							<span class="indicator-label">موافق</span>
+							<span class="indicator-label">{{ __('ui.audit.agree') }}</span>
 						</button>
 					</div>
 				</form>
@@ -250,7 +250,7 @@
 		<div class="modal-dialog modal-dialog-centered mw-1000px mw-lg-1400px">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h2 class="fw-bold" id="notesHistoryModalTitle">سجل الحالات</h2>
+					<h2 class="fw-bold" id="notesHistoryModalTitle">{{ __('ui.audit.status_history') }}</h2>
 					<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
 						<i class="ki-duotone ki-cross fs-1"></i>
 					</div>
@@ -261,18 +261,18 @@
 						<table class="table table-row-bordered table-striped gy-5 gs-7">
 							<thead>
 								<tr class="fw-bold fs-6 text-gray-800">
-									<th>الحالة</th>
-									<th>المستخدم</th>
-									<th>الدور</th>
-									<th>الملاحظات</th>
-									<th>التاريخ</th>
-									<th>إجراءات</th>
+									<th>{{ __('ui.audit.status') }}</th>
+									<th>{{ __('ui.audit.user') }}</th>
+									<th>{{ __('ui.audit.role') }}</th>
+									<th>{{ __('ui.audit.notes') }}</th>
+									<th>{{ __('ui.audit.date') }}</th>
+									<th>{{ __('ui.audit.actions') }}</th>
 
 								</tr>
 							</thead>
 							<tbody id="buildingHistoryTableBody">
 								<tr>
-									<td colspan="6" class="text-center text-muted">لا توجد بيانات</td>
+									<td colspan="6" class="text-center text-muted">{{ __('ui.audit.no_data') }}</td>
 								</tr>
 							</tbody>
 						</table>
@@ -280,7 +280,7 @@
 				</div>
 
 				<div class="modal-footer">
-					<button type="button" class="btn btn-light" data-bs-dismiss="modal">إغلاق</button>
+					<button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('ui.audit.close') }}</button>
 				</div>
 			</div>
 		</div>
@@ -420,10 +420,10 @@
 
 				if (selectedIds.length === 0) {
 					Swal.fire({
-						text: "يرجى اختيار مبنى واحد على الأقل.",
+						text: @json(__('ui.audit.select_at_least_one_building')),
 						icon: "warning",
 						buttonsStyling: false,
-						confirmButtonText: "موافق",
+						confirmButtonText: @json(__('ui.buttons.ok')),
 						customClass: {
 							confirmButton: "btn btn-primary"
 						}
@@ -431,7 +431,7 @@
 					return;
 				}
 
-				$('#modal_title').text('تعيين للمهندس');
+				$('#modal_title').text(@json(__('ui.audit.assign_engineer')));
 				$('#assign_type').val('QC/QA Engineer');
 				$('#assign_status_id').val(2);
 
@@ -456,10 +456,10 @@
 
 				if (selectedIds.length === 0) {
 					Swal.fire({
-						text: "يرجى اختيار مبنى واحد على الأقل.",
+						text: @json(__('ui.audit.select_at_least_one_building')),
 						icon: "warning",
 						buttonsStyling: false,
-						confirmButtonText: "موافق",
+						confirmButtonText: @json(__('ui.buttons.ok')),
 						customClass: {
 							confirmButton: "btn btn-primary"
 						}
@@ -467,7 +467,7 @@
 					return;
 				}
 
-				$('#modal_title').text('تعيين للمحامي');
+				$('#modal_title').text(@json(__('ui.audit.assign_lawyer')));
 				$('#assign_type').val('Legal Auditor');
 				$('#assign_status_id').val(6);
 
@@ -504,10 +504,10 @@
 
 						// تنبيه بالنجاح
 						Swal.fire({
-							text: "تمت عملية التعيين بنجاح!",
+							text: @json(__('ui.audit.assigned_success')),
 							icon: "success",
 							buttonsStyling: false,
-							confirmButtonText: "موافق",
+							confirmButtonText: @json(__('ui.buttons.ok')),
 							customClass: {
 								confirmButton: "btn btn-primary"
 							}
@@ -519,10 +519,10 @@
 					error: function (xhr) {
 						// تنبيه بالخطأ
 						Swal.fire({
-							text: "حدث خطأ ما، يرجى المحاولة لاحقاً.",
+							text: @json(__('ui.audit.error_try_later')),
 							icon: "error",
 							buttonsStyling: false,
-							confirmButtonText: "حسناً",
+							confirmButtonText: @json(__('ui.buttons.ok')),
 							customClass: {
 								confirmButton: "btn btn-primary"
 							}
@@ -544,12 +544,12 @@
 				e.stopPropagation();
 
 				let globalid = $(this).data('globalid');
-				let buildingName = $(this).data('building-name') || 'المبنى';
+				let buildingName = $(this).data('building-name') || @json(__('ui.audit.default_building'));
 
-				$('#notesHistoryModalTitle').text('سجل الحالات - ' + buildingName);
+				$('#notesHistoryModalTitle').text(@json(__('ui.audit.status_history')) + ' - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
 																	<tr>
-																		<td colspan="6" class="text-center">جاري التحميل...</td>
+																		<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
 																	</tr>
 																`);
 
@@ -576,7 +576,7 @@
 																								<button type="button"
 																									class="btn btn-sm btn-light-danger btn-delete-history"
 																									data-id="${item.id}">
-																									حذف
+																									${@json(__('ui.audit.delete_record'))}
 																								</button>
 																							` : '-'}
 																						</td>
@@ -586,7 +586,7 @@
 						} else {
 							rows = `
 																				<tr>
-																					<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
+																					<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
 																				</tr>
 																			`;
 						}
@@ -596,7 +596,7 @@
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
 																			<tr>
-																				<td colspan="6" class="text-center text-danger">تعذر تحميل السجل</td>
+																				<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
 																			</tr>
 																		`);
 					}
@@ -608,7 +608,7 @@
 				let id = $(this).data('id');
 				let button = $(this);
 
-				if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) {
+				if (!confirm(@json(__('ui.audit.confirm_delete_record')))) {
 					return;
 				}
 
@@ -621,22 +621,22 @@
 					},
 					success: function (response) {
 						if (response.status) {
-							toastr.success(response.message || 'تم حذف السجل بنجاح');
+							toastr.success(response.message || @json(__('ui.audit.record_deleted')));
 							button.closest('tr').remove();
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
 																			<tr>
-																				<td colspan="6" class="text-center text-muted">لا يوجد سجل حالات</td>
+																				<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
 																			</tr>
 																		`);
 							}
 						} else {
-							toastr.error(response.message || 'فشل حذف السجل');
+							toastr.error(response.message || @json(__('ui.audit.delete_failed')));
 						}
 					},
 					error: function (xhr) {
-						let message = 'تعذر حذف السجل';
+						let message = @json(__('ui.audit.delete_failed'));
 
 						if (xhr.responseJSON && xhr.responseJSON.message) {
 							message = xhr.responseJSON.message;
@@ -655,10 +655,10 @@
 
 				if (selectedIds.length === 0) {
 					Swal.fire({
-						text: "يرجى اختيار مبنى واحد على الأقل.",
+						text: @json(__('ui.audit.select_at_least_one_building')),
 						icon: "warning",
 						buttonsStyling: false,
-						confirmButtonText: "موافق",
+						confirmButtonText: @json(__('ui.buttons.ok')),
 						customClass: {
 							confirmButton: "btn btn-primary"
 						}
@@ -667,12 +667,12 @@
 				}
 
 				Swal.fire({
-					title: 'اعتماد نهائي',
-					text: 'هل أنت متأكد من اعتماد المباني المحددة نهائياً؟',
+					title: @json(__('ui.audit.final_approval_title')),
+					text: @json(__('ui.audit.final_approval_confirm')),
 					icon: 'question',
 					showCancelButton: true,
-					confirmButtonText: 'نعم، اعتماد',
-					cancelButtonText: 'إلغاء',
+					confirmButtonText: @json(__('ui.audit.yes_approve')),
+					cancelButtonText: @json(__('ui.buttons.cancel')),
 					buttonsStyling: false,
 					customClass: {
 						confirmButton: "btn btn-warning",
@@ -694,10 +694,10 @@
 						},
 						success: function (response) {
 							Swal.fire({
-								text: response.message || "تم الاعتماد النهائي بنجاح.",
+								text: response.message || @json(__('ui.audit.approved_success')),
 								icon: "success",
 								buttonsStyling: false,
-								confirmButtonText: "موافق",
+								confirmButtonText: @json(__('ui.buttons.ok')),
 								customClass: {
 									confirmButton: "btn btn-primary"
 								}
@@ -707,7 +707,7 @@
 							});
 						},
 						error: function (xhr) {
-							let message = "حدث خطأ أثناء الاعتماد النهائي.";
+							let message = @json(__('ui.audit.final_approval_failed'));
 
 							if (xhr.responseJSON && xhr.responseJSON.message) {
 								message = xhr.responseJSON.message;
@@ -717,7 +717,7 @@
 								text: message,
 								icon: "error",
 								buttonsStyling: false,
-								confirmButtonText: "حسناً",
+								confirmButtonText: @json(__('ui.buttons.ok')),
 								customClass: {
 									confirmButton: "btn btn-primary"
 								}
@@ -766,14 +766,14 @@
 
 		function loadAssignUsers(type) {
 			let users = [];
-			let label = 'إختر المستخدم';
+			let label = @json(__('ui.audit.select_user'));
 
 			if (type === 'QC/QA Engineer') {
 				users = assignEngineers;
-				label = 'إختر المهندس';
+				label = @json(__('ui.audit.select_engineer'));
 			} else if (type === 'Legal Auditor') {
 				users = assignLawyers;
-				label = 'إختر المحامي';
+				label = @json(__('ui.audit.select_lawyer'));
 			}
 
 			$('#user_label').text(label);

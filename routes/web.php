@@ -8,8 +8,12 @@ use App\Http\Controllers\DamageAssessment\damageAssessmentController;
 use App\Http\Controllers\DamageAssessment\engineerController;
 use App\Http\Controllers\DamageAssessment\ExportDataController;
 use App\Http\Controllers\DamageAssessment\housingController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicBuilding\PublicBuildingController;
 use App\Http\Controllers\Report\reportController;
+use App\Http\Controllers\Report\SurveyReportController;
+use App\Http\Controllers\RoadFacility\RoadFacilityController;
 use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\roleController;
 use App\Http\Controllers\UserManagement\userController;
@@ -24,6 +28,8 @@ Route::get('/', function () {
 
     return redirect()->route('login');
 });
+
+Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
 Route::get('/forgot-password', function () {
@@ -78,7 +84,7 @@ Route::middleware('auth')->group(function () {
         foreach ($commands as $index => $command) {
             $result = Process::path($repo)->run($command);
 
-            // diff --cached --quiet يرجع 1 إذا فيه تغييرات
+            // diff --cached --quiet Ã™Å Ã˜Â±Ã˜Â¬Ã˜Â¹ 1 Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™ÂÃ™Å Ã™â€¡ Ã˜ÂªÃ˜ÂºÃ™Å Ã™Å Ã˜Â±Ã˜Â§Ã˜Âª
             if ($index === 1) {
                 if ($result->exitCode() === 0) {
                     return response()->json([
@@ -181,6 +187,15 @@ Route::middleware('auth')->group(function () {
     Route::resource('housing', controller: housingController::class);
     Route::get('/showHousing/{globalid}', action: [housingController::class, 'index']);
 
+    Route::get('/public-buildings', [PublicBuildingController::class, 'index'])->name('public-buildings.index');
+    Route::get('/public-buildings/data', [PublicBuildingController::class, 'data'])->name('public-buildings.data');
+    Route::get('/public-buildings/export/{format}', [PublicBuildingController::class, 'export'])->name('public-buildings.export');
+    Route::get('/public-buildings/{publicBuilding}', [PublicBuildingController::class, 'show'])->name('public-buildings.show');
+    Route::get('/road-facilities', [RoadFacilityController::class, 'index'])->name('road-facilities.index');
+    Route::get('/road-facilities/data', [RoadFacilityController::class, 'data'])->name('road-facilities.data');
+    Route::get('/road-facilities/export/{format}', [RoadFacilityController::class, 'export'])->name('road-facilities.export');
+    Route::get('/road-facilities/{roadFacility}', [RoadFacilityController::class, 'show'])->name('road-facilities.show');
+
     // engineers
     Route::resource('engineer', controller: engineerController::class);
     Route::get('engineerAssessments/{assignedto}', [engineerController::class, 'engineerAssessments']);
@@ -194,18 +209,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/showHousings', action: [damageAssessmentController::class, 'showHousings']);
     Route::get('/housing-units-map', [damageAssessmentController::class, 'housingUnitsMap'])
         ->name('housing-units-map');
+    Route::get('/public-buildings-map', [damageAssessmentController::class, 'publicBuildingsMap'])
+        ->name('public-buildings-map');
+    Route::get('/road-facilities-map', [damageAssessmentController::class, 'roadFacilitiesMap'])
+        ->name('road-facilities-map');
     // Reports
 
     Route::get('reports/productivity', action: [reportController::class, 'productivity']);
     Route::get('/export_productivity', [reportController::class, 'export_productivity'])->name('export_productivity');
 
     Route::get('/search-buildings', [damageAssessmentController::class, 'search'])->name('buildings.search');
+    Route::get('/global-search', [damageAssessmentController::class, 'globalSearch'])->name('global-search');
 
     Route::get('reports/commulative/export', [ReportController::class, 'exportCommulative'])->name('reports.commulative.export');
     Route::get('reports/commulative', action: [reportController::class, 'commulative'])->name('reports.commulative');
     Route::get('reports/daily-achievement', [reportController::class, 'dailyAchievement'])->name('reports.daily-achievement');
     Route::get('reports/auditors-daily', [reportController::class, 'auditorsDailyAchievement'])->name('reports.auditors-daily');
     Route::get('reports/lawyers-daily', [reportController::class, 'lawyersDailyAchievement'])->name('reports.lawyers-daily');
+    Route::get('reports/public-buildings', [SurveyReportController::class, 'publicBuildings'])->name('reports.public-buildings');
+    Route::get('reports/road-facilities', [SurveyReportController::class, 'roadFacilities'])->name('reports.road-facilities');
 
     // Ensure this matches your URL: phc/audit
     Route::get('/audit', [auditController::class, 'index'])->name('audit.index');
@@ -265,10 +287,6 @@ Route::middleware('auth')->group(function () {
 });
 use Spatie\Browsershot\Browsershot;
 
-
-
-
-
 Route::get('/debug-pdf', function () {
 
     $pdfPath = storage_path('app/public/debug.pdf');
@@ -277,8 +295,8 @@ Route::get('/debug-pdf', function () {
         <html lang="ar" dir="rtl">
         <head><meta charset="UTF-8"></head>
         <body>
-            <h1>نجح التصدير ✅</h1>
-            <p>Browsershot يعمل باستخدام Edge</p>
+            <h1>Ã™â€ Ã˜Â¬Ã˜Â­ Ã˜Â§Ã™â€žÃ˜ÂªÃ˜ÂµÃ˜Â¯Ã™Å Ã˜Â± Ã¢Å“â€¦</h1>
+            <p>Browsershot Ã™Å Ã˜Â¹Ã™â€¦Ã™â€ž Ã˜Â¨Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã˜Â§Ã™â€¦ Edge</p>
         </body>
         </html>
     ')

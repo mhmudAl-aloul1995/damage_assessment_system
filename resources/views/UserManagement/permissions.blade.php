@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'الصلاحيات')
-@section('pageName', 'الصلاحيات')
+@section('title', __('ui.permissions.title'))
+@section('pageName', __('ui.permissions.title'))
 
 @section('content')
 <div class="card card-flush">
@@ -12,12 +12,8 @@
                     <span class="path1"></span>
                     <span class="path2"></span>
                 </i>
-                <input
-                    type="text"
-                    id="permission_search"
-                    class="form-control form-control-solid w-250px ps-13"
-                    placeholder="Search Permissions"
-                />
+                <input type="text" id="permission_search" class="form-control form-control-solid w-250px ps-13"
+                    placeholder="{{ __('ui.permissions.search_placeholder') }}" />
             </div>
         </div>
 
@@ -28,7 +24,7 @@
                     <span class="path2"></span>
                     <span class="path3"></span>
                 </i>
-                Add Permission
+                {{ __('ui.permissions.add_button') }}
             </button>
         </div>
     </div>
@@ -37,26 +33,24 @@
         <table class="table align-middle table-row-dashed fs-6 gy-5 mb-0" id="kt_permissions_table">
             <thead>
                 <tr class="text-start text-gray-400 fw-bold fs-7 text-uppercase gs-0">
-                    <th>Name</th>
-                    <th>Assigned to</th>
-                    <th>Created Date</th>
-                    <th class="text-end">Actions</th>
+                    <th>{{ __('ui.permissions.name') }}</th>
+                    <th>{{ __('ui.permissions.assigned_to') }}</th>
+                    <th>{{ __('ui.permissions.created_at') }}</th>
+                    <th class="text-end">{{ __('ui.permissions.actions') }}</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
 </div>
+
 <div class="modal fade" id="kt_modal_add_permission" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered mw-650px">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="fw-bold">Add a Permission</h2>
+                <h2 class="fw-bold">{{ __('ui.permissions.add_title') }}</h2>
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
-                    <i class="ki-duotone ki-cross fs-1">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
+                    <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
                 </div>
             </div>
 
@@ -66,18 +60,17 @@
 
                     <div class="fv-row mb-7">
                         <label class="fs-6 fw-semibold form-label mb-2">
-                            <span class="required">Permission Name</span>
+                            <span class="required">{{ __('ui.permissions.name_label') }}</span>
                         </label>
 
-                        <input class="form-control form-control-solid" placeholder="Enter a permission name" name="name" />
+                        <input class="form-control form-control-solid" placeholder="{{ __('ui.permissions.name_placeholder') }}" name="name" />
                     </div>
 
                     <div class="text-center pt-15">
-                        <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">Discard</button>
+                        <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('ui.buttons.discard') }}</button>
                         <button type="submit" class="btn btn-primary" id="add_permission_submit_btn">
-                            <span class="indicator-label">Submit</span>
-                            <span class="indicator-progress">
-                                Please wait...
+                            <span class="indicator-label">{{ __('ui.buttons.submit') }}</span>
+                            <span class="indicator-progress">{{ __('ui.auth.please_wait') }}
                                 <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                             </span>
                         </button>
@@ -92,12 +85,9 @@
     <div class="modal-dialog modal-dialog-centered mw-650px">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="fw-bold">Update Permission</h2>
+                <h2 class="fw-bold">{{ __('ui.permissions.update_title') }}</h2>
                 <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
-                    <i class="ki-duotone ki-cross fs-1">
-                        <span class="path1"></span>
-                        <span class="path2"></span>
-                    </i>
+                    <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
                 </div>
             </div>
 
@@ -109,8 +99,8 @@
                         <span class="path3"></span>
                     </i>
                     <div class="fw-semibold fs-6 text-gray-700">
-                        <strong class="me-1">Warning!</strong>
-                        By editing the permission name, you might break the system permissions functionality.
+                        <strong class="me-1">{{ __('ui.permissions.warning_title') }}</strong>
+                        {{ __('ui.permissions.warning_text') }}
                     </div>
                 </div>
 
@@ -120,18 +110,17 @@
 
                     <div class="fv-row mb-7">
                         <label class="fs-6 fw-semibold form-label mb-2">
-                            <span class="required">Permission Name</span>
+                            <span class="required">{{ __('ui.permissions.name_label') }}</span>
                         </label>
 
-                        <input class="form-control form-control-solid" placeholder="Enter a permission name" name="name" id="edit_permission_name" />
+                        <input class="form-control form-control-solid" placeholder="{{ __('ui.permissions.name_placeholder') }}" name="name" id="edit_permission_name" />
                     </div>
 
                     <div class="text-center pt-15">
-                        <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">Discard</button>
+                        <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('ui.buttons.discard') }}</button>
                         <button type="submit" class="btn btn-primary" id="update_permission_submit_btn">
-                            <span class="indicator-label">Submit</span>
-                            <span class="indicator-progress">
-                                Please wait...
+                            <span class="indicator-label">{{ __('ui.buttons.submit') }}</span>
+                            <span class="indicator-progress">{{ __('ui.auth.please_wait') }}
                                 <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                             </span>
                         </button>
@@ -146,18 +135,25 @@
 @section('script')
 <script>
     let permissionsTable;
+    const permissionTranslations = {
+        ok: @json(__('ui.buttons.ok')),
+        error: @json(__('ui.messages.unexpected_error')),
+        deleteConfirm: @json(__('ui.permissions.delete_confirm', ['name' => '__NAME__'])),
+        yesDelete: @json(__('ui.buttons.yes_delete')),
+        cancel: @json(__('ui.buttons.cancel')),
+        dataTableLanguageUrl: @json(app()->getLocale() === 'ar' ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json'),
+    };
 
     function showErrors(xhr) {
         if (xhr.responseJSON && xhr.responseJSON.errors) {
-            let errors = Object.values(xhr.responseJSON.errors).flat().join('<br>');
-            Swal.fire({ html: errors, icon: 'error', confirmButtonText: 'OK' });
+            Swal.fire({ html: Object.values(xhr.responseJSON.errors).flat().join('<br>'), icon: 'error', confirmButtonText: permissionTranslations.ok });
             return;
         }
 
         Swal.fire({
-            text: xhr.responseJSON?.message ?? 'Something went wrong',
+            text: xhr.responseJSON?.message ?? permissionTranslations.error,
             icon: 'error',
-            confirmButtonText: 'OK'
+            confirmButtonText: permissionTranslations.ok
         });
     }
 
@@ -171,7 +167,7 @@
             lengthChange: false,
             order: [[0, 'asc']],
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json'
+                url: permissionTranslations.dataTableLanguageUrl
             },
             columns: [
                 { data: 'name', name: 'name' },
@@ -192,9 +188,7 @@
 
         $('#kt_modal_add_permission_form').on('submit', function (e) {
             e.preventDefault();
-
             let btn = $('#add_permission_submit_btn');
-
             btn.attr('data-kt-indicator', 'on').prop('disabled', true);
 
             $.ajax({
@@ -206,11 +200,7 @@
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_add_permission')).hide();
                     permissionsTable.ajax.reload(null, false);
 
-                    Swal.fire({
-                        text: response.message,
-                        icon: 'success',
-                        confirmButtonText: 'OK'
-                    });
+                    Swal.fire({ text: response.message, icon: 'success', confirmButtonText: permissionTranslations.ok });
                 },
                 error: function (xhr) {
                     showErrors(xhr);
@@ -230,7 +220,6 @@
                 success: function (response) {
                     $('#edit_permission_id').val(response.permission.id);
                     $('#edit_permission_name').val(response.permission.name);
-
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_update_permission')).show();
                 },
                 error: function (xhr) {
@@ -241,10 +230,8 @@
 
         $('#kt_modal_update_permission_form').on('submit', function (e) {
             e.preventDefault();
-
             let id = $('#edit_permission_id').val();
             let btn = $('#update_permission_submit_btn');
-
             btn.attr('data-kt-indicator', 'on').prop('disabled', true);
 
             $.ajax({
@@ -254,12 +241,7 @@
                 success: function (response) {
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_update_permission')).hide();
                     permissionsTable.ajax.reload(null, false);
-
-                    Swal.fire({
-                        text: response.message,
-                        icon: 'success',
-                        confirmButtonText: 'OK'
-                    });
+                    Swal.fire({ text: response.message, icon: 'success', confirmButtonText: permissionTranslations.ok });
                 },
                 error: function (xhr) {
                     showErrors(xhr);
@@ -275,13 +257,15 @@
             let name = $(this).data('name');
 
             Swal.fire({
-                text: 'Are you sure you want to delete ' + name + '?',
+                text: permissionTranslations.deleteConfirm.replace('__NAME__', name),
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'Yes, delete!',
-                cancelButtonText: 'Cancel'
+                confirmButtonText: permissionTranslations.yesDelete,
+                cancelButtonText: permissionTranslations.cancel
             }).then((result) => {
-                if (!result.isConfirmed) return;
+                if (!result.isConfirmed) {
+                    return;
+                }
 
                 $.ajax({
                     url: "{{ url('user-management/permissions') }}/" + id,
@@ -292,12 +276,7 @@
                     },
                     success: function (response) {
                         permissionsTable.ajax.reload(null, false);
-
-                        Swal.fire({
-                            text: response.message,
-                            icon: 'success',
-                            confirmButtonText: 'OK'
-                        });
+                        Swal.fire({ text: response.message, icon: 'success', confirmButtonText: permissionTranslations.ok });
                     },
                     error: function (xhr) {
                         showErrors(xhr);

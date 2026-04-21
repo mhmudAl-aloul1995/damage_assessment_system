@@ -1,17 +1,66 @@
+<?php
+	$isRtl = app()->getLocale() === 'ar';
+	$direction = $isRtl ? 'rtl' : 'ltr';
+	$suffix = $isRtl ? '.rtl' : '';
+	$quickSearchLinks = [
+		[
+			'title' => __('ui.search.dashboard'),
+			'subtitle' => __('ui.damage_dashboard.title'),
+			'url' => url('damageAssessment'),
+			'icon' => 'ki-element-11',
+		],
+		[
+			'title' => __('ui.search.buildings'),
+			'subtitle' => __('ui.damage_dashboard.buildings'),
+			'url' => url('building'),
+			'icon' => 'ki-home',
+		],
+		[
+			'title' => __('ui.search.housing_units'),
+			'subtitle' => __('ui.damage_dashboard.housing_units'),
+			'url' => url('housing'),
+			'icon' => 'ki-home-2',
+		],
+		[
+			'title' => __('ui.search.public_buildings'),
+			'subtitle' => __('ui.damage_dashboard.public_buildings'),
+			'url' => route('public-buildings.index'),
+			'icon' => 'ki-office-bag',
+		],
+		[
+			'title' => __('ui.search.road_facilities'),
+			'subtitle' => __('ui.damage_dashboard.road_facilities'),
+			'url' => route('road-facilities.index'),
+			'icon' => 'ki-map',
+		],
+		[
+			'title' => __('ui.search.audit_dashboard'),
+			'subtitle' => __('ui.audit_dashboard.title'),
+			'url' => route('audit.dashboard'),
+			'icon' => 'ki-shield-tick',
+		],
+		[
+			'title' => __('ui.search.exports'),
+			'subtitle' => __('ui.exports.title'),
+			'url' => route('export.data.index'),
+			'icon' => 'ki-file-down',
+		],
+	];
+?>
 <!DOCTYPE html>
 
-<html direction="rtl" dir="rtl" style="direction: rtl">
+<html lang="<?php echo e(app()->getLocale()); ?>" direction="<?php echo e($direction); ?>" dir="<?php echo e($direction); ?>" style="direction: <?php echo e($direction); ?>">
 <!--begin::Head-->
 
 <head>
 	<base href="" />
-	<title>المجلس الفلسطيني للإسكان</title>
+	<title><?php echo e(__('ui.app.name')); ?></title>
 	<meta charset="utf-8" />
 	<meta name="description" content="" />
 	<meta name="keywords" content="" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
-	<meta property="og:locale" content="en_US" />
+	<meta property="og:locale" content="<?php echo e($isRtl ? 'ar_PS' : 'en_US'); ?>" />
 	<meta property="og:type" content="article" />
 	<meta property="og:title" content="" />
 	<meta property="og:url" content="https://keenthemes.com/metronic" />
@@ -19,16 +68,18 @@
 	<link rel="canonical" href="https://preview.keenthemes.com/metronic8" />
 	<link rel="shortcut icon" href="<?php echo e(asset('assets/media/logos/logo_641.png')); ?>" />
 	<!--begin::Fonts(mandatory for all pages)-->
+	<link rel="stylesheet" href="<?php echo e(asset('assets/css/fontface.css')); ?>">
 	<!--end::Fonts-->
 	<!--begin::Vendor Stylesheets(used for this page only)-->
-	<link href="<?php echo e(url('')); ?>/assets/plugins/custom/fullcalendar/fullcalendar.bundle.rtl.css" rel="stylesheet"
+	<link href="<?php echo e(url('')); ?>/assets/plugins/custom/fullcalendar/fullcalendar.bundle<?php echo e($suffix); ?>.css" rel="stylesheet"
 		type="text/css" />
-	<link href="<?php echo e(url('')); ?>/assets/plugins/custom/datatables/datatables.bundle.rtl.css" rel="stylesheet"
+	<link href="<?php echo e(url('')); ?>/assets/plugins/custom/datatables/datatables.bundle<?php echo e($suffix); ?>.css" rel="stylesheet"
 		type="text/css" />
 	<!--end::Vendor Stylesheets-->
 	<!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
-	<link href="<?php echo e(url('')); ?>/assets/plugins/global/plugins.bundle.rtl.css" rel="stylesheet" type="text/css" />
-	<link href="<?php echo e(url('')); ?>/assets/css/style.bundle.rtl.css" rel="stylesheet" type="text/css" />
+	<link href="<?php echo e(url('')); ?>/assets/plugins/global/plugins.bundle<?php echo e($suffix); ?>.css" rel="stylesheet" type="text/css" />
+	<link href="<?php echo e(url('')); ?>/assets/css/style.bundle<?php echo e($suffix); ?>.css" rel="stylesheet" type="text/css" />
+	<link href="<?php echo e(asset('assets/css/font-unified.css')); ?>" rel="stylesheet" type="text/css" />
 	<!--end::Global Stylesheets Bundle-->
 	<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
 </head>
@@ -46,32 +97,20 @@
 		font-style: normal;
 
 	}
-
-
-
-	body {
-		font-family: 'Droid Arabic Kufi', sans-serif;
-	}
-
-	.apexcharts-legend-text {
-		font-family: 'Droid Arabic Kufi', sans-serif !important;
-
-
-	}
-
 	[type="tel"],
 	[type="url"],
 	[type="email"],
 	[type="number"],
 	table {
-		direction: rtl !important;
+		direction: <?php echo e($direction); ?> !important;
 	}
 
 	th,
 	td,
 	.text-end {
-		text-align: center !important;
+		text-align: <?php echo e($isRtl ? 'center' : 'inherit'); ?> !important;
 	}
+
 </style>
 
 <body id="kt_app_body" data-kt-app-layout="dark-sidebar" data-kt-app-header-fixed="true"
@@ -93,7 +132,7 @@
 				<div class="app-container container-fluid d-flex align-items-stretch justify-content-between"
 					id="kt_app_header_container">
 					<!--begin::Sidebar mobile toggle-->
-					<div class="d-flex align-items-center d-lg-none ms-n3 me-1 me-md-2" title="Show sidebar menu">
+					<div class="d-flex align-items-center d-lg-none ms-n3 me-1 me-md-2" title="<?php echo e(__('ui.search.show_sidebar')); ?>">
 						<div class="btn btn-icon btn-active-color-primary w-35px h-35px"
 							id="kt_app_sidebar_mobile_toggle">
 							<i class="ki-duotone ki-abstract-14 fs-2 fs-md-1">
@@ -164,8 +203,9 @@
 											<!--end::Icon-->
 											<!--begin::Input-->
 											<input type="text"
+												id="global-search-input"
 												class="search-input form-control form-control-flush ps-10" name="search"
-												value="" placeholder="Search..." data-kt-search-element="input" />
+												value="" placeholder="<?php echo e(__('ui.search.placeholder')); ?>" data-kt-search-element="input" />
 											<!--end::Input-->
 											<!--begin::Spinner-->
 											<span
@@ -191,7 +231,7 @@
 												<!--begin::Preferences toggle-->
 												<div data-kt-search-element="preferences-show"
 													class="btn btn-icon w-20px btn-sm btn-active-color-primary me-1"
-													data-bs-toggle="tooltip" title="Show search preferences">
+													data-bs-toggle="tooltip" title="<?php echo e(__('ui.search.preferences')); ?>">
 													<i class="ki-duotone ki-setting-2 fs-2">
 														<span class="path1"></span>
 														<span class="path2"></span>
@@ -201,7 +241,7 @@
 												<!--begin::Advanced search toggle-->
 												<div data-kt-search-element="advanced-options-form-show"
 													class="btn btn-icon w-20px btn-sm btn-active-color-primary"
-													data-bs-toggle="tooltip" title="Show more search options">
+													data-bs-toggle="tooltip" title="<?php echo e(__('ui.search.advanced')); ?>">
 													<i class="ki-duotone ki-down fs-2"></i>
 												</div>
 												<!--end::Advanced search toggle-->
@@ -218,7 +258,7 @@
 											<div class="scroll-y mh-200px mh-lg-350px">
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pb-5"
-													data-kt-search-element="category-title">Users</h3>
+													data-kt-search-element="category-title"><?php echo e(__('ui.search.users')); ?></h3>
 												<!--end::Category title-->
 												<!--begin::Item-->
 												<a href="#"
@@ -305,7 +345,7 @@
 												<!--end::Item-->
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pt-5 pb-5"
-													data-kt-search-element="category-title">Customers</h3>
+													data-kt-search-element="category-title"><?php echo e(__('ui.search.customers')); ?></h3>
 												<!--end::Category title-->
 												<!--begin::Item-->
 												<a href="#"
@@ -409,7 +449,7 @@
 												<!--end::Item-->
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pt-5 pb-5"
-													data-kt-search-element="category-title">Projects</h3>
+													data-kt-search-element="category-title"><?php echo e(__('ui.search.projects')); ?></h3>
 												<!--end::Category title-->
 												<!--begin::Item-->
 												<a href="#"
@@ -727,7 +767,7 @@
 												<label>
 													<input type="radio" class="btn-check" name="type" value="users" />
 													<span
-														class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4">Users</span>
+														class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4"><?php echo e(__('ui.search.users')); ?></span>
 												</label>
 												<!--end::Option-->
 												<!--begin::Option-->
@@ -742,7 +782,7 @@
 													<input type="radio" class="btn-check" name="type"
 														value="projects" />
 													<span
-														class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4">Projects</span>
+														class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4"><?php echo e(__('ui.search.projects')); ?></span>
 												</label>
 												<!--end::Option-->
 											</div>
@@ -829,7 +869,7 @@
 										<div class="d-flex justify-content-end">
 											<button type="reset"
 												class="btn btn-sm btn-light fw-bold btn-active-light-primary me-2"
-												data-kt-search-element="advanced-options-form-cancel">Cancel</button>
+												data-kt-search-element="advanced-options-form-cancel"><?php echo e(__('ui.buttons.cancel')); ?></button>
 											<a href="../../demo1/dist/pages/search/horizontal.html"
 												class="btn btn-sm fw-bold btn-primary"
 												data-kt-search-element="advanced-options-form-search">Search</a>
@@ -847,7 +887,7 @@
 											<label
 												class="form-check form-switch form-switch-sm form-check-custom form-check-solid flex-stack">
 												<span
-													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2">Projects</span>
+													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2"><?php echo e(__('ui.search.projects')); ?></span>
 												<input class="form-check-input" type="checkbox" value="1"
 													checked="checked" />
 											</label>
@@ -891,7 +931,7 @@
 											<label
 												class="form-check form-switch form-switch-sm form-check-custom form-check-solid flex-stack">
 												<span
-													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2">Users</span>
+													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2"><?php echo e(__('ui.search.users')); ?></span>
 												<input class="form-check-input" type="checkbox" value="1" />
 											</label>
 										</div>
@@ -900,9 +940,8 @@
 										<div class="d-flex justify-content-end pt-7">
 											<button type="reset"
 												class="btn btn-sm btn-light fw-bold btn-active-light-primary me-2"
-												data-kt-search-element="preferences-dismiss">Cancel</button>
-											<button type="submit" class="btn btn-sm fw-bold btn-primary">Save
-												Changes</button>
+												data-kt-search-element="preferences-dismiss"><?php echo e(__('ui.buttons.cancel')); ?></button>
+											<button type="submit" class="btn btn-sm fw-bold btn-primary"><?php echo e(__('ui.buttons.save')); ?></button>
 										</div>
 										<!--end::Actions-->
 									</form>
@@ -911,6 +950,20 @@
 								<!--end::Menu-->
 							</div>
 							<!--end::Search-->
+						</div>
+
+						<div class="app-navbar-item ms-1 ms-md-4">
+							<div class="btn-group" role="group" aria-label="<?php echo e(__('ui.locale.switcher')); ?>">
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = config('app.supported_locales', ['en']); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $locale): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+									<form method="POST" action="<?php echo e(route('locale.update', $locale)); ?>">
+										<?php echo csrf_field(); ?>
+										<button type="submit" class="btn btn-sm <?php echo e(app()->getLocale() === $locale ? 'btn-primary' : 'btn-light'); ?>">
+											<?php echo e(__('ui.locale.' . ($locale === 'ar' ? 'arabic' : 'english'))); ?>
+
+										</button>
+									</form>
+								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+							</div>
 						</div>
 
 						<!--end::My apps links-->
@@ -974,7 +1027,7 @@
 
 								<!--begin::Menu item-->
 								<div class="menu-item px-5">
-									<a href="<?php echo e(route('profile.edit')); ?>" class="menu-link px-5">ملفي الشخصي</a>
+									<a href="<?php echo e(route('profile.edit')); ?>" class="menu-link px-5"><?php echo e(__('ui.nav.profile')); ?></a>
 								</div>
 
 								<div class="separator my-2"></div>
@@ -984,7 +1037,8 @@
 									data-kt-menu-placement="left-start" data-kt-menu-offset="-15px, 0">
 									<a href="#" class="menu-link px-5">
 										<span class="menu-title position-relative">
-											الوضع الليلي
+											<?php echo e(__('ui.theme.mode')); ?>
+
 											<span class="ms-5 position-absolute translate-middle-y top-50 end-0">
 												<i class="ki-duotone ki-night-day theme-light-show fs-2">
 													<span class="path1"></span>
@@ -1028,7 +1082,7 @@
 														<span class="path10"></span>
 													</i>
 												</span>
-												<span class="menu-title">مضيئ</span>
+												<span class="menu-title"><?php echo e(__('ui.theme.light')); ?></span>
 											</a>
 										</div>
 										<!--end::Menu item-->
@@ -1043,7 +1097,7 @@
 														<span class="path2"></span>
 													</i>
 												</span>
-												<span class="menu-title">قاتم</span>
+												<span class="menu-title"><?php echo e(__('ui.theme.dark')); ?></span>
 											</a>
 										</div>
 										<!--end::Menu item-->
@@ -1057,7 +1111,8 @@
 								<div class="menu-item px-5">
 									<a href="#" class="menu-link px-5"
 										onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-										تسجيل خروج
+										<?php echo e(__('ui.nav.logout')); ?>
+
 									</a>
 								</div>
 
@@ -1074,7 +1129,7 @@
 						</div>
 						<!--end::User menu-->
 						<!--begin::Header menu toggle-->
-						<div class="app-navbar-item d-lg-none ms-2 me-n2" title="Show header menu">
+						<div class="app-navbar-item d-lg-none ms-2 me-n2" title="<?php echo e(__('ui.search.show_header')); ?>">
 							<div class="btn btn-flex btn-icon btn-active-color-primary w-30px h-30px"
 								id="kt_app_header_menu_toggle">
 								<i class="ki-duotone ki-element-4 fs-1">
@@ -1181,7 +1236,7 @@
 														</i>
 													</span>
 
-													<span class="menu-title"><?php echo e($menu['title']); ?></span>
+													<span class="menu-title"><?php echo e(__($menu['title'])); ?></span>
 													<span class="menu-arrow"></span>
 												</span>
 
@@ -1193,7 +1248,7 @@
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>
-																<span class="menu-title"><?php echo e($item['title']); ?></span>
+																<span class="menu-title"><?php echo e(__($item['title'])); ?></span>
 															</a>
 														</div>
 													<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
@@ -1230,7 +1285,7 @@
 								<ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
 									<!--begin::Item-->
 									<li class="breadcrumb-item text-muted">
-										<a href="<?php echo e(url('')); ?>" class="text-muted text-hover-primary">الرئيسية</a>
+										<a href="<?php echo e(url('')); ?>" class="text-muted text-hover-primary"><?php echo e(__('ui.nav.home')); ?></a>
 									</li>
 									<!--end::Item-->
 									<!--begin::Item-->
@@ -1347,67 +1402,159 @@
 	<script>
 
 		$(document).ready(function () {
-			let searchInput = $('#search-input');
-			let timeout = null;
+			const searchRoot = $('#kt_header_search');
+			const searchInput = $('#global-search-input');
+			const searchSpinner = searchRoot.find('.search-spinner');
+			const searchReset = searchRoot.find('.search-reset');
+			const searchResults = searchRoot.find('[data-kt-search-element="results"]');
+			const searchMain = searchRoot.find('[data-kt-search-element="main"]');
+			const searchEmpty = searchRoot.find('[data-kt-search-element="empty"]');
+			const searchResultsList = searchResults.find('.scroll-y').first();
+			const searchEmptyTitle = searchEmpty.find('h3').first();
+			const quickSearchLinks = <?php echo json_encode($quickSearchLinks, 15, 512) ?>;
+			const noResultsTemplate = <?php echo json_encode(__('ui.search.no_results', ['query' => '__QUERY__']), 512) ?>;
+			let debounceTimer = null;
+			let activeRequest = null;
 
-			searchInput.on('keyup', function () {
-				clearTimeout(timeout);
-				let query = $(this).val();
+			const iconPaths = {
+				'ki-element-11': '<span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>',
+				'ki-home': '<span class="path1"></span><span class="path2"></span>',
+				'ki-home-2': '<span class="path1"></span><span class="path2"></span>',
+				'ki-office-bag': '<span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>',
+				'ki-map': '<span class="path1"></span><span class="path2"></span><span class="path3"></span>',
+				'ki-shield-tick': '<span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>',
+				'ki-file-down': '<span class="path1"></span><span class="path2"></span>',
+			};
 
-				// 1. If query is too short, show suggestions and hide results
+			const escapeHtml = (value) => $('<div>').text(value ?? '').html();
+			const iconMarkup = (icon) => iconPaths[icon] ?? '<span class="path1"></span><span class="path2"></span>';
+
+			const renderQuickLinks = () => {
+				let html = `
+					<div class="d-flex flex-stack fw-semibold mb-4">
+						<span class="text-muted fs-6 me-2">${escapeHtml(<?php echo json_encode(__('ui.search.quick_access'), 15, 512) ?>)}</span>
+					</div>
+					<div class="text-muted fs-7 mb-5">${escapeHtml(<?php echo json_encode(__('ui.search.start_typing'), 15, 512) ?>)}</div>
+					<div class="scroll-y mh-200px mh-lg-325px">
+				`;
+
+				quickSearchLinks.forEach((link) => {
+					html += `
+						<a href="${escapeHtml(link.url)}" class="d-flex text-dark text-hover-primary align-items-center mb-5">
+							<div class="symbol symbol-40px me-4">
+								<span class="symbol-label bg-light-primary">
+									<i class="ki-duotone ${escapeHtml(link.icon)} fs-2 text-primary">
+										${iconMarkup(link.icon)}
+									</i>
+								</span>
+							</div>
+							<div class="d-flex flex-column">
+								<span class="fs-6 fw-semibold">${escapeHtml(link.title)}</span>
+								<span class="fs-7 text-muted fw-semibold">${escapeHtml(link.subtitle)}</span>
+							</div>
+						</a>
+					`;
+				});
+
+				html += '</div>';
+
+				searchMain.html(html);
+			};
+
+			const showMainState = () => {
+				searchMain.removeClass('d-none');
+				searchResults.addClass('d-none');
+				searchEmpty.addClass('d-none');
+				searchSpinner.addClass('d-none');
+			};
+
+			const renderResults = (results) => {
+				let currentGroup = null;
+				let html = '';
+
+				results.forEach((result) => {
+					if (currentGroup !== result.group) {
+						currentGroup = result.group;
+						html += `<h3 class="fs-5 text-muted m-0 ${html === '' ? 'pb-5' : 'pt-5 pb-5'}">${escapeHtml(result.group)}</h3>`;
+					}
+
+					html += `
+						<a href="${escapeHtml(result.url)}" class="d-flex text-dark text-hover-primary align-items-center mb-5">
+							<div class="symbol symbol-40px me-4">
+								<span class="symbol-label bg-light-primary">
+									<i class="ki-duotone ${escapeHtml(result.icon)} fs-2 text-primary">
+										${iconMarkup(result.icon)}
+									</i>
+								</span>
+							</div>
+							<div class="d-flex flex-column">
+								<span class="fs-6 fw-semibold">${escapeHtml(result.title)}</span>
+								<span class="fs-7 text-muted fw-semibold">${escapeHtml(result.subtitle)}</span>
+							</div>
+						</a>
+					`;
+				});
+
+				searchResultsList.html(html);
+				searchMain.addClass('d-none');
+				searchEmpty.addClass('d-none');
+				searchResults.removeClass('d-none');
+			};
+
+			const showEmptyState = (query) => {
+				searchMain.addClass('d-none');
+				searchResults.addClass('d-none');
+				searchEmptyTitle.text(noResultsTemplate.replace('__QUERY__', query));
+				searchEmpty.removeClass('d-none');
+			};
+
+			renderQuickLinks();
+			showMainState();
+
+			searchInput.on('input', function () {
+				const query = $(this).val().trim();
+
+				searchReset.toggleClass('d-none', query.length === 0);
+
+				if (activeRequest) {
+					activeRequest.abort();
+					activeRequest = null;
+				}
+
+				clearTimeout(debounceTimer);
+
 				if (query.length < 2) {
-					$('#search-results-wrapper').addClass('d-none');
-					$('#search-suggestions').removeClass('d-none');
-					$('#search-spinner').addClass('d-none');
+					showMainState();
 					return;
 				}
 
-				// 2. Start Search (Debounced to 500ms)
-				timeout = setTimeout(function () {
-					$('#search-spinner').removeClass('d-none'); // Show loader
+				debounceTimer = setTimeout(function () {
+					searchSpinner.removeClass('d-none');
 
-					$.ajax({
-						url: "<?php echo e(url('search-buildings')); ?>", // Your Laravel Route
+					activeRequest = $.ajax({
+						url: <?php echo json_encode(route('global-search'), 15, 512) ?>,
 						method: 'GET',
 						data: { search: query },
-						success: function (data) {
-							$('#search-spinner').addClass('d-none');
-							$('#search-suggestions').addClass('d-none');
-							$('#search-results-wrapper').removeClass('d-none');
+					}).done(function (response) {
+						const results = response.results ?? [];
 
-							let html = '';
-							if (data.length > 0) {
-								data.forEach(building => {
-									// Extract name from the first housing unit found
-									let personName = building.housing_unit.length > 0
-										? `${building.housing_unit[0].q_9_3_1_first_name} ${building.housing_unit[0].q_9_3_4_last_name}`
-										: 'No Resident';
-
-									html += `
-                                <div class="rounded d-flex flex-stack bg-active-lighten p-4">
-                                    <div class="d-flex align-items-center">
-                                        <div class="symbol symbol-35px symbol-circle">
-                                            <span class="symbol-label bg-light-primary text-primary fw-semibold">
-                                                ${personName.charAt(0)}
-                                            </span>
-                                        </div>
-                                        <div class="ms-5">
-                                            <a href="/buildings/${building.id}" class="fs-5 fw-bold text-gray-900 text-hover-primary mb-2">
-                                                ${personName}
-                                            </a>
-                                            <div class="fw-semibold text-muted">Building: ${building.building_name}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="border-bottom border-gray-300 border-bottom-dashed my-2"></div>`;
-								});
-							} else {
-								html = '<div class="p-10 text-center">No results found for "' + query + '"</div>';
-							}
-							$('#search-results-list').html(html);
+						if (results.length === 0) {
+							showEmptyState(query);
+							return;
 						}
+
+						renderResults(results);
+					}).always(function () {
+						searchSpinner.addClass('d-none');
+						activeRequest = null;
 					});
-				}, 500);
+				}, 300);
+			});
+
+			searchReset.on('click', function () {
+				searchInput.val('');
+				searchResultsList.empty();
+				showMainState();
 			});
 		});
 
@@ -1479,4 +1626,5 @@
 </body>
 <!--end::Body-->
 
-</html><?php /**PATH D:\myProjects\phc\resources\views/layouts/app.blade.php ENDPATH**/ ?>
+</html>
+<?php /**PATH D:\myProjects\phc\resources\views/layouts/app.blade.php ENDPATH**/ ?>

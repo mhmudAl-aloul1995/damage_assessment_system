@@ -1,8 +1,52 @@
-<?php $__env->startSection('title', 'الإستبيان'); ?>
-<?php $__env->startSection('pageName', 'الإستبيان'); ?>
+<?php $__env->startSection('title', __('ui.damage_dashboard.title')); ?>
+<?php $__env->startSection('pageName', __('ui.damage_dashboard.title')); ?>
 
 
 <?php $__env->startSection('content'); ?>
+	<?php
+		$dashboardStatLinks = [
+			'buildings' => [
+				'fully_damaged' => url('building').'?'.http_build_query(['building_damage_status' => 'fully_damaged']),
+				'partially_damaged' => url('building').'?'.http_build_query(['building_damage_status' => 'partially_damaged']),
+				'committee_review' => url('building').'?'.http_build_query(['building_damage_status' => 'committee_review']),
+				'assessment_blocked' => url('building').'?'.http_build_query(['security_situation' => 'Unsafe']),
+				'bodies_present' => url('building').'?'.http_build_query(['bodies_present' => 'yes3']),
+				'uxo_present' => url('building').'?'.http_build_query(['uxo_present' => 'yes3']),
+				'debris_blocking' => url('building').'?'.http_build_query(['building_debris_exist' => 'yes']),
+				'completed' => url('building').'?'.http_build_query(['field_status' => 'COMPLETED']),
+			],
+			'housing' => [
+				'fully_damaged' => url('housing').'?'.http_build_query(['unit_damage_status' => 'fully_damaged2']),
+				'partially_damaged' => url('housing').'?'.http_build_query(['unit_damage_status' => 'partially_damaged2']),
+				'committee_review' => url('housing').'?'.http_build_query(['unit_damage_status' => 'committee_review2']),
+				'assessment_blocked' => url('housing').'?'.http_build_query(['security_situation_unit' => 'Unsafe']),
+				'structural_support' => url('housing').'?'.http_build_query(['unit_support_needed' => 'yes']),
+				'at_risk_of_collapse' => url('housing').'?'.http_build_query(['unit_stripping' => 'yes']),
+				'habitable' => url('housing').'?'.http_build_query(['is_the_housing_unit_or_living_habitable' => 'yes']),
+				'fire_affected' => url('housing').'?'.http_build_query(['has_fire' => 'yes']),
+			],
+			'public_buildings' => [
+				'damaged' => route('public-buildings.index').'?'.http_build_query(['damaged_only' => 1]),
+				'units' => route('public-buildings.index').'?'.http_build_query(['with_units' => 1]),
+				'municipalities' => route('public-buildings.index').'?'.http_build_query(['has_municipality' => 1]),
+				'neighborhoods' => route('public-buildings.index').'?'.http_build_query(['has_neighborhood' => 1]),
+				'assigned_staff' => route('public-buildings.index').'?'.http_build_query(['has_assigned_to' => 1]),
+				'occupied' => route('public-buildings.index').'?'.http_build_query(['occupied_only' => 1]),
+				'bodies' => route('public-buildings.index').'?'.http_build_query(['bodies_only' => 1]),
+				'uxo' => route('public-buildings.index').'?'.http_build_query(['uxo_only' => 1]),
+			],
+			'road_facilities' => [
+				'damaged' => route('road-facilities.index').'?'.http_build_query(['damaged_only' => 1]),
+				'items' => route('road-facilities.index').'?'.http_build_query(['with_items' => 1]),
+				'municipalities' => route('road-facilities.index').'?'.http_build_query(['has_municipality' => 1]),
+				'neighborhoods' => route('road-facilities.index').'?'.http_build_query(['has_neighborhood' => 1]),
+				'potholes' => route('road-facilities.index').'?'.http_build_query(['potholes_only' => 1]),
+				'obstacles' => route('road-facilities.index').'?'.http_build_query(['obstacles_only' => 1]),
+				'buried_bodies' => route('road-facilities.index').'?'.http_build_query(['buried_bodies_only' => 1]),
+				'uxo' => route('road-facilities.index').'?'.http_build_query(['uxo_only' => 1]),
+			],
+		];
+	?>
 	<style>
 		#externalLegendDiv {
 			padding: 10px;
@@ -53,17 +97,167 @@
 
 
 		}
+
+		.damage-dashboard-stats {
+			--summary-card-height: 700px;
+			--summary-header-height: 230px;
+			--summary-body-height: 560px;
+			--summary-body-offset: 68px;
+			--summary-label-size: clamp(0.72rem, 0.66rem + 0.22vw, 0.92rem);
+			--summary-number-size: clamp(0.82rem, 0.78rem + 0.18vw, 1rem);
+			--summary-total-size: clamp(2rem, 1.8rem + 0.8vw, 2.8rem);
+			--summary-gap: 0.75rem;
+			--summary-row-gap: 0.9rem;
+		}
+
+		.damage-dashboard-stats > [class*="col-"] {
+			display: flex;
+		}
+
+		.damage-dashboard-stats .dashboard-summary-card {
+			width: 100%;
+			height: var(--summary-card-height);
+			min-height: var(--summary-card-height);
+			max-height: var(--summary-card-height);
+			margin-bottom: 0 !important;
+		}
+
+		.damage-dashboard-stats .dashboard-summary-card > .card-body {
+			display: flex;
+			flex-direction: column;
+			height: 100%;
+			padding: 0 !important;
+			overflow: hidden;
+		}
+
+		.damage-dashboard-stats .dashboard-summary-header {
+			height: var(--summary-header-height);
+			min-height: var(--summary-header-height) !important;
+			max-height: var(--summary-header-height);
+			flex: 0 0 auto;
+		}
+
+		.damage-dashboard-stats .dashboard-summary-body {
+			height: var(--summary-body-height);
+			min-height: var(--summary-body-height);
+			max-height: var(--summary-body-height);
+			margin-top: calc(var(--summary-body-offset) * -1) !important;
+			display: flex;
+			flex-direction: column;
+			justify-content: space-between;
+			overflow: hidden;
+		}
+
+		.damage-dashboard-stats .dashboard-summary-header .d-flex.text-center.flex-column.text-white.pt-8 {
+			padding-top: clamp(1.5rem, 1.35rem + 0.3vw, 1.9rem) !important;
+		}
+
+		.damage-dashboard-stats .dashboard-summary-header .fw-semibold.fs-7 {
+			font-size: clamp(0.85rem, 0.8rem + 0.14vw, 0.98rem) !important;
+		}
+
+		.damage-dashboard-stats .dashboard-summary-header .fw-bold.fs-1.fs-lg-2x.pt-1 {
+			font-size: var(--summary-total-size) !important;
+			line-height: 1.08;
+			padding-top: 0.35rem !important;
+		}
+
+		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100 {
+			display: flex !important;
+			flex-wrap: nowrap !important;
+			align-items: center !important;
+			justify-content: space-between;
+			gap: var(--summary-gap);
+			min-width: 0;
+		}
+
+		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100 > .mb-1.pe-3.flex-grow-1 {
+			flex: 1 1 auto;
+			min-width: 0;
+			margin-bottom: 0 !important;
+		}
+
+		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100 > .mb-1.pe-3.flex-grow-1 a {
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			overflow: hidden;
+			line-height: 1.35;
+			min-height: calc(1.35em * 2);
+			font-size: var(--summary-label-size) !important;
+			word-break: normal;
+			overflow-wrap: anywhere;
+		}
+
+		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100 > .fw-bold,
+		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100 > .d-flex.align-items-center {
+			flex: 0 0 auto;
+			white-space: nowrap;
+			font-size: var(--summary-number-size) !important;
+		}
+
+		.damage-dashboard-stats .symbol.symbol-25px.w-25px.me-5 {
+			margin-inline-end: clamp(0.75rem, 0.55rem + 0.35vw, 1rem) !important;
+		}
+
+		.damage-dashboard-stats .dashboard-summary-body .d-flex.align-items-center.mb-6 {
+			min-height: 0;
+			margin-bottom: var(--summary-row-gap) !important;
+		}
+
+		@media (max-width: 991.98px) {
+			.damage-dashboard-stats {
+				--summary-card-height: 660px;
+				--summary-header-height: 215px;
+				--summary-body-height: 530px;
+				--summary-body-offset: 56px;
+				--summary-label-size: clamp(0.68rem, 0.63rem + 0.18vw, 0.82rem);
+				--summary-number-size: clamp(0.78rem, 0.74rem + 0.14vw, 0.9rem);
+				--summary-total-size: clamp(1.75rem, 1.6rem + 0.45vw, 2.25rem);
+				--summary-gap: 0.65rem;
+				--summary-row-gap: 0.8rem;
+			}
+		}
+
+		@media (max-width: 767.98px) {
+			.damage-dashboard-stats {
+				--summary-card-height: 620px;
+				--summary-header-height: 200px;
+				--summary-body-height: 500px;
+				--summary-body-offset: 44px;
+				--summary-label-size: clamp(0.64rem, 0.6rem + 0.16vw, 0.74rem);
+				--summary-number-size: clamp(0.72rem, 0.68rem + 0.12vw, 0.82rem);
+				--summary-total-size: clamp(1.5rem, 1.38rem + 0.32vw, 1.95rem);
+				--summary-gap: 0.55rem;
+				--summary-row-gap: 0.7rem;
+			}
+		}
+
+		@media (max-width: 575.98px) {
+			.damage-dashboard-stats {
+				--summary-card-height: 600px;
+				--summary-header-height: 190px;
+				--summary-body-height: 485px;
+				--summary-body-offset: 38px;
+				--summary-label-size: clamp(0.6rem, 0.58rem + 0.1vw, 0.68rem);
+				--summary-number-size: clamp(0.68rem, 0.66rem + 0.08vw, 0.76rem);
+				--summary-total-size: clamp(1.3rem, 1.2rem + 0.22vw, 1.65rem);
+				--summary-gap: 0.5rem;
+				--summary-row-gap: 0.62rem;
+			}
+		}
 	</style>
-	<div class="row g-5 g-xl-8">
+	
+	<div class="row g-5 g-xl-8 damage-dashboard-stats">
 		<!--begin::Col-->
 		<!-- 1. Changed to responsive column: col-sm-6 col-xl-3 -->
 		<div class="col-sm-6 col-xl-3 mb-5">
-			<div class="card card-xl-stretch mb-xl-8">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<!-- 2. Changed h-275px to min-h-275px to allow expansion if text wraps -->
-					<div style="background-color: #ad3d3d;" class="px-9 pt-7 card-rounded min-h-275px w-100">
+					<div style="background-color: #ad3d3d;" class="px-9 pt-7 card-rounded min-h-275px w-100 dashboard-summary-header">
 						<div class="d-flex flex-stack">
-							<h3 class="m-0 text-white fw-bold fs-3">المباني</h3>
+							<h3 class="m-0 text-white fw-bold fs-3"><?php echo e(__('ui.damage_dashboard.buildings')); ?></h3>
 							<div class="ms-1">
 								<button type="button"
 									class="btn btn-sm btn-icon btn-color-white btn-active-white border-0 me-n3"
@@ -75,13 +269,13 @@
 						</div>
 						<div class="d-flex text-center flex-column text-white pt-8">
 							<!-- Added text-wrap here -->
-							<span class="fw-semibold fs-7 text-wrap">مباني تم تقييمها</span>
+							<span class="fw-semibold fs-7 text-wrap"><?php echo e(__('ui.damage_dashboard.assessed_buildings')); ?></span>
 							<span
 								class="fw-bold fs-1 fs-lg-2x pt-1"><?php echo e($buildingStats['fully_damaged'] + $buildingStats['partially_damaged'] + $buildingStats['committee_review'] + $buildingStats['security_unsafe']); ?></span>
 						</div>
 					</div>
 
-					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1"
+					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
 						style="margin-top: -100px">
 						<!-- Item 1 -->
 						<div class="d-flex align-items-center mb-6">
@@ -92,8 +286,7 @@
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
 									<!-- Added text-wrap -->
-									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">ضرر
-										كلي</a>
+									<a href="<?php echo e($dashboardStatLinks['buildings']['fully_damaged']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.fully_damaged')); ?></a>
 								</div>
 								<div class="d-flex align-items-center">
 									<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
@@ -113,8 +306,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">ضرر
-										جزئي</a>
+									<a href="<?php echo e($dashboardStatLinks['buildings']['partially_damaged']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.partially_damaged')); ?></a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
 									<?php echo e($buildingStats['partially_damaged']); ?>
@@ -133,9 +325,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="#"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">لجنة
-										فنية</a>
+									<a href="<?php echo e($dashboardStatLinks['buildings']['committee_review']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.committee_review')); ?></a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
 									<?php echo e($buildingStats['committee_review']); ?>
@@ -147,18 +337,64 @@
 						<!-- Item 4 -->
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-document fs-3"><span
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search fs-3"><span
 											class="path1"></span><span class="path2"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="#"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">تعيق
-										التقييم</a>
+									<a href="<?php echo e($dashboardStatLinks['buildings']['assessment_blocked']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.assessment_blocked')); ?></a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($buildingStats['security_unsafe']); ?>
 
 								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-people fs-3"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['buildings']['bodies_present']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.bodies_present')); ?></a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($buildingStats['bodies']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-security-user fs-3"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['buildings']['uxo_present']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.uxo_present')); ?></a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($buildingStats['uxo']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-geolocation fs-3"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['buildings']['debris_blocking']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.debris_blocking')); ?></a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($buildingStats['debris']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-check fs-3"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['buildings']['completed']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.completed')); ?></a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($buildingStats['completed']); ?></div>
 							</div>
 						</div>
 					</div>
@@ -168,16 +404,16 @@
 
 		<!--end::Col-->
 		<!--begin::Col-->
-		<div class="col-xl-3">
+		<div class="d-none">
 			<!--begin::Mixed Widget 1-->
-			<div class="card card-xl-stretch mb-xl-8">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<!--begin::Body-->
 				<div class="card-body p-0">
 					<!--begin::Header-->
-					<div style="  background-color: #ccb050; " class="px-9 pt-7 text-white card-rounded h-275px w-100 ">
+					<div style="  background-color: #ccb050; " class="px-9 pt-7 text-white card-rounded h-275px w-100 dashboard-summary-header">
 						<!--begin::Heading-->
 						<div class="d-flex flex-stack">
-							<h3 class="m-0  text-white fw-bold fs-3">المباني </h3>
+							<h3 class="m-0  text-white fw-bold fs-3"><?php echo e(__('ui.damage_dashboard.buildings')); ?></h3>
 							<div class="ms-1">
 								<!--begin::Menu-->
 								<button type="button"
@@ -196,14 +432,14 @@
 						<!--end::Heading-->
 						<!--begin::Balance-->
 						<div class="d-flex text-center flex-column  pt-8">
-							<span class="fw-semibold fs-7"> مباني لم يتم تقييمها </span>
+							<span class="fw-semibold fs-7"><?php echo e(__('ui.damage_dashboard.buildings_not_assessed')); ?></span>
 							<span class="fw-bold fs-1 fs-lg-2x pt-1"><?php echo e($buildingStats['not_completed']); ?></span>
 						</div>
 						<!--end::Balance-->
 					</div>
 					<!--end::Header-->
 					<!--begin::Items-->
-					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1"
+					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
 						style="margin-top: -100px">
 
 						<!--begin::Item-->
@@ -223,7 +459,7 @@
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">
-										وجود جثث فيها </a>
+										<?php echo e(__('ui.damage_dashboard.bodies_present')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -260,7 +496,7 @@
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">
-										ذخائر غير منفجرة </a>
+										<?php echo e(__('ui.damage_dashboard.uxo_present')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -295,7 +531,7 @@
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">
-										ركام يعيق الوصول </a>
+										<?php echo e(__('ui.damage_dashboard.debris_blocking')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -333,7 +569,7 @@
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="#" class="fs-7 text-gray-800 text-hover-primary fw-bold">
 
-										صعوبة التقييم</a>
+										<?php echo e(__('ui.damage_dashboard.assessment_blocked')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -365,16 +601,16 @@
 
 
 		<!--begin::Col-->
-		<div class="col-xl-3">
+		<div class="col-sm-6 col-xl-3">
 			<!--begin::Mixed Widget 1-->
-			<div class="card card-xl-stretch mb-xl-8">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<!--begin::Body-->
 				<div class="card-body p-0">
 					<!--begin::Header-->
-					<div style=" background-color: #67986c; " class="px-9 pt-7 card-rounded h-275px w-100">
+					<div style=" background-color: #67986c; " class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
 						<!--begin::Heading-->
 						<div class="d-flex flex-stack">
-							<h3 class="m-0 text-white fw-bold fs-3">الوحدات السكانية </h3>
+							<h3 class="m-0 text-white fw-bold fs-3"><?php echo e(__('ui.damage_dashboard.housing_units')); ?></h3>
 							<div class="ms-1">
 								<!--begin::Menu-->
 								<button type="button"
@@ -394,7 +630,7 @@
 						<!--end::Heading-->
 						<!--begin::Balance-->
 						<div class="d-flex text-center flex-column text-white pt-8">
-							<span class="fw-semibold fs-7">إجمالي الوحدات السكانية </span>
+							<span class="fw-semibold fs-7"><?php echo e(__('ui.damage_dashboard.total_housing_units')); ?></span>
 							<span
 								class="fw-bold fs-1 fs-lg-2x pt-1"><?php echo e($unitStats['fully_damaged'] + $unitStats['partially_damaged'] + $unitStats['committee_review'] + $unitStats['security_unsafe']); ?></span>
 						</div>
@@ -402,7 +638,7 @@
 					</div>
 					<!--end::Header-->
 					<!--begin::Items-->
-					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1"
+					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
 						style="margin-top: -100px">
 
 						<!--begin::Item-->
@@ -421,7 +657,7 @@
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">ضرر كلي</a>
+									<a href="<?php echo e($dashboardStatLinks['housing']['fully_damaged']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold"><?php echo e(__('ui.damage_dashboard.fully_damaged')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"> </div>
 								</div>
 								<!--end::Title-->
@@ -458,7 +694,7 @@
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">ضرر جزئي</a>
+									<a href="<?php echo e($dashboardStatLinks['housing']['partially_damaged']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold"><?php echo e(__('ui.damage_dashboard.partially_damaged')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -498,8 +734,7 @@
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold"> لجنة
-										فنية</a>
+									<a href="<?php echo e($dashboardStatLinks['housing']['committee_review']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold"><?php echo e(__('ui.damage_dashboard.committee_review')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"> </div>
 								</div>
 								<!--end::Title-->
@@ -521,18 +756,64 @@
 						<!-- Item 4 -->
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-document fs-3"><span
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search fs-3"><span
 											class="path1"></span><span class="path2"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="#"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">تعيق
-										التقييم</a>
+									<a href="<?php echo e($dashboardStatLinks['housing']['assessment_blocked']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.assessment_blocked')); ?></a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($unitStats['security_unsafe']); ?>
 
 								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-home fs-3"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['housing']['structural_support']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.structural_support')); ?></a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($unitStats['unit_support_needed']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-graph-up fs-3"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['housing']['at_risk_of_collapse']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.at_risk_of_collapse')); ?></a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($unitStats['unit_stripping']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-home-2 fs-3"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['housing']['habitable']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.habitable')); ?></a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($unitStats['habitable']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-security-user fs-3"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['housing']['fire_affected']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap"><?php echo e(__('ui.damage_dashboard.fire_affected')); ?></a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($unitStats['has_fire']); ?></div>
 							</div>
 						</div>
 					</div>
@@ -546,16 +827,16 @@
 			<!--end::Body-->
 		</div>
 		<!--end::Mixed Widget 1-->
-		<div class="col-xl-3">
+		<div class="d-none">
 			<!--begin::Mixed Widget 1-->
-			<div class="card card-xl-stretch mb-xl-8">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<!--begin::Body-->
 				<div class="card-body p-0">
 					<!--begin::Header-->
-					<div style=" background-color: #0163ac; " class="px-9 pt-7 card-rounded h-275px w-100 ">
+					<div style=" background-color: #0163ac; " class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
 						<!--begin::Heading-->
 						<div class="d-flex flex-stack">
-							<h3 class="m-0 text-white fw-bold fs-3">الوحدات السكانية </h3>
+							<h3 class="m-0 text-white fw-bold fs-3"><?php echo e(__('ui.damage_dashboard.housing_units')); ?></h3>
 							<div class="ms-1">
 								<!--begin::Menu-->
 								<button type="button"
@@ -575,7 +856,7 @@
 						<!--end::Heading-->
 						<!--begin::Balance-->
 						<div class="d-flex text-center flex-column text-white pt-8">
-							<span class="fw-semibold fs-7">إجمالي الوحدات السكانية </span>
+							<span class="fw-semibold fs-7"><?php echo e(__('ui.damage_dashboard.total_housing_units')); ?></span>
 							<span
 								class="fw-bold fs-1 fs-lg-2x pt-1"><?php echo e($unitStats['fully_damaged'] + $unitStats['partially_damaged'] + $unitStats['committee_review'] + $unitStats['security_unsafe']); ?></span>
 						</div>
@@ -583,7 +864,7 @@
 					</div>
 					<!--end::Header-->
 					<!--begin::Items-->
-					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1"
+					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
 						style="margin-top: -100px">
 
 
@@ -604,7 +885,7 @@
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="<?php echo e(url('housing')); ?>?unit_support_needed=yes"
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">
-										تدعيم هيكلي</a>
+										<?php echo e(__('ui.damage_dashboard.structural_support')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -640,7 +921,7 @@
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">
-										قابل للإنهيار </a>
+										<?php echo e(__('ui.damage_dashboard.at_risk_of_collapse')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -675,7 +956,7 @@
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">
-										مناسبة للسكن</a>
+										<?php echo e(__('ui.damage_dashboard.habitable')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -708,7 +989,7 @@
 								<!--begin::Title-->
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="#" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">
-										متأثرة بالحريق </a>
+										<?php echo e(__('ui.damage_dashboard.fire_affected')); ?></a>
 									<div class="text-gray-400 fw-semibold fs-7"></div>
 								</div>
 								<!--end::Title-->
@@ -732,6 +1013,251 @@
 			</div>
 			<!--end::Mixed Widget 1-->
 		</div>
+		<div class="col-sm-6 col-xl-3">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
+				<div class="card-body p-0">
+					<div style="background-color: rgb(191 152 7);" class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
+						<div class="d-flex flex-stack">
+							<h3 class="m-0 text-white fw-bold fs-3">Public Buildings</h3>
+							<div class="ms-1">
+								<button type="button"
+									class="btn btn-sm btn-icon btn-color-white btn-active-white border-0 me-n3"
+									data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
+									<i class="ki-duotone ki-category fs-7 fs-lg-6"><span class="path1"></span><span
+											class="path2"></span><span class="path3"></span><span class="path4"></span></i>
+								</button>
+							</div>
+						</div>
+						<div class="d-flex text-center flex-column text-white pt-8">
+							<span class="fw-semibold fs-7">Total Public Buildings</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1"><?php echo e($publicBuildingStats['total_surveys']); ?></span>
+						</div>
+					</div>
+					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
+						style="margin-top: -100px">
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-compass fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['public_buildings']['damaged']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Damaged</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($publicBuildingStats['damaged_buildings']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-home fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['public_buildings']['units']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Units</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($publicBuildingStats['total_units']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-map fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['public_buildings']['municipalities']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Municipalities</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($publicBuildingStats['municipalities']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-geolocation fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['public_buildings']['neighborhoods']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Neighborhoods</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($publicBuildingStats['neighborhoods']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-profile-user fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['public_buildings']['assigned_staff']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Assigned Staff</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($publicBuildingStats['assigned_staff']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-people fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['public_buildings']['occupied']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Occupied</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($publicBuildingStats['occupied_buildings']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-security-user fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['public_buildings']['bodies']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Bodies</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($publicBuildingStats['bodies_present']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['public_buildings']['uxo']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">UXO</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($publicBuildingStats['uxo_present']); ?></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-6 col-xl-3">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
+				<div class="card-body p-0">
+					<div style="background-color: #0f766e;" class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
+						<div class="d-flex flex-stack">
+							<h3 class="m-0 text-white fw-bold fs-3">Road Facilities</h3>
+							<div class="ms-1">
+								<button type="button"
+									class="btn btn-sm btn-icon btn-color-white btn-active-white border-0 me-n3"
+									data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
+									<i class="ki-duotone ki-category fs-7 fs-lg-6"><span class="path1"></span><span
+											class="path2"></span><span class="path3"></span><span class="path4"></span></i>
+								</button>
+							</div>
+						</div>
+						<div class="d-flex text-center flex-column text-white pt-8">
+							<span class="fw-semibold fs-7">Total Road Facilities</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1"><?php echo e($roadFacilityStats['total_surveys']); ?></span>
+						</div>
+					</div>
+					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
+						style="margin-top: -100px">
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-compass fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['road_facilities']['damaged']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Damaged</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($roadFacilityStats['damaged_roads']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-element-11 fs-1"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span><span
+											class="path4"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['road_facilities']['items']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Items</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($roadFacilityStats['total_items']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-map fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['road_facilities']['municipalities']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Municipalities</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($roadFacilityStats['municipalities']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-geolocation fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['road_facilities']['neighborhoods']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Neighborhoods</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($roadFacilityStats['neighborhoods']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-abstract-26 fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['road_facilities']['potholes']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Potholes</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($roadFacilityStats['potholes_locations']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-warning-2 fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['road_facilities']['obstacles']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Obstacles</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($roadFacilityStats['obstacle_locations']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-security-user fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['road_facilities']['buried_bodies']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Buried Bodies</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($roadFacilityStats['buried_bodies_locations']); ?></div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search fs-1"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="<?php echo e($dashboardStatLinks['road_facilities']['uxo']); ?>" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">UXO</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1"><?php echo e($roadFacilityStats['uxo_locations']); ?></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 
 
@@ -741,8 +1267,8 @@
 			<div class="card card-xl-stretch mb-xl-8">
 				<div class="card-header border-0 pt-5">
 					<h3 class="card-title align-items-start flex-column">
-						<span class="card-label fw-bold fs-3 mb-1">ملخص حالة المباني</span>
-						<span class="text-muted mt-1 fw-semibold fs-7">تفاصيل إحصائية لعملية التقييم</span>
+						<span class="card-label fw-bold fs-3 mb-1"><?php echo e(__('ui.damage_dashboard.buildings_status_summary')); ?></span>
+						<span class="text-muted mt-1 fw-semibold fs-7"><?php echo e(__('ui.damage_dashboard.buildings_status_summary_hint')); ?></span>
 					</h3>
 				</div>
 				<div class="card-body py-3">
@@ -750,9 +1276,9 @@
 						<table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
 							<thead>
 								<tr class="fw-bold text-muted">
-									<th class="min-w-150px">الحالة (Category)</th>
-									<th class="min-w-100px text-end">العدد (Count)</th>
-									<th class="min-w-150px text-end">النسبة (Percentage)</th>
+									<th class="min-w-150px"><?php echo e(__('ui.damage_dashboard.category')); ?></th>
+									<th class="min-w-100px text-end"><?php echo e(__('ui.damage_dashboard.count')); ?></th>
+									<th class="min-w-150px text-end"><?php echo e(__('ui.damage_dashboard.percentage')); ?></th>
 								</tr>
 							</thead>
 							<tbody>
@@ -766,7 +1292,7 @@
 								?>
 
 								<tr>
-									<td><span class="text-dark fw-bold text-hover-primary fs-6">ضرر كلي</span></td>
+									<td><span class="text-dark fw-bold text-hover-primary fs-6"><?php echo e(__('ui.damage_dashboard.fully_damaged')); ?></span></td>
 									<td class="text-end text-muted fw-bold"><?php echo e($buildingStats['fully_damaged']); ?></td>
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
@@ -782,7 +1308,7 @@
 								</tr>
 
 								<tr>
-									<td><span class="text-dark fw-bold text-hover-primary fs-6">ضرر جزئي</span></td>
+									<td><span class="text-dark fw-bold text-hover-primary fs-6"><?php echo e(__('ui.damage_dashboard.partially_damaged')); ?></span></td>
 									<td class="text-end text-muted fw-bold"><?php echo e($buildingStats['partially_damaged']); ?></td>
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
@@ -798,7 +1324,7 @@
 								</tr>
 
 								<tr>
-									<td><span class="text-dark fw-bold text-hover-primary fs-6">لجنة فنية</span></td>
+									<td><span class="text-dark fw-bold text-hover-primary fs-6"><?php echo e(__('ui.damage_dashboard.committee_review')); ?></span></td>
 									<td class="text-end text-muted fw-bold"><?php echo e($buildingStats['committee_review']); ?></td>
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
@@ -814,7 +1340,7 @@
 								</tr>
 
 								<tr class="bg-light-secondary">
-									<td><span class="text-dark fw-bolder fs-6">الإجمالي المقيّم</span></td>
+									<td><span class="text-dark fw-bolder fs-6"><?php echo e(__('ui.damage_dashboard.total_assessed')); ?></span></td>
 									<td class="text-end text-dark fw-bolder fs-6"><?php echo e($totalAssessed); ?></td>
 									<td class="text-end"><span class="badge badge-light-success fw-bold">100%</span></td>
 								</tr>
@@ -831,8 +1357,8 @@
 			<div class="card card-xl-stretch mb-xl-8">
 				<div class="card-header border-0 pt-5">
 					<h3 class="card-title align-items-start flex-column">
-						<span class="card-label fw-bold fs-3 mb-1">ملخص حالة الوحدات السكنية</span>
-						<span class="text-muted mt-1 fw-semibold fs-7">تفاصيل إحصائية لتقييم الوحدات</span>
+						<span class="card-label fw-bold fs-3 mb-1"><?php echo e(__('ui.damage_dashboard.housing_status_summary')); ?></span>
+						<span class="text-muted mt-1 fw-semibold fs-7"><?php echo e(__('ui.damage_dashboard.housing_status_summary_hint')); ?></span>
 					</h3>
 				</div>
 				<div class="card-body py-3">
@@ -840,9 +1366,9 @@
 						<table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
 							<thead>
 								<tr class="fw-bold text-muted">
-									<th class="min-w-150px">الحالة (Category)</th>
-									<th class="min-w-100px text-end">العدد (Count)</th>
-									<th class="min-w-150px text-end">النسبة (Percentage)</th>
+									<th class="min-w-150px"><?php echo e(__('ui.damage_dashboard.category')); ?></th>
+									<th class="min-w-100px text-end"><?php echo e(__('ui.damage_dashboard.count')); ?></th>
+									<th class="min-w-150px text-end"><?php echo e(__('ui.damage_dashboard.percentage')); ?></th>
 								</tr>
 							</thead>
 							<tbody>
@@ -859,7 +1385,7 @@
 								?>
 
 								<tr>
-									<td><span class="text-dark fw-bold text-hover-primary fs-6">وحدات - ضرر كلي</span></td>
+									<td><span class="text-dark fw-bold text-hover-primary fs-6"><?php echo e(__('ui.damage_dashboard.units_fully_damaged')); ?></span></td>
 									<td class="text-end text-muted fw-bold"><?php echo e($uFully); ?></td>
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
@@ -875,7 +1401,7 @@
 								</tr>
 
 								<tr>
-									<td><span class="text-dark fw-bold text-hover-primary fs-6">وحدات - ضرر جزئي</span></td>
+									<td><span class="text-dark fw-bold text-hover-primary fs-6"><?php echo e(__('ui.damage_dashboard.units_partially_damaged')); ?></span></td>
 									<td class="text-end text-muted fw-bold"><?php echo e($uPartially); ?></td>
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
@@ -891,7 +1417,7 @@
 								</tr>
 
 								<tr>
-									<td><span class="text-dark fw-bold text-hover-primary fs-6">وحدات - لجنة فنية </span>
+									<td><span class="text-dark fw-bold text-hover-primary fs-6"><?php echo e(__('ui.damage_dashboard.units_committee_review')); ?></span>
 									</td>
 									<td class="text-end text-muted fw-bold"><?php echo e($uCommittee); ?></td>
 									<td class="text-end">
@@ -908,7 +1434,7 @@
 								</tr>
 
 								<tr class="bg-light-secondary">
-									<td><span class="text-dark fw-bolder fs-6">إجمالي الوحدات المقيّمة</span></td>
+									<td><span class="text-dark fw-bolder fs-6"><?php echo e(__('ui.damage_dashboard.total_units_assessed')); ?></span></td>
 									<td class="text-end text-dark fw-bolder fs-6"><?php echo e($totalUnitsAssessed); ?></td>
 									<td class="text-end"><span class="badge badge-light-success fw-bold">100%</span></td>
 								</tr>
@@ -926,7 +1452,7 @@
 			<div class="card card-xl-stretch mb-xl-8">
 				<div class="card-header border-0 pt-5">
 					<h3 class="card-title align-items-start flex-column">
-						<span class="card-label fw-bold fs-3 mb-1">إحصائيات المباني</span>
+						<span class="card-label fw-bold fs-3 mb-1"><?php echo e(__('ui.damage_dashboard.building_statistics')); ?></span>
 					</h3>
 				</div>
 				<div class="card-body">
@@ -940,7 +1466,7 @@
 			<div class="card card-xl-stretch mb-xl-8">
 				<div class="card-header border-0 pt-5">
 					<h3 class="card-title align-items-start flex-column">
-						<span class="card-label fw-bold fs-3 mb-1">إحصائيات الوحدات السكنية</span>
+						<span class="card-label fw-bold fs-3 mb-1"><?php echo e(__('ui.damage_dashboard.housing_statistics')); ?></span>
 					</h3>
 				</div>
 				<div class="card-body">
@@ -971,12 +1497,13 @@
 							<span class="path2"></span>
 						</i>
 						<input type="text" data-kt-engineer-table-filter="search"
-							class="form-control form-control-solid w-250px ps-13" placeholder="بحث" />
+							class="form-control form-control-solid w-250px ps-13" placeholder="<?php echo e(__('ui.damage_dashboard.search_placeholder')); ?>" />
 					</div>
 				</div>
 				<div class="card-title">
 					<!--begin::Search-->
-					الخريطة الجوية
+					<?php echo e(__('ui.damage_dashboard.aerial_map')); ?>
+
 				</div>
 			</div>
 			<!--begin::Body-->
@@ -1031,6 +1558,91 @@
 	</div>
 
 
+	<div class="row g-5 g-xl-8 mt-2">
+		<div class="card">
+			<div class="card-header border-0 pt-6">
+				<div class="cart-title">
+					<div class="d-flex align-items-center position-relative my-1">
+						<i class="ki-duotone ki-magnifier fs-3 position-absolute ms-5">
+							<span class="path1"></span>
+							<span class="path2"></span>
+						</i>
+						<input type="text" data-kt-public-building-map-filter="search"
+							class="form-control form-control-solid w-250px ps-13" placeholder="Search public buildings" />
+					</div>
+				</div>
+				<div class="card-title">
+					Public Buildings Map
+				</div>
+			</div>
+			<div class="card-body p-lg-17">
+				<div class="row mb-3">
+					<div class="col-md-5 pe-lg-10">
+						<table class="table table-rounded table-striped align-middle fs-7 fs-lg-6 gy-5"
+							id="kt_table_public_building">
+							<thead>
+								<tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+									<th class="min-w-70px">Municipality</th>
+									<th class="min-w-70px">Neighborhood</th>
+									<th class="min-w-70px">Object ID</th>
+									<th class="min-w-70px">Building Name</th>
+									<th class="min-w-70px">Damage Status</th>
+								</tr>
+							</thead>
+							<tbody class="text-gray-600 fw-semibold"></tbody>
+						</table>
+					</div>
+					<div class="col-md-7 ps-lg-10">
+						<div id="publicBuildingViewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 486px"></div>
+						<div id="publicBuildingLegendDiv"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row g-5 g-xl-8 mt-2">
+		<div class="card">
+			<div class="card-header border-0 pt-6">
+				<div class="cart-title">
+					<div class="d-flex align-items-center position-relative my-1">
+						<i class="ki-duotone ki-magnifier fs-3 position-absolute ms-5">
+							<span class="path1"></span>
+							<span class="path2"></span>
+						</i>
+						<input type="text" data-kt-road-facility-map-filter="search"
+							class="form-control form-control-solid w-250px ps-13" placeholder="Search road facilities" />
+					</div>
+				</div>
+				<div class="card-title">
+					Road Facilities Map
+				</div>
+			</div>
+			<div class="card-body p-lg-17">
+				<div class="row mb-3">
+					<div class="col-md-5 pe-lg-10">
+						<table class="table table-rounded table-striped align-middle fs-7 fs-lg-6 gy-5"
+							id="kt_table_road_facility">
+							<thead>
+								<tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+									<th class="min-w-70px">Municipality</th>
+									<th class="min-w-70px">Neighborhood</th>
+									<th class="min-w-70px">Object ID</th>
+									<th class="min-w-70px">Road Name</th>
+									<th class="min-w-70px">Damage Level</th>
+								</tr>
+							</thead>
+							<tbody class="text-gray-600 fw-semibold"></tbody>
+						</table>
+					</div>
+					<div class="col-md-7 ps-lg-10">
+						<div id="roadFacilityViewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 486px"></div>
+						<div id="roadFacilityLegendDiv"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('script'); ?>
@@ -1056,7 +1668,12 @@
 				type: 'donut',
 				height: 350
 			},
-			labels: ['ضرر كلي', 'ضرر جزئي', 'لجنة فنية', 'صعوبة في التقييم'],
+			labels: [
+				<?php echo json_encode(__('ui.damage_dashboard.fully_damaged'), 15, 512) ?>,
+				<?php echo json_encode(__('ui.damage_dashboard.partially_damaged'), 15, 512) ?>,
+				<?php echo json_encode(__('ui.damage_dashboard.committee_review'), 15, 512) ?>,
+				<?php echo json_encode(__('ui.damage_dashboard.assessment_blocked'), 15, 512) ?>
+			],
 			colors: ['#F1416C', '#FFAD0F', '#009EF7', '#7239EA'],
 			legend: {
 				position: 'bottom'
@@ -1080,7 +1697,11 @@
 				type: 'donut',
 				height: 350
 			},
-			labels: ['ضرر كلي (وحدات)', 'ضرر جزئي (وحدات)', 'لجنة فنية'],
+			labels: [
+				<?php echo json_encode(__('ui.damage_dashboard.units_fully_damaged'), 15, 512) ?>,
+				<?php echo json_encode(__('ui.damage_dashboard.units_partially_damaged'), 15, 512) ?>,
+				<?php echo json_encode(__('ui.damage_dashboard.units_committee_review'), 15, 512) ?>
+			],
 			colors: ['#D9214E', '#F1BC00', '#50CD89'],
 			legend: {
 				position: 'bottom'
@@ -1223,7 +1844,7 @@
 						const attrs = event.graphic.attributes;
 						const g = attrs.globalid || attrs.GLOBALID || "";
 						const name = attrs.building_name || "";
-						return `المبنى: ${name} <a target="_blank" style="color:red;" href="${assessmentBaseUrl}/${g}">الإستبيان</a>`;
+						return `${<?php echo json_encode(__('ui.damage_dashboard.building_name'), 15, 512) ?>}: ${name} <a target="_blank" style="color:red;" href="${assessmentBaseUrl}/${g}">${<?php echo json_encode(__('ui.damage_dashboard.assessment'), 15, 512) ?>}</a>`;
 					},
 					content: [
 						{
@@ -1232,7 +1853,7 @@
 						},
 						{
 							type: "text",
-							text: `<a style="color:red;" target="_blank" href="${assessmentBaseUrl}/{globalid}">الإستبيان</a>`
+							text: `<a style="color:red;" target="_blank" href="${assessmentBaseUrl}/{globalid}">${<?php echo json_encode(__('ui.damage_dashboard.assessment'), 15, 512) ?>}</a>`
 						}
 					],
 					actions: [measureThisAction]
@@ -1284,7 +1905,7 @@
 
 			const searchWidget = new Search({
 				view: view,
-				allPlaceholder: "بحث",
+				allPlaceholder: <?php echo json_encode(__('ui.damage_dashboard.search'), 15, 512) ?>,
 				includeDefaultSources: false,
 				sources: [{
 					layer: featureLayer,
@@ -1293,7 +1914,7 @@
 					exactMatch: false,
 					outFields: ["*"],
 					name: "Buildings",
-					placeholder: "بحث عن المبنى بالاسم أو الرقم"
+					placeholder: <?php echo json_encode(__('ui.damage_dashboard.search_building_name_or_number'), 15, 512) ?>
 				}]
 			});
 
@@ -1552,5 +2173,372 @@
 		}, 300000);
 	</script>
 
+	<script>
+		(function () {
+			const publicBuildingLayerUrl = <?php echo json_encode($publicBuildingLayerUrl, 15, 512) ?>;
+			const roadFacilityLayerUrl = <?php echo json_encode($roadFacilityLayerUrl, 15, 512) ?>;
+			const publicBuildingShowUrlTemplate = <?php echo json_encode(route('public-buildings.show', ['publicBuilding' => '__ID__']), 512) ?>;
+			const roadFacilityShowUrlTemplate = <?php echo json_encode(route('road-facilities.show', ['roadFacility' => '__ID__']), 512) ?>;
+			const arcgisToken = <?php echo json_encode($token, 15, 512) ?>;
+
+			function initRemoteMapTable(config) {
+				const tableElement = document.getElementById(config.tableId);
+
+				if (!tableElement) {
+					return;
+				}
+
+				const datatable = $(tableElement).DataTable({
+					serverSide: true,
+					ajax: {
+						url: config.ajaxUrl,
+						type: 'GET'
+					},
+					dom:
+						"<'table-responsive'tr>" +
+						"<'row'<'col-sm-12 col-md-5 d-flex align-items-center justify-content-center justify-content-md-start'i>" +
+						"<'col-sm-12 col-md-7 d-flex align-items-center justify-content-center justify-content-md-end'p>>",
+					info: false,
+					order: [],
+					pageLength: 10,
+					lengthChange: false,
+					processing: true,
+					columns: config.columns,
+					createdRow: function (row, data) {
+						$(row).css('cursor', 'pointer');
+						$(row).attr('data-objectid', data.objectid);
+					}
+				});
+
+				datatable.on('draw', function () {
+					KTMenu.createInstances();
+				});
+
+				const filterSearch = document.querySelector(config.searchSelector);
+
+				if (filterSearch) {
+					filterSearch.addEventListener('keydown', function (event) {
+						if (event.which === 13) {
+							event.preventDefault();
+							datatable.search(event.target.value).draw();
+						}
+					});
+				}
+			}
+
+			require([
+				'esri/Map',
+				'esri/views/MapView',
+				'esri/layers/FeatureLayer',
+				'esri/layers/GraphicsLayer',
+				'esri/Graphic',
+				'esri/identity/IdentityManager',
+				'esri/widgets/BasemapToggle',
+				'esri/widgets/Legend',
+				'esri/widgets/Search',
+				'esri/widgets/ScaleBar'
+			], function (
+				Map,
+				MapView,
+				FeatureLayer,
+				GraphicsLayer,
+				Graphic,
+				esriId,
+				BasemapToggle,
+				Legend,
+				Search,
+				ScaleBar
+			) {
+				function buildPopupTitle(event, nameField, urlTemplate) {
+					const attrs = event.graphic.attributes;
+					const recordName = attrs[nameField] || attrs.NAME || 'Record';
+					const objectId = attrs.OBJECTID || attrs.objectid;
+					const detailsUrl = urlTemplate.replace('__ID__', objectId);
+
+					return `${recordName} <a target="_blank" style="color:red;" href="${detailsUrl}">Open</a>`;
+				}
+
+				function createSelectionSymbol(geometryType) {
+					if (geometryType === 'polygon' || geometryType === 'extent') {
+						return {
+							type: 'simple-fill',
+							color: [0, 0, 0, 0],
+							outline: {
+								color: [0, 255, 255, 1],
+								width: 3
+							}
+						};
+					}
+
+					if (geometryType === 'polyline') {
+						return {
+							type: 'simple-line',
+							color: [0, 255, 255, 1],
+							width: 4
+						};
+					}
+
+					return {
+						type: 'simple-marker',
+						style: 'circle',
+						size: 12,
+						color: [0, 255, 255, 0.25],
+						outline: {
+							color: [0, 255, 255, 1],
+							width: 2
+						}
+					};
+				}
+
+				function initFeatureMap(config) {
+					if (!config.layerUrl) {
+						return;
+					}
+
+					esriId.registerToken({
+						server: config.layerUrl,
+						token: arcgisToken,
+						expires: Date.now() + (60 * 60 * 1000)
+					});
+
+					const featureLayer = new FeatureLayer({
+						url: config.layerUrl,
+						renderer: config.renderer,
+						outFields: ['*'],
+						minScale: 0,
+						maxScale: 0,
+						popupTemplate: {
+							title: function (event) {
+								return buildPopupTitle(event, config.nameField, config.showUrlTemplate);
+							},
+							content: [{
+								type: 'fields',
+								fieldInfos: config.fieldInfos
+							}]
+						}
+					});
+
+					const selectionLayer = new GraphicsLayer({ listMode: 'hide' });
+					const map = new Map({
+						basemap: 'satellite',
+						layers: [featureLayer, selectionLayer]
+					});
+
+					const view = new MapView({
+						container: config.mapContainer,
+						map: map,
+						center: [34.460987, 31.514266],
+						zoom: 14
+					});
+
+					view.popup.dockEnabled = true;
+					view.popup.dockOptions = {
+						position: 'top-left',
+						breakpoint: false,
+						buttonEnabled: false
+					};
+
+					view.ui.add(new BasemapToggle({ view: view, nextBasemap: 'osm' }), 'top-left');
+					view.ui.add(new Legend({
+						view: view,
+						container: config.legendContainer,
+						layerInfos: [{
+							layer: featureLayer,
+							title: config.legendTitle
+						}]
+					}), 'bottom-right');
+					view.ui.add(new Search({
+						view: view,
+						allPlaceholder: 'Search',
+						includeDefaultSources: false,
+						sources: [{
+							layer: featureLayer,
+							searchFields: config.searchFields,
+							displayField: config.nameField,
+							exactMatch: false,
+							outFields: ['*'],
+							name: config.legendTitle,
+							placeholder: config.searchPlaceholder
+						}]
+					}), { position: 'top-right' });
+					view.ui.add(new ScaleBar({ view: view, unit: 'metric' }), { position: 'bottom-left' });
+
+					function drawPersistentSelection(feature) {
+						selectionLayer.removeAll();
+
+						selectionLayer.add(new Graphic({
+							geometry: feature.geometry.clone ? feature.geometry.clone() : feature.geometry,
+							attributes: feature.attributes,
+							symbol: createSelectionSymbol(feature.geometry.type)
+						}));
+					}
+
+					function selectFeature(feature, doZoom) {
+						drawPersistentSelection(feature);
+
+						view.popup.open({
+							features: [feature],
+							location: feature.geometry.extent ? feature.geometry.extent.center : feature.geometry
+						});
+
+						if (doZoom) {
+							const zoomTarget = feature.geometry.extent
+								? feature.geometry.extent.expand(1.5)
+								: { target: feature.geometry, zoom: 18 };
+
+							view.goTo(zoomTarget, {
+								duration: 2000,
+								easing: 'in-out-expo'
+							}).catch(function (error) {
+								if (error.name !== 'AbortError') {
+									console.error('GoTo failed:', error);
+								}
+							});
+						}
+					}
+
+					function zoomToFeatureByObjectId(objectId) {
+						const parsedObjectId = parseInt(objectId, 10);
+
+						if (Number.isNaN(parsedObjectId)) {
+							return;
+						}
+
+						const query = featureLayer.createQuery();
+						query.where = `OBJECTID = ${parsedObjectId}`;
+						query.returnGeometry = true;
+						query.outFields = ['*'];
+
+						featureLayer.queryFeatures(query).then(function (results) {
+							if (!results.features.length) {
+								return;
+							}
+
+							selectFeature(results.features[0], true);
+						});
+					}
+
+					view.on('click', function (event) {
+						view.hitTest(event).then(function (response) {
+							const result = response.results.find(function (item) {
+								return item.graphic && item.graphic.layer === featureLayer;
+							});
+
+							if (result) {
+								selectFeature(result.graphic, false);
+							} else {
+								selectionLayer.removeAll();
+							}
+						});
+					});
+
+					$('#' + config.tableId + ' tbody').on('click', 'tr', function () {
+						const objectId = $(this).attr('data-objectid');
+
+						if (objectId) {
+							zoomToFeatureByObjectId(objectId);
+						}
+					});
+				}
+
+				initFeatureMap({
+					mapContainer: 'publicBuildingViewDiv',
+					legendContainer: 'publicBuildingLegendDiv',
+					tableId: 'kt_table_public_building',
+					layerUrl: publicBuildingLayerUrl,
+					renderer: {
+						type: 'unique-value',
+						field: 'building_damage_status',
+						defaultSymbol: {
+							type: 'simple-fill',
+							color: [128, 128, 128, 0.9],
+							outline: { color: 'white', width: 1 }
+						},
+						uniqueValueInfos: [
+							{ value: 'committee_review', symbol: { type: 'simple-fill', color: [255, 255, 0, 0.5], outline: { color: 'black', width: 1 } }, label: 'Committee Review' },
+							{ value: 'fully_damaged', symbol: { type: 'simple-fill', color: [255, 0, 0, 0.5], outline: { color: 'white', width: 2 } }, label: 'Fully Damaged' },
+							{ value: 'partially_damaged', symbol: { type: 'simple-fill', color: [0, 255, 0, 0.5], outline: { color: 'white', width: 1 } }, label: 'Partially Damaged' }
+						]
+					},
+					legendTitle: 'Public Building Damage Status',
+					nameField: 'building_name',
+					showUrlTemplate: publicBuildingShowUrlTemplate,
+					fieldInfos: [
+						{ fieldName: 'objectid', label: 'Object ID' },
+						{ fieldName: 'building_name', label: 'Building Name' },
+						{ fieldName: 'municipalitie', label: 'Municipality' },
+						{ fieldName: 'neighborhood', label: 'Neighborhood' },
+						{ fieldName: 'building_damage_status', label: 'Damage Status' }
+					],
+					searchFields: ['building_name', 'objectid', 'municipalitie', 'neighborhood'],
+					searchPlaceholder: 'Search public buildings'
+				});
+
+				initFeatureMap({
+					mapContainer: 'roadFacilityViewDiv',
+					legendContainer: 'roadFacilityLegendDiv',
+					tableId: 'kt_table_road_facility',
+					layerUrl: roadFacilityLayerUrl,
+					renderer: {
+						type: 'unique-value',
+						field: 'road_damage_level',
+						defaultSymbol: {
+							type: 'simple-line',
+							color: [128, 128, 128, 1],
+							width: 3
+						},
+						uniqueValueInfos: [
+							{ value: 'destroyed', symbol: { type: 'simple-line', color: [255, 0, 0, 1], width: 4 }, label: 'Destroyed' },
+							{ value: 'severe', symbol: { type: 'simple-line', color: [255, 94, 0, 1], width: 4 }, label: 'Severe' },
+							{ value: 'moderate', symbol: { type: 'simple-line', color: [255, 193, 7, 1], width: 4 }, label: 'Moderate' },
+							{ value: 'minor', symbol: { type: 'simple-line', color: [40, 167, 69, 1], width: 4 }, label: 'Minor' },
+							{ value: 'No_Damage', symbol: { type: 'simple-line', color: [0, 123, 255, 1], width: 4 }, label: 'No Damage' }
+						]
+					},
+					legendTitle: 'Road Damage Level',
+					nameField: 'str_name',
+					showUrlTemplate: roadFacilityShowUrlTemplate,
+					fieldInfos: [
+						{ fieldName: 'objectid', label: 'Object ID' },
+						{ fieldName: 'str_name', label: 'Road Name' },
+						{ fieldName: 'municipalitie', label: 'Municipality' },
+						{ fieldName: 'neighborhood', label: 'Neighborhood' },
+						{ fieldName: 'road_damage_level', label: 'Damage Level' }
+					],
+					searchFields: ['str_name', 'objectid', 'municipalitie', 'neighborhood'],
+					searchPlaceholder: 'Search road facilities'
+				});
+			});
+
+			KTUtil.onDOMContentLoaded(function () {
+				initRemoteMapTable({
+					tableId: 'kt_table_public_building',
+					ajaxUrl: <?php echo json_encode(route('public-buildings-map'), 15, 512) ?>,
+					searchSelector: '[data-kt-public-building-map-filter="search"]',
+					columns: [
+						{ data: 'municipalitie', name: 'municipalitie', searchable: true },
+						{ data: 'neighborhood', name: 'neighborhood', searchable: true },
+						{ data: 'objectid', name: 'objectid', searchable: true },
+						{ data: 'building_name', name: 'building_name', searchable: true },
+						{ data: 'building_damage_status', name: 'building_damage_status', searchable: true }
+					]
+				});
+
+				initRemoteMapTable({
+					tableId: 'kt_table_road_facility',
+					ajaxUrl: <?php echo json_encode(route('road-facilities-map'), 15, 512) ?>,
+					searchSelector: '[data-kt-road-facility-map-filter="search"]',
+					columns: [
+						{ data: 'municipalitie', name: 'municipalitie', searchable: true },
+						{ data: 'neighborhood', name: 'neighborhood', searchable: true },
+						{ data: 'objectid', name: 'objectid', searchable: true },
+						{ data: 'str_name', name: 'str_name', searchable: true },
+						{ data: 'road_damage_level', name: 'road_damage_level', searchable: true }
+					]
+				});
+			});
+		})();
+	</script>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/damageAssessment.blade.php ENDPATH**/ ?>

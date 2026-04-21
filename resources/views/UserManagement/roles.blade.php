@@ -1,9 +1,11 @@
 @extends('layouts.app')
 
+@section('title', __('ui.roles.title'))
+@section('pageName', __('ui.roles.title'))
+
 @section('content')
 <div id="kt_app_content_container" class="app-container container-xxl">
     <div id="roles_cards_wrapper" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-5 g-xl-9">
-
         @foreach($roles as $role)
             @php
                 $rolePermissions = $role->permissions->pluck('name');
@@ -21,7 +23,7 @@
 
                     <div class="card-body pt-1">
                         <div class="fw-bold text-gray-600 mb-5">
-                            Total users with this role: {{ $role->users_count }}
+                            {{ __('ui.roles.users_count', ['count' => $role->users_count]) }}
                         </div>
 
                         <div class="d-flex flex-column text-gray-600">
@@ -33,37 +35,28 @@
                             @empty
                                 <div class="d-flex align-items-center py-2">
                                     <span class="bullet bg-secondary me-3"></span>
-                                    <em>No permissions assigned</em>
+                                    <em>{{ __('ui.roles.no_permissions') }}</em>
                                 </div>
                             @endforelse
 
                             @if($remainingCount > 0)
                                 <div class="d-flex align-items-center py-2">
                                     <span class="bullet bg-primary me-3"></span>
-                                    <em>and {{ $remainingCount }} more...</em>
+                                    <em>{{ __('ui.roles.and_more', ['count' => $remainingCount]) }}</em>
                                 </div>
                             @endif
                         </div>
                     </div>
 
                     <div class="card-footer flex-wrap pt-0">
-                        <button
-                            type="button"
-                            class="btn btn-light btn-active-light-primary my-1 me-2 btn-edit-role"
-                            data-id="{{ $role->id }}"
-                            data-bs-toggle="modal"
-                            data-bs-target="#kt_modal_update_role"
-                        >
-                            Edit Role
+                        <button type="button" class="btn btn-light btn-active-light-primary my-1 me-2 btn-edit-role"
+                            data-id="{{ $role->id }}" data-bs-toggle="modal" data-bs-target="#kt_modal_update_role">
+                            {{ __('ui.buttons.edit') }}
                         </button>
 
-                        <button
-                            type="button"
-                            class="btn btn-light btn-active-danger my-1 btn-delete-role"
-                            data-id="{{ $role->id }}"
-                            data-name="{{ $role->name }}"
-                        >
-                            Delete
+                        <button type="button" class="btn btn-light btn-active-danger my-1 btn-delete-role"
+                            data-id="{{ $role->id }}" data-name="{{ $role->name }}">
+                            {{ __('ui.buttons.delete') }}
                         </button>
                     </div>
                 </div>
@@ -73,32 +66,23 @@
         <div class="col-md-4" id="add-role-card">
             <div class="card h-md-100">
                 <div class="card-body d-flex flex-center">
-                    <button
-                        type="button"
-                        class="btn btn-clear d-flex flex-column flex-center"
-                        data-bs-toggle="modal"
-                        data-bs-target="#kt_modal_add_role"
-                    >
+                    <button type="button" class="btn btn-clear d-flex flex-column flex-center"
+                        data-bs-toggle="modal" data-bs-target="#kt_modal_add_role">
                         <img src="{{ asset('assets/media/illustrations/sketchy-1/4.png') }}" alt="" class="mw-100 mh-150px mb-7" />
-                        <div class="fw-bold fs-3 text-gray-600 text-hover-primary">Add New Role</div>
+                        <div class="fw-bold fs-3 text-gray-600 text-hover-primary">{{ __('ui.roles.add_new') }}</div>
                     </button>
                 </div>
             </div>
         </div>
-
     </div>
 
-    {{-- Add Role Modal --}}
     <div class="modal fade" id="kt_modal_add_role" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered mw-750px">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="fw-bold">Add a Role</h2>
+                    <h2 class="fw-bold">{{ __('ui.roles.add_title') }}</h2>
                     <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
-                        <i class="ki-duotone ki-cross fs-1">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
+                        <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
                     </div>
                 </div>
 
@@ -109,23 +93,23 @@
                         <div class="d-flex flex-column scroll-y me-n7 pe-7">
                             <div class="fv-row mb-10">
                                 <label class="fs-5 fw-bold form-label mb-2">
-                                    <span class="required">Role name</span>
+                                    <span class="required">{{ __('ui.roles.role_name') }}</span>
                                 </label>
-                                <input class="form-control form-control-solid" placeholder="Enter a role name" name="name" />
+                                <input class="form-control form-control-solid" placeholder="{{ __('ui.roles.role_name_placeholder') }}" name="name" />
                             </div>
 
                             <div class="fv-row">
-                                <label class="fs-5 fw-bold form-label mb-2">Role Permissions</label>
+                                <label class="fs-5 fw-bold form-label mb-2">{{ __('ui.roles.permissions') }}</label>
 
                                 <div class="table-responsive">
                                     <table class="table align-middle table-row-dashed fs-6 gy-5">
                                         <tbody class="text-gray-600 fw-semibold">
                                             <tr>
-                                                <td class="text-gray-800">All Permissions</td>
+                                                <td class="text-gray-800">{{ __('ui.roles.all_permissions') }}</td>
                                                 <td>
                                                     <label class="form-check form-check-custom form-check-solid me-9">
                                                         <input class="form-check-input select-all-permissions" type="checkbox" />
-                                                        <span class="form-check-label">Select all</span>
+                                                        <span class="form-check-label">{{ __('ui.buttons.select_all') }}</span>
                                                     </label>
                                                 </td>
                                             </tr>
@@ -135,13 +119,8 @@
                                                     <td class="text-gray-800">{{ $permission->name }}</td>
                                                     <td>
                                                         <label class="form-check form-check-sm form-check-custom form-check-solid">
-                                                            <input
-                                                                class="form-check-input permission-checkbox"
-                                                                type="checkbox"
-                                                                name="permissions[]"
-                                                                value="{{ $permission->name }}"
-                                                            />
-                                                            <span class="form-check-label">Allow</span>
+                                                            <input class="form-check-input permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permission->name }}" />
+                                                            <span class="form-check-label">{{ __('ui.buttons.allow') }}</span>
                                                         </label>
                                                     </td>
                                                 </tr>
@@ -153,9 +132,9 @@
                         </div>
 
                         <div class="text-center pt-15">
-                            <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">Discard</button>
+                            <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('ui.buttons.discard') }}</button>
                             <button type="submit" class="btn btn-primary" id="add_role_submit_btn">
-                                <span class="indicator-label">Submit</span>
+                                <span class="indicator-label">{{ __('ui.buttons.submit') }}</span>
                             </button>
                         </div>
                     </form>
@@ -164,51 +143,41 @@
         </div>
     </div>
 
-    {{-- Update Role Modal --}}
     <div class="modal fade" id="kt_modal_update_role" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered mw-750px">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="fw-bold">Update Role</h2>
+                    <h2 class="fw-bold">{{ __('ui.roles.update_title') }}</h2>
                     <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
-                        <i class="ki-duotone ki-cross fs-1">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
+                        <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
                     </div>
                 </div>
 
                 <div class="modal-body scroll-y mx-5 my-7">
                     <form id="kt_modal_update_role_form" class="form">
                         @csrf
-
                         <input type="hidden" id="edit_role_id">
 
                         <div class="d-flex flex-column scroll-y me-n7 pe-7">
                             <div class="fv-row mb-10">
                                 <label class="fs-5 fw-bold form-label mb-2">
-                                    <span class="required">Role name</span>
+                                    <span class="required">{{ __('ui.roles.role_name') }}</span>
                                 </label>
-                                <input
-                                    class="form-control form-control-solid"
-                                    placeholder="Enter a role name"
-                                    name="name"
-                                    id="edit_role_name"
-                                />
+                                <input class="form-control form-control-solid" placeholder="{{ __('ui.roles.role_name_placeholder') }}" name="name" id="edit_role_name" />
                             </div>
 
                             <div class="fv-row">
-                                <label class="fs-5 fw-bold form-label mb-2">Role Permissions</label>
+                                <label class="fs-5 fw-bold form-label mb-2">{{ __('ui.roles.permissions') }}</label>
 
                                 <div class="table-responsive">
                                     <table class="table align-middle table-row-dashed fs-6 gy-5">
                                         <tbody class="text-gray-600 fw-semibold">
                                             <tr>
-                                                <td class="text-gray-800">All Permissions</td>
+                                                <td class="text-gray-800">{{ __('ui.roles.all_permissions') }}</td>
                                                 <td>
                                                     <label class="form-check form-check-custom form-check-solid me-9">
                                                         <input class="form-check-input select-all-permissions-edit" type="checkbox" />
-                                                        <span class="form-check-label">Select all</span>
+                                                        <span class="form-check-label">{{ __('ui.buttons.select_all') }}</span>
                                                     </label>
                                                 </td>
                                             </tr>
@@ -218,13 +187,8 @@
                                                     <td class="text-gray-800">{{ $permission->name }}</td>
                                                     <td>
                                                         <label class="form-check form-check-sm form-check-custom form-check-solid">
-                                                            <input
-                                                                class="form-check-input edit-permission-checkbox"
-                                                                type="checkbox"
-                                                                name="permissions[]"
-                                                                value="{{ $permission->name }}"
-                                                            />
-                                                            <span class="form-check-label">Allow</span>
+                                                            <input class="form-check-input edit-permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permission->name }}" />
+                                                            <span class="form-check-label">{{ __('ui.buttons.allow') }}</span>
                                                         </label>
                                                     </td>
                                                 </tr>
@@ -236,9 +200,9 @@
                         </div>
 
                         <div class="text-center pt-15">
-                            <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">Discard</button>
+                            <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('ui.buttons.discard') }}</button>
                             <button type="submit" class="btn btn-primary" id="update_role_submit_btn">
-                                <span class="indicator-label">Update</span>
+                                <span class="indicator-label">{{ __('ui.buttons.update') }}</span>
                             </button>
                         </div>
                     </form>
@@ -246,13 +210,22 @@
             </div>
         </div>
     </div>
-
 </div>
 @endsection
 
 @section('script')
 <script>
 $(document).ready(function () {
+    const roleTranslations = {
+        error: @json(__('ui.messages.unexpected_error')),
+        noPermissions: @json(__('ui.roles.no_permissions')),
+        andMore: @json(__('ui.roles.and_more', ['count' => '__COUNT__'])),
+        usersCount: @json(__('ui.roles.users_count', ['count' => '__COUNT__'])),
+        edit: @json(__('ui.buttons.edit')),
+        delete: @json(__('ui.buttons.delete')),
+        deleteConfirm: @json(__('ui.roles.delete_confirm', ['name' => '__NAME__'])),
+    };
+
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -260,20 +233,12 @@ $(document).ready(function () {
     });
 
     function showErrors(xhr) {
-        console.log(xhr);
-
         if (xhr.responseJSON && xhr.responseJSON.errors) {
-            let errors = Object.values(xhr.responseJSON.errors).flat().join('\n');
-            alert(errors);
+            alert(Object.values(xhr.responseJSON.errors).flat().join('\n'));
             return;
         }
 
-        if (xhr.responseJSON && xhr.responseJSON.message) {
-            alert(xhr.responseJSON.message);
-            return;
-        }
-
-        alert('Something went wrong');
+        alert(xhr.responseJSON?.message ?? roleTranslations.error);
     }
 
     function escapeHtml(text) {
@@ -288,81 +253,35 @@ $(document).ready(function () {
             let remainingCount = role.permissions.length - visiblePermissions.length;
 
             visiblePermissions.forEach(function(permission) {
-                permissionsHtml += `
-                    <div class="d-flex align-items-center py-2">
-                        <span class="bullet bg-primary me-3"></span>
-                        ${escapeHtml(permission)}
-                    </div>
-                `;
+                permissionsHtml += `<div class="d-flex align-items-center py-2"><span class="bullet bg-primary me-3"></span>${escapeHtml(permission)}</div>`;
             });
 
             if (remainingCount > 0) {
-                permissionsHtml += `
-                    <div class="d-flex align-items-center py-2">
-                        <span class="bullet bg-primary me-3"></span>
-                        <em>and ${remainingCount} more...</em>
-                    </div>
-                `;
+                permissionsHtml += `<div class="d-flex align-items-center py-2"><span class="bullet bg-primary me-3"></span><em>${roleTranslations.andMore.replace('__COUNT__', remainingCount)}</em></div>`;
             }
         } else {
-            permissionsHtml = `
-                <div class="d-flex align-items-center py-2">
-                    <span class="bullet bg-secondary me-3"></span>
-                    <em>No permissions assigned</em>
-                </div>
-            `;
+            permissionsHtml = `<div class="d-flex align-items-center py-2"><span class="bullet bg-secondary me-3"></span><em>${roleTranslations.noPermissions}</em></div>`;
         }
 
-        return `
-            <div class="col-md-4 role-card-item" id="role-card-${role.id}" data-role-id="${role.id}">
-                <div class="card card-flush h-md-100">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <h2>${escapeHtml(role.name)}</h2>
-                        </div>
-                    </div>
-
-                    <div class="card-body pt-1">
-                        <div class="fw-bold text-gray-600 mb-5">
-                            Total users with this role: ${role.users_count ?? 0}
-                        </div>
-
-                        <div class="d-flex flex-column text-gray-600">
-                            ${permissionsHtml}
-                        </div>
-                    </div>
-
-                    <div class="card-footer flex-wrap pt-0">
-                        <button
-                            type="button"
-                            class="btn btn-light btn-active-light-primary my-1 me-2 btn-edit-role"
-                            data-id="${role.id}"
-                            data-bs-toggle="modal"
-                            data-bs-target="#kt_modal_update_role"
-                        >
-                            Edit Role
-                        </button>
-
-                        <button
-                            type="button"
-                            class="btn btn-light btn-active-danger my-1 btn-delete-role"
-                            data-id="${role.id}"
-                            data-name="${escapeHtml(role.name)}"
-                        >
-                            Delete
-                        </button>
-                    </div>
+        return `<div class="col-md-4 role-card-item" id="role-card-${role.id}" data-role-id="${role.id}">
+            <div class="card card-flush h-md-100">
+                <div class="card-header"><div class="card-title"><h2>${escapeHtml(role.name)}</h2></div></div>
+                <div class="card-body pt-1">
+                    <div class="fw-bold text-gray-600 mb-5">${roleTranslations.usersCount.replace('__COUNT__', role.users_count ?? 0)}</div>
+                    <div class="d-flex flex-column text-gray-600">${permissionsHtml}</div>
+                </div>
+                <div class="card-footer flex-wrap pt-0">
+                    <button type="button" class="btn btn-light btn-active-light-primary my-1 me-2 btn-edit-role" data-id="${role.id}" data-bs-toggle="modal" data-bs-target="#kt_modal_update_role">${roleTranslations.edit}</button>
+                    <button type="button" class="btn btn-light btn-active-danger my-1 btn-delete-role" data-id="${role.id}" data-name="${escapeHtml(role.name)}">${roleTranslations.delete}</button>
                 </div>
             </div>
-        `;
+        </div>`;
     }
 
     $('#kt_modal_add_role_form').on('submit', function(e) {
         e.preventDefault();
-
         let form = $(this);
         let btn = $('#add_role_submit_btn');
-
         btn.prop('disabled', true);
 
         $.ajax({
@@ -373,9 +292,7 @@ $(document).ready(function () {
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_add_role')).hide();
                 form[0].reset();
                 $('.select-all-permissions').prop('checked', false);
-
-                let newCardHtml = buildRoleCard(response.role);
-                $('#add-role-card').before(newCardHtml);
+                $('#add-role-card').before(buildRoleCard(response.role));
             },
             error: function(xhr) {
                 showErrors(xhr);
@@ -388,7 +305,6 @@ $(document).ready(function () {
 
     $(document).on('click', '.btn-edit-role', function() {
         let roleId = $(this).data('id');
-
         $('#kt_modal_update_role_form')[0].reset();
         $('.edit-permission-checkbox').prop('checked', false);
         $('.select-all-permissions-edit').prop('checked', false);
@@ -399,11 +315,8 @@ $(document).ready(function () {
             success: function(response) {
                 $('#edit_role_id').val(response.role.id);
                 $('#edit_role_name').val(response.role.name);
-
-                let permissions = response.role.permissions ?? [];
-
                 $('.edit-permission-checkbox').each(function() {
-                    $(this).prop('checked', permissions.includes($(this).val()));
+                    $(this).prop('checked', (response.role.permissions ?? []).includes($(this).val()));
                 });
             },
             error: function(xhr) {
@@ -414,10 +327,8 @@ $(document).ready(function () {
 
     $('#kt_modal_update_role_form').on('submit', function(e) {
         e.preventDefault();
-
         let roleId = $('#edit_role_id').val();
         let btn = $('#update_role_submit_btn');
-
         btn.prop('disabled', true);
 
         $.ajax({
@@ -426,9 +337,7 @@ $(document).ready(function () {
             data: $(this).serialize() + '&_method=PUT',
             success: function(response) {
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_update_role')).hide();
-
-                let updatedCardHtml = buildRoleCard(response.role);
-                $('#role-card-' + response.role.id).replaceWith(updatedCardHtml);
+                $('#role-card-' + response.role.id).replaceWith(buildRoleCard(response.role));
             },
             error: function(xhr) {
                 showErrors(xhr);
@@ -443,16 +352,14 @@ $(document).ready(function () {
         let roleId = $(this).data('id');
         let roleName = $(this).data('name');
 
-        if (!confirm('Are you sure you want to delete role: ' + roleName + ' ?')) {
+        if (!confirm(roleTranslations.deleteConfirm.replace('__NAME__', roleName))) {
             return;
         }
 
         $.ajax({
             url: "{{ url('/user-management/roles') }}/" + roleId,
             type: 'POST',
-            data: {
-                _method: 'DELETE'
-            },
+            data: { _method: 'DELETE' },
             success: function() {
                 $('#role-card-' + roleId).remove();
             },
@@ -471,4 +378,4 @@ $(document).ready(function () {
     });
 });
 </script>
-@endSection
+@endsection

@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('title', 'الإستبيان')
-@section('pageName', 'الإستبيان')
+@section('title', __('ui.audit.title'))
+@section('pageName', __('ui.audit.title'))
 
 @section('content')
     @php
@@ -18,12 +18,12 @@
                 <div class="card-header pt-6">
                     <div class="card-title">
                         <i class="ki-duotone ki-filter fs-1 me-3 text-primary"></i>
-                        <h3 class="fw-bold m-0">الفلاتر</h3>
+                        <h3 class="fw-bold m-0">{{ __('ui.audit.filters') }}</h3>
                     </div>
 
                     <div class="card-toolbar">
                         <button type="button" class="btn btn-sm btn-light-danger" id="resetFilters">
-                            إعادة تعيين
+                            {{ __('ui.audit.reset') }}
                         </button>
                     </div>
                 </div>
@@ -31,17 +31,17 @@
                 <div class="card-body">
                     <div class="row g-5">
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">بحث باسم المبنى</label>
+                            <label class="form-label fw-semibold">{{ __('ui.audit.search_building_name') }}</label>
                             <input type="text" id="filter_building_name" class="form-control form-control-solid"
-                                placeholder="اسم المبنى" />
+                                placeholder="{{ __('ui.audit.building_name_placeholder') }}" />
                         </div>
 
 
 
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">الحالة الهندسية</label>
+                            <label class="form-label fw-semibold">{{ __('ui.audit.engineering_status') }}</label>
                             <select id="filter_eng_status" class="form-select form-select-solid" data-control="select2"
-                                data-allow-clear="true" data-placeholder="اختر الحالة">
+                                data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
                                 <option></option>
                                 <option value="pending">Pending</option>
                                 <option value="assigned_to_engineer">Assigned To Engineer</option>
@@ -52,9 +52,9 @@
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">الحالة القانونية</label>
+                            <label class="form-label fw-semibold">{{ __('ui.audit.legal_status') }}</label>
                             <select id="filter_legal_status" class="form-select form-select-solid" data-control="select2"
-                                data-allow-clear="true" data-placeholder="اختر الحالة">
+                                data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
                                 <option></option>
                                 <option value="pending">Pending</option>
                                 <option value="assigned_to_lawyer">Assigned To Lawyer</option>
@@ -65,14 +65,14 @@
 
 
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">منطقة/حي</label>
+                            <label class="form-label fw-semibold">{{ __('ui.audit.area') }}</label>
                             <input type="text" id="filter_area" class="form-control form-control-solid"
-                                placeholder="المنطقة أو الحي" />
+                                placeholder="{{ __('ui.audit.area_placeholder') }}" />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">المهندس الميداني </label>
+                            <label class="form-label fw-semibold">{{ __('ui.audit.field_engineer') }}</label>
                             <select id="filter_field_engineer" class="form-select form-select-solid" data-control="select2"
-                                data-allow-clear="true" data-placeholder="اختر Field Engineer">
+                                data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_field_engineer') }}">
                                 <option></option>
                                 @foreach($assignedTo as $eng)
                                     <option value="{{ $eng->assignedto }}">{{ $eng->assignedto }}</option>
@@ -81,9 +81,9 @@
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">حالة الضرر</label>
+                            <label class="form-label fw-semibold">{{ __('ui.audit.damage_status') }}</label>
                             <select id="filter_damage_status" class="form-select form-select-solid" data-control="select2"
-                                data-allow-clear="true" data-placeholder="اختر الحالة">
+                                data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
                                 <option></option>
                                 <option value="fully_damaged">Fully Damaged</option>
                                 <option value="partially_damaged">Partially Damaged</option>
@@ -91,19 +91,19 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">من تاريخ الإنشاء</label>
-                            <input type="date" id="filter_from_date" placeholder="من تاريخ الإنشاء"
+                            <label class="form-label fw-semibold">{{ __('ui.audit.from_creation_date') }}</label>
+                            <input type="date" id="filter_from_date" placeholder="{{ __('ui.audit.from_creation_date') }}"
                                 class="form-control form-control-solid">
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">إلى تاريخ الإنشاء</label>
-                            <input type="date" id="filter_to_date" placeholder="إلى تاريخ الإنشاء"
+                            <label class="form-label fw-semibold">{{ __('ui.audit.to_creation_date') }}</label>
+                            <input type="date" id="filter_to_date" placeholder="{{ __('ui.audit.to_creation_date') }}"
                                 class="form-control form-control-solid">
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <button type="button" class="btn btn-primary w-100" id="applyFilters">
-                                تطبيق الفلاتر
+                                {{ __('ui.audit.apply_filters') }}
                             </button>
                         </div>
                     </div>
@@ -126,7 +126,7 @@
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
-                                تحديث
+                                {{ __('ui.audit.refresh') }}
                             </button>
                         </div>
                     </div>
