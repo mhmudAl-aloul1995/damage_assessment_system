@@ -1,5 +1,5 @@
 
-INSERT INTO `building_statusess` (`id`, `building_id`, `status_id`, `user_id`, `type`, `notes`, `created_at`, `updated_at`) VALUES
+INSERT INTO `building_statuses` (`id`, `building_id`, `status_id`, `user_id`, `type`, `notes`, `created_at`, `updated_at`) VALUES
 (1, 4670, 4, 1276, 'QC/QA Engineer', 'تم', '2026-03-31 17:42:54', '2026-04-05 14:44:40'),
 (2, 7857, 3, 1276, 'QC/QA Engineer', 'الوحدات السكنية التي يوجد فيها اضرار لا يوجد اي حصر كميات لها', '2026-03-31 17:42:54', '2026-04-06 15:49:45'),
 (3, 8856, 4, 1297, 'QC/QA Engineer', 'تمت المراجعة', '2026-03-31 17:42:54', '2026-04-05 16:52:47'),
