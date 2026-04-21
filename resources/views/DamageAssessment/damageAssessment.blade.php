@@ -49,6 +49,11 @@
 		];
 	@endphp
 	<style>
+		.damage-dashboard-stats,
+		.damage-dashboard-stats * {
+			font-family: 'Droid Arabic Kufi', sans-serif !important;
+		}
+
 		#externalLegendDiv {
 			padding: 10px;
 			background-color: white;
