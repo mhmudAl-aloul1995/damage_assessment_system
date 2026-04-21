@@ -223,7 +223,8 @@
 						<div id="selected_buildings_container"></div>
 
 						<div class="fv-row mb-7">
-							<label id="user_label" class="required fs-6 fw-semibold mb-2"><?php echo e(__('ui.audit.select_engineer')); ?></label>
+							<label id="user_label"
+								class="required fs-6 fw-semibold mb-2"><?php echo e(__('ui.audit.select_engineer')); ?></label>
 
 							<select name="user_id" id="assign_user_id" class="form-select form-select-solid"
 								data-control="select2" data-placeholder="<?php echo e(__('ui.audit.select_user')); ?>"
@@ -239,7 +240,8 @@
 					</div>
 
 					<div class="modal-footer flex-center">
-						<button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal"><?php echo e(__('ui.buttons.cancel')); ?></button>
+						<button type="reset" class="btn btn-light me-3"
+							data-bs-dismiss="modal"><?php echo e(__('ui.buttons.cancel')); ?></button>
 						<button type="submit" class="btn btn-primary" id="kt_modal_assign_submit">
 							<span class="indicator-label"><?php echo e(__('ui.audit.agree')); ?></span>
 						</button>
@@ -341,7 +343,7 @@
 					orderable: false,
 					searchable: false
 				}],
-				order: [[1, 'desc']],
+				order: [[8, 'desc']],
 				columns: [
 					{
 						data: 'objectid',
@@ -349,10 +351,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																																<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																																	<input class="form-check-input" type="checkbox"
-																																		data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																																</div>`
+																																	<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																																		<input class="form-check-input" type="checkbox"
+																																			data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																																	</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'assignedto', name: 'assignedto' },
@@ -550,10 +552,10 @@
 
 				$('#notesHistoryModalTitle').text(<?php echo json_encode(__('ui.audit.status_history'), 15, 512) ?> + ' - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-																	<tr>
-																		<td colspan="6" class="text-center">${<?php echo json_encode(__('ui.audit.loading'), 15, 512) ?>}</td>
-																	</tr>
-																`);
+																		<tr>
+																			<td colspan="6" class="text-center">${<?php echo json_encode(__('ui.audit.loading'), 15, 512) ?>}</td>
+																		</tr>
+																	`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -567,40 +569,40 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-																					<tr>
-																						<td>${item.status_name}</td>
-																						<td>${item.user_name}</td>
-																						<td>${item.role_name}</td>
-																						<td>${item.notes}</td>
-																						<td>${item.created_at}</td>
-																						<td>
-																							${item.can_delete ? `
-																								<button type="button"
-																									class="btn btn-sm btn-light-danger btn-delete-history"
-																									data-id="${item.id}">
-																									${<?php echo json_encode(__('ui.audit.delete_record'), 15, 512) ?>}
-																								</button>
-																							` : '-'}
-																						</td>
-																					</tr>
-																				`;
+																						<tr>
+																							<td>${item.status_name}</td>
+																							<td>${item.user_name}</td>
+																							<td>${item.role_name}</td>
+																							<td>${item.notes}</td>
+																							<td>${item.created_at}</td>
+																							<td>
+																								${item.can_delete ? `
+																									<button type="button"
+																										class="btn btn-sm btn-light-danger btn-delete-history"
+																										data-id="${item.id}">
+																										${<?php echo json_encode(__('ui.audit.delete_record'), 15, 512) ?>}
+																									</button>
+																								` : '-'}
+																							</td>
+																						</tr>
+																					`;
 							});
 						} else {
 							rows = `
-																				<tr>
-																					<td colspan="6" class="text-center text-muted">${<?php echo json_encode(__('ui.audit.no_status_history'), 15, 512) ?>}</td>
-																				</tr>
-																			`;
+																					<tr>
+																						<td colspan="6" class="text-center text-muted">${<?php echo json_encode(__('ui.audit.no_status_history'), 15, 512) ?>}</td>
+																					</tr>
+																				`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-																			<tr>
-																				<td colspan="6" class="text-center text-danger">${<?php echo json_encode(__('ui.audit.failed_load_history'), 15, 512) ?>}</td>
-																			</tr>
-																		`);
+																				<tr>
+																					<td colspan="6" class="text-center text-danger">${<?php echo json_encode(__('ui.audit.failed_load_history'), 15, 512) ?>}</td>
+																				</tr>
+																			`);
 					}
 				});
 			});
@@ -628,10 +630,10 @@
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
-																			<tr>
-																				<td colspan="6" class="text-center text-muted">${<?php echo json_encode(__('ui.audit.no_status_history'), 15, 512) ?>}</td>
-																			</tr>
-																		`);
+																				<tr>
+																					<td colspan="6" class="text-center text-muted">${<?php echo json_encode(__('ui.audit.no_status_history'), 15, 512) ?>}</td>
+																				</tr>
+																			`);
 							}
 						} else {
 							toastr.error(response.message || <?php echo json_encode(__('ui.audit.delete_failed'), 15, 512) ?>);
@@ -791,5 +793,4 @@
 		}
 	</script>
 <?php $__env->stopSection(); ?>
-
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\myProjects\phc\resources\views/DamageAssessment/audit.blade.php ENDPATH**/ ?>
