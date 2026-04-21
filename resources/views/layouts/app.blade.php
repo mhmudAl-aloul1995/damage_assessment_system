@@ -972,7 +972,7 @@
 							<div class="cursor-pointer symbol symbol-35px"
 								data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
 								data-kt-menu-placement="bottom-end">
-								<img src="{{ Auth::user()->avatar ? asset('storage/app/public/' . Auth::user()->avatar) : asset('assets/media/avatars/blank.png') }}"
+								<img src="{{ Auth::user()->avatar ? url('storage/app/public/' . Auth::user()->avatar) : asset('assets/media/avatars/blank.png') }}"
 									class="rounded-3" alt="user" />
 							</div>
 							<!--begin::User account menu-->
@@ -985,7 +985,7 @@
 										<!--begin::Avatar-->
 										<div class="symbol symbol-50px ms-4 flex-shrink-0">
 											<img alt="Avatar"
-												src="{{ Auth::user()->avatar ? asset('storage/app/public/'. Auth::user()->avatar) : asset('assets/media/avatars/blank.png') }}"
+												src="{{ Auth::user()->avatar ? url('storage/app/public/'. Auth::user()->avatar) : asset('assets/media/avatars/blank.png') }}"
 												class="object-fit-cover rounded" />
 										</div>
 										<!--end::Avatar-->
