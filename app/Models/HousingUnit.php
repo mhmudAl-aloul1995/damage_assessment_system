@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Container\Attributes\Auth;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Casts\Attribute; // Import Attribute if using modern Laravel accessors
-use App\Models\EditAssessment;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Model; // Import Attribute if using modern Laravel accessors
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
+
 /**
  * Class HousingUnit
  *
@@ -353,8 +353,6 @@ class HousingUnit extends Model
      *
      * @var list<string>
      */
-
-
     protected $fillable = [
         'id',
         'attachments',
@@ -683,7 +681,7 @@ class HousingUnit extends Model
         'cm13',
         'pm40',
         'security_situation_unit',
-        'final_comments'
+        'final_comments',
     ];
 
     /**
@@ -696,79 +694,84 @@ class HousingUnit extends Model
     /**
      * @return array<string, string>
      */
-
     protected $appends = ['full_name'];
-
 
     protected function fullName(): Attribute
     {
 
         return Attribute::make(
-            get: fn($value, $attributes) => implode(' ', array_filter([
+            get: fn ($value, $attributes) => implode(' ', array_filter([
                 $attributes['q_9_3_1_first_name'] ?? '',
                 $attributes['q_9_3_2_second_name__father'] ?? '',
                 $attributes['q_9_3_4_last_name'] ?? '',
             ])),
         );
     }
+
     protected array $editedFieldsCache = [];
 
-/*     public function edits(): HasMany
-    {
-        return $this->hasMany(EditAssessment::class, 'global_id', 'globalid')
-            ->where('type', 'housing_table');
-    } */
+    /*     public function edits(): HasMany
+        {
+            return $this->hasMany(EditAssessment::class, 'global_id', 'globalid')
+                ->where('type', 'housing_table');
+        } */
 
-/*     protected function getEditedFieldsMap(): array
-    {
-        if (!empty($this->editedFieldsCache)) {
+    /*     protected function getEditedFieldsMap(): array
+        {
+            if (!empty($this->editedFieldsCache)) {
+                return $this->editedFieldsCache;
+            }
+
+            $edits = $this->relationLoaded('edits')
+                ? $this->getRelation('edits')
+                : $this->edits()->get();
+
+            $this->editedFieldsCache = $edits
+                ->sortByDesc('id')
+                ->unique('field_name')
+                ->mapWithKeys(fn($edit) => [$edit->field_name => $edit->field_value])
+                ->toArray();
+
             return $this->editedFieldsCache;
         }
 
-        $edits = $this->relationLoaded('edits')
-            ? $this->getRelation('edits')
-            : $this->edits()->get();
+        public function getAttributeValue($key): mixed
+        {
+            $value = parent::getAttributeValue($key);
 
-        $this->editedFieldsCache = $edits
-            ->sortByDesc('id')
-            ->unique('field_name')
-            ->mapWithKeys(fn($edit) => [$edit->field_name => $edit->field_value])
-            ->toArray();
+            if (!array_key_exists($key, $this->attributes)) {
+                return $value;
+            }
 
-        return $this->editedFieldsCache;
-    }
+            $editedFields = $this->getEditedFieldsMap();
 
-    public function getAttributeValue($key): mixed
-    {
-        $value = parent::getAttributeValue($key);
+            if (array_key_exists($key, $editedFields)) {
+                return $editedFields[$key];
+            }
 
-        if (!array_key_exists($key, $this->attributes)) {
             return $value;
         }
 
-        $editedFields = $this->getEditedFieldsMap();
+        public function getOriginalOrEditedAttributes(): array
+        {
+            $data = parent::attributesToArray();
 
-        if (array_key_exists($key, $editedFields)) {
-            return $editedFields[$key];
-        }
+            foreach ($this->getEditedFieldsMap() as $field => $value) {
+                $data[$field] = $value;
+            }
 
-        return $value;
-    }
-
-    public function getOriginalOrEditedAttributes(): array
-    {
-        $data = parent::attributesToArray();
-
-        foreach ($this->getEditedFieldsMap() as $field => $value) {
-            $data[$field] = $value;
-        }
-
-        return $data;
-    } */
+            return $data;
+        } */
     public function building()
     {
         return $this->belongsTo(Building::class, 'parentglobalid', 'globalid'); // Post::class is the related model
     }
+
+    public function committeeDecision(): MorphOne
+    {
+        return $this->morphOne(CommitteeDecision::class, 'decisionable');
+    }
+
     public function buildingStatuses()
     {
         return $this->hasMany(BuildingStatus::class);
@@ -779,11 +782,13 @@ class HousingUnit extends Model
         return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
             ->where('type', 'QC/QA Engineer');
     }
+
     public function finalApproval()
     {
         return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
             ->where('status_id', 19);
     }
+
     public function lawyerStatus()
     {
         return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')

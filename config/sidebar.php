@@ -155,6 +155,29 @@ return [
         ],
     ],
     [
+        'title' => 'menu.committee.title',
+        'icon' => 'ki-shield-search',
+        'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor'],
+        'active_patterns' => [
+            'committee-decisions*',
+            'committee-members*',
+        ],
+        'items' => [
+            [
+                'title' => 'menu.committee.decisions',
+                'url' => 'committee-decisions',
+                'pattern' => 'committee-decisions*',
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor'],
+            ],
+            [
+                'title' => 'menu.committee.members',
+                'url' => 'committee-members',
+                'pattern' => 'committee-members*',
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor'],
+            ],
+        ],
+    ],
+    [
         'title' => 'menu.user_management.title',
         'icon' => 'ki-user',
         'roles' => ['Database Officer'],

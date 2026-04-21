@@ -31,6 +31,11 @@ return [
         'records' => 'Attendance Records',
         'report' => 'Report',
     ],
+    'committee' => [
+        'title' => 'Committee Decisions',
+        'decisions' => 'Committee Decisions',
+        'members' => 'Committee Members',
+    ],
     'user_management' => [
         'title' => 'User Management',
         'users' => 'Users',

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Attendance\AttendanceController;
+use App\Http\Controllers\Committee\CommitteeDecisionController;
+use App\Http\Controllers\Committee\CommitteeMemberController;
 use App\Http\Controllers\DamageAssessment\ArcGISController;
 use App\Http\Controllers\DamageAssessment\auditController;
 use App\Http\Controllers\DamageAssessment\buildingController;
@@ -171,6 +173,24 @@ Route::middleware('auth')->group(function () {
             ->name('monthly-report');
         Route::get('export-monthly-report', [AttendanceController::class, 'exportMonthlyReport'])
             ->name('export-monthly-report');
+    });
+
+    Route::prefix('committee-decisions')->name('committee-decisions.')->group(function () {
+        Route::get('/', [CommitteeDecisionController::class, 'index'])->name('index');
+        Route::get('/buildings/data', [CommitteeDecisionController::class, 'buildingsData'])->name('buildings.data');
+        Route::get('/housing-units/data', [CommitteeDecisionController::class, 'housingUnitsData'])->name('housing-units.data');
+        Route::get('/buildings/{building}', [CommitteeDecisionController::class, 'showBuilding'])->name('buildings.show');
+        Route::get('/housing-units/{housingUnit}', [CommitteeDecisionController::class, 'showHousingUnit'])->name('housing-units.show');
+        Route::put('/{committeeDecision}', [CommitteeDecisionController::class, 'update'])->name('update');
+        Route::post('/{committeeDecision}/sign', [CommitteeDecisionController::class, 'sign'])->name('sign');
+    });
+
+    Route::prefix('committee-members')->name('committee-members.')->group(function () {
+        Route::get('/', [CommitteeMemberController::class, 'index'])->name('index');
+        Route::get('/data', [CommitteeMemberController::class, 'data'])->name('data');
+        Route::post('/', [CommitteeMemberController::class, 'store'])->name('store');
+        Route::put('/{committeeMember}', [CommitteeMemberController::class, 'update'])->name('update');
+        Route::delete('/{committeeMember}', [CommitteeMemberController::class, 'destroy'])->name('destroy');
     });
 
     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);

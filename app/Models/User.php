@@ -83,4 +83,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Attendance::class, 'user_id');
     }
+
+    public function committeeMembers()
+    {
+        return $this->hasMany(CommitteeMember::class);
+    }
+
+    public function managedCommitteeDecisions()
+    {
+        return $this->hasMany(CommitteeDecision::class, 'committee_manager_id');
+    }
 }

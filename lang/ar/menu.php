@@ -31,6 +31,11 @@ return [
         'records' => 'حضور/غياب',
         'report' => 'التقرير',
     ],
+    'committee' => [
+        'title' => 'قرارات اللجنة',
+        'decisions' => 'قرارات اللجنة',
+        'members' => 'أعضاء اللجنة',
+    ],
     'user_management' => [
         'title' => 'إدارة المستخدمين',
         'users' => 'المستخدمين',

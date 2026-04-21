@@ -1,0 +1,186 @@
+@extends('layouts.app')
+
+@php
+    $recordName = $recordType === 'housing-unit'
+        ? ($decisionable->housing_unit_number ?: $decisionable->full_name ?: $decisionable->objectid)
+        : ($decisionable->building_name ?: $decisionable->objectid);
+@endphp
+
+@section('title', 'قرار اللجنة')
+@section('pageName', 'قرار اللجنة')
+
+@section('content')
+    @if (session('success'))
+        <div class="alert alert-success mb-5">{{ session('success') }}</div>
+    @endif
+
+    <div class="row g-5 mb-5">
+        <div class="col-lg-4">
+            <div class="card card-flush h-100 border border-gray-200">
+                <div class="card-header">
+                    <div class="card-title"><h3 class="fw-bold m-0">ملخص القرار</h3></div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">نوع السجل</div>
+                        <div class="fw-bold">{{ $recordType === 'housing-unit' ? 'وحدة سكنية' : 'مبنى' }}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">رقم السجل</div>
+                        <div class="fw-bold">{{ $decisionable->objectid ?? '-' }}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">الاسم</div>
+                        <div class="fw-bold">{{ $recordName }}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">المبنى</div>
+                        <div class="fw-bold">{{ $building?->building_name ?? '-' }}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">المهندس الميداني</div>
+                        <div class="fw-bold">{{ $building?->assignedto ?? '-' }}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">حالة القرار</div>
+                        <div class="fw-bold">{{ $statusLabels[$decision->status] ?? $decision->status }}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">قرار اللجنة</div>
+                        <div class="fw-bold">{{ $decisionTypes[$decision->decision_type] ?? '-' }}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">الإجراء</div>
+                        <div class="fw-bold">{{ $decision->action_text ?: '-' }}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">التواقيع المطلوبة</div>
+                        <div class="fw-bold">
+                            {{ $decision->signatures->filter(fn ($signature) => $signature->committeeMember?->is_required && $signature->committeeMember?->is_active)->where('status', 'approved')->count() }}
+                            /
+                            {{ $decision->signatures->filter(fn ($signature) => $signature->committeeMember?->is_required && $signature->committeeMember?->is_active)->count() }}
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted fs-7">حالة ArcGIS</div>
+                        <div class="fw-bold">{{ $decision->arcgis_sync_status ?: 'pending' }}</div>
+                    </div>
+                    <div>
+                        <div class="text-muted fs-7">حالة WhatsApp</div>
+                        <div class="fw-bold">{{ $decision->whatsapp_status ?: 'pending' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card card-flush border border-gray-200 mb-5">
+                <div class="card-header">
+                    <div class="card-title"><h3 class="fw-bold m-0">بيانات قرار اللجنة</h3></div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ route('committee-decisions.update', $decision) }}">
+                        @csrf
+                        @method('PUT')
+
+                        <div class="row g-5">
+                            <div class="col-md-6">
+                                <label class="form-label required">نوع القرار</label>
+                                <select name="decision_type" class="form-select form-select-solid" {{ $canManageContent ? '' : 'disabled' }}>
+                                    @foreach ($decisionTypes as $value => $label)
+                                        <option value="{{ $value }}" @selected(old('decision_type', $decision->decision_type) === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label required">تاريخ القرار</label>
+                                <input type="date" name="decision_date" class="form-control form-control-solid"
+                                    value="{{ old('decision_date', optional($decision->decision_date)->format('Y-m-d') ?: now()->format('Y-m-d')) }}"
+                                    {{ $canManageContent ? '' : 'disabled' }}>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label required">نص قرار اللجنة</label>
+                                <textarea name="decision_text" rows="5" class="form-control form-control-solid" {{ $canManageContent ? '' : 'disabled' }}>{{ old('decision_text', $decision->decision_text) }}</textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">الإجراء المطلوب</label>
+                                <textarea name="action_text" rows="3" class="form-control form-control-solid" {{ $canManageContent ? '' : 'disabled' }}>{{ old('action_text', $decision->action_text) }}</textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">ملاحظات اللجنة</label>
+                                <textarea name="notes" rows="3" class="form-control form-control-solid" {{ $canManageContent ? '' : 'disabled' }}>{{ old('notes', $decision->notes) }}</textarea>
+                            </div>
+                            @if ($canManageContent)
+                                <div class="col-12 text-end">
+                                    <button type="submit" class="btn btn-primary">حفظ القرار</button>
+                                </div>
+                            @endif
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card card-flush border border-gray-200">
+                <div class="card-header">
+                    <div class="card-title"><h3 class="fw-bold m-0">التواقيع والاعتمادات</h3></div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3">
+                            <thead>
+                                <tr class="fw-bold text-muted bg-light">
+                                    <th>العضو</th>
+                                    <th>الصفة</th>
+                                    <th>مطلوب</th>
+                                    <th>الحالة</th>
+                                    <th>الملاحظات</th>
+                                    <th>تاريخ التوقيع</th>
+                                    <th>المستخدم</th>
+                                    <th>الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($decision->signatures->sortBy(fn ($signature) => $signature->committeeMember->sort_order ?? 0) as $signature)
+                                    <tr>
+                                        <td>{{ $signature->committeeMember?->name }}</td>
+                                        <td>{{ $signature->committeeMember?->title ?: '-' }}</td>
+                                        <td>
+                                            <span class="badge badge-light-{{ $signature->committeeMember?->is_required ? 'primary' : 'secondary' }}">
+                                                {{ $signature->committeeMember?->is_required ? 'مطلوب' : 'اختياري' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-light-{{ $signature->status === 'approved' ? 'success' : ($signature->status === 'rejected' ? 'danger' : 'warning') }}">
+                                                {{ $signature->status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $signature->notes ?: '-' }}</td>
+                                        <td>{{ optional($signature->signed_at)->format('Y-m-d H:i') ?: '-' }}</td>
+                                        <td>{{ $signature->signedByUser?->name ?: '-' }}</td>
+                                        <td>
+                                            @if ($canSign && (! $signature->committeeMember?->user_id || $signature->committeeMember?->user_id === auth()->id()))
+                                                <form method="POST" action="{{ route('committee-decisions.sign', $decision) }}" class="d-flex gap-2 flex-wrap">
+                                                    @csrf
+                                                    <input type="hidden" name="committee_member_id" value="{{ $signature->committee_member_id }}">
+                                                    <select name="status" class="form-select form-select-sm form-select-solid w-125px">
+                                                        <option value="approved">approved</option>
+                                                        <option value="rejected">rejected</option>
+                                                        <option value="pending">pending</option>
+                                                    </select>
+                                                    <input type="text" name="notes" class="form-control form-control-sm form-control-solid w-175px" placeholder="ملاحظات">
+                                                    <button type="submit" class="btn btn-light-primary btn-sm">تسجيل</button>
+                                                </form>
+                                            @else
+                                                <span class="text-muted">لا يوجد إجراء</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection

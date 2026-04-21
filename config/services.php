@@ -42,5 +42,23 @@ return [
         'road_facility_survey_layer_url' => env('ARCGIS_ROAD_FACILITY_SURVEY_LAYER_URL', 'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_8d4df706500f47a8864206fd1b251739_form/FeatureServer'),
         'road_facility_survey_referer' => env('ARCGIS_ROAD_FACILITY_SURVEY_REFERER', 'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_8d4df706500f47a8864206fd1b251739_form/FeatureServer/0'),
     ],
+    'committee_decisions' => [
+        'whatsapp' => [
+            'endpoint' => env('COMMITTEE_WHATSAPP_ENDPOINT'),
+            'token' => env('COMMITTEE_WHATSAPP_TOKEN'),
+        ],
+        'arcgis' => [
+            'base_url' => env('COMMITTEE_ARCGIS_BASE_URL', ''),
+            'token' => env('COMMITTEE_ARCGIS_TOKEN', ''),
+            'token_url' => env('COMMITTEE_ARCGIS_TOKEN_URL', 'https://www.arcgis.com/sharing/rest/generateToken'),
+            'referer' => env('COMMITTEE_ARCGIS_REFERER', env('APP_URL')),
+            'building_layer_id' => env('COMMITTEE_ARCGIS_BUILDING_LAYER_ID', 0),
+            'housing_unit_layer_id' => env('COMMITTEE_ARCGIS_HOUSING_UNIT_LAYER_ID', 1),
+            'identifier_field' => env('COMMITTEE_ARCGIS_IDENTIFIER_FIELD', 'objectid'),
+            'status_field' => env('COMMITTEE_ARCGIS_STATUS_FIELD', 'field_status'),
+            'status_value' => env('COMMITTEE_ARCGIS_STATUS_VALUE', 'not_completed'),
+            'unit_target' => env('COMMITTEE_ARCGIS_UNIT_TARGET', 'unit'),
+        ],
+    ],
 
 ];

@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -15,7 +15,15 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = [
-            /* 'dashboard.view',
+            'view committee decisions',
+            'create committee decisions',
+            'edit committee decisions',
+            'sign committee decisions',
+            'manage committee members',
+            'manage committee decision content',
+            'send committee whatsapp',
+            'sync committee decision arcgis',
+        /* 'dashboard.view',
 
             'users.view',
             'users.create',
@@ -75,15 +83,49 @@ class RolesAndPermissionsSeeder extends Seeder
             'name' => 'QC/QA Engineer',
             'guard_name' => 'web',
         ]);
-        $fieldEngineer = Role::firstOrCreate([
+        $legalAuditor = Role::firstOrCreate([
             'name' => 'Legal Auditor',
             'guard_name' => 'web',
         ]);
-        $fieldEngineer = Role::firstOrCreate([
+        $operationalLead = Role::firstOrCreate([
             'name' => 'Team Leader',
             'guard_name' => 'web',
         ]);
-        /* 
+
+        $systemManager->givePermissionTo($permissions);
+        $areaManager->givePermissionTo([
+            'view committee decisions',
+            'create committee decisions',
+            'edit committee decisions',
+            'manage committee members',
+            'manage committee decision content',
+            'send committee whatsapp',
+            'sync committee decision arcgis',
+        ]);
+        $teamLeader->givePermissionTo([
+            'view committee decisions',
+            'create committee decisions',
+            'edit committee decisions',
+            'manage committee decision content',
+        ]);
+        $auditing->givePermissionTo([
+            'view committee decisions',
+            'sign committee decisions',
+        ]);
+        $fieldEngineer->givePermissionTo([
+            'view committee decisions',
+            'sign committee decisions',
+        ]);
+        $legalAuditor->givePermissionTo([
+            'view committee decisions',
+            'sign committee decisions',
+        ]);
+        $operationalLead->givePermissionTo([
+            'view committee decisions',
+            'manage committee members',
+            'manage committee decision content',
+        ]);
+        /*
         $systemManager->syncPermissions($permissions);
 
         $areaManager->syncPermissions([
@@ -125,7 +167,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'assessments.edit',
             'assessments.submit',
         ]); */
-        User::find(1)->assignRole($systemManager);
+        User::find(1)?->assignRole($systemManager);
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
