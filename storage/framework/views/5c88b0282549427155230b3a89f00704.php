@@ -50,7 +50,7 @@
 	<style>
 		.damage-dashboard-stats,
 		.damage-dashboard-stats * {
-			font-family: 'Droid Arabic Kufi', sans-serif !important;
+			font-family: 'Droid Arabic Kufi' !important;
 		}
 
 		#externalLegendDiv {
