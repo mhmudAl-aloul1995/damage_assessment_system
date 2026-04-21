@@ -33,7 +33,7 @@ assets
 /node_modules
 /.env
 /storage/logs/*.log
-*.sql
+
 *.rar
 *.zip
 *.7z
