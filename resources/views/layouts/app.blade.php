@@ -49,7 +49,8 @@
 @endphp
 <!DOCTYPE html>
 
-<html lang="{{ app()->getLocale() }}" direction="{{ $direction }}" dir="{{ $direction }}" style="direction: {{ $direction }}">
+<html lang="{{ app()->getLocale() }}" direction="{{ $direction }}" dir="{{ $direction }}"
+	style="direction: {{ $direction }}">
 <!--begin::Head-->
 
 <head>
@@ -89,28 +90,33 @@
 <style>
 	@font-face {
 		font-family: 'Droid Arabic Kufi';
-		src: url('DroidArabicKufi.eot');
-		src: url('DroidArabicKufi.eot?#iefix') format('embedded-opentype'),
-			url({{url('DroidArabicKufi.woff')}}) format('woff'),
-			url({{url('DroidArabicKufi.ttf')}}) format('truetype');
+		src: url('{{ asset("fonts/DroidArabicKufi.eot") }}');
+		src:
+			url('{{ asset("fonts/DroidArabicKufi.eot?#iefix") }}') format('embedded-opentype'),
+			url('{{ asset("fonts/DroidArabicKufi.woff") }}') format('woff'),
+			url('{{ asset("fonts/DroidArabicKufi.ttf") }}') format('truetype');
+
 		font-weight: normal;
 		font-style: normal;
-
 	}
+
 	[type="tel"],
 	[type="url"],
 	[type="email"],
 	[type="number"],
 	table {
-		direction: {{ $direction }} !important;
+		direction:
+			{{ $direction }}
+			!important;
 	}
 
 	th,
 	td,
 	.text-end {
-		text-align: {{ $isRtl ? 'center' : 'inherit' }} !important;
+		text-align:
+			{{ $isRtl ? 'center' : 'inherit' }}
+			!important;
 	}
-
 </style>
 
 <body id="kt_app_body" data-kt-app-layout="dark-sidebar" data-kt-app-header-fixed="true"
@@ -132,7 +138,8 @@
 				<div class="app-container container-fluid d-flex align-items-stretch justify-content-between"
 					id="kt_app_header_container">
 					<!--begin::Sidebar mobile toggle-->
-					<div class="d-flex align-items-center d-lg-none ms-n3 me-1 me-md-2" title="{{ __('ui.search.show_sidebar') }}">
+					<div class="d-flex align-items-center d-lg-none ms-n3 me-1 me-md-2"
+						title="{{ __('ui.search.show_sidebar') }}">
 						<div class="btn btn-icon btn-active-color-primary w-35px h-35px"
 							id="kt_app_sidebar_mobile_toggle">
 							<i class="ki-duotone ki-abstract-14 fs-2 fs-md-1">
@@ -202,10 +209,10 @@
 											</i>
 											<!--end::Icon-->
 											<!--begin::Input-->
-											<input type="text"
-												id="global-search-input"
+											<input type="text" id="global-search-input"
 												class="search-input form-control form-control-flush ps-10" name="search"
-												value="" placeholder="{{ __('ui.search.placeholder') }}" data-kt-search-element="input" />
+												value="" placeholder="{{ __('ui.search.placeholder') }}"
+												data-kt-search-element="input" />
 											<!--end::Input-->
 											<!--begin::Spinner-->
 											<span
@@ -258,7 +265,8 @@
 											<div class="scroll-y mh-200px mh-lg-350px">
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pb-5"
-													data-kt-search-element="category-title">{{ __('ui.search.users') }}</h3>
+													data-kt-search-element="category-title">{{ __('ui.search.users') }}
+												</h3>
 												<!--end::Category title-->
 												<!--begin::Item-->
 												<a href="#"
@@ -345,7 +353,8 @@
 												<!--end::Item-->
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pt-5 pb-5"
-													data-kt-search-element="category-title">{{ __('ui.search.customers') }}</h3>
+													data-kt-search-element="category-title">
+													{{ __('ui.search.customers') }}</h3>
 												<!--end::Category title-->
 												<!--begin::Item-->
 												<a href="#"
@@ -449,7 +458,8 @@
 												<!--end::Item-->
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pt-5 pb-5"
-													data-kt-search-element="category-title">{{ __('ui.search.projects') }}</h3>
+													data-kt-search-element="category-title">
+													{{ __('ui.search.projects') }}</h3>
 												<!--end::Category title-->
 												<!--begin::Item-->
 												<a href="#"
@@ -941,7 +951,8 @@
 											<button type="reset"
 												class="btn btn-sm btn-light fw-bold btn-active-light-primary me-2"
 												data-kt-search-element="preferences-dismiss">{{ __('ui.buttons.cancel') }}</button>
-											<button type="submit" class="btn btn-sm fw-bold btn-primary">{{ __('ui.buttons.save') }}</button>
+											<button type="submit"
+												class="btn btn-sm fw-bold btn-primary">{{ __('ui.buttons.save') }}</button>
 										</div>
 										<!--end::Actions-->
 									</form>
@@ -957,7 +968,8 @@
 								@foreach(config('app.supported_locales', ['en']) as $locale)
 									<form method="POST" action="{{ route('locale.update', $locale) }}">
 										@csrf
-										<button type="submit" class="btn btn-sm {{ app()->getLocale() === $locale ? 'btn-primary' : 'btn-light' }}">
+										<button type="submit"
+											class="btn btn-sm {{ app()->getLocale() === $locale ? 'btn-primary' : 'btn-light' }}">
 											{{ __('ui.locale.' . ($locale === 'ar' ? 'arabic' : 'english')) }}
 										</button>
 									</form>
@@ -1023,7 +1035,8 @@
 
 								<!--begin::Menu item-->
 								<div class="menu-item px-5">
-									<a href="{{ route('profile.edit') }}" class="menu-link px-5">{{ __('ui.nav.profile') }}</a>
+									<a href="{{ route('profile.edit') }}"
+										class="menu-link px-5">{{ __('ui.nav.profile') }}</a>
 								</div>
 
 								<div class="separator my-2"></div>
@@ -1279,7 +1292,8 @@
 								<ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
 									<!--begin::Item-->
 									<li class="breadcrumb-item text-muted">
-										<a href="{{url('')}}" class="text-muted text-hover-primary">{{ __('ui.nav.home') }}</a>
+										<a href="{{url('')}}"
+											class="text-muted text-hover-primary">{{ __('ui.nav.home') }}</a>
 									</li>
 									<!--end::Item-->
 									<!--begin::Item-->
