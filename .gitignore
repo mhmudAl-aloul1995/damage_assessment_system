@@ -25,15 +25,12 @@ assets
 *.rar
 *.zip
 *.7z
-
-/vendor
 /node_modules
 /.env
 /vendor
 /node_modules
 /.env
 /storage/logs/*.log
-
 *.rar
 *.zip
 *.7z

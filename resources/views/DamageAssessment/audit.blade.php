@@ -221,7 +221,8 @@
 						<div id="selected_buildings_container"></div>
 
 						<div class="fv-row mb-7">
-							<label id="user_label" class="required fs-6 fw-semibold mb-2">{{ __('ui.audit.select_engineer') }}</label>
+							<label id="user_label"
+								class="required fs-6 fw-semibold mb-2">{{ __('ui.audit.select_engineer') }}</label>
 
 							<select name="user_id" id="assign_user_id" class="form-select form-select-solid"
 								data-control="select2" data-placeholder="{{ __('ui.audit.select_user') }}"
@@ -237,7 +238,8 @@
 					</div>
 
 					<div class="modal-footer flex-center">
-						<button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('ui.buttons.cancel') }}</button>
+						<button type="reset" class="btn btn-light me-3"
+							data-bs-dismiss="modal">{{ __('ui.buttons.cancel') }}</button>
 						<button type="submit" class="btn btn-primary" id="kt_modal_assign_submit">
 							<span class="indicator-label">{{ __('ui.audit.agree') }}</span>
 						</button>
@@ -339,7 +341,7 @@
 					orderable: false,
 					searchable: false
 				}],
-				order: [[1, 'desc']],
+				order: [[8, 'desc']],
 				columns: [
 					{
 						data: 'objectid',
@@ -347,10 +349,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																																<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																																	<input class="form-check-input" type="checkbox"
-																																		data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																																</div>`
+																																	<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																																		<input class="form-check-input" type="checkbox"
+																																			data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																																	</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'assignedto', name: 'assignedto' },
@@ -548,10 +550,10 @@
 
 				$('#notesHistoryModalTitle').text(@json(__('ui.audit.status_history')) + ' - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-																	<tr>
-																		<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
-																	</tr>
-																`);
+																		<tr>
+																			<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
+																		</tr>
+																	`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -565,40 +567,40 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-																					<tr>
-																						<td>${item.status_name}</td>
-																						<td>${item.user_name}</td>
-																						<td>${item.role_name}</td>
-																						<td>${item.notes}</td>
-																						<td>${item.created_at}</td>
-																						<td>
-																							${item.can_delete ? `
-																								<button type="button"
-																									class="btn btn-sm btn-light-danger btn-delete-history"
-																									data-id="${item.id}">
-																									${@json(__('ui.audit.delete_record'))}
-																								</button>
-																							` : '-'}
-																						</td>
-																					</tr>
-																				`;
+																						<tr>
+																							<td>${item.status_name}</td>
+																							<td>${item.user_name}</td>
+																							<td>${item.role_name}</td>
+																							<td>${item.notes}</td>
+																							<td>${item.created_at}</td>
+																							<td>
+																								${item.can_delete ? `
+																									<button type="button"
+																										class="btn btn-sm btn-light-danger btn-delete-history"
+																										data-id="${item.id}">
+																										${@json(__('ui.audit.delete_record'))}
+																									</button>
+																								` : '-'}
+																							</td>
+																						</tr>
+																					`;
 							});
 						} else {
 							rows = `
-																				<tr>
-																					<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																				</tr>
-																			`;
+																					<tr>
+																						<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																					</tr>
+																				`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-																			<tr>
-																				<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
-																			</tr>
-																		`);
+																				<tr>
+																					<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
+																				</tr>
+																			`);
 					}
 				});
 			});
@@ -626,10 +628,10 @@
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
-																			<tr>
-																				<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																			</tr>
-																		`);
+																				<tr>
+																					<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																				</tr>
+																			`);
 							}
 						} else {
 							toastr.error(response.message || @json(__('ui.audit.delete_failed')));
