@@ -402,11 +402,13 @@ class Building extends Model
             return $value;
         }
 
+        if (!$this->relationLoaded('edits')) {
+            return $value;
+        }
+
         $editedFields = $this->getEditedFieldsMap();
 
-        return array_key_exists($key, $editedFields)
-            ? $editedFields[$key]
-            : $value;
+        return $editedFields[$key] ?? $value;
     }
     public function housing_unit()
     {
