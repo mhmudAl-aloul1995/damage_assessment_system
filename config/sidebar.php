@@ -68,8 +68,26 @@ return [
         'items' => [
             [
                 'title' => 'menu.reports.area_productivity',
-                'url' => 'reports/commulative',
-                'pattern' => 'reports/commulative*',
+                'url' => 'reports/area-productivity/housing-units',
+                'pattern' => 'reports/area-productivity/housing-units*',
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
+            ],
+            [
+                'title' => 'menu.reports.buildings_area_productivity',
+                'url' => 'reports/area-productivity/buildings',
+                'pattern' => 'reports/area-productivity/buildings*',
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
+            ],
+            [
+                'title' => 'menu.reports.public_buildings_area_productivity',
+                'url' => 'reports/area-productivity/public-buildings',
+                'pattern' => 'reports/area-productivity/public-buildings*',
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
+            ],
+            [
+                'title' => 'menu.reports.road_facilities_area_productivity',
+                'url' => 'reports/area-productivity/road-facilities',
+                'pattern' => 'reports/area-productivity/road-facilities*',
                 'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
             ],
             [

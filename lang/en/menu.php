@@ -14,6 +14,9 @@ return [
     'reports' => [
         'title' => 'Reports',
         'area_productivity' => 'Area Productivity',
+        'buildings_area_productivity' => 'Buildings Area Productivity',
+        'public_buildings_area_productivity' => 'Public Buildings Area Productivity',
+        'road_facilities_area_productivity' => 'Road Facilities Area Productivity',
         'engineer_productivity' => 'Engineer Productivity',
         'daily_audit' => 'Daily Audit Achievement',
         'public_buildings' => 'Public Buildings Report',

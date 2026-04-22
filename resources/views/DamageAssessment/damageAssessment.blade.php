@@ -1006,7 +1006,7 @@
 				<div class="card-body p-0">
 					<div style="background-color: rgb(191 152 7);" class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
 						<div class="d-flex flex-stack">
-							<h3 class="m-0 text-white fw-bold fs-3">Public Buildings</h3>
+							<h3 class="m-0 text-white fw-bold fs-3">{{ __('ui.damage_dashboard.public_buildings') }}</h3>
 							<div class="ms-1">
 								<button type="button"
 									class="btn btn-sm btn-icon btn-color-white btn-active-white border-0 me-n3"
@@ -1017,7 +1017,7 @@
 							</div>
 						</div>
 						<div class="d-flex text-center flex-column text-white pt-8">
-							<span class="fw-semibold fs-7">Total Public Buildings</span>
+							<span class="fw-semibold fs-7">{{ __('multilingual.damage_dashboard.total_public_buildings') }}</span>
 							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $publicBuildingStats['total_surveys'] }}</span>
 						</div>
 					</div>
@@ -1030,7 +1030,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['public_buildings']['damaged'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Damaged</a>
+									<a href="{{ $dashboardStatLinks['public_buildings']['damaged'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.damaged') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $publicBuildingStats['damaged_buildings'] }}</div>
 							</div>
@@ -1042,7 +1042,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['public_buildings']['units'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Units</a>
+									<a href="{{ $dashboardStatLinks['public_buildings']['units'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.units') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $publicBuildingStats['total_units'] }}</div>
 							</div>
@@ -1054,7 +1054,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['public_buildings']['municipalities'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Municipalities</a>
+									<a href="{{ $dashboardStatLinks['public_buildings']['municipalities'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.municipalities') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $publicBuildingStats['municipalities'] }}</div>
 							</div>
@@ -1066,7 +1066,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['public_buildings']['neighborhoods'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Neighborhoods</a>
+									<a href="{{ $dashboardStatLinks['public_buildings']['neighborhoods'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.neighborhoods') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $publicBuildingStats['neighborhoods'] }}</div>
 							</div>
@@ -1078,7 +1078,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['public_buildings']['assigned_staff'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Assigned Staff</a>
+									<a href="{{ $dashboardStatLinks['public_buildings']['assigned_staff'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.assigned_staff') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $publicBuildingStats['assigned_staff'] }}</div>
 							</div>
@@ -1090,7 +1090,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['public_buildings']['occupied'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Occupied</a>
+									<a href="{{ $dashboardStatLinks['public_buildings']['occupied'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.occupied') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $publicBuildingStats['occupied_buildings'] }}</div>
 							</div>
@@ -1102,7 +1102,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['public_buildings']['bodies'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Bodies</a>
+									<a href="{{ $dashboardStatLinks['public_buildings']['bodies'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.bodies') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $publicBuildingStats['bodies_present'] }}</div>
 							</div>
@@ -1114,7 +1114,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['public_buildings']['uxo'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">UXO</a>
+									<a href="{{ $dashboardStatLinks['public_buildings']['uxo'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.uxo') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $publicBuildingStats['uxo_present'] }}</div>
 							</div>
@@ -1128,7 +1128,7 @@
 				<div class="card-body p-0">
 					<div style="background-color: #0f766e;" class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
 						<div class="d-flex flex-stack">
-							<h3 class="m-0 text-white fw-bold fs-3">Road Facilities</h3>
+							<h3 class="m-0 text-white fw-bold fs-3">{{ __('ui.damage_dashboard.road_facilities') }}</h3>
 							<div class="ms-1">
 								<button type="button"
 									class="btn btn-sm btn-icon btn-color-white btn-active-white border-0 me-n3"
@@ -1139,7 +1139,7 @@
 							</div>
 						</div>
 						<div class="d-flex text-center flex-column text-white pt-8">
-							<span class="fw-semibold fs-7">Total Road Facilities</span>
+							<span class="fw-semibold fs-7">{{ __('multilingual.damage_dashboard.total_road_facilities') }}</span>
 							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $roadFacilityStats['total_surveys'] }}</span>
 						</div>
 					</div>
@@ -1152,7 +1152,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['damaged'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Damaged</a>
+									<a href="{{ $dashboardStatLinks['road_facilities']['damaged'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.damaged') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $roadFacilityStats['damaged_roads'] }}</div>
 							</div>
@@ -1165,7 +1165,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['items'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Items</a>
+									<a href="{{ $dashboardStatLinks['road_facilities']['items'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.items') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $roadFacilityStats['total_items'] }}</div>
 							</div>
@@ -1177,7 +1177,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['municipalities'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Municipalities</a>
+									<a href="{{ $dashboardStatLinks['road_facilities']['municipalities'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.municipalities') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $roadFacilityStats['municipalities'] }}</div>
 							</div>
@@ -1189,7 +1189,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['neighborhoods'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Neighborhoods</a>
+									<a href="{{ $dashboardStatLinks['road_facilities']['neighborhoods'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.neighborhoods') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $roadFacilityStats['neighborhoods'] }}</div>
 							</div>
@@ -1201,7 +1201,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['potholes'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Potholes</a>
+									<a href="{{ $dashboardStatLinks['road_facilities']['potholes'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.potholes') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $roadFacilityStats['potholes_locations'] }}</div>
 							</div>
@@ -1213,7 +1213,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['obstacles'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Obstacles</a>
+									<a href="{{ $dashboardStatLinks['road_facilities']['obstacles'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.obstacles') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $roadFacilityStats['obstacle_locations'] }}</div>
 							</div>
@@ -1225,7 +1225,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['buried_bodies'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">Buried Bodies</a>
+									<a href="{{ $dashboardStatLinks['road_facilities']['buried_bodies'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.buried_bodies') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $roadFacilityStats['buried_bodies_locations'] }}</div>
 							</div>
@@ -1237,7 +1237,7 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['uxo'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">UXO</a>
+									<a href="{{ $dashboardStatLinks['road_facilities']['uxo'] }}" class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.uxo') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $roadFacilityStats['uxo_locations'] }}</div>
 							</div>
@@ -1555,11 +1555,11 @@
 							<span class="path2"></span>
 						</i>
 						<input type="text" data-kt-public-building-map-filter="search"
-							class="form-control form-control-solid w-250px ps-13" placeholder="Search public buildings" />
+							class="form-control form-control-solid w-250px ps-13" placeholder="{{ __('multilingual.damage_dashboard.search_public_buildings') }}" />
 					</div>
 				</div>
 				<div class="card-title">
-					Public Buildings Map
+					{{ __('multilingual.damage_dashboard.public_buildings_map') }}
 				</div>
 			</div>
 			<div class="card-body p-lg-17">
@@ -1569,11 +1569,11 @@
 							id="kt_table_public_building">
 							<thead>
 								<tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-									<th class="min-w-70px">Municipality</th>
-									<th class="min-w-70px">Neighborhood</th>
-									<th class="min-w-70px">Object ID</th>
-									<th class="min-w-70px">Building Name</th>
-									<th class="min-w-70px">Damage Status</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.municipality') }}</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.neighborhood') }}</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.object_id') }}</th>
+									<th class="min-w-70px">{{ __('ui.damage_dashboard.building_name') }}</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.damage_status') }}</th>
 								</tr>
 							</thead>
 							<tbody class="text-gray-600 fw-semibold"></tbody>
@@ -1598,11 +1598,11 @@
 							<span class="path2"></span>
 						</i>
 						<input type="text" data-kt-road-facility-map-filter="search"
-							class="form-control form-control-solid w-250px ps-13" placeholder="Search road facilities" />
+							class="form-control form-control-solid w-250px ps-13" placeholder="{{ __('multilingual.damage_dashboard.search_road_facilities') }}" />
 					</div>
 				</div>
 				<div class="card-title">
-					Road Facilities Map
+					{{ __('multilingual.damage_dashboard.road_facilities_map') }}
 				</div>
 			</div>
 			<div class="card-body p-lg-17">
@@ -1612,11 +1612,11 @@
 							id="kt_table_road_facility">
 							<thead>
 								<tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-									<th class="min-w-70px">Municipality</th>
-									<th class="min-w-70px">Neighborhood</th>
-									<th class="min-w-70px">Object ID</th>
-									<th class="min-w-70px">Road Name</th>
-									<th class="min-w-70px">Damage Level</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.municipality') }}</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.neighborhood') }}</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.object_id') }}</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.road_name') }}</th>
+									<th class="min-w-70px">{{ __('multilingual.damage_dashboard.damage_level') }}</th>
 								</tr>
 							</thead>
 							<tbody class="text-gray-600 fw-semibold"></tbody>
@@ -1752,7 +1752,7 @@
 								width: 1
 							}
 						},
-						label: "Committee Review"
+						label: @json(__('ui.damage_dashboard.committee_review'))
 					},
 					{
 						value: "fully_damaged",
@@ -1764,7 +1764,7 @@
 								width: 2
 							}
 						},
-						label: "Fully Damaged"
+						label: @json(__('ui.damage_dashboard.fully_damaged'))
 					},
 					{
 						value: "partially_damaged",
@@ -1776,7 +1776,7 @@
 								width: 1
 							}
 						},
-						label: "Partially Damaged"
+						label: @json(__('ui.damage_dashboard.partially_damaged'))
 					}
 				]
 			};
@@ -2440,23 +2440,23 @@
 							outline: { color: 'white', width: 1 }
 						},
 						uniqueValueInfos: [
-							{ value: 'committee_review', symbol: { type: 'simple-fill', color: [255, 255, 0, 0.5], outline: { color: 'black', width: 1 } }, label: 'Committee Review' },
-							{ value: 'fully_damaged', symbol: { type: 'simple-fill', color: [255, 0, 0, 0.5], outline: { color: 'white', width: 2 } }, label: 'Fully Damaged' },
-							{ value: 'partially_damaged', symbol: { type: 'simple-fill', color: [0, 255, 0, 0.5], outline: { color: 'white', width: 1 } }, label: 'Partially Damaged' }
+							{ value: 'committee_review', symbol: { type: 'simple-fill', color: [255, 255, 0, 0.5], outline: { color: 'black', width: 1 } }, label: @json(__('ui.damage_dashboard.committee_review')) },
+							{ value: 'fully_damaged', symbol: { type: 'simple-fill', color: [255, 0, 0, 0.5], outline: { color: 'white', width: 2 } }, label: @json(__('ui.damage_dashboard.fully_damaged')) },
+							{ value: 'partially_damaged', symbol: { type: 'simple-fill', color: [0, 255, 0, 0.5], outline: { color: 'white', width: 1 } }, label: @json(__('ui.damage_dashboard.partially_damaged')) }
 						]
 					},
-					legendTitle: 'Public Building Damage Status',
+					legendTitle: @json(__('multilingual.damage_dashboard.public_building_damage_status')),
 					nameField: 'building_name',
 					showUrlTemplate: publicBuildingShowUrlTemplate,
 					fieldInfos: [
-						{ fieldName: 'objectid', label: 'Object ID' },
-						{ fieldName: 'building_name', label: 'Building Name' },
-						{ fieldName: 'municipalitie', label: 'Municipality' },
-						{ fieldName: 'neighborhood', label: 'Neighborhood' },
-						{ fieldName: 'building_damage_status', label: 'Damage Status' }
+						{ fieldName: 'objectid', label: @json(__('multilingual.damage_dashboard.object_id')) },
+						{ fieldName: 'building_name', label: @json(__('ui.damage_dashboard.building_name')) },
+						{ fieldName: 'municipalitie', label: @json(__('multilingual.damage_dashboard.municipality')) },
+						{ fieldName: 'neighborhood', label: @json(__('multilingual.damage_dashboard.neighborhood')) },
+						{ fieldName: 'building_damage_status', label: @json(__('multilingual.damage_dashboard.damage_status')) }
 					],
 					searchFields: ['building_name', 'objectid', 'municipalitie', 'neighborhood'],
-					searchPlaceholder: 'Search public buildings'
+					searchPlaceholder: @json(__('multilingual.damage_dashboard.search_public_buildings'))
 				});
 
 				initFeatureMap({
@@ -2473,25 +2473,25 @@
 							width: 3
 						},
 						uniqueValueInfos: [
-							{ value: 'destroyed', symbol: { type: 'simple-line', color: [255, 0, 0, 1], width: 4 }, label: 'Destroyed' },
-							{ value: 'severe', symbol: { type: 'simple-line', color: [255, 94, 0, 1], width: 4 }, label: 'Severe' },
-							{ value: 'moderate', symbol: { type: 'simple-line', color: [255, 193, 7, 1], width: 4 }, label: 'Moderate' },
-							{ value: 'minor', symbol: { type: 'simple-line', color: [40, 167, 69, 1], width: 4 }, label: 'Minor' },
-							{ value: 'No_Damage', symbol: { type: 'simple-line', color: [0, 123, 255, 1], width: 4 }, label: 'No Damage' }
+							{ value: 'destroyed', symbol: { type: 'simple-line', color: [255, 0, 0, 1], width: 4 }, label: @json(__('multilingual.damage_dashboard.destroyed')) },
+							{ value: 'severe', symbol: { type: 'simple-line', color: [255, 94, 0, 1], width: 4 }, label: @json(__('multilingual.damage_dashboard.severe')) },
+							{ value: 'moderate', symbol: { type: 'simple-line', color: [255, 193, 7, 1], width: 4 }, label: @json(__('multilingual.damage_dashboard.moderate')) },
+							{ value: 'minor', symbol: { type: 'simple-line', color: [40, 167, 69, 1], width: 4 }, label: @json(__('multilingual.damage_dashboard.minor')) },
+							{ value: 'No_Damage', symbol: { type: 'simple-line', color: [0, 123, 255, 1], width: 4 }, label: @json(__('multilingual.damage_dashboard.no_damage')) }
 						]
 					},
-					legendTitle: 'Road Damage Level',
+					legendTitle: @json(__('multilingual.damage_dashboard.road_damage_level')),
 					nameField: 'str_name',
 					showUrlTemplate: roadFacilityShowUrlTemplate,
 					fieldInfos: [
-						{ fieldName: 'objectid', label: 'Object ID' },
-						{ fieldName: 'str_name', label: 'Road Name' },
-						{ fieldName: 'municipalitie', label: 'Municipality' },
-						{ fieldName: 'neighborhood', label: 'Neighborhood' },
-						{ fieldName: 'road_damage_level', label: 'Damage Level' }
+						{ fieldName: 'objectid', label: @json(__('multilingual.damage_dashboard.object_id')) },
+						{ fieldName: 'str_name', label: @json(__('multilingual.damage_dashboard.road_name')) },
+						{ fieldName: 'municipalitie', label: @json(__('multilingual.damage_dashboard.municipality')) },
+						{ fieldName: 'neighborhood', label: @json(__('multilingual.damage_dashboard.neighborhood')) },
+						{ fieldName: 'road_damage_level', label: @json(__('multilingual.damage_dashboard.damage_level')) }
 					],
 					searchFields: ['str_name', 'objectid', 'municipalitie', 'neighborhood'],
-					searchPlaceholder: 'Search road facilities'
+					searchPlaceholder: @json(__('multilingual.damage_dashboard.search_road_facilities'))
 				});
 			});
 

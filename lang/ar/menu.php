@@ -14,6 +14,9 @@ return [
     'reports' => [
         'title' => 'التقارير',
         'area_productivity' => 'إنتاجية المناطق',
+        'buildings_area_productivity' => 'إنتاجية مناطق المباني',
+        'public_buildings_area_productivity' => 'إنتاجية مناطق المباني العامة',
+        'road_facilities_area_productivity' => 'إنتاجية مناطق مرافق الطرق',
         'engineer_productivity' => 'إنتاجية المهندسين',
         'daily_audit' => 'إنجاز التدقيق اليومي',
         'public_buildings' => 'تقرير المباني العامة',

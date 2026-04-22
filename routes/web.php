@@ -19,6 +19,7 @@ use App\Http\Controllers\DamageAssessment\housingController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicBuilding\PublicBuildingController;
+use App\Http\Controllers\Report\AreaProductivityReportController;
 use App\Http\Controllers\Report\reportController;
 use App\Http\Controllers\Report\SurveyReportController;
 use App\Http\Controllers\RoadFacility\RoadFacilityController;
@@ -296,6 +297,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('reports/commulative/export', [ReportController::class, 'exportCommulative'])->name('reports.commulative.export');
     Route::get('reports/commulative', action: [reportController::class, 'commulative'])->name('reports.commulative');
+    Route::get('reports/area-productivity/housing-units', [AreaProductivityReportController::class, 'housingUnits'])->name('reports.area-productivity.housing-units');
+    Route::get('reports/area-productivity/buildings', [AreaProductivityReportController::class, 'buildings'])->name('reports.area-productivity.buildings');
+    Route::get('reports/area-productivity/public-buildings', [AreaProductivityReportController::class, 'publicBuildings'])->name('reports.area-productivity.public-buildings');
+    Route::get('reports/area-productivity/road-facilities', [AreaProductivityReportController::class, 'roadFacilities'])->name('reports.area-productivity.road-facilities');
+    Route::get('reports/area-productivity/housing-units/export', [AreaProductivityReportController::class, 'exportHousingUnits'])->name('reports.area-productivity.export.housing-units');
+    Route::get('reports/area-productivity/buildings/export', [AreaProductivityReportController::class, 'exportBuildings'])->name('reports.area-productivity.export.buildings');
+    Route::get('reports/area-productivity/public-buildings/export', [AreaProductivityReportController::class, 'exportPublicBuildings'])->name('reports.area-productivity.export.public-buildings');
+    Route::get('reports/area-productivity/road-facilities/export', [AreaProductivityReportController::class, 'exportRoadFacilities'])->name('reports.area-productivity.export.road-facilities');
     Route::get('reports/daily-achievement', [reportController::class, 'dailyAchievement'])->name('reports.daily-achievement');
     Route::get('reports/auditors-daily', [reportController::class, 'auditorsDailyAchievement'])->name('reports.auditors-daily');
     Route::get('reports/lawyers-daily', [reportController::class, 'lawyersDailyAchievement'])->name('reports.lawyers-daily');

@@ -1,41 +1,43 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Exports;
 
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class AreaProductivityExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithColumnFormatting, WithCustomStartCell, WithEvents
+class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColumnFormatting, WithCustomStartCell, WithEvents, WithHeadings, WithMapping, WithStyles
 {
-    protected $data, $startDate, $endDate, $rowCount;
-
-    public function __construct($data, $startDate, $endDate)
-    {
-        $this->data = $data;
-        $this->startDate = $startDate;
-        $this->endDate = $endDate;
-        $this->rowCount = count($data);
-    }
+    public function __construct(
+        private readonly Collection $data,
+        private readonly string $startDate,
+        private readonly string $endDate,
+        private readonly string $reportTitle,
+        private readonly string $sectorLabel,
+    ) {}
 
     public function startCell(): string
     {
         return 'A3';
     }
 
-    public function collection()
+    public function collection(): Collection
     {
-        $totals = [
-            'Sector' => 'Grand Totals:',
+        $totals = (object) [
+            'Sector' => __('multilingual.area_productivity_reports.labels.grand_totals'),
             'governorate' => '',
             'municipalitie' => '',
             'neighborhood' => '',
@@ -43,45 +45,69 @@ class AreaProductivityExport implements FromCollection, WithHeadings, WithMappin
             'tda_range' => $this->data->sum('tda_range'),
             'pda_range' => $this->data->sum('pda_range'),
             'cra_range' => $this->data->sum('cra_range'),
-            'total' => $this->data->sum(fn($row) => ($row->tda_range ?? 0) + ($row->pda_range ?? 0) + ($row->cra_range ?? 0))
+            'total_count' => $this->data->sum('total_count'),
         ];
-        return collect($this->data)->push((object) $totals);
+
+        return collect($this->data)->push($totals);
     }
 
     public function headings(): array
     {
-        return ['Sector', 'Governorate', 'Municipality', 'Area/Neighborhood', 'Engineers', 'TDA', 'PDA', 'CRA', 'Total'];
+        return [
+            __('multilingual.area_productivity_reports.columns.total_count'),
+            __('multilingual.area_productivity_reports.columns.cra'),
+            __('multilingual.area_productivity_reports.columns.pda'),
+            __('multilingual.area_productivity_reports.columns.tda'),
+            __('multilingual.area_productivity_reports.columns.engineers'),
+            __('multilingual.area_productivity_reports.columns.neighborhood'),
+            __('multilingual.area_productivity_reports.columns.municipality'),
+            __('multilingual.area_productivity_reports.columns.governorate'),
+            __('multilingual.area_productivity_reports.columns.sector'),
+        ];
     }
 
-    public function styles(Worksheet $sheet)
+    public function map($row): array
     {
-        $headerRow = 3;
-        $lastRow = $this->rowCount + 4;
-
-        // Apply Borders
-        $sheet->getStyle("A{$headerRow}:I{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-
-        // Center all data for better visibility
-        $sheet->getStyle("A{$headerRow}:I{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $isTotal = ($row->Sector ?? '') === __('multilingual.area_productivity_reports.labels.grand_totals');
 
         return [
-            // 1. Enlarge Title (Size 18)
+            $row->total_count ?? 0,
+            $row->cra_range ?? 0,
+            $row->pda_range ?? 0,
+            $row->tda_range ?? 0,
+            $row->no_eng ?? 0,
+            $isTotal ? '' : ($row->neighborhood ?? ''),
+            $isTotal ? '' : ($row->municipalitie ?? ''),
+            $isTotal ? '' : ($row->governorate ?? ''),
+            $isTotal ? __('multilingual.area_productivity_reports.labels.grand_totals') : ($row->Sector ?? $this->sectorLabel),
+        ];
+    }
+
+    public function styles(Worksheet $sheet): array
+    {
+        $headerRow = 3;
+        $lastRow = $this->data->count() + 4;
+
+        $sheet->getStyle("A{$headerRow}:I{$lastRow}")
+            ->getBorders()
+            ->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THIN);
+
+        $sheet->getStyle("A{$headerRow}:I{$lastRow}")
+            ->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        return [
             1 => ['font' => ['bold' => true, 'size' => 20]],
-
-            // 2. Enlarge Table Headers (Size 14)
             $headerRow => [
-                'font' => ['bold' => true, 'size' => 18, 'color' => ['argb' => 'FFFFFFFF']],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF28a745']],
+                'font' => ['bold' => true, 'size' => 14, 'color' => ['argb' => 'FFFFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF28A745']],
             ],
-
-            // 3. Enlarge Data Rows (Size 12)
             "A4:I{$lastRow}" => [
-                'font' => ['size' => 15],
+                'font' => ['size' => 12],
             ],
-
-            // 4. Grand Total Row Background & Large Font
             $lastRow => [
-                'font' => ['bold' => true, 'size' => 16],
+                'font' => ['bold' => true, 'size' => 13],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFE9ECEF']],
             ],
         ];
@@ -90,19 +116,18 @@ class AreaProductivityExport implements FromCollection, WithHeadings, WithMappin
     public function registerEvents(): array
     {
         return [
-            AfterSheet::class => function (AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event): void {
                 $sheet = $event->sheet->getDelegate();
-                $lastRow = $this->rowCount + 4;
+                $lastRow = $this->data->count() + 4;
 
-                // Set Title
                 $sheet->mergeCells('A1:I1');
-                $sheet->setCellValue('A1', "Areas Productivity Report: {$this->startDate} to {$this->endDate}");
+                $sheet->setCellValue('A1', "{$this->reportTitle}: {$this->startDate} to {$this->endDate}");
                 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                // ENLARGE ROW HEIGHTS (Vertical Spacing)
-                $sheet->getRowDimension(1)->setRowHeight(35); // Title Height
-                for ($i = 3; $i <= $lastRow; $i++) {
-                    $sheet->getRowDimension($i)->setRowHeight(25); // Table Rows Height
+                $sheet->getRowDimension(1)->setRowHeight(35);
+
+                for ($row = 3; $row <= $lastRow; $row++) {
+                    $sheet->getRowDimension($row)->setRowHeight(24);
                 }
             },
         ];
@@ -110,26 +135,12 @@ class AreaProductivityExport implements FromCollection, WithHeadings, WithMappin
 
     public function columnFormats(): array
     {
-        return ['E' => '#,##0', 'F' => '#,##0', 'G' => '#,##0', 'H' => '#,##0', 'I' => '#,##0'];
-    }
-
-    public function map($row): array
-    {
-        $isTotal = $row->Sector === 'Grand Totals:';
         return [
-            $row->Sector ?? 'Housing',
-            $row->governorate,
-            $row->municipalitie,
-            $row->neighborhood,
-            $row->no_eng,
-            $row->tda_range,
-            $row->pda_range,
-            $row->cra_range,
-            $isTotal ? $row->total : (($row->tda_range ?? 0) + ($row->pda_range ?? 0) + ($row->cra_range ?? 0)),
+            'A' => '#,##0',
+            'B' => '#,##0',
+            'C' => '#,##0',
+            'D' => '#,##0',
+            'E' => '#,##0',
         ];
     }
 }
-
-
-
-?>
