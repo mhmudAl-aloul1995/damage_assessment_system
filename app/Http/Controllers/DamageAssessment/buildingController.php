@@ -58,7 +58,7 @@ class buildingController extends Controller
             ? ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'zone_code', 'neighborhood']
             : ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'zone_code', 'units_count', 'editdate', 'field_status', 'units_nos', 'damaged_units_nos', 'neighborhood', 'municipalitie'];
 
-        $query = Building::query()->with('edits')->select($select)->where('assignedto', '!=', '');
+        $query = Building::query()->select($select)->where('assignedto', '!=', '');
 
         $excludeKeys = ['order', '_', 'columns', 'draw', 'start', 'length', 'search', 'hompage_building'];
         $filters = $request->except($excludeKeys);
