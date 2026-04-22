@@ -25,9 +25,7 @@ Thumbs.db
 *.rar
 *.zip
 *.7z
-/node_modules
 /.env
-/vendor
 /node_modules
 /.env
 /storage/logs/*.log
