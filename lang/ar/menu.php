@@ -36,7 +36,10 @@ return [
         'title' => 'قرارات اللجنة',
         'decisions' => 'قرارات اللجنة',
         'members' => 'أعضاء اللجنة',
-        'telegram_integrations' => 'تكاملات تيليجرام',
+        'telegram_integrations' => 'وجهات تيليجرام',
+        'telegram_settings' => 'إعدادات تيليجرام',
+        'telegram_discovered_chats' => 'القروبات المكتشفة',
+        'telegram_broadcasts' => 'البث الجماعي',
     ],
     'user_management' => [
         'title' => 'إدارة المستخدمين',

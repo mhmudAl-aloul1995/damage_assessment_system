@@ -35,6 +35,10 @@ return [
         'title' => 'Committee Decisions',
         'decisions' => 'Committee Decisions',
         'members' => 'Committee Members',
+        'telegram_integrations' => 'Telegram Destinations',
+        'telegram_settings' => 'Telegram Settings',
+        'telegram_discovered_chats' => 'Discovered Chats',
+        'telegram_broadcasts' => 'Telegram Broadcasts',
     ],
     'user_management' => [
         'title' => 'User Management',

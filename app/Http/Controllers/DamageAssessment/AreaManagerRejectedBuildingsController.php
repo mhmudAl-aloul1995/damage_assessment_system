@@ -27,7 +27,7 @@ class AreaManagerRejectedBuildingsController extends Controller
 
         return View::make('DamageAssessment.areaManagerRejectedBuildings', [
             'regionKey' => $regionKey,
-            'regionLabel' => data_get($regionConfig, 'label', $regionKey ?: 'Area Manager'),
+            'regionLabel' => data_get($regionConfig, 'label', $regionKey ?: __('multilingual.area_manager_review.default_region')),
             'municipalities' => $municipalities,
         ]);
     }
@@ -103,7 +103,7 @@ class AreaManagerRejectedBuildingsController extends Controller
             ->addColumn('actions', function ($row): string {
                 $assessmentUrl = url('/assessment/'.$row->globalid);
 
-                return '<a href="'.$assessmentUrl.'" class="btn btn-light-primary btn-sm" target="_blank">Open Audit</a>';
+                return '<a href="'.$assessmentUrl.'" class="btn btn-light-primary btn-sm" target="_blank">'.e(__('multilingual.area_manager_review.actions.open_audit')).'</a>';
             })
             ->rawColumns(['latest_status_label', 'actions'])
             ->toJson();

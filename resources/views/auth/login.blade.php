@@ -48,7 +48,7 @@
 
                         <div class="btn-group" role="group" aria-label="{{ __('ui.locale.switcher') }}">
                             @foreach(config('app.supported_locales', ['en']) as $locale)
-                                <form method="POST" action="{{ route('locale.update', $locale) }}">
+                                <form method="POST" action="{{ route('locale.update', $locale) }}" class="locale-switcher-form" data-locale="{{ $locale }}">
                                     @csrf
                                     <button type="submit" class="btn btn-sm {{ app()->getLocale() === $locale ? 'btn-primary' : 'btn-light' }}">
                                         {{ __('ui.locale.' . ($locale === 'ar' ? 'arabic' : 'english')) }}
@@ -132,5 +132,22 @@
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/custom/authentication/sign-in/general.js') }}"></script>
+    <script>
+        const persistedLocale = document.documentElement.lang;
+
+        if (persistedLocale) {
+            localStorage.setItem('preferred_locale', persistedLocale);
+        }
+
+        document.querySelectorAll('.locale-switcher-form').forEach((form) => {
+            form.addEventListener('submit', function () {
+                const locale = this.dataset.locale;
+
+                if (locale) {
+                    localStorage.setItem('preferred_locale', locale);
+                }
+            });
+        });
+    </script>
 </body>
 </html>

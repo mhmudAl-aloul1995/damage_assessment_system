@@ -1,5 +1,5 @@
-<?php $__env->startSection('title', 'Area Manager Review'); ?>
-<?php $__env->startSection('pageName', 'Area Manager Review'); ?>
+<?php $__env->startSection('title', __('multilingual.area_manager_review.title')); ?>
+<?php $__env->startSection('pageName', __('multilingual.area_manager_review.page_name')); ?>
 
 <?php $__env->startSection('content'); ?>
     <div class="row mb-5">
@@ -11,7 +11,7 @@
                             <span class="path1"></span>
                             <span class="path2"></span>
                         </i>
-                        <h3 class="fw-bold m-0">Area Manager Review Queue</h3>
+                        <h3 class="fw-bold m-0"><?php echo e(__('multilingual.area_manager_review.queue_title')); ?></h3>
                     </div>
                     <div class="card-toolbar">
                         <button type="button" class="btn btn-sm btn-light-primary" id="refreshAreaManagerTable">
@@ -19,19 +19,20 @@
                                 <span class="path1"></span>
                                 <span class="path2"></span>
                             </i>
-                            Refresh
+                            <?php echo e(__('multilingual.area_manager_review.actions.refresh')); ?>
+
                         </button>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info d-flex flex-column gap-2 mb-0">
-                        <div><span class="fw-bold">Region:</span> <?php echo e($regionLabel); ?></div>
+                        <div><span class="fw-bold"><?php echo e(__('multilingual.area_manager_review.region')); ?>:</span> <?php echo e($regionLabel); ?></div>
                         <div>
-                            <span class="fw-bold">Allowed municipalities:</span>
+                            <span class="fw-bold"><?php echo e(__('multilingual.area_manager_review.allowed_municipalities')); ?>:</span>
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $municipalities; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $municipality): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
                                 <span class="badge badge-light-primary me-1"><?php echo e($municipality); ?></span>
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
-                                <span class="badge badge-light-danger">No municipalities configured</span>
+                                <span class="badge badge-light-danger"><?php echo e(__('multilingual.area_manager_review.no_municipalities')); ?></span>
                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                         </div>
                     </div>
@@ -51,7 +52,7 @@
                                 <span class="path2"></span>
                             </i>
                             <input type="text" id="areaManagerTableSearch"
-                                class="form-control form-control-solid w-250px ps-13" placeholder="Search buildings" />
+                                class="form-control form-control-solid w-250px ps-13" placeholder="<?php echo e(__('multilingual.area_manager_review.search_placeholder')); ?>" />
                         </div>
                     </div>
                 </div>
@@ -62,14 +63,14 @@
                             <thead>
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th width="40">#</th>
-                                    <th>Object ID</th>
-                                    <th>Building Name</th>
-                                    <th>Municipality</th>
-                                    <th>Neighborhood</th>
-                                    <th>Field Engineer</th>
-                                    <th>Latest Status</th>
-                                    <th>Status Date</th>
-                                    <th class="text-end min-w-100px">Actions</th>
+                                    <th><?php echo e(__('multilingual.area_manager_review.columns.object_id')); ?></th>
+                                    <th><?php echo e(__('multilingual.area_manager_review.columns.building_name')); ?></th>
+                                    <th><?php echo e(__('multilingual.area_manager_review.columns.municipality')); ?></th>
+                                    <th><?php echo e(__('multilingual.area_manager_review.columns.neighborhood')); ?></th>
+                                    <th><?php echo e(__('multilingual.area_manager_review.columns.field_engineer')); ?></th>
+                                    <th><?php echo e(__('multilingual.area_manager_review.columns.latest_status')); ?></th>
+                                    <th><?php echo e(__('multilingual.area_manager_review.columns.status_date')); ?></th>
+                                    <th class="text-end min-w-100px"><?php echo e(__('multilingual.area_manager_review.columns.actions')); ?></th>
                                 </tr>
                             </thead>
                             <tbody class="text-gray-600 fw-semibold"></tbody>

@@ -20,8 +20,6 @@ class TelegramIntegrationController extends Controller
 
     public function index(): View
     {
-        // abort_unless(auth()->user()->can('view telegram integrations'), 403);
-
         return view('Committee.TelegramIntegrations.index', [
             'users' => User::query()->orderBy('name')->get(['id', 'name', 'username_arcgis']),
             'counts' => [
@@ -36,8 +34,6 @@ class TelegramIntegrationController extends Controller
 
     public function data(): JsonResponse
     {
-        // abort_unless(auth()->user()->can('view telegram integrations'), 403);
-
         $query = TelegramIntegration::query()
             ->with(['user:id,name,username_arcgis', 'creator:id,name', 'linkSessions'])
             ->select('telegram_integrations.*');
@@ -59,7 +55,7 @@ class TelegramIntegrationController extends Controller
 
         return redirect()
             ->route('telegram-integrations.index')
-            ->with('success', 'تم إنشاء تكامل تيليجرام وتوليد رابط الربط بنجاح.');
+            ->with('success', __('multilingual.telegram_integrations.messages.created'));
     }
 
     public function refresh(TelegramIntegration $telegramIntegration): RedirectResponse
@@ -81,7 +77,7 @@ class TelegramIntegrationController extends Controller
 
         return redirect()
             ->route('telegram-integrations.index')
-            ->with('success', 'تم تعطيل التكامل وإيقاف جلسات الربط المفتوحة.');
+            ->with('success', __('multilingual.telegram_integrations.messages.disabled'));
     }
 
     public function destroy(TelegramIntegration $telegramIntegration): RedirectResponse
@@ -92,12 +88,14 @@ class TelegramIntegrationController extends Controller
 
         return redirect()
             ->route('telegram-integrations.index')
-            ->with('success', 'تم حذف التكامل.');
+            ->with('success', __('multilingual.telegram_integrations.messages.deleted'));
     }
 
     private function typeBadge(string $type): string
     {
-        $label = $type === TelegramIntegration::TYPE_GROUP ? 'Group' : 'User';
+        $label = $type === TelegramIntegration::TYPE_GROUP
+            ? __('multilingual.telegram_integrations.types.group')
+            : __('multilingual.telegram_integrations.types.user');
         $color = $type === TelegramIntegration::TYPE_GROUP ? 'warning' : 'primary';
 
         return '<span class="badge badge-light-'.$color.'">'.e($label).'</span>';
@@ -113,7 +111,7 @@ class TelegramIntegrationController extends Controller
             default => 'secondary',
         };
 
-        return '<span class="badge badge-light-'.$color.'">'.e((string) str($status)->replace('_', ' ')->title()).'</span>';
+        return '<span class="badge badge-light-'.$color.'">'.e(__('multilingual.telegram_integrations.statuses.'.$status)).'</span>';
     }
 
     private function actionsColumn(TelegramIntegration $integration): string
@@ -122,25 +120,25 @@ class TelegramIntegrationController extends Controller
         $actions = [];
 
         if ($shareableLink !== null) {
-            $actions[] = '<button type="button" class="btn btn-light-primary btn-sm telegram-copy-link" data-link="'.e($shareableLink).'">Copy Link</button>';
+            $actions[] = '<button type="button" class="btn btn-light-primary btn-sm telegram-copy-link" data-link="'.e($shareableLink).'">'.e(__('multilingual.telegram_integrations.actions.copy_link')).'</button>';
         }
 
         $actions[] = '<form method="POST" action="'.route('telegram-integrations.refresh', $integration).'" class="d-inline">'
             .csrf_field()
-            .'<button type="submit" class="btn btn-light-info btn-sm">Refresh Status</button>'
+            .'<button type="submit" class="btn btn-light-info btn-sm">'.e(__('multilingual.telegram_integrations.actions.refresh_status')).'</button>'
             .'</form>';
 
         if ($integration->status !== TelegramIntegration::STATUS_DISABLED) {
             $actions[] = '<form method="POST" action="'.route('telegram-integrations.disable', $integration).'" class="d-inline">'
                 .csrf_field()
-                .'<button type="submit" class="btn btn-light-warning btn-sm">Disable</button>'
+                .'<button type="submit" class="btn btn-light-warning btn-sm">'.e(__('multilingual.telegram_integrations.actions.disable')).'</button>'
                 .'</form>';
         }
 
         $actions[] = '<form method="POST" action="'.route('telegram-integrations.destroy', $integration).'" class="d-inline">'
             .csrf_field()
             .method_field('DELETE')
-            .'<button type="submit" class="btn btn-light-danger btn-sm" onclick="return confirm(\'Delete this Telegram integration?\')">Delete</button>'
+            .'<button type="submit" class="btn btn-light-danger btn-sm" onclick="return confirm(\''.e(__('multilingual.telegram_integrations.actions.delete_confirm')).'\')">'.e(__('multilingual.telegram_integrations.actions.delete')).'</button>'
             .'</form>';
 
         return '<div class="d-flex justify-content-end gap-2 flex-wrap">'.implode('', $actions).'</div>';

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Attendance Dashboard')
-@section('pageName', 'Attendance Dashboard')
+@section('title', __('multilingual.attendance_dashboard.title'))
+@section('pageName', __('multilingual.attendance_dashboard.page_name'))
 
 @section('content')
     <div class="app-content flex-column-fluid">
@@ -10,7 +10,7 @@
             <div class="card mb-7">
                 <div class="card-header border-0 pt-6">
                     <div class="card-title">
-                        <h2 class="fw-bold">Attendance Dashboard</h2>
+                        <h2 class="fw-bold">{{ __('multilingual.attendance_dashboard.title') }}</h2>
                     </div>
 
                     <div class="card-toolbar">
@@ -24,12 +24,12 @@
                             <input type="hidden" name="year" id="year_value" value="{{ $year ?? now()->format('Y') }}">
 
                             <button type="submit" class="btn btn-light-primary">
-                                Filter
+                                {{ __('multilingual.attendance_dashboard.filter') }}
                             </button>
 
                             <a href="{{ route('attendance.export-monthly-report', ['month' => $month, 'year' => $year]) }}"
                                 class="btn btn-success">
-                                Export Monthly Report
+                                {{ __('multilingual.attendance_dashboard.export_monthly_report') }}
                             </a>
                         </form>
                     </div>
@@ -42,7 +42,7 @@
                         <div class="card-header pt-5">
                             <div class="card-title d-flex flex-column">
                                 <span class="fs-2hx fw-bold text-dark me-2 lh-1">{{ $totalUsers }}</span>
-                                <span class="text-gray-500 pt-1 fw-semibold fs-6">Total Users</span>
+                                <span class="text-gray-500 pt-1 fw-semibold fs-6">{{ __('multilingual.attendance_dashboard.total_users') }}</span>
                             </div>
                         </div>
                         <div class="card-body pt-2 pb-4 d-flex align-items-center">
@@ -59,7 +59,7 @@
                         <div class="card-header pt-5">
                             <div class="card-title d-flex flex-column">
                                 <span class="fs-2hx fw-bold text-success me-2 lh-1">{{ $todayPresent }}</span>
-                                <span class="text-gray-500 pt-1 fw-semibold fs-6">Present Today</span>
+                                <span class="text-gray-500 pt-1 fw-semibold fs-6">{{ __('multilingual.attendance_dashboard.present_today') }}</span>
                             </div>
                         </div>
                         <div class="card-body pt-2 pb-4 d-flex align-items-center">
@@ -75,7 +75,7 @@
                         <div class="card-header pt-5">
                             <div class="card-title d-flex flex-column">
                                 <span class="fs-2hx fw-bold text-danger me-2 lh-1">{{ $todayAbsent }}</span>
-                                <span class="text-gray-500 pt-1 fw-semibold fs-6">Absent Today</span>
+                                <span class="text-gray-500 pt-1 fw-semibold fs-6">{{ __('multilingual.attendance_dashboard.absent_today') }}</span>
                             </div>
                         </div>
                         <div class="card-body pt-2 pb-4 d-flex align-items-center">
@@ -91,7 +91,7 @@
                         <div class="card-header pt-5">
                             <div class="card-title d-flex flex-column">
                                 <span class="fs-2hx fw-bold text-primary me-2 lh-1">{{ $attendanceRate }}%</span>
-                                <span class="text-gray-500 pt-1 fw-semibold fs-6">Attendance Rate Today</span>
+                                <span class="text-gray-500 pt-1 fw-semibold fs-6">{{ __('multilingual.attendance_dashboard.attendance_rate_today') }}</span>
                             </div>
                         </div>
                         <div class="card-body pt-2 pb-4 d-flex align-items-center">
@@ -109,13 +109,13 @@
                     <div class="card card-flush h-md-100">
                         <div class="card-header pt-7">
                             <div class="card-title">
-                                <h3 class="card-label fw-bold text-dark">Monthly Present</h3>
+                                <h3 class="card-label fw-bold text-dark">{{ __('multilingual.attendance_dashboard.monthly_present') }}</h3>
                             </div>
                         </div>
                         <div class="card-body pt-6">
                             <div class="d-flex align-items-center">
                                 <span class="fs-3x fw-bold text-success me-3">{{ $monthPresent }}</span>
-                                <span class="text-gray-500 fw-semibold">present records in selected month</span>
+                                <span class="text-gray-500 fw-semibold">{{ __('multilingual.attendance_dashboard.present_records_selected_month') }}</span>
                             </div>
                         </div>
                     </div>
@@ -125,13 +125,13 @@
                     <div class="card card-flush h-md-100">
                         <div class="card-header pt-7">
                             <div class="card-title">
-                                <h3 class="card-label fw-bold text-dark">Monthly Absent</h3>
+                                <h3 class="card-label fw-bold text-dark">{{ __('multilingual.attendance_dashboard.monthly_absent') }}</h3>
                             </div>
                         </div>
                         <div class="card-body pt-6">
                             <div class="d-flex align-items-center">
                                 <span class="fs-3x fw-bold text-danger me-3">{{ $monthAbsent }}</span>
-                                <span class="text-gray-500 fw-semibold">absent records in selected month</span>
+                                <span class="text-gray-500 fw-semibold">{{ __('multilingual.attendance_dashboard.absent_records_selected_month') }}</span>
                             </div>
                         </div>
                     </div>
@@ -143,7 +143,7 @@
                     <div class="card card-flush">
                         <div class="card-header pt-7">
                             <div class="card-title">
-                                <h3 class="card-label fw-bold text-dark">Daily Attendance Chart</h3>
+                                <h3 class="card-label fw-bold text-dark">{{ __('multilingual.attendance_dashboard.daily_attendance_chart') }}</h3>
                             </div>
                         </div>
                         <div class="card-body">
@@ -158,7 +158,7 @@
                     <div class="card card-flush h-xl-100">
                         <div class="card-header pt-7">
                             <div class="card-title">
-                                <h3 class="card-label fw-bold text-dark">Attendance by Contract</h3>
+                                <h3 class="card-label fw-bold text-dark">{{ __('multilingual.attendance_dashboard.attendance_by_contract') }}</h3>
                             </div>
                         </div>
                         <div class="card-body">
@@ -171,7 +171,7 @@
                     <div class="card card-flush h-xl-100">
                         <div class="card-header pt-7">
                             <div class="card-title">
-                                <h3 class="card-label fw-bold text-dark">Attendance by Role</h3>
+                                <h3 class="card-label fw-bold text-dark">{{ __('multilingual.attendance_dashboard.attendance_by_role') }}</h3>
                             </div>
                         </div>
                         <div class="card-body">
@@ -186,7 +186,7 @@
                     <div class="card card-flush h-xl-100">
                         <div class="card-header pt-7">
                             <div class="card-title">
-                                <h3 class="card-label fw-bold text-dark">Top Employees</h3>
+                                <h3 class="card-label fw-bold text-dark">{{ __('multilingual.attendance_dashboard.top_employees') }}</h3>
                             </div>
                         </div>
                         <div class="card-body pt-5">
@@ -194,8 +194,8 @@
                                 <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
                                     <thead>
                                         <tr class="fw-bold text-muted">
-                                            <th>Name</th>
-                                            <th>Present Days</th>
+                                            <th>{{ __('multilingual.attendance_dashboard.columns.name') }}</th>
+                                            <th>{{ __('multilingual.attendance_dashboard.columns.present_days') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -206,7 +206,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="2" class="text-center text-muted">No data found</td>
+                                                <td colspan="2" class="text-center text-muted">{{ __('multilingual.attendance_dashboard.no_data') }}</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -220,7 +220,7 @@
                     <div class="card card-flush h-xl-100">
                         <div class="card-header pt-7">
                             <div class="card-title">
-                                <h3 class="card-label fw-bold text-dark">Low Employees</h3>
+                                <h3 class="card-label fw-bold text-dark">{{ __('multilingual.attendance_dashboard.low_employees') }}</h3>
                             </div>
                         </div>
                         <div class="card-body pt-5">
@@ -228,8 +228,8 @@
                                 <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
                                     <thead>
                                         <tr class="fw-bold text-muted">
-                                            <th>Name</th>
-                                            <th>Present Days</th>
+                                            <th>{{ __('multilingual.attendance_dashboard.columns.name') }}</th>
+                                            <th>{{ __('multilingual.attendance_dashboard.columns.present_days') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -240,7 +240,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="2" class="text-center text-muted">No data found</td>
+                                                <td colspan="2" class="text-center text-muted">{{ __('multilingual.attendance_dashboard.no_data') }}</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -286,8 +286,8 @@
                     toolbar: { show: false }
                 },
                 series: [
-                    { name: 'Present', data: dailyPresent },
-                    { name: 'Absent', data: dailyAbsent }
+                    { name: @json(__('multilingual.attendance_dashboard.present')), data: dailyPresent },
+                    { name: @json(__('multilingual.attendance_dashboard.absent')), data: dailyAbsent }
                 ],
                 xaxis: {
                     categories: dailyCategories
@@ -311,7 +311,7 @@
                     toolbar: { show: false }
                 },
                 series: [{
-                    name: 'Attendance Rate %',
+                    name: @json(__('multilingual.attendance_dashboard.attendance_rate_percent')),
                     data: contractSeries
                 }],
                 xaxis: {
@@ -330,7 +330,7 @@
                     toolbar: { show: false }
                 },
                 series: [{
-                    name: 'Attendance Rate %',
+                    name: @json(__('multilingual.attendance_dashboard.attendance_rate_percent')),
                     data: roleSeries
                 }],
                 xaxis: {

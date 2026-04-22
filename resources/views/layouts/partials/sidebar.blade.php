@@ -8,35 +8,35 @@
 
         <li class="nav-item">
             <a class="nav-link text-white" href="{{ route('dashboard') }}">
-                Dashboard
+                {{ __('ui.search.dashboard') }}
             </a>
         </li>
 
         <li class="nav-item">
             <a class="nav-link text-white" href="{{ route('building.index') }}">
-                Buildings
+                {{ __('ui.search.buildings') }}
             </a>
         </li>
 
         <li class="nav-item">
             <a class="nav-link text-white" href="{{ route('apartments.index') }}">
-                Apartments
+                {{ __('ui.search.housing_units') }}
             </a>
         </li>
 
         <li class="nav-item">
             <a class="nav-link text-white" href="{{ route('tenants.index') }}">
-                Tenants
+                {{ __('ui.search.customers') }}
             </a>
         </li>
 
         <li class="nav-item mt-3 border-top pt-3">
-            <small class="text-muted px-3">SYSTEM</small>
+            <small class="text-muted px-3">{{ __('ui.app.brand') }}</small>
         </li>
 
         <li class="nav-item">
             <a class="nav-link text-white" href="{{ route('users.index') }}">
-                Users
+                {{ __('ui.search.users') }}
             </a>
         </li>
 

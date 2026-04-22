@@ -4,149 +4,247 @@ declare(strict_types=1);
 
 namespace App\services;
 
-use App\Models\TelegramIntegration;
+use App\Models\TelegramDestination;
+use App\Models\TelegramDiscoveredChat;
 use App\Models\TelegramLinkSession;
 use App\Models\User;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class TelegramConnectionService
 {
-    public function createIntegration(array $data, User $creator): TelegramIntegration
+    public function __construct(
+        private readonly TelegramSettingsService $settingsService,
+        private readonly TelegramBotService $botService,
+    ) {}
+
+    public function createDestination(array $data, User $creator): TelegramDestination
     {
-        return DB::transaction(function () use ($data, $creator): TelegramIntegration {
-            $integration = TelegramIntegration::query()->create([
-                'user_id' => $data['user_id'] ?? null,
-                'created_by' => $creator->id,
-                'name' => $data['name'],
+        return DB::transaction(function () use ($data, $creator): TelegramDestination {
+            $destination = TelegramDestination::query()->create([
                 'type' => $data['type'],
-                'status' => TelegramIntegration::STATUS_PENDING,
+                'scope_type' => $data['scope_type'] ?? 'system',
+                'name' => $data['name'],
+                'status' => TelegramDestination::STATUS_PENDING,
+                'related_model_type' => $data['related_model_type'] ?? null,
+                'related_model_id' => $data['related_model_id'] ?? null,
+                'context_id' => $data['context_id'] ?? null,
+                'linked_by' => $creator->id,
+                'is_active' => true,
+                'extra_settings' => $data['extra_settings'] ?? null,
             ]);
 
-            $this->createLinkSession($integration);
+            $destination->preferences()->create([
+                'notify_status_changes' => true,
+            ]);
 
-            return $integration->load(['user', 'creator', 'linkSessions']);
+            $this->createLinkSession($destination);
+
+            return $destination->load(['preferences', 'linkedByUser', 'linkSessions']);
         });
     }
 
-    public function createLinkSession(TelegramIntegration $integration): TelegramLinkSession
+    public function ensureUserDestinationLink(User $user, User $creator): TelegramDestination
     {
-        $integration->linkSessions()
+        $destination = TelegramDestination::query()
+            ->where('type', TelegramDestination::TYPE_USER)
+            ->where('related_model_type', User::class)
+            ->where('related_model_id', $user->id)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($destination === null) {
+            return $this->createDestination([
+                'name' => $user->name.' Telegram',
+                'type' => TelegramDestination::TYPE_USER,
+                'scope_type' => 'system',
+                'related_model_type' => User::class,
+                'related_model_id' => $user->id,
+            ], $creator);
+        }
+
+        DB::transaction(function () use ($destination, $creator): void {
+            if (! $destination->is_active || $destination->status === TelegramDestination::STATUS_DISABLED) {
+                $destination->forceFill([
+                    'is_active' => true,
+                    'status' => blank($destination->chat_id) ? TelegramDestination::STATUS_PENDING : $destination->status,
+                    'linked_by' => $creator->id,
+                    'last_error' => null,
+                ])->save();
+            }
+
+            $this->createLinkSession($destination);
+        });
+
+        return $destination->fresh(['preferences', 'linkedByUser', 'linkSessions']);
+    }
+
+    public function updatePreferences(TelegramDestination $destination, array $preferences): void
+    {
+        $destination->preferences()->updateOrCreate([], $preferences);
+    }
+
+    public function createLinkSession(TelegramDestination $destination): TelegramLinkSession
+    {
+        $destination->linkSessions()
             ->where('status', TelegramLinkSession::STATUS_PENDING)
             ->update(['status' => TelegramLinkSession::STATUS_DISABLED]);
 
-        return $integration->linkSessions()->create([
-            'token' => Str::random(40),
+        $token = Str::random(40);
+
+        $destination->forceFill([
+            'telegram_link_token' => $token,
+            'status' => $destination->isConnected() ? TelegramDestination::STATUS_CONNECTED : TelegramDestination::STATUS_PENDING,
+            'last_error' => null,
+        ])->save();
+
+        return $destination->linkSessions()->create([
+            'token' => $token,
             'status' => TelegramLinkSession::STATUS_PENDING,
             'expires_at' => now()->addDays(7),
         ]);
     }
 
-    public function shareableLink(TelegramIntegration $integration): ?string
+    public function shareableLink(TelegramDestination $destination): ?string
     {
-        $botUsername = (string) config('services.telegram.bot_username', '');
-        $session = $integration->loadMissing('linkSessions')->latestPendingSession();
+        $settings = $this->settingsService->current();
+        $session = $destination->loadMissing('linkSessions')->linkSessions->firstWhere('status', TelegramLinkSession::STATUS_PENDING);
 
-        if ($botUsername === '' || $session === null) {
+        if (blank($settings->bot_username) || $session === null) {
             return null;
         }
 
-        $parameter = 'ti_'.$session->token;
+        $parameter = 'td_'.$session->token;
 
-        if ($integration->type === TelegramIntegration::TYPE_GROUP) {
+        if ($destination->type === TelegramDestination::TYPE_GROUP) {
             $admin = 'invite_users+manage_chat+delete_messages';
 
-            return sprintf('https://t.me/%s?startgroup=%s&admin=%s', $botUsername, $parameter, $admin);
+            return sprintf('https://t.me/%s?startgroup=%s&admin=%s', $settings->bot_username, $parameter, $admin);
         }
 
-        return sprintf('https://t.me/%s?start=%s', $botUsername, $parameter);
+        return sprintf('https://t.me/%s?start=%s', $settings->bot_username, $parameter);
     }
 
-    public function refreshStatus(TelegramIntegration $integration): array
+    public function refreshStatus(TelegramDestination $destination): array
     {
-        $token = (string) config('services.telegram.bot_token', '');
-
-        if ($token === '') {
+        if (! $this->settingsService->enabled()) {
             return [
                 'success' => false,
-                'message' => 'Telegram bot token is not configured.',
+                'message' => 'Telegram is disabled or not configured.',
             ];
         }
 
-        if (blank($integration->telegram_chat_id)) {
+        if (blank($destination->chat_id)) {
             return [
                 'success' => false,
-                'message' => 'This integration is not linked to a Telegram chat yet.',
+                'message' => 'This destination is not linked to a Telegram chat yet.',
             ];
         }
 
-        /** @var Response $response */
-        $response = Http::acceptJson()->post(
-            sprintf('https://api.telegram.org/bot%s/getChat', $token),
-            ['chat_id' => $integration->telegram_chat_id],
-        );
+        $response = $this->botService->getChat($destination->chat_id);
 
         if (! $response->successful() || ! data_get($response->json(), 'ok')) {
-            $integration->forceFill([
-                'status' => TelegramIntegration::STATUS_FAILED,
+            $destination->forceFill([
+                'status' => TelegramDestination::STATUS_FAILED,
                 'last_error' => $response->body(),
             ])->save();
 
             return [
                 'success' => false,
-                'message' => 'Telegram could not confirm the chat connection.',
+                'message' => 'Telegram could not confirm the destination connection.',
             ];
         }
 
         $chat = (array) data_get($response->json(), 'result', []);
 
-        $integration->forceFill([
-            'status' => TelegramIntegration::STATUS_CONNECTED,
+        $destination->forceFill([
+            'status' => TelegramDestination::STATUS_CONNECTED,
             'telegram_username' => Arr::get($chat, 'username'),
-            'telegram_title' => Arr::get($chat, 'title') ?: trim((string) Arr::get($chat, 'first_name').' '.(string) Arr::get($chat, 'last_name')),
+            'telegram_first_name' => Arr::get($chat, 'first_name'),
+            'telegram_last_name' => Arr::get($chat, 'last_name'),
+            'meta_json' => array_merge($destination->meta_json ?? [], ['chat' => $chat]),
             'last_error' => null,
         ])->save();
 
         return [
             'success' => true,
-            'message' => 'Telegram integration status refreshed successfully.',
+            'message' => 'Telegram destination status refreshed successfully.',
         ];
     }
 
-    public function disableIntegration(TelegramIntegration $integration): void
+    public function disableDestination(TelegramDestination $destination): void
     {
-        DB::transaction(function () use ($integration): void {
-            $integration->loadMissing('user');
-
-            $integration->linkSessions()
+        DB::transaction(function () use ($destination): void {
+            $destination->linkSessions()
                 ->where('status', TelegramLinkSession::STATUS_PENDING)
                 ->update(['status' => TelegramLinkSession::STATUS_DISABLED]);
 
-            if ($integration->type === TelegramIntegration::TYPE_USER && $integration->user !== null && $integration->user->telegram_chat_id === $integration->telegram_chat_id) {
-                $integration->user->forceFill(['telegram_chat_id' => null])->save();
-            }
-
-            $integration->forceFill([
-                'status' => TelegramIntegration::STATUS_DISABLED,
-                'disabled_at' => now(),
+            $destination->forceFill([
+                'status' => TelegramDestination::STATUS_DISABLED,
+                'is_active' => false,
             ])->save();
         });
     }
 
-    public function deleteIntegration(TelegramIntegration $integration): void
+    public function regenerateLink(TelegramDestination $destination): TelegramDestination
     {
-        DB::transaction(function () use ($integration): void {
-            $integration->loadMissing('user');
+        $this->createLinkSession($destination);
 
-            if ($integration->type === TelegramIntegration::TYPE_USER && $integration->user !== null && $integration->user->telegram_chat_id === $integration->telegram_chat_id) {
-                $integration->user->forceFill(['telegram_chat_id' => null])->save();
-            }
+        return $destination->fresh(['preferences', 'linkedByUser', 'linkSessions']);
+    }
 
-            $integration->delete();
+    public function deleteDestination(TelegramDestination $destination): void
+    {
+        $destination->delete();
+    }
+
+    public function unlinkDestination(TelegramDestination $destination): void
+    {
+        DB::transaction(function () use ($destination): void {
+            $destination->forceFill([
+                'status' => TelegramDestination::STATUS_PENDING,
+                'chat_id' => null,
+                'telegram_user_id' => null,
+                'telegram_username' => null,
+                'telegram_first_name' => null,
+                'telegram_last_name' => null,
+                'linked_at' => null,
+                'last_error' => null,
+                'meta_json' => null,
+            ])->save();
+
+            $this->createLinkSession($destination);
+        });
+    }
+
+    public function promoteDiscoveredChat(TelegramDiscoveredChat $discoveredChat, array $data, User $creator): TelegramDestination
+    {
+        return DB::transaction(function () use ($discoveredChat, $data, $creator): TelegramDestination {
+            $destination = TelegramDestination::query()->create([
+                'type' => TelegramDestination::TYPE_GROUP,
+                'scope_type' => $data['scope_type'] ?? 'system',
+                'name' => $data['name'] ?? ($discoveredChat->title ?: $discoveredChat->chat_id),
+                'status' => TelegramDestination::STATUS_CONNECTED,
+                'chat_id' => $discoveredChat->chat_id,
+                'telegram_username' => $discoveredChat->username,
+                'meta_json' => $discoveredChat->meta_json,
+                'context_id' => $data['context_id'] ?? null,
+                'linked_by' => $creator->id,
+                'is_active' => true,
+                'linked_at' => now(),
+            ]);
+
+            $destination->preferences()->create([
+                'notify_broadcasts' => true,
+            ]);
+
+            $discoveredChat->forceFill([
+                'telegram_destination_id' => $destination->id,
+            ])->save();
+
+            return $destination->load(['preferences', 'linkedByUser']);
         });
     }
 
@@ -158,14 +256,25 @@ class TelegramConnectionService
             return ['status' => 'ignored'];
         }
 
+        $chat = (array) Arr::get($message, 'chat', []);
+        $chatType = (string) Arr::get($chat, 'type', '');
+
+        if (in_array($chatType, ['group', 'supergroup'], true)) {
+            $this->recordDiscoveredChat($message);
+        }
+
         $token = $this->extractSessionToken((string) Arr::get($message, 'text', ''));
 
         if ($token === null) {
+            if ($chatType === 'private' && $this->settingsService->enabled()) {
+                $this->sendPrivateInstructions((string) Arr::get($chat, 'id'));
+            }
+
             return ['status' => 'ignored'];
         }
 
         $session = TelegramLinkSession::query()
-            ->with('integration.user')
+            ->with('destination')
             ->where('token', $token)
             ->first();
 
@@ -173,83 +282,110 @@ class TelegramConnectionService
             return ['status' => 'ignored'];
         }
 
-        $integration = $session->integration;
+        $destination = $session->destination;
 
-        if ($integration->status === TelegramIntegration::STATUS_DISABLED) {
+        if (! $destination->is_active || $destination->status === TelegramDestination::STATUS_DISABLED) {
             $session->forceFill(['status' => TelegramLinkSession::STATUS_DISABLED])->save();
 
             return ['status' => 'disabled'];
         }
 
-        $chat = (array) Arr::get($message, 'chat', []);
         $from = (array) Arr::get($message, 'from', []);
-        $chatType = (string) Arr::get($chat, 'type', '');
         $chatId = (string) Arr::get($chat, 'id', '');
 
-        if ($integration->type === TelegramIntegration::TYPE_USER && $chatType !== 'private') {
-            return $this->failLink($integration, $session, 'This link is intended for a direct Telegram user chat.');
+        if ($destination->type === TelegramDestination::TYPE_USER && $chatType !== 'private') {
+            return $this->failLink($destination, $session, 'This link is intended for a direct Telegram user chat.');
         }
 
-        if ($integration->type === TelegramIntegration::TYPE_GROUP && ! in_array($chatType, ['group', 'supergroup'], true)) {
-            return $this->failLink($integration, $session, 'This link is intended for a Telegram group or supergroup.');
+        if ($destination->type === TelegramDestination::TYPE_GROUP && ! in_array($chatType, ['group', 'supergroup'], true)) {
+            return $this->failLink($destination, $session, 'This link is intended for a Telegram group or supergroup.');
         }
 
-        $duplicate = TelegramIntegration::query()
-            ->where('id', '!=', $integration->id)
-            ->where('type', $integration->type)
-            ->where('telegram_chat_id', $chatId)
-            ->whereIn('status', [
-                TelegramIntegration::STATUS_PENDING,
-                TelegramIntegration::STATUS_CONNECTED,
-                TelegramIntegration::STATUS_FAILED,
-            ])
+        $duplicate = TelegramDestination::query()
+            ->where('id', '!=', $destination->id)
+            ->where('chat_id', $chatId)
+            ->where('is_active', true)
             ->exists();
 
         if ($duplicate) {
-            return $this->failLink($integration, $session, 'This Telegram chat is already linked to another integration.');
+            return $this->failLink($destination, $session, 'This Telegram chat is already linked to another destination.');
         }
 
-        DB::transaction(function () use ($integration, $session, $chat, $from, $chatId): void {
-            $displayName = trim((string) Arr::get($from, 'first_name').' '.(string) Arr::get($from, 'last_name'));
-            $linkedBy = Arr::get($from, 'username') ? '@'.Arr::get($from, 'username') : ($displayName !== '' ? $displayName : (string) Arr::get($chat, 'title', 'Telegram'));
-
-            $integration->forceFill([
-                'status' => TelegramIntegration::STATUS_CONNECTED,
-                'telegram_chat_id' => $chatId,
-                'telegram_username' => Arr::get($chat, 'username') ?: Arr::get($from, 'username'),
-                'telegram_title' => Arr::get($chat, 'title') ?: ($displayName !== '' ? $displayName : null),
-                'linked_by' => $linkedBy,
+        DB::transaction(function () use ($destination, $session, $chat, $from, $chatId): void {
+            $destination->forceFill([
+                'status' => TelegramDestination::STATUS_CONNECTED,
+                'chat_id' => $chatId,
+                'telegram_user_id' => Arr::get($from, 'id'),
+                'telegram_username' => Arr::get($from, 'username') ?: Arr::get($chat, 'username'),
+                'telegram_first_name' => Arr::get($from, 'first_name'),
+                'telegram_last_name' => Arr::get($from, 'last_name'),
                 'linked_at' => now(),
-                'disabled_at' => null,
                 'last_error' => null,
+                'meta_json' => array_merge($destination->meta_json ?? [], ['chat' => $chat, 'from' => $from]),
             ])->save();
 
             $session->forceFill([
                 'status' => TelegramLinkSession::STATUS_CONNECTED,
-                'telegram_payload' => $chat + ['from' => $from],
+                'telegram_payload' => ['chat' => $chat, 'from' => $from],
                 'completed_at' => now(),
             ])->save();
 
-            if ($integration->type === TelegramIntegration::TYPE_USER && $integration->user !== null) {
-                $integration->user->forceFill([
-                    'telegram_chat_id' => $chatId,
-                ])->save();
-            }
+            TelegramDiscoveredChat::query()
+                ->where('chat_id', $chatId)
+                ->update(['telegram_destination_id' => $destination->id]);
         });
 
-        Log::info('Telegram integration linked successfully.', [
-            'telegram_integration_id' => $integration->id,
+        Log::info('Telegram destination linked successfully.', [
+            'telegram_destination_id' => $destination->id,
             'chat_id' => $chatId,
         ]);
 
         return ['status' => 'connected'];
     }
 
-    private function failLink(TelegramIntegration $integration, TelegramLinkSession $session, string $message): array
+    public function discoveredChatsQuery()
     {
-        DB::transaction(function () use ($integration, $session, $message): void {
-            $integration->forceFill([
-                'status' => TelegramIntegration::STATUS_FAILED,
+        return TelegramDiscoveredChat::query()->with('destination')->latest('last_seen_at');
+    }
+
+    private function recordDiscoveredChat(array $message): void
+    {
+        $chat = (array) Arr::get($message, 'chat', []);
+
+        TelegramDiscoveredChat::query()->updateOrCreate(
+            ['chat_id' => (string) Arr::get($chat, 'id')],
+            [
+                'chat_type' => (string) Arr::get($chat, 'type'),
+                'title' => Arr::get($chat, 'title'),
+                'username' => Arr::get($chat, 'username'),
+                'last_message_text' => Arr::get($message, 'text'),
+                'last_seen_at' => now(),
+                'meta_json' => $message,
+            ],
+        );
+    }
+
+    private function sendPrivateInstructions(string $chatId): void
+    {
+        if ($chatId === '') {
+            return;
+        }
+
+        try {
+            $this->botService->sendMessage($chatId, 'This bot is linked from inside the system. Please use the generated link from the platform to connect your account.');
+        } catch (\Throwable $throwable) {
+            Log::warning('Telegram private instruction message failed.', [
+                'chat_id' => $chatId,
+                'message' => $throwable->getMessage(),
+            ]);
+        }
+    }
+
+    private function failLink(TelegramDestination $destination, TelegramLinkSession $session, string $message): array
+    {
+        DB::transaction(function () use ($destination, $session, $message): void {
+            $destination->forceFill([
+                'status' => TelegramDestination::STATUS_FAILED,
                 'last_error' => $message,
             ])->save();
 
@@ -260,12 +396,7 @@ class TelegramConnectionService
             ])->save();
         });
 
-        $this->createLinkSession($integration);
-
-        Log::warning('Telegram integration linking failed.', [
-            'telegram_integration_id' => $integration->id,
-            'message' => $message,
-        ]);
+        $this->createLinkSession($destination);
 
         return ['status' => 'failed'];
     }
@@ -285,7 +416,7 @@ class TelegramConnectionService
 
     private function extractSessionToken(string $text): ?string
     {
-        if (! preg_match('/\bti_([A-Za-z0-9]+)\b/', $text, $matches)) {
+        if (! preg_match('/\btd_([A-Za-z0-9]+)\b/', $text, $matches)) {
             return null;
         }
 

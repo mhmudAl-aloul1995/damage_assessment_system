@@ -40,7 +40,7 @@
                         <th class="min-w-150px">{{ __('ui.users.full_name') }}</th>
                         <th class="min-w-150px">{{ __('ui.users.name_en') }}</th>
                         <th class="min-w-150px">ArcGIS Username</th>
-                        <th class="min-w-150px">Telegram Chat ID</th>
+                        <th class="min-w-175px">{{ __('multilingual.user_management.telegram.connection') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.email') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.id_no') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.contract_type') }}</th>
@@ -143,12 +143,6 @@
                             </div>
 
                             <div class="fv-row mb-7">
-                                <label class="fw-semibold fs-6 mb-2">Telegram Chat ID</label>
-                                <input type="text" name="telegram_chat_id" class="form-control form-control-solid"
-                                    placeholder="User, group, or supergroup chat id" />
-                            </div>
-
-                            <div class="fv-row mb-7">
                                 <label class="required fw-semibold fs-6 mb-2">{{ __('ui.users.email') }}</label>
                                 <input type="email" name="email" class="form-control form-control-solid"
                                     placeholder="example@domain.com" />
@@ -247,6 +241,13 @@
             retry: @json(__('ui.buttons.try_again')),
             loadFailed: @json(__('ui.users.load_failed')),
             saved: @json(__('ui.users.saved')),
+            telegramLinkReady: @json(__('multilingual.user_management.telegram.link_ready')),
+            telegramLinkButton: @json(__('multilingual.user_management.telegram.generate_link')),
+            telegramCopyLink: @json(__('multilingual.telegram_integrations.actions.copy_link')),
+            telegramCopySuccess: @json(__('multilingual.telegram_integrations.messages.link_copied')),
+            telegramCopyFailed: @json(__('multilingual.telegram_integrations.messages.link_copy_failed')),
+            telegramOpenDestination: @json(__('multilingual.user_management.telegram.open_destination')),
+            telegramNotConfigured: @json(__('multilingual.user_management.telegram.link_not_available')),
             dataTableLanguageUrl: @json(app()->getLocale() === 'ar' ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json'),
         };
 
@@ -299,7 +300,6 @@
                     $('#kt_modal_user_form input[name="name"]').val(user.name ?? '');
                     $('#kt_modal_user_form input[name="name_en"]').val(user.name_en ?? '');
                     $('#kt_modal_user_form input[name="username_arcgis"]').val(user.username_arcgis ?? '');
-                    $('#kt_modal_user_form input[name="telegram_chat_id"]').val(user.telegram_chat_id ?? '');
                     $('#kt_modal_user_form input[name="email"]').val(user.email ?? '');
                     $('#kt_modal_user_form input[name="id_no"]').val(user.id_no ?? '');
                     $('#kt_modal_user_form select[name="contract_type"]').val(user.contract_type ?? '');
@@ -321,6 +321,76 @@
                     showSwalError(userTranslations.loadFailed);
                 }
             });
+        }
+
+        function generateTelegramLink(id) {
+            $.ajax({
+                url: "{{ url('user-management/user') }}/" + id + "/telegram-link",
+                type: "POST",
+                success: function (response) {
+                    const shareableLink = response.shareable_link ?? '';
+                    const linkHtml = shareableLink
+                        ? `<div class="mt-4">
+                                <label class="form-label fw-semibold">${userTranslations.telegramLinkButton}</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-control-solid" id="telegram_shareable_link" value="${shareableLink}" readonly>
+                                    <button type="button" class="btn btn-primary" onclick="copyTelegramLink()">${userTranslations.telegramCopyLink}</button>
+                                </div>
+                            </div>`
+                        : `<div class="alert alert-warning mt-4 mb-0">${userTranslations.telegramNotConfigured}</div>`;
+
+                    Swal.fire({
+                        title: response.message ?? userTranslations.telegramLinkReady,
+                        html: `
+                            <div class="text-start">
+                                <div class="mb-3">
+                                    <span class="badge badge-light-info">${response.status_label ?? ''}</span>
+                                </div>
+                                ${linkHtml}
+                                <div class="mt-4">
+                                    <a href="${response.destination_url}" class="btn btn-light-primary">${userTranslations.telegramOpenDestination}</a>
+                                </div>
+                            </div>
+                        `,
+                        icon: 'success',
+                        buttonsStyling: false,
+                        confirmButtonText: userTranslations.ok,
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+
+                    usersTable.ajax.reload(null, false);
+                },
+                error: function (xhr) {
+                    showSwalError(xhr.responseJSON?.message ?? userTranslations.error);
+                }
+            });
+        }
+
+        function copyTelegramLink() {
+            const input = document.getElementById('telegram_shareable_link');
+
+            if (!input) {
+                showSwalError(userTranslations.telegramNotConfigured);
+                return;
+            }
+
+            navigator.clipboard.writeText(input.value)
+                .then(() => {
+                    Swal.fire({
+                        text: userTranslations.telegramCopySuccess,
+                        icon: 'success',
+                        buttonsStyling: false,
+                        confirmButtonText: userTranslations.ok,
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                })
+                .catch(() => {
+                    showSwalError(userTranslations.telegramCopyFailed);
+                });
         }
 
         $(document).ready(function () {
@@ -348,7 +418,7 @@
                     { data: 'name', name: 'name' },
                     { data: 'name_en', name: 'name_en' },
                     { data: 'username_arcgis', name: 'username_arcgis' },
-                    { data: 'telegram_chat_id', name: 'telegram_chat_id' },
+                    { data: 'telegram_destination', name: 'telegram_destination', searchable: false, orderable: false },
                     { data: 'email', name: 'email' },
                     { data: 'id_no', name: 'id_no' },
                     { data: 'contract_type', name: 'contract_type' },

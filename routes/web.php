@@ -3,7 +3,10 @@
 use App\Http\Controllers\Attendance\AttendanceController;
 use App\Http\Controllers\Committee\CommitteeDecisionController;
 use App\Http\Controllers\Committee\CommitteeMemberController;
-use App\Http\Controllers\Committee\TelegramIntegrationController;
+use App\Http\Controllers\Committee\TelegramBroadcastController;
+use App\Http\Controllers\Committee\TelegramDestinationController;
+use App\Http\Controllers\Committee\TelegramDiscoveredChatController;
+use App\Http\Controllers\Committee\TelegramSettingsController;
 use App\Http\Controllers\Committee\TelegramWebhookController;
 use App\Http\Controllers\DamageAssessment\ArcGISController;
 use App\Http\Controllers\DamageAssessment\AreaManagerRejectedBuildingsController;
@@ -135,6 +138,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [userController::class, 'store'])->name('users.store');
 
         Route::get('/{user}/edit', [userController::class, 'edit'])->name('users.edit');
+        Route::post('/{user}/telegram-link', [userController::class, 'telegramLink'])->name('users.telegram-link');
 
         Route::put('/{user}', [userController::class, 'update'])->name('users.update');
 
@@ -204,12 +208,42 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
-        Route::get('/', [TelegramIntegrationController::class, 'index'])->name('index');
-        Route::get('/data', [TelegramIntegrationController::class, 'data'])->name('data');
-        Route::post('/', [TelegramIntegrationController::class, 'store'])->name('store');
-        Route::post('/{telegramIntegration}/refresh', [TelegramIntegrationController::class, 'refresh'])->name('refresh');
-        Route::post('/{telegramIntegration}/disable', [TelegramIntegrationController::class, 'disable'])->name('disable');
-        Route::delete('/{telegramIntegration}', [TelegramIntegrationController::class, 'destroy'])->name('destroy');
+        Route::get('/', fn () => redirect()->route('telegram.destinations.index'))->name('index');
+        Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
+        Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
+        Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
+        Route::post('/{telegramDestination}/disable', [TelegramDestinationController::class, 'disable'])->name('disable');
+        Route::delete('/{telegramDestination}', [TelegramDestinationController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('telegram/settings')->name('telegram.settings.')->group(function () {
+        Route::get('/', [TelegramSettingsController::class, 'index'])->name('index');
+        Route::put('/', [TelegramSettingsController::class, 'update'])->name('update');
+    });
+
+    Route::prefix('telegram/destinations')->name('telegram.destinations.')->group(function () {
+        Route::get('/', [TelegramDestinationController::class, 'index'])->name('index');
+        Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
+        Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
+        Route::get('/{telegramDestination}', [TelegramDestinationController::class, 'show'])->name('show');
+        Route::put('/{telegramDestination}/preferences', [TelegramDestinationController::class, 'updatePreferences'])->name('preferences.update');
+        Route::post('/{telegramDestination}/regenerate-link', [TelegramDestinationController::class, 'regenerateLink'])->name('regenerate-link');
+        Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
+        Route::post('/{telegramDestination}/unlink', [TelegramDestinationController::class, 'unlink'])->name('unlink');
+        Route::post('/{telegramDestination}/disable', [TelegramDestinationController::class, 'disable'])->name('disable');
+        Route::delete('/{telegramDestination}', [TelegramDestinationController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('telegram/discovered-chats')->name('telegram.discovered.')->group(function () {
+        Route::get('/', [TelegramDiscoveredChatController::class, 'index'])->name('index');
+        Route::get('/data', [TelegramDiscoveredChatController::class, 'data'])->name('data');
+        Route::post('/{telegramDiscoveredChat}/promote', [TelegramDiscoveredChatController::class, 'promote'])->name('promote');
+    });
+
+    Route::prefix('telegram/broadcasts')->name('telegram.broadcasts.')->group(function () {
+        Route::get('/', [TelegramBroadcastController::class, 'index'])->name('index');
+        Route::get('/data', [TelegramBroadcastController::class, 'data'])->name('data');
+        Route::post('/', [TelegramBroadcastController::class, 'store'])->name('store');
     });
 
     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);
@@ -325,9 +359,11 @@ Route::middleware('auth')->group(function () {
 
 });
 
-Route::post('/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
+Route::post('/api/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('telegram.webhook');
+Route::post('/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
+    ->withoutMiddleware([VerifyCsrfToken::class]);
 use Spatie\Browsershot\Browsershot;
 
 Route::get('/debug-pdf', function () {

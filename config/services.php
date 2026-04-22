@@ -35,8 +35,8 @@ return [
         ],
     ],
     'telegram' => [
+        'base_url' => env('TELEGRAM_API_BASE_URL', 'https://api.telegram.org'),
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
-        'chat_id' => env('TELEGRAM_CHAT_ID'),
         'bot_username' => env('TELEGRAM_BOT_USERNAME'),
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
     ],
@@ -50,8 +50,7 @@ return [
     ],
     'committee_decisions' => [
         'telegram' => [
-            'bot_token' => env('TELEGRAM_BOT_TOKEN'),
-            'chat_id' => env('TELEGRAM_CHAT_ID'),
+            'preference_key' => 'notify_status_changes',
         ],
         'arcgis' => [
             'base_url' => env('COMMITTEE_ARCGIS_BASE_URL', ''),

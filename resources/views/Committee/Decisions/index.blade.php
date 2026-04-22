@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'قرارات اللجنة')
-@section('pageName', 'قرارات اللجنة')
+@section('title', __('multilingual.committee_decisions.title'))
+@section('pageName', __('multilingual.committee_decisions.page_name'))
 
 @section('content')
     @if (session('success'))
@@ -13,7 +13,7 @@
             <div class="card card-flush h-100 border border-gray-200">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted fs-6 mb-2">سجلات المباني بانتظار اللجنة</div>
+                        <div class="text-muted fs-6 mb-2">{{ __('multilingual.committee_decisions.buildings_waiting') }}</div>
                         <div class="fs-2hx fw-bold text-primary">{{ $buildingCount }}</div>
                     </div>
                     <i class="ki-duotone ki-home fs-3x text-primary">
@@ -26,7 +26,7 @@
             <div class="card card-flush h-100 border border-gray-200">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted fs-6 mb-2">سجلات الوحدات بانتظار اللجنة</div>
+                        <div class="text-muted fs-6 mb-2">{{ __('multilingual.committee_decisions.housing_waiting') }}</div>
                         <div class="fs-2hx fw-bold text-warning">{{ $housingCount }}</div>
                     </div>
                     <i class="ki-duotone ki-home-2 fs-3x text-warning">
@@ -40,16 +40,16 @@
     <div class="card card-flush shadow-sm">
         <div class="card-header pt-6">
             <div class="card-title">
-                <h3 class="fw-bold m-0">إدارة قرارات اللجنة الفنية</h3>
+                <h3 class="fw-bold m-0">{{ __('multilingual.committee_decisions.management_title') }}</h3>
             </div>
         </div>
         <div class="card-body">
             <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x fs-6 fw-semibold mb-5">
                 <li class="nav-item">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#committee_buildings_tab">المباني</a>
+                    <a class="nav-link active" data-bs-toggle="tab" href="#committee_buildings_tab">{{ __('multilingual.committee_decisions.tabs.buildings') }}</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#committee_units_tab">الوحدات السكنية</a>
+                    <a class="nav-link" data-bs-toggle="tab" href="#committee_units_tab">{{ __('multilingual.committee_decisions.tabs.housing_units') }}</a>
                 </li>
             </ul>
 
@@ -61,15 +61,15 @@
                                 <tr class="fw-bold text-muted bg-light">
                                     <th>ObjectID</th>
                                     <th>GlobalID</th>
-                                    <th>اسم المبنى</th>
-                                    <th>الحي</th>
-                                    <th>المهندس الميداني</th>
-                                    <th>الحالة الحالية</th>
-                                    <th>القرار</th>
-                                    <th>التواقيع</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.building_name') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.neighborhood') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.field_engineer') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.current_status') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.decision') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.signatures') }}</th>
                                     <th>ArcGIS</th>
                                     <th>Telegram</th>
-                                    <th class="text-end">الإجراء</th>
+                                    <th class="text-end">{{ __('multilingual.committee_decisions.columns.actions') }}</th>
                                 </tr>
                             </thead>
                         </table>
@@ -82,15 +82,15 @@
                                 <tr class="fw-bold text-muted bg-light">
                                     <th>ObjectID</th>
                                     <th>GlobalID</th>
-                                    <th>الاسم / المالك</th>
-                                    <th>المبنى</th>
-                                    <th>الحي</th>
-                                    <th>الحالة الحالية</th>
-                                    <th>القرار</th>
-                                    <th>التواقيع</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.owner_name') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.building') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.neighborhood') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.current_status') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.decision') }}</th>
+                                    <th>{{ __('multilingual.committee_decisions.columns.signatures') }}</th>
                                     <th>ArcGIS</th>
                                     <th>Telegram</th>
-                                    <th class="text-end">الإجراء</th>
+                                    <th class="text-end">{{ __('multilingual.committee_decisions.columns.actions') }}</th>
                                 </tr>
                             </thead>
                         </table>

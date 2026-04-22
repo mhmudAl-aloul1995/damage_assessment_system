@@ -7,59 +7,69 @@ namespace App\services\Messaging;
 use App\Models\CommitteeDecision;
 use App\Models\HousingUnit;
 use App\Models\User;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
+use App\services\TelegramDestinationResolver;
+use App\services\TelegramNotifier;
+use App\services\TelegramSettingsService;
 use Illuminate\Support\Facades\Log;
 
 class TelegramMessagingProvider implements MessagingProvider
 {
+    public function __construct(
+        private readonly TelegramSettingsService $settingsService,
+        private readonly TelegramDestinationResolver $destinationResolver,
+        private readonly TelegramNotifier $notifier,
+    ) {}
+
     public function sendCommitteeDecision(CommitteeDecision $decision, ?User $recipient = null): array
     {
-        $token = (string) (config('services.telegram.bot_token') ?: config('services.committee_decisions.telegram.bot_token', ''));
-        $defaultChatId = (string) (config('services.telegram.chat_id') ?: config('services.committee_decisions.telegram.chat_id', ''));
-        $chatId = $recipient?->telegram_chat_id ?: $defaultChatId;
-
-        if ($token === '' || $chatId === '') {
-            Log::warning('Committee Telegram bot is not configured.', ['committee_decision_id' => $decision->id]);
-
-            return [
-                'success' => false,
-                'status' => 'not_configured',
-                'message' => 'Telegram bot token or chat id is not configured.',
-            ];
-        }
-
-        /** @var Response $response */
-        $response = Http::acceptJson()->post(
-            sprintf('https://api.telegram.org/bot%s/sendMessage', $token),
-            [
-                'chat_id' => $chatId,
-                'text' => $this->buildCommitteeDecisionMessage($decision),
-            ],
-        );
-
-        if (! $response->successful() || ! (bool) data_get($response->json(), 'ok', false)) {
-            Log::error('Committee Telegram request failed.', [
+        if (! $this->settingsService->enabled()) {
+            Log::warning('Committee Telegram is disabled or not configured.', [
                 'committee_decision_id' => $decision->id,
-                'status' => $response->status(),
-                'body' => $response->body(),
             ]);
 
             return [
                 'success' => false,
+                'status' => 'not_configured',
+                'message' => 'Telegram is disabled or not configured.',
+            ];
+        }
+
+        if ($recipient === null) {
+            return [
+                'success' => false,
+                'status' => 'missing_destination',
+                'message' => 'The field engineer could not be resolved.',
+            ];
+        }
+
+        $destinations = $this->destinationResolver->forRelatedModel(User::class, $recipient->id, 'notify_status_changes');
+
+        if ($destinations->isEmpty()) {
+            return [
+                'success' => false,
+                'status' => 'missing_destination',
+                'message' => 'No connected Telegram destination was found for the field engineer.',
+            ];
+        }
+
+        $result = $this->notifier->sendCollection($destinations, $this->buildCommitteeDecisionMessage($decision));
+
+        if ($result['sent_count'] === 0) {
+            return [
+                'success' => false,
                 'status' => 'failed',
-                'message' => $response->body(),
+                'message' => 'Telegram delivery failed for all resolved destinations.',
             ];
         }
 
         return [
             'success' => true,
             'status' => 'sent',
-            'message' => $response->body(),
+            'message' => sprintf('Sent to %d Telegram destination(s).', $result['sent_count']),
         ];
     }
 
-    public function buildCommitteeDecisionMessage(CommitteeDecision $decision): string
+    private function buildCommitteeDecisionMessage(CommitteeDecision $decision): string
     {
         $decisionable = $decision->decisionable;
         $building = $decisionable instanceof HousingUnit ? $decisionable->building : $decisionable;
@@ -70,13 +80,14 @@ class TelegramMessagingProvider implements MessagingProvider
             : '';
 
         return trim(implode("\n", [
-            'Committee Decision',
+            '<b>Committee Decision</b>',
             'Building: '.$recordName.' (#'.$buildingNumber.')'.$unitLabel,
             'Decision Type: '.($decision->decision_type ?? '-'),
             'Decision Text: '.($decision->decision_text ?? '-'),
             'Required Action: '.($decision->action_text ?? '-'),
             'Committee Notes: '.($decision->notes ?? '-'),
             'Decision Date: '.optional($decision->decision_date)->format('Y-m-d'),
+            '<code>'.now()->format('Y-m-d H:i').'</code>',
         ]));
     }
 }

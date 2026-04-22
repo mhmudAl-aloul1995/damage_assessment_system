@@ -6,16 +6,23 @@ namespace App\Http\Controllers\Committee;
 
 use App\Http\Controllers\Controller;
 use App\services\TelegramConnectionService;
+use App\services\TelegramSettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TelegramWebhookController extends Controller
 {
-    public function __construct(private readonly TelegramConnectionService $connectionService) {}
+    public function __construct(
+        private readonly TelegramConnectionService $connectionService,
+        private readonly TelegramSettingsService $settingsService,
+    ) {}
 
     public function handle(Request $request, string $secret): JsonResponse
     {
-        abort_unless(hash_equals((string) config('services.telegram.webhook_secret', ''), $secret), 403);
+        $settings = $this->settingsService->current();
+
+        abort_unless($settings->is_enabled, 404);
+        abort_unless(hash_equals((string) ($settings->webhook_secret ?: ''), $secret), 404);
 
         $result = $this->connectionService->handleWebhookUpdate($request->all());
 

@@ -37,6 +37,7 @@ class User extends Authenticatable
         'name_en',
         'username_arcgis',
         'telegram_chat_id',
+        'preferred_locale',
     ];
 
     protected $hidden = [
@@ -64,6 +65,7 @@ class User extends Authenticatable
             'address' => 'string',
             'username_arcgis' => 'string',
             'telegram_chat_id' => 'string',
+            'preferred_locale' => 'string',
             'email_verified_at' => 'datetime',
             'password' => 'string',
             'remember_token' => 'string',
@@ -101,5 +103,10 @@ class User extends Authenticatable
     public function telegramIntegrations()
     {
         return $this->hasMany(TelegramIntegration::class);
+    }
+
+    public function telegramDestinations()
+    {
+        return $this->morphMany(TelegramDestination::class, 'relatedModel', 'related_model_type', 'related_model_id');
     }
 }

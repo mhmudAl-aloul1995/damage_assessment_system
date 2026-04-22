@@ -111,20 +111,23 @@
 			!important;
 	}
 
-	th,
-	td,
-	.text-end {
-		text-align:
-			<?php echo e($isRtl ? 'center' : 'inherit'); ?>
+	body.locale-rtl .form-check {
+		padding-right: 1.5rem;
+		padding-left: 0;
+	}
 
-			!important;
+	body.locale-rtl .form-check .form-check-input {
+		float: right;
+		margin-right: -1.5rem;
+		margin-left: 0;
 	}
 </style>
 
 <body id="kt_app_body" data-kt-app-layout="dark-sidebar" data-kt-app-header-fixed="true"
 	data-kt-app-sidebar-enabled="true" data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-hoverable="true"
 	data-kt-app-sidebar-push-header="true" data-kt-app-sidebar-push-toolbar="true"
-	data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true" class="app-default">
+	data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true"
+	class="app-default locale-<?php echo e($direction); ?>" data-locale="<?php echo e(app()->getLocale()); ?>" data-direction="<?php echo e($direction); ?>">
 	<!--begin::Theme mode setup on page load-->
 	<script>var defaultThemeMode = "light"; var themeMode; if (document.documentElement) { if (document.documentElement.hasAttribute("data-bs-theme-mode")) { themeMode = document.documentElement.getAttribute("data-bs-theme-mode"); } else { if (localStorage.getItem("data-bs-theme") !== null) { themeMode = localStorage.getItem("data-bs-theme"); } else { themeMode = defaultThemeMode; } } if (themeMode === "system") { themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; } document.documentElement.setAttribute("data-bs-theme", themeMode); }</script>
 	<!--end::Theme mode setup on page load-->
@@ -969,7 +972,7 @@
 						<div class="app-navbar-item ms-1 ms-md-4">
 							<div class="btn-group" role="group" aria-label="<?php echo e(__('ui.locale.switcher')); ?>">
 								<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = config('app.supported_locales', ['en']); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $locale): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
-									<form method="POST" action="<?php echo e(route('locale.update', $locale)); ?>">
+									<form method="POST" action="<?php echo e(route('locale.update', $locale)); ?>" class="locale-switcher-form" data-locale="<?php echo e($locale); ?>">
 										<?php echo csrf_field(); ?>
 										<button type="submit"
 											class="btn btn-sm <?php echo e(app()->getLocale() === $locale ? 'btn-primary' : 'btn-light'); ?>">
@@ -1419,6 +1422,22 @@
 	<script>
 
 		$(document).ready(function () {
+			const persistedLocale = document.body.dataset.locale;
+
+			if (persistedLocale) {
+				localStorage.setItem('preferred_locale', persistedLocale);
+			}
+
+			document.querySelectorAll('.locale-switcher-form').forEach((form) => {
+				form.addEventListener('submit', function () {
+					const locale = this.dataset.locale;
+
+					if (locale) {
+						localStorage.setItem('preferred_locale', locale);
+					}
+				});
+			});
+
 			const searchRoot = $('#kt_header_search');
 			const searchInput = $('#global-search-input');
 			const searchSpinner = searchRoot.find('.search-spinner');
@@ -1643,4 +1662,5 @@
 </body>
 <!--end::Body-->
 
-</html><?php /**PATH D:\myProjects\phc\resources\views/layouts/app.blade.php ENDPATH**/ ?>
+</html>
+<?php /**PATH D:\myProjects\phc\resources\views/layouts/app.blade.php ENDPATH**/ ?>

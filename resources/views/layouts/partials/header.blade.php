@@ -19,14 +19,14 @@
                    aria-expanded="false">
 
                     <img src="{{ asset('images/user.png') }}" width="32" height="32" class="rounded-circle me-2">
-                    <span>{{ auth()->user()->name ?? 'User' }}</span>
+                    <span>{{ auth()->user()->name ?? __('ui.nav.profile') }}</span>
                 </a>
 
                 <ul class="dropdown-menu dropdown-menu-end">
 
                     <li>
                         <a class="dropdown-item" href="{{ route('profile') }}">
-                            Profile
+                            {{ __('ui.nav.profile') }}
                         </a>
                     </li>
 
@@ -38,7 +38,7 @@
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button class="dropdown-item">
-                                Logout
+                                {{ __('ui.nav.logout') }}
                             </button>
                         </form>
                     </li>

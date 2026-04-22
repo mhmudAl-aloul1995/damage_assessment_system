@@ -12,6 +12,8 @@ class TelegramLinkSession extends Model
 {
     use HasFactory;
 
+    protected $table = 'telegram_destination_link_sessions';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_CONNECTED = 'connected';
@@ -21,7 +23,7 @@ class TelegramLinkSession extends Model
     public const STATUS_DISABLED = 'disabled';
 
     protected $fillable = [
-        'telegram_integration_id',
+        'telegram_destination_id',
         'token',
         'status',
         'telegram_payload',
@@ -32,7 +34,7 @@ class TelegramLinkSession extends Model
     protected function casts(): array
     {
         return [
-            'telegram_integration_id' => 'integer',
+            'telegram_destination_id' => 'integer',
             'telegram_payload' => 'array',
             'completed_at' => 'datetime',
             'expires_at' => 'datetime',
@@ -41,8 +43,8 @@ class TelegramLinkSession extends Model
         ];
     }
 
-    public function integration(): BelongsTo
+    public function destination(): BelongsTo
     {
-        return $this->belongsTo(TelegramIntegration::class, 'telegram_integration_id');
+        return $this->belongsTo(TelegramDestination::class, 'telegram_destination_id');
     }
 }
