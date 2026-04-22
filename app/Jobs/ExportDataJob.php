@@ -116,79 +116,36 @@ class ExportDataJob implements ShouldQueue
                 }
             }
 
-            $latestBuildingEditIds = DB::table('edit_assessments')
-                ->selectRaw('global_id, field_name, MAX(id) as max_id')
-                ->where('type', 'building_table')
-                ->groupBy('global_id', 'field_name');
-
-            $latestBuildingEdits = DB::table('edit_assessments as ea1')
-                ->joinSub($latestBuildingEditIds, 'ea2', function ($join) {
-                    $join->on('ea1.id', '=', 'ea2.max_id');
-                })
-                ->select('ea1.global_id', 'ea1.field_name', 'ea1.field_value');
-
-            $query->leftJoinSub($latestBuildingEdits, 'bea', function ($join) {
-                $join->on('bea.global_id', '=', 'b.globalid');
-            });
-
-            if ($needsHousingJoin) {
-                $latestHousingEditIds = DB::table('edit_assessments')
-                    ->selectRaw('global_id, field_name, MAX(id) as max_id')
-                    ->where('type', 'housing_unit_table')
-                    ->groupBy('global_id', 'field_name');
-
-                $latestHousingEdits = DB::table('edit_assessments as ea1')
-                    ->joinSub($latestHousingEditIds, 'ea2', function ($join) {
-                        $join->on('ea1.id', '=', 'ea2.max_id');
-                    })
-                    ->select('ea1.global_id', 'ea1.field_name', 'ea1.field_value');
-
-                $query->leftJoinSub($latestHousingEdits, 'hea', function ($join) {
-                    $join->on('hea.global_id', '=', 'h.globalid');
-                });
-            }
-
             $selects = [
                 $paginateByHousing
                     ? 'h.objectid as export_row_id'
                     : 'b.objectid as export_row_id',
+                'b.globalid as building_globalid',
             ];
+
+            if ($paginateByHousing) {
+                $selects[] = 'h.globalid as housing_globalid';
+            }
 
             foreach ($buildingColumns as $column) {
                 if ($column === $buildingUnitsCountColumn) {
-                    $selects[] = 'MAX(COALESCE(housing_counts.housing_units_count, 0)) as `building_housing_units_count`';
+                    $selects[] = 'COALESCE(housing_counts.housing_units_count, 0) as `building_housing_units_count`';
                     continue;
                 }
 
                 if (Schema::hasColumn('buildings', $column)) {
-                    $safeColumn = str_replace('`', '``', $column);
-                    $safeValue = str_replace("'", "''", $column);
-
-                    $selects[] = "
-                        COALESCE(
-                            MAX(CASE WHEN bea.field_name = '{$safeValue}' THEN bea.field_value END),
-                            MAX(b.`{$safeColumn}`)
-                        ) as `building_{$safeColumn}`
-                    ";
+                    $selects[] = "b.`{$column}` as `building_{$column}`";
                 }
             }
 
             foreach ($housingColumns as $column) {
                 if (Schema::hasColumn('housing_units', $column)) {
-                    $safeColumn = str_replace('`', '``', $column);
-                    $safeValue = str_replace("'", "''", $column);
-
-                    $selects[] = "
-                        COALESCE(
-                            MAX(CASE WHEN hea.field_name = '{$safeValue}' THEN hea.field_value END),
-                            MAX(h.`{$safeColumn}`)
-                        ) as `housing_{$safeColumn}`
-                    ";
+                    $selects[] = "h.`{$column}` as `housing_{$column}`";
                 }
             }
 
             if ($needsFamily) {
-                $selects[] = 'MAX(fam.family_members_total) as family_members_total';
+                $selects[] = 'fam.family_members_total as family_members_total';
             }
 
             $query->selectRaw(implode(', ', $selects));
@@ -218,12 +175,6 @@ class ExportDataJob implements ShouldQueue
                 }
             }
 
-            if ($paginateByHousing) {
-                $query->groupBy('h.objectid');
-            } else {
-                $query->groupBy('b.objectid');
-            }
-
             \Log::info('Export Query', [
                 'sql' => $query->toSql(),
                 'bindings' => $query->getBindings(),
@@ -250,7 +201,13 @@ class ExportDataJob implements ShouldQueue
                 mkdir(dirname($fullPath), 0777, true);
             }
 
-            $generator = function () use ($query, $paginateByHousing, $export) {
+            $generator = function () use (
+                $query,
+                $paginateByHousing,
+                $export,
+                $buildingColumns,
+                $housingColumns
+            ) {
                 $lastId = 0;
                 $limit = 200;
 
@@ -278,8 +235,56 @@ class ExportDataJob implements ShouldQueue
                         break;
                     }
 
+                    $buildingGlobalIds = [];
+                    $housingGlobalIds = [];
+
                     foreach ($rows as $row) {
-                        yield (array) $row;
+                        if (!empty($row->building_globalid)) {
+                            $buildingGlobalIds[] = $row->building_globalid;
+                        }
+
+                        if ($paginateByHousing && !empty($row->housing_globalid)) {
+                            $housingGlobalIds[] = $row->housing_globalid;
+                        }
+                    }
+
+                    $buildingEdits = $this->loadLatestEdits(
+                        array_values(array_unique($buildingGlobalIds)),
+                        'building_table'
+                    );
+
+                    $housingEdits = $paginateByHousing
+                        ? $this->loadLatestEdits(
+                            array_values(array_unique($housingGlobalIds)),
+                            'housing_unit_table'
+                        )
+                        : [];
+
+                    foreach ($rows as $row) {
+                        $rowArray = (array) $row;
+
+                        $buildingGlobalId = $rowArray['building_globalid'] ?? null;
+                        $housingGlobalId = $rowArray['housing_globalid'] ?? null;
+
+                        if ($buildingGlobalId && isset($buildingEdits[$buildingGlobalId])) {
+                            foreach ($buildingEdits[$buildingGlobalId] as $fieldName => $fieldValue) {
+                                $key = 'building_' . $fieldName;
+                                if (array_key_exists($key, $rowArray)) {
+                                    $rowArray[$key] = $fieldValue;
+                                }
+                            }
+                        }
+
+                        if ($paginateByHousing && $housingGlobalId && isset($housingEdits[$housingGlobalId])) {
+                            foreach ($housingEdits[$housingGlobalId] as $fieldName => $fieldValue) {
+                                $key = 'housing_' . $fieldName;
+                                if (array_key_exists($key, $rowArray)) {
+                                    $rowArray[$key] = $fieldValue;
+                                }
+                            }
+                        }
+
+                        yield $rowArray;
                         $lastId = max($lastId, (int) $row->export_row_id);
                     }
                 }
@@ -302,6 +307,10 @@ class ExportDataJob implements ShouldQueue
                     $colIndex = 1;
 
                     foreach (array_keys($row) as $header) {
+                        if (in_array($header, ['export_row_id', 'building_globalid', 'housing_globalid'], true)) {
+                            continue;
+                        }
+
                         $label = $header;
 
                         if (str_starts_with($header, 'building_')) {
@@ -360,7 +369,12 @@ class ExportDataJob implements ShouldQueue
                 }
 
                 $colIndex = 1;
-                foreach ($row as $value) {
+
+                foreach ($row as $key => $value) {
+                    if (in_array($key, ['export_row_id', 'building_globalid', 'housing_globalid'], true)) {
+                        continue;
+                    }
+
                     $colLetter = Coordinate::stringFromColumnIndex($colIndex);
                     $sheet->setCellValue($colLetter . $rowNumber, $value);
                     $colIndex++;
@@ -434,5 +448,33 @@ class ExportDataJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    protected function loadLatestEdits(array $globalIds, string $type): array
+    {
+        if (empty($globalIds)) {
+            return [];
+        }
+
+        $latestIds = DB::table('edit_assessments')
+            ->selectRaw('global_id, field_name, MAX(id) as max_id')
+            ->where('type', $type)
+            ->whereIn('global_id', $globalIds)
+            ->groupBy('global_id', 'field_name');
+
+        $rows = DB::table('edit_assessments as ea1')
+            ->joinSub($latestIds, 'ea2', function ($join) {
+                $join->on('ea1.id', '=', 'ea2.max_id');
+            })
+            ->select('ea1.global_id', 'ea1.field_name', 'ea1.field_value')
+            ->get();
+
+        $result = [];
+
+        foreach ($rows as $row) {
+            $result[$row->global_id][$row->field_name] = $row->field_value;
+        }
+
+        return $result;
     }
 }
