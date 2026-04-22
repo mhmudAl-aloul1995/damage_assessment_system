@@ -60,8 +60,10 @@ class ExportDataJob implements ShouldQueue
 
             $buildingUnitsCountColumn = 'housing_units_count';
             $needsHousingUnitsCount = in_array($buildingUnitsCountColumn, $buildingColumns, true);
+            $needsHousingJoin = !empty($housingColumns);
+            $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
+            $paginateByHousing = $needsHousingJoin;
 
-            // labels for headers
             $assessmentLabels = DB::table('assessments')
                 ->whereNotNull('name')
                 ->select('name', 'label')
@@ -73,11 +75,9 @@ class ExportDataJob implements ShouldQueue
 
             $query = DB::table('buildings as b');
 
-            if (!empty($housingColumns)) {
+            if ($needsHousingJoin) {
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
             }
-
-            $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
 
             if ($needsHousingUnitsCount) {
                 $housingUnitsCountSub = DB::table('housing_units as hu_count')
@@ -116,29 +116,79 @@ class ExportDataJob implements ShouldQueue
                 }
             }
 
-            $paginateByHousing = !empty($housingColumns);
+            $latestBuildingEditIds = DB::table('edit_assessments')
+                ->selectRaw('global_id, field_name, MAX(id) as max_id')
+                ->where('type', 'building_table')
+                ->groupBy('global_id', 'field_name');
+
+            $latestBuildingEdits = DB::table('edit_assessments as ea1')
+                ->joinSub($latestBuildingEditIds, 'ea2', function ($join) {
+                    $join->on('ea1.id', '=', 'ea2.max_id');
+                })
+                ->select('ea1.global_id', 'ea1.field_name', 'ea1.field_value');
+
+            $query->leftJoinSub($latestBuildingEdits, 'bea', function ($join) {
+                $join->on('bea.global_id', '=', 'b.globalid');
+            });
+
+            if ($needsHousingJoin) {
+                $latestHousingEditIds = DB::table('edit_assessments')
+                    ->selectRaw('global_id, field_name, MAX(id) as max_id')
+                    ->where('type', 'housing_unit_table')
+                    ->groupBy('global_id', 'field_name');
+
+                $latestHousingEdits = DB::table('edit_assessments as ea1')
+                    ->joinSub($latestHousingEditIds, 'ea2', function ($join) {
+                        $join->on('ea1.id', '=', 'ea2.max_id');
+                    })
+                    ->select('ea1.global_id', 'ea1.field_name', 'ea1.field_value');
+
+                $query->leftJoinSub($latestHousingEdits, 'hea', function ($join) {
+                    $join->on('hea.global_id', '=', 'h.globalid');
+                });
+            }
 
             $selects = [
                 $paginateByHousing
-                ? 'h.objectid as export_row_id'
-                : 'b.objectid as export_row_id',
+                    ? 'h.objectid as export_row_id'
+                    : 'b.objectid as export_row_id',
             ];
 
             foreach ($buildingColumns as $column) {
                 if ($column === $buildingUnitsCountColumn) {
-                    $selects[] = 'COALESCE(housing_counts.housing_units_count, 0) as `building_housing_units_count`';
+                    $selects[] = 'MAX(COALESCE(housing_counts.housing_units_count, 0)) as `building_housing_units_count`';
                     continue;
                 }
 
-                $selects[] = "b.`{$column}` as `building_{$column}`";
+                if (Schema::hasColumn('buildings', $column)) {
+                    $safeColumn = str_replace('`', '``', $column);
+                    $safeValue = str_replace("'", "''", $column);
+
+                    $selects[] = "
+                        COALESCE(
+                            MAX(CASE WHEN bea.field_name = '{$safeValue}' THEN bea.field_value END),
+                            MAX(b.`{$safeColumn}`)
+                        ) as `building_{$safeColumn}`
+                    ";
+                }
             }
 
             foreach ($housingColumns as $column) {
-                $selects[] = "h.`{$column}` as `housing_{$column}`";
+                if (Schema::hasColumn('housing_units', $column)) {
+                    $safeColumn = str_replace('`', '``', $column);
+                    $safeValue = str_replace("'", "''", $column);
+
+                    $selects[] = "
+                        COALESCE(
+                            MAX(CASE WHEN hea.field_name = '{$safeValue}' THEN hea.field_value END),
+                            MAX(h.`{$safeColumn}`)
+                        ) as `housing_{$safeColumn}`
+                    ";
+                }
             }
 
             if ($needsFamily) {
-                $selects[] = 'fam.family_members_total as family_members_total';
+                $selects[] = 'MAX(fam.family_members_total) as family_members_total';
             }
 
             $query->selectRaw(implode(', ', $selects));
@@ -149,6 +199,7 @@ class ExportDataJob implements ShouldQueue
                 if (empty($values)) {
                     continue;
                 }
+
                 if ($field === 'building_states_auditig') {
                     $query->whereExists(function ($sub) use ($values) {
                         $sub->select(DB::raw(1))
@@ -159,11 +210,18 @@ class ExportDataJob implements ShouldQueue
 
                     continue;
                 }
+
                 if (Schema::hasColumn('buildings', $field)) {
                     $query->whereIn("b.$field", $values);
                 } elseif (Schema::hasColumn('housing_units', $field)) {
                     $query->whereIn("h.$field", $values);
                 }
+            }
+
+            if ($paginateByHousing) {
+                $query->groupBy('h.objectid');
+            } else {
+                $query->groupBy('b.objectid');
             }
 
             \Log::info('Export Query', [
@@ -270,7 +328,6 @@ class ExportDataJob implements ShouldQueue
                     $lastCol = $colIndex - 1;
                     $lastColLetter = Coordinate::stringFromColumnIndex($lastCol);
 
-                    // Header styling
                     $sheet->getStyle("A1:{$lastColLetter}1")->applyFromArray([
                         'font' => [
                             'bold' => true,
@@ -309,7 +366,6 @@ class ExportDataJob implements ShouldQueue
                     $colIndex++;
                 }
 
-                // Data row styling
                 $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")->applyFromArray([
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -324,7 +380,6 @@ class ExportDataJob implements ShouldQueue
                     ],
                 ]);
 
-                // Alternate row color
                 if ($rowNumber % 2 === 0) {
                     $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")
                         ->getFill()
@@ -343,13 +398,11 @@ class ExportDataJob implements ShouldQueue
                 $rowNumber++;
             }
 
-            // Auto size all columns
             for ($i = 1; $i <= Coordinate::columnIndexFromString($lastColLetter); $i++) {
                 $colLetter = Coordinate::stringFromColumnIndex($i);
                 $sheet->getColumnDimension($colLetter)->setAutoSize(true);
             }
 
-            // Final table border
             $sheet->getStyle("A1:{$lastColLetter}" . ($rowNumber - 1))
                 ->getBorders()
                 ->getAllBorders()
