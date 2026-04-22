@@ -941,10 +941,13 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
 
     public static $classMap = array (
         'App\\Console\\Commands\\BackupDatabase' => __DIR__ . '/../..' . '/app/Console/Commands/BackupDatabase.php',
+        'App\\Console\\Commands\\SetTelegramWebhookCommand' => __DIR__ . '/../..' . '/app/Console/Commands/SetTelegramWebhookCommand.php',
         'App\\Console\\Commands\\SyncArcGISBuilding' => __DIR__ . '/../..' . '/app/Console/Commands/SyncArcGISBuilding.php',
         'App\\Console\\Commands\\SyncArcGISHousing' => __DIR__ . '/../..' . '/app/Console/Commands/SyncArcGISHousing.php',
         'App\\Console\\Commands\\SyncArcGISPublicBuildingSurvey' => __DIR__ . '/../..' . '/app/Console/Commands/SyncArcGISPublicBuildingSurvey.php',
         'App\\Console\\Commands\\SyncArcGISRoadFacilitySurvey' => __DIR__ . '/../..' . '/app/Console/Commands/SyncArcGISRoadFacilitySurvey.php',
+        'App\\Console\\Commands\\SyncTelegramUserDestinationsCommand' => __DIR__ . '/../..' . '/app/Console/Commands/SyncTelegramUserDestinationsCommand.php',
+        'App\\Console\\Commands\\TelegramWebhookInfoCommand' => __DIR__ . '/../..' . '/app/Console/Commands/TelegramWebhookInfoCommand.php',
         'App\\DataSyncService' => __DIR__ . '/../..' . '/app/DataSyncService.php',
         'App\\Exports\\AreaProductivityExport' => __DIR__ . '/../..' . '/app/Exports/AreaProductivityExport.php',
         'App\\Exports\\AttendanceMonthlyReportExport' => __DIR__ . '/../..' . '/app/Exports/AttendanceMonthlyReportExport.php',

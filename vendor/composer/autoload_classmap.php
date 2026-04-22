@@ -7,10 +7,13 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'App\\Console\\Commands\\BackupDatabase' => $baseDir . '/app/Console/Commands/BackupDatabase.php',
+    'App\\Console\\Commands\\SetTelegramWebhookCommand' => $baseDir . '/app/Console/Commands/SetTelegramWebhookCommand.php',
     'App\\Console\\Commands\\SyncArcGISBuilding' => $baseDir . '/app/Console/Commands/SyncArcGISBuilding.php',
     'App\\Console\\Commands\\SyncArcGISHousing' => $baseDir . '/app/Console/Commands/SyncArcGISHousing.php',
     'App\\Console\\Commands\\SyncArcGISPublicBuildingSurvey' => $baseDir . '/app/Console/Commands/SyncArcGISPublicBuildingSurvey.php',
     'App\\Console\\Commands\\SyncArcGISRoadFacilitySurvey' => $baseDir . '/app/Console/Commands/SyncArcGISRoadFacilitySurvey.php',
+    'App\\Console\\Commands\\SyncTelegramUserDestinationsCommand' => $baseDir . '/app/Console/Commands/SyncTelegramUserDestinationsCommand.php',
+    'App\\Console\\Commands\\TelegramWebhookInfoCommand' => $baseDir . '/app/Console/Commands/TelegramWebhookInfoCommand.php',
     'App\\DataSyncService' => $baseDir . '/app/DataSyncService.php',
     'App\\Exports\\AreaProductivityExport' => $baseDir . '/app/Exports/AreaProductivityExport.php',
     'App\\Exports\\AttendanceMonthlyReportExport' => $baseDir . '/app/Exports/AttendanceMonthlyReportExport.php',

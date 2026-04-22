@@ -23,6 +23,7 @@
         "spatie/browsershot": "^5.2",
         "spatie/laravel-pdf": "^2.2",
         "spatie/laravel-permission": "^6.24",
+        "symfony/mime": "^7.4",
         "yajra/laravel-datatables": "^12",
         "yajra/laravel-datatables-oracle": "^12"
     },
