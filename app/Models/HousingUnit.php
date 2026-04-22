@@ -700,7 +700,7 @@ class HousingUnit extends Model
     {
 
         return Attribute::make(
-            get: fn ($value, $attributes) => implode(' ', array_filter([
+            get: fn($value, $attributes) => implode(' ', array_filter([
                 $attributes['q_9_3_1_first_name'] ?? '',
                 $attributes['q_9_3_2_second_name__father'] ?? '',
                 $attributes['q_9_3_4_last_name'] ?? '',
@@ -710,58 +710,58 @@ class HousingUnit extends Model
 
     protected array $editedFieldsCache = [];
 
-        public function edits(): HasMany
-        {
-            return $this->hasMany(EditAssessment::class, 'global_id', 'globalid')
-                ->where('type', 'housing_table');
-        } 
+    public function edits(): HasMany
+    {
+        return $this->hasMany(EditAssessment::class, 'global_id', 'globalid')
+            ->where('type', 'housing_table');
+    }
 
-         protected function getEditedFieldsMap(): array
-        {
-            if (!empty($this->editedFieldsCache)) {
-                return $this->editedFieldsCache;
-            }
-
-            $edits = $this->relationLoaded('edits')
-                ? $this->getRelation('edits')
-                : $this->edits()->get();
-
-            $this->editedFieldsCache = $edits
-                ->sortByDesc('id')
-                ->unique('field_name')
-                ->mapWithKeys(fn($edit) => [$edit->field_name => $edit->field_value])
-                ->toArray();
-
+    protected function getEditedFieldsMap(): array
+    {
+        if (!empty($this->editedFieldsCache)) {
             return $this->editedFieldsCache;
         }
 
-        public function getAttributeValue($key): mixed
-        {
-            $value = parent::getAttributeValue($key);
+        $edits = $this->relationLoaded('edits')
+            ? $this->getRelation('edits')
+            : $this->edits()->get();
 
-            if (!array_key_exists($key, $this->attributes)) {
-                return $value;
-            }
+        $this->editedFieldsCache = $edits
+            ->sortByDesc('id')
+            ->unique('field_name')
+            ->mapWithKeys(fn($edit) => [$edit->field_name => $edit->field_value])
+            ->toArray();
 
-            $editedFields = $this->getEditedFieldsMap();
+        return $this->editedFieldsCache;
+    }
 
-            if (array_key_exists($key, $editedFields)) {
-                return $editedFields[$key];
-            }
+    public function getAttribute($key)
+    {
+        $value = parent::getAttribute($key);
 
+        if (!is_string($key) || !array_key_exists($key, $this->attributes)) {
             return $value;
         }
 
-        public function getOriginalOrEditedAttributes(): array
-        {
-            $data = parent::attributesToArray();
+        if (!$this->relationLoaded('edits')) {
+            return $value;
+        }
 
-            foreach ($this->getEditedFieldsMap() as $field => $value) {
-                $data[$field] = $value;
-            }
+        $editedFields = $this->getEditedFieldsMap();
 
-            return $data;
-        } */
+        return $editedFields[$key] ?? $value;
+    }
+
+    public function getOriginalOrEditedAttributes(): array
+    {
+        $data = parent::attributesToArray();
+
+        foreach ($this->getEditedFieldsMap() as $field => $value) {
+            $data[$field] = $value;
+        }
+
+        return $data;
+    }
     public function building()
     {
         return $this->belongsTo(Building::class, 'parentglobalid', 'globalid'); // Post::class is the related model
