@@ -101,7 +101,7 @@ class AreaManagerRejectedBuildingsController extends Controller
                     : '-';
             })
             ->addColumn('actions', function ($row): string {
-                $assessmentUrl = url('/showAssessment/'.$row->globalid);
+                $assessmentUrl = url('/assessment/'.$row->globalid);
 
                 return '<a href="'.$assessmentUrl.'" class="btn btn-light-primary btn-sm" target="_blank">Open Audit</a>';
             })
