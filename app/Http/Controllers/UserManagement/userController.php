@@ -53,6 +53,8 @@ class userController extends Controller
             })
             ->editColumn('name', fn ($user) => $user->name ?? '-')
             ->editColumn('name_en', fn ($user) => $user->name_en ?? '-')
+            ->editColumn('username_arcgis', fn ($user) => $user->username_arcgis ?? '-')
+            ->editColumn('telegram_chat_id', fn ($user) => $user->telegram_chat_id ?? '-')
             ->editColumn('email', fn ($user) => $user->email ?? '-')
             ->editColumn('id_no', fn ($user) => $user->id_no ?? '-')
             ->editColumn('contract_type', fn ($user) => strtoupper($user->contract_type ?? '-'))
@@ -93,6 +95,8 @@ class userController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'name_en' => $user->name_en,
+                'username_arcgis' => $user->username_arcgis,
+                'telegram_chat_id' => $user->telegram_chat_id,
                 'email' => $user->email,
                 'id_no' => $user->id_no,
                 'contract_type' => $user->contract_type,
@@ -110,6 +114,8 @@ class userController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'name_en' => 'nullable|string|max:255',
+            'username_arcgis' => 'nullable|string|max:255|unique:users,username_arcgis',
+            'telegram_chat_id' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email',
             'id_no' => 'nullable|string|max:255|unique:users,id_no',
             'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
@@ -129,6 +135,8 @@ class userController extends Controller
             $user = User::create([
                 'name' => $request->name,
                 'name_en' => $request->name_en,
+                'username_arcgis' => $request->username_arcgis,
+                'telegram_chat_id' => $request->telegram_chat_id,
                 'email' => $request->email,
                 'id_no' => $request->id_no,
                 'contract_type' => $request->contract_type,
@@ -166,6 +174,8 @@ class userController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'name_en' => 'nullable|string|max:255',
+            'username_arcgis' => 'nullable|string|max:255|unique:users,username_arcgis,'.$user->id,
+            'telegram_chat_id' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
             'id_no' => 'nullable|string|max:255|unique:users,id_no,'.$user->id,
             'contract_type' => 'nullable|in:phc,undp,mopwh,pef',
@@ -178,6 +188,8 @@ class userController extends Controller
         $data = [
             'name' => $request->name,
             'name_en' => $request->name_en,
+            'username_arcgis' => $request->username_arcgis,
+            'telegram_chat_id' => $request->telegram_chat_id,
             'email' => $request->email,
             'id_no' => $request->id_no,
             'contract_type' => $request->contract_type,

@@ -68,7 +68,7 @@
                                     <th>القرار</th>
                                     <th>التواقيع</th>
                                     <th>ArcGIS</th>
-                                    <th>WhatsApp</th>
+                                    <th>Telegram</th>
                                     <th class="text-end">الإجراء</th>
                                 </tr>
                             </thead>
@@ -89,7 +89,7 @@
                                     <th>القرار</th>
                                     <th>التواقيع</th>
                                     <th>ArcGIS</th>
-                                    <th>WhatsApp</th>
+                                    <th>Telegram</th>
                                     <th class="text-end">الإجراء</th>
                                 </tr>
                             </thead>
@@ -119,7 +119,7 @@
                     { data: 'has_decision', name: 'has_decision', orderable: false, searchable: false },
                     { data: 'signatures_count', name: 'signatures_count', orderable: false, searchable: false },
                     { data: 'arcgis_status', name: 'arcgis_status', orderable: false, searchable: false },
-                    { data: 'whatsapp_status', name: 'whatsapp_status', orderable: false, searchable: false },
+                    { data: 'telegram_status', name: 'telegram_status', orderable: false, searchable: false },
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' },
                 ]
             });
@@ -139,7 +139,7 @@
                     { data: 'has_decision', name: 'has_decision', orderable: false, searchable: false },
                     { data: 'signatures_count', name: 'signatures_count', orderable: false, searchable: false },
                     { data: 'arcgis_status', name: 'arcgis_status', orderable: false, searchable: false },
-                    { data: 'whatsapp_status', name: 'whatsapp_status', orderable: false, searchable: false },
+                    { data: 'telegram_status', name: 'telegram_status', orderable: false, searchable: false },
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' },
                 ]
             });

@@ -65,8 +65,9 @@ it('shows committee decision pages and datatable data for buildings and housing 
         ->assertSee('ملخص القرار');
 });
 
-it('completes committee decision workflow, sends whatsapp, and syncs arcgis after required signatures', function () {
-    config()->set('services.committee_decisions.whatsapp.endpoint', 'https://example.test/whatsapp');
+it('completes the committee workflow, sends a direct telegram message, and syncs arcgis after required signatures', function () {
+    config()->set('services.committee_decisions.telegram.bot_token', 'telegram-bot-token');
+    config()->set('services.committee_decisions.telegram.chat_id', '');
     config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
     config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
     config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
@@ -75,7 +76,7 @@ it('completes committee decision workflow, sends whatsapp, and syncs arcgis afte
     config()->set('services.committee_decisions.arcgis.token', 'static-token');
 
     Http::fake([
-        'https://example.test/whatsapp' => Http::response(['success' => true], 200),
+        'https://api.telegram.org/bottelegram-bot-token/sendMessage' => Http::response(['ok' => true], 200),
         'https://example.test/arcgis/FeatureServer/0/updateFeatures' => Http::response([
             'updateResults' => [['success' => true]],
         ], 200),
@@ -90,7 +91,8 @@ it('completes committee decision workflow, sends whatsapp, and syncs arcgis afte
 
     $engineer = User::factory()->create([
         'name' => 'Engineer Field',
-        'phone' => '0591111111',
+        'username_arcgis' => 'engineer.field.arcgis',
+        'telegram_chat_id' => '99887766',
     ]);
 
     $signerOneUser = User::factory()->create();
@@ -114,7 +116,7 @@ it('completes committee decision workflow, sends whatsapp, and syncs arcgis afte
         'globalid' => 'building-guid-2',
         'building_name' => 'عمارة الصفا',
         'neighborhood' => 'تل الهوا',
-        'assignedto' => $engineer->name,
+        'assignedto' => $engineer->username_arcgis,
         'building_damage_status' => 'committee_review',
     ]);
 
@@ -150,9 +152,62 @@ it('completes committee decision workflow, sends whatsapp, and syncs arcgis afte
 
     expect($decision->status)->toBe('completed');
     expect($decision->completed_at)->not->toBeNull();
-    expect($decision->whatsapp_status)->toBe('sent');
+    expect($decision->telegram_status)->toBe('sent');
     expect($decision->arcgis_sync_status)->toBe('synced');
 
-    Http::assertSent(fn ($request) => str_contains($request->url(), '/whatsapp'));
-    Http::assertSent(fn ($request) => str_contains($request->url(), '/updateFeatures'));
+    Http::assertSent(function ($request): bool {
+        return $request->url() === 'https://api.telegram.org/bottelegram-bot-token/sendMessage'
+            && $request['chat_id'] === '99887766';
+    });
+    Http::assertSent(fn ($request): bool => str_contains($request->url(), '/updateFeatures'));
+});
+
+it('allows retrying telegram for a completed decision using the default group chat', function () {
+    config()->set('services.committee_decisions.telegram.bot_token', 'telegram-bot-token');
+    config()->set('services.committee_decisions.telegram.chat_id', '-1001234567890');
+
+    Http::fake([
+        'https://api.telegram.org/bottelegram-bot-token/sendMessage' => Http::response(['ok' => true], 200),
+    ]);
+
+    $user = User::factory()->create();
+    $user->givePermissionTo(['view committee decisions', 'send committee telegram']);
+
+    $building = Building::query()->create([
+        'objectid' => 9501,
+        'globalid' => 'building-guid-retry',
+        'building_name' => 'Retry Building',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'unmatched.engineer',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => 'accepted',
+        'decision_text' => 'Ready to resend',
+        'decision_date' => '2026-04-22',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'created_by' => $user->id,
+        'updated_by' => $user->id,
+        'committee_manager_id' => $user->id,
+        'completed_at' => now(),
+        'telegram_status' => 'missing_chat_id',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('committee-decisions.retry-telegram', $decision))
+        ->assertRedirect();
+
+    $this->artisan('queue:work --once')->assertExitCode(0);
+
+    $decision->refresh();
+
+    expect($decision->telegram_status)->toBe('sent');
+
+    Http::assertSent(function ($request): bool {
+        return $request->url() === 'https://api.telegram.org/bottelegram-bot-token/sendMessage'
+            && $request['chat_id'] === '-1001234567890';
+    });
 });

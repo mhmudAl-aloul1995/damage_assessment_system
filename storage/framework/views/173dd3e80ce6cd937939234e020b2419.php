@@ -39,6 +39,8 @@
                         <th class="w-10px pe-2"></th>
                         <th class="min-w-150px"><?php echo e(__('ui.users.full_name')); ?></th>
                         <th class="min-w-150px"><?php echo e(__('ui.users.name_en')); ?></th>
+                        <th class="min-w-150px">ArcGIS Username</th>
+                        <th class="min-w-150px">Telegram Chat ID</th>
                         <th class="min-w-125px"><?php echo e(__('ui.users.email')); ?></th>
                         <th class="min-w-125px"><?php echo e(__('ui.users.id_no')); ?></th>
                         <th class="min-w-125px"><?php echo e(__('ui.users.contract_type')); ?></th>
@@ -132,6 +134,18 @@
                                 <label class="fw-semibold fs-6 mb-2"><?php echo e(__('ui.users.name_en')); ?></label>
                                 <input type="text" name="name_en" class="form-control form-control-solid"
                                     placeholder="<?php echo e(__('ui.users.name_en')); ?>" />
+                            </div>
+
+                            <div class="fv-row mb-7">
+                                <label class="fw-semibold fs-6 mb-2">ArcGIS Username</label>
+                                <input type="text" name="username_arcgis" class="form-control form-control-solid"
+                                    placeholder="ArcGIS assignedto username" />
+                            </div>
+
+                            <div class="fv-row mb-7">
+                                <label class="fw-semibold fs-6 mb-2">Telegram Chat ID</label>
+                                <input type="text" name="telegram_chat_id" class="form-control form-control-solid"
+                                    placeholder="User, group, or supergroup chat id" />
                             </div>
 
                             <div class="fv-row mb-7">
@@ -287,6 +301,8 @@
                     $('#user_id').val(user.id);
                     $('#kt_modal_user_form input[name="name"]').val(user.name ?? '');
                     $('#kt_modal_user_form input[name="name_en"]').val(user.name_en ?? '');
+                    $('#kt_modal_user_form input[name="username_arcgis"]').val(user.username_arcgis ?? '');
+                    $('#kt_modal_user_form input[name="telegram_chat_id"]').val(user.telegram_chat_id ?? '');
                     $('#kt_modal_user_form input[name="email"]').val(user.email ?? '');
                     $('#kt_modal_user_form input[name="id_no"]').val(user.id_no ?? '');
                     $('#kt_modal_user_form select[name="contract_type"]').val(user.contract_type ?? '');
@@ -334,6 +350,8 @@
                     { data: 'checkbox', name: 'checkbox', searchable: false, orderable: false },
                     { data: 'name', name: 'name' },
                     { data: 'name_en', name: 'name_en' },
+                    { data: 'username_arcgis', name: 'username_arcgis' },
+                    { data: 'telegram_chat_id', name: 'telegram_chat_id' },
                     { data: 'email', name: 'email' },
                     { data: 'id_no', name: 'id_no' },
                     { data: 'contract_type', name: 'contract_type' },

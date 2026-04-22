@@ -57,4 +57,32 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-"# damage_assessment_system" 
+# damage_assessment_system
+
+## Committee Telegram Notifications
+
+Committee decision notifications now use the Telegram Bot API instead of WhatsApp.
+
+Set the bot credentials in your environment:
+
+```env
+TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN
+TELEGRAM_CHAT_ID=YOUR_USER_OR_GROUP_ID
+TELEGRAM_BOT_USERNAME=YOUR_BOT_USERNAME
+TELEGRAM_WEBHOOK_SECRET=CHANGE_ME_TO_A_RANDOM_SECRET
+```
+
+How recipients are resolved:
+
+- If the assigned field engineer user has `telegram_chat_id`, the decision is sent directly to that Telegram user or private chat.
+- If no engineer-specific `telegram_chat_id` is available, the system falls back to `TELEGRAM_CHAT_ID`, which can be a group or supergroup chat id.
+- ArcGIS synchronization behavior remains unchanged.
+
+## Telegram Integration Management
+
+The admin panel includes a `Telegram Integrations` screen for creating managed Telegram user or group links.
+
+- `User` integrations generate a deep link using `start` and bind the private chat after the engineer starts the bot with the generated token.
+- `Group` integrations generate an add-to-group link using `startgroup`; after the bot is added, send the generated token command inside the target group to finish the link.
+- The Telegram webhook must point to `/telegram/webhook/{TELEGRAM_WEBHOOK_SECRET}` on your application URL.
+- Use the screen actions to copy the link, refresh the live chat metadata, disable a connection, or delete it.

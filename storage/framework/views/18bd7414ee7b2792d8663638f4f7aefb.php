@@ -66,9 +66,17 @@
                         <div class="fw-bold"><?php echo e($decision->arcgis_sync_status ?: 'pending'); ?></div>
                     </div>
                     <div>
-                        <div class="text-muted fs-7">حالة WhatsApp</div>
-                        <div class="fw-bold"><?php echo e($decision->whatsapp_status ?: 'pending'); ?></div>
+                        <div class="text-muted fs-7">حالة Telegram</div>
+                        <div class="fw-bold"><?php echo e($decision->telegram_status ?: 'pending'); ?></div>
                     </div>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($canRetryTelegram && $decision->isCompleted() && $decision->telegram_status !== 'sent'): ?>
+                        <div class="mt-6">
+                            <form method="POST" action="<?php echo e(route('committee-decisions.retry-telegram', $decision)); ?>">
+                                <?php echo csrf_field(); ?>
+                                <button type="submit" class="btn btn-light-success btn-sm">إعادة محاولة Telegram</button>
+                            </form>
+                        </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </div>
             </div>
         </div>
@@ -141,6 +149,21 @@
                             </thead>
                             <tbody>
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $decision->signatures->sortBy(fn ($signature) => $signature->committeeMember->sort_order ?? 0); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $signature): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                    <?php
+                                        $isLinkedToCurrentUser = ! $signature->committeeMember?->user_id || $signature->committeeMember?->user_id === auth()->id();
+                                        $signatureLocked = $decision->isCompleted();
+                                        $signatureReason = null;
+
+                                        if (! $canSign) {
+                                            $signatureReason = 'لا تملك صلاحية التوقيع';
+                                        } elseif (! $signature->committeeMember?->is_active) {
+                                            $signatureReason = 'عضو اللجنة غير مفعل';
+                                        } elseif (! $isLinkedToCurrentUser) {
+                                            $signatureReason = 'هذا التوقيع مرتبط بمستخدم آخر';
+                                        } elseif ($signatureLocked) {
+                                            $signatureReason = 'القرار مكتمل ولا يقبل توقيعًا جديدًا';
+                                        }
+                                    ?>
                                     <tr>
                                         <td><?php echo e($signature->committeeMember?->name); ?></td>
                                         <td><?php echo e($signature->committeeMember?->title ?: '-'); ?></td>
@@ -160,7 +183,7 @@
                                         <td><?php echo e(optional($signature->signed_at)->format('Y-m-d H:i') ?: '-'); ?></td>
                                         <td><?php echo e($signature->signedByUser?->name ?: '-'); ?></td>
                                         <td>
-                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($canSign && (! $signature->committeeMember?->user_id || $signature->committeeMember?->user_id === auth()->id())): ?>
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(! $signatureReason): ?>
                                                 <form method="POST" action="<?php echo e(route('committee-decisions.sign', $decision)); ?>" class="d-flex gap-2 flex-wrap">
                                                     <?php echo csrf_field(); ?>
                                                     <input type="hidden" name="committee_member_id" value="<?php echo e($signature->committee_member_id); ?>">
@@ -173,7 +196,7 @@
                                                     <button type="submit" class="btn btn-light-primary btn-sm">تسجيل</button>
                                                 </form>
                                             <?php else: ?>
-                                                <span class="text-muted">لا يوجد إجراء</span>
+                                                <span class="text-muted"><?php echo e($signatureReason); ?></span>
                                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                         </td>
                                     </tr>

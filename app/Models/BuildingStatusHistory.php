@@ -9,8 +9,9 @@ class BuildingStatusHistory extends Model
     protected $fillable = [
         'building_id',
         'status_id',
+        'type',
         'user_id',
-        'notes'
+        'notes',
     ];
 
     public function building()

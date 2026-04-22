@@ -25,6 +25,7 @@ return [
         'dashboard' => 'لوحة معلومات التدقيق',
         'home' => 'الرئيسية',
         'building_audit' => 'تدقيق المبنى',
+        'area_manager_review' => 'مراجعة مدير المنطقة',
     ],
     'attendance' => [
         'title' => 'الحضور والغياب',
@@ -35,6 +36,7 @@ return [
         'title' => 'قرارات اللجنة',
         'decisions' => 'قرارات اللجنة',
         'members' => 'أعضاء اللجنة',
+        'telegram_integrations' => 'تكاملات تيليجرام',
     ],
     'user_management' => [
         'title' => 'إدارة المستخدمين',

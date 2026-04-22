@@ -66,9 +66,17 @@
                         <div class="fw-bold">{{ $decision->arcgis_sync_status ?: 'pending' }}</div>
                     </div>
                     <div>
-                        <div class="text-muted fs-7">حالة WhatsApp</div>
-                        <div class="fw-bold">{{ $decision->whatsapp_status ?: 'pending' }}</div>
+                        <div class="text-muted fs-7">حالة Telegram</div>
+                        <div class="fw-bold">{{ $decision->telegram_status ?: 'pending' }}</div>
                     </div>
+                    @if ($canRetryTelegram && $decision->isCompleted() && $decision->telegram_status !== 'sent')
+                        <div class="mt-6">
+                            <form method="POST" action="{{ route('committee-decisions.retry-telegram', $decision) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-light-success btn-sm">إعادة محاولة Telegram</button>
+                            </form>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -141,6 +149,21 @@
                             </thead>
                             <tbody>
                                 @foreach ($decision->signatures->sortBy(fn ($signature) => $signature->committeeMember->sort_order ?? 0) as $signature)
+                                    @php
+                                        $isLinkedToCurrentUser = ! $signature->committeeMember?->user_id || $signature->committeeMember?->user_id === auth()->id();
+                                        $signatureLocked = $decision->isCompleted();
+                                        $signatureReason = null;
+
+                                        if (! $canSign) {
+                                            $signatureReason = 'لا تملك صلاحية التوقيع';
+                                        } elseif (! $signature->committeeMember?->is_active) {
+                                            $signatureReason = 'عضو اللجنة غير مفعل';
+                                        } elseif (! $isLinkedToCurrentUser) {
+                                            $signatureReason = 'هذا التوقيع مرتبط بمستخدم آخر';
+                                        } elseif ($signatureLocked) {
+                                            $signatureReason = 'القرار مكتمل ولا يقبل توقيعًا جديدًا';
+                                        }
+                                    @endphp
                                     <tr>
                                         <td>{{ $signature->committeeMember?->name }}</td>
                                         <td>{{ $signature->committeeMember?->title ?: '-' }}</td>
@@ -158,7 +181,7 @@
                                         <td>{{ optional($signature->signed_at)->format('Y-m-d H:i') ?: '-' }}</td>
                                         <td>{{ $signature->signedByUser?->name ?: '-' }}</td>
                                         <td>
-                                            @if ($canSign && (! $signature->committeeMember?->user_id || $signature->committeeMember?->user_id === auth()->id()))
+                                            @if (! $signatureReason)
                                                 <form method="POST" action="{{ route('committee-decisions.sign', $decision) }}" class="d-flex gap-2 flex-wrap">
                                                     @csrf
                                                     <input type="hidden" name="committee_member_id" value="{{ $signature->committee_member_id }}">
@@ -171,7 +194,7 @@
                                                     <button type="submit" class="btn btn-light-primary btn-sm">تسجيل</button>
                                                 </form>
                                             @else
-                                                <span class="text-muted">لا يوجد إجراء</span>
+                                                <span class="text-muted">{{ $signatureReason }}</span>
                                             @endif
                                         </td>
                                     </tr>

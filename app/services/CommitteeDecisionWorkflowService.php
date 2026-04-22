@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\services;
 
-use App\Jobs\SendCommitteeDecisionWhatsappJob;
+use App\Jobs\SendCommitteeDecisionTelegramJob;
 use App\Jobs\SyncCommitteeDecisionArcGisJob;
 use App\Models\Building;
 use App\Models\CommitteeDecision;
@@ -153,7 +153,7 @@ class CommitteeDecisionWorkflowService
                     'completed_at' => now(),
                 ])->save();
 
-                SendCommitteeDecisionWhatsappJob::dispatch($decision->id)->afterCommit();
+                SendCommitteeDecisionTelegramJob::dispatch($decision->id)->afterCommit();
                 SyncCommitteeDecisionArcGisJob::dispatch($decision->id)->afterCommit();
             }
 
@@ -182,20 +182,20 @@ class CommitteeDecisionWorkflowService
 
         return User::query()
             ->where(function ($query) use ($building): void {
-                $query->where('name', $building->assignedto)
+                $query->where('username_arcgis', $building->assignedto)
+                    ->orWhere('name', $building->assignedto)
                     ->orWhere('name_en', $building->assignedto);
             })
-            ->whereNotNull('phone')
             ->first();
     }
 
-    public function markWhatsappResult(CommitteeDecision $decision, array $result): void
+    public function markTelegramResult(CommitteeDecision $decision, array $result): void
     {
         $decision->forceFill([
-            'whatsapp_status' => $result['status'] ?? null,
-            'whatsapp_last_attempt_at' => now(),
-            'whatsapp_sent_at' => ($result['success'] ?? false) ? now() : $decision->whatsapp_sent_at,
-            'whatsapp_last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? null),
+            'telegram_status' => $result['status'] ?? null,
+            'telegram_last_attempt_at' => now(),
+            'telegram_sent_at' => ($result['success'] ?? false) ? now() : $decision->telegram_sent_at,
+            'telegram_last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? null),
         ])->save();
     }
 

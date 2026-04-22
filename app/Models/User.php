@@ -35,6 +35,8 @@ class User extends Authenticatable
         'contract_start_date',
         'region',
         'name_en',
+        'username_arcgis',
+        'telegram_chat_id',
     ];
 
     protected $hidden = [
@@ -60,6 +62,8 @@ class User extends Authenticatable
             'phone' => 'string',
             'avatar' => 'string',
             'address' => 'string',
+            'username_arcgis' => 'string',
+            'telegram_chat_id' => 'string',
             'email_verified_at' => 'datetime',
             'password' => 'string',
             'remember_token' => 'string',
@@ -92,5 +96,10 @@ class User extends Authenticatable
     public function managedCommitteeDecisions()
     {
         return $this->hasMany(CommitteeDecision::class, 'committee_manager_id');
+    }
+
+    public function telegramIntegrations()
+    {
+        return $this->hasMany(TelegramIntegration::class);
     }
 }

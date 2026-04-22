@@ -36,10 +36,10 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('committee_manager_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('completed_at')->nullable();
-            $table->string('whatsapp_status')->nullable();
-            $table->timestamp('whatsapp_sent_at')->nullable();
-            $table->timestamp('whatsapp_last_attempt_at')->nullable();
-            $table->text('whatsapp_last_error')->nullable();
+            $table->string('telegram_status')->nullable();
+            $table->timestamp('telegram_sent_at')->nullable();
+            $table->timestamp('telegram_last_attempt_at')->nullable();
+            $table->text('telegram_last_error')->nullable();
             $table->timestamp('arcgis_synced_at')->nullable();
             $table->timestamp('arcgis_last_attempt_at')->nullable();
             $table->string('arcgis_sync_status')->nullable();

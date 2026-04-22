@@ -34,6 +34,12 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+    ],
     'arcgis' => [
         'username' => env('ARCGIS_USERNAME'),
         'password' => env('ARCGIS_PASSWORD'),
@@ -43,9 +49,9 @@ return [
         'road_facility_survey_referer' => env('ARCGIS_ROAD_FACILITY_SURVEY_REFERER', 'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_8d4df706500f47a8864206fd1b251739_form/FeatureServer/0'),
     ],
     'committee_decisions' => [
-        'whatsapp' => [
-            'endpoint' => env('COMMITTEE_WHATSAPP_ENDPOINT'),
-            'token' => env('COMMITTEE_WHATSAPP_TOKEN'),
+        'telegram' => [
+            'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+            'chat_id' => env('TELEGRAM_CHAT_ID'),
         ],
         'arcgis' => [
             'base_url' => env('COMMITTEE_ARCGIS_BASE_URL', ''),

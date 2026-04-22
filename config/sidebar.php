@@ -107,9 +107,10 @@ return [
     [
         'title' => 'menu.audit.title',
         'icon' => 'ki-medal-star',
-        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer'],
+        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'Area Manager'],
         'active_patterns' => [
             'audit*',
+            'area-manager-review*',
         ],
         'items' => [
             [
@@ -129,6 +130,12 @@ return [
                 'url' => 'auditBuilding',
                 'pattern' => 'auditBuilding',
                 'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer'],
+            ],
+            [
+                'title' => 'menu.audit.area_manager_review',
+                'url' => 'area-manager-review',
+                'pattern' => 'area-manager-review*',
+                'roles' => ['Area Manager','Database Officer'],
             ],
         ],
     ],
@@ -161,6 +168,7 @@ return [
         'active_patterns' => [
             'committee-decisions*',
             'committee-members*',
+            'telegram-integrations*',
         ],
         'items' => [
             [
@@ -174,6 +182,12 @@ return [
                 'url' => 'committee-members',
                 'pattern' => 'committee-members*',
                 'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor'],
+            ],
+            [
+                'title' => 'menu.committee.telegram_integrations',
+                'url' => 'telegram-integrations',
+                'pattern' => 'telegram-integrations*',
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor'],
             ],
         ],
     ],

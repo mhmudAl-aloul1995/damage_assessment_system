@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Committee;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Committee\SaveCommitteeDecisionRequest;
 use App\Http\Requests\Committee\SignCommitteeDecisionRequest;
+use App\Jobs\SendCommitteeDecisionTelegramJob;
 use App\Models\Building;
 use App\Models\CommitteeDecision;
 use App\Models\CommitteeMember;
@@ -20,12 +21,7 @@ use Yajra\DataTables\Facades\DataTables;
 
 class CommitteeDecisionController extends Controller
 {
-    public function __construct(private readonly CommitteeDecisionWorkflowService $workflowService)
-    {
-       /*  $this->middleware('permission:view committee decisions')->only(['index', 'buildingsData', 'housingUnitsData', 'showBuilding', 'showHousingUnit']);
-        $this->middleware('permission:manage committee decision content')->only(['update']);
-        $this->middleware('permission:sign committee decisions')->only(['sign']); */
-    }
+    public function __construct(private readonly CommitteeDecisionWorkflowService $workflowService) {}
 
     public function index(): View
     {
@@ -43,9 +39,9 @@ class CommitteeDecisionController extends Controller
                 : '<span class="badge badge-light-warning">لا يوجد</span>')
             ->addColumn('signatures_count', fn (Building $building): string => $this->signatureBadge($building->committeeDecision))
             ->addColumn('arcgis_status', fn (Building $building): string => $this->syncBadge($building->committeeDecision?->arcgis_sync_status, 'ArcGIS'))
-            ->addColumn('whatsapp_status', fn (Building $building): string => $this->syncBadge($building->committeeDecision?->whatsapp_status, 'WhatsApp'))
+            ->addColumn('telegram_status', fn (Building $building): string => $this->syncBadge($building->committeeDecision?->telegram_status, 'Telegram'))
             ->addColumn('actions', fn (Building $building): string => '<a class="btn btn-light-primary btn-sm" href="'.route('committee-decisions.buildings.show', $building).'">فتح القرار</a>')
-            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'whatsapp_status', 'actions'])
+            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'telegram_status', 'actions'])
             ->toJson();
     }
 
@@ -59,9 +55,9 @@ class CommitteeDecisionController extends Controller
                 : '<span class="badge badge-light-warning">لا يوجد</span>')
             ->addColumn('signatures_count', fn (HousingUnit $unit): string => $this->signatureBadge($unit->committeeDecision))
             ->addColumn('arcgis_status', fn (HousingUnit $unit): string => $this->syncBadge($unit->committeeDecision?->arcgis_sync_status, 'ArcGIS'))
-            ->addColumn('whatsapp_status', fn (HousingUnit $unit): string => $this->syncBadge($unit->committeeDecision?->whatsapp_status, 'WhatsApp'))
+            ->addColumn('telegram_status', fn (HousingUnit $unit): string => $this->syncBadge($unit->committeeDecision?->telegram_status, 'Telegram'))
             ->addColumn('actions', fn (HousingUnit $unit): string => '<a class="btn btn-light-primary btn-sm" href="'.route('committee-decisions.housing-units.show', $unit).'">فتح القرار</a>')
-            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'whatsapp_status', 'actions'])
+            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'telegram_status', 'actions'])
             ->toJson();
     }
 
@@ -97,6 +93,23 @@ class CommitteeDecisionController extends Controller
         return redirect()
             ->back()
             ->with('success', 'تم تسجيل التوقيع بنجاح.');
+    }
+
+    public function retryTelegram(CommitteeDecision $committeeDecision): RedirectResponse
+    {
+        abort_unless(auth()->user()->can('send committee telegram'), 403);
+        abort_unless($committeeDecision->isCompleted(), 422, 'لا يمكن إعادة محاولة تيليجرام قبل اكتمال القرار.');
+
+        $committeeDecision->forceFill([
+            'telegram_status' => 'retrying',
+            'telegram_last_error' => null,
+        ])->save();
+
+        SendCommitteeDecisionTelegramJob::dispatch($committeeDecision->id)->afterCommit();
+
+        return redirect()
+            ->back()
+            ->with('success', 'تمت جدولة إعادة محاولة إرسال تيليجرام.');
     }
 
     private function buildingQuery(): Builder
@@ -146,6 +159,7 @@ class CommitteeDecisionController extends Controller
             'recordType' => $recordType,
             'canManageContent' => auth()->user()->can('manage committee decision content'),
             'canSign' => auth()->user()->can('sign committee decisions'),
+            'canRetryTelegram' => auth()->user()->can('send committee telegram'),
             'decisionTypes' => [
                 'accepted' => 'مقبول',
                 'rejected' => 'مرفوض',
@@ -187,9 +201,10 @@ class CommitteeDecisionController extends Controller
         $map = [
             'synced' => 'success',
             'sent' => 'success',
-            'missing_phone' => 'warning',
+            'missing_chat_id' => 'warning',
             'not_configured' => 'warning',
             'failed' => 'danger',
+            'retrying' => 'info',
             'skipped' => 'secondary',
             null => 'secondary',
         ];

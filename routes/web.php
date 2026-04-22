@@ -3,7 +3,10 @@
 use App\Http\Controllers\Attendance\AttendanceController;
 use App\Http\Controllers\Committee\CommitteeDecisionController;
 use App\Http\Controllers\Committee\CommitteeMemberController;
+use App\Http\Controllers\Committee\TelegramIntegrationController;
+use App\Http\Controllers\Committee\TelegramWebhookController;
 use App\Http\Controllers\DamageAssessment\ArcGISController;
+use App\Http\Controllers\DamageAssessment\AreaManagerRejectedBuildingsController;
 use App\Http\Controllers\DamageAssessment\auditController;
 use App\Http\Controllers\DamageAssessment\buildingController;
 use App\Http\Controllers\DamageAssessment\damageAssessmentController;
@@ -22,6 +25,7 @@ use App\Http\Controllers\UserManagement\userController;
 use App\Models\Attendance;
 use App\Models\AttendanceImportLog;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
@@ -175,6 +179,11 @@ Route::middleware('auth')->group(function () {
             ->name('export-monthly-report');
     });
 
+    Route::prefix('area-manager-review')->name('area-manager-review.')->group(function () {
+        Route::get('/', [AreaManagerRejectedBuildingsController::class, 'index'])->name('index');
+        Route::get('/data', [AreaManagerRejectedBuildingsController::class, 'data'])->name('data');
+    });
+
     Route::prefix('committee-decisions')->name('committee-decisions.')->group(function () {
         Route::get('/', [CommitteeDecisionController::class, 'index'])->name('index');
         Route::get('/buildings/data', [CommitteeDecisionController::class, 'buildingsData'])->name('buildings.data');
@@ -183,6 +192,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/housing-units/{housingUnit}', [CommitteeDecisionController::class, 'showHousingUnit'])->name('housing-units.show');
         Route::put('/{committeeDecision}', [CommitteeDecisionController::class, 'update'])->name('update');
         Route::post('/{committeeDecision}/sign', [CommitteeDecisionController::class, 'sign'])->name('sign');
+        Route::post('/{committeeDecision}/retry-telegram', [CommitteeDecisionController::class, 'retryTelegram'])->name('retry-telegram');
     });
 
     Route::prefix('committee-members')->name('committee-members.')->group(function () {
@@ -191,6 +201,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [CommitteeMemberController::class, 'store'])->name('store');
         Route::put('/{committeeMember}', [CommitteeMemberController::class, 'update'])->name('update');
         Route::delete('/{committeeMember}', [CommitteeMemberController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
+        Route::get('/', [TelegramIntegrationController::class, 'index'])->name('index');
+        Route::get('/data', [TelegramIntegrationController::class, 'data'])->name('data');
+        Route::post('/', [TelegramIntegrationController::class, 'store'])->name('store');
+        Route::post('/{telegramIntegration}/refresh', [TelegramIntegrationController::class, 'refresh'])->name('refresh');
+        Route::post('/{telegramIntegration}/disable', [TelegramIntegrationController::class, 'disable'])->name('disable');
+        Route::delete('/{telegramIntegration}', [TelegramIntegrationController::class, 'destroy'])->name('destroy');
     });
 
     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);
@@ -305,6 +324,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/exports/{id}/cancel', [ExportDataController::class, 'cancel']);
 
 });
+
+Route::post('/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('telegram.webhook');
 use Spatie\Browsershot\Browsershot;
 
 Route::get('/debug-pdf', function () {
