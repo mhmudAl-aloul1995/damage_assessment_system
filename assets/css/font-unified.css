@@ -1,0 +1,89 @@
+@font-face {
+    font-family: 'Droid Arabic Kufi';
+    src: url('../../DroidArabicKufi.eot');
+    src:
+        url('../../DroidArabicKufi.eot?#iefix') format('embedded-opentype'),
+        url('../../DroidArabicKufi.woff') format('woff'),
+        url('../../DroidArabicKufi.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+label,
+small,
+strong,
+a,
+button,
+input,
+select,
+textarea,
+th,
+td,
+li,
+.text-muted,
+.text-gray-900,
+.text-gray-800,
+.text-gray-700,
+.text-gray-600,
+.text-gray-500,
+.form-control,
+.form-select,
+.form-check-label,
+.card-title,
+.menu-title,
+.dropdown-item,
+.modal-title,
+.dataTables_wrapper,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .paginate_button,
+.select2-container,
+.select2-container .select2-selection,
+.select2-container .select2-search__field,
+.select2-dropdown,
+.page-title,
+.breadcrumb,
+.badge,
+.alert,
+.swal2-popup,
+.swal2-title,
+.swal2-html-container,
+.swal2-confirm,
+.swal2-cancel,
+.nav-link {
+    font-family: 'Droid Arabic Kufi', sans-serif !important;
+}
+
+.apexcharts-legend-text,
+.apexcharts-text,
+.apexcharts-title-text,
+.apexcharts-datalabel,
+.apexcharts-xaxis-label,
+.apexcharts-yaxis-label {
+    font-family: 'Droid Arabic Kufi', sans-serif !important;
+}
+
+input::placeholder,
+textarea::placeholder,
+select,
+.select2-container .select2-selection__placeholder {
+    font-family: 'Droid Arabic Kufi', sans-serif !important;
+}
+
+.ki-duotone span,
+.ki-outline span,
+.ki-solid span,
+[class^='ki-'] span,
+[class*=' ki-'] span {
+    font-family: inherit !important;
+}

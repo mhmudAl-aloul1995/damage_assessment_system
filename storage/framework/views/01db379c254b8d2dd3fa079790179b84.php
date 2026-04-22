@@ -90,11 +90,11 @@
 <style>
 	@font-face {
 		font-family: 'Droid Arabic Kufi';
-		src: url('<?php echo e(asset("DroidArabicKufi.eot")); ?>');
+		src: url('<?php echo e(asset("assets/DroidArabicKufi.eot")); ?>');
 		src:
-			url('<?php echo e(asset("DroidArabicKufi.eot?#iefix")); ?>') format('embedded-opentype'),
-			url('<?php echo e(asset("DroidArabicKufi.woff")); ?>') format('woff'),
-			url('<?php echo e(asset("DroidArabicKufi.ttf")); ?>') format('truetype');
+			url('<?php echo e(asset("assets/DroidArabicKufi.eot?#iefix")); ?>') format('embedded-opentype'),
+			url('<?php echo e(asset("assets/DroidArabicKufi.woff")); ?>') format('woff'),
+			url('<?php echo e(asset("assets/DroidArabicKufi.ttf")); ?>') format('truetype');
 
 		font-weight: normal;
 		font-style: normal;
