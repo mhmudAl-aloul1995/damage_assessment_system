@@ -366,7 +366,7 @@ class Building extends Model
      */
     protected array $editedFieldsCache = [];
 
-    /*     public function edits(): HasMany
+         public function edits(): HasMany
         {
             return $this->hasMany(EditAssessment::class, 'global_id', 'globalid')
                 ->where('type', 'building_table');
@@ -406,7 +406,7 @@ class Building extends Model
             }
 
             return $value;
-        } */
+        } 
     public function housing_unit()
     {
         return $this->hasMany(HousingUnit::class, 'parentglobalid', 'globalid');

@@ -710,13 +710,13 @@ class HousingUnit extends Model
 
     protected array $editedFieldsCache = [];
 
-    /*     public function edits(): HasMany
+        public function edits(): HasMany
         {
             return $this->hasMany(EditAssessment::class, 'global_id', 'globalid')
                 ->where('type', 'housing_table');
-        } */
+        } 
 
-    /*     protected function getEditedFieldsMap(): array
+         protected function getEditedFieldsMap(): array
         {
             if (!empty($this->editedFieldsCache)) {
                 return $this->editedFieldsCache;
