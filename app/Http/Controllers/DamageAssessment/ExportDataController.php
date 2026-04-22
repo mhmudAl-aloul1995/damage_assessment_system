@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class ExportDataController extends Controller
 {
+    /**ل */
     public function index()
     {
         $buildingColumns = DB::getSchemaBuilder()->getColumnListing('buildings');
