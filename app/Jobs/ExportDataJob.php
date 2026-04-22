@@ -24,13 +24,15 @@ class ExportDataJob implements ShouldQueue
     public int $tries = 3;
     public int $timeout = 0;
 
-    public function __construct(public int $exportId) {}
+    public function __construct(public int $exportId)
+    {
+    }
 
     public function handle(): void
     {
         $export = Export::find($this->exportId);
 
-        if (! $export || $export->status === 'cancelled') {
+        if (!$export || $export->status === 'cancelled') {
             return;
         }
 
@@ -71,11 +73,11 @@ class ExportDataJob implements ShouldQueue
 
             $query = DB::table('buildings as b');
 
-            if (! empty($housingColumns)) {
+            if (!empty($housingColumns)) {
                 $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
             }
 
-            $needsFamily = ! is_null($familyMembersFrom) || ! is_null($familyMembersTo);
+            $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
 
             if ($needsHousingUnitsCount) {
                 $housingUnitsCountSub = DB::table('housing_units as hu_count')
@@ -105,21 +107,21 @@ class ExportDataJob implements ShouldQueue
                     $join->on('b.globalid', '=', 'fam.parentglobalid');
                 });
 
-                if (! is_null($familyMembersFrom)) {
+                if (!is_null($familyMembersFrom)) {
                     $query->where('fam.family_members_total', '>=', (int) $familyMembersFrom);
                 }
 
-                if (! is_null($familyMembersTo)) {
+                if (!is_null($familyMembersTo)) {
                     $query->where('fam.family_members_total', '<=', (int) $familyMembersTo);
                 }
             }
 
-            $paginateByHousing = ! empty($housingColumns);
+            $paginateByHousing = !empty($housingColumns);
 
             $selects = [
                 $paginateByHousing
-                    ? 'h.objectid as export_row_id'
-                    : 'b.objectid as export_row_id',
+                ? 'h.objectid as export_row_id'
+                : 'b.objectid as export_row_id',
             ];
 
             foreach ($buildingColumns as $column) {
@@ -142,12 +144,21 @@ class ExportDataJob implements ShouldQueue
             $query->selectRaw(implode(', ', $selects));
 
             foreach ($filters as $field => $values) {
-                $values = array_filter((array) $values, fn ($value) => $value !== null && $value !== '');
+                $values = array_filter((array) $values, fn($value) => $value !== null && $value !== '');
 
                 if (empty($values)) {
                     continue;
                 }
+                if ($field === 'building_states_auditig') {
+                    $query->whereExists(function ($sub) use ($values) {
+                        $sub->select(DB::raw(1))
+                            ->from('building_statuses as bs')
+                            ->whereColumn('bs.building_id', 'b.objectid')
+                            ->whereIn('bs.status_id', $values);
+                    });
 
+                    continue;
+                }
                 if (Schema::hasColumn('buildings', $field)) {
                     $query->whereIn("b.$field", $values);
                 } elseif (Schema::hasColumn('housing_units', $field)) {
@@ -162,7 +173,7 @@ class ExportDataJob implements ShouldQueue
 
             $hasData = (clone $query)->exists();
 
-            if (! $hasData) {
+            if (!$hasData) {
                 $export->update([
                     'status' => 'done',
                     'progress' => 100,
@@ -177,7 +188,7 @@ class ExportDataJob implements ShouldQueue
             $fileName = 'exports/export_' . now()->timestamp . '.xlsx';
             $fullPath = storage_path('app/public/' . $fileName);
 
-            if (! is_dir(dirname($fullPath))) {
+            if (!is_dir(dirname($fullPath))) {
                 mkdir(dirname($fullPath), 0777, true);
             }
 
@@ -229,7 +240,7 @@ class ExportDataJob implements ShouldQueue
             foreach ($generator() as $row) {
                 $processed++;
 
-                if (! $headersWritten) {
+                if (!$headersWritten) {
                     $colIndex = 1;
 
                     foreach (array_keys($row) as $header) {

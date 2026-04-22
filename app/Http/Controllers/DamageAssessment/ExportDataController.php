@@ -49,6 +49,14 @@ class ExportDataController extends Controller
             ->get()
             ->groupBy('list_name');
 
+        $auditingStatuses = DB::table('assessment_statuses')
+            ->select('id as name', 'label_ar as label')
+            ->orderBy('label_ar')
+            ->get();
+
+
+        $filters['building_states_auditig'] = $auditingStatuses;
+
         $buildingUnitsCountColumn = 'housing_units_count';
 
         $assessmentMeta[$buildingUnitsCountColumn] = [
@@ -56,12 +64,12 @@ class ExportDataController extends Controller
             'hint' => 'حقل مخصص يعرض عدد الوحدات السكنية المرتبطة بالمبنى',
         ];
 
-        if (! in_array($buildingUnitsCountColumn, $buildingColumns, true)) {
+        if (!in_array($buildingUnitsCountColumn, $buildingColumns, true)) {
             $buildingColumns[] = $buildingUnitsCountColumn;
         }
 
         $assessmentLabels = Assessment::pluck('label', 'name');
-
+        $assessmentLabels['building_states_auditig'] = 'حالات المبنى - التدقيق';
         return view('exports.index', [
             'assessmentLabels' => $assessmentLabels,
             'buildingColumns' => $buildingColumns,
@@ -87,7 +95,7 @@ class ExportDataController extends Controller
             'status' => $export->status,
             'progress' => $export->progress ?? 0,
             'processed' => $export->processed ?? 0,
-            'file' => $export->file_name ? asset('storage/'.$export->file_name) : null,
+            'file' => $export->file_name ? asset('storage/' . $export->file_name) : null,
         ]);
     }
 
@@ -148,7 +156,7 @@ class ExportDataController extends Controller
 
             return response()->json([
                 'status' => false,
-                'message' => 'فشل بدء التصدير: '.$e->getMessage(),
+                'message' => 'فشل بدء التصدير: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -157,7 +165,7 @@ class ExportDataController extends Controller
     {
         $export = Export::where('user_id', auth()->id())->findOrFail($id);
 
-        if (! in_array($export->status, ['pending', 'processing'])) {
+        if (!in_array($export->status, ['pending', 'processing'])) {
             return response()->json([
                 'status' => false,
                 'message' => 'لا يمكن إلغاء هذا التصدير.',
