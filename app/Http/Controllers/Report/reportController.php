@@ -121,6 +121,7 @@ class reportController extends Controller
 
     public function exportCommulative(Request $request)
     {
+        set_time_limit(-1);
         $startDate = $request->input('start_date', now()->subDays(30)->toDateString());
         $endDate = $request->input('end_date', now()->toDateString());
 
