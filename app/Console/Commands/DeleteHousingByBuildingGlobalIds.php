@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 class DeleteHousingByBuildingGlobalIds extends Command
 {
     protected $signature = 'housing:delete-by-building-globalids';
-    protected $description = 'Delete housing edit assessments, housing statuses, and housing units by building globalids';
+    protected $description = 'Delete housing data by parentglobalid';
 
     public function handle(): int
     {
@@ -2793,16 +2793,15 @@ class DeleteHousingByBuildingGlobalIds extends Command
             try {
                 $editAssessmentsDeleted = DB::table('edit_assessments as ea')
                     ->join('housing_units as hu', 'hu.globalid', '=', 'ea.global_id')
-                    ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
                     ->where('ea.type', 'housing_table')
-                    ->whereIn('b.globalid', $chunk)
+                    ->whereIn('hu.parentglobalid', $chunk)
                     ->delete();
 
                 $housingStatusesDeleted = DB::table('housing_statuses as hs')
                     ->join('housing_units as hu', 'hu.objectid', '=', 'hs.housing_id')
-                    ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
-                    ->whereIn('b.globalid', $chunk)
+                    ->whereIn('hu.parentglobalid', $chunk)
                     ->delete();
+
 
 
                 DB::commit();
@@ -2815,7 +2814,6 @@ class DeleteHousingByBuildingGlobalIds extends Command
                 $this->line("  - housing_statuses deleted: {$housingStatusesDeleted}");
             } catch (\Throwable $e) {
                 DB::rollBack();
-
                 $this->error("Chunk {$part} failed: " . $e->getMessage());
                 return self::FAILURE;
             }
@@ -2825,7 +2823,6 @@ class DeleteHousingByBuildingGlobalIds extends Command
         $this->info('Deletion completed successfully.');
         $this->line("Total edit_assessments deleted: {$totalEditAssessmentsDeleted}");
         $this->line("Total housing_statuses deleted: {$totalHousingStatusesDeleted}");
-        $this->line("Total housing_units deleted: {$totalHousingUnitsDeleted}");
 
         return self::SUCCESS;
     }
