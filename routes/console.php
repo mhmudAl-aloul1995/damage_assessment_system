@@ -15,14 +15,14 @@ Schedule::command('queue:work --stop-when-empty')
     ->runInBackground();
 
 Schedule::command('sync:building')
-    ->everyTenMinutes()
+    ->hourly()
     ->withoutOverlapping() // Prevents the task from running if the previous one is still active
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
     ->appendOutputTo(storage_path('logs/schedule.log'))
     ->runInBackground();
 Schedule::command('sync:housing')
-    ->everyTenMinutes()
+    ->hourly()
     ->withoutOverlapping() // Prevents the task from running if the previous one is still active
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
@@ -30,14 +30,14 @@ Schedule::command('sync:housing')
     ->runInBackground();
 
 Schedule::command('sync:public-building-survey')
-    ->everyTenMinutes()
+    ->hourly()
     ->withoutOverlapping()
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
     ->appendOutputTo(storage_path('logs/schedule.log'))
     ->runInBackground();
 Schedule::command('sync:road-facility-survey')
-    ->everyTenMinutes()
+    ->hourly()
     ->withoutOverlapping()
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
