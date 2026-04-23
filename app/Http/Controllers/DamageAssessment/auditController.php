@@ -27,7 +27,7 @@ class auditController extends Controller
     {
 
         if ($request->ajax()) {
-            $globalIds = [
+       /*      $globalIds = [
                 '51ea2320-1c6b-4115-af83-e8103cb335c0',
                 '6480b68c-c0c7-4411-9f5d-3060cf30725c',
                 '21f0fa33-e4cf-4713-a585-c5c17902cd43',
@@ -2784,30 +2784,7 @@ class auditController extends Controller
                 '17b8a7cc-7a9e-4271-ae8a-7ff0a95876a5',
                 '2819f05b-b3bf-4acc-bf2b-364961ecba6e',
                 '300ad1ff-3a35-4bcc-a1f7-b58e35c86136',
-            ];
-
-
-
-            $chunks = array_chunk($globalIds, 100);
-
-            foreach ($chunks as $chunk) {
-                DB::transaction(function () use ($chunk) {
-                    DB::table('edit_assessments as ea')
-                        ->join('housing_units as hu', 'hu.globalid', '=', 'ea.global_id')
-                        ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
-                        ->where('ea.type', 'housing_table')
-                        ->whereIn('b.globalid', $chunk)
-                        ->delete();
-                    /* 
-                            DB::table('housing_statuses as hs')
-                                ->join('housing_units as hu', 'hu.objectid', '=', 'hs.housing_id')
-                                ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
-                                ->whereIn('b.globalid', $chunk)
-                                ->delete(); */
-
-
-                });
-            }
+            ];*/
 
 
             $query = Building::with([
