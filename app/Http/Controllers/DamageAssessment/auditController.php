@@ -2791,7 +2791,7 @@ class auditController extends Controller
                 'engineerStatus.status',
                 'lawyerStatus.status',
             ])
-                ->whereNotIn('globalid', $globalids)
+              //  ->whereNotIn('globalid', $globalids)
                 ->where('field_status', 'COMPLETED');
 
             if ($request->filled('engineer_id')) {
