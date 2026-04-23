@@ -10,7 +10,6 @@ class HousingUnitImportController extends Controller
 {
     public function import(): JsonResponse
     {
-        $managerId = 1297;
         $now = Carbon::now();
 
         $allowedFields = [
@@ -348,19 +347,26 @@ class HousingUnitImportController extends Controller
         ];
 
         $housingInserted = 0;
-        $assignedInserted = 0;
         $editInserted = 0;
         $housingStatusesInserted = 0;
         $invalidJsonSkipped = 0;
         $skippedRows = 0;
-        $missingMappedUsers = 0;
 
         DB::beginTransaction();
         set_time_limit(1000);
+
         try {
             DB::table('warda_units')
                 ->orderBy('id')
-                ->chunkById(200, function ($units) use ($managerId, $now, $allowedFields, &$housingInserted, &$assignedInserted, &$editInserted, &$housingStatusesInserted, &$invalidJsonSkipped, &$skippedRows, &$missingMappedUsers) {
+                ->chunkById(200, function ($units) use (
+                    $now,
+                    $allowedFields,
+                    &$housingInserted,
+                    &$editInserted,
+                    &$housingStatusesInserted,
+                    &$invalidJsonSkipped,
+                    &$skippedRows
+                ) {
                     foreach ($units as $unit) {
                         $engineeringAuditStatus = trim((string) ($unit->engineering_audit_status ?? ''));
                         $legalAuditStatus = trim((string) ($unit->legal_audit_status ?? ''));
@@ -376,14 +382,6 @@ class HousingUnitImportController extends Controller
 
                         $engineerUserId = $this->mapOldUserIdToNewUserId($unit->engineer_id ?? null);
                         $lawyerUserId = $this->mapOldUserIdToNewUserId($unit->lawyer_id ?? null);
-
-                        if (!empty($unit->engineer_id) && empty($engineerUserId)) {
-                            $missingMappedUsers++;
-                        }
-
-                        if (!empty($unit->lawyer_id) && empty($lawyerUserId)) {
-                            $missingMappedUsers++;
-                        }
 
                         /*
                          * 1) housing_units
@@ -421,60 +419,7 @@ class HousingUnitImportController extends Controller
                         }
 
                         /*
-                         * 2) assigned_assessment_users - Engineer
-                         */
-                        if (!empty($engineerUserId) && !empty($unit->building_id)) {
-                            $exists = DB::table('assigned_assessment_users')
-                                ->where('manager_id', $managerId)
-                                ->where('user_id', $engineerUserId)
-                                ->where('type', 'QC/QA Engineer')
-                                ->where('building_id', $unit->building_id)
-                                ->exists();
-
-                            if (!$exists) {
-                                DB::table('assigned_assessment_users')->insert([
-                                    'manager_id' => $managerId,
-                                    'user_id' => $engineerUserId,
-                                    'type' => 'QC/QA Engineer',
-                                    'building_id' => $unit->building_id,
-                                    'created_at' => $now,
-                                    'updated_at' => $now,
-                                ]);
-
-                                $assignedInserted++;
-                            }
-                        }
-
-                        /*
-                         * 3) assigned_assessment_users - Lawyer
-                         */
-                        if (!empty($lawyerUserId) && !empty($unit->building_id)) {
-                            $exists = DB::table('assigned_assessment_users')
-                                ->where('manager_id', $managerId)
-                                ->where('user_id', $lawyerUserId)
-                                ->where('type', 'Legal Auditor')
-                                ->where('building_id', $unit->building_id)
-                                ->exists();
-
-                            if (!$exists) {
-                                DB::table('assigned_assessment_users')->insert([
-                                    'manager_id' => $managerId,
-                                    'user_id' => $lawyerUserId,
-                                    'type' => 'Legal Auditor',
-                                    'building_id' => $unit->building_id,
-                                    'created_at' => $now,
-                                    'updated_at' => $now,
-                                ]);
-
-                                $assignedInserted++;
-                            }
-                        }
-
-                        /*
-                         * 4) edit_assessments
-                         * الأصل من housing_units
-                         * المعدل من warda_units.all_data
-                         * المخزن = قيمة JSON المعدلة
+                         * 2) edit_assessments
                          */
                         if ($existingHousing && !empty($unit->globalid) && !empty($unit->all_data)) {
                             $decoded = json_decode($unit->all_data, true);
@@ -531,7 +476,7 @@ class HousingUnitImportController extends Controller
                         }
 
                         /*
-                         * 5) housing_statuses - Engineer
+                         * 3) housing_statuses - Engineer
                          */
                         $engineerStatusId = null;
 
@@ -596,7 +541,7 @@ class HousingUnitImportController extends Controller
                         }
 
                         /*
-                         * 6) housing_statuses - Lawyer
+                         * 4) housing_statuses - Lawyer
                          */
                         $lawyerStatusId = null;
 
@@ -673,12 +618,10 @@ class HousingUnitImportController extends Controller
                 'success' => true,
                 'message' => 'Housing units import completed successfully.',
                 'housing_units_inserted' => $housingInserted,
-                'assigned_assessment_users_inserted' => $assignedInserted,
                 'edit_assessmentss_inserted' => $editInserted,
                 'housing_statuses_inserted' => $housingStatusesInserted,
                 'invalid_json_skipped' => $invalidJsonSkipped,
                 'rows_skipped_by_pending_or_assigned_status' => $skippedRows,
-                'missing_mapped_users' => $missingMappedUsers,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
