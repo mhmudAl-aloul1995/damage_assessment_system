@@ -2788,24 +2788,28 @@ class auditController extends Controller
 
 
 
-            DB::transaction(function () use ($globalIds) {
+            $chunks = array_chunk($globalIds, 100);
 
-                DB::table('edit_assessments as ea')
-                    ->join('housing_units as hu', 'hu.globalid', '=', 'ea.global_id')
-                    ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
-                    ->where('ea.type', 'housing_table')
-                    ->whereIn('b.globalid', $globalIds)
-                    ->delete();
+            foreach ($chunks as $chunk) {
+                DB::transaction(function () use ($chunk) {
+                    DB::table('edit_assessments as ea')
+                        ->join('housing_units as hu', 'hu.globalid', '=', 'ea.global_id')
+                        ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
+                        ->where('ea.type', 'housing_table')
+                        ->whereIn('b.globalid', $chunk)
+                        ->delete();
+                    /* 
+                            DB::table('housing_statuses as hs')
+                                ->join('housing_units as hu', 'hu.objectid', '=', 'hs.housing_id')
+                                ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
+                                ->whereIn('b.globalid', $chunk)
+                                ->delete(); */
 
-                DB::table('housing_statuses as hs')
-                    ->join('housing_units as hu', 'hu.objectid', '=', 'hs.housing_id')
-                    ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
-                    ->whereIn('b.globalid', $globalIds)
-                    ->delete();
 
-               
+                });
+            }
 
-            });
+
             $query = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
