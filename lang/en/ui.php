@@ -91,6 +91,12 @@ return [
         'allowed_types' => 'Allowed file types: png, jpg, jpeg.',
         'phone_tooltip' => 'Phone number must be active',
         'no_role' => 'No Role',
+        'change_password_title' => 'Change Password',
+        'change_password_hint' => 'Update your account password to keep your access secure.',
+        'current_password' => 'Current Password',
+        'new_password' => 'New Password',
+        'new_password_confirmation' => 'Confirm New Password',
+        'change_password_action' => 'Update Password',
     ],
     'messages' => [
         'success' => 'Success',
@@ -98,6 +104,7 @@ return [
         'unexpected_error' => 'Something went wrong.',
         'validation_error' => 'Some fields contain errors.',
         'profile_updated' => 'Your profile has been updated successfully.',
+        'password_updated' => 'Your password has been updated successfully.',
     ],
     'users' => [
         'title' => 'Users',

@@ -103,6 +103,12 @@ return [
         'allowed_types' => 'أنواع الملفات المسموح بها: png, jpg, jpeg.',
         'phone_tooltip' => 'يجب أن يكون رقم الجوال فعالًا',
         'no_role' => 'لا يوجد دور',
+        'change_password_title' => 'تغيير كلمة المرور',
+        'change_password_hint' => 'حدّث كلمة مرور حسابك للحفاظ على أمان الوصول.',
+        'current_password' => 'كلمة المرور الحالية',
+        'new_password' => 'كلمة المرور الجديدة',
+        'new_password_confirmation' => 'تأكيد كلمة المرور الجديدة',
+        'change_password_action' => 'تحديث كلمة المرور',
     ],
     'messages' => [
         'success' => 'نجاح',
@@ -110,6 +116,7 @@ return [
         'unexpected_error' => 'حدث خطأ غير متوقع.',
         'validation_error' => 'تم العثور على بعض الأخطاء في الإدخال.',
         'profile_updated' => 'تم تحديث الملف الشخصي بنجاح.',
+        'password_updated' => 'تم تحديث كلمة المرور بنجاح.',
     ],
     'users' => [
         'title' => 'المستخدمون',

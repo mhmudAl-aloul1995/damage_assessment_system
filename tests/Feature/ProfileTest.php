@@ -9,7 +9,12 @@ test('profile page is displayed', function () {
         ->actingAs($user)
         ->get('/profile');
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertSee(__('ui.profile.change_password_title'))
+        ->assertSee(__('ui.profile.current_password'))
+        ->assertSee(__('ui.profile.new_password'))
+        ->assertSee(__('ui.profile.new_password_confirmation'));
 });
 
 test('profile information can be updated', function () {
@@ -17,20 +22,20 @@ test('profile information can be updated', function () {
 
     $response = $this
         ->actingAs($user)
-        ->patch('/profile', [
+        ->put('/profile', [
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
 
     $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
+        ->assertOk()
+        ->assertJsonPath('status', 'success');
 
     $user->refresh();
 
     $this->assertSame('Test User', $user->name);
     $this->assertSame('test@example.com', $user->email);
-    $this->assertNull($user->email_verified_at);
+    $this->assertNotNull($user->email_verified_at);
 });
 
 test('email verification status is unchanged when the email address is unchanged', function () {
@@ -38,14 +43,14 @@ test('email verification status is unchanged when the email address is unchanged
 
     $response = $this
         ->actingAs($user)
-        ->patch('/profile', [
+        ->put('/profile', [
             'name' => 'Test User',
             'email' => $user->email,
         ]);
 
     $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect('/profile');
+        ->assertOk()
+        ->assertJsonPath('status', 'success');
 
     $this->assertNotNull($user->refresh()->email_verified_at);
 });
@@ -56,7 +61,7 @@ test('user can delete their account', function () {
     $response = $this
         ->actingAs($user)
         ->delete('/profile', [
-            'password' => 'password',
+            'password' => '123456',
         ]);
 
     $response

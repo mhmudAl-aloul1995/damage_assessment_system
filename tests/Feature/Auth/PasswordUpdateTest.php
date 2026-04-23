@@ -10,9 +10,9 @@ test('password can be updated', function () {
         ->actingAs($user)
         ->from('/profile')
         ->put('/password', [
-            'current_password' => 'password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
+            'current_password' => '123456',
+            'new_password' => 'new-password',
+            'new_password_confirmation' => 'new-password',
         ]);
 
     $response
@@ -30,11 +30,28 @@ test('correct password must be provided to update password', function () {
         ->from('/profile')
         ->put('/password', [
             'current_password' => 'wrong-password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
+            'new_password' => 'new-password',
+            'new_password_confirmation' => 'new-password',
         ]);
 
     $response
         ->assertSessionHasErrorsIn('updatePassword', 'current_password')
+        ->assertRedirect('/profile');
+});
+
+test('new password confirmation is required to update password', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->from('/profile')
+        ->put('/password', [
+            'current_password' => '123456',
+            'new_password' => 'new-password',
+            'new_password_confirmation' => 'different-password',
+        ]);
+
+    $response
+        ->assertSessionHasErrorsIn('updatePassword', 'new_password')
         ->assertRedirect('/profile');
 });
