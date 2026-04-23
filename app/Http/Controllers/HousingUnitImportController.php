@@ -400,8 +400,8 @@ class HousingUnitImportController extends Controller
                                 'floor_number' => $unit->floor_number,
                                 'housing_unit_number' => $unit->housing_unit_number,
                                 'unit_direction' => $unit->unit_direction,
-                                'created_at' => $now,
-                                'updated_at' => $now,
+                               'created_at' => $lawyerStatusAt,
+                                    'updated_at' => $lawyerStatusAt,
                             ];
 
                             foreach ($allowedFields as $field) {
@@ -466,8 +466,8 @@ class HousingUnitImportController extends Controller
                                         'field_name' => $fieldName,
                                         'field_value' => $jsonValue,
                                         'user_id' => null,
-                                        'created_at' => $now,
-                                        'updated_at' => $now,
+                                      'created_at' => $lawyerStatusAt,
+                                    'updated_at' => $lawyerStatusAt,
                                     ]);
 
                                     $editInserted++;

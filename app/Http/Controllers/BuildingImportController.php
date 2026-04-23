@@ -309,8 +309,8 @@ class BuildingImportController extends Controller
                                         'field_name' => $fieldName,
                                         'field_value' => $tableValue,
                                         'user_id' => null,
-                                        'created_at' => $now,
-                                        'updated_at' => $now,
+                                         'created_at' => $engineerStatusAt,
+                                    'updated_at' => $engineerStatusAt,
                                     ]);
 
                                     $editInserted++;
