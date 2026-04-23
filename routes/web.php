@@ -83,10 +83,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="' . $safeRepo . '" add .',
-            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
-            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
-            'git -c safe.directory="' . $safeRepo . '" push',
+            'git -c safe.directory="'.$safeRepo.'" add .',
+            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
+            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
+            'git -c safe.directory="'.$safeRepo.'" push',
         ];
 
         $outputs = [];
@@ -106,7 +106,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (!$result->successful()) {
+            if (! $result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -209,7 +209,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
-        Route::get('/', fn() => redirect()->route('telegram.destinations.index'))->name('index');
+        Route::get('/', fn () => redirect()->route('telegram.destinations.index'))->name('index');
         Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
         Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
         Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
@@ -355,6 +355,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/export-data', [ExportDataController::class, 'index'])->name('export.data.index');
     Route::post('/export-data', [ExportDataController::class, 'export'])->name('export.data.download');
+    Route::post('/export-data/objectids/import', [ExportDataController::class, 'importObjectIds'])->name('export.data.objectids.import');
+    Route::post('/export-data/objectids/reset', [ExportDataController::class, 'resetImportedObjectIds'])->name('export.data.objectids.reset');
 
     Route::post('/export/start', [ExportDataController::class, 'export'])->name('export.start');
     Route::get('/export/status/{id}', [ExportDataController::class, 'check'])
@@ -405,4 +407,4 @@ Route::get('/import-buildings-test', [BuildingImportController::class, 'import']
 use App\Http\Controllers\HousingUnitImportController;
 
 Route::get('/import-housing-units', [HousingUnitImportController::class, 'import']);
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

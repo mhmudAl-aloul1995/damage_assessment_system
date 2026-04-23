@@ -15,7 +15,28 @@
 		<div class="card shadow-sm">
 			<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
 				<h3 class="mb-0"><?php echo e(__('ui.exports.title')); ?></h3>
+				<div class="d-flex align-items-center flex-wrap gap-2">
+					<button type="button" class="btn btn-sm btn-light-primary" data-bs-toggle="modal"
+						data-bs-target="#importObjectIdsModal">
+						<i class="ki-duotone ki-file-up fs-5">
+							<span class="path1"></span>
+							<span class="path2"></span>
+						</i>
+						<?php echo e(__('ui.exports.import_objectids_excel')); ?>
 
+					</button>
+
+					<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($importedObjectIds)): ?>
+						<button type="button" class="btn btn-sm btn-light-danger" id="resetObjectIdsFilterBtn">
+							<i class="ki-duotone ki-cross-circle fs-5">
+								<span class="path1"></span>
+								<span class="path2"></span>
+							</i>
+							<?php echo e(__('ui.exports.reset_objectid_import_filter')); ?>
+
+						</button>
+					<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+				</div>
 
 			</div>
 
@@ -24,6 +45,26 @@
 					<div class="alert alert-danger">
 						<?php echo e(session('error')); ?>
 
+					</div>
+				<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+				<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($importedObjectIds)): ?>
+					<div class="alert alert-info d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+						<div>
+							<strong><?php echo e(__('ui.exports.objectid_import_active')); ?></strong>
+							<div class="text-muted fs-7 mt-1">
+								<?php echo e(__('ui.exports.objectid_import_active_count', ['count' => count($importedObjectIds)])); ?>
+
+							</div>
+						</div>
+						<div class="d-flex flex-wrap gap-2">
+							<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = array_slice($importedObjectIds, 0, 8); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $objectId): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+								<span class="badge badge-light-primary"><?php echo e($objectId); ?></span>
+							<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+							<?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(count($importedObjectIds) > 8): ?>
+								<span class="badge badge-light">+<?php echo e(count($importedObjectIds) - 8); ?></span>
+							<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+						</div>
 					</div>
 				<?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
@@ -343,6 +384,49 @@
 		</div>
 	</div>
 
+	<div class="modal fade" id="importObjectIdsModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<form id="importObjectIdsForm" enctype="multipart/form-data">
+					<?php echo csrf_field(); ?>
+					<div class="modal-header">
+						<h2 class="fw-bold"><?php echo e(__('ui.exports.import_objectids_excel')); ?></h2>
+						<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+							<i class="ki-duotone ki-cross fs-1">
+								<span class="path1"></span>
+								<span class="path2"></span>
+							</i>
+						</div>
+					</div>
+
+					<div class="modal-body py-10 px-lg-17">
+						<div class="mb-7">
+							<label class="required fw-semibold fs-6 mb-2 d-block"><?php echo e(__('ui.exports.objectid_import_file_label')); ?></label>
+							<input type="file" name="objectids_file" id="objectids_file"
+								class="form-control form-control-solid" accept=".xlsx,.xls,.csv" />
+							<div class="form-text"><?php echo e(__('ui.exports.objectid_import_file_help')); ?></div>
+							<div class="invalid-feedback d-block" id="objectids-file-error" style="display: none;"></div>
+						</div>
+					</div>
+
+					<div class="modal-footer flex-center">
+						<button type="button" class="btn btn-light me-3" data-bs-dismiss="modal">
+							<?php echo e(__('ui.buttons.cancel')); ?>
+
+						</button>
+						<button type="submit" class="btn btn-primary" id="importObjectIdsSubmitBtn">
+							<span class="indicator-label"><?php echo e(__('ui.exports.import_objectids_excel')); ?></span>
+							<span class="indicator-progress"><?php echo e(__('ui.auth.please_wait')); ?>
+
+								<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+							</span>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
 
 <?php $__env->stopSection(); ?>
 
@@ -454,6 +538,19 @@
 
 		function disableExportButtons() {
 			$('.export-btn').prop('disabled', true);
+		}
+
+		function setImportObjectIdsLoading(isLoading) {
+			const button = $('#importObjectIdsSubmitBtn');
+			if (!button.length) return;
+
+			if (isLoading) {
+				button.attr('data-kt-indicator', 'on');
+				button.prop('disabled', true);
+			} else {
+				button.removeAttr('data-kt-indicator');
+				button.prop('disabled', false);
+			}
 		}
 
 		function showPreparingCard() {
@@ -592,6 +689,64 @@
 					btn.innerHTML = '<i class="fas fa-chevron-left me-1"></i> <?php echo e(__('ui.exports.show')); ?>';
 				});
 			}
+
+			$('#importObjectIdsForm').on('submit', function (e) {
+				e.preventDefault();
+
+				const form = this;
+				const formData = new FormData(form);
+
+				$('#objectids-file-error').hide().text('');
+				setImportObjectIdsLoading(true);
+
+				$.ajax({
+					url: <?php echo json_encode(route('export.data.objectids.import'), 15, 512) ?>,
+					type: 'POST',
+					data: formData,
+					processData: false,
+					contentType: false,
+					success: function (response) {
+						toastr.success(response.message);
+						const modalElement = document.getElementById('importObjectIdsModal');
+						const modalInstance = bootstrap.Modal.getInstance(modalElement);
+						if (modalInstance) {
+							modalInstance.hide();
+						}
+						form.reset();
+						window.location.reload();
+					},
+					error: function (xhr) {
+						const message = xhr.responseJSON?.message || <?php echo json_encode(__('ui.exports.objectid_import_failed'), 15, 512) ?>;
+						const fieldMessage = xhr.responseJSON?.errors?.objectids_file?.[0];
+
+						if (fieldMessage) {
+							$('#objectids-file-error').text(fieldMessage).show();
+						}
+
+						toastr.error(message);
+					},
+					complete: function () {
+						setImportObjectIdsLoading(false);
+					}
+				});
+			});
+
+			$('#resetObjectIdsFilterBtn').on('click', function () {
+				$.ajax({
+					url: <?php echo json_encode(route('export.data.objectids.reset'), 15, 512) ?>,
+					type: 'POST',
+					data: {
+						_token: <?php echo json_encode(csrf_token(), 15, 512) ?>
+					},
+					success: function (response) {
+						toastr.success(response.message);
+						window.location.reload();
+					},
+					error: function (xhr) {
+						toastr.error(xhr.responseJSON?.message || <?php echo json_encode(__('ui.exports.objectid_import_reset_failed'), 15, 512) ?>);
+					}
+				});
+			});
 
 			$('.export-btn').on('click', function (e) {
 				e.preventDefault();
