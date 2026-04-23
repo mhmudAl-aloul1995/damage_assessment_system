@@ -400,8 +400,8 @@ class HousingUnitImportController extends Controller
                                 'floor_number' => $unit->floor_number,
                                 'housing_unit_number' => $unit->housing_unit_number,
                                 'unit_direction' => $unit->unit_direction,
-                               'created_at' => $lawyerStatusAt,
-                                    'updated_at' => $lawyerStatusAt,
+                                'created_at' => $now,
+                                'updated_at' => $now,
                             ];
 
                             foreach ($allowedFields as $field) {
@@ -427,6 +427,14 @@ class HousingUnitImportController extends Controller
                             if (!is_array($decoded)) {
                                 $invalidJsonSkipped++;
                             } else {
+                                $editAssessmentDate = $now;
+
+                                if (!empty($unit->engineering_audit_date)) {
+                                    $editAssessmentDate = $this->parseDateValue($unit->engineering_audit_date);
+                                } elseif (!empty($unit->legal_audit_date)) {
+                                    $editAssessmentDate = $this->parseDateValue($unit->legal_audit_date);
+                                }
+
                                 foreach ($allowedFields as $fieldName) {
                                     if (!property_exists($existingHousing, $fieldName)) {
                                         continue;
@@ -466,8 +474,8 @@ class HousingUnitImportController extends Controller
                                         'field_name' => $fieldName,
                                         'field_value' => $jsonValue,
                                         'user_id' => null,
-                                      'created_at' => $lawyerStatusAt,
-                                    'updated_at' => $lawyerStatusAt,
+                                        'created_at' => $editAssessmentDate,
+                                        'updated_at' => $editAssessmentDate,
                                     ]);
 
                                     $editInserted++;
@@ -481,17 +489,17 @@ class HousingUnitImportController extends Controller
                         $engineerStatusId = null;
 
                         if (empty($engineerUserId)) {
-                            $engineerStatusId = 2;
+                            $engineerStatusId = 2; // assigned_to_engineer
                         } else {
                             switch ($engineeringAuditStatus) {
                                 case 'Accepted by Engineer':
-                                    $engineerStatusId = 4;
+                                    $engineerStatusId = 4; // accepted_by_engineer
                                     break;
                                 case 'Engineer Review need':
-                                    $engineerStatusId = 5;
+                                    $engineerStatusId = 5; // need_review
                                     break;
                                 case 'Rejected By Engineer':
-                                    $engineerStatusId = 3;
+                                    $engineerStatusId = 3; // rejected_by_engineer
                                     break;
                             }
                         }
@@ -546,21 +554,21 @@ class HousingUnitImportController extends Controller
                         $lawyerStatusId = null;
 
                         if (empty($lawyerUserId)) {
-                            $lawyerStatusId = 6;
+                            $lawyerStatusId = 6; // assigned_to_lawyer
                         } else {
                             switch ($legalAuditStatus) {
                                 case 'Accepted by Lawyer':
-                                    $lawyerStatusId = 8;
+                                    $lawyerStatusId = 8; // accepted_by_lawyer
                                     break;
                                 case 'Lawyer Review need':
-                                    $lawyerStatusId = 7;
+                                    $lawyerStatusId = 7; // legal_notes
                                     break;
                                 case 'Rejected By Lawyer':
-                                    $lawyerStatusId = 7;
+                                    $lawyerStatusId = 7; // legal_notes
                                     break;
                                 default:
                                     if (!empty($unit->lawyer_notes)) {
-                                        $lawyerStatusId = 7;
+                                        $lawyerStatusId = 7; // legal_notes
                                     }
                                     break;
                             }
