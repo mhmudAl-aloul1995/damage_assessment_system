@@ -36,13 +36,13 @@ class SyncArcGISLayers extends Command
             ],
 
             'public_building' => [
-                'table' => 'public_building_survay',
+                'table' => 'public_building_survays',
                 'url' => env('ARCGIS_PUBLIC_BUILDINGS_URL'),
                 'unique' => 'objectid',
             ],
 
             'road_facilites' => [
-                'table' => 'road_facilites_survay',
+                'table' => 'road_facility_surveys',
                 'url' => env('ARCGIS_ROAD_FACILITIES_URL'),
                 'unique' => 'objectid',
             ],
