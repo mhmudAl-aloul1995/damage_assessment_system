@@ -3,15 +3,15 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 class SyncArcGISLayers extends Command
 {
-    protected $signature = 'sync:arcgis-layers';
+    protected $signature = 'sync:arcgis-layers {table?} {--chunk=1000}';
 
-    protected $description = 'Sync buildings, housing units, public buildings and road facilities from ArcGIS';
+    protected $description = 'Sync ArcGIS layers';
 
     public function handle()
     {
@@ -35,24 +35,36 @@ class SyncArcGISLayers extends Command
                 'unique' => 'objectid',
             ],
 
-            'public_buildings' => [
-                'table' => 'public_building_surveys',
+            'public_builfing' => [
+                'table' => 'public_builfing_survay',
                 'url' => env('ARCGIS_PUBLIC_BUILDINGS_URL'),
                 'unique' => 'objectid',
             ],
 
-            'road_facilities' => [
-                'table' => 'road_facilities_surveys',
+            'road_facilites' => [
+                'table' => 'road_facilites_survay',
                 'url' => env('ARCGIS_ROAD_FACILITIES_URL'),
                 'unique' => 'objectid',
             ],
         ];
 
-        foreach ($layers as $name => $config) {
-            $this->syncLayer($name, $config, $token);
+        $tableOnly = $this->argument('table');
+
+        if ($tableOnly) {
+            if (! isset($layers[$tableOnly])) {
+                $this->error("Table '{$tableOnly}' not found in sync config.");
+                $this->info('Available tables: '.implode(', ', array_keys($layers)));
+                return self::FAILURE;
+            }
+
+            $this->syncLayer($tableOnly, $layers[$tableOnly], $token);
+        } else {
+            foreach ($layers as $name => $config) {
+                $this->syncLayer($name, $config, $token);
+            }
         }
 
-        $this->info('All ArcGIS layers synced successfully.');
+        $this->info('Sync finished.');
 
         return self::SUCCESS;
     }
@@ -60,13 +72,20 @@ class SyncArcGISLayers extends Command
     private function syncLayer(string $name, array $config, string $token): void
     {
         $table = $config['table'];
-        $serviceUrl = rtrim($config['url'], '/') . '/query';
         $unique = $config['unique'];
+        $url = $config['url'] ?? null;
+
+        if (empty($url)) {
+            $this->error("Missing ArcGIS URL for {$name}. Check .env");
+            return;
+        }
 
         if (! Schema::hasTable($table)) {
             $this->error("Table not found: {$table}");
             return;
         }
+
+        $serviceUrl = rtrim($url, '/') . '/query';
 
         $tableColumns = Schema::getColumnListing($table);
 
@@ -84,7 +103,7 @@ class SyncArcGISLayers extends Command
             ->toArray();
 
         $offset = 0;
-        $limit = 1000;
+        $limit = (int) $this->option('chunk');
 
         $inserted = 0;
         $updated = 0;
@@ -110,7 +129,7 @@ class SyncArcGISLayers extends Command
             $data = $response->json();
 
             if (isset($data['error'])) {
-                $this->error("ArcGIS Query Error in {$name}: " . ($data['error']['message'] ?? 'Unknown error'));
+                $this->error("ArcGIS Query Error in {$name}: ".($data['error']['message'] ?? 'Unknown error'));
                 return;
             }
 
@@ -170,8 +189,8 @@ class SyncArcGISLayers extends Command
                     }
 
                     DB::table($table)->insert($row);
-                    $inserted++;
 
+                    $inserted++;
                     continue;
                 }
 
@@ -209,16 +228,23 @@ class SyncArcGISLayers extends Command
 
     private function getArcgisToken(): ?string
     {
-        $response = Http::asForm()->post('https://www.arcgis.com/sharing/rest/generateToken', [
-            'f' => 'json',
-            'username' => env('ARCGIS_USERNAME'),
-            'password' => env('ARCGIS_PASSWORD'),
-            'client' => 'referer',
-            'referer' => config('app.url'),
-            'expiration' => 60,
-        ]);
+        $response = Http::asForm()
+            ->timeout(60)
+            ->post('https://www.arcgis.com/sharing/rest/generateToken', [
+                'f' => 'json',
+                'username' => env('ARCGIS_USERNAME'),
+                'password' => env('ARCGIS_PASSWORD'),
+                'client' => 'referer',
+                'referer' => config('app.url'),
+                'expiration' => 60,
+            ]);
 
         $data = $response->json();
+
+        if (isset($data['error'])) {
+            $this->error('ArcGIS Token Error: '.($data['error']['message'] ?? 'Unknown error'));
+            return null;
+        }
 
         return $data['token'] ?? null;
     }
