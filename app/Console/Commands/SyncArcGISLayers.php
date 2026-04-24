@@ -35,12 +35,13 @@ class SyncArcGISLayers extends Command
                 'unique' => 'objectid',
             ],
 
-            'public_building_surveys' => [
-                'table' => 'public_building_surveys',
-                'url' => config('services.arcgis.public_building_survey_layer_url'),
-                'unique' => 'objectid',
-                'returnGeometry' => true,
-            ],
+           'public_building_surveys' => [
+    'table' => 'public_building_surveys',
+    'url' => config('services.arcgis.public_building_survey_layer_url'),
+    'unique' => 'objectid',
+    'returnGeometry' => true,
+    'where' => '1=1',
+],
 
             'road_facility_surveys' => [
                 'table' => 'road_facility_surveys',
