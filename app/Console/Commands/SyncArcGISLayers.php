@@ -35,7 +35,7 @@ class SyncArcGISLayers extends Command
                 'unique' => 'objectid',
             ],
 
-            'public_builfing' => [
+            'public_building' => [
                 'table' => 'public_building_survay',
                 'url' => env('ARCGIS_PUBLIC_BUILDINGS_URL'),
                 'unique' => 'objectid',
