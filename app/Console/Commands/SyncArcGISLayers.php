@@ -13,7 +13,7 @@ class SyncArcGISLayers extends Command
 
     protected $description = 'Sync ArcGIS layers';
 
-    public function handle()
+    public function handle(): int
     {
         $token = $this->getArcgisToken();
 
@@ -35,12 +35,12 @@ class SyncArcGISLayers extends Command
                 'unique' => 'objectid',
             ],
 
-          'public_building_surveys' => [
+            'public_building_surveys' => [
                 'table' => 'public_building_surveys',
                 'url' => config('services.arcgis.public_building_survey_layer_url'),
-                'returnGeometry' => true,
                 'unique' => 'objectid',
-                   ],
+                'returnGeometry' => true,
+            ],
 
             'road_facility_surveys' => [
                 'table' => 'road_facility_surveys',
@@ -77,7 +77,7 @@ class SyncArcGISLayers extends Command
         $url = $config['url'] ?? null;
 
         if (empty($url)) {
-            $this->error("Missing ArcGIS URL for {$name}. Check .env");
+            $this->error("Missing ArcGIS URL for {$name}. Check .env/services.php");
             return;
         }
 
@@ -86,7 +86,7 @@ class SyncArcGISLayers extends Command
             return;
         }
 
-        $serviceUrl = rtrim($url, '/') . '/query';
+        $serviceUrl = $this->normalizeQueryUrl($url);
 
         $tableColumns = Schema::getColumnListing($table);
 
@@ -117,15 +117,20 @@ class SyncArcGISLayers extends Command
             $this->line("Fetching {$name} offset: {$offset}");
 
             $response = Http::timeout(120)->get($serviceUrl, [
-                'where' => '1=1',
+                'where' => $config['where'] ?? '1=1',
                 'outFields' => '*',
                 'f' => 'json',
                 'token' => $token,
                 'resultOffset' => $offset,
                 'resultRecordCount' => $limit,
                 'orderByFields' => 'objectid ASC',
-                'returnGeometry' => 'false',
+                'returnGeometry' => $config['returnGeometry'] ?? false,
             ]);
+
+            if (! $response->successful()) {
+                $this->error("ArcGIS query failed for {$name}: ".$response->body());
+                return;
+            }
 
             $data = $response->json();
 
@@ -142,6 +147,14 @@ class SyncArcGISLayers extends Command
 
             foreach ($features as $feature) {
                 $attributes = $feature['attributes'] ?? [];
+
+                if (
+                    in_array('location', $tableColumns)
+                    && ($attributes['location'] ?? null) === null
+                    && isset($feature['geometry'])
+                ) {
+                    $attributes['location'] = json_encode($feature['geometry'], JSON_UNESCAPED_UNICODE);
+                }
 
                 $arcgisMap = [];
 
@@ -248,6 +261,25 @@ class SyncArcGISLayers extends Command
         }
 
         return $data['token'] ?? null;
+    }
+
+    private function normalizeQueryUrl(string $url): string
+    {
+        $url = rtrim($url, '/');
+
+        if (str_ends_with(strtolower($url), '/query')) {
+            return $url;
+        }
+
+        if (preg_match('#/featureserver$#i', $url)) {
+            return $url.'/0/query';
+        }
+
+        if (preg_match('#/featureserver/\d+$#i', $url)) {
+            return $url.'/query';
+        }
+
+        return $url;
     }
 
     private function makeHash(array $row): string
