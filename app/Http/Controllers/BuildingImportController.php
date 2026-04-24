@@ -262,61 +262,70 @@ class BuildingImportController extends Controller
                         }
 
                         /*
-                         * edit_assessment
-                         */
-                        if (!empty($building->globalid) && !empty($building->all_data)) {
-                            $decoded = json_decode($building->all_data, true);
+ * edit_assessment
+ */
+if (!empty($building->globalid) && !empty($building->all_data)) {
+    $decoded = json_decode($building->all_data, true);
 
-                            if (!is_array($decoded)) {
-                                $invalidJsonSkipped++;
-                            } else {
-                                foreach ($allowedFields as $fieldName) {
-                                    if (!property_exists($building, $fieldName)) {
-                                        continue;
-                                    }
+    if (!is_array($decoded)) {
+        $invalidJsonSkipped++;
+    } else {
+        $editAssessmentDate = $now;
 
-                                    if (!array_key_exists($fieldName, $decoded)) {
-                                        continue;
-                                    }
+        if (!empty($building->engineering_audit_date)) {
+            $editAssessmentDate = $this->parseDateValue($building->engineering_audit_date);
+        } elseif (!empty($building->legal_audit_date)) {
+            $editAssessmentDate = $this->parseDateValue($building->legal_audit_date);
+        }
 
-                                    $tableValue = $this->normalizeValue($building->{$fieldName});
-                                    $jsonValue = $this->normalizeValue($decoded[$fieldName]);
+        foreach ($allowedFields as $fieldName) {
+            if (!property_exists($building, $fieldName)) {
+                continue;
+            }
 
-                                    if ($tableValue === $jsonValue) {
-                                        continue;
-                                    }
+            if (!array_key_exists($fieldName, $decoded)) {
+                continue;
+            }
 
-                                    $sameValueExists = DB::table('edit_assessments')
-                                        ->where('global_id', $building->globalid)
-                                        ->where('type', 'building_table')
-                                        ->where('field_name', $fieldName)
-                                        ->where(function ($query) use ($tableValue) {
-                                            if ($tableValue === null) {
-                                                $query->whereNull('field_value');
-                                            } else {
-                                                $query->where('field_value', $tableValue);
-                                            }
-                                        })
-                                        ->exists();
+            $tableValue = $this->normalizeValue($building->{$fieldName});
+            $jsonValue = $this->normalizeValue($decoded[$fieldName]);
 
-                                    if ($sameValueExists) {
-                                        continue;
-                                    }
+            if ($tableValue === $jsonValue) {
+                continue;
+            }
 
-                                    DB::table('edit_assessments')->insert([
-                                        'global_id' => $building->globalid,
-                                        'type' => 'building_table',
-                                        'field_name' => $fieldName,
-                                        'field_value' => $tableValue,
-                                        'user_id' => null,
-                                         'created_at' => $engineerStatusAt,
-                                    'updated_at' => $engineerStatusAt,
-                                    ]);
+            $sameValueExists = DB::table('edit_assessments')
+                ->where('global_id', $building->globalid)
+                ->where('type', 'building_table')
+                ->where('field_name', $fieldName)
+                ->where(function ($query) use ($tableValue) {
+                    if ($tableValue === null) {
+                        $query->whereNull('field_value');
+                    } else {
+                        $query->where('field_value', $tableValue);
+                    }
+                })
+                ->exists();
 
-                                    $editInserted++;
-                                }
-                            }
-                        }
+            if ($sameValueExists) {
+                continue;
+            }
+
+            DB::table('edit_assessments')->insert([
+                'global_id' => $building->globalid,
+                'type' => 'building_table',
+                'field_name' => $fieldName,
+                'field_value' => $tableValue,
+                'user_id' => null,
+                'created_at' => $editAssessmentDate,
+                'updated_at' => $editAssessmentDate,
+            ]);
+
+            $editInserted++;
+        }
+    }
+}
+      
 
                         /*
                          * building_statuses - Engineer
