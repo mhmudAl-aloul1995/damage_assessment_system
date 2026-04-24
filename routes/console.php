@@ -14,7 +14,7 @@ Schedule::command('queue:work --stop-when-empty')
     ->appendOutputTo(storage_path('logs/schedule.log'))
     ->runInBackground();
 
-Schedule::command('sync:building')
+/* Schedule::command('sync:building')
     ->hourly()
     ->withoutOverlapping() // Prevents the task from running if the previous one is still active
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
@@ -35,9 +35,9 @@ Schedule::command('sync:public-building')
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
     ->appendOutputTo(storage_path('logs/schedule.log'))
-    ->runInBackground();
-Schedule::command('sync:road-facility')
-    ->hourly()
+    ->runInBackground(); */
+Schedule::command('sync:arcgis-layers')
+    ->dailyAt(config('database_backup.schedule_time', '00:00'))
     ->withoutOverlapping()
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
