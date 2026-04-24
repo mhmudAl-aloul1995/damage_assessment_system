@@ -8295,7 +8295,16 @@ WHERE
 COMMIT;
 
 START TRANSACTION;
-/*'51ea2320-1c6b-4115-af83-e8103cb335c0',
+
+DELETE ea
+FROM edit_assessments AS ea
+INNER JOIN housing_units AS hu
+    ON hu.globalid = ea.global_id
+INNER JOIN buildings AS b
+    ON b.globalid = hu.parentglobalid
+WHERE ea.type = 'housing_table'
+AND b.globalid IN (
+'51ea2320-1c6b-4115-af83-e8103cb335c0',
                 '6480b68c-c0c7-4411-9f5d-3060cf30725c',
                 '21f0fa33-e4cf-4713-a585-c5c17902cd43',
                 '30139479-0413-4190-a7e3-054f91af2609',
@@ -9221,7 +9230,7 @@ START TRANSACTION;
                 '3675866c-1356-4323-9a91-9b6119fdfb92',
                 'e46451e9-6bb9-4e38-9e21-7c16ede39f0d',
                 'bcb0ac5d-2379-4270-9dd8-52211f4f659c',
-                 'bff8d28f-a1fd-4493-982a-d2357b284fc3',
+                'bff8d28f-a1fd-4493-982a-d2357b284fc3',
                 '83fed01a-34e1-4f2f-aa14-bdd8c2a4fc6c',
                 '6c6ba42d-6a76-41f9-a715-a2c5c606525d',
                 '0ff99199-16a8-422e-b294-e83c719e2ce2',
@@ -10024,7 +10033,6 @@ START TRANSACTION;
                 'ad50bb0a-d211-4dd5-ba24-4a97c23013d5',
                 '559188da-5688-412c-b5f0-190f32d50583',
                 '8549eaaf-1b60-4265-9802-db19919dee95',
-                
                 'd54c3136-aff1-42c6-8efa-2831cd936b64',
                 'dffd5b91-a6c1-40e9-9d93-3dc282b1679d',
                 'ea9ba10e-2305-4d49-9e12-4a270e433967',
@@ -10427,17 +10435,6 @@ START TRANSACTION;
                 '6abddd39-ea70-4fe8-8a7d-80a00552c6be',
                 '6fa9d3a9-cec9-4ba2-9ebe-407b4a1ca484',
                 '296570d6-aa12-49c1-82c5-ec9409cc216c',
-                */
-DELETE ea
-FROM edit_assessments AS ea
-INNER JOIN housing_units AS hu
-    ON hu.globalid = ea.global_id
-INNER JOIN buildings AS b
-    ON b.globalid = hu.parentglobalid
-WHERE ea.type = 'housing_table'
-AND b.globalid IN (
-
-               
                 '5aac7361-926e-4717-958c-00aaeee5765f',
                 '1fafe582-7ce9-49d3-9e0f-20604b0b05f3',
                 '8476a88b-c7e2-47f6-999d-cb6c6d8f582a',

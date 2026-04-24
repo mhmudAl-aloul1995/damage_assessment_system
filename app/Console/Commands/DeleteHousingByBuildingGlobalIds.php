@@ -2884,5 +2884,9 @@ class DeleteHousingByBuildingGlobalIds extends Command
         $this->info("Total housing_statuses deleted: {$totalHousingStatuses}");
 
         return self::SUCCESS;
+        /**DELETE FROM edit_assessments WHERE created_at > '2026-04-23 15:30:00';
+DELETE FROM assigned_assessment_users WHERE created_at > '2026-04-23 15:30:00';
+DELETE FROM building_statuses WHERE created_at > '2026-04-23 15:30:00';
+DELETE FROM housing_statuses WHERE created_at > '2026-04-23 15:30:00'; */
     }
 }

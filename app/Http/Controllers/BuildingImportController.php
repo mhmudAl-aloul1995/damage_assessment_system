@@ -13,167 +13,6 @@ class BuildingImportController extends Controller
         $managerId = 1297;
         $now = Carbon::now();
 
-        $allowedFields = [
-            'audit_status',
-            'final_approval_status',
-            'final_approval_notes',
-            'auditor_id',
-            'audit_date',
-            'engineer_id',
-            'engineer_notes',
-            'engineering_audit_status',
-            'engineering_audit_date',
-            'lawyer_id',
-            'lawyer_notes',
-            'legal_audit_status',
-            'legal_audit_date',
-            'objectid',
-            'globalid',
-            'Field_status',
-            'Building_Committee_Status',
-            'Unit_Committee_Status',
-            'Unit_Committee_Count',
-            'PARCEL_NO1',
-            'BLOCK_NO1',
-            'OWNER_NA',
-            'units_count',
-            'AssignedTo',
-            'GroupNumber',
-            'Zone_Code',
-            'start',
-            'end',
-            'today',
-            'username',
-            'simserial',
-            'subscriberid',
-            'deviceid',
-            'phonenumber',
-            'Weather',
-            'Security_Situation',
-            'building_damage_status',
-            'building_type',
-            'building_type_other',
-            'building_use',
-            'building_name',
-            'Date_of_damage',
-            'building_material',
-            'other_material',
-            'building_age',
-            'floor_nos',
-            'ground_floor_area__m2',
-            'Floor_Area_m2',
-            'units_nos',
-            'damaged_units_nos',
-            'occupied_units_nos',
-            'vacant_units_nos',
-            'is_damaged_before',
-            'if_damaged',
-            'building_debris_exist',
-            'building_debris_qty',
-            'building_debris_blocking',
-            'uxo_present',
-            'bodies_present',
-            'estimated_number_of_bodies',
-            'building_status_visit',
-            'building_roof_type',
-            'clay_tile_area',
-            'concrete_area',
-            'aspestos_area',
-            'scorite_area',
-            'other_roof',
-            'other_roof_area',
-            'building_ownership',
-            'owner_status',
-            'building_responsible',
-            'building_authorization',
-            'land_fully_owned',
-            'owner_name',
-            'owner_id',
-            'owner_mobile',
-            'board1_name',
-            'board1_id',
-            'board1_number',
-            'board2_name',
-            'board2_id',
-            'board2_number',
-            'has_authorization_if_not_owner',
-            'authorization_details',
-            'is_rented',
-            'tenant_names',
-            'agreement_type',
-            'agreement_duration',
-            'has_documents',
-            'doc_types_available',
-            'doc_types_other',
-            'no_documents_reason',
-            'need_renew_docs',
-            'doc_challenges',
-            'doc_challenges_other',
-            'has_dispute',
-            'dispute_types',
-            'dispute_other',
-            'general_notes',
-            'attach_one_photo_for_each_of_the_following_documents',
-            'select_document',
-            'has_elevator',
-            'elevator_number',
-            'elevator_status',
-            'elevator_box',
-            'elevator_motor',
-            'has_solar',
-            'solar_damage_status',
-            'has_well',
-            'well_damage_status',
-            'has_fence',
-            'fence_damage_status',
-            'fence_length',
-            'has_electric_room',
-            'electric_room_damage_status',
-            'has_sewage',
-            'sewage_damage_status',
-            'has_other_service',
-            'other_service_details',
-            'building_services_notes',
-            'staircase_status',
-            'Staircase_widt',
-            'has_parking',
-            'parking_status',
-            'garage_area',
-            'garage_type',
-            'has_canopy',
-            'canopy_status',
-            'carport_length',
-            'carport_width',
-            'carport_area',
-            'carport_height',
-            'has_basement',
-            'basement_status',
-            'basement_area',
-            'has_mezzanine',
-            'mezzanine_status',
-            'roof_terrace_area',
-            'Comments_Recommendations',
-            'CreationDate',
-            'Creator',
-            'EditDate',
-            'Editor',
-            'security_Info',
-            'is_draft',
-            'Service_Ownership',
-            'Service_Ownership_Name',
-            'land_area',
-            'Governorate',
-            'Municipalitie',
-            'Neighborhood',
-            'owner_name_1',
-            'owner_mobile_1',
-            'owner_mobile_v_1',
-            'floor_nos_1',
-            'building_address',
-            'is_risk_parts',
-            'elevator_damaged_doors',
-        ];
-
         $assignedInserted = 0;
         $editInserted = 0;
         $buildingStatusesInserted = 0;
@@ -186,8 +25,18 @@ class BuildingImportController extends Controller
         try {
             DB::table('warda_buildings')
                 ->orderBy('id')
-                ->chunkById(200, function ($buildings) use ($managerId, $now, $allowedFields, &$assignedInserted, &$editInserted, &$buildingStatusesInserted, &$invalidJsonSkipped, &$skippedRows, &$missingMappedUsers) {
+                ->chunkById(200, function ($buildings) use (
+                    $managerId,
+                    $now,
+                    &$assignedInserted,
+                    &$editInserted,
+                    &$buildingStatusesInserted,
+                    &$invalidJsonSkipped,
+                    &$skippedRows,
+                    &$missingMappedUsers
+                ) {
                     foreach ($buildings as $building) {
+
                         $engineeringAuditStatus = trim((string) ($building->engineering_audit_status ?? ''));
                         $legalAuditStatus = trim((string) ($building->legal_audit_status ?? ''));
 
@@ -212,9 +61,12 @@ class BuildingImportController extends Controller
                         }
 
                         /*
-                         * assigned_assessment_users - Engineer
-                         */
+                        |--------------------------------------------------------------------------
+                        | assigned_assessment_users - Engineer
+                        |--------------------------------------------------------------------------
+                        */
                         if (!empty($engineerUserId) && !empty($building->objectid)) {
+
                             $exists = DB::table('assigned_assessment_users')
                                 ->where('manager_id', $managerId)
                                 ->where('user_id', $engineerUserId)
@@ -237,9 +89,12 @@ class BuildingImportController extends Controller
                         }
 
                         /*
-                         * assigned_assessment_users - Lawyer
-                         */
+                        |--------------------------------------------------------------------------
+                        | assigned_assessment_users - Lawyer
+                        |--------------------------------------------------------------------------
+                        */
                         if (!empty($lawyerUserId) && !empty($building->objectid)) {
+
                             $exists = DB::table('assigned_assessment_users')
                                 ->where('manager_id', $managerId)
                                 ->where('user_id', $lawyerUserId)
@@ -262,204 +117,145 @@ class BuildingImportController extends Controller
                         }
 
                         /*
- * edit_assessment
- */
-if (!empty($building->globalid) && !empty($building->all_data)) {
-    $decoded = json_decode($building->all_data, true);
+                        |--------------------------------------------------------------------------
+                        | edit_assessments
+                        |--------------------------------------------------------------------------
+                        */
+                        if (!empty($building->globalid) && !empty($building->all_data)) {
 
-    if (!is_array($decoded)) {
-        $invalidJsonSkipped++;
-    } else {
-        $editAssessmentDate = $now;
+                            $decoded = json_decode($building->all_data, true);
 
-        if (!empty($building->engineering_audit_date)) {
-            $editAssessmentDate = $this->parseDateValue($building->engineering_audit_date);
-        } elseif (!empty($building->legal_audit_date)) {
-            $editAssessmentDate = $this->parseDateValue($building->legal_audit_date);
-        }
+                            if (!is_array($decoded)) {
+                                $invalidJsonSkipped++;
+                            } else {
 
-        foreach ($allowedFields as $fieldName) {
-            if (!property_exists($building, $fieldName)) {
-                continue;
-            }
+                                $editAssessmentDate = $now;
 
-            if (!array_key_exists($fieldName, $decoded)) {
-                continue;
-            }
+                                if (!empty($building->engineering_audit_date)) {
+                                    $editAssessmentDate = $this->parseDateValue($building->engineering_audit_date);
+                                } elseif (!empty($building->legal_audit_date)) {
+                                    $editAssessmentDate = $this->parseDateValue($building->legal_audit_date);
+                                }
 
-            $tableValue = $this->normalizeValue($building->{$fieldName});
-            $jsonValue = $this->normalizeValue($decoded[$fieldName]);
+                                $userId = $engineerUserId ?: $lawyerUserId;
 
-            if ($tableValue === $jsonValue) {
-                continue;
-            }
+                                foreach ($decoded as $fieldName => $jsonValue) {
 
-            $sameValueExists = DB::table('edit_assessments')
-                ->where('global_id', $building->globalid)
-                ->where('type', 'building_table')
-                ->where('field_name', $fieldName)
-                ->where(function ($query) use ($tableValue) {
-                    if ($tableValue === null) {
-                        $query->whereNull('field_value');
-                    } else {
-                        $query->where('field_value', $tableValue);
-                    }
-                })
-                ->exists();
+                                    if (!property_exists($building, $fieldName)) {
+                                        continue;
+                                    }
 
-            if ($sameValueExists) {
-                continue;
-            }
+                                    $tableValue = $this->normalizeValue($building->{$fieldName});
+                                    $jsonValue = $this->normalizeValue($jsonValue);
 
-            DB::table('edit_assessments')->insert([
-                'global_id' => $building->globalid,
-                'type' => 'building_table',
-                'field_name' => $fieldName,
-                'field_value' => $tableValue,
-                'user_id' => null,
-                'created_at' => $editAssessmentDate,
-                'updated_at' => $editAssessmentDate,
-            ]);
+                                    if ($tableValue === $jsonValue) {
+                                        continue;
+                                    }
 
-            $editInserted++;
-        }
-    }
-}
-      
+                                    $sameValueExists = DB::table('edit_assessments')
+                                        ->where('global_id', $building->globalid)
+                                        ->where('type', 'building_table')
+                                        ->where('field_name', $fieldName)
+                                        ->where(function ($query) use ($tableValue) {
+                                            if ($tableValue === null) {
+                                                $query->whereNull('field_value');
+                                            } else {
+                                                $query->where('field_value', $tableValue);
+                                            }
+                                        })
+                                        ->exists();
+
+                                    if ($sameValueExists) {
+                                        continue;
+                                    }
+
+                                    DB::table('edit_assessments')->insert([
+                                        'global_id' => $building->globalid,
+                                        'type' => 'building_table',
+                                        'field_name' => $fieldName,
+                                        'field_value' => $tableValue,
+                                        'user_id' => $userId,
+                                        'created_at' => $editAssessmentDate,
+                                        'updated_at' => $editAssessmentDate,
+                                    ]);
+
+                                    $editInserted++;
+                                }
+                            }
+                        }
 
                         /*
-                         * building_statuses - Engineer
-                         */
+                        |--------------------------------------------------------------------------
+                        | building_statuses - Engineer
+                        |--------------------------------------------------------------------------
+                        */
                         $engineerStatusId = null;
 
                         if (empty($engineerUserId)) {
                             $engineerStatusId = 2;
                         } else {
-                            switch ($engineeringAuditStatus) {
-                                case 'Accepted by Engineer':
-                                    $engineerStatusId = 4;
-                                    break;
-                                case 'Engineer Review need':
-                                    $engineerStatusId = 5;
-                                    break;
-                                case 'Rejected By Engineer':
-                                    $engineerStatusId = 3;
-                                    break;
-                            }
+                            match ($engineeringAuditStatus) {
+                                'Accepted by Engineer' => $engineerStatusId = 4,
+                                'Engineer Review need' => $engineerStatusId = 5,
+                                'Rejected By Engineer' => $engineerStatusId = 3,
+                                default => null,
+                            };
                         }
 
-                        if ($engineerStatusId !== null && !empty($building->objectid)) {
-                            $engineerStatusAt = !empty($building->engineering_audit_date)
+                        if ($engineerStatusId && !empty($building->objectid)) {
+
+                            $statusDate = !empty($building->engineering_audit_date)
                                 ? $this->parseDateValue($building->engineering_audit_date)
                                 : $now;
 
-                            $existsEngineerStatus = DB::table('building_statuses')
-                                ->where('building_id', $building->objectid)
-                                ->where('status_id', $engineerStatusId)
-                                ->where('type', 'QC/QA Engineer')
-                                ->where(function ($query) use ($engineerUserId) {
-                                    if (empty($engineerUserId)) {
-                                        $query->whereNull('user_id');
-                                    } else {
-                                        $query->where('user_id', $engineerUserId);
-                                    }
-                                })
-                                ->where(function ($query) use ($building) {
-                                    $notes = $building->engineer_notes ?? null;
+                            DB::table('building_statuses')->insert([
+                                'building_id' => $building->objectid,
+                                'status_id' => $engineerStatusId,
+                                'user_id' => $engineerUserId,
+                                'type' => 'QC/QA Engineer',
+                                'notes' => $building->engineer_notes,
+                                'created_at' => $statusDate,
+                                'updated_at' => $statusDate,
+                            ]);
 
-                                    if ($notes === null || $notes === '') {
-                                        $query->where(function ($q) {
-                                            $q->whereNull('notes')->orWhere('notes', '');
-                                        });
-                                    } else {
-                                        $query->where('notes', $notes);
-                                    }
-                                })
-                                ->exists();
-
-                            if (!$existsEngineerStatus) {
-                                DB::table('building_statuses')->insert([
-                                    'building_id' => $building->objectid,
-                                    'status_id' => $engineerStatusId,
-                                    'user_id' => $engineerUserId,
-                                    'type' => 'QC/QA Engineer',
-                                    'notes' => $building->engineer_notes,
-                                    'created_at' => $engineerStatusAt,
-                                    'updated_at' => $engineerStatusAt,
-                                ]);
-
-                                $buildingStatusesInserted++;
-                            }
+                            $buildingStatusesInserted++;
                         }
 
                         /*
-                         * building_statuses - Lawyer
-                         */
+                        |--------------------------------------------------------------------------
+                        | building_statuses - Lawyer
+                        |--------------------------------------------------------------------------
+                        */
                         $lawyerStatusId = null;
 
                         if (empty($lawyerUserId)) {
                             $lawyerStatusId = 6;
                         } else {
-                            switch ($legalAuditStatus) {
-                                case 'Accepted by Lawyer':
-                                    $lawyerStatusId = 8;
-                                    break;
-                                case 'Lawyer Review need':
-                                    $lawyerStatusId = 7;
-                                    break;
-                                case 'Rejected By Lawyer':
-                                    $lawyerStatusId = 7;
-                                    break;
-                                default:
-                                    if (!empty($building->lawyer_notes)) {
-                                        $lawyerStatusId = 7;
-                                    }
-                                    break;
-                            }
+                            match ($legalAuditStatus) {
+                                'Accepted by Lawyer' => $lawyerStatusId = 8,
+                                'Lawyer Review need' => $lawyerStatusId = 7,
+                                'Rejected By Lawyer' => $lawyerStatusId = 7,
+                                default => !empty($building->lawyer_notes) ? $lawyerStatusId = 7 : null,
+                            };
                         }
 
-                        if ($lawyerStatusId !== null && !empty($building->objectid)) {
-                            $lawyerStatusAt = !empty($building->legal_audit_date)
+                        if ($lawyerStatusId && !empty($building->objectid)) {
+
+                            $statusDate = !empty($building->legal_audit_date)
                                 ? $this->parseDateValue($building->legal_audit_date)
                                 : $now;
 
-                            $existsLawyerStatus = DB::table('building_statuses')
-                                ->where('building_id', $building->objectid)
-                                ->where('status_id', $lawyerStatusId)
-                                ->where('type', 'Legal Auditor')
-                                ->where(function ($query) use ($lawyerUserId) {
-                                    if (empty($lawyerUserId)) {
-                                        $query->whereNull('user_id');
-                                    } else {
-                                        $query->where('user_id', $lawyerUserId);
-                                    }
-                                })
-                                ->where(function ($query) use ($building) {
-                                    $notes = $building->lawyer_notes ?? null;
+                            DB::table('building_statuses')->insert([
+                                'building_id' => $building->objectid,
+                                'status_id' => $lawyerStatusId,
+                                'user_id' => $lawyerUserId,
+                                'type' => 'Legal Auditor',
+                                'notes' => $building->lawyer_notes,
+                                'created_at' => $statusDate,
+                                'updated_at' => $statusDate,
+                            ]);
 
-                                    if ($notes === null || $notes === '') {
-                                        $query->where(function ($q) {
-                                            $q->whereNull('notes')->orWhere('notes', '');
-                                        });
-                                    } else {
-                                        $query->where('notes', $notes);
-                                    }
-                                })
-                                ->exists();
-
-                            if (!$existsLawyerStatus) {
-                                DB::table('building_statuses')->insert([
-                                    'building_id' => $building->objectid,
-                                    'status_id' => $lawyerStatusId,
-                                    'user_id' => $lawyerUserId,
-                                    'type' => 'Legal Auditor',
-                                    'notes' => $building->lawyer_notes,
-                                    'created_at' => $lawyerStatusAt,
-                                    'updated_at' => $lawyerStatusAt,
-                                ]);
-
-                                $buildingStatusesInserted++;
-                            }
+                            $buildingStatusesInserted++;
                         }
                     }
                 });
@@ -476,7 +272,9 @@ if (!empty($building->globalid) && !empty($building->all_data)) {
                 'rows_skipped_by_pending_or_assigned_status' => $skippedRows,
                 'missing_mapped_users' => $missingMappedUsers,
             ]);
+
         } catch (\Throwable $e) {
+
             DB::rollBack();
 
             return response()->json([
@@ -490,13 +288,9 @@ if (!empty($building->globalid) && !empty($building->all_data)) {
 
     private function mapOldUserIdToNewUserId(mixed $oldId): ?int
     {
-        if (empty($oldId)) {
-            return null;
-        }
+        if (empty($oldId)) return null;
 
-        $oldId = (int) $oldId;
-
-        $manualUserMap = [
+        $map = [
             236 => 1342,
             237 => 1341,
             238 => 1340,
@@ -511,48 +305,28 @@ if (!empty($building->globalid) && !empty($building->all_data)) {
             248 => 1276,
         ];
 
-        return $manualUserMap[$oldId] ?? null;
+        return $map[(int)$oldId] ?? null;
     }
 
     private function normalizeValue(mixed $value): ?string
     {
-        if ($value === null) {
-            return null;
-        }
-
-        if (is_bool($value)) {
-            return $value ? '1' : '0';
-        }
-
-        if (is_array($value) || is_object($value)) {
-            return json_encode($value, JSON_UNESCAPED_UNICODE);
-        }
-
-        if (is_numeric($value)) {
-            return (string) $value;
-        }
-
-        return trim((string) $value);
+        if ($value === null) return null;
+        if (is_bool($value)) return $value ? '1' : '0';
+        if (is_array($value) || is_object($value)) return json_encode($value);
+        return trim((string)$value);
     }
 
     private function parseDateValue(mixed $value): Carbon
     {
-        if (empty($value)) {
-            return now();
-        }
-
         try {
             if (is_numeric($value)) {
-                $value = (string) $value;
-
-                if (strlen($value) >= 13) {
-                    return Carbon::createFromTimestampMs((int) $value);
-                }
-
-                return Carbon::createFromTimestamp((int) $value);
+                return strlen((string)$value >= 13)
+                    ? Carbon::createFromTimestampMs((int)$value)
+                    : Carbon::createFromTimestamp((int)$value);
             }
 
             return Carbon::parse($value);
+
         } catch (\Throwable $e) {
             return now();
         }
