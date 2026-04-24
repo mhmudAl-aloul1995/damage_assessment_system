@@ -37,7 +37,8 @@ class SyncArcGISLayers extends Command
 
           'public_building_surveys' => [
                 'table' => 'public_building_surveys',
-                'url' => env('ARCGIS_PUBLIC_BUILDINGS_URL'),
+                'url' => config('services.arcgis.public_building_survey_layer_url'),
+                'returnGeometry' => true,
                 'unique' => 'objectid',
                    ],
 
