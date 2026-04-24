@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Console\Commands;
@@ -8,11 +9,11 @@ use Illuminate\Support\Facades\DB;
 class DeleteHousingByBuildingGlobalIds extends Command
 {
     protected $signature = 'housing:delete-by-building-globalids';
-    protected $description = 'Delete housing data by parentglobalid';
+    protected $description = 'Delete housing/building related data by building globalids';
 
     public function handle(): int
     {
-        $globalIds = [
+          $globalIds = [
             '51ea2320-1c6b-4115-af83-e8103cb335c0',
             '6480b68c-c0c7-4411-9f5d-3060cf30725c',
             '21f0fa33-e4cf-4713-a585-c5c17902cd43',
@@ -2771,58 +2772,117 @@ class DeleteHousingByBuildingGlobalIds extends Command
             '300ad1ff-3a35-4bcc-a1f7-b58e35c86136',
         ];
 
-        if (empty($globalIds)) {
-            $this->warn('No globalIds provided.');
-            return self::FAILURE;
-        }
-
-        $chunks = array_chunk($globalIds, 100);
-
-        $totalEditAssessmentsDeleted = 0;
-        $totalHousingStatusesDeleted = 0;
-        $totalHousingUnitsDeleted = 0;
-
         $this->info('Starting deletion process...');
 
+        $chunks = array_chunk($globalIds, 200);
+        $chunksCount = count($chunks);
+
+        $totalAssignedUsers = 0;
+        $totalBuildingStatuses = 0;
+        $totalEditAssessments = 0;
+        $totalHousingStatuses = 0;
+
         foreach ($chunks as $index => $chunk) {
-            $part = $index + 1;
-            $this->info("Processing chunk {$part}/" . count($chunks));
+            $this->info('Processing chunk '.($index + 1).'/'.$chunksCount);
 
             DB::beginTransaction();
 
             try {
-                $editAssessmentsDeleted = DB::table('edit_assessments as ea')
-                    ->join('housing_units as hu', 'hu.globalid', '=', 'ea.global_id')
-                    ->where('ea.type', 'housing_table')
-                    ->whereIn('hu.parentglobalid', $chunk)
-                    ->delete();
+                /*
+                 * Get buildings by globalid
+                 */
+                $buildingObjectIds = DB::table('warda_buildings')
+                    ->whereIn('globalid', $chunk)
+                    ->whereNotNull('objectid')
+                    ->pluck('objectid');
 
-                $housingStatusesDeleted = DB::table('housing_statuses as hs')
-                    ->join('housing_units as hu', 'hu.objectid', '=', 'hs.housing_id')
-                    ->whereIn('hu.parentglobalid', $chunk)
-                    ->delete();
+                /*
+                 * Get housing units under these buildings
+                 */
+                $units = DB::table('warda_units')
+                    ->whereIn('parentglobalid', $chunk)
+                    ->select('objectid', 'globalid')
+                    ->get();
 
+                $unitObjectIds = $units->pluck('objectid')->filter()->values();
+                $unitGlobalIds = $units->pluck('globalid')->filter()->values();
 
+                /*
+                 * assigned_assessment_users
+                 * building_id only
+                 */
+                $deletedAssignedUsers = 0;
+
+                if ($buildingObjectIds->isNotEmpty()) {
+                    $deletedAssignedUsers = DB::table('assigned_assessment_users')
+                        ->whereIn('building_id', $buildingObjectIds)
+                        ->delete();
+                }
+
+                /*
+                 * building_statuses
+                 */
+                $deletedBuildingStatuses = 0;
+
+                if ($buildingObjectIds->isNotEmpty()) {
+                    $deletedBuildingStatuses = DB::table('building_statuses')
+                        ->whereIn('building_id', $buildingObjectIds)
+                        ->delete();
+                }
+
+                /*
+                 * edit_assessments
+                 */
+                $deletedEditAssessments = 0;
+
+                if ($unitGlobalIds->isNotEmpty()) {
+                    $deletedEditAssessments = DB::table('edit_assessments')
+                        ->where('type', 'housing_table')
+                        ->whereIn('global_id', $unitGlobalIds)
+                        ->delete();
+                }
+
+                /*
+                 * housing_statuses
+                 */
+                $deletedHousingStatuses = 0;
+
+                if ($unitObjectIds->isNotEmpty()) {
+                    $deletedHousingStatuses = DB::table('housing_statuses')
+                        ->whereIn('housing_id', $unitObjectIds)
+                        ->delete();
+                }
 
                 DB::commit();
 
-                $totalEditAssessmentsDeleted += $editAssessmentsDeleted;
-                $totalHousingStatusesDeleted += $housingStatusesDeleted;
+                $totalAssignedUsers += $deletedAssignedUsers;
+                $totalBuildingStatuses += $deletedBuildingStatuses;
+                $totalEditAssessments += $deletedEditAssessments;
+                $totalHousingStatuses += $deletedHousingStatuses;
 
-                $this->info("Chunk {$part} done.");
-                $this->line("  - edit_assessments deleted: {$editAssessmentsDeleted}");
-                $this->line("  - housing_statuses deleted: {$housingStatusesDeleted}");
+                $this->info('Chunk '.($index + 1).' done.');
+                $this->info("  - assigned_assessment_users deleted: {$deletedAssignedUsers}");
+                $this->info("  - building_statuses deleted: {$deletedBuildingStatuses}");
+                $this->info("  - edit_assessments deleted: {$deletedEditAssessments}");
+                $this->info("  - housing_statuses deleted: {$deletedHousingStatuses}");
+                $this->info("  - matched buildings: ".$buildingObjectIds->count());
+                $this->info("  - matched units: ".$units->count());
             } catch (\Throwable $e) {
                 DB::rollBack();
-                $this->error("Chunk {$part} failed: " . $e->getMessage());
+
+                $this->error('Chunk '.($index + 1).' failed.');
+                $this->error($e->getMessage());
+                $this->error('Line: '.$e->getLine());
+
                 return self::FAILURE;
             }
         }
 
-        $this->newLine();
-        $this->info('Deletion completed successfully.');
-        $this->line("Total edit_assessments deleted: {$totalEditAssessmentsDeleted}");
-        $this->line("Total housing_statuses deleted: {$totalHousingStatusesDeleted}");
+        $this->info('Deletion completed.');
+        $this->info("Total assigned_assessment_users deleted: {$totalAssignedUsers}");
+        $this->info("Total building_statuses deleted: {$totalBuildingStatuses}");
+        $this->info("Total edit_assessments deleted: {$totalEditAssessments}");
+        $this->info("Total housing_statuses deleted: {$totalHousingStatuses}");
 
         return self::SUCCESS;
     }

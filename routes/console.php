@@ -29,14 +29,14 @@ Schedule::command('sync:housing')
     ->appendOutputTo(storage_path('logs/schedule.log'))
     ->runInBackground();
 
-Schedule::command('sync:public-building-survey')
+Schedule::command('sync:public-building')
     ->hourly()
     ->withoutOverlapping()
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->onOneServer()
     ->appendOutputTo(storage_path('logs/schedule.log'))
     ->runInBackground();
-Schedule::command('sync:road-facility-survey')
+Schedule::command('sync:road-facility')
     ->hourly()
     ->withoutOverlapping()
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
