@@ -20,6 +20,8 @@ class PublicBuildingSurvey extends Model
     {
         return [
             'date_of_damage' => 'date',
+            'creationdate' => 'datetime',
+            'editdate' => 'datetime',
             'benef_type' => 'array',
             'building_roof_type' => 'array',
             'ground_floor_use' => 'array',

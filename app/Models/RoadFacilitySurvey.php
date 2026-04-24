@@ -20,6 +20,8 @@ class RoadFacilitySurvey extends Model
     {
         return [
             'submission_date' => 'datetime',
+            'creationdate' => 'datetime',
+            'editdate' => 'datetime',
             'blockage_reason' => 'array',
             'road_type' => 'array',
             'sidewalk_damage_type' => 'array',

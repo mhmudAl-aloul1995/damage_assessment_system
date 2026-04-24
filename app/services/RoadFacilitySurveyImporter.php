@@ -12,6 +12,7 @@ class RoadFacilitySurveyImporter
 {
     private const MAIN_FIELD_MAP = [
         'location' => 'location',
+        'globalid' => 'globalid',
         'Field_status' => 'field_status',
         'objectid' => 'objectid',
         'Governorate' => 'governorate',
@@ -41,8 +42,11 @@ class RoadFacilitySurveyImporter
         'potholes_volume_m3' => 'potholes_volume_m3',
         'damaged_road_width_m' => 'damaged_road_width_m',
         'lane_count' => 'lane_count',
+        'road_type_note' => 'road_type_note',
         'road_type' => 'road_type',
         'other_read_type' => 'other_read_type',
+        'asphalt' => 'asphalt',
+        'basecoarse' => 'basecoarse',
         'no_layers' => 'no_layers',
         'thickness_cm' => 'thickness_cm',
         'area_m2' => 'area_m2',
@@ -53,12 +57,14 @@ class RoadFacilitySurveyImporter
         'sidewalk_interlock_m2' => 'sidewalk_interlock_m2',
         'sidewalk_damage_type' => 'sidewalk_damage_type',
         'street_interlock_m2' => 'street_interlock_m2',
+        'curbstone_m' => 'curbstone_m',
         'sidewalk_basecourse_m2' => 'sidewalk_basecourse_m2',
         'curbstone_damaged_m' => 'curbstone_damaged_m',
         'curbstone_repair_m' => 'curbstone_repair_m',
         'curbstone_painting_m' => 'curbstone_painting_m',
         'unpaved_road_m2' => 'unpaved_road_m2',
         'lighting_electrical_network' => 'lighting_electrical_network',
+        'lighting_poles' => 'lighting_poles',
         'pole_type' => 'pole_type',
         'no_steel_pole' => 'no_steel_pole',
         'no_wooden_pole' => 'no_wooden_pole',
@@ -94,6 +100,7 @@ class RoadFacilitySurveyImporter
         'road_painting_m2' => 'road_painting_m2',
         'curbstone_painting_mr' => 'curbstone_painting_mr',
         'handrails_painting_mr' => 'handrails_painting_mr',
+        'other_note' => 'other_note',
         'buried_bodies' => 'buried_bodies',
         'buried_bodies_est' => 'buried_bodies_est',
         'uxo_present' => 'uxo_present',
@@ -102,6 +109,10 @@ class RoadFacilitySurveyImporter
         'damge_photo_3' => 'damge_photo_3',
         'damge_photo_4' => 'damge_photo_4',
         'final_comments' => 'final_comments',
+        'CreationDate' => 'creationdate',
+        'Creator' => 'creator',
+        'EditDate' => 'editdate',
+        'Editor' => 'editor',
     ];
 
     private const ITEM_FIELD_MAP = [

@@ -81,7 +81,7 @@ class SyncArcGISPublicBuildingSurvey extends Command
                     $payload['location'] = json_encode($feature['geometry'], JSON_UNESCAPED_UNICODE);
                 }
 
-                foreach (['creationdate', 'editdate', 'Date_of_damage', 'today', 'start', 'end'] as $dateField) {
+                foreach (['creationdate', 'editdate', 'CreationDate', 'EditDate', 'Date_of_damage', 'today', 'start', 'end'] as $dateField) {
                     if (isset($payload[$dateField]) && is_numeric($payload[$dateField])) {
                         $payload[$dateField] = date('Y-m-d H:i:s', (int) ($payload[$dateField] / 1000));
                     }

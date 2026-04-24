@@ -40,9 +40,20 @@ it('auto-detects a populated layer from the feature server root url and syncs ro
                     [
                         'attributes' => [
                             'objectid' => 9101,
+                            'globalid' => '{ROAD-9101}',
                             'Field_status' => 'COMPLETED',
                             'Str_Name' => 'Salah Al Din Road',
                             'road_damage_level' => 'moderate',
+                            'road_type_note' => 'Choose damaged components',
+                            'asphalt' => 'yes',
+                            'basecoarse' => 'yes',
+                            'curbstone_m' => 25.5,
+                            'lighting_poles' => 'yes',
+                            'other_note' => 'Additional damaged assets',
+                            'CreationDate' => 1713960000000,
+                            'EditDate' => 1714046400000,
+                            'Creator' => 'arcgis.editor',
+                            'Editor' => 'arcgis.reviewer',
                             'final_comments' => 'Needs asphalt repair',
                         ],
                         'geometry' => [
@@ -65,8 +76,19 @@ it('auto-detects a populated layer from the feature server root url and syncs ro
     $survey = RoadFacilitySurvey::query()->where('objectid', 9101)->first();
 
     expect($survey)->not->toBeNull();
+    expect($survey->globalid)->toBe('{ROAD-9101}');
     expect($survey->str_name)->toBe('Salah Al Din Road');
     expect($survey->road_damage_level)->toBe('moderate');
+    expect($survey->road_type_note)->toBe('Choose damaged components');
+    expect($survey->asphalt)->toBe('yes');
+    expect($survey->basecoarse)->toBe('yes');
+    expect((float) $survey->curbstone_m)->toBe(25.5);
+    expect($survey->lighting_poles)->toBe('yes');
+    expect($survey->other_note)->toBe('Additional damaged assets');
+    expect($survey->creator)->toBe('arcgis.editor');
+    expect($survey->editor)->toBe('arcgis.reviewer');
+    expect($survey->creationdate)->not->toBeNull();
+    expect($survey->editdate)->not->toBeNull();
     expect($survey->final_comments)->toBe('Needs asphalt repair');
     expect($survey->location)->toContain('paths');
 });

@@ -13,6 +13,7 @@ class PublicBuildingSurveyImporter
 {
     private const MAIN_FIELD_MAP = [
         'location' => 'location',
+        'globalid' => 'globalid',
         'Field_status' => 'field_status',
         'PARCEL_NO1' => 'parcel_no1',
         'BLOCK_NO1' => 'block_no1',
@@ -53,11 +54,14 @@ class PublicBuildingSurveyImporter
         'visit_Status' => 'visit_status',
         'is_bodies' => 'is_bodies',
         'is_UXO' => 'is_uxo',
+        'occupied_stakeholders' => 'occupied_stakeholders',
+        'Is_displaced' => 'is_displaced',
         'is_building_occupied' => 'is_building_occupied',
         'occupied_by' => 'occupied_by',
         'number_displaced_families' => 'number_displaced_families',
         'land_area__m2' => 'land_area_m2',
         'and_ownership' => 'and_ownership',
+        'building_boundaries' => 'building_boundaries',
         'northern_side' => 'northern_side',
         'southern_side' => 'southern_side',
         'eastern_side' => 'eastern_side',
@@ -112,6 +116,10 @@ class PublicBuildingSurveyImporter
         'building_image_1' => 'building_image_1',
         'building_image_2' => 'building_image_2',
         'building_image_3' => 'building_image_3',
+        'CreationDate' => 'creationdate',
+        'Creator' => 'creator',
+        'EditDate' => 'editdate',
+        'Editor' => 'editor',
     ];
 
     private const UNIT_FIELD_MAP = [

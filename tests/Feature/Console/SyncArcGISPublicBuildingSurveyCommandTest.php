@@ -25,9 +25,17 @@ it('syncs public building survey records from ArcGIS feature server root url', f
                 [
                     'attributes' => [
                         'objectid' => 9901,
+                        'globalid' => '{PUB-9901}',
                         'Field_status' => 'COMPLETED',
                         'building_name' => 'Public Clinic',
                         'building_damage_status' => 'partially_damaged',
+                        'occupied_stakeholders' => 'Yes',
+                        'Is_displaced' => 'No',
+                        'building_boundaries' => 'North/South',
+                        'CreationDate' => 1713960000000,
+                        'EditDate' => 1714046400000,
+                        'Creator' => 'arcgis.editor',
+                        'Editor' => 'arcgis.reviewer',
                         'Comments_Recommendations' => 'Repair the facade',
                     ],
                     'geometry' => [
@@ -47,7 +55,15 @@ it('syncs public building survey records from ArcGIS feature server root url', f
 
     expect($survey)->not->toBeNull();
     expect($survey->building_name)->toBe('Public Clinic');
+    expect($survey->globalid)->toBe('{PUB-9901}');
     expect($survey->building_damage_status)->toBe('partially_damaged');
+    expect($survey->occupied_stakeholders)->toBe('Yes');
+    expect($survey->is_displaced)->toBe('No');
+    expect($survey->building_boundaries)->toBe('North/South');
+    expect($survey->creator)->toBe('arcgis.editor');
+    expect($survey->editor)->toBe('arcgis.reviewer');
+    expect($survey->creationdate)->not->toBeNull();
+    expect($survey->editdate)->not->toBeNull();
     expect($survey->comments_recommendations)->toBe('Repair the facade');
     expect($survey->location)->toContain('rings');
 });
