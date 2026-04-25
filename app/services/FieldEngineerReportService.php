@@ -80,17 +80,21 @@ class FieldEngineerReportService
         $buildingsQuery = $this->filteredBuildingsQuery($filters);
         $housingUnitsQuery = $this->filteredHousingUnitsQuery($filters);
         $editsQuery = $this->filteredEditsQuery($filters);
+        $fieldStatusExpression = $this->collatedValue('field_status');
+        $buildingDamageExpression = $this->collatedValue('building_damage_status');
+        $finalStatusExpression = $this->collatedValue('final_status_name');
+        $unitDamageExpression = $this->collatedValue('unit_damage_status');
 
         $buildingsSummary = DB::query()
             ->fromSub($buildingsQuery, 'filtered_buildings')
             ->selectRaw("
                 COUNT(*) as total_buildings,
-                SUM(CASE WHEN field_status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_buildings,
-                SUM(CASE WHEN field_status <> 'COMPLETED' OR field_status IS NULL THEN 1 ELSE 0 END) as not_completed_buildings,
-                SUM(CASE WHEN building_damage_status IS NOT NULL AND building_damage_status <> '' AND building_damage_status NOT IN ('no_damage', 'no_damage2') THEN 1 ELSE 0 END) as damaged_buildings,
-                SUM(CASE WHEN final_status_name LIKE '%accept%' THEN 1 ELSE 0 END) as accepted_statuses,
-                SUM(CASE WHEN final_status_name LIKE '%reject%' THEN 1 ELSE 0 END) as rejected_statuses,
-                SUM(CASE WHEN final_status_name = 'need_review' THEN 1 ELSE 0 END) as need_review_statuses,
+                SUM(CASE WHEN {$fieldStatusExpression} = 'COMPLETED' THEN 1 ELSE 0 END) as completed_buildings,
+                SUM(CASE WHEN {$fieldStatusExpression} <> 'COMPLETED' OR field_status IS NULL THEN 1 ELSE 0 END) as not_completed_buildings,
+                SUM(CASE WHEN building_damage_status IS NOT NULL AND {$buildingDamageExpression} <> '' AND {$buildingDamageExpression} NOT IN ('no_damage', 'no_damage2') THEN 1 ELSE 0 END) as damaged_buildings,
+                SUM(CASE WHEN {$finalStatusExpression} LIKE '%accept%' THEN 1 ELSE 0 END) as accepted_statuses,
+                SUM(CASE WHEN {$finalStatusExpression} LIKE '%reject%' THEN 1 ELSE 0 END) as rejected_statuses,
+                SUM(CASE WHEN {$finalStatusExpression} = 'need_review' THEN 1 ELSE 0 END) as need_review_statuses,
                 MAX(COALESCE(editdate, creationdate)) as last_updated_at
             ")
             ->first();
@@ -99,7 +103,7 @@ class FieldEngineerReportService
             ->fromSub($housingUnitsQuery, 'filtered_housing_units')
             ->selectRaw("
                 COUNT(*) as total_housing_units,
-                SUM(CASE WHEN unit_damage_status IS NOT NULL AND unit_damage_status <> '' AND unit_damage_status NOT IN ('no_damage', 'no_damage2') THEN 1 ELSE 0 END) as damaged_housing_units
+                SUM(CASE WHEN unit_damage_status IS NOT NULL AND {$unitDamageExpression} <> '' AND {$unitDamageExpression} NOT IN ('no_damage', 'no_damage2') THEN 1 ELSE 0 END) as damaged_housing_units
             ")
             ->first();
 
@@ -797,5 +801,14 @@ class FieldEngineerReportService
         }
 
         return "{$leftColumn} COLLATE utf8mb4_unicode_ci = {$rightColumn} COLLATE utf8mb4_unicode_ci";
+    }
+
+    private function collatedValue(string $column): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return $column;
+        }
+
+        return "{$column} COLLATE utf8mb4_unicode_ci";
     }
 }
