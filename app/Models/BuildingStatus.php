@@ -10,7 +10,8 @@ class BuildingStatus extends Model
         'building_id',
         'status_id',
         'user_id',
-        'notes'
+        'type',
+        'notes',
     ];
 
     public function status()
@@ -22,13 +23,14 @@ class BuildingStatus extends Model
     {
         return $this->belongsTo(User::class);
     }
-        public function building()
+
+    public function building()
     {
-        return $this->belongsTo(Building::class,'building_id','objectid');
+        return $this->belongsTo(Building::class, 'building_id', 'objectid');
     }
-   public function assessment_status()
+
+    public function assessment_status()
     {
         return $this->belongsTo(AssessmentStatus::class, 'status_id');
     }
-    
 }

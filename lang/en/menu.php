@@ -17,6 +17,7 @@ return [
         'buildings_area_productivity' => 'Buildings Area Productivity',
         'public_buildings_area_productivity' => 'Public Buildings Area Productivity',
         'road_facilities_area_productivity' => 'Road Facilities Area Productivity',
+        'field_engineer' => 'Field Engineer Report',
         'engineer_productivity' => 'Engineer Productivity',
         'daily_audit' => 'Daily Audit Achievement',
         'public_buildings' => 'Public Buildings Report',

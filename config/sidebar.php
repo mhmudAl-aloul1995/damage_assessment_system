@@ -91,6 +91,12 @@ return [
                 'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
             ],
             [
+                'title' => 'menu.reports.field_engineer',
+                'url' => 'reports/field-engineer',
+                'pattern' => 'reports/field-engineer*',
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'Auditing Supervisor'],
+            ],
+            [
                 'title' => 'menu.reports.engineer_productivity',
                 'url' => 'reports/productivity',
                 'pattern' => 'reports/productivity*',

@@ -17,6 +17,7 @@ return [
         'buildings_area_productivity' => 'إنتاجية مناطق المباني',
         'public_buildings_area_productivity' => 'إنتاجية مناطق المباني العامة',
         'road_facilities_area_productivity' => 'إنتاجية مناطق مرافق الطرق',
+        'field_engineer' => 'تقرير المهندس الميداني',
         'engineer_productivity' => 'إنتاجية المهندسين',
         'daily_audit' => 'إنجاز التدقيق اليومي',
         'public_buildings' => 'تقرير المباني العامة',
