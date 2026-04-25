@@ -6,6 +6,7 @@ use App\Exports\FieldEngineerReportExport;
 use App\Http\Requests\Report\FieldEngineerReportFilterRequest;
 use App\Services\FieldEngineerReportService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
@@ -31,6 +32,11 @@ class FieldEngineerReportController extends Controller
     public function buildings(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+
+        if (! $filters['assignedto']) {
+            return $this->emptyDataTableResponse($request);
+        }
+
         $query = $this->fieldEngineerReportService->filteredBuildingsQuery($filters);
 
         return DataTables::of($query)
@@ -38,22 +44,32 @@ class FieldEngineerReportController extends Controller
             ->editColumn('creationdate', fn ($row) => $row->creationdate ? date('Y-m-d h:i A', strtotime((string) $row->creationdate)) : '-')
             ->editColumn('editdate', fn ($row) => $row->editdate ? date('Y-m-d h:i A', strtotime((string) $row->editdate)) : '-')
             ->rawColumns(['final_status_label'])
-            ->toJson();
+            ->make(true);
     }
 
     public function housingUnits(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+
+        if (! $filters['assignedto']) {
+            return $this->emptyDataTableResponse($request);
+        }
+
         $query = $this->fieldEngineerReportService->filteredHousingUnitsQuery($filters);
 
         return DataTables::of($query)
             ->editColumn('creationdate', fn ($row) => $row->creationdate ? date('Y-m-d h:i A', strtotime((string) $row->creationdate)) : '-')
-            ->toJson();
+            ->make(true);
     }
 
     public function edits(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+
+        if (! $filters['assignedto']) {
+            return $this->emptyDataTableResponse($request);
+        }
+
         $query = $this->fieldEngineerReportService->filteredEditsQuery($filters);
 
         return DataTables::of($query)
@@ -62,12 +78,17 @@ class FieldEngineerReportController extends Controller
                 : __('multilingual.field_engineer_report.types.housing'))
             ->editColumn('field_name', fn ($row) => $this->fieldEngineerReportService->fieldLabel((string) $row->field_name))
             ->editColumn('updated_at', fn ($row) => $row->updated_at ? date('Y-m-d h:i A', strtotime((string) $row->updated_at)) : '-')
-            ->toJson();
+            ->make(true);
     }
 
     public function statusHistory(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+
+        if (! $filters['assignedto']) {
+            return $this->emptyDataTableResponse($request);
+        }
+
         $query = $this->fieldEngineerReportService->filteredStatusHistoryQuery($filters);
 
         return DataTables::of($query)
@@ -77,17 +98,33 @@ class FieldEngineerReportController extends Controller
             ->editColumn('status_label', fn ($row) => $this->statusBadge($row->status_name, $row->status_label))
             ->editColumn('created_at', fn ($row) => $row->created_at ? date('Y-m-d h:i A', strtotime((string) $row->created_at)) : '-')
             ->rawColumns(['status_label'])
-            ->toJson();
+            ->make(true);
     }
 
     public function assignments(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+
+        if (! $filters['assignedto']) {
+            return $this->emptyDataTableResponse($request);
+        }
+
         $query = $this->fieldEngineerReportService->filteredAssignmentsQuery($filters);
 
         return DataTables::of($query)
             ->editColumn('assigned_date', fn ($row) => $row->assigned_date ? date('Y-m-d h:i A', strtotime((string) $row->assigned_date)) : '-')
-            ->toJson();
+            ->make(true);
+    }
+
+    public function stats(FieldEngineerReportFilterRequest $request): JsonResponse
+    {
+        $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+
+        return response()->json([
+            'summary' => $filters['assignedto']
+                ? $this->fieldEngineerReportService->summary($filters)
+                : $this->fieldEngineerReportService->emptySummary(),
+        ]);
     }
 
     public function export(FieldEngineerReportFilterRequest $request, string $tab, string $format)
@@ -122,5 +159,10 @@ class FieldEngineerReportController extends Controller
         }
 
         return '<span class="'.$badgeClass.'">'.e($statusLabel ?: '-').'</span>';
+    }
+
+    private function emptyDataTableResponse(Request $request): JsonResponse
+    {
+        return DataTables::of(collect())->make(true);
     }
 }

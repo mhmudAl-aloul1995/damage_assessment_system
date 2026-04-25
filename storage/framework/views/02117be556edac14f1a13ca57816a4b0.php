@@ -403,6 +403,7 @@
             const filtersForm = document.getElementById('fieldEngineerFiltersForm');
             const currentTabInputValue = <?php echo json_encode($currentTab, 15, 512) ?>;
             const tables = {};
+            $.fn.dataTable.ext.errMode = 'none';
 
             $('.report-select2').select2({
                 allowClear: true,
@@ -438,6 +439,11 @@
                     .replace('__FORMAT__', format) + '?' + params.toString();
             }
 
+            function handleTableError(xhr) {
+                console.log(xhr.responseText || xhr);
+                alert('Error loading data. Check console.');
+            }
+
             function initializeDataTable(key, selector, ajaxUrl, columns) {
                 if (tables[key]) {
                     return tables[key];
@@ -454,12 +460,20 @@
                         url: ajaxUrl,
                         data: function (data) {
                             Object.assign(data, filterPayload());
+                        },
+                        error: function (xhr) {
+                            handleTableError(xhr);
                         }
                     },
                     columns: columns,
                     language: {
                         url: dataTablesLanguageUrl
                     }
+                });
+
+                $(selector).on('error.dt', function (event, settings, techNote, message) {
+                    console.log(message);
+                    alert('Error loading data. Check console.');
                 });
 
                 return tables[key];
@@ -470,7 +484,7 @@
                     return tables.buildings;
                 },
                 housing_units: function () {
-                    return initializeDataTable('housing_units', '#fieldEngineerHousingTable', "<?php echo e(route('reports.field-engineer.housing-units')); ?>", [
+                    return initializeDataTable('housing_units', '#fieldEngineerHousingTable', "<?php echo e(url('reports/field-engineer/housing-units')); ?>", [
                         {data: 'objectid', name: 'housing_units.objectid'},
                         {data: 'parentglobalid', name: 'housing_units.parentglobalid'},
                         {data: 'building_objectid', name: 'buildings.objectid'},
@@ -481,7 +495,7 @@
                     ]);
                 },
                 edits: function () {
-                    return initializeDataTable('edits', '#fieldEngineerEditsTable', "<?php echo e(route('reports.field-engineer.edits')); ?>", [
+                    return initializeDataTable('edits', '#fieldEngineerEditsTable', "<?php echo e(url('reports/field-engineer/edits')); ?>", [
                         {data: 'source_type', name: 'edit_assessments.type'},
                         {data: 'global_id', name: 'edit_assessments.global_id'},
                         {data: 'field_name', name: 'edit_assessments.field_name'},
@@ -492,7 +506,7 @@
                     ]);
                 },
                 status_history: function () {
-                    return initializeDataTable('status_history', '#fieldEngineerStatusHistoryTable', "<?php echo e(route('reports.field-engineer.status-history')); ?>", [
+                    return initializeDataTable('status_history', '#fieldEngineerStatusHistoryTable', "<?php echo e(url('reports/field-engineer/status-history')); ?>", [
                         {data: 'item_type', name: 'status_history.item_type'},
                         {data: 'item_number', name: 'status_history.item_number'},
                         {data: 'status_label', name: 'status_history.status_label', orderable: false},
@@ -501,7 +515,7 @@
                     ]);
                 },
                 assignments: function () {
-                    return initializeDataTable('assignments', '#fieldEngineerAssignmentsTable', "<?php echo e(route('reports.field-engineer.assignments')); ?>", [
+                    return initializeDataTable('assignments', '#fieldEngineerAssignmentsTable', "<?php echo e(url('reports/field-engineer/assignments')); ?>", [
                         {data: 'building_id', name: 'assigned_assessment_users.building_id'},
                         {data: 'assigned_user', name: 'assigned_user.name'},
                         {data: 'assigned_by', name: 'manager_user.name'},
@@ -511,7 +525,7 @@
                 },
             };
 
-            initializeDataTable('buildings', '#fieldEngineerBuildingsTable', "<?php echo e(route('reports.field-engineer.buildings')); ?>", [
+            initializeDataTable('buildings', '#fieldEngineerBuildingsTable', "<?php echo e(url('reports/field-engineer/buildings')); ?>", [
                 {data: 'objectid', name: 'buildings.objectid'},
                 {data: 'globalid', name: 'buildings.globalid'},
                 {data: 'assignedto', name: 'buildings.assignedto'},

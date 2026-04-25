@@ -307,10 +307,16 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/area-productivity/public-buildings/export', [AreaProductivityReportController::class, 'exportPublicBuildings'])->name('reports.area-productivity.export.public-buildings');
     Route::get('reports/area-productivity/road-facilities/export', [AreaProductivityReportController::class, 'exportRoadFacilities'])->name('reports.area-productivity.export.road-facilities');
     Route::get('reports/field-engineer', [FieldEngineerReportController::class, 'index'])->name('reports.field-engineer.index');
+    Route::get('reports/field-engineer/stats', [FieldEngineerReportController::class, 'stats'])->name('reports.field-engineer.stats');
+    Route::get('reports/field-engineer/buildings', [FieldEngineerReportController::class, 'buildings']);
     Route::get('reports/field-engineer/buildings/data', [FieldEngineerReportController::class, 'buildings'])->name('reports.field-engineer.buildings');
+    Route::get('reports/field-engineer/housing-units', [FieldEngineerReportController::class, 'housingUnits']);
     Route::get('reports/field-engineer/housing-units/data', [FieldEngineerReportController::class, 'housingUnits'])->name('reports.field-engineer.housing-units');
+    Route::get('reports/field-engineer/edits', [FieldEngineerReportController::class, 'edits']);
     Route::get('reports/field-engineer/edits/data', [FieldEngineerReportController::class, 'edits'])->name('reports.field-engineer.edits');
+    Route::get('reports/field-engineer/status-history', [FieldEngineerReportController::class, 'statusHistory']);
     Route::get('reports/field-engineer/status-history/data', [FieldEngineerReportController::class, 'statusHistory'])->name('reports.field-engineer.status-history');
+    Route::get('reports/field-engineer/assignments', [FieldEngineerReportController::class, 'assignments']);
     Route::get('reports/field-engineer/assignments/data', [FieldEngineerReportController::class, 'assignments'])->name('reports.field-engineer.assignments');
     Route::get('reports/field-engineer/export/{tab}/{format}', [FieldEngineerReportController::class, 'export'])->name('reports.field-engineer.export');
     Route::get('reports/daily-achievement', [reportController::class, 'dailyAchievement'])->name('reports.daily-achievement');

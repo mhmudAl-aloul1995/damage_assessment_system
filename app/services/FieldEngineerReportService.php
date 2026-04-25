@@ -77,6 +77,10 @@ class FieldEngineerReportService
 
     public function summary(array $filters): array
     {
+        if (! $filters['assignedto']) {
+            return $this->emptySummary();
+        }
+
         $buildingsQuery = $this->filteredBuildingsQuery($filters);
         $housingUnitsQuery = $this->filteredHousingUnitsQuery($filters);
         $editsQuery = $this->filteredEditsQuery($filters);
@@ -84,17 +88,24 @@ class FieldEngineerReportService
         $buildingDamageExpression = $this->collatedValue('building_damage_status');
         $finalStatusExpression = $this->collatedValue('final_status_name');
         $unitDamageExpression = $this->collatedValue('unit_damage_status');
+        $completedLiteral = $this->collatedLiteral('COMPLETED');
+        $emptyLiteral = $this->collatedLiteral('');
+        $needReviewLiteral = $this->collatedLiteral('need_review');
+        $noDamageLiteral = $this->collatedLiteral('no_damage');
+        $noDamage2Literal = $this->collatedLiteral('no_damage2');
+        $acceptLikeLiteral = $this->collatedLiteral('%accept%');
+        $rejectLikeLiteral = $this->collatedLiteral('%reject%');
 
         $buildingsSummary = DB::query()
             ->fromSub($buildingsQuery, 'filtered_buildings')
             ->selectRaw("
                 COUNT(*) as total_buildings,
-                SUM(CASE WHEN {$fieldStatusExpression} = 'COMPLETED' THEN 1 ELSE 0 END) as completed_buildings,
-                SUM(CASE WHEN {$fieldStatusExpression} <> 'COMPLETED' OR field_status IS NULL THEN 1 ELSE 0 END) as not_completed_buildings,
-                SUM(CASE WHEN building_damage_status IS NOT NULL AND {$buildingDamageExpression} <> '' AND {$buildingDamageExpression} NOT IN ('no_damage', 'no_damage2') THEN 1 ELSE 0 END) as damaged_buildings,
-                SUM(CASE WHEN {$finalStatusExpression} LIKE '%accept%' THEN 1 ELSE 0 END) as accepted_statuses,
-                SUM(CASE WHEN {$finalStatusExpression} LIKE '%reject%' THEN 1 ELSE 0 END) as rejected_statuses,
-                SUM(CASE WHEN {$finalStatusExpression} = 'need_review' THEN 1 ELSE 0 END) as need_review_statuses,
+                SUM(CASE WHEN {$fieldStatusExpression} = {$completedLiteral} THEN 1 ELSE 0 END) as completed_buildings,
+                SUM(CASE WHEN {$fieldStatusExpression} <> {$completedLiteral} OR field_status IS NULL THEN 1 ELSE 0 END) as not_completed_buildings,
+                SUM(CASE WHEN building_damage_status IS NOT NULL AND {$buildingDamageExpression} <> {$emptyLiteral} AND {$buildingDamageExpression} NOT IN ({$noDamageLiteral}, {$noDamage2Literal}) THEN 1 ELSE 0 END) as damaged_buildings,
+                SUM(CASE WHEN {$finalStatusExpression} LIKE {$acceptLikeLiteral} THEN 1 ELSE 0 END) as accepted_statuses,
+                SUM(CASE WHEN {$finalStatusExpression} LIKE {$rejectLikeLiteral} THEN 1 ELSE 0 END) as rejected_statuses,
+                SUM(CASE WHEN {$finalStatusExpression} = {$needReviewLiteral} THEN 1 ELSE 0 END) as need_review_statuses,
                 MAX(COALESCE(editdate, creationdate)) as last_updated_at
             ")
             ->first();
@@ -103,7 +114,7 @@ class FieldEngineerReportService
             ->fromSub($housingUnitsQuery, 'filtered_housing_units')
             ->selectRaw("
                 COUNT(*) as total_housing_units,
-                SUM(CASE WHEN unit_damage_status IS NOT NULL AND {$unitDamageExpression} <> '' AND {$unitDamageExpression} NOT IN ('no_damage', 'no_damage2') THEN 1 ELSE 0 END) as damaged_housing_units
+                SUM(CASE WHEN unit_damage_status IS NOT NULL AND {$unitDamageExpression} <> {$emptyLiteral} AND {$unitDamageExpression} NOT IN ({$noDamageLiteral}, {$noDamage2Literal}) THEN 1 ELSE 0 END) as damaged_housing_units
             ")
             ->first();
 
@@ -132,6 +143,25 @@ class FieldEngineerReportService
             'completion_rate' => $totalBuildings > 0 ? round(($completedBuildings / $totalBuildings) * 100, 1) : 0.0,
             'completed_buildings' => $completedBuildings,
             'not_completed_buildings' => (int) ($buildingsSummary->not_completed_buildings ?? 0),
+        ];
+    }
+
+    public function emptySummary(): array
+    {
+        return [
+            'total_buildings' => 0,
+            'total_housing_units' => 0,
+            'damaged_buildings' => 0,
+            'damaged_housing_units' => 0,
+            'building_edits' => 0,
+            'housing_edits' => 0,
+            'accepted_statuses' => 0,
+            'rejected_statuses' => 0,
+            'need_review_statuses' => 0,
+            'last_updated_at' => null,
+            'completion_rate' => 0.0,
+            'completed_buildings' => 0,
+            'not_completed_buildings' => 0,
         ];
     }
 
@@ -616,15 +646,21 @@ class FieldEngineerReportService
         }
 
         if ($filters['municipalitie']) {
-            $query->whereRaw($municipalityExpression.' = ?', [$filters['municipalitie']]);
+            $query->whereRaw(
+                $this->collatedExpression($municipalityExpression).' = '.$this->collatedLiteral($filters['municipalitie'])
+            );
         }
 
         if ($filters['neighborhood']) {
-            $query->whereRaw($neighborhoodExpression.' = ?', [$filters['neighborhood']]);
+            $query->whereRaw(
+                $this->collatedExpression($neighborhoodExpression).' = '.$this->collatedLiteral($filters['neighborhood'])
+            );
         }
 
         if ($filters['building_damage_status']) {
-            $query->whereRaw($damageExpression.' = ?', [$filters['building_damage_status']]);
+            $query->whereRaw(
+                $this->collatedExpression($damageExpression).' = '.$this->collatedLiteral($filters['building_damage_status'])
+            );
         }
 
         if ($filters['engineer_status']) {
@@ -659,10 +695,10 @@ class FieldEngineerReportService
                 $searchQuery->where("{$buildingTable}.objectid", 'like', '%'.$search.'%')
                     ->orWhere("{$buildingTable}.globalid", 'like', '%'.$search.'%')
                     ->orWhere("{$buildingTable}.assignedto", 'like', '%'.$search.'%')
-                    ->orWhereRaw($buildingNameExpression.' like ?', ['%'.$search.'%'])
-                    ->orWhereRaw($municipalityExpression.' like ?', ['%'.$search.'%'])
-                    ->orWhereRaw($neighborhoodExpression.' like ?', ['%'.$search.'%'])
-                    ->orWhereRaw($damageExpression.' like ?', ['%'.$search.'%']);
+                    ->orWhereRaw($this->collatedExpression($buildingNameExpression).' like '.$this->collatedLiteral('%'.$search.'%'))
+                    ->orWhereRaw($this->collatedExpression($municipalityExpression).' like '.$this->collatedLiteral('%'.$search.'%'))
+                    ->orWhereRaw($this->collatedExpression($neighborhoodExpression).' like '.$this->collatedLiteral('%'.$search.'%'))
+                    ->orWhereRaw($this->collatedExpression($damageExpression).' like '.$this->collatedLiteral('%'.$search.'%'));
             });
         }
 
@@ -676,15 +712,24 @@ class FieldEngineerReportService
         }
 
         if ($filters['municipalitie']) {
-            $query->whereRaw('COALESCE(building_edit_municipalitie.field_value, buildings.municipalitie) = ?', [$filters['municipalitie']]);
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(building_edit_municipalitie.field_value, buildings.municipalitie)')
+                .' = '.$this->collatedLiteral($filters['municipalitie'])
+            );
         }
 
         if ($filters['neighborhood']) {
-            $query->whereRaw('COALESCE(building_edit_neighborhood.field_value, buildings.neighborhood) = ?', [$filters['neighborhood']]);
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(building_edit_neighborhood.field_value, buildings.neighborhood)')
+                .' = '.$this->collatedLiteral($filters['neighborhood'])
+            );
         }
 
         if ($filters['building_damage_status']) {
-            $query->whereRaw('COALESCE(building_edit_damage_status.field_value, buildings.building_damage_status) = ?', [$filters['building_damage_status']]);
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(building_edit_damage_status.field_value, buildings.building_damage_status)')
+                .' = '.$this->collatedLiteral($filters['building_damage_status'])
+            );
         }
 
         if ($filters['engineer_status']) {
@@ -714,9 +759,9 @@ class FieldEngineerReportService
                     ->orWhere('housing_units.parentglobalid', 'like', '%'.$search.'%')
                     ->orWhere('buildings.objectid', 'like', '%'.$search.'%')
                     ->orWhere('buildings.assignedto', 'like', '%'.$search.'%')
-                    ->orWhereRaw('COALESCE(housing_edit_type.field_value, housing_units.housing_unit_type) like ?', ['%'.$search.'%'])
-                    ->orWhereRaw('COALESCE(housing_edit_damage.field_value, housing_units.unit_damage_status) like ?', ['%'.$search.'%'])
-                    ->orWhereRaw('COALESCE(housing_edit_occupied.field_value, housing_units.occupied) like ?', ['%'.$search.'%']);
+                    ->orWhereRaw($this->collatedExpression('COALESCE(housing_edit_type.field_value, housing_units.housing_unit_type)').' like '.$this->collatedLiteral('%'.$search.'%'))
+                    ->orWhereRaw($this->collatedExpression('COALESCE(housing_edit_damage.field_value, housing_units.unit_damage_status)').' like '.$this->collatedLiteral('%'.$search.'%'))
+                    ->orWhereRaw($this->collatedExpression('COALESCE(housing_edit_occupied.field_value, housing_units.occupied)').' like '.$this->collatedLiteral('%'.$search.'%'));
             });
         }
 
@@ -810,5 +855,25 @@ class FieldEngineerReportService
         }
 
         return "{$column} COLLATE utf8mb4_unicode_ci";
+    }
+
+    private function collatedExpression(string $expression): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return $expression;
+        }
+
+        return "({$expression}) COLLATE utf8mb4_unicode_ci";
+    }
+
+    private function collatedLiteral(string $value): string
+    {
+        $quotedValue = "'".str_replace("'", "''", $value)."'";
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return $quotedValue;
+        }
+
+        return "{$quotedValue} COLLATE utf8mb4_unicode_ci";
     }
 }
