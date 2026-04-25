@@ -15,7 +15,7 @@ return new class extends Migration
             $table->index('municipalitie', 'buildings_municipalitie_index');
             $table->index('neighborhood', 'buildings_neighborhood_index');
         });
-
+//sss
         Schema::table('housing_units', function (Blueprint $table) {
             $table->index('parentglobalid', 'housing_units_parentglobalid_index');
             $table->index('globalid', 'housing_units_globalid_index');
