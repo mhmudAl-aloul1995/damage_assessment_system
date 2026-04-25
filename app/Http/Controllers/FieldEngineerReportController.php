@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
-use Yajra\DataTables\Facades\DataTables;
 
 class FieldEngineerReportController extends Controller
 {
@@ -23,14 +22,13 @@ class FieldEngineerReportController extends Controller
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
         $startedAt = microtime(true);
-        $summary = $filters['assignedto']
-            ? $this->fieldEngineerReportService->summary($filters)
-            : $this->fieldEngineerReportService->emptySummary();
 
         $response = response()->view('reports.field-engineer.index', [
             'filters' => $filters,
             'filterOptions' => $this->fieldEngineerReportService->filterOptions(),
-            'summary' => $summary,
+            'summary' => $filters['assignedto']
+                ? $this->fieldEngineerReportService->summary($filters)
+                : $this->fieldEngineerReportService->emptySummary(),
         ]);
 
         Log::info('FieldEngineerReport index time', [
@@ -44,20 +42,29 @@ class FieldEngineerReportController extends Controller
     public function buildings(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+        $parameters = $this->dataTableParameters($request);
 
         if (! $filters['assignedto']) {
-            return $this->emptyDataTableResponse($request);
+            return $this->emptyDataTableResponse($parameters['draw']);
         }
 
         $startedAt = microtime(true);
-        $query = $this->fieldEngineerReportService->filteredBuildingsQuery($filters);
+        $result = $this->fieldEngineerReportService->paginateBuildings($filters, $parameters['start'], $parameters['length']);
+        $data = $result['rows']->map(fn ($row) => [
+            'objectid' => $row->objectid,
+            'globalid' => $row->globalid,
+            'assignedto' => $row->assignedto,
+            'municipalitie' => $row->municipalitie,
+            'neighborhood' => $row->neighborhood,
+            'parcel_no1' => $row->parcel_no1,
+            'building_use' => $row->building_use,
+            'building_damage_status' => $row->building_damage_status,
+            'creationdate' => $row->creationdate ? date('Y-m-d h:i A', strtotime((string) $row->creationdate)) : '-',
+            'editdate' => $row->editdate ? date('Y-m-d h:i A', strtotime((string) $row->editdate)) : '-',
+            'final_status_label' => $this->statusBadge($row->final_status_name, $row->final_status_label),
+        ]);
 
-        $response = DataTables::of($query)
-            ->editColumn('final_status_label', fn ($row) => $this->statusBadge($row->final_status_name, $row->final_status_label))
-            ->editColumn('creationdate', fn ($row) => $row->creationdate ? date('Y-m-d h:i A', strtotime((string) $row->creationdate)) : '-')
-            ->editColumn('editdate', fn ($row) => $row->editdate ? date('Y-m-d h:i A', strtotime((string) $row->editdate)) : '-')
-            ->rawColumns(['final_status_label'])
-            ->make(true);
+        $response = response()->json($this->dataTablePayload($parameters['draw'], $result['total'], $data->all()));
 
         $this->logEndpointTiming('buildings', $filters, $startedAt);
 
@@ -67,17 +74,25 @@ class FieldEngineerReportController extends Controller
     public function housingUnits(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+        $parameters = $this->dataTableParameters($request);
 
         if (! $filters['assignedto']) {
-            return $this->emptyDataTableResponse($request);
+            return $this->emptyDataTableResponse($parameters['draw']);
         }
 
         $startedAt = microtime(true);
-        $query = $this->fieldEngineerReportService->filteredHousingUnitsQuery($filters);
+        $result = $this->fieldEngineerReportService->paginateHousingUnits($filters, $parameters['start'], $parameters['length']);
+        $data = $result['rows']->map(fn ($row) => [
+            'objectid' => $row->objectid,
+            'parentglobalid' => $row->parentglobalid,
+            'building_objectid' => $row->building_objectid,
+            'housing_unit_type' => $row->housing_unit_type,
+            'unit_damage_status' => $row->unit_damage_status,
+            'occupied' => $row->occupied,
+            'creationdate' => $row->creationdate ? date('Y-m-d h:i A', strtotime((string) $row->creationdate)) : '-',
+        ]);
 
-        $response = DataTables::of($query)
-            ->editColumn('creationdate', fn ($row) => $row->creationdate ? date('Y-m-d h:i A', strtotime((string) $row->creationdate)) : '-')
-            ->make(true);
+        $response = response()->json($this->dataTablePayload($parameters['draw'], $result['total'], $data->all()));
 
         $this->logEndpointTiming('housing_units', $filters, $startedAt);
 
@@ -87,21 +102,27 @@ class FieldEngineerReportController extends Controller
     public function edits(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+        $parameters = $this->dataTableParameters($request);
 
         if (! $filters['assignedto']) {
-            return $this->emptyDataTableResponse($request);
+            return $this->emptyDataTableResponse($parameters['draw']);
         }
 
         $startedAt = microtime(true);
-        $query = $this->fieldEngineerReportService->filteredEditsQuery($filters);
-
-        $response = DataTables::of($query)
-            ->editColumn('source_type', fn ($row) => $row->source_type === 'building_table'
+        $result = $this->fieldEngineerReportService->paginateEdits($filters, $parameters['start'], $parameters['length']);
+        $data = $result['rows']->map(fn ($row) => [
+            'source_type' => $row->source_type === 'building_table'
                 ? __('multilingual.field_engineer_report.types.building')
-                : __('multilingual.field_engineer_report.types.housing'))
-            ->editColumn('field_name', fn ($row) => $this->fieldEngineerReportService->fieldLabel((string) $row->field_name))
-            ->editColumn('updated_at', fn ($row) => $row->updated_at ? date('Y-m-d h:i A', strtotime((string) $row->updated_at)) : '-')
-            ->make(true);
+                : __('multilingual.field_engineer_report.types.housing'),
+            'global_id' => $row->global_id,
+            'field_name' => $this->fieldEngineerReportService->fieldLabel((string) $row->field_name),
+            'old_value' => $row->old_value,
+            'new_value' => $row->new_value,
+            'updated_by' => $row->updated_by,
+            'updated_at' => $row->updated_at ? date('Y-m-d h:i A', strtotime((string) $row->updated_at)) : '-',
+        ]);
+
+        $response = response()->json($this->dataTablePayload($parameters['draw'], $result['total'], $data->all()));
 
         $this->logEndpointTiming('edits', $filters, $startedAt);
 
@@ -111,22 +132,25 @@ class FieldEngineerReportController extends Controller
     public function statusHistory(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+        $parameters = $this->dataTableParameters($request);
 
         if (! $filters['assignedto']) {
-            return $this->emptyDataTableResponse($request);
+            return $this->emptyDataTableResponse($parameters['draw']);
         }
 
         $startedAt = microtime(true);
-        $query = $this->fieldEngineerReportService->filteredStatusHistoryQuery($filters);
-
-        $response = DataTables::of($query)
-            ->editColumn('item_type', fn ($row) => $row->item_type === 'building'
+        $result = $this->fieldEngineerReportService->paginateStatusHistory($filters, $parameters['start'], $parameters['length']);
+        $data = $result['rows']->map(fn ($row) => [
+            'item_type' => $row->item_type === 'building'
                 ? __('multilingual.field_engineer_report.types.building')
-                : __('multilingual.field_engineer_report.types.housing'))
-            ->editColumn('status_label', fn ($row) => $this->statusBadge($row->status_name, $row->status_label))
-            ->editColumn('created_at', fn ($row) => $row->created_at ? date('Y-m-d h:i A', strtotime((string) $row->created_at)) : '-')
-            ->rawColumns(['status_label'])
-            ->make(true);
+                : __('multilingual.field_engineer_report.types.housing'),
+            'item_number' => $row->item_number,
+            'status_label' => $this->statusBadge($row->status_name, $row->status_label),
+            'changed_by' => $row->changed_by,
+            'created_at' => $row->created_at ? date('Y-m-d h:i A', strtotime((string) $row->created_at)) : '-',
+        ]);
+
+        $response = response()->json($this->dataTablePayload($parameters['draw'], $result['total'], $data->all()));
 
         $this->logEndpointTiming('status_history', $filters, $startedAt);
 
@@ -136,17 +160,23 @@ class FieldEngineerReportController extends Controller
     public function assignments(FieldEngineerReportFilterRequest $request): JsonResponse
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
+        $parameters = $this->dataTableParameters($request);
 
         if (! $filters['assignedto']) {
-            return $this->emptyDataTableResponse($request);
+            return $this->emptyDataTableResponse($parameters['draw']);
         }
 
         $startedAt = microtime(true);
-        $query = $this->fieldEngineerReportService->filteredAssignmentsQuery($filters);
+        $result = $this->fieldEngineerReportService->paginateAssignments($filters, $parameters['start'], $parameters['length']);
+        $data = $result['rows']->map(fn ($row) => [
+            'building_id' => $row->building_id,
+            'assigned_user' => $row->assigned_user,
+            'assigned_by' => $row->assigned_by,
+            'assigned_date' => $row->assigned_date ? date('Y-m-d h:i A', strtotime((string) $row->assigned_date)) : '-',
+            'notes' => $row->notes,
+        ]);
 
-        $response = DataTables::of($query)
-            ->editColumn('assigned_date', fn ($row) => $row->assigned_date ? date('Y-m-d h:i A', strtotime((string) $row->assigned_date)) : '-')
-            ->make(true);
+        $response = response()->json($this->dataTablePayload($parameters['draw'], $result['total'], $data->all()));
 
         $this->logEndpointTiming('assignments', $filters, $startedAt);
 
@@ -206,9 +236,9 @@ class FieldEngineerReportController extends Controller
         return '<span class="'.$badgeClass.'">'.e($statusLabel ?: '-').'</span>';
     }
 
-    private function emptyDataTableResponse(Request $request): JsonResponse
+    private function emptyDataTableResponse(int $draw): JsonResponse
     {
-        return DataTables::of(collect())->make(true);
+        return response()->json($this->dataTablePayload($draw, 0, []));
     }
 
     private function logEndpointTiming(string $endpoint, array $filters, float $startedAt): void
@@ -218,5 +248,26 @@ class FieldEngineerReportController extends Controller
             'assignedto' => $filters['assignedto'],
             'execution_ms' => round((microtime(true) - $startedAt) * 1000, 2),
         ]);
+    }
+
+    private function dataTableParameters(Request $request): array
+    {
+        $length = max(1, min((int) $request->input('length', 25), 100));
+
+        return [
+            'draw' => (int) $request->input('draw', 1),
+            'start' => max((int) $request->input('start', 0), 0),
+            'length' => $length,
+        ];
+    }
+
+    private function dataTablePayload(int $draw, int $total, array $data): array
+    {
+        return [
+            'draw' => $draw,
+            'recordsTotal' => $total,
+            'recordsFiltered' => $total,
+            'data' => $data,
+        ];
     }
 }

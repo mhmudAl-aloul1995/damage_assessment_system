@@ -266,7 +266,7 @@
 
                             <div class="col-md-4 d-flex align-items-end gap-3">
                                 <button type="submit" class="btn btn-primary flex-fill">Search</button>
-                                <a href="{{ route('reports.field-engineer.index') }}" class="btn btn-light flex-fill">Reset</a>
+                                <button type="button" class="btn btn-light flex-fill" id="resetFieldEngineerFilters">Reset</button>
                             </div>
                         </div>
                     </form>
@@ -416,11 +416,11 @@
         document.addEventListener('DOMContentLoaded', function () {
             const localeIsArabic = @json($isArabic);
             const currentTabInputValue = @json($currentTab);
-            const hasSelectedEngineer = @json(!empty($filters['assignedto']));
             const initialSummary = @json($summary);
             const filtersForm = document.getElementById('fieldEngineerFiltersForm');
             const loadingState = document.getElementById('fieldEngineerLoadingState');
             const errorState = document.getElementById('fieldEngineerErrorState');
+            const resetFiltersButton = document.getElementById('resetFieldEngineerFilters');
             const tables = {};
 
             $.fn.dataTable.ext.errMode = 'none';
@@ -479,6 +479,41 @@
                 }, {});
             }
 
+            function hasAssignedEngineer() {
+                const payload = filterPayload();
+
+                return Boolean((payload.assignedto || '').trim());
+            }
+
+            function updatePageUrl() {
+                const payload = filterPayload();
+                const params = new URLSearchParams();
+
+                Object.entries(payload).forEach(function ([key, value]) {
+                    if (value !== null && value !== undefined && String(value).trim() !== '') {
+                        params.set(key, value);
+                    }
+                });
+
+                const activeTab = $('.nav-link.active').data('tab') || currentTabInputValue;
+
+                if (activeTab) {
+                    params.set('tab', activeTab);
+                }
+
+                const nextUrl = params.toString()
+                    ? window.location.pathname + '?' + params.toString()
+                    : window.location.pathname;
+
+                window.history.replaceState({}, '', nextUrl);
+            }
+
+            function reloadInitializedTables() {
+                Object.values(tables).forEach(function (table) {
+                    table.ajax.reload(null, true);
+                });
+            }
+
             function buildExportUrl(format) {
                 const activeTab = $('.nav-link.active').data('tab') || currentTabInputValue;
                 const params = new URLSearchParams(filterPayload());
@@ -517,7 +552,7 @@
             function fetchStats() {
                 renderSummary(initialSummary || {});
 
-                if (!hasSelectedEngineer) {
+                if (!hasAssignedEngineer()) {
                     return;
                 }
 
@@ -648,6 +683,33 @@
             fetchStats();
             tabTables.buildings();
 
+            $(filtersForm).on('submit', function (event) {
+                event.preventDefault();
+                clearErrorState();
+                updatePageUrl();
+                fetchStats();
+
+                if (!tables.buildings) {
+                    tabTables.buildings();
+                }
+
+                reloadInitializedTables();
+            });
+
+            $(resetFiltersButton).on('click', function () {
+                filtersForm.reset();
+                $('.report-select2').val(null).trigger('change');
+                clearErrorState();
+                updatePageUrl();
+                fetchStats();
+
+                if (!tables.buildings) {
+                    tabTables.buildings();
+                }
+
+                reloadInitializedTables();
+            });
+
             $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function (event) {
                 const tab = $(event.target).data('tab');
 
@@ -655,9 +717,7 @@
                     tabTables[tab]();
                 }
 
-                const params = new URLSearchParams(window.location.search);
-                params.set('tab', tab);
-                window.history.replaceState({}, '', window.location.pathname + '?' + params.toString());
+                updatePageUrl();
             });
 
             if (currentTabInputValue !== 'buildings' && tabTables[currentTabInputValue]) {

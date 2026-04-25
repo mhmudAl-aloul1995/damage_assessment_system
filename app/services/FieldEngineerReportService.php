@@ -15,6 +15,8 @@ class FieldEngineerReportService
 {
     private ?Collection $fieldLabels = null;
 
+    private ?bool $forceCollation = null;
+
     public function filterOptions(): array
     {
         return [
@@ -88,68 +90,109 @@ class FieldEngineerReportService
             return $this->emptySummary();
         }
 
-        $buildingsQuery = $this->filteredBuildingsQuery($filters);
-        $housingUnitsQuery = $this->filteredHousingUnitsQuery($filters);
-        $editsQuery = $this->filteredEditsQuery($filters);
-        $fieldStatusExpression = $this->collatedValue('field_status');
-        $buildingDamageExpression = $this->collatedValue('building_damage_status');
-        $finalStatusExpression = $this->collatedValue('final_status_name');
-        $unitDamageExpression = $this->collatedValue('unit_damage_status');
-        $completedLiteral = $this->collatedLiteral('COMPLETED');
-        $emptyLiteral = $this->collatedLiteral('');
-        $needReviewLiteral = $this->collatedLiteral('need_review');
-        $noDamageLiteral = $this->collatedLiteral('no_damage');
-        $noDamage2Literal = $this->collatedLiteral('no_damage2');
-        $acceptLikeLiteral = $this->collatedLiteral('%accept%');
-        $rejectLikeLiteral = $this->collatedLiteral('%reject%');
+        $cacheKey = 'field-engineer-report:summary:'.md5(json_encode($filters));
 
-        $buildingsSummary = DB::query()
-            ->fromSub($buildingsQuery, 'filtered_buildings')
-            ->selectRaw("
-                COUNT(*) as total_buildings,
-                SUM(CASE WHEN {$fieldStatusExpression} = {$completedLiteral} THEN 1 ELSE 0 END) as completed_buildings,
-                SUM(CASE WHEN {$fieldStatusExpression} <> {$completedLiteral} OR field_status IS NULL THEN 1 ELSE 0 END) as not_completed_buildings,
-                SUM(CASE WHEN building_damage_status IS NOT NULL AND {$buildingDamageExpression} <> {$emptyLiteral} AND {$buildingDamageExpression} NOT IN ({$noDamageLiteral}, {$noDamage2Literal}) THEN 1 ELSE 0 END) as damaged_buildings,
-                SUM(CASE WHEN {$finalStatusExpression} LIKE {$acceptLikeLiteral} THEN 1 ELSE 0 END) as accepted_statuses,
-                SUM(CASE WHEN {$finalStatusExpression} LIKE {$rejectLikeLiteral} THEN 1 ELSE 0 END) as rejected_statuses,
-                SUM(CASE WHEN {$finalStatusExpression} = {$needReviewLiteral} THEN 1 ELSE 0 END) as need_review_statuses,
-                MAX(COALESCE(editdate, creationdate)) as last_updated_at
-            ")
-            ->first();
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($filters) {
+            return $this->calculateSummary($filters);
+        });
+    }
 
-        $housingSummary = DB::query()
-            ->fromSub($housingUnitsQuery, 'filtered_housing_units')
-            ->selectRaw("
-                COUNT(*) as total_housing_units,
-                SUM(CASE WHEN unit_damage_status IS NOT NULL AND {$unitDamageExpression} <> {$emptyLiteral} AND {$unitDamageExpression} NOT IN ({$noDamageLiteral}, {$noDamage2Literal}) THEN 1 ELSE 0 END) as damaged_housing_units
-            ")
-            ->first();
+    private function calculateSummary(array $filters): array
+    {
+        $buildingIdentifiersQuery = $this->filteredBuildingIdentifiersQuery($filters);
+        $housingIdentifiersQuery = $this->filteredHousingIdentifiersQuery($filters);
+        $totalBuildings = DB::query()
+            ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
+            ->count();
 
-        $editsSummary = DB::query()
-            ->fromSub($editsQuery, 'filtered_edits')
-            ->selectRaw("
-                SUM(CASE WHEN source_type = 'building_table' THEN 1 ELSE 0 END) as building_edits,
-                SUM(CASE WHEN source_type = 'housing_table' THEN 1 ELSE 0 END) as housing_edits
-            ")
-            ->first();
+        $completedBuildings = DB::query()
+            ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
+            ->join('buildings', 'buildings.id', '=', 'filtered_buildings.id')
+            ->where('buildings.field_status', 'COMPLETED')
+            ->count();
 
-        $totalBuildings = (int) ($buildingsSummary->total_buildings ?? 0);
-        $completedBuildings = (int) ($buildingsSummary->completed_buildings ?? 0);
+        $notCompletedBuildings = DB::query()
+            ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
+            ->join('buildings', 'buildings.id', '=', 'filtered_buildings.id')
+            ->where(function ($query) {
+                $query->whereNull('buildings.field_status')
+                    ->orWhere('buildings.field_status', '!=', 'COMPLETED');
+            })
+            ->count();
+
+        $damagedBuildings = DB::query()
+            ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
+            ->join('buildings', 'buildings.id', '=', 'filtered_buildings.id')
+            ->leftJoinSub($this->latestEditValueSubquery('building_table', 'building_damage_status'), 'edit_building_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_damage_status.global_id', 'buildings.globalid')))
+            ->whereNotNull(DB::raw('COALESCE(edit_building_damage_status.field_value, buildings.building_damage_status)'))
+            ->whereNotIn(DB::raw('COALESCE(edit_building_damage_status.field_value, buildings.building_damage_status)'), ['no_damage', 'no_damage2', ''])
+            ->count();
+
+        $lastUpdatedAt = DB::query()
+            ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
+            ->join('buildings', 'buildings.id', '=', 'filtered_buildings.id')
+            ->max(DB::raw('COALESCE(buildings.editdate, buildings.creationdate)'));
+
+        $finalStatusesBase = DB::query()
+            ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
+            ->joinSub($this->buildingStatusSubquery(null, 'team_leader', 'final'), 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'filtered_buildings.objectid'));
+
+        $acceptedStatuses = (clone $finalStatusesBase)
+            ->where('final_statuses.status_name', 'like', '%accept%')
+            ->count();
+
+        $rejectedStatuses = (clone $finalStatusesBase)
+            ->where('final_statuses.status_name', 'like', '%reject%')
+            ->count();
+
+        $needReviewStatuses = (clone $finalStatusesBase)
+            ->where('final_statuses.status_name', 'need_review')
+            ->count();
+
+        $totalHousingUnits = DB::query()
+            ->fromSub($housingIdentifiersQuery, 'filtered_housing_units')
+            ->count();
+
+        $damagedHousingUnits = DB::query()
+            ->fromSub($housingIdentifiersQuery, 'filtered_housing_units')
+            ->join('housing_units', 'housing_units.id', '=', 'filtered_housing_units.id')
+            ->leftJoinSub($this->latestEditValueSubquery('housing_table', 'unit_damage_status'), 'edit_housing_damage', fn ($join) => $join->whereRaw($this->collatedEquals('edit_housing_damage.global_id', 'housing_units.globalid')))
+            ->whereNotNull(DB::raw('COALESCE(edit_housing_damage.field_value, housing_units.unit_damage_status)'))
+            ->whereNotIn(DB::raw('COALESCE(edit_housing_damage.field_value, housing_units.unit_damage_status)'), ['no_damage', 'no_damage2', ''])
+            ->count();
+
+        $buildingEdits = DB::table('edit_assessments')
+            ->where('edit_assessments.type', 'building_table')
+            ->whereExists(function ($existsQuery) use ($filters) {
+                $existsQuery->fromSub($this->filteredBuildingIdentifiersQuery($filters), 'filtered_buildings')
+                    ->selectRaw('1')
+                    ->whereRaw($this->collatedEquals('filtered_buildings.globalid', 'edit_assessments.global_id'));
+            })
+            ->count();
+
+        $housingEdits = DB::table('edit_assessments')
+            ->where('edit_assessments.type', 'housing_table')
+            ->whereExists(function ($existsQuery) use ($filters) {
+                $existsQuery->fromSub($this->filteredHousingIdentifiersQuery($filters), 'filtered_housing')
+                    ->selectRaw('1')
+                    ->whereRaw($this->collatedEquals('filtered_housing.globalid', 'edit_assessments.global_id'));
+            })
+            ->count();
 
         return [
             'total_buildings' => $totalBuildings,
-            'total_housing_units' => (int) ($housingSummary->total_housing_units ?? 0),
-            'damaged_buildings' => (int) ($buildingsSummary->damaged_buildings ?? 0),
-            'damaged_housing_units' => (int) ($housingSummary->damaged_housing_units ?? 0),
-            'building_edits' => (int) ($editsSummary->building_edits ?? 0),
-            'housing_edits' => (int) ($editsSummary->housing_edits ?? 0),
-            'accepted_statuses' => (int) ($buildingsSummary->accepted_statuses ?? 0),
-            'rejected_statuses' => (int) ($buildingsSummary->rejected_statuses ?? 0),
-            'need_review_statuses' => (int) ($buildingsSummary->need_review_statuses ?? 0),
-            'last_updated_at' => $buildingsSummary->last_updated_at,
+            'total_housing_units' => $totalHousingUnits,
+            'damaged_buildings' => $damagedBuildings,
+            'damaged_housing_units' => $damagedHousingUnits,
+            'building_edits' => $buildingEdits,
+            'housing_edits' => $housingEdits,
+            'accepted_statuses' => $acceptedStatuses,
+            'rejected_statuses' => $rejectedStatuses,
+            'need_review_statuses' => $needReviewStatuses,
+            'last_updated_at' => $lastUpdatedAt,
             'completion_rate' => $totalBuildings > 0 ? round(($completedBuildings / $totalBuildings) * 100, 1) : 0.0,
             'completed_buildings' => $completedBuildings,
-            'not_completed_buildings' => (int) ($buildingsSummary->not_completed_buildings ?? 0),
+            'not_completed_buildings' => $notCompletedBuildings,
         ];
     }
 
@@ -493,6 +536,200 @@ class FieldEngineerReportService
         return $this->fieldLabels()->get($fieldName, $fieldName);
     }
 
+    public function paginateBuildings(array $filters, int $start, int $length): array
+    {
+        $baseQuery = $this->filteredBuildingIdentifiersQuery($filters);
+        $total = (clone $baseQuery)->count();
+        $pageIds = (clone $baseQuery)
+            ->orderByDesc('buildings.creationdate')
+            ->orderByDesc('buildings.id')
+            ->offset($start)
+            ->limit($length)
+            ->pluck('buildings.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($pageIds === []) {
+            return ['total' => $total, 'rows' => collect()];
+        }
+
+        $rows = $this->filteredBuildingsQuery($filters)
+            ->whereIn('buildings.id', $pageIds)
+            ->get();
+
+        return [
+            'total' => $total,
+            'rows' => $this->sortRowsBySequence($rows, $pageIds, 'id'),
+        ];
+    }
+
+    public function paginateHousingUnits(array $filters, int $start, int $length): array
+    {
+        $baseQuery = $this->filteredHousingIdentifiersQuery($filters);
+        $total = (clone $baseQuery)->count();
+        $pageIds = (clone $baseQuery)
+            ->orderByDesc('housing_units.creationdate')
+            ->orderByDesc('housing_units.id')
+            ->offset($start)
+            ->limit($length)
+            ->pluck('housing_units.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($pageIds === []) {
+            return ['total' => $total, 'rows' => collect()];
+        }
+
+        $rows = $this->filteredHousingUnitsQuery($filters)
+            ->whereIn('housing_units.id', $pageIds)
+            ->get();
+
+        return [
+            'total' => $total,
+            'rows' => $this->sortRowsBySequence($rows, $pageIds, 'id'),
+        ];
+    }
+
+    public function paginateEdits(array $filters, int $start, int $length): array
+    {
+        $baseQuery = DB::table('edit_assessments')
+            ->select(['edit_assessments.id', 'edit_assessments.updated_at'])
+            ->where(function ($query) use ($filters) {
+                $query->where(function ($buildingQuery) use ($filters) {
+                    $buildingQuery->where('edit_assessments.type', 'building_table')
+                        ->whereExists(function ($existsQuery) use ($filters) {
+                            $existsQuery->fromSub($this->filteredBuildingIdentifiersQuery($filters), 'filtered_buildings')
+                                ->selectRaw('1')
+                                ->whereRaw($this->collatedEquals('filtered_buildings.globalid', 'edit_assessments.global_id'));
+                        });
+                })->orWhere(function ($housingQuery) use ($filters) {
+                    $housingQuery->where('edit_assessments.type', 'housing_table')
+                        ->whereExists(function ($existsQuery) use ($filters) {
+                            $existsQuery->fromSub($this->filteredHousingIdentifiersQuery($filters), 'filtered_housing')
+                                ->selectRaw('1')
+                                ->whereRaw($this->collatedEquals('filtered_housing.globalid', 'edit_assessments.global_id'));
+                        });
+                });
+            });
+
+        if ($search = $filters['search']) {
+            $baseQuery->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('edit_assessments.global_id', 'like', '%'.$search.'%')
+                    ->orWhere('edit_assessments.field_name', 'like', '%'.$search.'%')
+                    ->orWhere('edit_assessments.field_value', 'like', '%'.$search.'%');
+            });
+        }
+
+        $total = (clone $baseQuery)->count();
+        $pageIds = (clone $baseQuery)
+            ->orderByDesc('edit_assessments.updated_at')
+            ->orderByDesc('edit_assessments.id')
+            ->offset($start)
+            ->limit($length)
+            ->pluck('edit_assessments.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($pageIds === []) {
+            return ['total' => $total, 'rows' => collect()];
+        }
+
+        $rows = $this->filteredEditsQuery($filters)
+            ->whereIn('edit_assessments.id', $pageIds)
+            ->get();
+
+        return [
+            'total' => $total,
+            'rows' => $this->sortRowsBySequence($rows, $pageIds, 'id'),
+        ];
+    }
+
+    public function paginateStatusHistory(array $filters, int $start, int $length): array
+    {
+        $baseQuery = $this->statusHistoryIdentifiersQuery($filters);
+        $total = DB::query()->fromSub(clone $baseQuery, 'status_history_ids')->count();
+        $pageRows = DB::query()
+            ->fromSub($baseQuery, 'status_history_ids')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->offset($start)
+            ->limit($length)
+            ->get();
+
+        if ($pageRows->isEmpty()) {
+            return ['total' => $total, 'rows' => collect()];
+        }
+
+        $pageBuildingIds = $pageRows->where('item_type', 'building')->pluck('id')->all();
+        $pageHousingIds = $pageRows->where('item_type', 'housing')->pluck('id')->all();
+
+        $rows = $this->filteredStatusHistoryQuery($filters)
+            ->where(function ($query) use ($pageBuildingIds, $pageHousingIds) {
+                if ($pageBuildingIds !== []) {
+                    $query->where(function ($innerQuery) use ($pageBuildingIds) {
+                        $innerQuery->where('status_history.item_type', 'building')
+                            ->whereIn('status_history.id', $pageBuildingIds);
+                    });
+                }
+
+                if ($pageHousingIds !== []) {
+                    $query->orWhere(function ($innerQuery) use ($pageHousingIds) {
+                        $innerQuery->where('status_history.item_type', 'housing')
+                            ->whereIn('status_history.id', $pageHousingIds);
+                    });
+                }
+            })
+            ->get();
+
+        $sequence = $pageRows
+            ->map(fn ($row) => $row->item_type.'-'.$row->id)
+            ->all();
+
+        return [
+            'total' => $total,
+            'rows' => $this->sortRowsByCompositeSequence($rows, $sequence, fn ($row) => $row->item_type.'-'.$row->id),
+        ];
+    }
+
+    public function paginateAssignments(array $filters, int $start, int $length): array
+    {
+        $filteredBuildings = $this->filteredBuildingIdentifiersQuery($filters)->select([
+            'buildings.id',
+        ]);
+
+        $baseQuery = DB::table('assigned_assessment_users')
+            ->join('buildings', 'buildings.id', '=', 'assigned_assessment_users.building_id')
+            ->joinSub($filteredBuildings, 'filtered_buildings', fn ($join) => $join->on('filtered_buildings.id', '=', 'buildings.id'))
+            ->select(['assigned_assessment_users.id', 'assigned_assessment_users.created_at']);
+
+        if ($search = $filters['search']) {
+            $baseQuery->where('assigned_assessment_users.type', 'like', '%'.$search.'%');
+        }
+
+        $total = (clone $baseQuery)->count();
+        $pageIds = (clone $baseQuery)
+            ->orderByDesc('assigned_assessment_users.created_at')
+            ->orderByDesc('assigned_assessment_users.id')
+            ->offset($start)
+            ->limit($length)
+            ->pluck('assigned_assessment_users.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($pageIds === []) {
+            return ['total' => $total, 'rows' => collect()];
+        }
+
+        $rows = $this->filteredAssignmentsQuery($filters)
+            ->whereIn('assigned_assessment_users.id', $pageIds)
+            ->get();
+
+        return [
+            'total' => $total,
+            'rows' => $this->sortRowsBySequence($rows, $pageIds, 'id'),
+        ];
+    }
+
     private function exportBuildingsRows(array $filters): array
     {
         $rows = $this->filteredBuildingsQuery($filters)->orderBy('creationdate', 'desc')->get();
@@ -636,6 +873,35 @@ class FieldEngineerReportService
             ]);
     }
 
+    private function statusHistoryIdentifiersQuery(array $filters): Builder
+    {
+        $filteredBuildings = $this->filteredBuildingIdentifiersQuery($filters)->select([
+            'buildings.objectid',
+        ]);
+
+        $filteredHousing = $this->filteredHousingIdentifiersQuery($filters)->select([
+            'housing_units.objectid',
+        ]);
+
+        $buildingHistoryQuery = DB::table('building_status_histories as history')
+            ->joinSub($filteredBuildings, 'filtered_buildings', fn ($join) => $join->on('filtered_buildings.objectid', '=', 'history.building_id'))
+            ->select([
+                DB::raw("'building' as item_type"),
+                'history.id',
+                'history.created_at',
+            ]);
+
+        $housingHistoryQuery = DB::table('housing_status_histories as history')
+            ->joinSub($filteredHousing, 'filtered_housing', fn ($join) => $join->on('filtered_housing.objectid', '=', 'history.housing_id'))
+            ->select([
+                DB::raw("'housing' as item_type"),
+                'history.id',
+                'history.created_at',
+            ]);
+
+        return DB::query()->fromSub($buildingHistoryQuery->unionAll($housingHistoryQuery), 'status_history_ids');
+    }
+
     private function filteredBuildingIdentifiersQuery(array $filters): Builder
     {
         $query = DB::table('buildings')->select([
@@ -705,11 +971,30 @@ class FieldEngineerReportService
         return $query;
     }
 
+    private function sortRowsBySequence(Collection $rows, array $sequence, string $key): Collection
+    {
+        $positions = array_flip($sequence);
+
+        return $rows
+            ->sortBy(fn ($row) => $positions[(int) data_get($row, $key)] ?? PHP_INT_MAX)
+            ->values();
+    }
+
+    private function sortRowsByCompositeSequence(Collection $rows, array $sequence, callable $resolver): Collection
+    {
+        $positions = array_flip($sequence);
+
+        return $rows
+            ->sortBy(fn ($row) => $positions[$resolver($row)] ?? PHP_INT_MAX)
+            ->values();
+    }
+
     private function filteredHousingIdentifiersQuery(array $filters): Builder
     {
         $query = DB::table('housing_units')
             ->join('buildings', fn ($join) => $join->whereRaw($this->collatedEquals('housing_units.parentglobalid', 'buildings.globalid')))
             ->select([
+                'housing_units.id',
                 'housing_units.objectid',
                 'housing_units.globalid',
                 'housing_units.parentglobalid',
@@ -1021,7 +1306,7 @@ class FieldEngineerReportService
 
     private function collatedEquals(string $leftColumn, string $rightColumn): string
     {
-        if (DB::connection()->getDriverName() === 'sqlite') {
+        if (! $this->shouldForceCollation()) {
             return "{$leftColumn} = {$rightColumn}";
         }
 
@@ -1030,7 +1315,7 @@ class FieldEngineerReportService
 
     private function collatedValue(string $column): string
     {
-        if (DB::connection()->getDriverName() === 'sqlite') {
+        if (! $this->shouldForceCollation()) {
             return $column;
         }
 
@@ -1039,7 +1324,7 @@ class FieldEngineerReportService
 
     private function collatedExpression(string $expression): string
     {
-        if (DB::connection()->getDriverName() === 'sqlite') {
+        if (! $this->shouldForceCollation()) {
             return $expression;
         }
 
@@ -1050,10 +1335,52 @@ class FieldEngineerReportService
     {
         $quotedValue = "'".str_replace("'", "''", $value)."'";
 
-        if (DB::connection()->getDriverName() === 'sqlite') {
+        if (! $this->shouldForceCollation()) {
             return $quotedValue;
         }
 
         return "{$quotedValue} COLLATE utf8mb4_unicode_ci";
+    }
+
+    private function shouldForceCollation(): bool
+    {
+        if ($this->forceCollation !== null) {
+            return $this->forceCollation;
+        }
+
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return $this->forceCollation = false;
+        }
+
+        $databaseName = DB::connection()->getDatabaseName();
+
+        if (! $databaseName) {
+            return $this->forceCollation = true;
+        }
+
+        $collations = collect(DB::table('information_schema.COLUMNS')
+            ->select('COLLATION_NAME')
+            ->where('TABLE_SCHEMA', $databaseName)
+            ->where(function ($query) {
+                $query->where(function ($innerQuery) {
+                    $innerQuery->where('TABLE_NAME', 'buildings')
+                        ->whereIn('COLUMN_NAME', ['globalid', 'assignedto', 'field_status', 'building_damage_status']);
+                })->orWhere(function ($innerQuery) {
+                    $innerQuery->where('TABLE_NAME', 'housing_units')
+                        ->whereIn('COLUMN_NAME', ['globalid', 'parentglobalid']);
+                })->orWhere(function ($innerQuery) {
+                    $innerQuery->where('TABLE_NAME', 'edit_assessments')
+                        ->whereIn('COLUMN_NAME', ['global_id']);
+                })->orWhere(function ($innerQuery) {
+                    $innerQuery->where('TABLE_NAME', 'assessment_statuses')
+                        ->whereIn('COLUMN_NAME', ['name', 'stage']);
+                });
+            })
+            ->pluck('COLLATION_NAME'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        return $this->forceCollation = $collations->count() > 1;
     }
 }
