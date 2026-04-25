@@ -87,6 +87,7 @@ class AreaManagerRejectedBuildingsController extends Controller
                         ->orWhere('assessment_statuses.name', 'like', '%'.$keyword.'%');
                 });
             })
+            ->orderColumn('latest_status_at', 'latest_history.created_at $1')
             ->editColumn('latest_status_label', function ($row): string {
                 $statusName = strtolower((string) $row->latest_status_name);
                 $badgeClass = str_contains($statusName, 'reject')

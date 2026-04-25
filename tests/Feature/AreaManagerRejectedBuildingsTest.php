@@ -126,6 +126,29 @@ it('filters the area manager review queue by latest rejected or need review stat
         ->assertDontSee('South Accepted Latest')
         ->assertDontSee('North Rejected');
 
+    $this->actingAs($manager)
+        ->get(route('area-manager-review.data', [
+            'draw' => 2,
+            'start' => 0,
+            'length' => 10,
+            'columns' => [
+                ['data' => 'DT_RowIndex', 'name' => 'DT_RowIndex', 'searchable' => 'false', 'orderable' => 'false', 'search' => ['value' => '', 'regex' => 'false']],
+                ['data' => 'objectid', 'name' => 'objectid', 'searchable' => 'true', 'orderable' => 'true', 'search' => ['value' => '', 'regex' => 'false']],
+                ['data' => 'building_name', 'name' => 'building_name', 'searchable' => 'true', 'orderable' => 'true', 'search' => ['value' => '', 'regex' => 'false']],
+                ['data' => 'municipalitie', 'name' => 'municipalitie', 'searchable' => 'true', 'orderable' => 'true', 'search' => ['value' => '', 'regex' => 'false']],
+                ['data' => 'neighborhood', 'name' => 'neighborhood', 'searchable' => 'true', 'orderable' => 'true', 'search' => ['value' => '', 'regex' => 'false']],
+                ['data' => 'assignedto', 'name' => 'assignedto', 'searchable' => 'true', 'orderable' => 'true', 'search' => ['value' => '', 'regex' => 'false']],
+                ['data' => 'latest_status_label', 'name' => 'latest_status_label', 'searchable' => 'true', 'orderable' => 'true', 'search' => ['value' => '', 'regex' => 'false']],
+                ['data' => 'latest_status_at', 'name' => 'latest_history.created_at', 'searchable' => 'false', 'orderable' => 'true', 'search' => ['value' => '', 'regex' => 'false']],
+                ['data' => 'actions', 'name' => 'actions', 'searchable' => 'false', 'orderable' => 'false', 'search' => ['value' => '', 'regex' => 'false']],
+            ],
+            'order' => [
+                ['column' => 7, 'dir' => 'desc'],
+            ],
+        ]))
+        ->assertOk()
+        ->assertSee('South Rejected');
+
     $this->actingAs($otherUser)
         ->get(route('area-manager-review.index'))
         ->assertForbidden();

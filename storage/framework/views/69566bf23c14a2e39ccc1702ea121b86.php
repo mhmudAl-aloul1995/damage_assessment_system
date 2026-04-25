@@ -103,7 +103,11 @@
                     { data: 'neighborhood', name: 'neighborhood' },
                     { data: 'assignedto', name: 'assignedto' },
                     { data: 'latest_status_label', name: 'latest_status_label' },
-                    { data: 'latest_status_at', name: 'latest_status_at' },
+                    {
+                        data: 'latest_status_at',
+                        name: 'latest_history.created_at',
+                        searchable: false
+                    },
                     {
                         data: 'actions',
                         name: 'actions',
