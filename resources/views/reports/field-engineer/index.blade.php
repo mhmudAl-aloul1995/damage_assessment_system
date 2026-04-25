@@ -282,17 +282,20 @@
                             {{ __("multilingual.field_engineer_report.stats.{$card['key']}") }}
                         </div>
                         <div class="value text-{{ $card['class'] }}" data-summary-key="{{ $card['key'] }}">
+                            @php
+                                $summaryValue = $summary[$card['key']] ?? null;
+                            @endphp
                             @if (!empty($card['isDate']))
-                                -
+                                {{ $summaryValue ?: '-' }}
                             @elseif (!empty($card['isPercent']))
-                                0.0%
+                                {{ number_format((float) ($summaryValue ?? 0), 1) }}%
                             @else
-                                0
+                                {{ number_format((float) ($summaryValue ?? 0)) }}
                             @endif
                         </div>
                         @if ($card['key'] === 'completion_rate')
                             <div class="progress h-8px mt-4">
-                                <div class="progress-bar bg-primary" role="progressbar" data-summary-progress="{{ $card['key'] }}" style="width: 0%;"></div>
+                                <div class="progress-bar bg-primary" role="progressbar" data-summary-progress="{{ $card['key'] }}" style="width: {{ min(100, (float) ($summary['completion_rate'] ?? 0)) }}%;"></div>
                             </div>
                         @endif
                     </div>
@@ -414,6 +417,7 @@
             const localeIsArabic = @json($isArabic);
             const currentTabInputValue = @json($currentTab);
             const hasSelectedEngineer = @json(!empty($filters['assignedto']));
+            const initialSummary = @json($summary);
             const filtersForm = document.getElementById('fieldEngineerFiltersForm');
             const loadingState = document.getElementById('fieldEngineerLoadingState');
             const errorState = document.getElementById('fieldEngineerErrorState');
@@ -511,21 +515,7 @@
             }
 
             function fetchStats() {
-                renderSummary({
-                    total_buildings: 0,
-                    total_housing_units: 0,
-                    damaged_buildings: 0,
-                    damaged_housing_units: 0,
-                    building_edits: 0,
-                    housing_edits: 0,
-                    accepted_statuses: 0,
-                    rejected_statuses: 0,
-                    need_review_statuses: 0,
-                    last_updated_at: null,
-                    completion_rate: 0,
-                    completed_buildings: 0,
-                    not_completed_buildings: 0,
-                });
+                renderSummary(initialSummary || {});
 
                 if (!hasSelectedEngineer) {
                     return;
@@ -654,6 +644,7 @@
                 },
             };
 
+            renderSummary(initialSummary || {});
             fetchStats();
             tabTables.buildings();
 

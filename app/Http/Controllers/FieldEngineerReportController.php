@@ -23,11 +23,14 @@ class FieldEngineerReportController extends Controller
     {
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
         $startedAt = microtime(true);
+        $summary = $filters['assignedto']
+            ? $this->fieldEngineerReportService->summary($filters)
+            : $this->fieldEngineerReportService->emptySummary();
 
         $response = response()->view('reports.field-engineer.index', [
             'filters' => $filters,
             'filterOptions' => $this->fieldEngineerReportService->filterOptions(),
-            'summary' => $this->fieldEngineerReportService->emptySummary(),
+            'summary' => $summary,
         ]);
 
         Log::info('FieldEngineerReport index time', [

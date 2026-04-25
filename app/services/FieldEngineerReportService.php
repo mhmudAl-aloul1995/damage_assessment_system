@@ -179,9 +179,9 @@ class FieldEngineerReportService
         $damageStatusEdit = $this->latestEditValueSubquery('building_table', 'building_damage_status');
         $buildingUseEdit = $this->latestEditValueSubquery('building_table', 'building_use');
         $buildingNameEdit = $this->latestEditValueSubquery('building_table', 'building_name');
-        $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
-        $legalStatus = $this->buildingStatusSubquery('Legal Auditor', null, 'legal');
         $finalStatus = $this->buildingStatusSubquery(null, 'team_leader', 'final');
+        $includeEngineerStatus = (bool) $filters['engineer_status'];
+        $includeLegalStatus = (bool) $filters['legal_status'];
 
         $query = DB::table('buildings')
             ->leftJoinSub($municipalityEdit, 'edit_municipalitie', fn ($join) => $join->whereRaw($this->collatedEquals('edit_municipalitie.global_id', 'buildings.globalid')))
@@ -189,8 +189,6 @@ class FieldEngineerReportService
             ->leftJoinSub($damageStatusEdit, 'edit_building_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_damage_status.global_id', 'buildings.globalid')))
             ->leftJoinSub($buildingUseEdit, 'edit_building_use', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_use.global_id', 'buildings.globalid')))
             ->leftJoinSub($buildingNameEdit, 'edit_building_name', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_name.global_id', 'buildings.globalid')))
-            ->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'))
-            ->leftJoinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'))
             ->leftJoinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'))
             ->select([
                 'buildings.id',
@@ -206,37 +204,41 @@ class FieldEngineerReportService
                 DB::raw('COALESCE(edit_neighborhood.field_value, buildings.neighborhood) as neighborhood'),
                 DB::raw('COALESCE(edit_building_use.field_value, buildings.building_use) as building_use'),
                 DB::raw('COALESCE(edit_building_damage_status.field_value, buildings.building_damage_status) as building_damage_status'),
-                DB::raw('engineer_statuses.status_name as engineer_status_name'),
-                DB::raw('engineer_statuses.status_label as engineer_status_label'),
-                DB::raw('legal_statuses.status_name as legal_status_name'),
-                DB::raw('legal_statuses.status_label as legal_status_label'),
+                DB::raw(($includeEngineerStatus ? 'engineer_statuses.status_name' : 'null').' as engineer_status_name'),
+                DB::raw(($includeEngineerStatus ? 'engineer_statuses.status_label' : 'null').' as engineer_status_label'),
+                DB::raw(($includeLegalStatus ? 'legal_statuses.status_name' : 'null').' as legal_status_name'),
+                DB::raw(($includeLegalStatus ? 'legal_statuses.status_label' : 'null').' as legal_status_label'),
                 DB::raw('final_statuses.status_name as final_status_name'),
                 DB::raw('final_statuses.status_label as final_status_label'),
             ]);
+
+        if ($includeEngineerStatus) {
+            $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
+            $query->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'));
+        }
+
+        if ($includeLegalStatus) {
+            $legalStatus = $this->buildingStatusSubquery('Legal Auditor', null, 'legal');
+            $query->leftJoinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'));
+        }
 
         return $this->applyBuildingFilters($query, $filters);
     }
 
     public function filteredHousingUnitsQuery(array $filters): Builder
     {
-        $buildingMunicipalityEdit = $this->latestEditValueSubquery('building_table', 'municipalitie');
-        $buildingNeighborhoodEdit = $this->latestEditValueSubquery('building_table', 'neighborhood');
-        $buildingDamageStatusEdit = $this->latestEditValueSubquery('building_table', 'building_damage_status');
-        $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
-        $legalStatus = $this->buildingStatusSubquery('Legal Auditor', null, 'legal');
-        $finalStatus = $this->buildingStatusSubquery(null, 'team_leader', 'final');
         $housingTypeEdit = $this->latestEditValueSubquery('housing_table', 'housing_unit_type');
         $housingDamageEdit = $this->latestEditValueSubquery('housing_table', 'unit_damage_status');
         $housingOccupiedEdit = $this->latestEditValueSubquery('housing_table', 'occupied');
+        $includeMunicipality = (bool) $filters['municipalitie'];
+        $includeNeighborhood = (bool) $filters['neighborhood'];
+        $includeBuildingDamage = (bool) $filters['building_damage_status'];
+        $includeEngineerStatus = (bool) $filters['engineer_status'];
+        $includeLegalStatus = (bool) $filters['legal_status'];
+        $includeFinalStatus = (bool) $filters['final_status'];
 
         $query = DB::table('housing_units')
             ->join('buildings', fn ($join) => $join->whereRaw($this->collatedEquals('housing_units.parentglobalid', 'buildings.globalid')))
-            ->leftJoinSub($buildingMunicipalityEdit, 'building_edit_municipalitie', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_municipalitie.global_id', 'buildings.globalid')))
-            ->leftJoinSub($buildingNeighborhoodEdit, 'building_edit_neighborhood', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_neighborhood.global_id', 'buildings.globalid')))
-            ->leftJoinSub($buildingDamageStatusEdit, 'building_edit_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_damage_status.global_id', 'buildings.globalid')))
-            ->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'))
-            ->leftJoinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'))
-            ->leftJoinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'))
             ->leftJoinSub($housingTypeEdit, 'housing_edit_type', fn ($join) => $join->whereRaw($this->collatedEquals('housing_edit_type.global_id', 'housing_units.globalid')))
             ->leftJoinSub($housingDamageEdit, 'housing_edit_damage', fn ($join) => $join->whereRaw($this->collatedEquals('housing_edit_damage.global_id', 'housing_units.globalid')))
             ->leftJoinSub($housingOccupiedEdit, 'housing_edit_occupied', fn ($join) => $join->whereRaw($this->collatedEquals('housing_edit_occupied.global_id', 'housing_units.globalid')))
@@ -250,34 +252,50 @@ class FieldEngineerReportService
                 DB::raw('COALESCE(housing_edit_type.field_value, housing_units.housing_unit_type) as housing_unit_type'),
                 DB::raw('COALESCE(housing_edit_damage.field_value, housing_units.unit_damage_status) as unit_damage_status'),
                 DB::raw('COALESCE(housing_edit_occupied.field_value, housing_units.occupied) as occupied'),
-                DB::raw('COALESCE(building_edit_municipalitie.field_value, buildings.municipalitie) as building_municipalitie'),
-                DB::raw('COALESCE(building_edit_neighborhood.field_value, buildings.neighborhood) as building_neighborhood'),
-                DB::raw('COALESCE(building_edit_damage_status.field_value, buildings.building_damage_status) as building_damage_status'),
+                DB::raw(($includeMunicipality ? 'COALESCE(building_edit_municipalitie.field_value, buildings.municipalitie)' : 'buildings.municipalitie').' as building_municipalitie'),
+                DB::raw(($includeNeighborhood ? 'COALESCE(building_edit_neighborhood.field_value, buildings.neighborhood)' : 'buildings.neighborhood').' as building_neighborhood'),
+                DB::raw(($includeBuildingDamage ? 'COALESCE(building_edit_damage_status.field_value, buildings.building_damage_status)' : 'buildings.building_damage_status').' as building_damage_status'),
                 'buildings.assignedto',
-                DB::raw('engineer_statuses.status_name as engineer_status_name'),
-                DB::raw('legal_statuses.status_name as legal_status_name'),
-                DB::raw('final_statuses.status_name as final_status_name'),
+                DB::raw(($includeEngineerStatus ? 'engineer_statuses.status_name' : 'null').' as engineer_status_name'),
+                DB::raw(($includeLegalStatus ? 'legal_statuses.status_name' : 'null').' as legal_status_name'),
+                DB::raw(($includeFinalStatus ? 'final_statuses.status_name' : 'null').' as final_status_name'),
             ]);
+
+        if ($includeMunicipality) {
+            $buildingMunicipalityEdit = $this->latestEditValueSubquery('building_table', 'municipalitie');
+            $query->leftJoinSub($buildingMunicipalityEdit, 'building_edit_municipalitie', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_municipalitie.global_id', 'buildings.globalid')));
+        }
+
+        if ($includeNeighborhood) {
+            $buildingNeighborhoodEdit = $this->latestEditValueSubquery('building_table', 'neighborhood');
+            $query->leftJoinSub($buildingNeighborhoodEdit, 'building_edit_neighborhood', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_neighborhood.global_id', 'buildings.globalid')));
+        }
+
+        if ($includeBuildingDamage) {
+            $buildingDamageStatusEdit = $this->latestEditValueSubquery('building_table', 'building_damage_status');
+            $query->leftJoinSub($buildingDamageStatusEdit, 'building_edit_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_damage_status.global_id', 'buildings.globalid')));
+        }
+
+        if ($includeEngineerStatus) {
+            $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
+            $query->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'));
+        }
+
+        if ($includeLegalStatus) {
+            $legalStatus = $this->buildingStatusSubquery('Legal Auditor', null, 'legal');
+            $query->leftJoinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'));
+        }
+
+        if ($includeFinalStatus) {
+            $finalStatus = $this->buildingStatusSubquery(null, 'team_leader', 'final');
+            $query->leftJoinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'));
+        }
 
         return $this->applyHousingFilters($query, $filters);
     }
 
     public function filteredEditsQuery(array $filters): Builder
     {
-        $filteredBuildings = $this->filteredBuildingsQuery($filters)->select([
-            'buildings.id',
-            'buildings.objectid',
-            'buildings.globalid',
-            'buildings.assignedto',
-        ]);
-
-        $filteredHousing = $this->filteredHousingUnitsQuery($filters)->select([
-            'housing_units.objectid',
-            'housing_units.globalid',
-            'housing_units.parentglobalid',
-            'assignedto',
-        ]);
-
         $previousValueSubquery = '
             (
                 select previous_edit.field_value
@@ -298,18 +316,23 @@ class FieldEngineerReportService
         ';
 
         $query = DB::table('edit_assessments')
-            ->leftJoinSub($filteredBuildings, 'filtered_buildings', function ($join) {
-                $join->whereRaw($this->collatedEquals('filtered_buildings.globalid', 'edit_assessments.global_id'))
-                    ->where('edit_assessments.type', '=', 'building_table');
-            })
-            ->leftJoinSub($filteredHousing, 'filtered_housing', function ($join) {
-                $join->whereRaw($this->collatedEquals('filtered_housing.globalid', 'edit_assessments.global_id'))
-                    ->where('edit_assessments.type', '=', 'housing_table');
-            })
             ->leftJoin('users', 'users.id', '=', 'edit_assessments.user_id')
-            ->where(function ($query) {
-                $query->whereNotNull('filtered_buildings.globalid')
-                    ->orWhereNotNull('filtered_housing.globalid');
+            ->where(function ($query) use ($filters) {
+                $query->where(function ($buildingQuery) use ($filters) {
+                    $buildingQuery->where('edit_assessments.type', 'building_table')
+                        ->whereExists(function ($existsQuery) use ($filters) {
+                            $existsQuery->fromSub($this->filteredBuildingIdentifiersQuery($filters), 'filtered_buildings')
+                                ->selectRaw('1')
+                                ->whereRaw($this->collatedEquals('filtered_buildings.globalid', 'edit_assessments.global_id'));
+                        });
+                })->orWhere(function ($housingQuery) use ($filters) {
+                    $housingQuery->where('edit_assessments.type', 'housing_table')
+                        ->whereExists(function ($existsQuery) use ($filters) {
+                            $existsQuery->fromSub($this->filteredHousingIdentifiersQuery($filters), 'filtered_housing')
+                                ->selectRaw('1')
+                                ->whereRaw($this->collatedEquals('filtered_housing.globalid', 'edit_assessments.global_id'));
+                        });
+                });
             })
             ->select([
                 'edit_assessments.id',
@@ -337,13 +360,13 @@ class FieldEngineerReportService
 
     public function filteredStatusHistoryQuery(array $filters): Builder
     {
-        $filteredBuildings = $this->filteredBuildingsQuery($filters)->select([
+        $filteredBuildings = $this->filteredBuildingIdentifiersQuery($filters)->select([
             'buildings.objectid',
             'buildings.globalid',
             'buildings.assignedto',
         ]);
 
-        $filteredHousing = $this->filteredHousingUnitsQuery($filters)->select([
+        $filteredHousing = $this->filteredHousingIdentifiersQuery($filters)->select([
             'housing_units.objectid',
             'housing_units.globalid',
             'assignedto',
@@ -599,22 +622,158 @@ class FieldEngineerReportService
 
     private function latestEditValueSubquery(string $type, string $fieldName): Builder
     {
+        $latestEditIds = DB::table('edit_assessments')
+            ->selectRaw('MAX(id) as latest_id, global_id')
+            ->where('type', $type)
+            ->where('field_name', $fieldName)
+            ->groupBy('global_id');
+
         return DB::table('edit_assessments as latest_edit')
+            ->joinSub($latestEditIds, 'latest_edit_ids', fn ($join) => $join->on('latest_edit_ids.latest_id', '=', 'latest_edit.id'))
             ->select([
                 'latest_edit.global_id',
                 'latest_edit.field_value',
-            ])
-            ->where('latest_edit.type', $type)
-            ->where('latest_edit.field_name', $fieldName)
-            ->whereRaw('latest_edit.id = (
-                select inner_edit.id
-                from edit_assessments as inner_edit
-                where inner_edit.type = ?
-                    and inner_edit.field_name = ?
-                    and '.$this->collatedEquals('inner_edit.global_id', 'latest_edit.global_id').'
-                order by inner_edit.updated_at desc, inner_edit.id desc
-                limit 1
-            )', [$type, $fieldName]);
+            ]);
+    }
+
+    private function filteredBuildingIdentifiersQuery(array $filters): Builder
+    {
+        $query = DB::table('buildings')->select([
+            'buildings.id',
+            'buildings.objectid',
+            'buildings.globalid',
+            'buildings.assignedto',
+        ]);
+
+        if ($filters['municipalitie']) {
+            $municipalityEdit = $this->latestEditValueSubquery('building_table', 'municipalitie');
+            $query->leftJoinSub($municipalityEdit, 'edit_municipalitie', fn ($join) => $join->whereRaw($this->collatedEquals('edit_municipalitie.global_id', 'buildings.globalid')));
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(edit_municipalitie.field_value, buildings.municipalitie)')
+                .' = '.$this->collatedLiteral($filters['municipalitie'])
+            );
+        }
+
+        if ($filters['neighborhood']) {
+            $neighborhoodEdit = $this->latestEditValueSubquery('building_table', 'neighborhood');
+            $query->leftJoinSub($neighborhoodEdit, 'edit_neighborhood', fn ($join) => $join->whereRaw($this->collatedEquals('edit_neighborhood.global_id', 'buildings.globalid')));
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(edit_neighborhood.field_value, buildings.neighborhood)')
+                .' = '.$this->collatedLiteral($filters['neighborhood'])
+            );
+        }
+
+        if ($filters['building_damage_status']) {
+            $damageStatusEdit = $this->latestEditValueSubquery('building_table', 'building_damage_status');
+            $query->leftJoinSub($damageStatusEdit, 'edit_building_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_damage_status.global_id', 'buildings.globalid')));
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(edit_building_damage_status.field_value, buildings.building_damage_status)')
+                .' = '.$this->collatedLiteral($filters['building_damage_status'])
+            );
+        }
+
+        if ($filters['engineer_status']) {
+            $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
+            $query->joinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'));
+            $query->where('engineer_statuses.status_name', $filters['engineer_status']);
+        }
+
+        if ($filters['legal_status']) {
+            $legalStatus = $this->buildingStatusSubquery('Legal Auditor', null, 'legal');
+            $query->joinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'));
+            $query->where('legal_statuses.status_name', $filters['legal_status']);
+        }
+
+        if ($filters['final_status']) {
+            $finalStatus = $this->buildingStatusSubquery(null, 'team_leader', 'final');
+            $query->joinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'));
+            $query->where('final_statuses.status_name', $filters['final_status']);
+        }
+
+        if ($filters['assignedto']) {
+            $query->where('buildings.assignedto', $filters['assignedto']);
+        }
+
+        if ($filters['from_date']) {
+            $query->whereDate('buildings.creationdate', '>=', $filters['from_date']);
+        }
+
+        if ($filters['to_date']) {
+            $query->whereDate('buildings.creationdate', '<=', $filters['to_date']);
+        }
+
+        return $query;
+    }
+
+    private function filteredHousingIdentifiersQuery(array $filters): Builder
+    {
+        $query = DB::table('housing_units')
+            ->join('buildings', fn ($join) => $join->whereRaw($this->collatedEquals('housing_units.parentglobalid', 'buildings.globalid')))
+            ->select([
+                'housing_units.objectid',
+                'housing_units.globalid',
+                'housing_units.parentglobalid',
+                'assignedto',
+            ]);
+
+        if ($filters['municipalitie']) {
+            $buildingMunicipalityEdit = $this->latestEditValueSubquery('building_table', 'municipalitie');
+            $query->leftJoinSub($buildingMunicipalityEdit, 'building_edit_municipalitie', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_municipalitie.global_id', 'buildings.globalid')));
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(building_edit_municipalitie.field_value, buildings.municipalitie)')
+                .' = '.$this->collatedLiteral($filters['municipalitie'])
+            );
+        }
+
+        if ($filters['neighborhood']) {
+            $buildingNeighborhoodEdit = $this->latestEditValueSubquery('building_table', 'neighborhood');
+            $query->leftJoinSub($buildingNeighborhoodEdit, 'building_edit_neighborhood', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_neighborhood.global_id', 'buildings.globalid')));
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(building_edit_neighborhood.field_value, buildings.neighborhood)')
+                .' = '.$this->collatedLiteral($filters['neighborhood'])
+            );
+        }
+
+        if ($filters['building_damage_status']) {
+            $buildingDamageStatusEdit = $this->latestEditValueSubquery('building_table', 'building_damage_status');
+            $query->leftJoinSub($buildingDamageStatusEdit, 'building_edit_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_damage_status.global_id', 'buildings.globalid')));
+            $query->whereRaw(
+                $this->collatedExpression('COALESCE(building_edit_damage_status.field_value, buildings.building_damage_status)')
+                .' = '.$this->collatedLiteral($filters['building_damage_status'])
+            );
+        }
+
+        if ($filters['engineer_status']) {
+            $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
+            $query->joinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'));
+            $query->where('engineer_statuses.status_name', $filters['engineer_status']);
+        }
+
+        if ($filters['legal_status']) {
+            $legalStatus = $this->buildingStatusSubquery('Legal Auditor', null, 'legal');
+            $query->joinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'));
+            $query->where('legal_statuses.status_name', $filters['legal_status']);
+        }
+
+        if ($filters['final_status']) {
+            $finalStatus = $this->buildingStatusSubquery(null, 'team_leader', 'final');
+            $query->joinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'));
+            $query->where('final_statuses.status_name', $filters['final_status']);
+        }
+
+        if ($filters['assignedto']) {
+            $query->where('buildings.assignedto', $filters['assignedto']);
+        }
+
+        if ($filters['from_date']) {
+            $query->whereDate('buildings.creationdate', '>=', $filters['from_date']);
+        }
+
+        if ($filters['to_date']) {
+            $query->whereDate('buildings.creationdate', '<=', $filters['to_date']);
+        }
+
+        return $query;
     }
 
     private function buildingStatusSubquery(?string $type, ?string $stage, string $alias): Builder

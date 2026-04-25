@@ -288,17 +288,22 @@
 
                         </div>
                         <div class="value text-<?php echo e($card['class']); ?>" data-summary-key="<?php echo e($card['key']); ?>">
+                            <?php
+                                $summaryValue = $summary[$card['key']] ?? null;
+                            ?>
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($card['isDate'])): ?>
-                                -
+                                <?php echo e($summaryValue ?: '-'); ?>
+
                             <?php elseif(!empty($card['isPercent'])): ?>
-                                0.0%
+                                <?php echo e(number_format((float) ($summaryValue ?? 0), 1)); ?>%
                             <?php else: ?>
-                                0
+                                <?php echo e(number_format((float) ($summaryValue ?? 0))); ?>
+
                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                         </div>
                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($card['key'] === 'completion_rate'): ?>
                             <div class="progress h-8px mt-4">
-                                <div class="progress-bar bg-primary" role="progressbar" data-summary-progress="<?php echo e($card['key']); ?>" style="width: 0%;"></div>
+                                <div class="progress-bar bg-primary" role="progressbar" data-summary-progress="<?php echo e($card['key']); ?>" style="width: <?php echo e(min(100, (float) ($summary['completion_rate'] ?? 0))); ?>%;"></div>
                             </div>
                         <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                     </div>
@@ -421,6 +426,7 @@
             const localeIsArabic = <?php echo json_encode($isArabic, 15, 512) ?>;
             const currentTabInputValue = <?php echo json_encode($currentTab, 15, 512) ?>;
             const hasSelectedEngineer = <?php echo json_encode(!empty($filters['assignedto']), 15, 512) ?>;
+            const initialSummary = <?php echo json_encode($summary, 15, 512) ?>;
             const filtersForm = document.getElementById('fieldEngineerFiltersForm');
             const loadingState = document.getElementById('fieldEngineerLoadingState');
             const errorState = document.getElementById('fieldEngineerErrorState');
@@ -518,21 +524,7 @@
             }
 
             function fetchStats() {
-                renderSummary({
-                    total_buildings: 0,
-                    total_housing_units: 0,
-                    damaged_buildings: 0,
-                    damaged_housing_units: 0,
-                    building_edits: 0,
-                    housing_edits: 0,
-                    accepted_statuses: 0,
-                    rejected_statuses: 0,
-                    need_review_statuses: 0,
-                    last_updated_at: null,
-                    completion_rate: 0,
-                    completed_buildings: 0,
-                    not_completed_buildings: 0,
-                });
+                renderSummary(initialSummary || {});
 
                 if (!hasSelectedEngineer) {
                     return;
@@ -661,6 +653,7 @@
                 },
             };
 
+            renderSummary(initialSummary || {});
             fetchStats();
             tabTables.buildings();
 
