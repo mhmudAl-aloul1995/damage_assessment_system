@@ -75,6 +75,7 @@
             <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-5">
                 <div>
                     <div class="text-muted fs-7 mb-2">
+                        <?php echo e(__('menu.reports.title')); ?> /
                         <?php echo e(__('multilingual.field_engineer_report.page_name')); ?>
 
                     </div>

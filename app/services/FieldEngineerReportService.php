@@ -143,11 +143,11 @@ class FieldEngineerReportService
         $finalStatus = $this->buildingStatusSubquery(null, 'team_leader', 'final');
 
         $query = DB::table('buildings')
-            ->leftJoinSub($municipalityEdit, 'edit_municipalitie', fn ($join) => $join->on('edit_municipalitie.global_id', '=', 'buildings.globalid'))
-            ->leftJoinSub($neighborhoodEdit, 'edit_neighborhood', fn ($join) => $join->on('edit_neighborhood.global_id', '=', 'buildings.globalid'))
-            ->leftJoinSub($damageStatusEdit, 'edit_building_damage_status', fn ($join) => $join->on('edit_building_damage_status.global_id', '=', 'buildings.globalid'))
-            ->leftJoinSub($buildingUseEdit, 'edit_building_use', fn ($join) => $join->on('edit_building_use.global_id', '=', 'buildings.globalid'))
-            ->leftJoinSub($buildingNameEdit, 'edit_building_name', fn ($join) => $join->on('edit_building_name.global_id', '=', 'buildings.globalid'))
+            ->leftJoinSub($municipalityEdit, 'edit_municipalitie', fn ($join) => $join->whereRaw($this->collatedEquals('edit_municipalitie.global_id', 'buildings.globalid')))
+            ->leftJoinSub($neighborhoodEdit, 'edit_neighborhood', fn ($join) => $join->whereRaw($this->collatedEquals('edit_neighborhood.global_id', 'buildings.globalid')))
+            ->leftJoinSub($damageStatusEdit, 'edit_building_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_damage_status.global_id', 'buildings.globalid')))
+            ->leftJoinSub($buildingUseEdit, 'edit_building_use', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_use.global_id', 'buildings.globalid')))
+            ->leftJoinSub($buildingNameEdit, 'edit_building_name', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_name.global_id', 'buildings.globalid')))
             ->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'))
             ->leftJoinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'))
             ->leftJoinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'))
@@ -189,16 +189,16 @@ class FieldEngineerReportService
         $housingOccupiedEdit = $this->latestEditValueSubquery('housing_table', 'occupied');
 
         $query = DB::table('housing_units')
-            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
-            ->leftJoinSub($buildingMunicipalityEdit, 'building_edit_municipalitie', fn ($join) => $join->on('building_edit_municipalitie.global_id', '=', 'buildings.globalid'))
-            ->leftJoinSub($buildingNeighborhoodEdit, 'building_edit_neighborhood', fn ($join) => $join->on('building_edit_neighborhood.global_id', '=', 'buildings.globalid'))
-            ->leftJoinSub($buildingDamageStatusEdit, 'building_edit_damage_status', fn ($join) => $join->on('building_edit_damage_status.global_id', '=', 'buildings.globalid'))
+            ->join('buildings', fn ($join) => $join->whereRaw($this->collatedEquals('housing_units.parentglobalid', 'buildings.globalid')))
+            ->leftJoinSub($buildingMunicipalityEdit, 'building_edit_municipalitie', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_municipalitie.global_id', 'buildings.globalid')))
+            ->leftJoinSub($buildingNeighborhoodEdit, 'building_edit_neighborhood', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_neighborhood.global_id', 'buildings.globalid')))
+            ->leftJoinSub($buildingDamageStatusEdit, 'building_edit_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('building_edit_damage_status.global_id', 'buildings.globalid')))
             ->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'))
             ->leftJoinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'))
             ->leftJoinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'))
-            ->leftJoinSub($housingTypeEdit, 'housing_edit_type', fn ($join) => $join->on('housing_edit_type.global_id', '=', 'housing_units.globalid'))
-            ->leftJoinSub($housingDamageEdit, 'housing_edit_damage', fn ($join) => $join->on('housing_edit_damage.global_id', '=', 'housing_units.globalid'))
-            ->leftJoinSub($housingOccupiedEdit, 'housing_edit_occupied', fn ($join) => $join->on('housing_edit_occupied.global_id', '=', 'housing_units.globalid'))
+            ->leftJoinSub($housingTypeEdit, 'housing_edit_type', fn ($join) => $join->whereRaw($this->collatedEquals('housing_edit_type.global_id', 'housing_units.globalid')))
+            ->leftJoinSub($housingDamageEdit, 'housing_edit_damage', fn ($join) => $join->whereRaw($this->collatedEquals('housing_edit_damage.global_id', 'housing_units.globalid')))
+            ->leftJoinSub($housingOccupiedEdit, 'housing_edit_occupied', fn ($join) => $join->whereRaw($this->collatedEquals('housing_edit_occupied.global_id', 'housing_units.globalid')))
             ->select([
                 'housing_units.id',
                 'housing_units.objectid',
@@ -258,11 +258,11 @@ class FieldEngineerReportService
 
         $query = DB::table('edit_assessments')
             ->leftJoinSub($filteredBuildings, 'filtered_buildings', function ($join) {
-                $join->on('filtered_buildings.globalid', '=', 'edit_assessments.global_id')
+                $join->whereRaw($this->collatedEquals('filtered_buildings.globalid', 'edit_assessments.global_id'))
                     ->where('edit_assessments.type', '=', 'building_table');
             })
             ->leftJoinSub($filteredHousing, 'filtered_housing', function ($join) {
-                $join->on('filtered_housing.globalid', '=', 'edit_assessments.global_id')
+                $join->whereRaw($this->collatedEquals('filtered_housing.globalid', 'edit_assessments.global_id'))
                     ->where('edit_assessments.type', '=', 'housing_table');
             })
             ->leftJoin('users', 'users.id', '=', 'edit_assessments.user_id')
@@ -370,9 +370,9 @@ class FieldEngineerReportService
 
         $query = DB::table('assigned_assessment_users')
             ->join('buildings', 'buildings.id', '=', 'assigned_assessment_users.building_id')
-            ->leftJoinSub($municipalityEdit, 'edit_municipalitie', fn ($join) => $join->on('edit_municipalitie.global_id', '=', 'buildings.globalid'))
-            ->leftJoinSub($neighborhoodEdit, 'edit_neighborhood', fn ($join) => $join->on('edit_neighborhood.global_id', '=', 'buildings.globalid'))
-            ->leftJoinSub($damageStatusEdit, 'edit_building_damage_status', fn ($join) => $join->on('edit_building_damage_status.global_id', '=', 'buildings.globalid'))
+            ->leftJoinSub($municipalityEdit, 'edit_municipalitie', fn ($join) => $join->whereRaw($this->collatedEquals('edit_municipalitie.global_id', 'buildings.globalid')))
+            ->leftJoinSub($neighborhoodEdit, 'edit_neighborhood', fn ($join) => $join->whereRaw($this->collatedEquals('edit_neighborhood.global_id', 'buildings.globalid')))
+            ->leftJoinSub($damageStatusEdit, 'edit_building_damage_status', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_damage_status.global_id', 'buildings.globalid')))
             ->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'))
             ->leftJoinSub($legalStatus, 'legal_statuses', fn ($join) => $join->on('legal_statuses.building_id', '=', 'buildings.objectid'))
             ->leftJoinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'))
@@ -570,7 +570,7 @@ class FieldEngineerReportService
                 from edit_assessments as inner_edit
                 where inner_edit.type = ?
                     and inner_edit.field_name = ?
-                    and inner_edit.global_id = latest_edit.global_id
+                    and '.$this->collatedEquals('inner_edit.global_id', 'latest_edit.global_id').'
                 order by inner_edit.updated_at desc, inner_edit.id desc
                 limit 1
             )', [$type, $fieldName]);
@@ -788,5 +788,14 @@ class FieldEngineerReportService
     private function trans(string $key): string
     {
         return (string) __("multilingual.field_engineer_report.{$key}");
+    }
+
+    private function collatedEquals(string $leftColumn, string $rightColumn): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return "{$leftColumn} = {$rightColumn}";
+        }
+
+        return "{$leftColumn} COLLATE utf8mb4_unicode_ci = {$rightColumn} COLLATE utf8mb4_unicode_ci";
     }
 }
