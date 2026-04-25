@@ -33,3 +33,5 @@ Thumbs.db
 *.zip
 *.7z
 /public
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
