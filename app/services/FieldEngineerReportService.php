@@ -6,6 +6,7 @@ use App\Models\Assessment;
 use App\Models\AssessmentStatus;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -17,33 +18,39 @@ class FieldEngineerReportService
     public function filterOptions(): array
     {
         return [
-            'engineers' => DB::table('buildings')
-                ->select('assignedto')
-                ->whereNotNull('assignedto')
-                ->where('assignedto', '!=', '')
-                ->distinct()
-                ->orderBy('assignedto')
-                ->pluck('assignedto')
-                ->values()
-                ->all(),
-            'municipalities' => DB::table('buildings')
-                ->select('municipalitie')
-                ->whereNotNull('municipalitie')
-                ->where('municipalitie', '!=', '')
-                ->distinct()
-                ->orderBy('municipalitie')
-                ->pluck('municipalitie')
-                ->values()
-                ->all(),
-            'neighborhoods' => DB::table('buildings')
-                ->select('neighborhood')
-                ->whereNotNull('neighborhood')
-                ->where('neighborhood', '!=', '')
-                ->distinct()
-                ->orderBy('neighborhood')
-                ->pluck('neighborhood')
-                ->values()
-                ->all(),
+            'engineers' => Cache::remember('field-engineer-report:engineers', now()->addMinutes(30), function () {
+                return DB::table('buildings')
+                    ->select('assignedto')
+                    ->whereNotNull('assignedto')
+                    ->where('assignedto', '!=', '')
+                    ->distinct()
+                    ->orderBy('assignedto')
+                    ->pluck('assignedto')
+                    ->values()
+                    ->all();
+            }),
+            'municipalities' => Cache::remember('field-engineer-report:municipalities', now()->addMinutes(30), function () {
+                return DB::table('buildings')
+                    ->select('municipalitie')
+                    ->whereNotNull('municipalitie')
+                    ->where('municipalitie', '!=', '')
+                    ->distinct()
+                    ->orderBy('municipalitie')
+                    ->pluck('municipalitie')
+                    ->values()
+                    ->all();
+            }),
+            'neighborhoods' => Cache::remember('field-engineer-report:neighborhoods', now()->addMinutes(30), function () {
+                return DB::table('buildings')
+                    ->select('neighborhood')
+                    ->whereNotNull('neighborhood')
+                    ->where('neighborhood', '!=', '')
+                    ->distinct()
+                    ->orderBy('neighborhood')
+                    ->pluck('neighborhood')
+                    ->values()
+                    ->all();
+            }),
             'building_damage_statuses' => DB::table('buildings')
                 ->select('building_damage_status')
                 ->whereNotNull('building_damage_status')
@@ -612,7 +619,21 @@ class FieldEngineerReportService
 
     private function buildingStatusSubquery(?string $type, ?string $stage, string $alias): Builder
     {
+        $latestStatusIds = DB::table('building_statuses as status_lookup')
+            ->join('assessment_statuses as assessment_status_lookup', 'assessment_status_lookup.id', '=', 'status_lookup.status_id')
+            ->selectRaw('MAX(status_lookup.id) as latest_id')
+            ->groupBy('status_lookup.building_id');
+
+        if ($type !== null) {
+            $latestStatusIds->where('status_lookup.type', $type);
+        }
+
+        if ($stage !== null) {
+            $latestStatusIds->where('assessment_status_lookup.stage', $stage);
+        }
+
         $query = DB::table('building_statuses')
+            ->joinSub($latestStatusIds, $alias.'_latest_ids', fn ($join) => $join->on($alias.'_latest_ids.latest_id', '=', 'building_statuses.id'))
             ->join('assessment_statuses', 'assessment_statuses.id', '=', 'building_statuses.status_id')
             ->select([
                 'building_statuses.building_id',
