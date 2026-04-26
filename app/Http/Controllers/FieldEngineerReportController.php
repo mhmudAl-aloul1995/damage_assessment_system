@@ -15,7 +15,8 @@ class FieldEngineerReportController extends Controller
 {
     public function __construct(private readonly FieldEngineerReportService $fieldEngineerReportService)
     {
-        $this->middleware('role:Database Officer|Project Officer|Area Manager|Auditing Supervisor');
+        $this->middleware('role:Database Officer|Project Officer|Area Manager|Auditing Supervisor
+        |Team Leader -INF|Team Leader');
     }
 
     public function index(FieldEngineerReportFilterRequest $request): Response
