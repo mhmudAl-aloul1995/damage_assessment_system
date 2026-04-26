@@ -142,7 +142,7 @@ class FieldEngineerReportService
         $lastUpdatedAt = DB::query()
             ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
             ->join('buildings', 'buildings.id', '=', 'filtered_buildings.id')
-            ->max(DB::raw('COALESCE(buildings.editdate, buildings.editdate)'));
+            ->max(DB::raw('COALESCE(buildings.editdate, buildings.creationdate)'));
 
         $finalStatusesBase = DB::query()
             ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
@@ -250,7 +250,7 @@ class FieldEngineerReportService
                 'buildings.globalid',
                 'buildings.assignedto',
                 'buildings.parcel_no1',
-                'buildings.editdate',
+                'buildings.creationdate',
                 'buildings.editdate',
                 'buildings.field_status',
                 DB::raw('COALESCE(edit_building_name.field_value, buildings.building_name) as building_name'),
@@ -301,7 +301,7 @@ class FieldEngineerReportService
                 'housing_units.objectid',
                 'housing_units.globalid',
                 'housing_units.parentglobalid',
-                'housing_units.editdate',
+                'housing_units.creationdate',
                 DB::raw('buildings.objectid as building_objectid'),
                 DB::raw('COALESCE(housing_edit_type.field_value, housing_units.housing_unit_type) as housing_unit_type'),
                 DB::raw('COALESCE(housing_edit_damage.field_value, housing_units.unit_damage_status) as unit_damage_status'),
@@ -552,7 +552,7 @@ class FieldEngineerReportService
         $baseQuery = $this->filteredBuildingIdentifiersQuery($filters);
         $total = (clone $baseQuery)->count();
         $pageIds = (clone $baseQuery)
-            ->orderByDesc('buildings.editdate')
+            ->orderByDesc('buildings.creationdate')
             ->orderByDesc('buildings.id')
             ->offset($start)
             ->limit($length)
@@ -579,7 +579,7 @@ class FieldEngineerReportService
         $baseQuery = $this->filteredHousingIdentifiersQuery($filters);
         $total = (clone $baseQuery)->count();
         $pageIds = (clone $baseQuery)
-            ->orderByDesc('housing_units.editdate')
+            ->orderByDesc('housing_units.creationdate')
             ->orderByDesc('housing_units.id')
             ->offset($start)
             ->limit($length)
@@ -743,7 +743,7 @@ class FieldEngineerReportService
 
     private function exportBuildingsRows(array $filters): array
     {
-        $rows = $this->filteredBuildingsQuery($filters)->orderBy('editdate', 'desc')->get();
+        $rows = $this->filteredBuildingsQuery($filters)->orderBy('creationdate', 'desc')->get();
 
         return [[
             $this->trans('tabs.buildings'),
@@ -755,7 +755,7 @@ class FieldEngineerReportService
             $this->trans('columns.parcel_number'),
             $this->trans('columns.building_use'),
             $this->trans('columns.building_damage_status'),
-            $this->trans('columns.editdate'),
+            $this->trans('columns.creationdate'),
             $this->trans('columns.last_update'),
             $this->trans('columns.final_status'),
         ], $rows->map(function ($row) {
@@ -769,7 +769,7 @@ class FieldEngineerReportService
                 $row->parcel_no1,
                 $row->building_use,
                 $row->building_damage_status,
-                $row->editdate,
+                $row->creationdate,
                 $row->editdate,
                 $row->final_status_label,
             ];
@@ -778,7 +778,7 @@ class FieldEngineerReportService
 
     private function exportHousingRows(array $filters): array
     {
-        $rows = $this->filteredHousingUnitsQuery($filters)->orderBy('housing_units.editdate', 'desc')->get();
+        $rows = $this->filteredHousingUnitsQuery($filters)->orderBy('housing_units.creationdate', 'desc')->get();
 
         return [[
             $this->trans('tabs.housing_units'),
@@ -788,7 +788,7 @@ class FieldEngineerReportService
             $this->trans('columns.unit_use'),
             $this->trans('columns.damage_status'),
             $this->trans('columns.occupant_status'),
-            $this->trans('columns.editdate'),
+            $this->trans('columns.creationdate'),
         ], $rows->map(fn ($row) => [
             $this->trans('tabs.housing_units'),
             $row->objectid,
@@ -797,7 +797,7 @@ class FieldEngineerReportService
             $row->housing_unit_type,
             $row->unit_damage_status,
             $row->occupied,
-            $row->editdate,
+            $row->creationdate,
         ])];
     }
 
@@ -972,11 +972,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('buildings.editdate', '>=', $filters['from_date']);
+            $query->whereDate('buildings.creationdate', '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('buildings.editdate', '<=', $filters['to_date']);
+            $query->whereDate('buildings.creationdate', '<=', $filters['to_date']);
         }
 
         return $query;
@@ -1062,11 +1062,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('buildings.editdate', '>=', $filters['from_date']);
+            $query->whereDate('buildings.creationdate', '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('buildings.editdate', '<=', $filters['to_date']);
+            $query->whereDate('buildings.creationdate', '<=', $filters['to_date']);
         }
 
         return $query;
@@ -1152,11 +1152,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate("{$buildingTable}.editdate", '>=', $filters['from_date']);
+            $query->whereDate("{$buildingTable}.creationdate", '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate("{$buildingTable}.editdate", '<=', $filters['to_date']);
+            $query->whereDate("{$buildingTable}.creationdate", '<=', $filters['to_date']);
         }
 
         if ($search = $filters['search']) {
@@ -1221,11 +1221,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('housing_units.editdate', '>=', $filters['from_date']);
+            $query->whereDate('buildings.creationdate', '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('housing_units.editdate', '<=', $filters['to_date']);
+            $query->whereDate('buildings.creationdate', '<=', $filters['to_date']);
         }
 
         if ($search = $filters['search']) {
