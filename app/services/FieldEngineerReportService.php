@@ -1221,11 +1221,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('buildings.editdate', '>=', $filters['from_date']);
+            $query->whereDate('housing_units.editdate', '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('buildings.editdate', '<=', $filters['to_date']);
+            $query->whereDate('housing_units.editdate', '<=', $filters['to_date']);
         }
 
         if ($search = $filters['search']) {
