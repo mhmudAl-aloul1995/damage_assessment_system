@@ -171,102 +171,130 @@
                     <form method="GET" action="{{ route('reports.field-engineer.index') }}" id="fieldEngineerFiltersForm">
                         <div class="row g-5">
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.assignedto') }}</label>
+                                <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.assignedto') }}</label>
                                 <select name="assignedto" class="form-select form-select-solid report-select2"
                                     data-placeholder="{{ __('multilingual.field_engineer_report.select_placeholder') }}">
                                     <option value="">{{ __('multilingual.field_engineer_report.all_options') }}</option>
                                     @foreach ($filterOptions['engineers'] as $engineer)
-                                        <option value="{{ $engineer }}" @selected($filters['assignedto'] === $engineer)>{{ $engineer }}</option>
+                                        <option value="{{ $engineer }}" @selected($filters['assignedto'] === $engineer)>
+                                            {{ $engineer }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.municipalitie') }}</label>
+                                <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.municipalitie') }}</label>
                                 <select name="municipalitie" class="form-select form-select-solid report-select2"
                                     data-placeholder="{{ __('multilingual.field_engineer_report.select_placeholder') }}">
                                     <option value="">{{ __('multilingual.field_engineer_report.all_options') }}</option>
                                     @foreach ($filterOptions['municipalities'] as $municipality)
-                                        <option value="{{ $municipality }}" @selected($filters['municipalitie'] === $municipality)>{{ $municipality }}</option>
+                                        <option value="{{ $municipality }}"
+                                            @selected($filters['municipalitie'] === $municipality)>{{ $municipality }}</option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.neighborhood') }}</label>
+                                <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.neighborhood') }}</label>
                                 <select name="neighborhood" class="form-select form-select-solid report-select2"
                                     data-placeholder="{{ __('multilingual.field_engineer_report.select_placeholder') }}">
                                     <option value="">{{ __('multilingual.field_engineer_report.all_options') }}</option>
                                     @foreach ($filterOptions['neighborhoods'] as $neighborhood)
-                                        <option value="{{ $neighborhood }}" @selected($filters['neighborhood'] === $neighborhood)>{{ $neighborhood }}</option>
+                                        <option value="{{ $neighborhood }}" @selected($filters['neighborhood'] === $neighborhood)>
+                                            {{ $neighborhood }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.building_damage_status') }}</label>
+                                <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.building_damage_status') }}</label>
                                 <select name="building_damage_status" class="form-select form-select-solid report-select2"
                                     data-placeholder="{{ __('multilingual.field_engineer_report.select_placeholder') }}">
                                     <option value="">{{ __('multilingual.field_engineer_report.all_options') }}</option>
                                     @foreach ($filterOptions['building_damage_statuses'] as $status)
-                                        <option value="{{ $status }}" @selected($filters['building_damage_status'] === $status)>{{ $status }}</option>
+                                        <option value="{{ $status }}" @selected($filters['building_damage_status'] === $status)>
+                                            {{ $status }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.engineer_status') }}</label>
+                                <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.engineer_status') }}</label>
                                 <select name="engineer_status" class="form-select form-select-solid report-select2"
                                     data-placeholder="{{ __('multilingual.field_engineer_report.select_placeholder') }}">
                                     <option value="">{{ __('multilingual.field_engineer_report.all_options') }}</option>
                                     @foreach ($filterOptions['engineer_statuses'] as $status)
-                                        <option value="{{ $status['name'] }}" @selected($filters['engineer_status'] === $status['name'])>{{ $status['label'] }}</option>
+                                        <option value="{{ $status['name'] }}"
+                                            @selected($filters['engineer_status'] === $status['name'])>{{ $status['label'] }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.legal_status') }}</label>
+                                <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.legal_status') }}</label>
                                 <select name="legal_status" class="form-select form-select-solid report-select2"
                                     data-placeholder="{{ __('multilingual.field_engineer_report.select_placeholder') }}">
                                     <option value="">{{ __('multilingual.field_engineer_report.all_options') }}</option>
                                     @foreach ($filterOptions['legal_statuses'] as $status)
-                                        <option value="{{ $status['name'] }}" @selected($filters['legal_status'] === $status['name'])>{{ $status['label'] }}</option>
+                                        <option value="{{ $status['name'] }}"
+                                            @selected($filters['legal_status'] === $status['name'])>{{ $status['label'] }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.final_status') }}</label>
+                                <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.final_status') }}</label>
                                 <select name="final_status" class="form-select form-select-solid report-select2"
                                     data-placeholder="{{ __('multilingual.field_engineer_report.select_placeholder') }}">
                                     <option value="">{{ __('multilingual.field_engineer_report.all_options') }}</option>
                                     @foreach ($filterOptions['final_statuses'] as $status)
-                                        <option value="{{ $status['name'] }}" @selected($filters['final_status'] === $status['name'])>{{ $status['label'] }}</option>
+                                        <option value="{{ $status['name'] }}"
+                                            @selected($filters['final_status'] === $status['name'])>{{ $status['label'] }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.from_date') }}</label>
-                                <input data-date-format="yyyy-mm-dd" type="date" name="from_date" value="{{ $filters['from_date'] }}" class="form-control form-control-solid">
+                                <label class="form-label">
+                                    {{ __('multilingual.field_engineer_report.filters.from_date') }}
+                                </label>
+                                <input type="text" name="from_date " placeholder="yyyy-mm-dd"
+                                    value="{{ $filters['from_date'] }}" class="form-control datepicker form-control-solid">
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.to_date') }}</label>
-                                <input data-date-format="yyyy-mm-dd" type="date" name="to_date" value="{{ $filters['to_date'] }}" class="form-control form-control-solid">
+                                <label class="form-label">
+                                    {{ __('multilingual.field_engineer_report.filters.to_date') }}
+                                </label>
+                                <input type="text" name="to_date" placeholder="yyyy-mm-dd"
+                                    value="{{ $filters['to_date'] }}" class="form-control datepicker form-control-solid">
                             </div>
 
                             <div class="col-md-8">
-                                <label class="form-label">{{ __('multilingual.field_engineer_report.filters.search') }}</label>
-                                <input  type="text" name="search" value="{{ $filters['search'] }}"
+                                <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.search') }}</label>
+                                <input type="text" name="search" value="{{ $filters['search'] }}"
                                     placeholder="{{ __('multilingual.field_engineer_report.search_placeholder') }}"
                                     class="form-control form-control-solid">
                             </div>
 
                             <div class="col-md-4 d-flex align-items-end gap-3">
                                 <button type="submit" class="btn btn-primary flex-fill">Search</button>
-                                <button type="button" class="btn btn-light flex-fill" id="resetFieldEngineerFilters">Reset</button>
+                                <button type="button" class="btn btn-light flex-fill"
+                                    id="resetFieldEngineerFilters">Reset</button>
                             </div>
                         </div>
                     </form>
@@ -295,7 +323,8 @@
                         </div>
                         @if ($card['key'] === 'completion_rate')
                             <div class="progress h-8px mt-4">
-                                <div class="progress-bar bg-primary" role="progressbar" data-summary-progress="{{ $card['key'] }}" style="width: {{ min(100, (float) ($summary['completion_rate'] ?? 0)) }}%;"></div>
+                                <div class="progress-bar bg-primary" role="progressbar" data-summary-progress="{{ $card['key'] }}"
+                                    style="width: {{ min(100, (float) ($summary['completion_rate'] ?? 0)) }}%;"></div>
                             </div>
                         @endif
                     </div>
@@ -308,7 +337,8 @@
                 <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x fs-6 mb-5">
                     @foreach (['buildings', 'housing_units', 'edits', 'status_history', 'assignments'] as $tab)
                         <li class="nav-item">
-                            <a class="nav-link {{ $currentTab === $tab ? 'active' : '' }}" data-bs-toggle="tab" href="#tab-{{ $tab }}" data-tab="{{ $tab }}">
+                            <a class="nav-link {{ $currentTab === $tab ? 'active' : '' }}" data-bs-toggle="tab"
+                                href="#tab-{{ $tab }}" data-tab="{{ $tab }}">
                                 {{ __("multilingual.field_engineer_report.tabs.{$tab}") }}
                             </a>
                         </li>
@@ -318,7 +348,8 @@
                 <div class="tab-content">
                     <div class="tab-pane fade {{ $currentTab === 'buildings' ? 'show active' : '' }}" id="tab-buildings">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100" id="fieldEngineerBuildingsTable">
+                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                                id="fieldEngineerBuildingsTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
                                         <th>{{ __('multilingual.field_engineer_report.columns.object_id') }}</th>
@@ -328,7 +359,8 @@
                                         <th>{{ __('multilingual.field_engineer_report.columns.neighborhood') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.parcel_number') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.building_use') }}</th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.building_damage_status') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.building_damage_status') }}
+                                        </th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.creationdate') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.last_update') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.final_status') }}</th>
@@ -338,9 +370,11 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade {{ $currentTab === 'housing_units' ? 'show active' : '' }}" id="tab-housing_units">
+                    <div class="tab-pane fade {{ $currentTab === 'housing_units' ? 'show active' : '' }}"
+                        id="tab-housing_units">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100" id="fieldEngineerHousingTable">
+                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                                id="fieldEngineerHousingTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
                                         <th>{{ __('multilingual.field_engineer_report.columns.object_id') }}</th>
@@ -358,7 +392,8 @@
 
                     <div class="tab-pane fade {{ $currentTab === 'edits' ? 'show active' : '' }}" id="tab-edits">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100" id="fieldEngineerEditsTable">
+                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                                id="fieldEngineerEditsTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
                                         <th>{{ __('multilingual.field_engineer_report.columns.type') }}</th>
@@ -374,9 +409,11 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade {{ $currentTab === 'status_history' ? 'show active' : '' }}" id="tab-status_history">
+                    <div class="tab-pane fade {{ $currentTab === 'status_history' ? 'show active' : '' }}"
+                        id="tab-status_history">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100" id="fieldEngineerStatusHistoryTable">
+                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                                id="fieldEngineerStatusHistoryTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
                                         <th>{{ __('multilingual.field_engineer_report.columns.type') }}</th>
@@ -390,9 +427,11 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade {{ $currentTab === 'assignments' ? 'show active' : '' }}" id="tab-assignments">
+                    <div class="tab-pane fade {{ $currentTab === 'assignments' ? 'show active' : '' }}"
+                        id="tab-assignments">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100" id="fieldEngineerAssignmentsTable">
+                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                                id="fieldEngineerAssignmentsTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
                                         <th>{{ __('multilingual.field_engineer_report.columns.building_id') }}</th>
@@ -413,6 +452,7 @@
 
 @section('script')
     <script>
+
         document.addEventListener('DOMContentLoaded', function () {
             const localeIsArabic = @json($isArabic);
             const currentTabInputValue = @json($currentTab);
@@ -430,7 +470,12 @@
                 width: '100%',
                 dir: localeIsArabic ? 'rtl' : 'ltr',
             });
-
+            flatpickr('.datepicker', {
+                dateFormat: 'Y-m-d',
+                allowInput: true,
+                locale: localeIsArabic ? 'ar' : 'en',
+            });
+          
             const dataTablesLanguageUrl = localeIsArabic
                 ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json'
                 : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json';
@@ -624,57 +669,57 @@
             const tabTables = {
                 buildings: function () {
                     return initializeDataTable('buildings', '#fieldEngineerBuildingsTable', "{{ url('reports/field-engineer/buildings') }}", [
-                        {data: 'objectid', name: 'buildings.objectid'},
-                        {data: 'globalid', name: 'buildings.globalid'},
-                        {data: 'assignedto', name: 'buildings.assignedto'},
-                        {data: 'municipalitie', name: 'municipalitie'},
-                        {data: 'neighborhood', name: 'neighborhood'},
-                        {data: 'parcel_no1', name: 'buildings.parcel_no1'},
-                        {data: 'building_use', name: 'building_use'},
-                        {data: 'building_damage_status', name: 'building_damage_status'},
-                        {data: 'creationdate', name: 'buildings.creationdate'},
-                        {data: 'editdate', name: 'buildings.editdate'},
-                        {data: 'final_status_label', name: 'final_status_label', orderable: false, searchable: false},
+                        { data: 'objectid', name: 'buildings.objectid' },
+                        { data: 'globalid', name: 'buildings.globalid' },
+                        { data: 'assignedto', name: 'buildings.assignedto' },
+                        { data: 'municipalitie', name: 'municipalitie' },
+                        { data: 'neighborhood', name: 'neighborhood' },
+                        { data: 'parcel_no1', name: 'buildings.parcel_no1' },
+                        { data: 'building_use', name: 'building_use' },
+                        { data: 'building_damage_status', name: 'building_damage_status' },
+                        { data: 'creationdate', name: 'buildings.creationdate' },
+                        { data: 'editdate', name: 'buildings.editdate' },
+                        { data: 'final_status_label', name: 'final_status_label', orderable: false, searchable: false },
                     ]);
                 },
                 housing_units: function () {
                     return initializeDataTable('housing_units', '#fieldEngineerHousingTable', "{{ url('reports/field-engineer/housing-units') }}", [
-                        {data: 'objectid', name: 'housing_units.objectid'},
-                        {data: 'parentglobalid', name: 'housing_units.parentglobalid'},
-                        {data: 'building_objectid', name: 'building_objectid'},
-                        {data: 'housing_unit_type', name: 'housing_unit_type'},
-                        {data: 'unit_damage_status', name: 'unit_damage_status'},
-                        {data: 'occupied', name: 'occupied'},
-                        {data: 'creationdate', name: 'housing_units.creationdate'},
+                        { data: 'objectid', name: 'housing_units.objectid' },
+                        { data: 'parentglobalid', name: 'housing_units.parentglobalid' },
+                        { data: 'building_objectid', name: 'building_objectid' },
+                        { data: 'housing_unit_type', name: 'housing_unit_type' },
+                        { data: 'unit_damage_status', name: 'unit_damage_status' },
+                        { data: 'occupied', name: 'occupied' },
+                        { data: 'creationdate', name: 'housing_units.creationdate' },
                     ]);
                 },
                 edits: function () {
                     return initializeDataTable('edits', '#fieldEngineerEditsTable', "{{ url('reports/field-engineer/edits') }}", [
-                        {data: 'source_type', name: 'source_type'},
-                        {data: 'global_id', name: 'edit_assessments.global_id'},
-                        {data: 'field_name', name: 'edit_assessments.field_name'},
-                        {data: 'old_value', name: 'old_value', orderable: false},
-                        {data: 'new_value', name: 'new_value'},
-                        {data: 'updated_by', name: 'updated_by'},
-                        {data: 'updated_at', name: 'edit_assessments.updated_at'},
+                        { data: 'source_type', name: 'source_type' },
+                        { data: 'global_id', name: 'edit_assessments.global_id' },
+                        { data: 'field_name', name: 'edit_assessments.field_name' },
+                        { data: 'old_value', name: 'old_value', orderable: false },
+                        { data: 'new_value', name: 'new_value' },
+                        { data: 'updated_by', name: 'updated_by' },
+                        { data: 'updated_at', name: 'edit_assessments.updated_at' },
                     ]);
                 },
                 status_history: function () {
                     return initializeDataTable('status_history', '#fieldEngineerStatusHistoryTable', "{{ url('reports/field-engineer/status-history') }}", [
-                        {data: 'item_type', name: 'item_type'},
-                        {data: 'item_number', name: 'item_number'},
-                        {data: 'status_label', name: 'status_label', orderable: false, searchable: false},
-                        {data: 'changed_by', name: 'changed_by'},
-                        {data: 'created_at', name: 'created_at'},
+                        { data: 'item_type', name: 'item_type' },
+                        { data: 'item_number', name: 'item_number' },
+                        { data: 'status_label', name: 'status_label', orderable: false, searchable: false },
+                        { data: 'changed_by', name: 'changed_by' },
+                        { data: 'created_at', name: 'created_at' },
                     ]);
                 },
                 assignments: function () {
                     return initializeDataTable('assignments', '#fieldEngineerAssignmentsTable', "{{ url('reports/field-engineer/assignments') }}", [
-                        {data: 'building_id', name: 'assigned_assessment_users.building_id'},
-                        {data: 'assigned_user', name: 'assigned_user'},
-                        {data: 'assigned_by', name: 'assigned_by'},
-                        {data: 'assigned_date', name: 'assigned_date'},
-                        {data: 'notes', name: 'notes', orderable: false, searchable: false},
+                        { data: 'building_id', name: 'assigned_assessment_users.building_id' },
+                        { data: 'assigned_user', name: 'assigned_user' },
+                        { data: 'assigned_by', name: 'assigned_by' },
+                        { data: 'assigned_date', name: 'assigned_date' },
+                        { data: 'notes', name: 'notes', orderable: false, searchable: false },
                     ]);
                 },
             };
