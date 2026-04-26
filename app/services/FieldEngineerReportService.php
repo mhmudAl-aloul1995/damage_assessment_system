@@ -972,11 +972,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('buildings.creationdate', '>=', $filters['from_date']);
+            $query->whereDate('buildings.editdate', '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('buildings.creationdate', '<=', $filters['to_date']);
+            $query->whereDate('buildings.editdate', '<=', $filters['to_date']);
         }
 
         return $query;
