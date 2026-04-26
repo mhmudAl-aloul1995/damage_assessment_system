@@ -55,6 +55,9 @@
         #housing_table tbody tr.selected {
             background-color: rgba(0, 158, 247, 0.12) !important;
         }
+       .container-loader {
+            display: none !important;
+        }
     </style>
 
     <div class="card card-flush mb-7">
