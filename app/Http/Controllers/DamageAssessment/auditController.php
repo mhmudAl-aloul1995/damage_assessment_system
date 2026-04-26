@@ -25,7 +25,7 @@ class auditController extends Controller
 {
     public function __construct()
     {
-        dd('يوجد صيانة في هذا القسم، يرجى التواصل مع الدعم الفني');
+       // dd('يوجد صيانة في هذا القسم، يرجى التواصل مع الدعم الفني');
     }
     public function index(Request $request)
     {
