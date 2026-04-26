@@ -121,27 +121,21 @@
 		margin-left: 0;
 	}
 
-	#kt_app_content_container {
-		position: relative;
-		min-height: 300px;
-	}
-
 	.container-loader {
-		position: absolute;
+		position: fixed;
 		top: 0;
 		left: 0;
 		right: 0;
 		bottom: 0;
 
-		z-index: 9999;
+		z-index: 99999;
 		display: none;
 
 		align-items: center;
 		justify-content: center;
 
 		background: rgba(255, 255, 255, .65);
-		backdrop-filter: blur(2px);
-		border-radius: .75rem;
+		backdrop-filter: blur(3px);
 	}
 
 	.container-loader.show {
@@ -149,14 +143,16 @@
 	}
 
 	.loader-box {
-		min-width: 220px;
+		min-width: 240px;
 		padding: 2rem;
 		border-radius: 1rem;
 		background: #fff;
-		box-shadow: 0 15px 35px rgba(0, 0, 0, .12);
+		box-shadow: 0 20px 45px rgba(0, 0, 0, .15);
+
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		text-align: center;
 	}
 </style>
 
