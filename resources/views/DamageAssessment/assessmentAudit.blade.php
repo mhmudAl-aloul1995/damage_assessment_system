@@ -9,9 +9,12 @@
 
 @section('content')
     <style>
+        /* ===============================
+           Status Buttons
+        =============================== */
         .building-status-btn,
         .housing-status-btn {
-            transition: all 0.2s ease-in-out;
+            transition: all .2s ease-in-out;
         }
 
         .building-status-btn:hover,
@@ -22,26 +25,26 @@
         .building-status-btn.is-active,
         .housing-status-btn.is-active {
             transform: translateY(-1px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12);
+            box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .12);
         }
 
         .building-status-btn.btn-light-danger.is-active,
         .housing-status-btn.btn-light-danger.is-active {
-            background-color: var(--bs-danger) !important;
+            background: var(--bs-danger) !important;
             border-color: var(--bs-danger) !important;
             color: #fff !important;
         }
 
         .building-status-btn.btn-light-success.is-active,
         .housing-status-btn.btn-light-success.is-active {
-            background-color: var(--bs-success) !important;
+            background: var(--bs-success) !important;
             border-color: var(--bs-success) !important;
             color: #fff !important;
         }
 
         .building-status-btn.btn-light-warning.is-active,
         .housing-status-btn.btn-light-warning.is-active {
-            background-color: var(--bs-warning) !important;
+            background: var(--bs-warning) !important;
             border-color: var(--bs-warning) !important;
             color: #fff !important;
         }
@@ -49,49 +52,113 @@
         .building-status-btn:disabled,
         .housing-status-btn:disabled {
             cursor: not-allowed;
-            opacity: 0.8;
+            opacity: .8;
         }
 
+        /* ===============================
+           Tables
+        =============================== */
         #housing_table tbody tr.selected {
-            background-color: rgba(0, 158, 247, 0.12) !important;
+            background-color: rgba(0, 158, 247, .12) !important;
         }
 
         .container-loader {
             display: none !important;
         }
 
+        /* ===============================
+           Sidebar Summary
+        =============================== */
         .audit-sticky-menu {
             position: sticky;
             top: 95px;
             z-index: 10;
-        }
-
-        .audit-sticky-menu .menu-link {
-            cursor: pointer;
-            border-radius: .75rem;
-            padding: .85rem 1rem;
-            margin-bottom: .35rem;
-            transition: all .2s ease;
-        }
-
-        .audit-sticky-menu .menu-link:hover,
-        .audit-sticky-menu .menu-link.active {
-            background: var(--bs-primary-light);
-            color: var(--bs-primary);
+            border-radius: 1rem;
+            overflow: hidden;
         }
 
         .audit-anchor {
             scroll-margin-top: 120px;
         }
 
+        .summary-box {
+            min-height: 78px;
+            border-radius: .85rem;
+            padding: .85rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: all .2s ease;
+        }
+
+        .summary-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .08);
+        }
+
+        .summary-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--bs-gray-700);
+            margin-bottom: .35rem;
+            line-height: 1.4;
+        }
+
+        .summary-value {
+            font-size: .95rem;
+            font-weight: 800;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        /* ===============================
+           Responsive
+        =============================== */
+        @media (max-width: 1199px) {
+            .summary-title {
+                font-size: .75rem;
+            }
+
+            .summary-value {
+                font-size: 1.05rem;
+            }
+        }
+
         @media (max-width: 991px) {
             .audit-sticky-menu {
                 position: relative;
                 top: auto;
+                margin-bottom: 1rem;
+            }
+
+            .summary-box {
+                min-height: 70px;
+                padding: .75rem;
+            }
+
+            .summary-title {
+                font-size: .72rem;
+            }
+
+            .summary-value {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .summary-box {
+                min-height: auto;
+            }
+
+            .summary-title {
+                font-size: .70rem;
+            }
+
+            .summary-value {
+                font-size: .95rem;
             }
         }
     </style>
-
     <div class="card card-flush mb-7">
         <div class="card-header pt-7">
             <div class="card-title">
@@ -266,62 +333,52 @@
                     <div class="row g-7">
 
                         {{-- Sidebar --}}
-                        <div class="col-xl-3 col-lg-4">
+                        <div class="col-12 col-lg-3 col-xl-2">
 
                             <div class="card card-flush shadow-sm border-0 audit-sticky-menu">
 
-                                <div class="card-header py-5">
-                                    <div class="card-title">
-                                        <h3 class="fw-bold mb-0">ملخص الوحدة</h3>
+                                <div class="card-header py-3 px-4">
+                                    <div class="card-title m-0">
+                                        <h3 class="fw-bold fs-4 mb-0">ملخص الوحدة</h3>
                                     </div>
                                 </div>
 
-                                <div class="card-body pt-0">
+                                <div class="card-body p-3">
 
-                                    <div class="menu menu-column menu-rounded fw-semibold fs-6">
+                                    <div class="row g-3">
 
-                                        <div class="menu-item mb-3">
-                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
-                                                <span>مساحة الوحدة</span>
-                                                <span id="sidebar_unit_area" class="badge badge-light-primary">
-                                                    --
-                                                </span>
+                                        <div class="col-6 col-lg-12">
+                                            <div class="summary-box bg-light-primary">
+                                                <div class="summary-title">مساحة الوحدة</div>
+                                                <div id="sidebar_unit_area" class="summary-value text-primary">--</div>
                                             </div>
                                         </div>
 
-                                        <div class="menu-item mb-3">
-                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
-                                                <span>تحتاج تأهيل مطبخ</span>
-                                                <span id="sidebar_kitchen" class="badge badge-light-warning">
-                                                    --
-                                                </span>
+                                        <div class="col-6 col-lg-12">
+                                            <div class="summary-box bg-light-warning">
+                                                <div class="summary-title">تأهيل مطبخ</div>
+                                                <div id="sidebar_kitchen" class="summary-value text-warning">--</div>
                                             </div>
                                         </div>
 
-                                        <div class="menu-item mb-3">
-                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
-                                                <span>تأهيل حمام</span>
-                                                <span id="sidebar_bathroom" class="badge badge-light-warning">
-                                                    --
-                                                </span>
+                                        <div class="col-6 col-lg-12">
+                                            <div class="summary-box bg-light-warning">
+                                                <div class="summary-title">تأهيل حمام</div>
+                                                <div id="sidebar_bathroom" class="summary-value text-warning">--</div>
                                             </div>
                                         </div>
 
-                                        <div class="menu-item mb-3">
-                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
-                                                <span>ملائمة للسكن</span>
-                                                <span id="sidebar_living" class="badge badge-light-success">
-                                                    --
-                                                </span>
+                                        <div class="col-6 col-lg-12">
+                                            <div class="summary-box bg-light-success">
+                                                <div class="summary-title">ملائمة للسكن</div>
+                                                <div id="sidebar_living" class="summary-value text-success">--</div>
                                             </div>
                                         </div>
 
-                                        <div class="menu-item">
-                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
-                                                <span>عدد الغرف</span>
-                                                <span id="sidebar_rooms" class="badge badge-light-info">
-                                                    --
-                                                </span>
+                                        <div class="col-12 col-lg-12">
+                                            <div class="summary-box bg-light-info">
+                                                <div class="summary-title">عدد الغرف</div>
+                                                <div id="sidebar_rooms" class="summary-value text-info">--</div>
                                             </div>
                                         </div>
 
@@ -334,7 +391,7 @@
                         </div>
 
                         {{-- Main Table --}}
-                        <div class="col-xl-9 col-lg-8">
+                        <div class="col-xl-10 col-lg-8">
 
                             <div class="card card-flush shadow-sm border-0">
 
@@ -739,26 +796,26 @@
 
         function renderHistoryLoading() {
             $('#statusHistoryTable').html(`
-                                                                                                        <tr>
-                                                                                                            <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
-                                                                                                        </tr>
-                                                                                                    `);
+                                                                                                                                                    <tr>
+                                                                                                                                                        <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                                                                                                                                                    </tr>
+                                                                                                                                                `);
         }
 
         function renderHistoryEmpty() {
             $('#statusHistoryTable').html(`
-                                                                                                        <tr>
-                                                                                                            <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-                                                                                                        </tr>
-                                                                                                    `);
+                                                                                                                                                    <tr>
+                                                                                                                                                        <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                                                                                                                                                    </tr>
+                                                                                                                                                `);
         }
 
         function renderHistoryError() {
             $('#statusHistoryTable').html(`
-                                                                                                        <tr>
-                                                                                                            <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
-                                                                                                        </tr>
-                                                                                                    `);
+                                                                                                                                                    <tr>
+                                                                                                                                                        <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                                                                                                                                                    </tr>
+                                                                                                                                                `);
         }
 
         function escapeHtml(text) {
@@ -801,24 +858,24 @@
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                                                                                                            <button type="button" class="btn btn-sm btn-light-info"
-                                                                                                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                                                                                                تعديل
-                                                                                                                            </button>
-                                                                                                                        `;
+                                                                                                                                                                        <button type="button" class="btn btn-sm btn-light-info"
+                                                                                                                                                                            onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                                                                                                                                            تعديل
+                                                                                                                                                                        </button>
+                                                                                                                                                                    `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
                         }
 
                         rows += `
-                                                                                                        <tr>
-                                                                                                            <td>${item.status_name ?? '-'}</td>
-                                                                                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                                                                            <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                                                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                                                                                        </tr>
-                                                                                                                `;
+                                                                                                                                                    <tr>
+                                                                                                                                                        <td>${item.status_name ?? '-'}</td>
+                                                                                                                                                        <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                                                                                                        <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                                                                        <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                                                                                                    </tr>
+                                                                                                                                                            `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -994,7 +1051,27 @@
                 }
             });
         }
+        function syncHousingRowAfterNumberUpdate(globalid) {
+            if (!globalid) return;
 
+            let unitsTable = $('#housing_table').DataTable();
+
+            unitsTable.ajax.reload(function () {
+                $('#housing_table tbody tr').removeClass('selected');
+
+                $('#housing_table tbody tr').each(function () {
+                    let row = unitsTable.row(this).data();
+
+                    if (row && row.globalid == globalid) {
+                        $(this).addClass('selected');
+                        return false;
+                    }
+                });
+
+                $('#kt_table_housing_assessment').DataTable().ajax.reload(null, false);
+
+            }, false);
+        }
         function saveInlineValue(field, globalid, type, value, callback = null) {
             $.ajax({
                 url: "{{ route('assessment.inline.update') }}",
@@ -1007,19 +1084,28 @@
                     value: value
                 },
                 success: function (response) {
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success(response.message || 'تم الحفظ بنجاح');
-                    }
+                    toastr.success(response.message || 'تم الحفظ بنجاح');
 
-                    if (callback) {
-                        callback(true);
+                    if (
+                        type === 'housing_table' &&
+                        (
+                            field === 'housing_unit_number' ||
+                            field === 'unit_number' ||
+                            field === 'housing_number'
+                        )
+                    ) {
+                        reloadHousingTabTables();
                     }
 
                     if (type === 'building_table') {
                         reloadBuildingAssessmentTable();
-                    } else if (type === 'housing_table') {
+                    }
+
+                    if (type === 'housing_table') {
                         reloadHousingAssessmentTable();
                     }
+
+                    if (callback) callback(true);
                 },
                 error: function (xhr) {
                     let message = 'حدث خطأ أثناء الحفظ';
@@ -1028,19 +1114,12 @@
                         message = xhr.responseJSON.message;
                     }
 
-                    if (typeof toastr !== 'undefined') {
-                        toastr.error(message);
-                    } else {
-                        alert(message);
-                    }
+                    toastr.error(message);
 
-                    if (callback) {
-                        callback(false);
-                    }
+                    if (callback) callback(false);
                 }
             });
         }
-
         function setBuildingStatus(status) {
             let globalid = '{{ $buildingGlobalid }}';
 
@@ -1637,4 +1716,6 @@
 
 
     </script>
+
+
 @endsection

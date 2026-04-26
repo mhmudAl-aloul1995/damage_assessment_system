@@ -25,7 +25,7 @@ class auditController extends Controller
 {
     public function __construct()
     {
-       // dd('يوجد صيانة في هذا القسم، يرجى التواصل مع الدعم الفني');
+        // dd('يوجد صيانة في هذا القسم، يرجى التواصل مع الدعم الفني');
     }
     public function index(Request $request)
     {
@@ -3096,117 +3096,197 @@ class auditController extends Controller
         ));
     }
 
+
+
     public function housingUnitsByBuilding(Request $request)
-    {
-        $query = HousingUnit::query();
+{
+    $type = auth()->user()->roles->first()->name;
 
-        if ($request->globalid) {
-            $query->where('parentglobalid', $request->globalid);
-        }
-        $type = auth()->user()->roles->first()->name;
-        $filters = Filter::whereIn('list_name', [
-            'housing_unit_type',
-            'unit_damage_status',
-        ])->get()->groupBy('list_name');
+    $filters = Filter::whereIn('list_name', [
+        'housing_unit_type',
+        'unit_damage_status',
+    ])->get()->groupBy('list_name');
 
-        return DataTables::of($query->orderBy('floor_number', 'asc')
-            ->orderBy('housing_unit_number', 'asc'))
 
-            ->editColumn('housing_unit_type', function ($row) use ($filters) {
-                return getFilterLabel($filters, 'housing_unit_type', $row->housing_unit_type);
-            })
+    $latestIds = DB::table('edit_assessments')
+        ->selectRaw('MAX(id) as id')
+        ->where('type', 'housing_table')
+        ->where('field_name', 'housing_unit_number')
+        ->groupBy('global_id');
 
-            ->editColumn('unit_damage_status', function ($row) use ($filters) {
-                return getFilterLabel($filters, 'unit_damage_status', $row->unit_damage_status);
-            })
-            ->addColumn('current_status', function ($row) use ($type) {
-                return optional($row->statusByType($type)?->first()?->assessment_status)->name;
-            })
+    $lastUnitNumber = DB::table('edit_assessments as ea')
+        ->joinSub($latestIds, 'latest', function ($join) {
+            $join->on('ea.id', '=', 'latest.id');
+        })
+        ->select(
+            'ea.global_id',
+            'ea.field_value'
+        );
 
-            ->editColumn('owner_name', function ($row) {
-                // لو عندك full_name بدل owner_name
-                return $row->owner_name ?? $row->full_name ?? '-';
-            })
+    /*
+    |--------------------------------------------------------------------------
+    | الاستعلام الرئيسي
+    |--------------------------------------------------------------------------
+    */
 
-            ->editColumn('unit_direction', function ($row) {
-                return $row->unit_direction ?? '-';
-            })
+    $query = HousingUnit::query()
+        ->leftJoinSub($lastUnitNumber, 'last_unit_number', function ($join) {
+            $join->on(
+                'housing_units.globalid',
+                '=',
+                'last_unit_number.global_id'
+            );
+        })
+        ->select('housing_units.*')
+        ->selectRaw("
+            COALESCE(
+                last_unit_number.field_value,
+                housing_units.housing_unit_number
+            ) as latest_housing_unit_number
+        ");
 
-            // finalApproval
-            ->addColumn('final_approval_status', function ($row) {
-
-                $status = $row->finalApproval?->assessment_status?->label_en ?? 'Pending';
-
-                $statusName = strtolower($status);
-
-                if (str_contains($statusName, 'reject')) {
-                    $color = 'badge-danger';
-                } elseif (str_contains($statusName, 'accepted')) {
-                    $color = 'badge-success';
-                } elseif (str_contains($statusName, 'review')) {
-                    $color = 'badge-warning';
-                } elseif (str_contains($statusName, 'assigned')) {
-                    $color = 'badge-primary';
-                } else {
-                    $color = 'badge-secondary';
-                }
-
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
-            })
-
-            // Engineer Status
-            ->addColumn('engineering_audit_status', function ($row) {
-
-                $status = $row->engineerStatus?->assessment_status?->label_en ?? 'Pending';
-
-                $statusName = strtolower($status);
-
-                if (str_contains($statusName, 'reject')) {
-                    $color = 'badge-danger';
-                } elseif (str_contains($statusName, 'accepted')) {
-                    $color = 'badge-success';
-                } elseif (str_contains($statusName, 'review')) {
-                    $color = 'badge-warning';
-                } elseif (str_contains($statusName, 'assigned')) {
-                    $color = 'badge-primary';
-                } else {
-                    $color = 'badge-secondary';
-                }
-
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span><br>';
-            })
-
-            // Lawyer Status
-            ->addColumn('legal_audit_status', function ($row) {
-
-                $status = $row->lawyerStatus?->assessment_status?->label_en ?? 'Pending';
-
-                $statusName = strtolower($status);
-
-                if (str_contains($statusName, 'reject')) {
-                    $color = 'badge-danger';
-                } elseif (str_contains($statusName, 'accepted')) {
-                    $color = 'badge-success';
-                } elseif (str_contains($statusName, 'review')) {
-                    $color = 'badge-warning';
-                } elseif (str_contains($statusName, 'assigned')) {
-                    $color = 'badge-primary';
-                } else {
-                    $color = 'badge-secondary';
-                }
-
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . e($status) . '</span>';
-            })
-
-            ->rawColumns([
-                'legal_audit_status',
-                'engineering_audit_status',
-                'final_approval_status',
-            ])
-
-            ->make(true);
+    if ($request->globalid) {
+        $query->where(
+            'housing_units.parentglobalid',
+            $request->globalid
+        );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | DataTable
+    |--------------------------------------------------------------------------
+    */
+
+    return DataTables::of(
+        $query
+            ->orderByRaw('CAST(housing_units.floor_number AS UNSIGNED) ASC')
+            ->orderByRaw('CAST(latest_housing_unit_number AS UNSIGNED) ASC')
+    )
+
+        ->editColumn('housing_unit_type', function ($row) use ($filters) {
+            return getFilterLabel(
+                $filters,
+                'housing_unit_type',
+                $row->housing_unit_type
+            );
+        })
+
+        ->editColumn('unit_damage_status', function ($row) use ($filters) {
+            return getFilterLabel(
+                $filters,
+                'unit_damage_status',
+                $row->unit_damage_status
+            );
+        })
+
+        ->editColumn('housing_unit_number', function ($row) {
+            return $row->latest_housing_unit_number ?? '-';
+        })
+
+        ->editColumn('owner_name', function ($row) {
+            return $row->owner_name ?? $row->full_name ?? '-';
+        })
+
+        ->editColumn('unit_direction', function ($row) {
+            return $row->unit_direction ?? '-';
+        })
+
+        ->addColumn('current_status', function ($row) use ($type) {
+            return optional(
+                $row->statusByType($type)?->first()?->assessment_status
+            )->name;
+        })
+
+        /*
+        |--------------------------------------------------------------------------
+        | Final Approval
+        |--------------------------------------------------------------------------
+        */
+        ->addColumn('final_approval_status', function ($row) {
+
+            $status = $row->finalApproval?->assessment_status?->label_en ?? 'Pending';
+            $statusName = strtolower($status);
+
+            $color = 'badge-secondary';
+
+            if (str_contains($statusName, 'reject')) {
+                $color = 'badge-danger';
+            } elseif (str_contains($statusName, 'accepted')) {
+                $color = 'badge-success';
+            } elseif (str_contains($statusName, 'review')) {
+                $color = 'badge-warning';
+            } elseif (str_contains($statusName, 'assigned')) {
+                $color = 'badge-primary';
+            }
+
+            return '<span class="badge ' . $color . ' fw-bold px-4 py-3">'
+                . e($status) .
+                '</span>';
+        })
+
+        /*
+        |--------------------------------------------------------------------------
+        | Engineering Status
+        |--------------------------------------------------------------------------
+        */
+        ->addColumn('engineering_audit_status', function ($row) {
+
+            $status = $row->engineerStatus?->assessment_status?->label_en ?? 'Pending';
+            $statusName = strtolower($status);
+
+            $color = 'badge-secondary';
+
+            if (str_contains($statusName, 'reject')) {
+                $color = 'badge-danger';
+            } elseif (str_contains($statusName, 'accepted')) {
+                $color = 'badge-success';
+            } elseif (str_contains($statusName, 'review')) {
+                $color = 'badge-warning';
+            } elseif (str_contains($statusName, 'assigned')) {
+                $color = 'badge-primary';
+            }
+
+            return '<span class="badge ' . $color . ' fw-bold px-4 py-3">'
+                . e($status) .
+                '</span>';
+        })
+
+        /*
+        |--------------------------------------------------------------------------
+        | Legal Status
+        |--------------------------------------------------------------------------
+        */
+        ->addColumn('legal_audit_status', function ($row) {
+
+            $status = $row->lawyerStatus?->assessment_status?->label_en ?? 'Pending';
+            $statusName = strtolower($status);
+
+            $color = 'badge-secondary';
+
+            if (str_contains($statusName, 'reject')) {
+                $color = 'badge-danger';
+            } elseif (str_contains($statusName, 'accepted')) {
+                $color = 'badge-success';
+            } elseif (str_contains($statusName, 'review')) {
+                $color = 'badge-warning';
+            } elseif (str_contains($statusName, 'assigned')) {
+                $color = 'badge-primary';
+            }
+
+            return '<span class="badge ' . $color . ' fw-bold px-4 py-3">'
+                . e($status) .
+                '</span>';
+        })
+
+        ->rawColumns([
+            'legal_audit_status',
+            'engineering_audit_status',
+            'final_approval_status',
+        ])
+
+        ->make(true);
+}
     public function finalApproveSelected(Request $request)
     {
         $request->validate([
