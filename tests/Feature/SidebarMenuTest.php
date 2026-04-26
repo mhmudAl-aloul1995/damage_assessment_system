@@ -12,7 +12,7 @@ beforeEach(function () {
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
 });
 
-it('shows the sidebar menu for infrastructure team leaders', function () {
+it('shows the sidebar menu for infrastructure Team Leaders', function () {
     $role = Role::findOrCreate('Team Leader -INF', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);

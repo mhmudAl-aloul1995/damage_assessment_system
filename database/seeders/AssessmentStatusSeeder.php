@@ -78,7 +78,7 @@ class AssessmentStatusSeeder extends Seeder
             [
                 'name' => 'final_approval',
                 'label_en' => 'Final Approval',
-                'label_ar' => 'مقبولة نهائياً (من team leader)',
+                'label_ar' => 'مقبولة نهائياً (من Team Leader)',
                 'stage' => 'team_leader',
                 'order_step' => 9
             ],
@@ -86,7 +86,7 @@ class AssessmentStatusSeeder extends Seeder
             [
                 'name' => 'final_reject',
                 'label_en' => 'Final Reject',
-                'label_ar' => 'مرفوضة نهائياً (من team leader)',
+                'label_ar' => 'مرفوضة نهائياً (من Team Leader)',
                 'stage' => 'team_leader',
                 'order_step' => 10
             ],
