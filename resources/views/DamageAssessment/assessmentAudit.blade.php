@@ -70,13 +70,13 @@
 
         <div class="card-body">
             <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bold mb-8">
-                <li onclick="reloadBuildingAssessmentTable()" class="nav-item">
+                <li  class="nav-item">
                     <a class="nav-link text-active-primary active" data-bs-toggle="tab" href="#tab_building">
                         المبنى
                     </a>
                 </li>
 
-                <li onclick="reloadHousingTabTables()" class="nav-item">
+                <li class="nav-item">
                     <a class="nav-link text-active-primary" data-bs-toggle="tab" href="#tab_housing">
                         الوحدة السكنية
                     </a>
