@@ -42,13 +42,13 @@ return [
                 'title' => 'menu.damage_assessment.public_buildings',
                 'url' => 'public-buildings',
                 'pattern' => 'public-buildings*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
             ],
             [
                 'title' => 'menu.damage_assessment.road_facilities',
                 'url' => 'road-facilities',
                 'pattern' => 'road-facilities*',
-                'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
             ],
             [
                 'title' => 'menu.damage_assessment.engineers',
@@ -61,7 +61,7 @@ return [
     [
         'title' => 'menu.reports.title',
         'icon' => 'ki-chart-line',
-        'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'QC/QA Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'Team Leader -INF', 'Team Leader', 'Area Manager', 'QC/QA Engineer'],
         'active_patterns' => [
             'reports*',
         ],
@@ -82,19 +82,19 @@ return [
                 'title' => 'menu.reports.public_buildings_area_productivity',
                 'url' => 'reports/area-productivity/public-buildings',
                 'pattern' => 'reports/area-productivity/public-buildings*',
-                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
+                'roles' => ['Database Officer','Team Leader -INF','Project Officer', 'Area Manager'],
             ],
             [
                 'title' => 'menu.reports.road_facilities_area_productivity',
                 'url' => 'reports/area-productivity/road-facilities',
                 'pattern' => 'reports/area-productivity/road-facilities*',
-                'roles' => ['Database Officer', 'Project Officer', 'Area Manager'],
+                'roles' => ['Database Officer', 'Team Leader -INF', 'Project Officer', 'Area Manager'],
             ],
             [
                 'title' => 'menu.reports.field_engineer',
                 'url' => 'reports/field-engineer',
                 'pattern' => 'reports/field-engineer*',
-                'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'Auditing Supervisor'],
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager','Team Leader -INF','Team Leader' ,'Auditing Supervisor'],
             ],
             [
                 'title' => 'menu.reports.engineer_productivity',
@@ -124,7 +124,7 @@ return [
                 'title' => 'menu.reports.export_data',
                 'url' => 'export-data',
                 'pattern' => 'export-data*',
-                'roles' => ['Database Officer', 'Project Officer', 'QC/QA Engineer', 'Area Manager'],
+                'roles' => ['Database Officer', 'Project Officer', 'QC/QA Engineer', 'Team Leader -INF','Team Leader', 'Area Manager'],
             ],
         ],
     ],
