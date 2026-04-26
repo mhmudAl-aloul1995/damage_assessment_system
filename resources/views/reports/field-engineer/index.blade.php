@@ -249,17 +249,17 @@
 
                             <div class="col-md-4">
                                 <label class="form-label">{{ __('multilingual.field_engineer_report.filters.from_date') }}</label>
-                                <input type="date" name="from_date" value="{{ $filters['from_date'] }}" class="form-control form-control-solid">
+                                <input data-date-format="yyyy-mm-dd" type="date" name="from_date" value="{{ $filters['from_date'] }}" class="form-control form-control-solid">
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">{{ __('multilingual.field_engineer_report.filters.to_date') }}</label>
-                                <input type="date" name="to_date" value="{{ $filters['to_date'] }}" class="form-control form-control-solid">
+                                <input data-date-format="yyyy-mm-dd" type="date" name="to_date" value="{{ $filters['to_date'] }}" class="form-control form-control-solid">
                             </div>
 
                             <div class="col-md-8">
                                 <label class="form-label">{{ __('multilingual.field_engineer_report.filters.search') }}</label>
-                                <input type="text" name="search" value="{{ $filters['search'] }}"
+                                <input  type="text" name="search" value="{{ $filters['search'] }}"
                                     placeholder="{{ __('multilingual.field_engineer_report.search_placeholder') }}"
                                     class="form-control form-control-solid">
                             </div>
