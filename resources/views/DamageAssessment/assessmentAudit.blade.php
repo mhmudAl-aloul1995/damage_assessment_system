@@ -10,8 +10,8 @@
 @section('content')
     <style>
         /* ===============================
-           Status Buttons
-        =============================== */
+                                   Status Buttons
+                                =============================== */
         .building-status-btn,
         .housing-status-btn {
             transition: all .2s ease-in-out;
@@ -56,8 +56,8 @@
         }
 
         /* ===============================
-           Tables
-        =============================== */
+                                   Tables
+                                =============================== */
         #housing_table tbody tr.selected {
             background-color: rgba(0, 158, 247, .12) !important;
         }
@@ -67,8 +67,8 @@
         }
 
         /* ===============================
-           Sidebar Summary
-        =============================== */
+                                   Sidebar Summary
+                                =============================== */
         .audit-sticky-menu {
             position: sticky;
             top: 95px;
@@ -112,8 +112,8 @@
         }
 
         /* ===============================
-           Responsive
-        =============================== */
+                                   Responsive
+                                =============================== */
         @media (max-width: 1199px) {
             .summary-title {
                 font-size: .75rem;
@@ -796,26 +796,26 @@
 
         function renderHistoryLoading() {
             $('#statusHistoryTable').html(`
-                                                                                                                                                    <tr>
-                                                                                                                                                        <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
-                                                                                                                                                    </tr>
-                                                                                                                                                `);
+                                                                                                                                                                            <tr>
+                                                                                                                                                                                <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                                                                                                                                                                            </tr>
+                                                                                                                                                                        `);
         }
 
         function renderHistoryEmpty() {
             $('#statusHistoryTable').html(`
-                                                                                                                                                    <tr>
-                                                                                                                                                        <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-                                                                                                                                                    </tr>
-                                                                                                                                                `);
+                                                                                                                                                                            <tr>
+                                                                                                                                                                                <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                                                                                                                                                                            </tr>
+                                                                                                                                                                        `);
         }
 
         function renderHistoryError() {
             $('#statusHistoryTable').html(`
-                                                                                                                                                    <tr>
-                                                                                                                                                        <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
-                                                                                                                                                    </tr>
-                                                                                                                                                `);
+                                                                                                                                                                            <tr>
+                                                                                                                                                                                <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                                                                                                                                                                            </tr>
+                                                                                                                                                                        `);
         }
 
         function escapeHtml(text) {
@@ -858,24 +858,24 @@
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                                                                                                                                                        <button type="button" class="btn btn-sm btn-light-info"
-                                                                                                                                                                            onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                                                                                                                                            تعديل
-                                                                                                                                                                        </button>
-                                                                                                                                                                    `;
+                                                                                                                                                                                                <button type="button" class="btn btn-sm btn-light-info"
+                                                                                                                                                                                                    onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                                                                                                                                                                    تعديل
+                                                                                                                                                                                                </button>
+                                                                                                                                                                                            `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
                         }
 
                         rows += `
-                                                                                                                                                    <tr>
-                                                                                                                                                        <td>${item.status_name ?? '-'}</td>
-                                                                                                                                                        <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                                                                                                                        <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                                                                                                                        <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                                                                                                                                    </tr>
-                                                                                                                                                            `;
+                                                                                                                                                                            <tr>
+                                                                                                                                                                                <td>${item.status_name ?? '-'}</td>
+                                                                                                                                                                                <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                                                                                                                                <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                                                                                                <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                                                                                                                            </tr>
+                                                                                                                                                                                    `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -1089,12 +1089,14 @@
                     if (
                         type === 'housing_table' &&
                         (
-                            field === 'housing_unit_number' ||
-                            field === 'unit_number' ||
-                            field === 'housing_number'
+                            field === 'damaged_area_m2' ||
+                            field === 'reh_kitchen' ||
+                            field === 'reh_bathroom' ||
+                            field === 'is_the_housing_unit_or_living_habitable' ||
+                            field === 'number_of_rooms'
                         )
                     ) {
-                        reloadHousingTabTables();
+                        loadHousingSidebarSummary()
                     }
 
                     if (type === 'building_table') {
@@ -1494,7 +1496,6 @@
                             d.globalid = $("[name='globalid']").val();
                         },
                         dataSrc: function (json) {
-                            updateHousingSidebarFromDatatable(json.data || []);
                             return json.data || [];
                         }
                     },
@@ -1563,7 +1564,7 @@
 
             var handleChangeHousingUnit = function () {
                 const filterSelect = $('[name="globalid"]');
-
+                loadHousingSidebarSummary();
                 filterSelect.on("change", function () {
                     datatable.ajax.reload(null, false);
                 });
@@ -1689,32 +1690,29 @@
             return $('<div>').html(html ?? '').text().trim();
         }
 
-        function updateHousingSidebarFromDatatable(rows) {
-            const map = {
-                'مساحة الوحدة': '#sidebar_unit_area',
-                'هل يحتاج إلى إعادة تأهيل المطبخ؟': '#sidebar_kitchen',
-                'هل يحتاج إلى إعادة تأهيل الحمام؟': '#sidebar_bathroom',
-                'ملائمة للسكن': '#sidebar_living',
-                '8.9 number of rooms': '#sidebar_rooms'
-            };
 
-            Object.values(map).forEach(function (selector) {
-                $(selector).text('--');
-            });
+        function loadHousingSidebarSummary() {
+            let globalid = $("[name='globalid']").val();
 
-            rows.forEach(function (row) {
-                let question = cleanDatatableText(row.question);
-                let answer = cleanDatatableText(row.answer);
+            if (!globalid) return;
 
-                Object.keys(map).forEach(function (key) {
-                    if (question.includes(key)) {
-                        $(map[key]).text(answer || '--');
-                    }
-                });
+            $.ajax({
+                url: "{{ route('housing.summary') }}",
+                method: "GET",
+                data: { globalid: globalid },
+                success: function (res) {
+                    $('#sidebar_unit_area').text(res.unit_area ?? '--');
+                    $('#sidebar_kitchen').text(res.kitchen ?? '--');
+                    $('#sidebar_bathroom').text(res.bathroom ?? '--');
+                    $('#sidebar_living').text(res.living ?? '--');
+                    $('#sidebar_rooms').text(res.rooms ?? '--');
+                }
             });
         }
 
-
+        $('[name="globalid"]').on('change', function () {
+            loadHousingSidebarSummary();
+        });
     </script>
 
 

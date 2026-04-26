@@ -84,10 +84,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="'.$safeRepo.'" add .',
-            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
-            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
-            'git -c safe.directory="'.$safeRepo.'" push',
+            'git -c safe.directory="' . $safeRepo . '" add .',
+            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
+            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
+            'git -c safe.directory="' . $safeRepo . '" push',
         ];
 
         $outputs = [];
@@ -107,7 +107,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (! $result->successful()) {
+            if (!$result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -210,7 +210,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
-        Route::get('/', fn () => redirect()->route('telegram.destinations.index'))->name('index');
+        Route::get('/', fn() => redirect()->route('telegram.destinations.index'))->name('index');
         Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
         Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
         Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
@@ -391,34 +391,12 @@ Route::post('/telegram/webhook/{secret}', [TelegramWebhookController::class, 'ha
     ->withoutMiddleware([VerifyCsrfToken::class]);
 use Spatie\Browsershot\Browsershot;
 
-Route::get('/debug-pdf', function () {
-
-    $pdfPath = storage_path('app/public/debug.pdf');
-
-    Browsershot::html('
-        <html lang="ar" dir="rtl">
-        <head><meta charset="UTF-8"></head>
-        <body>
-            <h1>Ã™â€ Ã˜Â¬Ã˜Â­ Ã˜Â§Ã™â€žÃ˜ÂªÃ˜ÂµÃ˜Â¯Ã™Å Ã˜Â± Ã¢Å“â€¦</h1>
-            <p>Browsershot Ã™Å Ã˜Â¹Ã™â€¦Ã™â€ž Ã˜Â¨Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã˜Â§Ã™â€¦ Edge</p>
-        </body>
-        </html>
-    ')
-        ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
-        ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
-        ->setNodeModulePath(base_path('node_modules'))
-        ->setChromePath('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe')
-        ->format('A4')
-        ->showBackground()
-        ->save($pdfPath);
-
-    return response()->download($pdfPath);
-});
-
+Route::get('/housing-summary', [auditController::class, 'housingSummary'])
+    ->name('housing.summary');
 use App\Http\Controllers\BuildingImportController;
 
 Route::get('/import-buildings-test', [BuildingImportController::class, 'import']);
 use App\Http\Controllers\HousingUnitImportController;
 
 Route::get('/import-housing-units', [HousingUnitImportController::class, 'import']);
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
