@@ -359,8 +359,8 @@
 
                                         <div class="d-flex align-items-center flex-wrap fw-bold gap-2">
 
+                                            {{-- اختيار الوحدة --}}
                                             <div class="me-3">
-
                                                 <select name="globalid" class="form-select form-select-solid w-250px"
                                                     data-control="select2" data-placeholder="إختر الوحدة">
 
@@ -373,14 +373,50 @@
                                                     @endforeach
 
                                                 </select>
-
                                             </div>
 
+                                            {{-- أزرار التدقيق القانوني --}}
+                                            @role('Legal Auditor')
+
+                                            <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
+                                                data-status="accepted" onclick="setHousingStatus('accepted')">
+                                                مقبول
+                                            </button>
+
+                                            <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
+                                                data-status="legal_notes" onclick="setHousingStatus('legal_notes')">
+                                                بحاجة لمراجعة
+                                            </button>
+
+                                            @endrole
+
+                                            {{-- أزرار التدقيق الهندسي --}}
+                                            @role('QC/QA Engineer')
+
+                                            <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
+                                                data-status="rejected" onclick="setHousingStatus('rejected')">
+                                                مرفوض
+                                            </button>
+
+                                            <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
+                                                data-status="accepted" onclick="setHousingStatus('accepted')">
+                                                مقبول
+                                            </button>
+
+                                            <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
+                                                data-status="need_review" onclick="setHousingStatus('need_review')">
+                                                بحاجة لمراجعة
+                                            </button>
+
+                                            @endrole
+
+                                            {{-- ملاحظات --}}
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('housing','history')">
                                                 ملاحظات
                                             </button>
 
+                                            {{-- تعديل الملاحظة --}}
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('housing','edit_note')">
                                                 تعديل الملاحظة
@@ -703,26 +739,26 @@
 
         function renderHistoryLoading() {
             $('#statusHistoryTable').html(`
-                                                                                                    <tr>
-                                                                                                        <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
-                                                                                                    </tr>
-                                                                                                `);
+                                                                                                        <tr>
+                                                                                                            <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                                                                                                        </tr>
+                                                                                                    `);
         }
 
         function renderHistoryEmpty() {
             $('#statusHistoryTable').html(`
-                                                                                                    <tr>
-                                                                                                        <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-                                                                                                    </tr>
-                                                                                                `);
+                                                                                                        <tr>
+                                                                                                            <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                                                                                                        </tr>
+                                                                                                    `);
         }
 
         function renderHistoryError() {
             $('#statusHistoryTable').html(`
-                                                                                                    <tr>
-                                                                                                        <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
-                                                                                                    </tr>
-                                                                                                `);
+                                                                                                        <tr>
+                                                                                                            <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                                                                                                        </tr>
+                                                                                                    `);
         }
 
         function escapeHtml(text) {
@@ -765,24 +801,24 @@
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                                                                                                        <button type="button" class="btn btn-sm btn-light-info"
-                                                                                                                            onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                                                                                            تعديل
-                                                                                                                        </button>
-                                                                                                                    `;
+                                                                                                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                                                                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                                                                                                تعديل
+                                                                                                                            </button>
+                                                                                                                        `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
                         }
 
                         rows += `
-                                                                                                    <tr>
-                                                                                                        <td>${item.status_name ?? '-'}</td>
-                                                                                                        <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                                                                        <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                                                                        <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                                                                                    </tr>
-                                                                                                            `;
+                                                                                                        <tr>
+                                                                                                            <td>${item.status_name ?? '-'}</td>
+                                                                                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                                                            <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                                                        </tr>
+                                                                                                                `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -1599,6 +1635,6 @@
             });
         }
 
-        
+
     </script>
 @endsection
