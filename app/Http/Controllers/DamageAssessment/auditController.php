@@ -23,10 +23,15 @@ use Yajra\Datatables\Datatables;
 
 class auditController extends Controller
 {
+    public function __construct()
+    {
+        dd('يوجد صيانة في هذا القسم، يرجى التواصل مع الدعم الفني');
+    }
     public function index(Request $request)
     {
 
         if ($request->ajax()) {
+
        /*      $globalIds = [
                 '51ea2320-1c6b-4115-af83-e8103cb335c0',
                 '6480b68c-c0c7-4411-9f5d-3060cf30725c',
