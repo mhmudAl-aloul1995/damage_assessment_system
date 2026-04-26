@@ -55,7 +55,8 @@
         #housing_table tbody tr.selected {
             background-color: rgba(0, 158, 247, 0.12) !important;
         }
-       .container-loader {
+
+        .container-loader {
             display: none !important;
         }
     </style>
@@ -394,14 +395,27 @@
         let pendingHousingGlobalId = null;
 
         function initInlineEditors() {
+
             $('.inline-edit-select').each(function () {
-                if (!$(this).hasClass('select2-hidden-accessible')) {
-                    $(this).select2({
-                        minimumResultsForSearch: 0,
-                        width: '100%',
-                        dir: 'rtl'
-                    });
+
+                let el = $(this);
+
+                // إذا select2 موجود من قبل دمّره
+                if (el.hasClass('select2-hidden-accessible')) {
+                    el.select2('destroy');
                 }
+
+                // إذا لا يوجد options لا تفعّل select2
+                if (el.find('option').length <= 1) {
+                    return;
+                }
+
+                el.select2({
+                    width: '100%',
+                    dir: 'rtl',
+                    minimumResultsForSearch: 0,
+                    dropdownAutoWidth: true
+                });
             });
         }
 
@@ -450,7 +464,7 @@
 
             if (valueToSelect) {
                 pendingHousingGlobalId = valueToSelect;
-                select.val(valueToSelect).trigger('change.select2');
+                select.val(valueToSelect).trigger('change');
             }
 
             return valueToSelect;
@@ -484,7 +498,7 @@
             if (!selectedId) {
                 selectedId = getFirstHousingOptionValue();
                 if (selectedId) {
-                    $('[name="globalid"]').val(selectedId).trigger('change.select2');
+                    $('[name="globalid"]').val(selectedId).trigger('change');
                     pendingHousingGlobalId = selectedId;
                 }
             }
@@ -578,26 +592,26 @@
 
         function renderHistoryLoading() {
             $('#statusHistoryTable').html(`
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
-                                            </tr>
-                                        `);
+                                                                        <tr>
+                                                                            <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                                                                        </tr>
+                                                                    `);
         }
 
         function renderHistoryEmpty() {
             $('#statusHistoryTable').html(`
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-                                            </tr>
-                                        `);
+                                                                        <tr>
+                                                                            <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                                                                        </tr>
+                                                                    `);
         }
 
         function renderHistoryError() {
             $('#statusHistoryTable').html(`
-                                            <tr>
-                                                <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
-                                            </tr>
-                                        `);
+                                                                        <tr>
+                                                                            <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                                                                        </tr>
+                                                                    `);
         }
 
         function escapeHtml(text) {
@@ -640,24 +654,24 @@
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                                                <button type="button" class="btn btn-sm btn-light-info"
-                                                                    onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                                    تعديل
-                                                                </button>
-                                                            `;
+                                                                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                                                                تعديل
+                                                                                            </button>
+                                                                                        `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
                         }
 
                         rows += `
-                                            <tr>
-                                                <td>${item.status_name ?? '-'}</td>
-                                                <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                            </tr>
-                                                    `;
+                                                                        <tr>
+                                                                            <td>${item.status_name ?? '-'}</td>
+                                                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                            <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                        </tr>
+                                                                                `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -1108,14 +1122,21 @@
                         if (text !== '' && text !== '-') {
                             $(row).css('background-color', '#d4edda');
                         }
-                    }
+                    },
+                   /*  initComplete: function () {
+                        initInlineEditors();
+                    },
+
+                    drawCallback: function () {
+                        initInlineEditors();
+                    }, */
                 });
 
                 datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
-                    initInlineEditors();
+                  //  initInlineEditors();
                 });
             };
 
@@ -1280,14 +1301,20 @@
                         if (text !== '' && text !== '-') {
                             $(row).css('background-color', '#d4edda');
                         }
-                    }
+                    },
+              /*       initComplete: function () {
+                        initInlineEditors();
+                    },
+                    drawCallback: function () {
+                        initInlineEditors();
+                    }, */
                 });
 
                 datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
-                    initInlineEditors();
+                  //  initInlineEditors();
                 });
             };
 
@@ -1346,14 +1373,27 @@
         });
 
 
-        $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function () {
+        $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+
+            let target = $(e.target).attr('href');
+
             $.fn.dataTable.tables({
                 visible: true,
                 api: true
             }).columns.adjust();
 
-            initInlineEditors();
-            selectInitialHousingOption();
+            if (target === '#tab_housing') {
+
+                selectInitialHousingOption();
+
+                reloadBuildingUnitsTable();
+
+                reloadHousingAssessmentTable();
+
+                setTimeout(function () {
+                    initInlineEditors();
+                }, 100);
+            }
         });
 
         $('#housing_table tbody').on('click', 'tr', function () {
@@ -1388,30 +1428,19 @@
         });
 
         KTUtil.onDOMContentLoaded(function () {
+
             $("#kt_app_sidebar_toggle").click();
 
             KTBuildingAssessmentList.init();
             KTBuildingUnitsList.init();
             KTHousingAssessmentList.init();
-            initInlineEditors();
 
             setActiveStatusButton(
                 '.building-status-btn',
                 normalizeStatus(@json($buildingCurrentStatus))
             );
 
-            if (urlHousingGlobalId) {
-                let housingTab = document.querySelector('a[href="#tab_housing"]');
-
-                if (housingTab) {
-                    bootstrap.Tab.getOrCreateInstance(housingTab).show();
-                }
-            }
-
-            selectInitialHousingOption();
             reloadBuildingAssessmentTable();
-            reloadBuildingAssessmentTable();
-
         });
         function reloadTableWithoutScroll(tableId) {
             let scrollTop = $(window).scrollTop();
