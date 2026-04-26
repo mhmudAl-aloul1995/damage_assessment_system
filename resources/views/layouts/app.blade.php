@@ -120,13 +120,52 @@
 		margin-right: -1.5rem;
 		margin-left: 0;
 	}
+
+	#kt_app_content_container {
+		position: relative;
+		min-height: 300px;
+	}
+
+	.container-loader {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+
+		z-index: 9999;
+		display: none;
+
+		align-items: center;
+		justify-content: center;
+
+		background: rgba(255, 255, 255, .65);
+		backdrop-filter: blur(2px);
+		border-radius: .75rem;
+	}
+
+	.container-loader.show {
+		display: flex;
+	}
+
+	.loader-box {
+		min-width: 220px;
+		padding: 2rem;
+		border-radius: 1rem;
+		background: #fff;
+		box-shadow: 0 15px 35px rgba(0, 0, 0, .12);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
 </style>
 
 <body id="kt_app_body" data-kt-app-layout="dark-sidebar" data-kt-app-header-fixed="true"
 	data-kt-app-sidebar-enabled="true" data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-hoverable="true"
 	data-kt-app-sidebar-push-header="true" data-kt-app-sidebar-push-toolbar="true"
 	data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true"
-	class="app-default locale-{{ $direction }}" data-locale="{{ app()->getLocale() }}" data-direction="{{ $direction }}">
+	class="app-default locale-{{ $direction }}" data-locale="{{ app()->getLocale() }}"
+	data-direction="{{ $direction }}">
 	<!--begin::Theme mode setup on page load-->
 	<script>var defaultThemeMode = "light"; var themeMode; if (document.documentElement) { if (document.documentElement.hasAttribute("data-bs-theme-mode")) { themeMode = document.documentElement.getAttribute("data-bs-theme-mode"); } else { if (localStorage.getItem("data-bs-theme") !== null) { themeMode = localStorage.getItem("data-bs-theme"); } else { themeMode = defaultThemeMode; } } if (themeMode === "system") { themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; } document.documentElement.setAttribute("data-bs-theme", themeMode); }</script>
 	<!--end::Theme mode setup on page load-->
@@ -358,7 +397,8 @@
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pt-5 pb-5"
 													data-kt-search-element="category-title">
-													{{ __('ui.search.customers') }}</h3>
+													{{ __('ui.search.customers') }}
+												</h3>
 												<!--end::Category title-->
 												<!--begin::Item-->
 												<a href="#"
@@ -463,7 +503,8 @@
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pt-5 pb-5"
 													data-kt-search-element="category-title">
-													{{ __('ui.search.projects') }}</h3>
+													{{ __('ui.search.projects') }}
+												</h3>
 												<!--end::Category title-->
 												<!--begin::Item-->
 												<a href="#"
@@ -970,7 +1011,8 @@
 						<div class="app-navbar-item ms-1 ms-md-4">
 							<div class="btn-group" role="group" aria-label="{{ __('ui.locale.switcher') }}">
 								@foreach(config('app.supported_locales', ['en']) as $locale)
-									<form method="POST" action="{{ route('locale.update', $locale) }}" class="locale-switcher-form" data-locale="{{ $locale }}">
+									<form method="POST" action="{{ route('locale.update', $locale) }}"
+										class="locale-switcher-form" data-locale="{{ $locale }}">
 										@csrf
 										<button type="submit"
 											class="btn btn-sm {{ app()->getLocale() === $locale ? 'btn-primary' : 'btn-light' }}">
@@ -1326,6 +1368,13 @@
 						<!--begin::Content container-->
 						<div id="kt_app_content_container" class="app-container container-fluid">
 
+							<div id="appContainerLoading" class="container-loader">
+								<div class="loader-box">
+									<span class="spinner-border text-primary"></span>
+									<span class="fw-semibold mt-3">Loading...</span>
+								</div>
+							</div>
+
 							@yield('content')
 
 						</div>
@@ -1650,6 +1699,32 @@
 				})
 			}
 		}
+		function showAppLoading() {
+			$('#appContainerLoading').addClass('show');
+		}
+
+		function hideAppLoading() {
+			$('#appContainerLoading').removeClass('show');
+		}
+
+		/* Ajax */
+		$(document).ajaxStart(function () {
+			showAppLoading();
+		});
+
+		$(document).ajaxStop(function () {
+			hideAppLoading();
+		});
+
+		/* submit forms */
+		$(document).on('submit', 'form', function () {
+			showAppLoading();
+		});
+
+		/* links */
+		$(document).on('click', 'a[href]:not([href^="#"]):not([target="_blank"])', function () {
+			showAppLoading();
+		});
 	</script>
 </body>
 <!--end::Body-->
