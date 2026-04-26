@@ -24,7 +24,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-           $request->authenticate();
+        $request->authenticate();
 
         $request->session()->regenerate();
 
@@ -38,7 +38,7 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('dashboard');
         }
 
-        if ($user->hasRole('Team Leader')) {
+        if ($user->hasAnyRole(['Team Leader', 'Team Leader -INF'])) {
             return redirect()->route('dashboard');
         }
 
@@ -53,7 +53,6 @@ class AuthenticatedSessionController extends Controller
         if ($user->hasRole('Auditing Supervisor')) {
             return redirect()->route('audit.index');
         }
-
 
         return redirect()->intended(route('dashboard', absolute: false));
     }
