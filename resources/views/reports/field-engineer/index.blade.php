@@ -271,7 +271,7 @@
                                 <label class="form-label">
                                     {{ __('multilingual.field_engineer_report.filters.from_date') }}
                                 </label>
-                                <input type="text" name="from_date " placeholder="yyyy-mm-dd"
+                                <input type="text" name="from_date" placeholder="yyyy-mm-dd"
                                     value="{{ $filters['from_date'] }}" class="form-control datepicker form-control-solid">
                             </div>
 
@@ -524,10 +524,12 @@
                 }, {});
             }
 
-            function hasAssignedEngineer() {
+            function hasActiveFilters() {
                 const payload = filterPayload();
 
-                return Boolean((payload.assignedto || '').trim());
+                return Object.entries(payload).some(function ([key, value]) {
+                    return key !== 'tab' && String(value || '').trim() !== '';
+                });
             }
 
             function updatePageUrl() {
@@ -597,7 +599,7 @@
             function fetchStats() {
                 renderSummary(initialSummary || {});
 
-                if (!hasAssignedEngineer()) {
+                if (!hasActiveFilters()) {
                     return;
                 }
 

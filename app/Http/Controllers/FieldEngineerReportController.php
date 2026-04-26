@@ -27,7 +27,7 @@ class FieldEngineerReportController extends Controller
         $response = response()->view('reports.field-engineer.index', [
             'filters' => $filters,
             'filterOptions' => $this->fieldEngineerReportService->filterOptions(),
-            'summary' => $filters['assignedto']
+            'summary' => $this->fieldEngineerReportService->hasActiveFilters($filters)
                 ? $this->fieldEngineerReportService->summary($filters)
                 : $this->fieldEngineerReportService->emptySummary(),
         ]);
@@ -45,7 +45,7 @@ class FieldEngineerReportController extends Controller
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
         $parameters = $this->dataTableParameters($request);
 
-        if (! $filters['assignedto']) {
+        if (! $this->fieldEngineerReportService->hasActiveFilters($filters)) {
             return $this->emptyDataTableResponse($parameters['draw']);
         }
 
@@ -77,7 +77,7 @@ class FieldEngineerReportController extends Controller
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
         $parameters = $this->dataTableParameters($request);
 
-        if (! $filters['assignedto']) {
+        if (! $this->fieldEngineerReportService->hasActiveFilters($filters)) {
             return $this->emptyDataTableResponse($parameters['draw']);
         }
 
@@ -105,7 +105,7 @@ class FieldEngineerReportController extends Controller
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
         $parameters = $this->dataTableParameters($request);
 
-        if (! $filters['assignedto']) {
+        if (! $this->fieldEngineerReportService->hasActiveFilters($filters)) {
             return $this->emptyDataTableResponse($parameters['draw']);
         }
 
@@ -135,7 +135,7 @@ class FieldEngineerReportController extends Controller
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
         $parameters = $this->dataTableParameters($request);
 
-        if (! $filters['assignedto']) {
+        if (! $this->fieldEngineerReportService->hasActiveFilters($filters)) {
             return $this->emptyDataTableResponse($parameters['draw']);
         }
 
@@ -163,7 +163,7 @@ class FieldEngineerReportController extends Controller
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
         $parameters = $this->dataTableParameters($request);
 
-        if (! $filters['assignedto']) {
+        if (! $this->fieldEngineerReportService->hasActiveFilters($filters)) {
             return $this->emptyDataTableResponse($parameters['draw']);
         }
 
@@ -190,7 +190,7 @@ class FieldEngineerReportController extends Controller
         $startedAt = microtime(true);
 
         $response = response()->json([
-            'summary' => $filters['assignedto']
+            'summary' => $this->fieldEngineerReportService->hasActiveFilters($filters)
                 ? $this->fieldEngineerReportService->summary($filters)
                 : $this->fieldEngineerReportService->emptySummary(),
         ]);

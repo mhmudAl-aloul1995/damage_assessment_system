@@ -84,9 +84,20 @@ class FieldEngineerReportService
         ];
     }
 
+    public function hasActiveFilters(array $filters): bool
+    {
+        foreach ($filters as $key => $value) {
+            if ($key !== 'tab' && filled($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function summary(array $filters): array
     {
-        if (! $filters['assignedto']) {
+        if (! $this->hasActiveFilters($filters)) {
             return $this->emptySummary();
         }
 

@@ -199,8 +199,30 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ->assertOk()
         ->assertSee(__('multilingual.field_engineer_report.title'), false)
         ->assertSee('Engineer One', false)
+        ->assertSee('name="from_date"', false)
+        ->assertDontSee('name="from_date "', false)
         ->assertSee(__('multilingual.field_engineer_report.tabs.buildings'), false)
         ->assertSee(__('multilingual.field_engineer_report.stats.total_buildings'), false);
+
+    $independentFilterQuery = [
+        'municipalitie' => 'Gaza',
+        'from_date' => '2026-04-21',
+        'to_date' => '2026-04-30',
+    ];
+
+    $this->actingAs($user)
+        ->getJson(route('reports.field-engineer.buildings', array_merge($independentFilterQuery, [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ])))
+        ->assertOk()
+        ->assertJsonFragment([
+            'objectid' => 5002,
+        ])
+        ->assertJsonMissing([
+            'objectid' => 5001,
+        ]);
 
     $this->actingAs($user)
         ->getJson(route('reports.field-engineer.buildings', array_merge($query, [
