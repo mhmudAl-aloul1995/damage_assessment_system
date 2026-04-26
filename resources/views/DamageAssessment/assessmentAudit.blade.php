@@ -59,6 +59,37 @@
         .container-loader {
             display: none !important;
         }
+
+        .audit-sticky-menu {
+            position: sticky;
+            top: 95px;
+            z-index: 10;
+        }
+
+        .audit-sticky-menu .menu-link {
+            cursor: pointer;
+            border-radius: .75rem;
+            padding: .85rem 1rem;
+            margin-bottom: .35rem;
+            transition: all .2s ease;
+        }
+
+        .audit-sticky-menu .menu-link:hover,
+        .audit-sticky-menu .menu-link.active {
+            background: var(--bs-primary-light);
+            color: var(--bs-primary);
+        }
+
+        .audit-anchor {
+            scroll-margin-top: 120px;
+        }
+
+        @media (max-width: 991px) {
+            .audit-sticky-menu {
+                position: relative;
+                top: auto;
+            }
+        }
     </style>
 
     <div class="card card-flush mb-7">
@@ -70,7 +101,7 @@
 
         <div class="card-body">
             <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bold mb-8">
-                <li  class="nav-item">
+                <li class="nav-item">
                     <a class="nav-link text-active-primary active" data-bs-toggle="tab" href="#tab_building">
                         المبنى
                     </a>
@@ -176,10 +207,13 @@
                 </div>
 
                 {{-- تبويب الوحدة السكنية --}}
+
+                {{-- تبويب الوحدة السكنية --}}
                 <div class="tab-pane fade" id="tab_housing" role="tabpanel">
 
                     {{-- جدول الوحدات --}}
                     <div class="card card-flush mb-7 shadow-sm border-0">
+
                         <div class="card-header pt-6 pb-4 border-0">
                             <div class="card-title">
                                 <h3 class="fw-bold mb-0">وحدات المبنى</h3>
@@ -188,10 +222,12 @@
                             <div class="card-toolbar">
                                 <button type="button" class="btn btn-sm btn-light-primary"
                                     onclick="reloadBuildingUnitsTable()">
+
                                     <i class="ki-duotone ki-arrows-circle fs-6">
                                         <span class="path1"></span>
                                         <span class="path2"></span>
                                     </i>
+
                                     تحديث
                                 </button>
                             </div>
@@ -199,118 +235,193 @@
 
                         <div class="card-body pt-0 pb-4">
                             <div class="table-responsive">
+
                                 <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                     id="housing_table">
+
                                     <thead>
                                         <tr class="fw-bold fs-7 text-black-800 border-bottom border-gray-300">
                                             <th class="px-6 py-4">نوع الوحدة</th>
                                             <th class="px-6 py-4">حالة الضرر</th>
                                             <th class="px-6 py-4">رقم الطابق</th>
                                             <th class="px-6 py-4">رقم الوحدة</th>
-                                            <th class="px-6 py-4 min-w-280px">اسم المالك</th>
+                                            <th class="px-6 py-4">اسم المالك</th>
                                             <th class="px-6 py-4">اتجاه الوحدة</th>
                                             <th class="px-6 py-4">التدقيق القانوني</th>
                                             <th class="px-6 py-4">التدقيق الهندسي</th>
                                             <th class="px-6 py-4">الاعتماد النهائي</th>
                                         </tr>
                                     </thead>
+
                                     <tbody></tbody>
+
                                 </table>
+
                             </div>
                         </div>
+
                     </div>
 
-                    {{-- جدول تقييم الوحدة --}}
-                    <div class="card card-flush shadow-sm border-0">
-                        <div class="card-header border-0 pt-6 pb-4">
-                            <div class="card-title">
-                                <div class="d-flex align-items-center position-relative my-1">
-                                    <i class="ki-duotone ki-magnifier fs-3 position-absolute ms-5">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                    <input type="text" data-kt-HousingAssessment-table-filter="search"
-                                        class="form-control form-control-solid w-250px ps-13" placeholder="بحث" />
-                                </div>
-                            </div>
+                    {{-- Layout --}}
+                    <div class="row g-7">
 
-                            <div class="card-toolbar">
-                                <div class="d-flex align-items-center flex-wrap fw-bold gap-2">
-                                    <div class="d-flex justify-content-end me-3"
-                                        data-kt-HousingAssessment-table-toolbar="base">
-                                        <select name="globalid" data-kt-globalid-table-filter="search"
-                                            class="form-select form-select-solid text-black-800 fs-base fw-bold w-250px"
-                                            data-control="select2" data-allow-clear="true" data-dropdown-css-class="w-250px"
-                                            data-placeholder="إختر الوحدة">
-                                            <option value=""></option>
-                                            @foreach ($HousingUnit as $value)
-                                                <option value="{{ $value->globalid }}">
-                                                    {{ $value->objectid . '--' . $value->full_name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
+                        {{-- Sidebar --}}
+                        <div class="col-xl-3 col-lg-4">
+
+                            <div class="card card-flush shadow-sm border-0 audit-sticky-menu">
+
+                                <div class="card-header py-5">
+                                    <div class="card-title">
+                                        <h3 class="fw-bold mb-0">ملخص الوحدة</h3>
+                                    </div>
+                                </div>
+
+                                <div class="card-body pt-0">
+
+                                    <div class="menu menu-column menu-rounded fw-semibold fs-6">
+
+                                        <div class="menu-item mb-3">
+                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
+                                                <span>مساحة الوحدة</span>
+                                                <span id="sidebar_unit_area" class="badge badge-light-primary">
+                                                    --
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="menu-item mb-3">
+                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
+                                                <span>تحتاج تأهيل مطبخ</span>
+                                                <span id="sidebar_kitchen" class="badge badge-light-warning">
+                                                    --
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="menu-item mb-3">
+                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
+                                                <span>تأهيل حمام</span>
+                                                <span id="sidebar_bathroom" class="badge badge-light-warning">
+                                                    --
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="menu-item mb-3">
+                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
+                                                <span>ملائمة للسكن</span>
+                                                <span id="sidebar_living" class="badge badge-light-success">
+                                                    --
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="menu-item">
+                                            <div class="menu-link d-flex justify-content-between px-4 py-3">
+                                                <span>عدد الغرف</span>
+                                                <span id="sidebar_rooms" class="badge badge-light-info">
+                                                    --
+                                                </span>
+                                            </div>
+                                        </div>
+
                                     </div>
 
-                                    @role('Legal Auditor')
-                                    <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                        data-status="accepted" onclick="setHousingStatus('accepted')">
-                                        مقبول
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                        data-status="legal_notes" onclick="setHousingStatus('legal_notes')">
-                                        بحاجة لمراجعة
-                                    </button>
-                                    @endrole
-
-                                    @role('QC/QA Engineer')
-                                    <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
-                                        data-status="rejected" onclick="setHousingStatus('rejected')">
-                                        مرفوض
-                                    </button>
-
-                                    <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                        data-status="accepted" onclick="setHousingStatus('accepted')">
-                                        مقبول
-                                    </button>
-
-                                    <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                        data-status="need_review" onclick="setHousingStatus('need_review')">
-                                        بحاجة لمراجعة
-                                    </button>
-                                    @endrole
-
-                                    <button type="button" class="btn btn-sm btn-light-dark"
-                                        onclick="openNotesModal('housing', 'history')">
-                                        ملاحظات
-                                    </button>
-
-                                    <button type="button" class="btn btn-sm btn-light-info"
-                                        onclick="openNotesModal('housing', 'edit_note')">
-                                        تعديل الملاحظة
-                                    </button>
                                 </div>
+
                             </div>
+
                         </div>
 
-                        <div class="card-body pt-0 pb-4">
-                            <div class="table-responsive">
-                                <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
-                                    id="kt_table_housing_assessment">
-                                    <thead>
-                                        <tr class="fw-bold fs-6 text-black-800 border-bottom border-gray-300">
-                                            <th class="px-6 py-4 min-w-300px">السؤال</th>
-                                            <th class="text-center px-6 py-4 min-w-250px">الجواب</th>
-                                            <th class="text-center px-6 py-4 min-w-300px">تعديل الإجابة</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="text-black-600 fw-semibold"></tbody>
-                                </table>
+                        {{-- Main Table --}}
+                        <div class="col-xl-9 col-lg-8">
+
+                            <div class="card card-flush shadow-sm border-0">
+
+                                <div class="card-header border-0 pt-6 pb-4">
+
+                                    <div class="card-title">
+
+                                        <div class="d-flex align-items-center position-relative my-1">
+
+                                            <i class="ki-duotone ki-magnifier fs-3 position-absolute ms-5">
+                                                <span class="path1"></span>
+                                                <span class="path2"></span>
+                                            </i>
+
+                                            <input type="text" data-kt-HousingAssessment-table-filter="search"
+                                                class="form-control form-control-solid w-250px ps-13" placeholder="بحث" />
+                                        </div>
+
+                                    </div>
+
+                                    <div class="card-toolbar">
+
+                                        <div class="d-flex align-items-center flex-wrap fw-bold gap-2">
+
+                                            <div class="me-3">
+
+                                                <select name="globalid" class="form-select form-select-solid w-250px"
+                                                    data-control="select2" data-placeholder="إختر الوحدة">
+
+                                                    <option value=""></option>
+
+                                                    @foreach ($HousingUnit as $value)
+                                                        <option value="{{ $value->globalid }}">
+                                                            {{ $value->objectid }} -- {{ $value->full_name }}
+                                                        </option>
+                                                    @endforeach
+
+                                                </select>
+
+                                            </div>
+
+                                            <button type="button" class="btn btn-sm btn-light-dark"
+                                                onclick="openNotesModal('housing','history')">
+                                                ملاحظات
+                                            </button>
+
+                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                onclick="openNotesModal('housing','edit_note')">
+                                                تعديل الملاحظة
+                                            </button>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="card-body pt-0 pb-4">
+
+                                    <div class="table-responsive">
+
+                                        <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
+                                            id="kt_table_housing_assessment">
+
+                                            <thead>
+                                                <tr class="fw-bold fs-6 text-black-800 border-bottom border-gray-300">
+                                                    <th class="px-6 py-4 min-w-300px">السؤال</th>
+                                                    <th class="px-6 py-4 min-w-250px text-center">الجواب</th>
+                                                    <th class="px-6 py-4 min-w-300px text-center">تعديل الإجابة</th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody class="text-black-600 fw-semibold"></tbody>
+
+                                        </table>
+
+                                    </div>
+
+                                </div>
+
                             </div>
+
                         </div>
+
                     </div>
 
                 </div>
-
             </div>
         </div>
     </div>
@@ -592,26 +703,26 @@
 
         function renderHistoryLoading() {
             $('#statusHistoryTable').html(`
-                                                                        <tr>
-                                                                            <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
-                                                                        </tr>
-                                                                    `);
+                                                                                                    <tr>
+                                                                                                        <td colspan="5" class="text-center text-muted">جاري التحميل...</td>
+                                                                                                    </tr>
+                                                                                                `);
         }
 
         function renderHistoryEmpty() {
             $('#statusHistoryTable').html(`
-                                                                        <tr>
-                                                                            <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
-                                                                        </tr>
-                                                                    `);
+                                                                                                    <tr>
+                                                                                                        <td colspan="5" class="text-center text-muted">لا يوجد سجل حالات</td>
+                                                                                                    </tr>
+                                                                                                `);
         }
 
         function renderHistoryError() {
             $('#statusHistoryTable').html(`
-                                                                        <tr>
-                                                                            <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
-                                                                        </tr>
-                                                                    `);
+                                                                                                    <tr>
+                                                                                                        <td colspan="5" class="text-center text-danger">فشل تحميل السجل</td>
+                                                                                                    </tr>
+                                                                                                `);
         }
 
         function escapeHtml(text) {
@@ -654,24 +765,24 @@
                         if (item.id !== undefined) {
                             if (!item.has_final_approve) {
                                 editBtn = `
-                                                                                            <button type="button" class="btn btn-sm btn-light-info"
-                                                                                                onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
-                                                                                                تعديل
-                                                                                            </button>
-                                                                                        `;
+                                                                                                                        <button type="button" class="btn btn-sm btn-light-info"
+                                                                                                                            onclick="editSpecificNote('${type}', '${globalid}', '${item.id}')">
+                                                                                                                            تعديل
+                                                                                                                        </button>
+                                                                                                                    `;
                             } else {
                                 editBtn = `<span class="badge badge-light-danger">مغلق</span>`;
                             }
                         }
 
                         rows += `
-                                                                        <tr>
-                                                                            <td>${item.status_name ?? '-'}</td>
-                                                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                                            <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                                                        </tr>
-                                                                                `;
+                                                                                                    <tr>
+                                                                                                        <td>${item.status_name ?? '-'}</td>
+                                                                                                        <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                                                        <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                        <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                                                    </tr>
+                                                                                                            `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -1123,20 +1234,20 @@
                             $(row).css('background-color', '#d4edda');
                         }
                     },
-                   /*  initComplete: function () {
-                        initInlineEditors();
-                    },
+                    /*  initComplete: function () {
+                         initInlineEditors();
+                     },
 
-                    drawCallback: function () {
-                        initInlineEditors();
-                    }, */
+                     drawCallback: function () {
+                         initInlineEditors();
+                     }, */
                 });
 
                 datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
-                  //  initInlineEditors();
+                    //  initInlineEditors();
                 });
             };
 
@@ -1267,6 +1378,10 @@
                             d.parentglobalid = '{{ $buildingGlobalid }}';
                             d.globalid = $("[name='globalid']").val();
                         },
+                        dataSrc: function (json) {
+                            updateHousingSidebarFromDatatable(json.data || []);
+                            return json.data || [];
+                        }
                     },
                     info: false,
                     order: [],
@@ -1302,19 +1417,19 @@
                             $(row).css('background-color', '#d4edda');
                         }
                     },
-              /*       initComplete: function () {
-                        initInlineEditors();
-                    },
-                    drawCallback: function () {
-                        initInlineEditors();
-                    }, */
+                    /*       initComplete: function () {
+                              initInlineEditors();
+                          },
+                          drawCallback: function () {
+                              initInlineEditors();
+                          }, */
                 });
 
                 datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
-                  //  initInlineEditors();
+                    //  initInlineEditors();
                 });
             };
 
@@ -1450,5 +1565,40 @@
                 $(window).scrollTop(scrollTop);
             }, false);
         }
+        $(document).on('click', '.audit-sticky-menu .menu-link', function () {
+            $('.audit-sticky-menu .menu-link').removeClass('active');
+            $(this).addClass('active');
+        });
+
+        function cleanDatatableText(html) {
+            return $('<div>').html(html ?? '').text().trim();
+        }
+
+        function updateHousingSidebarFromDatatable(rows) {
+            const map = {
+                'مساحة الوحدة': '#sidebar_unit_area',
+                'هل يحتاج إلى إعادة تأهيل المطبخ؟': '#sidebar_kitchen',
+                'هل يحتاج إلى إعادة تأهيل الحمام؟': '#sidebar_bathroom',
+                'ملائمة للسكن': '#sidebar_living',
+                '8.9 number of rooms': '#sidebar_rooms'
+            };
+
+            Object.values(map).forEach(function (selector) {
+                $(selector).text('--');
+            });
+
+            rows.forEach(function (row) {
+                let question = cleanDatatableText(row.question);
+                let answer = cleanDatatableText(row.answer);
+
+                Object.keys(map).forEach(function (key) {
+                    if (question.includes(key)) {
+                        $(map[key]).text(answer || '--');
+                    }
+                });
+            });
+        }
+
+        
     </script>
 @endsection
