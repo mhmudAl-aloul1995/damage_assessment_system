@@ -47,9 +47,9 @@ class SyncArcGISLayers extends Command
         $tableOnly = $this->argument('table');
 
         if ($tableOnly) {
-            if (! isset($layers[$tableOnly])) {
+            if (!isset($layers[$tableOnly])) {
                 $this->error("Table '{$tableOnly}' not found in sync config.");
-                $this->info('Available tables: '.implode(', ', array_keys($layers)));
+                $this->info('Available tables: ' . implode(', ', array_keys($layers)));
 
                 return self::FAILURE;
             }
@@ -78,7 +78,7 @@ class SyncArcGISLayers extends Command
             return;
         }
 
-        if (! Schema::hasTable($table)) {
+        if (!Schema::hasTable($table)) {
             $this->error("Table not found: {$table}");
 
             return;
@@ -87,7 +87,7 @@ class SyncArcGISLayers extends Command
         $referer = $this->resolveReferer($config, $url);
         $token = $this->getArcgisToken($referer);
 
-        if (! $token) {
+        if (!$token) {
             $this->error("Could not retrieve ArcGIS token for {$name}.");
 
             return;
@@ -108,7 +108,7 @@ class SyncArcGISLayers extends Command
         $hasArcgisSyncedAtColumn = in_array('arcgis_synced_at', $tableColumns, true);
 
         $syncColumns = collect($tableColumns)
-            ->reject(fn ($col) => in_array($col, $ignoredColumns, true))
+            ->reject(fn($col) => in_array($col, $ignoredColumns, true))
             ->values()
             ->toArray();
 
@@ -137,8 +137,8 @@ class SyncArcGISLayers extends Command
                 'returnGeometry' => $this->normalizeBooleanQueryValue($config['returnGeometry'] ?? false),
             ]);
 
-            if (! $response->successful()) {
-                $this->error("ArcGIS query failed for {$name}: ".$response->body());
+            if (!$response->successful()) {
+                $this->error("ArcGIS query failed for {$name}: " . $response->body());
 
                 return;
             }
@@ -151,7 +151,7 @@ class SyncArcGISLayers extends Command
                 $detailsText = is_array($details) ? implode(' | ', array_filter($details)) : '';
                 $errorText = trim($message !== '' ? $message : $detailsText);
 
-                $this->error("ArcGIS Query Error in {$name}: ".($errorText !== '' ? $errorText : 'Unknown error'));
+                $this->error("ArcGIS Query Error in {$name}: " . ($errorText !== '' ? $errorText : 'Unknown error'));
 
                 return;
             }
@@ -181,7 +181,7 @@ class SyncArcGISLayers extends Command
 
                 $objectId = $arcgisMap[strtolower($unique)] ?? null;
 
-                if (! $objectId) {
+                if (!$objectId) {
                     continue;
                 }
 
@@ -195,6 +195,39 @@ class SyncArcGISLayers extends Command
                     }
                 }
 
+                if ($table === 'housing_units') {
+
+                    // If unit_owner is null -> build from names
+                    if (
+                        in_array('unit_owner', $tableColumns, true)
+                        && empty($row['unit_owner'])
+                    ) {
+                        $row['unit_owner'] = trim(implode(' ', array_filter([
+                           
+                            $row['q_13_3_1_first_name'] ?? null,
+                            $row['q_13_3_2_second_name__father'] ?? null,
+                            $row['q_13_3_3_third_name__grandfather'] ?? null,
+                            $row['q_13_3_4_last_name__family'] ?? null,
+                        ]))) ?: null;
+                    }
+
+                    
+
+                    if (
+                        in_array('housing_unit', $tableColumns, true)
+                        && empty($row['housing_unit'])
+                    ) {
+                        $buildingAssigneto = DB::table('buildings')
+                            ->where('objectid', $row['building_id'] ?? null) // change key if needed
+                            ->value('assigneto');
+
+                        if (!empty($buildingAssigneto)) {
+                            $row['housing_unit'] = $buildingAssigneto;
+                        }
+                    }
+                }
+
+
                 $row[$unique] = $objectId;
 
                 if (in_array('all_data', $tableColumns, true)) {
@@ -207,7 +240,7 @@ class SyncArcGISLayers extends Command
                     ->where($unique, $objectId)
                     ->first();
 
-                if (! $existing) {
+                if (!$existing) {
                     if ($hasArcgisHashColumn) {
                         $row['arcgis_hash'] = $newHash;
                     }
@@ -258,7 +291,7 @@ class SyncArcGISLayers extends Command
 
             $offset += $limit;
 
-            if (! ($data['exceededTransferLimit'] ?? false)) {
+            if (!($data['exceededTransferLimit'] ?? false)) {
                 break;
             }
         }
@@ -288,7 +321,7 @@ class SyncArcGISLayers extends Command
         $data = $response->json();
 
         if (isset($data['error'])) {
-            $this->error('ArcGIS Token Error: '.($data['error']['message'] ?? 'Unknown error'));
+            $this->error('ArcGIS Token Error: ' . ($data['error']['message'] ?? 'Unknown error'));
 
             return null;
         }
@@ -305,11 +338,11 @@ class SyncArcGISLayers extends Command
         }
 
         if (preg_match('#/featureserver$#i', $url)) {
-            return $url.'/0/query';
+            return $url . '/0/query';
         }
 
         if (preg_match('#/featureserver/\d+$#i', $url)) {
-            return $url.'/query';
+            return $url . '/query';
         }
 
         return $url;
@@ -400,7 +433,7 @@ class SyncArcGISLayers extends Command
                 return json_encode($decodedValue, JSON_UNESCAPED_UNICODE);
             }
 
-            $items = array_values(array_filter(array_map('trim', explode(',', $trimmedValue)), static fn ($item) => $item !== ''));
+            $items = array_values(array_filter(array_map('trim', explode(',', $trimmedValue)), static fn($item) => $item !== ''));
 
             return json_encode($items === [] ? [$trimmedValue] : $items, JSON_UNESCAPED_UNICODE);
         }
@@ -428,7 +461,7 @@ class SyncArcGISLayers extends Command
         }
 
         if (preg_match('#/featureserver$#i', $normalizedUrl)) {
-            return $normalizedUrl.'/0';
+            return $normalizedUrl . '/0';
         }
 
         return (string) config('app.url');
