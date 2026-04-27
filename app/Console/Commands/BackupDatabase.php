@@ -30,7 +30,7 @@ class BackupDatabase extends Command
 
         $connection = config("database.connections.{$connectionName}");
 
-        if (! is_array($connection)) {
+        if (!is_array($connection)) {
             $log->update([
                 'status' => 'failed',
                 'finished_at' => now(),
@@ -58,10 +58,14 @@ class BackupDatabase extends Command
                 default => throw new \RuntimeException("Database driver [{$driver}] is not supported for backups."),
             };
 
+         
+            $durationSeconds = max(1, now()->diffInSeconds($startedAt));
+
             $log->update([
                 'status' => 'success',
                 'finished_at' => now(),
                 'file_path' => $backupPath,
+                'duration_seconds' => $durationSeconds,
                 'message' => 'Database backup created successfully.',
             ]);
         } catch (\Throwable $exception) {
@@ -98,11 +102,11 @@ class BackupDatabase extends Command
     {
         $databasePath = $connection['database'] ?? null;
 
-        if (! $databasePath) {
+        if (!$databasePath) {
             throw new \RuntimeException("SQLite database path is not configured for [{$connectionName}].");
         }
 
-        if (! File::exists($databasePath)) {
+        if (!File::exists($databasePath)) {
             throw new \RuntimeException("SQLite database file was not found at [{$databasePath}].");
         }
 
@@ -130,7 +134,7 @@ class BackupDatabase extends Command
             $connection['database'] ?? '',
         ];
 
-        if (! empty($connection['password'])) {
+        if (!empty($connection['password'])) {
             $arguments[] = '--password=' . $connection['password'];
         }
 
@@ -172,7 +176,7 @@ class BackupDatabase extends Command
 
         $environment = [];
 
-        if (! empty($connection['password'])) {
+        if (!empty($connection['password'])) {
             $environment['PGPASSWORD'] = $connection['password'];
         }
 
@@ -189,7 +193,7 @@ class BackupDatabase extends Command
     {
         $binary = config("database_backup.{$configKey}");
 
-        if (! is_string($binary) || trim($binary) === '') {
+        if (!is_string($binary) || trim($binary) === '') {
             return null;
         }
 

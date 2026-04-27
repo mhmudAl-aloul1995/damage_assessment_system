@@ -34,7 +34,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\SystemLogController;
 Route::get('/', function () {
 
     return redirect()->route('login');
@@ -52,6 +52,12 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+
+
+
+Route::get('/system-logs', [SystemLogController::class, 'index'])->name('system.logs');
+Route::get('/system-logs/data', [SystemLogController::class, 'data'])->name('system.logs.data');
+
     Route::get('/gitPush', [engineerController::class, 'gitPush']);
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

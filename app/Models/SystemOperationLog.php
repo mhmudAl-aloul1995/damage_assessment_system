@@ -16,6 +16,9 @@ class SystemOperationLog extends Model
         'finished_at',
         'file_path',
         'total_records',
+        'inserted',
+        'updated',
+        'skipped',
         'message',
     ];
 

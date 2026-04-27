@@ -48,7 +48,7 @@ class SyncArcGISLayers extends Command
         $tableOnly = $this->argument('table');
 
         if ($tableOnly) {
-            if (! isset($layers[$tableOnly])) {
+            if (!isset($layers[$tableOnly])) {
                 $this->error("Table '{$tableOnly}' not found in sync config.");
                 $this->info('Available tables: ' . implode(', ', array_keys($layers)));
 
@@ -92,14 +92,14 @@ class SyncArcGISLayers extends Command
                 throw new \RuntimeException("Missing ArcGIS URL for {$name}. Check .env/services.php");
             }
 
-            if (! Schema::hasTable($table)) {
+            if (!Schema::hasTable($table)) {
                 throw new \RuntimeException("Table not found: {$table}");
             }
 
             $referer = $this->resolveReferer($config, $url);
             $token = $this->getArcgisToken($referer);
 
-            if (! $token) {
+            if (!$token) {
                 throw new \RuntimeException("Could not retrieve ArcGIS token for {$name}.");
             }
 
@@ -118,7 +118,7 @@ class SyncArcGISLayers extends Command
             $hasArcgisSyncedAtColumn = in_array('arcgis_synced_at', $tableColumns, true);
 
             $syncColumns = collect($tableColumns)
-                ->reject(fn ($col) => in_array($col, $ignoredColumns, true))
+                ->reject(fn($col) => in_array($col, $ignoredColumns, true))
                 ->values()
                 ->toArray();
 
@@ -143,7 +143,7 @@ class SyncArcGISLayers extends Command
                     'returnGeometry' => $this->normalizeBooleanQueryValue($config['returnGeometry'] ?? false),
                 ]);
 
-                if (! $response->successful()) {
+                if (!$response->successful()) {
                     throw new \RuntimeException("ArcGIS query failed for {$name}: " . $response->body());
                 }
 
@@ -185,7 +185,7 @@ class SyncArcGISLayers extends Command
 
                     $objectId = $arcgisMap[strtolower($unique)] ?? null;
 
-                    if (! $objectId) {
+                    if (!$objectId) {
                         continue;
                     }
 
@@ -220,7 +220,7 @@ class SyncArcGISLayers extends Command
                                 ->where('objectid', $row['building_id'] ?? null)
                                 ->value('assigneto');
 
-                            if (! empty($buildingAssigneto)) {
+                            if (!empty($buildingAssigneto)) {
                                 $row['housing_unit'] = $buildingAssigneto;
                             }
                         }
@@ -238,7 +238,7 @@ class SyncArcGISLayers extends Command
                         ->where($unique, $objectId)
                         ->first();
 
-                    if (! $existing) {
+                    if (!$existing) {
                         if ($hasArcgisHashColumn) {
                             $row['arcgis_hash'] = $newHash;
                         }
@@ -287,17 +287,23 @@ class SyncArcGISLayers extends Command
 
                 $offset += $limit;
 
-                if (! ($data['exceededTransferLimit'] ?? false)) {
+                if (!($data['exceededTransferLimit'] ?? false)) {
                     break;
                 }
             }
 
             $totalRecords = $inserted + $updated + $skipped;
-
+            $durationSeconds = max(1, now()->diffInSeconds($startedAt));
+            $recordsPerSecond = round($totalRecords / $durationSeconds, 2);
             $log->update([
                 'status' => 'success',
                 'finished_at' => now(),
-                'total_records' => $totalRecords,
+                'total_records' => $inserted + $updated + $skipped,
+                'duration_seconds' => $durationSeconds,
+                'records_per_second' => $recordsPerSecond,
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'skipped' => $skipped,
                 'message' => "Sync completed for {$name}. Inserted: {$inserted}, Updated: {$updated}, Skipped: {$skipped}.",
             ]);
 
@@ -306,13 +312,21 @@ class SyncArcGISLayers extends Command
             $this->info("Updated : {$updated}");
             $this->info("Skipped : {$skipped}");
         } catch (\Throwable $exception) {
+            $totalRecords = $inserted + $updated + $skipped;
+            $durationSeconds = max(1, now()->diffInSeconds($startedAt));
+            $recordsPerSecond = round($totalRecords / $durationSeconds, 2);
+
             $log->update([
                 'status' => 'failed',
                 'finished_at' => now(),
-                'total_records' => $inserted + $updated + $skipped,
+                'total_records' => $totalRecords,
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'duration_seconds' => $durationSeconds,
+                'records_per_second' => $recordsPerSecond,
                 'message' => $exception->getMessage(),
             ]);
-
             $this->error($exception->getMessage());
         }
     }
@@ -450,7 +464,7 @@ class SyncArcGISLayers extends Command
 
             $items = array_values(array_filter(
                 array_map('trim', explode(',', $trimmedValue)),
-                static fn ($item) => $item !== ''
+                static fn($item) => $item !== ''
             ));
 
             return json_encode($items === [] ? [$trimmedValue] : $items, JSON_UNESCAPED_UNICODE);
