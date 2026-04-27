@@ -146,8 +146,8 @@ class BackupDatabase extends Command
 
     private function resolveMySqlDumpBinary(string $driver): string
     {
-        $mariaDumpBinary = $this->resolveBinaryPath('mariadb_dump_binary');
-        $mysqlDumpBinary = $this->resolveBinaryPath('mysqldump_binary');
+        $mariaDumpBinary = $this->resolveBinaryPath('DB_BACKUP_MARIADB_DUMP_BINARY');
+        $mysqlDumpBinary = $this->resolveBinaryPath('DB_BACKUP_MYSQLDUMP_BINARY');
 
         if ($mariaDumpBinary !== null) {
             return $mariaDumpBinary;
