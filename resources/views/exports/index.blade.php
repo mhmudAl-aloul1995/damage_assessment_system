@@ -18,8 +18,6 @@
 	</style>
 
 
-
-	@endphp
 	<div class="container py-4">
 		<div id="exportResult" class="mt-4"></div>
 		<div class="card shadow-sm">
