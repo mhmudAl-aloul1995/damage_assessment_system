@@ -58,7 +58,7 @@ class BackupDatabase extends Command
                 default => throw new \RuntimeException("Database driver [{$driver}] is not supported for backups."),
             };
 
-         
+
             $durationSeconds = max(1, now()->diffInSeconds($startedAt));
 
             $log->update([
@@ -146,18 +146,20 @@ class BackupDatabase extends Command
 
     private function resolveMySqlDumpBinary(string $driver): string
     {
-        $mariaDumpBinary = $this->resolveBinaryPath('DB_BACKUP_MARIADB_DUMP_BINARY');
-        $mysqlDumpBinary = $this->resolveBinaryPath('DB_BACKUP_MYSQLDUMP_BINARY');
+        $mariaDumpBinary = env('DB_BACKUP_MARIADB_DUMP_BINARY');
+        $mysqlDumpBinary = env('DB_BACKUP_MYSQLDUMP_BINARY');
 
-        if ($mariaDumpBinary !== null) {
-            return $mariaDumpBinary;
+        if (!empty($mariaDumpBinary)) {
+            return trim($mariaDumpBinary);
         }
 
-        if ($driver === 'mariadb') {
-            return 'mariadb-dump';
+        if (!empty($mysqlDumpBinary)) {
+            return trim($mysqlDumpBinary);
         }
 
-        return $mysqlDumpBinary ?? 'mariadb-dump';
+        return $driver === 'mariadb'
+            ? 'mariadb-dump'
+            : 'mysqldump';
     }
 
     private function backupPostgres(array $connection, string $connectionName, string $backupDirectory, string $timestamp): string
