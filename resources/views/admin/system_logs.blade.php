@@ -4,33 +4,41 @@
 
 <div class="container-xxl">
 
-    <div class="card">
+    <div class="card card-flush shadow-sm">
 
-        <div class="card-header">
-            <h3 class="card-title">System Logs</h3>
+        <div class="card-header align-items-center py-5">
+            <div class="card-title">
+                <h3 class="fw-bold m-0">System Logs</h3>
+            </div>
         </div>
 
-        <div class="card-body">
+        <div class="card-body pt-0">
 
-            <table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_logs_table">
+            <div class="table-responsive">
 
-                <thead>
-                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                        <th>ID</th>
-                        <th>Type</th>
-                        <th>Layer</th>
-                        <th>Status</th>
-                        <th>Total</th>
-                        <th>Inserted</th>
-                        <th>Updated</th>
-                        <th>Skipped</th>
-                        <th>Duration</th>
-                        <th>Speed</th>
-                        <th>Finished</th>
-                    </tr>
-                </thead>
+                <table class="table align-middle table-row-dashed fs-6 gy-5 w-100" id="kt_logs_table">
 
-            </table>
+                    <thead>
+                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Layer</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                            <th>Inserted</th>
+                            <th>Updated</th>
+                            <th>Skipped</th>
+                            <th>Duration</th>
+                            <th>Speed</th>
+                            <th>Finished</th>
+                        </tr>
+                    </thead>
+
+                    <tbody></tbody>
+
+                </table>
+
+            </div>
 
         </div>
     </div>
@@ -43,21 +51,33 @@
 @section('scripts')
 
 <script>
-$(function () {
+$(document).ready(function () {
 
     $('#kt_logs_table').DataTable({
         processing: true,
         serverSide: true,
-        ajax: "{{ route('system.logs.data') }}",
         responsive: true,
+        autoWidth: false,
         pageLength: 25,
         order: [[0, 'desc']],
+        ajax: "{{ route('system.logs.data') }}",
+
+        language: {
+            processing: "Loading...",
+            search: "Search:",
+            lengthMenu: "Show _MENU_",
+            info: "Showing _START_ to _END_ of _TOTAL_ rows",
+            paginate: {
+                previous: "Prev",
+                next: "Next"
+            }
+        },
 
         columns: [
             {data: 'id', name: 'id'},
             {data: 'operation_type', name: 'operation_type'},
-            {data: 'layer_name', name: 'layer_name'},
-            {data: 'status', name: 'status'},
+            {data: 'layer_name', name: 'layer_name', defaultContent: '-'},
+            {data: 'status', name: 'status', orderable: false, searchable: false},
             {data: 'total_records', name: 'total_records'},
             {data: 'inserted', name: 'inserted'},
             {data: 'updated', name: 'updated'},
