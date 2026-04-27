@@ -686,49 +686,49 @@
             let sectionId = prefix + '_section_' + index;
 
             let html = `
-            <div class="assessment-section mb-4">
-                <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#${sectionId}">
-                    <div>
-                        <div class="fw-bold fs-5 text-gray-800">${section}</div>
-                        <div class="section-progress-bar mt-2">
-                            <div class="section-progress-fill" style="width:${percent}%"></div>
+                <div class="assessment-section mb-4">
+                    <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
+                         data-bs-toggle="collapse"
+                         data-bs-target="#${sectionId}">
+                        <div>
+                            <div class="fw-bold fs-5 text-gray-800">${section}</div>
+                            <div class="section-progress-bar mt-2">
+                                <div class="section-progress-fill" style="width:${percent}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge badge-light-primary">${items.length} سؤال</span>
+                            <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
                         </div>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="badge badge-light-primary">${items.length} سؤال</span>
-                        <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
-                    </div>
-                </div>
-
-                <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
-        `;
+                    <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
+            `;
 
             items.forEach(function (row) {
                 let hasAnswer = isAnswered(row);
                 let edited = isEdited(row);
 
                 html += `
-                <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''}">
-                    <div class="row g-4 align-items-start">
-                        <div class="col-xl-5 col-lg-12">
-                            <div class="assessment-question">${row.question || '-'}</div>
-                        </div>
+                    <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''}">
+                        <div class="row g-4 align-items-start">
+                            <div class="col-xl-5 col-lg-12">
+                                <div class="assessment-question">${row.question || '-'}</div>
+                            </div>
 
-                        <div class="col-xl-3 col-lg-6">
-                            <div class="text-muted fs-8 mb-1">الجواب</div>
-                            <div class="assessment-answer">${row.answer || '-'}</div>
-                        </div>
+                            <div class="col-xl-3 col-lg-6">
+                                <div class="text-muted fs-8 mb-1">الجواب</div>
+                                <div class="assessment-answer">${row.answer || '-'}</div>
+                            </div>
 
-                        <div class="col-xl-4 col-lg-6">
-                            <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
-                            <div class="assessment-edit">${row.editAnswer || '-'}</div>
+                            <div class="col-xl-4 col-lg-6">
+                                <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
+                                <div class="assessment-edit">${row.editAnswer || '-'}</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
             });
 
             html += `</div></div>`;
@@ -760,14 +760,14 @@
 
             let html = '';
             Object.keys(groups).forEach(function (section, index) {
-                html += sectionHtml(section, groups[section], index, prefix, index === 0);
+                html += sectionHtml(section, groups[section], index, prefix, true);
             });
 
             $(target).html(html || `
-            <div class="alert alert-light-warning">
-                لا توجد نتائج مطابقة للفلتر الحالي.
-            </div>
-        `);
+                <div class="alert alert-light-warning">
+                    لا توجد نتائج مطابقة للفلتر الحالي.
+                </div>
+            `);
 
             setTimeout(function () {
                 initInlineEditors();
@@ -907,7 +907,7 @@
         };
 
         const HOUSING_SURVEY_MAP = {
-            attachments: ['0. Introduction', 0],      
+            attachments: ['0. Introduction', 0],
 
             housing_unit_group: ['7. Unit Introduction', 701],
             housing_unit_type: ['7. Unit Introduction', 702],
@@ -1272,13 +1272,13 @@
                     let rows = '';
                     history.forEach(function (item) {
                         rows += `
-                        <tr>
-                            <td>${escapeHtml(item.status_name ?? '-')}</td>
-                            <td>${escapeHtml(item.user_name ?? '-')}</td>
-                            <td>${escapeHtml(item.notes ?? '-')}</td>
-                            <td>${escapeHtml(item.created_at ?? '-')}</td>
-                        </tr>
-                    `;
+                            <tr>
+                                <td>${escapeHtml(item.status_name ?? '-')}</td>
+                                <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                <td>${escapeHtml(item.notes ?? '-')}</td>
+                                <td>${escapeHtml(item.created_at ?? '-')}</td>
+                            </tr>
+                        `;
                     });
 
                     $('#statusHistoryTable').html(rows);
