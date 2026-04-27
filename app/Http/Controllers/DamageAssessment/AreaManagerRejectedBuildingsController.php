@@ -4,6 +4,7 @@ namespace App\Http\Controllers\DamageAssessment;
 
 use App\Http\Controllers\Controller;
 use App\Models\Building;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,11 +25,13 @@ class AreaManagerRejectedBuildingsController extends Controller
             ->filter()
             ->values()
             ->all();
+        $filterOptions = $this->filterOptions($municipalities);
 
         return View::make('DamageAssessment.areaManagerRejectedBuildings', [
             'regionKey' => $regionKey,
             'regionLabel' => data_get($regionConfig, 'label', $regionKey ?: __('multilingual.area_manager_review.default_region')),
             'municipalities' => $municipalities,
+            'filterOptions' => $filterOptions,
         ]);
     }
 
@@ -78,6 +81,8 @@ class AreaManagerRejectedBuildingsController extends Controller
             $query->whereRaw('1 = 0');
         }
 
+        $this->applyFilters($query, $request);
+
         return DataTables::eloquent($query)
             ->addIndexColumn()
             ->filterColumn('latest_status_label', function ($query, $keyword) {
@@ -108,5 +113,86 @@ class AreaManagerRejectedBuildingsController extends Controller
             })
             ->rawColumns(['latest_status_label', 'actions'])
             ->toJson();
+    }
+
+    private function filterOptions(array $municipalities): array
+    {
+        $buildingQuery = Building::query();
+
+        if (count($municipalities) > 0) {
+            $buildingQuery->whereIn('municipalitie', $municipalities);
+        } else {
+            $buildingQuery->whereRaw('1 = 0');
+        }
+
+        return [
+            'municipalities' => $municipalities,
+            'neighborhoods' => (clone $buildingQuery)
+                ->whereNotNull('neighborhood')
+                ->where('neighborhood', '!=', '')
+                ->distinct()
+                ->orderBy('neighborhood')
+                ->pluck('neighborhood')
+                ->values()
+                ->all(),
+            'field_engineers' => (clone $buildingQuery)
+                ->whereNotNull('assignedto')
+                ->where('assignedto', '!=', '')
+                ->distinct()
+                ->orderBy('assignedto')
+                ->pluck('assignedto')
+                ->values()
+                ->all(),
+            'statuses' => DB::table('assessment_statuses')
+                ->select(['name', 'label_ar', 'label_en'])
+                ->where(function ($statusQuery) {
+                    $statusQuery->where('name', 'need_review')
+                        ->orWhere('name', 'like', '%reject%');
+                })
+                ->orderBy('order_step')
+                ->get()
+                ->map(fn ($status) => [
+                    'name' => $status->name,
+                    'label' => app()->getLocale() === 'ar'
+                        ? ($status->label_ar ?: $status->label_en ?: $status->name)
+                        : ($status->label_en ?: $status->label_ar ?: $status->name),
+                ])
+                ->all(),
+        ];
+    }
+
+    private function applyFilters(Builder $query, Request $request): void
+    {
+        if ($request->filled('objectid')) {
+            $query->where('buildings.objectid', 'like', '%'.$request->string('objectid')->trim().'%');
+        }
+
+        if ($request->filled('building_name')) {
+            $query->where('buildings.building_name', 'like', '%'.$request->string('building_name')->trim().'%');
+        }
+
+        if ($request->filled('municipalitie')) {
+            $query->where('buildings.municipalitie', $request->string('municipalitie')->trim());
+        }
+
+        if ($request->filled('neighborhood')) {
+            $query->where('buildings.neighborhood', $request->string('neighborhood')->trim());
+        }
+
+        if ($request->filled('assignedto')) {
+            $query->where('buildings.assignedto', $request->string('assignedto')->trim());
+        }
+
+        if ($request->filled('latest_status')) {
+            $query->where('assessment_statuses.name', $request->string('latest_status')->trim());
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('latest_history.created_at', '>=', $request->date('from_date')->toDateString());
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('latest_history.created_at', '<=', $request->date('to_date')->toDateString());
+        }
     }
 }

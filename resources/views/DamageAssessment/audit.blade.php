@@ -185,6 +185,7 @@
 									</div>
 								</th>
 								<th>Building Name</th>
+								<th>إجمالي الحالات</th>
 								<th> Field Engineer</th>
 								<th>Engineer</th>
 								<th>Lawyer</th>
@@ -334,14 +335,14 @@
 						d.filter_to_date = $('#filter_to_date').val();
 					}
 				},
-				lengthMenu: [[10, 20, 25, 50, -1], [10, 20, 25, 50, "All"]],
+				lengthMenu: [[10, 20, 25, 50], [10, 20, 25, 50]],
 				pageLength: 20,
 				columnDefs: [{
 					targets: 0,
 					orderable: false,
 					searchable: false
 				}],
-				order: [[8, 'desc']],
+				order: [[9, 'desc']],
 				columns: [
 					{
 						data: 'objectid',
@@ -355,6 +356,7 @@
 																																	</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
+					{ data: 'housing_status_progress', name: 'housing_status_progress', searchable: false, orderable: false },
 					{ data: 'assignedto', name: 'assignedto' },
 					{ data: 'engineer', name: 'engineer', searchable: false },
 					{ data: 'lawyer', name: 'lawyer', searchable: false },

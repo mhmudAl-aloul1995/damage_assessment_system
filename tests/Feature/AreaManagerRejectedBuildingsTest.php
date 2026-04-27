@@ -2,7 +2,6 @@
 
 use App\Models\AssessmentStatus;
 use App\Models\Building;
-use App\Models\BuildingStatusHistory;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -93,14 +92,14 @@ it('filters the area manager review queue by latest rejected or need review stat
     ]);
 
     foreach ([
-        [$visibleRejected->objectid, $accepted->id, 'Old accepted', now()->subDays(3)],
-        [$visibleRejected->objectid, $rejected->id, 'Latest rejected', now()->subDay()],
-        [$visibleNeedReview->objectid, $needReview->id, 'Latest need review', now()->subHours(12)],
-        [$hiddenByLatestStatus->objectid, $rejected->id, 'Old rejected', now()->subDays(2)],
-        [$hiddenByLatestStatus->objectid, $accepted->id, 'Latest accepted', now()->subHours(4)],
-        [$hiddenByMunicipality->objectid, $rejected->id, 'North rejected', now()->subHours(2)],
+        [$visibleRejected->objectid, $accepted->id, 'Old accepted', '2026-04-20 09:00:00'],
+        [$visibleRejected->objectid, $rejected->id, 'Latest rejected', '2026-04-24 09:00:00'],
+        [$visibleNeedReview->objectid, $needReview->id, 'Latest need review', '2026-04-25 09:00:00'],
+        [$hiddenByLatestStatus->objectid, $rejected->id, 'Old rejected', '2026-04-23 09:00:00'],
+        [$hiddenByLatestStatus->objectid, $accepted->id, 'Latest accepted', '2026-04-25 10:00:00'],
+        [$hiddenByMunicipality->objectid, $rejected->id, 'North rejected', '2026-04-25 11:00:00'],
     ] as [$buildingId, $statusId, $notes, $timestamp]) {
-        BuildingStatusHistory::query()->create([
+        DB::table('building_status_histories')->insert([
             'building_id' => $buildingId,
             'status_id' => $statusId,
             'type' => 'QC/QA Engineer',
@@ -115,6 +114,8 @@ it('filters the area manager review queue by latest rejected or need review stat
         ->get(route('area-manager-review.index'))
         ->assertOk()
         ->assertSee('Area Manager Review Queue')
+        ->assertSee('filter_objectid')
+        ->assertSee('filter_latest_status')
         ->assertSee('Khan Younis')
         ->assertSee('Nusairat');
 
@@ -148,6 +149,35 @@ it('filters the area manager review queue by latest rejected or need review stat
         ]))
         ->assertOk()
         ->assertSee('South Rejected');
+
+    $this->actingAs($manager)
+        ->get(route('area-manager-review.data', [
+            'draw' => 3,
+            'start' => 0,
+            'length' => 10,
+            'municipalitie' => 'Khan Younis',
+            'neighborhood' => 'Center',
+            'assignedto' => 'Engineer A',
+            'latest_status' => 'rejected_by_engineer',
+            'to_date' => '2026-04-24',
+        ]))
+        ->assertOk()
+        ->assertSee('South Rejected')
+        ->assertDontSee('South Need Review');
+
+    $this->actingAs($manager)
+        ->get(route('area-manager-review.data', [
+            'draw' => 4,
+            'start' => 0,
+            'length' => 10,
+            'objectid' => '1102',
+            'building_name' => 'Need Review',
+            'latest_status' => 'need_review',
+            'from_date' => '2026-04-25',
+        ]))
+        ->assertOk()
+        ->assertSee('South Need Review')
+        ->assertDontSee('South Rejected');
 
     $this->actingAs($otherUser)
         ->get(route('area-manager-review.index'))

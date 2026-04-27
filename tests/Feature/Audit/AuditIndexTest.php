@@ -1,0 +1,77 @@
+<?php
+
+use App\Models\AssessmentStatus;
+use App\Models\Building;
+use App\Models\HousingStatus;
+use App\Models\HousingUnit;
+use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
+
+it('includes the housing units status progress in the audit table response', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    config()->set('database.default', 'mysql');
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'accepted ar',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 7001,
+        'globalid' => 'audit-building-units-count',
+        'building_name' => 'Audit Units Count Building',
+        'assignedto' => 'Engineer A',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-04-25 10:00:00',
+    ]);
+
+    $housingWithStatus = HousingUnit::query()->create([
+        'objectid' => 8001,
+        'globalid' => 'audit-housing-unit-1',
+        'parentglobalid' => $building->globalid,
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 8002,
+        'globalid' => 'audit-housing-unit-2',
+        'parentglobalid' => $building->globalid,
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $housingWithStatus->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'Audited',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'housing_status_progress' => '1 / 2',
+            'housing_units_count' => 2,
+            'housing_units_with_status_count' => 1,
+        ]);
+});

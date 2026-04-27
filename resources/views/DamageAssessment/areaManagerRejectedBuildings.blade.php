@@ -55,9 +55,100 @@
                                 class="form-control form-control-solid w-250px ps-13" placeholder="{{ __('multilingual.area_manager_review.search_placeholder') }}" />
                         </div>
                     </div>
+                    <div class="card-toolbar">
+                        <button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#areaManagerAdvancedFilters" aria-expanded="true">
+                            <i class="ki-duotone ki-filter fs-4">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            {{ __('multilingual.area_manager_review.filters.title') }}
+                        </button>
+                    </div>
                 </div>
 
                 <div class="card-body pt-0">
+                    <div class="collapse show mb-7" id="areaManagerAdvancedFilters">
+                        <div class="row g-4 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ __('multilingual.area_manager_review.columns.object_id') }}</label>
+                                <input type="text" id="filter_objectid" class="form-control form-control-solid"
+                                    placeholder="{{ __('multilingual.area_manager_review.filters.object_id') }}">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ __('multilingual.area_manager_review.columns.building_name') }}</label>
+                                <input type="text" id="filter_building_name" class="form-control form-control-solid"
+                                    placeholder="{{ __('multilingual.area_manager_review.filters.building_name') }}">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ __('multilingual.area_manager_review.columns.municipality') }}</label>
+                                <select id="filter_municipalitie" class="form-select form-select-solid area-manager-filter-select"
+                                    data-placeholder="{{ __('multilingual.area_manager_review.filters.all_municipalities') }}">
+                                    <option value=""></option>
+                                    @foreach ($filterOptions['municipalities'] as $municipality)
+                                        <option value="{{ $municipality }}">{{ $municipality }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ __('multilingual.area_manager_review.columns.neighborhood') }}</label>
+                                <select id="filter_neighborhood" class="form-select form-select-solid area-manager-filter-select"
+                                    data-placeholder="{{ __('multilingual.area_manager_review.filters.all_neighborhoods') }}">
+                                    <option value=""></option>
+                                    @foreach ($filterOptions['neighborhoods'] as $neighborhood)
+                                        <option value="{{ $neighborhood }}">{{ $neighborhood }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ __('multilingual.area_manager_review.columns.field_engineer') }}</label>
+                                <select id="filter_assignedto" class="form-select form-select-solid area-manager-filter-select"
+                                    data-placeholder="{{ __('multilingual.area_manager_review.filters.all_engineers') }}">
+                                    <option value=""></option>
+                                    @foreach ($filterOptions['field_engineers'] as $engineer)
+                                        <option value="{{ $engineer }}">{{ $engineer }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ __('multilingual.area_manager_review.columns.latest_status') }}</label>
+                                <select id="filter_latest_status" class="form-select form-select-solid area-manager-filter-select"
+                                    data-placeholder="{{ __('multilingual.area_manager_review.filters.all_statuses') }}">
+                                    <option value=""></option>
+                                    @foreach ($filterOptions['statuses'] as $status)
+                                        <option value="{{ $status['name'] }}">{{ $status['label'] }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ __('multilingual.area_manager_review.filters.from_date') }}</label>
+                                <input type="text" id="filter_from_date" class="form-control form-control-solid area-manager-datepicker"
+                                    placeholder="yyyy-mm-dd">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">{{ __('multilingual.area_manager_review.filters.to_date') }}</label>
+                                <input type="text" id="filter_to_date" class="form-control form-control-solid area-manager-datepicker"
+                                    placeholder="yyyy-mm-dd">
+                            </div>
+
+                            <div class="col-md-3 d-flex gap-3">
+                                <button type="button" class="btn btn-primary flex-fill" id="applyAreaManagerFilters">
+                                    {{ __('multilingual.area_manager_review.filters.apply_filters') }}
+                                </button>
+                                <button type="button" class="btn btn-light flex-fill" id="resetAreaManagerFilters">
+                                    {{ __('multilingual.area_manager_review.filters.reset') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table align-middle table-row-dashed fs-6 gy-5" id="areaManagerReviewTable">
                             <thead>
@@ -85,10 +176,43 @@
 @section('script')
     <script>
         $(function () {
+            $('.area-manager-filter-select').select2({
+                allowClear: true,
+                width: '100%'
+            });
+
+            let fromPicker = flatpickr("#filter_from_date", {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                onChange: function (selectedDates) {
+                    toPicker.set('minDate', selectedDates[0] || null);
+                }
+            });
+
+            let toPicker = flatpickr("#filter_to_date", {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                onChange: function (selectedDates) {
+                    fromPicker.set('maxDate', selectedDates[0] || null);
+                }
+            });
+
             let table = $('#areaManagerReviewTable').DataTable({
                 processing: true,
                 serverSide: true,
-                ajax: '{{ route('area-manager-review.data') }}',
+                ajax: {
+                    url: '{{ route('area-manager-review.data') }}',
+                    data: function (data) {
+                        data.objectid = $('#filter_objectid').val();
+                        data.building_name = $('#filter_building_name').val();
+                        data.municipalitie = $('#filter_municipalitie').val();
+                        data.neighborhood = $('#filter_neighborhood').val();
+                        data.assignedto = $('#filter_assignedto').val();
+                        data.latest_status = $('#filter_latest_status').val();
+                        data.from_date = $('#filter_from_date').val();
+                        data.to_date = $('#filter_to_date').val();
+                    }
+                },
                 order: [[7, 'desc']],
                 columns: [
                     {
@@ -128,6 +252,21 @@
 
             $('#areaManagerTableSearch').on('keyup', function () {
                 table.search($(this).val()).draw();
+            });
+
+            $('#applyAreaManagerFilters').on('click', function () {
+                table.ajax.reload();
+            });
+
+            $('#resetAreaManagerFilters').on('click', function () {
+                $('#filter_objectid').val('');
+                $('#filter_building_name').val('');
+                $('.area-manager-filter-select').val(null).trigger('change');
+                fromPicker.clear();
+                toPicker.clear();
+                table.search('');
+                $('#areaManagerTableSearch').val('');
+                table.ajax.reload();
             });
         });
     </script>
