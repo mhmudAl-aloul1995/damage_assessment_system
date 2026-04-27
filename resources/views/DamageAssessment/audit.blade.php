@@ -12,6 +12,10 @@
 			padding-right: 15px !important;
 			/* Adjust this value as needed */
 		}
+
+		.container-loader {
+			display: none !important;
+		}
 	</style>
 
 	<div class="row mb-5">
@@ -159,18 +163,19 @@
 						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
 							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
 						</button>
+						@unless(auth()->user()->hasRole('Area Manager'))
+							<button id="btn_final_approve" class="btn btn-warning btn-sm">
+								{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
+							</button>
 
-						<button id="btn_final_approve" class="btn btn-warning btn-sm">
-							{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
-						</button>
+							<button id="btn_assign_to_lawyer" class="btn btn-primary btn-sm">
+								{{ __('ui.audit.assign_to_lawyer') }} <i class="ki-duotone ki-plus"></i>
+							</button>
 
-						<button id="btn_assign_to_lawyer" class="btn btn-primary btn-sm">
-							{{ __('ui.audit.assign_to_lawyer') }} <i class="ki-duotone ki-plus"></i>
-						</button>
-
-						<button id="btn_assign_to_engineer" class="btn btn-info btn-sm">
-							{{ __('ui.audit.assign_to_engineer') }} <i class="ki-duotone ki-plus"></i>
-						</button>
+							<button id="btn_assign_to_engineer" class="btn btn-info btn-sm">
+								{{ __('ui.audit.assign_to_engineer') }} <i class="ki-duotone ki-plus"></i>
+							</button>
+						@endunless
 					</div>
 				</div>
 
@@ -350,10 +355,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																																	<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																																		<input class="form-check-input" type="checkbox"
-																																			data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																																	</div>`
+																																			<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																																				<input class="form-check-input" type="checkbox"
+																																					data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																																			</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'housing_status_progress', name: 'housing_status_progress', searchable: false, orderable: false },
@@ -552,10 +557,10 @@
 
 				$('#notesHistoryModalTitle').text(@json(__('ui.audit.status_history')) + ' - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-																		<tr>
-																			<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
-																		</tr>
-																	`);
+																				<tr>
+																					<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
+																				</tr>
+																			`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -569,40 +574,40 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-																						<tr>
-																							<td>${item.status_name}</td>
-																							<td>${item.user_name}</td>
-																							<td>${item.role_name}</td>
-																							<td>${item.notes}</td>
-																							<td>${item.created_at}</td>
-																							<td>
-																								${item.can_delete ? `
-																									<button type="button"
-																										class="btn btn-sm btn-light-danger btn-delete-history"
-																										data-id="${item.id}">
-																										${@json(__('ui.audit.delete_record'))}
-																									</button>
-																								` : '-'}
-																							</td>
-																						</tr>
-																					`;
+																								<tr>
+																									<td>${item.status_name}</td>
+																									<td>${item.user_name}</td>
+																									<td>${item.role_name}</td>
+																									<td>${item.notes}</td>
+																									<td>${item.created_at}</td>
+																									<td>
+																										${item.can_delete ? `
+																											<button type="button"
+																												class="btn btn-sm btn-light-danger btn-delete-history"
+																												data-id="${item.id}">
+																												${@json(__('ui.audit.delete_record'))}
+																											</button>
+																										` : '-'}
+																									</td>
+																								</tr>
+																							`;
 							});
 						} else {
 							rows = `
-																					<tr>
-																						<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																					</tr>
-																				`;
+																							<tr>
+																								<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																							</tr>
+																						`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-																				<tr>
-																					<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
-																				</tr>
-																			`);
+																						<tr>
+																							<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
+																						</tr>
+																					`);
 					}
 				});
 			});
@@ -630,10 +635,10 @@
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
-																				<tr>
-																					<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																				</tr>
-																			`);
+																						<tr>
+																							<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																						</tr>
+																					`);
 							}
 						} else {
 							toastr.error(response.message || @json(__('ui.audit.delete_failed')));

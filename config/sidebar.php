@@ -147,7 +147,7 @@ return [
                 'title' => 'menu.audit.home',
                 'url' => 'audit',
                 'pattern' => 'audit',
-                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer'],
+                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer','Area Manager'],
             ],
             [
                 'title' => 'menu.audit.building_audit',

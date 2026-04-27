@@ -358,10 +358,10 @@ class damageAssessmentController extends Controller
 
 
                 
-               /*  if ($original == null || $original == '') {
+                if ($value == null || $value == '') {
 
                     return '';
-                } */
+                } 
 
 
 
