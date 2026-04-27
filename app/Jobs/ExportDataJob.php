@@ -40,7 +40,7 @@ class ExportDataJob implements ShouldQueue
         }
 
         try {
-            ini_set('memory_limit', '2048');
+            ini_set('memory_limit', '-1');
             set_time_limit(0);
 
             \Log::info('Export started', ['id' => $export->id]);
