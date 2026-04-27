@@ -894,10 +894,11 @@
 
         const BUILDING_SURVEY_MAP = {
             attachments: ['0. Introduction', 0],
-            weather: ['0. Introduction', 1],
-            security_situation: ['0. Introduction', 2],
-            security_info: ['0. Introduction', 3],
-            building_name: ['0. Introduction', 4],
+            objectid: ['0. Introduction', 1],
+            weather: ['0. Introduction', 2],
+            security_situation: ['0. Introduction', 3],
+            security_info: ['0. Introduction', 4],
+            building_name: ['0. Introduction', 5],
 
             building_damage_status: ['1. Building Information', 100],
             building_type: ['1. Building Information', 101],
