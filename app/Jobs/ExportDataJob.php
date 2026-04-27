@@ -25,18 +25,22 @@ class ExportDataJob implements ShouldQueue
 
     public int $timeout = 0;
 
-    public function __construct(public int $exportId) {}
+    public function __construct(public int $exportId)
+    {
+    }
 
     public function handle(): void
     {
+        $cache = new \PhpOffice\PhpSpreadsheet\Collection\Memory\SimpleCache3();
+        \PhpOffice\PhpSpreadsheet\Settings::setCache($cache);
         $export = Export::find($this->exportId);
 
-        if (! $export || $export->status === 'cancelled') {
+        if (!$export || $export->status === 'cancelled') {
             return;
         }
 
         try {
-            ini_set('memory_limit', '1024M');
+            ini_set('memory_limit', '2048');
             set_time_limit(0);
 
             \Log::info('Export started', ['id' => $export->id]);
@@ -54,7 +58,7 @@ class ExportDataJob implements ShouldQueue
             $housingColumns = array_values($params['housing_columns'] ?? []);
             $filters = $params['filters'] ?? [];
             $importedObjectIds = collect($params['imported_object_ids'] ?? [])
-                ->map(fn ($value) => trim((string) $value))
+                ->map(fn($value) => trim((string) $value))
                 ->filter()
                 ->unique()
                 ->values()
@@ -65,8 +69,8 @@ class ExportDataJob implements ShouldQueue
 
             $buildingUnitsCountColumn = 'housing_units_count';
             $needsHousingUnitsCount = in_array($buildingUnitsCountColumn, $buildingColumns, true);
-            $needsHousingJoin = ! empty($housingColumns);
-            $needsFamily = ! is_null($familyMembersFrom) || ! is_null($familyMembersTo);
+            $needsHousingJoin = !empty($housingColumns);
+            $needsFamily = !is_null($familyMembersFrom) || !is_null($familyMembersTo);
             $paginateByHousing = $needsHousingJoin;
 
             $assessmentLabels = DB::table('assessments')
@@ -112,19 +116,19 @@ class ExportDataJob implements ShouldQueue
                     $join->on('b.globalid', '=', 'fam.parentglobalid');
                 });
 
-                if (! is_null($familyMembersFrom)) {
+                if (!is_null($familyMembersFrom)) {
                     $query->where('fam.family_members_total', '>=', (int) $familyMembersFrom);
                 }
 
-                if (! is_null($familyMembersTo)) {
+                if (!is_null($familyMembersTo)) {
                     $query->where('fam.family_members_total', '<=', (int) $familyMembersTo);
                 }
             }
 
             $selects = [
                 $paginateByHousing
-                    ? 'h.objectid as export_row_id'
-                    : 'b.objectid as export_row_id',
+                ? 'h.objectid as export_row_id'
+                : 'b.objectid as export_row_id',
                 'b.globalid as building_globalid',
             ];
 
@@ -157,7 +161,7 @@ class ExportDataJob implements ShouldQueue
             $query->selectRaw(implode(', ', $selects));
 
             foreach ($filters as $field => $values) {
-                $values = array_filter((array) $values, fn ($value) => $value !== null && $value !== '');
+                $values = array_filter((array) $values, fn($value) => $value !== null && $value !== '');
 
                 if (empty($values)) {
                     continue;
@@ -181,7 +185,7 @@ class ExportDataJob implements ShouldQueue
                 }
             }
 
-            if (! empty($importedObjectIds)) {
+            if (!empty($importedObjectIds)) {
                 $query->where(function ($nested) use ($importedObjectIds, $needsHousingJoin) {
                     $nested->whereIn('b.objectid', $importedObjectIds);
 
@@ -198,7 +202,7 @@ class ExportDataJob implements ShouldQueue
 
             $hasData = (clone $query)->exists();
 
-            if (! $hasData) {
+            if (!$hasData) {
                 $export->update([
                     'status' => 'done',
                     'progress' => 100,
@@ -211,19 +215,14 @@ class ExportDataJob implements ShouldQueue
                 return;
             }
 
-            $fileName = 'exports/export_'.now()->timestamp.'.xlsx';
-            $fullPath = storage_path('app/public/'.$fileName);
+            $fileName = 'exports/export_' . now()->timestamp . '.xlsx';
+            $fullPath = storage_path('app/public/' . $fileName);
 
-            if (! is_dir(dirname($fullPath))) {
+            if (!is_dir(dirname($fullPath))) {
                 mkdir(dirname($fullPath), 0777, true);
             }
 
-            $generator = function () use (
-                $query,
-                $paginateByHousing,
-                $export
-
-            ) {
+            $generator = function () use ($query, $paginateByHousing, $export) {
                 $lastId = 0;
                 $limit = 200;
 
@@ -256,11 +255,11 @@ class ExportDataJob implements ShouldQueue
                     $housingGlobalIds = [];
 
                     foreach ($rows as $row) {
-                        if (! empty($row->building_globalid)) {
+                        if (!empty($row->building_globalid)) {
                             $buildingGlobalIds[] = $row->building_globalid;
                         }
 
-                        if ($paginateByHousing && ! empty($row->housing_globalid)) {
+                        if ($paginateByHousing && !empty($row->housing_globalid)) {
                             $housingGlobalIds[] = $row->housing_globalid;
                         }
                     }
@@ -285,7 +284,7 @@ class ExportDataJob implements ShouldQueue
 
                         if ($buildingGlobalId && isset($buildingEdits[$buildingGlobalId])) {
                             foreach ($buildingEdits[$buildingGlobalId] as $fieldName => $fieldValue) {
-                                $key = 'building_'.$fieldName;
+                                $key = 'building_' . $fieldName;
                                 if (array_key_exists($key, $rowArray)) {
                                     $rowArray[$key] = $fieldValue;
                                 }
@@ -294,7 +293,7 @@ class ExportDataJob implements ShouldQueue
 
                         if ($paginateByHousing && $housingGlobalId && isset($housingEdits[$housingGlobalId])) {
                             foreach ($housingEdits[$housingGlobalId] as $fieldName => $fieldValue) {
-                                $key = 'housing_'.$fieldName;
+                                $key = 'housing_' . $fieldName;
                                 if (array_key_exists($key, $rowArray)) {
                                     $rowArray[$key] = $fieldValue;
                                 }
@@ -320,7 +319,7 @@ class ExportDataJob implements ShouldQueue
             foreach ($generator() as $row) {
                 $processed++;
 
-                if (! $headersWritten) {
+                if (!$headersWritten) {
                     $colIndex = 1;
 
                     foreach (array_keys($row) as $header) {
@@ -347,7 +346,7 @@ class ExportDataJob implements ShouldQueue
                         }
 
                         $colLetter = Coordinate::stringFromColumnIndex($colIndex);
-                        $sheet->setCellValue($colLetter.'1', $label);
+                        $sheet->setCellValue($colLetter . '1', $label);
                         $colIndex++;
                     }
 
@@ -393,23 +392,11 @@ class ExportDataJob implements ShouldQueue
                     }
 
                     $colLetter = Coordinate::stringFromColumnIndex($colIndex);
-                    $sheet->setCellValue($colLetter.$rowNumber, $value);
+                    $sheet->setCellValue($colLetter . $rowNumber, $value);
                     $colIndex++;
                 }
 
-                $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")->applyFromArray([
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                        'wrapText' => true,
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => 'E5E7EB'],
-                        ],
-                    ],
-                ]);
+
 
                 if ($rowNumber % 2 === 0) {
                     $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")
@@ -431,13 +418,9 @@ class ExportDataJob implements ShouldQueue
 
             for ($i = 1; $i <= Coordinate::columnIndexFromString($lastColLetter); $i++) {
                 $colLetter = Coordinate::stringFromColumnIndex($i);
-                $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+                $sheet->getColumnDimension($colLetter)->setWidth(25);
             }
 
-            $sheet->getStyle("A1:{$lastColLetter}".($rowNumber - 1))
-                ->getBorders()
-                ->getAllBorders()
-                ->setBorderStyle(Border::BORDER_THIN);
 
             $writer = new Xlsx($spreadsheet);
             $writer->save($fullPath);
