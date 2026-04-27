@@ -224,7 +224,7 @@ class ExportDataJob implements ShouldQueue
 
             $generator = function () use ($query, $paginateByHousing, $export) {
                 $lastId = 0;
-                $limit = 200;
+                $limit = 2000;
 
                 while (true) {
                     $export->refresh();
