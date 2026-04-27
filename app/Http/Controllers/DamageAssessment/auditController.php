@@ -4574,6 +4574,7 @@ COALESCE(
         if (!$unit) {
             return response()->json([
                 'unit_area' => '--',
+                'unit_owner' => '--',
                 'kitchen' => '--',
                 'bathroom' => '--',
                 'living' => '--',
@@ -4604,6 +4605,7 @@ COALESCE(
 
         $values = [
             'unit_area' => $edited['damaged_area_m2'] ?? $unit->damaged_area_m2 ?? '--',
+            'unit_owner' => $edited['unit_owner'] ?? $unit->unit_owner ?? '--',
             'kitchen' => $edited['reh_kitchen'] ?? $unit->reh_kitchen ?? '--',
             'bathroom' => $edited['reh_bathroom'] ?? $unit->reh_bathroom ?? '--',
             'living' => $edited['is_the_housing_unit_or_living_habitable']
@@ -4620,6 +4622,7 @@ COALESCE(
 
         return response()->json([
             'unit_area' => $values['unit_area'],
+            'unit_owner' => $values['unit_owner'],
             'kitchen' => getFilterLabel($filters, 'reh_kitchen', $values['kitchen']),
             'bathroom' => getFilterLabel($filters, 'reh_bathroom', $values['bathroom']),
             'living' => getFilterLabel($filters, 'is_the_housing_unit_or_living_habitable', $values['living']),

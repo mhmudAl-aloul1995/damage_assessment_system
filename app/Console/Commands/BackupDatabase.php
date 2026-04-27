@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\SystemOperationLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -14,10 +15,28 @@ class BackupDatabase extends Command
 
     public function handle(): int
     {
-        $connectionName = $this->option('connection') ?: config('database_backup.connection', config('database.default'));
+        $startedAt = now();
+
+        $connectionName = $this->option('connection')
+            ?: config('database_backup.connection', config('database.default'));
+
+        $log = SystemOperationLog::create([
+            'operation_type' => 'backup_database',
+            'status' => 'processing',
+            'connection_name' => $connectionName,
+            'started_at' => $startedAt,
+            'message' => 'Backup started.',
+        ]);
+
         $connection = config("database.connections.{$connectionName}");
 
         if (! is_array($connection)) {
+            $log->update([
+                'status' => 'failed',
+                'finished_at' => now(),
+                'message' => "Database connection [{$connectionName}] is not configured.",
+            ]);
+
             $this->error("Database connection [{$connectionName}] is not configured.");
 
             return self::FAILURE;
@@ -38,7 +57,20 @@ class BackupDatabase extends Command
                 'pgsql' => $this->backupPostgres($connection, $connectionName, $backupDirectory, $timestamp),
                 default => throw new \RuntimeException("Database driver [{$driver}] is not supported for backups."),
             };
+
+            $log->update([
+                'status' => 'success',
+                'finished_at' => now(),
+                'file_path' => $backupPath,
+                'message' => 'Database backup created successfully.',
+            ]);
         } catch (\Throwable $exception) {
+            $log->update([
+                'status' => 'failed',
+                'finished_at' => now(),
+                'message' => $exception->getMessage(),
+            ]);
+
             $this->error($exception->getMessage());
 
             return self::FAILURE;
@@ -74,7 +106,7 @@ class BackupDatabase extends Command
             throw new \RuntimeException("SQLite database file was not found at [{$databasePath}].");
         }
 
-        $backupPath = $backupDirectory.DIRECTORY_SEPARATOR."{$connectionName}_{$timestamp}.sqlite";
+        $backupPath = $backupDirectory . DIRECTORY_SEPARATOR . "{$connectionName}_{$timestamp}.sqlite";
         File::copy($databasePath, $backupPath);
 
         return $backupPath;
@@ -84,22 +116,22 @@ class BackupDatabase extends Command
     {
         $dumpBinary = $this->resolveMySqlDumpBinary($driver);
 
-        $backupPath = $backupDirectory.DIRECTORY_SEPARATOR."{$connectionName}_{$timestamp}.sql";
+        $backupPath = $backupDirectory . DIRECTORY_SEPARATOR . "{$connectionName}_{$timestamp}.sql";
 
         $arguments = [
             $dumpBinary,
-            '--host='.($connection['host'] ?? '127.0.0.1'),
-            '--port='.($connection['port'] ?? '3306'),
-            '--user='.($connection['username'] ?? 'root'),
+            '--host=' . ($connection['host'] ?? '127.0.0.1'),
+            '--port=' . ($connection['port'] ?? '3306'),
+            '--user=' . ($connection['username'] ?? 'root'),
             '--skip-comments',
             '--single-transaction',
             '--quick',
-            '--result-file='.$backupPath,
+            '--result-file=' . $backupPath,
             $connection['database'] ?? '',
         ];
 
         if (! empty($connection['password'])) {
-            $arguments[] = '--password='.$connection['password'];
+            $arguments[] = '--password=' . $connection['password'];
         }
 
         $result = Process::timeout(300)->run($arguments);
@@ -126,15 +158,15 @@ class BackupDatabase extends Command
 
     private function backupPostgres(array $connection, string $connectionName, string $backupDirectory, string $timestamp): string
     {
-        $backupPath = $backupDirectory.DIRECTORY_SEPARATOR."{$connectionName}_{$timestamp}.sql";
+        $backupPath = $backupDirectory . DIRECTORY_SEPARATOR . "{$connectionName}_{$timestamp}.sql";
         $dumpBinary = $this->resolveBinaryPath('pg_dump_binary') ?? 'pg_dump';
 
         $arguments = [
             $dumpBinary,
-            '--host='.($connection['host'] ?? '127.0.0.1'),
-            '--port='.($connection['port'] ?? '5432'),
-            '--username='.($connection['username'] ?? 'postgres'),
-            '--file='.$backupPath,
+            '--host=' . ($connection['host'] ?? '127.0.0.1'),
+            '--port=' . ($connection['port'] ?? '5432'),
+            '--username=' . ($connection['username'] ?? 'postgres'),
+            '--file=' . $backupPath,
             $connection['database'] ?? '',
         ];
 

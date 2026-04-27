@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\SystemOperationLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -47,7 +48,7 @@ class SyncArcGISLayers extends Command
         $tableOnly = $this->argument('table');
 
         if ($tableOnly) {
-            if (!isset($layers[$tableOnly])) {
+            if (! isset($layers[$tableOnly])) {
                 $this->error("Table '{$tableOnly}' not found in sync config.");
                 $this->info('Available tables: ' . implode(', ', array_keys($layers)));
 
@@ -68,179 +69,203 @@ class SyncArcGISLayers extends Command
 
     private function syncLayer(string $name, array $config): void
     {
-        $table = $config['table'];
-        $unique = $config['unique'];
-        $url = $config['url'] ?? null;
+        $startedAt = now();
 
-        if (empty($url)) {
-            $this->error("Missing ArcGIS URL for {$name}. Check .env/services.php");
-
-            return;
-        }
-
-        if (!Schema::hasTable($table)) {
-            $this->error("Table not found: {$table}");
-
-            return;
-        }
-
-        $referer = $this->resolveReferer($config, $url);
-        $token = $this->getArcgisToken($referer);
-
-        if (!$token) {
-            $this->error("Could not retrieve ArcGIS token for {$name}.");
-
-            return;
-        }
-
-        $serviceUrl = $this->normalizeQueryUrl($url);
-
-        $tableColumns = Schema::getColumnListing($table);
-
-        $ignoredColumns = [
-            'id',
-            'created_at',
-            'updated_at',
-            'arcgis_hash',
-            'arcgis_synced_at',
-        ];
-        $hasArcgisHashColumn = in_array('arcgis_hash', $tableColumns, true);
-        $hasArcgisSyncedAtColumn = in_array('arcgis_synced_at', $tableColumns, true);
-
-        $syncColumns = collect($tableColumns)
-            ->reject(fn($col) => in_array($col, $ignoredColumns, true))
-            ->values()
-            ->toArray();
-
-        $offset = 0;
-        $limit = (int) $this->option('chunk');
+        $log = SystemOperationLog::create([
+            'operation_type' => 'sync_layer',
+            'status' => 'processing',
+            'layer_name' => $name,
+            'started_at' => $startedAt,
+            'message' => "Sync started for {$name}.",
+        ]);
 
         $inserted = 0;
         $updated = 0;
         $skipped = 0;
 
-        $this->newLine();
-        $this->info("Syncing {$name}...");
-        $this->line("Using referer: {$referer}");
+        try {
+            $table = $config['table'];
+            $unique = $config['unique'];
+            $url = $config['url'] ?? null;
 
-        while (true) {
-            $this->line("Fetching {$name} offset: {$offset}");
-
-            $response = Http::timeout(120)->get($serviceUrl, [
-                'where' => $config['where'] ?? '1=1',
-                'outFields' => '*',
-                'f' => 'json',
-                'token' => $token,
-                'resultOffset' => $offset,
-                'resultRecordCount' => $limit,
-                'orderByFields' => 'objectid ASC',
-                'returnGeometry' => $this->normalizeBooleanQueryValue($config['returnGeometry'] ?? false),
-            ]);
-
-            if (!$response->successful()) {
-                $this->error("ArcGIS query failed for {$name}: " . $response->body());
-
-                return;
+            if (empty($url)) {
+                throw new \RuntimeException("Missing ArcGIS URL for {$name}. Check .env/services.php");
             }
 
-            $data = $response->json();
-
-            if (isset($data['error'])) {
-                $message = $data['error']['message'] ?? '';
-                $details = $data['error']['details'] ?? [];
-                $detailsText = is_array($details) ? implode(' | ', array_filter($details)) : '';
-                $errorText = trim($message !== '' ? $message : $detailsText);
-
-                $this->error("ArcGIS Query Error in {$name}: " . ($errorText !== '' ? $errorText : 'Unknown error'));
-
-                return;
+            if (! Schema::hasTable($table)) {
+                throw new \RuntimeException("Table not found: {$table}");
             }
 
-            $features = $data['features'] ?? [];
+            $referer = $this->resolveReferer($config, $url);
+            $token = $this->getArcgisToken($referer);
 
-            if (empty($features)) {
-                break;
+            if (! $token) {
+                throw new \RuntimeException("Could not retrieve ArcGIS token for {$name}.");
             }
 
-            foreach ($features as $feature) {
-                $attributes = $feature['attributes'] ?? [];
+            $serviceUrl = $this->normalizeQueryUrl($url);
+            $tableColumns = Schema::getColumnListing($table);
 
-                if (
-                    in_array('location', $tableColumns, true)
-                    && ($attributes['location'] ?? null) === null
-                    && isset($feature['geometry'])
-                ) {
-                    $attributes['location'] = json_encode($feature['geometry'], JSON_UNESCAPED_UNICODE);
+            $ignoredColumns = [
+                'id',
+                'created_at',
+                'updated_at',
+                'arcgis_hash',
+                'arcgis_synced_at',
+            ];
+
+            $hasArcgisHashColumn = in_array('arcgis_hash', $tableColumns, true);
+            $hasArcgisSyncedAtColumn = in_array('arcgis_synced_at', $tableColumns, true);
+
+            $syncColumns = collect($tableColumns)
+                ->reject(fn ($col) => in_array($col, $ignoredColumns, true))
+                ->values()
+                ->toArray();
+
+            $offset = 0;
+            $limit = (int) $this->option('chunk');
+
+            $this->newLine();
+            $this->info("Syncing {$name}...");
+            $this->line("Using referer: {$referer}");
+
+            while (true) {
+                $this->line("Fetching {$name} offset: {$offset}");
+
+                $response = Http::timeout(120)->get($serviceUrl, [
+                    'where' => $config['where'] ?? '1=1',
+                    'outFields' => '*',
+                    'f' => 'json',
+                    'token' => $token,
+                    'resultOffset' => $offset,
+                    'resultRecordCount' => $limit,
+                    'orderByFields' => 'objectid ASC',
+                    'returnGeometry' => $this->normalizeBooleanQueryValue($config['returnGeometry'] ?? false),
+                ]);
+
+                if (! $response->successful()) {
+                    throw new \RuntimeException("ArcGIS query failed for {$name}: " . $response->body());
                 }
 
-                $arcgisMap = [];
+                $data = $response->json();
 
-                foreach ($attributes as $key => $value) {
-                    $arcgisMap[strtolower($key)] = $value;
+                if (isset($data['error'])) {
+                    $message = $data['error']['message'] ?? '';
+                    $details = $data['error']['details'] ?? [];
+                    $detailsText = is_array($details) ? implode(' | ', array_filter($details)) : '';
+                    $errorText = trim($message !== '' ? $message : $detailsText);
+
+                    throw new \RuntimeException(
+                        "ArcGIS Query Error in {$name}: " . ($errorText !== '' ? $errorText : 'Unknown error')
+                    );
                 }
 
-                $objectId = $arcgisMap[strtolower($unique)] ?? null;
+                $features = $data['features'] ?? [];
 
-                if (!$objectId) {
-                    continue;
+                if (empty($features)) {
+                    break;
                 }
 
-                $row = [];
-
-                foreach ($syncColumns as $column) {
-                    $key = strtolower($column);
-
-                    if (array_key_exists($key, $arcgisMap)) {
-                        $row[$column] = $this->normalizeValue($arcgisMap[$key], $column, $table);
-                    }
-                }
-
-                if ($table === 'housing_units') {
-
-                    // If unit_owner is null -> build from names
-                    if (
-                        in_array('unit_owner', $tableColumns, true)
-                        && empty($row['unit_owner'])
-                    ) {
-                        $row['unit_owner'] = trim(implode(' ', array_filter([
-                           
-                            $row['q_13_3_1_first_name'] ?? null,
-                            $row['q_13_3_2_second_name__father'] ?? null,
-                            $row['q_13_3_3_third_name__grandfather'] ?? null,
-                            $row['q_13_3_4_last_name__family'] ?? null,
-                        ]))) ?: null;
-                    }
-
-                    
+                foreach ($features as $feature) {
+                    $attributes = $feature['attributes'] ?? [];
 
                     if (
-                        in_array('housing_unit', $tableColumns, true)
-                        && empty($row['housing_unit'])
+                        in_array('location', $tableColumns, true)
+                        && ($attributes['location'] ?? null) === null
+                        && isset($feature['geometry'])
                     ) {
-                        $buildingAssigneto = DB::table('buildings')
-                            ->where('objectid', $row['building_id'] ?? null) // change key if needed
-                            ->value('assigneto');
+                        $attributes['location'] = json_encode($feature['geometry'], JSON_UNESCAPED_UNICODE);
+                    }
 
-                        if (!empty($buildingAssigneto)) {
-                            $row['housing_unit'] = $buildingAssigneto;
+                    $arcgisMap = [];
+
+                    foreach ($attributes as $key => $value) {
+                        $arcgisMap[strtolower($key)] = $value;
+                    }
+
+                    $objectId = $arcgisMap[strtolower($unique)] ?? null;
+
+                    if (! $objectId) {
+                        continue;
+                    }
+
+                    $row = [];
+
+                    foreach ($syncColumns as $column) {
+                        $key = strtolower($column);
+
+                        if (array_key_exists($key, $arcgisMap)) {
+                            $row[$column] = $this->normalizeValue($arcgisMap[$key], $column, $table);
                         }
                     }
-                }
 
+                    if ($table === 'housing_units') {
+                        if (
+                            in_array('unit_owner', $tableColumns, true)
+                            && empty($row['unit_owner'])
+                        ) {
+                            $row['unit_owner'] = trim(implode(' ', array_filter([
+                                $row['q_13_3_1_first_name'] ?? null,
+                                $row['q_13_3_2_second_name__father'] ?? null,
+                                $row['q_13_3_3_third_name__grandfather'] ?? null,
+                                $row['q_13_3_4_last_name__family'] ?? null,
+                            ]))) ?: null;
+                        }
 
-                $row[$unique] = $objectId;
+                        if (
+                            in_array('housing_unit', $tableColumns, true)
+                            && empty($row['housing_unit'])
+                        ) {
+                            $buildingAssigneto = DB::table('buildings')
+                                ->where('objectid', $row['building_id'] ?? null)
+                                ->value('assigneto');
 
-                if (in_array('all_data', $tableColumns, true)) {
-                    $row['all_data'] = json_encode($attributes, JSON_UNESCAPED_UNICODE);
-                }
+                            if (! empty($buildingAssigneto)) {
+                                $row['housing_unit'] = $buildingAssigneto;
+                            }
+                        }
+                    }
 
-                $newHash = $this->makeHash($row);
+                    $row[$unique] = $objectId;
 
-                $existing = DB::table($table)
-                    ->where($unique, $objectId)
-                    ->first();
+                    if (in_array('all_data', $tableColumns, true)) {
+                        $row['all_data'] = json_encode($attributes, JSON_UNESCAPED_UNICODE);
+                    }
 
-                if (!$existing) {
+                    $newHash = $this->makeHash($row);
+
+                    $existing = DB::table($table)
+                        ->where($unique, $objectId)
+                        ->first();
+
+                    if (! $existing) {
+                        if ($hasArcgisHashColumn) {
+                            $row['arcgis_hash'] = $newHash;
+                        }
+
+                        if ($hasArcgisSyncedAtColumn) {
+                            $row['arcgis_synced_at'] = now();
+                        }
+
+                        if (in_array('created_at', $tableColumns, true)) {
+                            $row['created_at'] = now();
+                        }
+
+                        if (in_array('updated_at', $tableColumns, true)) {
+                            $row['updated_at'] = now();
+                        }
+
+                        DB::table($table)->insert($row);
+                        $inserted++;
+
+                        continue;
+                    }
+
+                    if ($hasArcgisHashColumn && ($existing->arcgis_hash ?? null) === $newHash) {
+                        $skipped++;
+                        continue;
+                    }
+
                     if ($hasArcgisHashColumn) {
                         $row['arcgis_hash'] = $newHash;
                     }
@@ -249,57 +274,47 @@ class SyncArcGISLayers extends Command
                         $row['arcgis_synced_at'] = now();
                     }
 
-                    if (in_array('created_at', $tableColumns, true)) {
-                        $row['created_at'] = now();
-                    }
-
                     if (in_array('updated_at', $tableColumns, true)) {
                         $row['updated_at'] = now();
                     }
 
-                    DB::table($table)->insert($row);
+                    DB::table($table)
+                        ->where($unique, $objectId)
+                        ->update($row);
 
-                    $inserted++;
-
-                    continue;
+                    $updated++;
                 }
 
-                if ($hasArcgisHashColumn && ($existing->arcgis_hash ?? null) === $newHash) {
-                    $skipped++;
+                $offset += $limit;
 
-                    continue;
+                if (! ($data['exceededTransferLimit'] ?? false)) {
+                    break;
                 }
-
-                if ($hasArcgisHashColumn) {
-                    $row['arcgis_hash'] = $newHash;
-                }
-
-                if ($hasArcgisSyncedAtColumn) {
-                    $row['arcgis_synced_at'] = now();
-                }
-
-                if (in_array('updated_at', $tableColumns, true)) {
-                    $row['updated_at'] = now();
-                }
-
-                DB::table($table)
-                    ->where($unique, $objectId)
-                    ->update($row);
-
-                $updated++;
             }
 
-            $offset += $limit;
+            $totalRecords = $inserted + $updated + $skipped;
 
-            if (!($data['exceededTransferLimit'] ?? false)) {
-                break;
-            }
+            $log->update([
+                'status' => 'success',
+                'finished_at' => now(),
+                'total_records' => $totalRecords,
+                'message' => "Sync completed for {$name}. Inserted: {$inserted}, Updated: {$updated}, Skipped: {$skipped}.",
+            ]);
+
+            $this->info("{$name} done.");
+            $this->info("Inserted: {$inserted}");
+            $this->info("Updated : {$updated}");
+            $this->info("Skipped : {$skipped}");
+        } catch (\Throwable $exception) {
+            $log->update([
+                'status' => 'failed',
+                'finished_at' => now(),
+                'total_records' => $inserted + $updated + $skipped,
+                'message' => $exception->getMessage(),
+            ]);
+
+            $this->error($exception->getMessage());
         }
-
-        $this->info("{$name} done.");
-        $this->info("Inserted: {$inserted}");
-        $this->info("Updated : {$updated}");
-        $this->info("Skipped : {$skipped}");
     }
 
     private function getArcgisToken(string $referer): ?string
@@ -377,8 +392,8 @@ class SyncArcGISLayers extends Command
         }
 
         if (
-            is_numeric($value) &&
-            (
+            is_numeric($value)
+            && (
                 str_contains($column, 'date')
                 || str_contains($column, 'time')
                 || in_array($column, ['today', 'start', 'end', 'editdate', 'creationdate'], true)
@@ -433,7 +448,10 @@ class SyncArcGISLayers extends Command
                 return json_encode($decodedValue, JSON_UNESCAPED_UNICODE);
             }
 
-            $items = array_values(array_filter(array_map('trim', explode(',', $trimmedValue)), static fn($item) => $item !== ''));
+            $items = array_values(array_filter(
+                array_map('trim', explode(',', $trimmedValue)),
+                static fn ($item) => $item !== ''
+            ));
 
             return json_encode($items === [] ? [$trimmedValue] : $items, JSON_UNESCAPED_UNICODE);
         }
