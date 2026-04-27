@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -16,5 +17,10 @@ class SystemOperationLog extends Model
         'file_path',
         'total_records',
         'message',
+    ];
+
+    protected $casts = [
+        'started_at' => 'datetime',
+        'finished_at' => 'datetime',
     ];
 }
