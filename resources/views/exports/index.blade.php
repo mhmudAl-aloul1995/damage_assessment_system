@@ -11,6 +11,10 @@
 		.card-toolbar .dropdown-menu .dropdown-item:hover {
 			background-color: #f8f9fa;
 		}
+
+		.container-loader {
+			display: none !important
+		}
 	</style>
 	<div class="container py-4">
 		<div id="exportResult" class="mt-4"></div>
@@ -48,7 +52,8 @@
 				@endif
 
 				@if(!empty($importedObjectIds))
-					<div class="alert alert-info d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+					<div
+						class="alert alert-info d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
 						<div>
 							<strong>{{ __('ui.exports.objectid_import_active') }}</strong>
 							<div class="text-muted fs-7 mt-1">
@@ -165,15 +170,19 @@
 									@endforeach
 
 									<div class="col-md-4 mb-4 filter-card-item static-filter-card">
-										<label class="form-label fw-bold searchable-filter-name">{{ __('ui.exports.family_members_from') }}</label>
+										<label
+											class="form-label fw-bold searchable-filter-name">{{ __('ui.exports.family_members_from') }}</label>
 										<input type="number" name="family_members_from"
 											class="form-control form-control-solid" min="0"
-											placeholder="{{ __('ui.exports.family_members_from') }}" value="{{ old('family_members_from') }}">
+											placeholder="{{ __('ui.exports.family_members_from') }}"
+											value="{{ old('family_members_from') }}">
 									</div>
 
 									<div class="col-md-4 mb-4 filter-card-item static-filter-card">
-										<label class="form-label fw-bold searchable-filter-name">{{ __('ui.exports.family_members_to') }}</label>
-										<input type="number" name="family_members_to" placeholder="{{ __('ui.exports.family_members_to') }}"
+										<label
+											class="form-label fw-bold searchable-filter-name">{{ __('ui.exports.family_members_to') }}</label>
+										<input type="number" name="family_members_to"
+											placeholder="{{ __('ui.exports.family_members_to') }}"
 											class="form-control form-control-solid" min="0"
 											value="{{ old('family_members_to') }}">
 									</div>
@@ -373,7 +382,8 @@
 
 					<div class="modal-body py-10 px-lg-17">
 						<div class="mb-7">
-							<label class="required fw-semibold fs-6 mb-2 d-block">{{ __('ui.exports.objectid_import_file_label') }}</label>
+							<label
+								class="required fw-semibold fs-6 mb-2 d-block">{{ __('ui.exports.objectid_import_file_label') }}</label>
 							<input type="file" name="objectids_file" id="objectids_file"
 								class="form-control form-control-solid" accept=".xlsx,.xls,.csv" />
 							<div class="form-text">{{ __('ui.exports.objectid_import_file_help') }}</div>
@@ -525,31 +535,31 @@
 
 		function showPreparingCard() {
 			$('#exportResult').html(`
-					<div class="card p-4 text-center">
-						<h5 class="mb-3">
-							{{ __('ui.exports.preparing_file') }}
-							<span class="spinner-border spinner-border-sm ms-2"></span>
-						</h5>
+						<div class="card p-4 text-center">
+							<h5 class="mb-3">
+								{{ __('ui.exports.preparing_file') }}
+								<span class="spinner-border spinner-border-sm ms-2"></span>
+							</h5>
 
-						<div class="progress mb-3" style="height: 25px;">
-							<div id="progressBar"
-								 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-								 style="width: 0%">
-								0%
+							<div class="progress mb-3" style="height: 25px;">
+								<div id="progressBar"
+									 class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+									 style="width: 0%">
+									0%
+								</div>
 							</div>
-						</div>
 
-						<div id="processedCount" class="text-muted small mt-2"></div>
-					</div>
-				`);
+							<div id="processedCount" class="text-muted small mt-2"></div>
+						</div>
+					`);
 		}
 
 		function showError(message) {
 			$('#exportResult').html(`
-					<div class="alert alert-danger text-center">
-						${message}
-					</div>
-				`);
+						<div class="alert alert-danger text-center">
+							${message}
+						</div>
+					`);
 
 			enableExportButtons();
 			stopExportInterval();
@@ -558,13 +568,13 @@
 
 		function showSuccess(fileUrl) {
 			$('#exportResult').html(`
-					<div class="alert alert-success text-center">
-						<div class="mb-3">{{ __('ui.exports.file_ready') }}</div>
-						<a href="${fileUrl}" class="btn btn-success" target="_blank">
-							{{ __('ui.exports.download_file') }}
-						</a>
-					</div>
-				`);
+						<div class="alert alert-success text-center">
+							<div class="mb-3">{{ __('ui.exports.file_ready') }}</div>
+							<a href="${fileUrl}" class="btn btn-success" target="_blank">
+								{{ __('ui.exports.download_file') }}
+							</a>
+						</div>
+					`);
 
 			enableExportButtons();
 			stopExportInterval();
@@ -752,11 +762,11 @@
 							Swal.fire({
 								title: @json(__('ui.exports.running_export_title')),
 								html: `
-										<div class="text-center">
-											<p>${res.message}</p>
-											<p>${@json(__('ui.exports.running_export_progress', ['progress' => '__PROGRESS__'])).replace('__PROGRESS__', res.running_export.progress ?? 0)}</p>
-										</div>
-									`,
+											<div class="text-center">
+												<p>${res.message}</p>
+												<p>${@json(__('ui.exports.running_export_progress', ['progress' => '__PROGRESS__'])).replace('__PROGRESS__', res.running_export.progress ?? 0)}</p>
+											</div>
+										`,
 								icon: 'warning',
 								showCancelButton: true,
 								confirmButtonText: @json(__('ui.exports.cancel_old_and_start_new')),
