@@ -9,6 +9,7 @@ use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
+use App\Models\EditAssessment;
 use App\Models\Filter;
 use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
@@ -3967,22 +3968,61 @@ class auditController extends Controller
             $value = implode(',', $value);
         }
 
-        \App\Models\EditAssessment::create(
-            [
-                'global_id' => $request->globalid,
-                'type' => $request->type,
-                'field_name' => $request->field,
-                'user_id' => auth()->id(),
-                'field_value' => $value,
-
-            ]
-
-        );
+        $edit = EditAssessment::query()->create([
+            'global_id' => $request->globalid,
+            'type' => $request->type,
+            'field_name' => $request->field,
+            'user_id' => auth()->id(),
+            'field_value' => $value,
+        ])->load('user');
 
         return response()->json([
             'status' => true,
             'message' => 'تم حفظ التعديل بنجاح',
+            'edit_id' => $edit->id,
+            'field_value' => $edit->field_value,
+            'user_name' => $edit->user?->name ?? '-',
+            'updated_at' => $edit->updated_at?->format('Y-m-d h:i A'),
+            'history' => $this->inlineAssessmentHistoryRows($request->type, $request->globalid, $request->field),
         ]);
+    }
+
+    public function inlineAssessmentHistory(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|in:building_table,housing_table',
+            'globalid' => 'required|string',
+            'field' => 'required|string',
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'history' => $this->inlineAssessmentHistoryRows(
+                (string) $request->type,
+                (string) $request->globalid,
+                (string) $request->field
+            ),
+        ]);
+    }
+
+    private function inlineAssessmentHistoryRows(string $type, string $globalid, string $field): array
+    {
+        return EditAssessment::query()
+            ->with('user')
+            ->where('type', $type)
+            ->where('global_id', $globalid)
+            ->where('field_name', $field)
+            ->latest('updated_at')
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->map(fn (EditAssessment $edit): array => [
+                'id' => $edit->id,
+                'value' => $edit->field_value,
+                'user_name' => $edit->user?->name ?? '-',
+                'updated_at' => $edit->updated_at?->format('Y-m-d h:i A') ?? '-',
+            ])
+            ->all();
     }
 
     public function housingUnitAudit(Request $request)

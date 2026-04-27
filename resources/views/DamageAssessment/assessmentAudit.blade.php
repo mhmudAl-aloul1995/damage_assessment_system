@@ -186,8 +186,8 @@
         }
 
         .assessment-item.is-missing {
-            background: #fff5f8 !important;
-            border-right: 4px solid #f1416c
+            background: #ffffff !important;
+            border-right: 4px solid #e4e6ef;
         }
 
         .assessment-item.is-edited {
@@ -281,6 +281,94 @@
             .audit-toolbar-sticky {
                 top: 60px
             }
+
+
+        }
+
+        .audit-edit-card {
+            background: #fff8dd;
+            border: 1px solid #ffe7a3;
+            border-radius: .85rem;
+            padding: 1rem;
+            text-align: center;
+            max-width: 320px;
+            margin: auto;
+            line-height: 1.8;
+        }
+
+        .audit-edit-card div {
+            display: block;
+        }
+
+        .audit-label {
+            color: #a1a5b7;
+            font-size: .82rem;
+            font-weight: 800;
+        }
+
+        .audit-new-value {
+            color: #181c32;
+            font-weight: 900;
+        }
+
+        .audit-original-value {
+            color: #7e8299;
+            font-weight: 800;
+        }
+
+        #tab_housing .card-header {
+            display: flex !important;
+            align-items: flex-start !important;
+            justify-content: space-between !important;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        #tab_housing .card-title {
+            margin: 0 !important;
+            flex: 0 0 auto;
+        }
+
+        #tab_housing .card-toolbar {
+            position: static !important;
+            top: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            flex: 1 1 auto;
+        }
+
+        #tab_housing .card-toolbar>.d-flex {
+            justify-content: flex-end;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+        #tab_housing [name="globalid"]+.select2,
+        #tab_housing select[name="globalid"] {
+            min-width: 250px;
+        }
+
+        @media (max-width: 991px) {
+
+            #tab_housing .card-title,
+            #tab_housing .card-toolbar {
+                width: 100%;
+            }
+
+            #tab_housing .card-toolbar>.d-flex {
+                justify-content: flex-start;
+            }
+
+            #tab_housing [name="globalid"]+.select2,
+            #tab_housing select[name="globalid"] {
+                width: 100% !important;
+                min-width: 100%;
+            }
+        }
+
+        .assessment-item.table-danger {
+            background: #fff5f8 !important;
+            border-right: 4px solid #f1416c !important;
         }
     </style>
 
@@ -511,6 +599,15 @@
                                                 onclick="openNotesModal('housing','history')">ملاحظات</button>
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
+                                            <button type="button" class="btn btn-sm btn-light-primary"
+                                                onclick="reloadHousingAssessmentTable();">
+                                                <i class="ki-duotone ki-arrows-circle fs-6">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                تحديث
+                                            </button>
+
                                         </div>
                                     </div>
                                 </div>
@@ -613,12 +710,15 @@
     <script>
         let notesContext = null;
         let pendingStatus = null;
+        let isSubmittingStatus = false;
         let noteEditMode = false;
         let currentNoteRecordId = null;
         let currentApprovalLocked = false;
         let urlHousingGlobalId = @json($housingGlobalid ?? null);
+        let buildingCurrentStatus = @json($buildingCurrentStatus);
         let initialHousingSelectionDone = false;
         let pendingHousingGlobalId = null;
+        let inlineSaveLocks = new Set();
 
         let currentHousingFilter = 'all';
         let currentBuildingFilter = 'all';
@@ -629,6 +729,7 @@
             KTBuildingAssessmentList.init();
             KTBuildingUnitsList.init();
             KTHousingAssessmentList.init();
+            setActiveStatusButton('.building-status-btn', normalizeStatus(buildingCurrentStatus));
             selectInitialHousingOption();
         });
 
@@ -686,49 +787,48 @@
             let sectionId = prefix + '_section_' + index;
 
             let html = `
-                <div class="assessment-section mb-4">
-                    <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
-                         data-bs-toggle="collapse"
-                         data-bs-target="#${sectionId}">
-                        <div>
-                            <div class="fw-bold fs-5 text-gray-800">${section}</div>
-                            <div class="section-progress-bar mt-2">
-                                <div class="section-progress-fill" style="width:${percent}%"></div>
-                            </div>
-                        </div>
+                                                                                                    <div class="assessment-section mb-4">
+                                                                                                        <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
+                                                                                                             data-bs-toggle="collapse"
+                                                                                                             data-bs-target="#${sectionId}">
+                                                                                                            <div>
+                                                                                                                <div class="fw-bold fs-5 text-gray-800">${section}</div>
+                                                                                                                <div class="section-progress-bar mt-2">
+                                                                                                                    <div class="section-progress-fill" style="width:${percent}%"></div>
+                                                                                                                </div>
+                                                                                                            </div>
 
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <span class="badge badge-light-primary">${items.length} سؤال</span>
-                            <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
-                        </div>
-                    </div>
+                                                                                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                <span class="badge badge-light-primary">${items.length} سؤال</span>
+                                                                                                                <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
+                                                                                                            </div>
+                                                                                                        </div>
 
-                    <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
-            `;
+                                                                                                        <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
+                                                                                                `;
 
             items.forEach(function (row) {
                 let hasAnswer = isAnswered(row);
                 let edited = isEdited(row);
 
                 html += `
-                    <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''}">
-                        <div class="row g-4 align-items-start">
-                            <div class="col-xl-5 col-lg-12">
-                                <div class="assessment-question">${row.question || '-'}</div>
-                            </div>
+                            <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''} ${row.rowClass || ''}">                                                                                <div class="row g-4 align-items-start">
+                                                                                                                <div class="col-xl-5 col-lg-12">
+                                                                                                                    <div class="assessment-question">${row.question || '-'}</div>
+                                                                                                                </div>
 
-                            <div class="col-xl-3 col-lg-6">
-                                <div class="text-muted fs-8 mb-1">الجواب</div>
-                                <div class="assessment-answer">${row.answer || '-'}</div>
-                            </div>
+                                                                                                                <div class="col-xl-3 col-lg-6">
+                                                                                                                    <div class="text-muted fs-8 mb-1">الجواب</div>
+                                                                                                                    <div class="assessment-answer">${row.answer || '-'}</div>
+                                                                                                                </div>
 
-                            <div class="col-xl-4 col-lg-6">
-                                <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
-                                <div class="assessment-edit">${row.editAnswer || '-'}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                                                                                                                <div class="col-xl-4 col-lg-6">
+                                                                                                                    <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
+                                                                                                                    <div class="assessment-edit">${row.editAnswer || '-'}</div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    `;
             });
 
             html += `</div></div>`;
@@ -764,10 +864,10 @@
             });
 
             $(target).html(html || `
-                <div class="alert alert-light-warning">
-                    لا توجد نتائج مطابقة للفلتر الحالي.
-                </div>
-            `);
+                                                                                                    <div class="alert alert-light-warning">
+                                                                                                        لا توجد نتائج مطابقة للفلتر الحالي.
+                                                                                                    </div>
+                                                                                                `);
 
             setTimeout(function () {
                 initInlineEditors();
@@ -1272,13 +1372,13 @@
                     let rows = '';
                     history.forEach(function (item) {
                         rows += `
-                            <tr>
-                                <td>${escapeHtml(item.status_name ?? '-')}</td>
-                                <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                <td>${escapeHtml(item.notes ?? '-')}</td>
-                                <td>${escapeHtml(item.created_at ?? '-')}</td>
-                            </tr>
-                        `;
+                                                                                                                <tr>
+                                                                                                                    <td>${escapeHtml(item.status_name ?? '-')}</td>
+                                                                                                                    <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                                                                    <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                                    <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                                                                </tr>
+                                                                                                            `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -1290,7 +1390,16 @@
         }
 
         function closeNotesModal() {
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('notesModal')).hide();
+            let modalEl = document.getElementById('notesModal');
+            let modal = bootstrap.Modal.getInstance(modalEl);
+
+            if (modal) {
+                modal.hide();
+            }
+
+            $('#notesInput').val('');
+            pendingStatus = null;
+            notesContext = null;
         }
 
         function loadEditableNote(type, globalid) {
@@ -1373,7 +1482,27 @@
                 }
             });
         }
-
+        function reloadBuildingAssessmentTable() {
+            if ($.fn.DataTable.isDataTable('#kt_table_building_assessment')) {
+                $('#kt_table_building_assessment')
+                    .DataTable()
+                    .ajax.reload(null, false);
+            }
+        }
+        function reloadHousingAssessmentTable() {
+            if ($.fn.DataTable.isDataTable('#kt_table_housing_assessment')) {
+                $('#kt_table_housing_assessment')
+                    .DataTable()
+                    .ajax.reload(null, false);
+            }
+        }
+        function reloadBuildingUnitsTable() {
+            if ($.fn.DataTable.isDataTable('#housing_table')) {
+                $('#housing_table')
+                    .DataTable()
+                    .ajax.reload(null, false);
+            }
+        }
         function syncHousingRowAfterNumberUpdate(globalid) {
             if (!globalid) return;
 
@@ -1393,7 +1522,17 @@
             }, false);
         }
 
+
         function saveInlineValue(field, globalid, type, value, callback = null) {
+            let lockKey = [type, globalid, field].join('|');
+
+            if (inlineSaveLocks.has(lockKey)) {
+                if (callback) callback(false);
+                return;
+            }
+
+            inlineSaveLocks.add(lockKey);
+
             $.ajax({
                 url: "{{ route('assessment.inline.update') }}",
                 method: "POST",
@@ -1408,21 +1547,31 @@
                     toastr.success(response.message || 'تم الحفظ بنجاح');
                     showAuditSaveIndicator();
 
+                    updateAnswerCardAfterSave(field, globalid, type, value, response);
+
                     if (
                         type === 'housing_table' &&
-                        ['damaged_area_m2', 'reh_kitchen', 'reh_bathroom', 'is_the_housing_unit_or_living_habitable', 'number_of_rooms'].includes(field)
+                        [
+                            'damaged_area_m2',
+                            'reh_kitchen',
+                            'reh_bathroom',
+                            'is_the_housing_unit_or_living_habitable',
+                            'number_of_rooms'
+                        ].includes(field)
                     ) {
                         loadHousingSidebarSummary();
                     }
 
-                    if (type === 'building_table') reloadBuildingAssessmentTable();
-                    if (type === 'housing_table') reloadHousingAssessmentTable();
-
+                    reloadHousingAssessmentTable();
+                    reloadBuildingUnitsTable();
                     if (callback) callback(true);
                 },
                 error: function (xhr) {
                     toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء الحفظ');
                     if (callback) callback(false);
+                },
+                complete: function () {
+                    inlineSaveLocks.delete(lockKey);
                 }
             });
         }
@@ -1449,89 +1598,86 @@
             openNotesModal('housing', 'note', status);
         }
 
+
         function submitStatusWithNotes() {
+            if (isSubmittingStatus) return;
+
             let notes = $('#notesInput').val();
+            notes = notes ? notes.trim() : '';
 
             if (!pendingStatus) {
                 toastr.warning('اختر حالة أولاً');
                 return;
             }
 
+            if (!notesContext) {
+                toastr.warning('نوع الحالة غير معروف');
+                return;
+            }
             if ((!notes || notes.trim() === '') && pendingStatus != 'accepted') {
                 toastr.warning('يرجى إدخال الملاحظة');
                 $('#notesInput').focus();
                 return;
             }
 
-            if (notesContext === 'building') {
-                let globalid = '{{ $buildingGlobalid }}';
+            isSubmittingStatus = true;
+            $('#notesSaveBtn').prop('disabled', true);
 
-                if (!globalid) {
-                    toastr.warning('لا يوجد مبنى محدد');
-                    return;
-                }
+            let isBuilding = notesContext === 'building';
+            let globalid = isBuilding ? '{{ $buildingGlobalid }}' : $("[name='globalid']").val();
 
-                $.ajax({
-                    url: "{{ route('building.assessment.set.status') }}",
-                    method: "POST",
-                    data: {
-                        _token: "{{ csrf_token() }}",
-                        globalid: globalid,
-                        status: pendingStatus,
-                        notes: notes
-                    },
-                    beforeSend: function () { $('.building-status-btn').prop('disabled', true); },
-                    success: function (response) {
-                        toastr.success(response.message || 'تم تحديث حالة المبنى');
+            if (!globalid) {
+                toastr.warning(isBuilding ? 'لا يوجد مبنى محدد' : 'يرجى اختيار الوحدة أولاً');
+                isSubmittingStatus = false;
+                $('#notesSaveBtn').prop('disabled', false);
+                return;
+            }
+
+            $.ajax({
+                url: isBuilding
+                    ? "{{ route('building.assessment.set.status') }}"
+                    : "{{ route('housing.assessment.set.status') }}",
+                method: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    globalid: globalid,
+                    status: pendingStatus,
+                    notes: notes
+                },
+                beforeSend: function () {
+                    isBuilding
+                        ? $('.building-status-btn').prop('disabled', true)
+                        : $('.housing-status-btn').prop('disabled', true);
+                },
+                success: function (response) {
+                    toastr.success(response.message || 'تم تحديث الحالة بنجاح');
+
+                    if (isBuilding) {
                         setActiveStatusButton('.building-status-btn', pendingStatus);
                         reloadBuildingAssessmentTable();
-                        reloadBuildingUnitsTable();
-                        closeNotesModal();
-                    },
-                    error: function (xhr) {
-                        toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء تحديث الحالة');
-                    },
-                    complete: function () {
-                        $('.building-status-btn').not('.is-active').prop('disabled', false);
-                    }
-                });
-            }
-
-            if (notesContext === 'housing') {
-                let globalid = $("[name='globalid']").val();
-
-                if (!globalid) {
-                    toastr.warning('يرجى اختيار الوحدة أولاً');
-                    return;
-                }
-
-                $.ajax({
-                    url: "{{ route('housing.assessment.set.status') }}",
-                    method: "POST",
-                    data: {
-                        _token: "{{ csrf_token() }}",
-                        globalid: globalid,
-                        status: pendingStatus,
-                        notes: notes
-                    },
-                    beforeSend: function () { $('.housing-status-btn').prop('disabled', true); },
-                    success: function (response) {
-                        toastr.success(response.message || 'تم تحديث الحالة بنجاح');
+                    } else {
                         setActiveStatusButton('.housing-status-btn', pendingStatus);
                         reloadHousingAssessmentTable();
-                        reloadBuildingUnitsTable();
-                        closeNotesModal();
-                    },
-                    error: function (xhr) {
-                        toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء تحديث الحالة');
-                    },
-                    complete: function () {
+                    }
+
+                    reloadBuildingUnitsTable();
+                    closeNotesModal();
+                },
+                error: function (xhr) {
+                    toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء تحديث الحالة');
+                },
+                complete: function () {
+                    isSubmittingStatus = false;
+                    $('#notesSaveBtn').prop('disabled', false);
+
+                    if (isBuilding) {
+                        $('.building-status-btn').not('.is-active').prop('disabled', false);
+                    } else {
                         $('.housing-status-btn').not('.is-active').prop('disabled', false);
                     }
-                });
-            }
+                }
+            });
         }
-
         $(document).on('click', '.inline-save-btn', function () {
             let btn = $(this);
             let wrapper = btn.closest('.d-flex');
@@ -1554,29 +1700,29 @@
             saveInlineValue(select.data('field'), select.data('globalid'), select.data('type'), select.val());
         });
 
-        function reloadBuildingAssessmentTable() {
-            if ($.fn.DataTable.isDataTable('#kt_table_building_assessment')) {
-                reloadTableWithoutScroll('#kt_table_building_assessment');
-            }
-        }
+        /*         function reloadBuildingAssessmentTable() {
+                    if ($.fn.DataTable.isDataTable('#kt_table_building_assessment')) {
+                        reloadTableWithoutScroll('#kt_table_building_assessment');
+                    }
+                }
 
-        function reloadHousingAssessmentTable() {
-            if ($.fn.DataTable.isDataTable('#kt_table_housing_assessment')) {
-                reloadTableWithoutScroll('#kt_table_housing_assessment');
-            }
-        }
+                function reloadHousingAssessmentTable() {
+                    if ($.fn.DataTable.isDataTable('#kt_table_housing_assessment')) {
+                        reloadTableWithoutScroll('#kt_table_housing_assessment');
+                    }
+                }
 
-        function reloadBuildingUnitsTable() {
-            if ($.fn.DataTable.isDataTable('#housing_table')) {
-                reloadTableWithoutScroll('#housing_table');
-            }
-        }
+                function reloadBuildingUnitsTable() {
+                    if ($.fn.DataTable.isDataTable('#housing_table')) {
+                        reloadTableWithoutScroll('#housing_table');
+                    }
+                }
 
-        function reloadHousingTabTables() {
-            reloadBuildingUnitsTable();
-            reloadHousingAssessmentTable();
-        }
-
+                function reloadHousingTabTables() {
+                    reloadBuildingUnitsTable();
+                    reloadHousingAssessmentTable();
+                }
+         */
         var KTBuildingAssessmentList = function () {
             var table = document.getElementById('kt_table_building_assessment');
             var datatable;
@@ -1711,6 +1857,7 @@
                     $(this).addClass('selected');
 
                     $('[name="globalid"]').val(row.globalid).trigger('change');
+                    setActiveStatusButton('.housing-status-btn', normalizeStatus(row.current_status));
                 });
             };
 
@@ -1750,8 +1897,12 @@
                             d.globalid = $("[name='globalid']").val();
                         },
                         dataSrc: function (json) {
-                            let rows = json.data || [];
 
+                            let rows = json.data || [];
+                            console.log(rows.map(r => ({
+                                name: r.name,
+                                rowClass: r.rowClass
+                            })));
                             rows = rows.filter(function (row) {
                                 return getHousingMap(row) !== null;
                             });
@@ -1759,6 +1910,7 @@
                             rows.forEach(function (row) {
                                 row.section = getHousingSection(row);
                                 row.sort_order = getHousingSort(row);
+                                row.rowClass = row.rowClass || '';
                             });
 
                             rows.sort((a, b) => a.sort_order - b.sort_order);
@@ -1782,27 +1934,40 @@
                 });
             };
 
+            /*      var handleSearchDatatable = function () {
+                     const filterSearch = document.querySelector('[data-kt-HousingAssessment-table-filter="search"]');
+                     if (!filterSearch) return;
+
+                     filterSearch.addEventListener('keyup', function () {
+                         let keyword = this.value.toLowerCase();
+                         let rows = lastHousingRows;
+
+                         if (keyword !== '') {
+                             rows = rows.filter(function (row) {
+                                 let q = $('<div>').html(row.question || '').text().toLowerCase();
+                                 let a = $('<div>').html(row.answer || '').text().toLowerCase();
+                                 let n = String(row.name || '').toLowerCase();
+                                 return q.includes(keyword) || a.includes(keyword) || n.includes(keyword);
+                             });
+                         }
+
+                         renderAccordion('#housing_assessment_accordion', rows, currentHousingFilter, 'housing');
+                     });
+                 };
+
+             */
             var handleSearchDatatable = function () {
                 const filterSearch = document.querySelector('[data-kt-HousingAssessment-table-filter="search"]');
                 if (!filterSearch) return;
 
-                filterSearch.addEventListener('keyup', function () {
-                    let keyword = this.value.toLowerCase();
-                    let rows = lastHousingRows;
+                filterSearch.addEventListener('keydown', function (e) {
 
-                    if (keyword !== '') {
-                        rows = rows.filter(function (row) {
-                            let q = $('<div>').html(row.question || '').text().toLowerCase();
-                            let a = $('<div>').html(row.answer || '').text().toLowerCase();
-                            let n = String(row.name || '').toLowerCase();
-                            return q.includes(keyword) || a.includes(keyword) || n.includes(keyword);
-                        });
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        datatable.search(this.value).draw();
                     }
-
-                    renderAccordion('#housing_assessment_accordion', rows, currentHousingFilter, 'housing');
                 });
             };
-
             var handleChangeHousingUnit = function () {
                 const filterSelect = $('[name="globalid"]');
                 loadHousingSidebarSummary();
@@ -1841,5 +2006,146 @@
                 $('#sidebar_unit_area,#sidebar_kitchen,#sidebar_bathroom,#sidebar_living,#sidebar_rooms').text('--');
             });
         }
+
+        function cleanAuditText(text) {
+            text = String(text || '')
+                .replace(/\s+/g, ' ')
+                .replace(/الأصل/g, '')
+                .replace(/آخر تعديل/g, '')
+                .replace(/اسم المعدّل/g, '')
+                .replace(/وقت التعديل/g, '')
+                .replace(/عرض سجل التعديلات/g, '')
+                .trim();
+
+            // يمنع WindyWindy أو Totally DamagedTotally Damaged
+            let half = text.substring(0, text.length / 2);
+            if (text.length % 2 === 0 && half === text.substring(text.length / 2)) {
+                text = half;
+            }
+
+            return text || '-';
+        }
+
+        function getCurrentEditValue(input, value) {
+            if (input.is('select')) {
+                let selected = input.find('option:selected');
+                return cleanAuditText(selected.text() || value);
+            }
+
+            return cleanAuditText(value);
+        }
+
+        function editHistoryCollapseId(type, globalid, field) {
+            return 'inline_history_' + btoa(unescape(encodeURIComponent(type + '_' + globalid + '_' + field)))
+                .replace(/[^a-zA-Z0-9]/g, '');
+        }
+
+        function renderEditHistoryItems(history) {
+            history = Array.isArray(history) ? history : [];
+
+            if (!history.length) {
+                return '<div class="text-muted small">لا يوجد سجل تعديلات لهذا الحقل.</div>';
+            }
+
+            return history.map(function (item) {
+                return `
+                                                                            <div class="border rounded p-2 mb-2 bg-light-info text-start">
+                                                                                <div><span class="audit-label">القيمة</span>: <span class="fw-semibold">${escapeHtml(cleanAuditText(item.value))}</span></div>
+                                                                                <div><span class="audit-label">المستخدم</span>: ${escapeHtml(item.user_name || '-')}</div>
+                                                                                <div><span class="audit-label">الوقت</span>: ${escapeHtml(item.updated_at || '-')}</div>
+                                                                            </div>
+                                                                        `;
+            }).join('');
+        }
+
+        function renderEditCard(originalText, displayValue, userName, updatedAt, type, globalid, field, history) {
+            let collapseId = editHistoryCollapseId(type, globalid, field);
+            let historyCount = Array.isArray(history) ? history.length : 0;
+
+            return `
+                                                                        <div class="audit-edit-card">
+                                                                            <div class="audit-label">الأصل</div>
+                                                                            <div class="audit-original-value">${escapeHtml(originalText)}</div>
+
+                                                                            <div class="audit-label text-warning mt-3">آخر تعديل</div>
+                                                                            <div class="audit-new-value">${escapeHtml(displayValue)}</div>
+
+                                                                            <div class="audit-label text-primary mt-3">اسم المعدّل</div>
+                                                                            <div>${escapeHtml(userName)}</div>
+
+                                                                            <div class="audit-label text-primary mt-3">وقت التعديل</div>
+                                                                            <div>${escapeHtml(updatedAt)}</div>
+
+                                                                            <button type="button"
+                                                                                    class="btn btn-sm btn-light-primary mt-4"
+                                                                                    data-bs-toggle="collapse"
+                                                                                    data-bs-target="#${collapseId}">
+                                                                                عرض سجل التعديلات (${historyCount})
+                                                                            </button>
+
+                                                                            <div class="collapse mt-3" id="${collapseId}">
+                                                                                ${renderEditHistoryItems(history)}
+                                                                            </div>
+                                                                        </div>
+                                                                    `;
+        }
+
+        function updateAnswerCardAfterSave(field, globalid, type, value, response) {
+            let input = $('[data-field="' + field + '"][data-globalid="' + globalid + '"][data-type="' + type + '"]');
+            let item = input.closest('.assessment-item');
+
+            if (!item.length) return;
+
+            let answerBox = item.find('.assessment-answer');
+
+            let originalText = answerBox.find('.audit-original-value').first().text().trim();
+
+            if (!originalText) {
+                originalText = answerBox.clone()
+                    .find('.audit-edit-card, .btn, button')
+                    .remove()
+                    .end()
+                    .text();
+
+                originalText = cleanAuditText(originalText);
+            }
+
+            let displayValue = getCurrentEditValue(input, value);
+
+            let userName = response.user_name || response.editor_name || response.updated_by || '{{ auth()->user()->name ?? "المستخدم الحالي" }}';
+            let updatedAt = response.updated_at || response.time || new Date().toLocaleString('ar');
+            let history = response.history || [{
+                value: displayValue,
+                user_name: userName,
+                updated_at: updatedAt
+            }];
+
+            answerBox.html(renderEditCard(originalText, displayValue, userName, updatedAt, type, globalid, field, history));
+
+            item.removeClass('is-missing').addClass('has-answer is-edited');
+        }
+        function showEditHistory(type, globalid, field) {
+            let collapseId = editHistoryCollapseId(type, globalid, field);
+            let target = $('#' + collapseId);
+
+            if (!target.length || target.data('loaded')) {
+                return;
+            }
+
+            target.html('<div class="text-muted small">جاري التحميل...</div>');
+
+            $.get("{{ route('assessment.inline.history') }}", {
+                type: type,
+                globalid: globalid,
+                field: field
+            }, function (response) {
+                target.html(renderEditHistoryItems(response.history || []));
+                target.data('loaded', true);
+            }).fail(function () {
+                target.html('<div class="text-danger small">فشل تحميل سجل التعديلات.</div>');
+            });
+        }
+
+        document.body.setAttribute('data-kt-app-sidebar-minimize', 'on');
     </script>
 @endsection

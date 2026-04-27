@@ -301,7 +301,7 @@ VALUES
     ('co3', 'CO3-Supply and cast reinforced concrete (B250/20) in door jambs, canopies, secondary tie columns,secondary beams, lintel, sills, infil and topping to walls', 'توريد وصب خرسانة مسلحة بقوة (B250/20) لأعمال الجلسات والكشفات  (M3)', '1.5', '1'),
     ('co4', 'CO4-Supply and cast reinforced concrete (B250/20) for ground beams or foundation', 'توريد وصب خرسانة مسلحة بقوة (B250/20) لأعمال الأحزمة الأرضية والقواعد (M3)', '1', '1'),
     ('co5', 'CO5-Supply and cast reinforced concrete (B300/20) for new columns', 'توريد وصب خرسانة مسلحة بقوة (B300/20) لأعمال الأعمدة الجديدة (M3)', '1', '1'),
-    ('co6', 'CO6-Supply and cast reinforced concrete (B300/20) as protective sleeve cover around existing damaged columns.', 'توريد وصب خرسانة مسلحة بقوة (B300/20) لأعمال غطاء خرساني (قمصان) حول الأعمدة المتضررة (No)', '1', '1'),
+    ('co6', 'CO6-Supply and cast reinforced concrete (B300/20) as protective sleeve cover around existing damaged columns.', 'توريد وصب خرسانة مسلحة بقوة (B300/20) لأعمال غطاء خرساني (قمصان) حول الأعمدة المتضررة (No)', '5', '1'),
     ('co7', 'CO7-Supply and cast reinforced concrete (B250/...)', 'توريد وصب خرسانة مسلحة بقوة (B250/20) لأعمال السقف المصمت بسماكة 15 - 10سم  (M2)', '40', '4'),
     ('co8', 'CO8-Supply and cast reinforced concrete (B250/20) for suspended hollow block slab [25cm average thick]', 'توريد وصب خرسانة مسلحة بقوة (B250/20) لأعمال الأسقف باستخدام بلوك مفرغ (ريبس) بسماكة  متوسط 25  سم  (M2)', '40', '4'),
     ('co9', 'CO9-Supply & cast reinforced concrete (B250/20) for stair case (landing, flights, steps & beams)', 'توريد وصب خرسانة مسلحة بقوة (B250/20) لأعمال الدرج (الشواحط والدرجات والأحزمة) (M3)', '1', '2'),

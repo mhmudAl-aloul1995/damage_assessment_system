@@ -342,6 +342,8 @@ Route::middleware('auth')->group(function () {
         ->name('audit.building.finalApprove');
     Route::post('/assessment/inline-update', [auditController::class, 'updateInlineAssessment'])
         ->name('assessment.inline.update');
+    Route::get('/assessment/inline-history', [auditController::class, 'inlineAssessmentHistory'])
+        ->name('assessment.inline.history');
 
     Route::get('/housing-units-by-building', [auditController::class, 'housingUnitsByBuilding'])
         ->name('housing.units.by.building');

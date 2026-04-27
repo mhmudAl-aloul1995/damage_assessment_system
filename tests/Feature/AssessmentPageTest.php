@@ -14,6 +14,7 @@ use Spatie\LaravelPdf\PdfBuilder;
 
 beforeEach(function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    config()->set('database.default', 'mysql');
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
 });
@@ -136,4 +137,41 @@ it('exports the assessment page as a pdf with attachments', function () {
             && $pdf->contains('housing-photo.jpg')
             && $pdf->contains('fake-token');
     });
+});
+
+it('returns inline edit metadata and field history when saving an audit edit', function () {
+    $user = User::factory()->create([
+        'name' => 'Audit Editor',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 501,
+        'globalid' => 'building-inline-history',
+        'building_name' => 'Original Building',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'building_name',
+        'field_value' => 'Previous Building',
+        'user_id' => $user->id,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.update'), [
+            'type' => 'building_table',
+            'globalid' => $building->globalid,
+            'field' => 'building_name',
+            'value' => 'Updated Building',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('field_value', 'Updated Building')
+        ->assertJsonPath('user_name', 'Audit Editor')
+        ->assertJsonCount(2, 'history')
+        ->assertJsonFragment([
+            'value' => 'Updated Building',
+            'user_name' => 'Audit Editor',
+        ]);
 });
