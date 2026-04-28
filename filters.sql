@@ -1776,7 +1776,11 @@ VALUES
     ('fire_severity', 'moderate', 'متوسط /moderate '),
     ('fire_severity', 'light', 'خفيف / light'),
     
-    
+    ('obstacle_type', '1', 'رفض المالك الحص'),
+    ('obstacle_type', '2', 'صعوبة الوصول / ركام'),
+    ('obstacle_type', '3', 'وجود أجسام متفجرة'),
+    ('obstacle_type', '3', 'أخرى'),
+
     
     ('resident_in_building', 'owner2', 'owner / المالك'),
     ('resident_in_building', 'rentee', 'rentee / مستأجر'),

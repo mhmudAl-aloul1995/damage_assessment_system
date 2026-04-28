@@ -340,8 +340,8 @@ class damageAssessmentController extends Controller
                 $arcgis->getAttachments($model->objectid, $layerId, $token)
             );
         }
-        $filtersMap = Filter::pluck('label', 'name');
-
+        $filtersMap = Filter::whereNotIn('name', ['1', '2', '3', '4'])
+            ->pluck('label', 'name');
         return DataTables::of($assessments)
             ->addColumn('rowClass', function ($row) use ($record, $allEdits) {
 
@@ -358,11 +358,11 @@ class damageAssessmentController extends Controller
                 $newCriteria = ($sizeOfUnit * $criteria) / 100;
 
 
-                
+
                 if ($value == null || $value == '') {
 
                     return '';
-                } 
+                }
 
 
 
