@@ -352,6 +352,7 @@ class Building extends Model
         'governorate',
         'municipalitie',
         'neighborhood',
+        'obstacle_type'
     ];
 
     /**

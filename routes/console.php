@@ -8,7 +8,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('queue:work database --stop-when-empty --tries=1 --timeout=3600 --memory=1024')
+Schedule::command('queue:work database --stop-when-empty --tries=1 --timeout=3600 --memory=2048')
     ->everyMinute()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/queue-schedule.log'))
