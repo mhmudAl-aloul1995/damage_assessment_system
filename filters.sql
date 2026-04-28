@@ -1797,9 +1797,9 @@ VALUES
     ('external_finishing_of_the_unit', 'other_finishing', 'other / أخرى'),
     
     
-    ('internal_finishing', 'super_lux', 'super lux / فاخر'),
-    ('internal_finishing', 'normal', 'normal / متوسط'),
-    ('internal_finishing', 'sub_normal', 'sub_normal / تحت المتوسط'),
+    ('internal_finishing_of_the_unit', 'super_lux', 'super lux / فاخر'),
+    ('internal_finishing_of_the_unit', 'normal', 'normal / متوسط'),
+    ('internal_finishing_of_the_unit', 'sub_normal', 'sub_normal / تحت المتوسط'),
     
     
     ('furniture_ownership', 'owner', 'owner / المالك'),
