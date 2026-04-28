@@ -2083,8 +2083,8 @@
             $.get("{{ route('housing.summary') }}", { globalid: globalid }, function (res) {
                 $('#sidebar_unit_area').text(res.unit_area || '--');
                 $('#sidebar_unit_owner').text(res.unit_owner || '--');
-                $('#sidebar_kitchen').text(res.reh_kitchen || '--');
-                $('#sidebar_bathroom').text(res.reh_bathroom || '--');
+                $('#sidebar_kitchen').text(res.kitchen || '--');
+                $('#sidebar_bathroom').text(res.bathroom || '--');
                 $('#sidebar_living').text(res.living || '--');
                 $('#sidebar_rooms').text(res.rooms || '--');
                 $('#sidebar_occupied').text(res.occupied || '--');

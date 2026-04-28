@@ -4568,137 +4568,149 @@ COALESCE(
     }
 
 
-  
-    public function housingSummary(Request $request)
-{
-    $unit = HousingUnit::where('globalid', $request->globalid)->first();
 
-    if (!$unit) {
+    public function housingSummary(Request $request)
+    {
+        $unit = HousingUnit::where('globalid', $request->globalid)->first();
+
+        if (!$unit) {
+            return response()->json([
+                'unit_area' => '--',
+                'unit_owner' => '--',
+                'kitchen' => '--',
+                'bathroom' => '--',
+                'living' => '--',
+                'rooms' => '--',
+                'occupied' => '--',
+                'external_finishing' => '""',
+                'internal_finishing' => '""',
+            ]);
+        }
+
+        $fields = [
+            'damaged_area_m2',
+            'unit_owner',
+            'reh_kitchen',
+            'reh_bathroom',
+            'is_the_housing_unit_or_living_habitable',
+            'number_of_rooms',
+            'occupied',
+            'external_finishing_of_the_unit',
+            'internal_finishing_of_the_unit',
+        ];
+
+        $latestIds = DB::table('edit_assessments')
+            ->selectRaw('MAX(id) as id')
+            ->where('type', 'housing_table')
+            ->where('global_id', $unit->globalid)
+            ->whereIn('field_name', $fields)
+            ->groupBy('field_name');
+
+        $edited = DB::table('edit_assessments as ea')
+            ->joinSub($latestIds, 'latest', function ($join) {
+                $join->on('ea.id', '=', 'latest.id');
+            })
+            ->pluck('ea.field_value', 'ea.field_name');
+
+        $values = [
+            'unit_area' => $edited['damaged_area_m2'] ?? $unit->damaged_area_m2 ?? '--',
+
+            'unit_owner' => $edited['unit_owner'] ?? $unit->unit_owner ?? '--',
+
+            'kitchen' => $edited['reh_kitchen'] ?? $unit->reh_kitchen ?? '--',
+
+            'bathroom' => $edited['reh_bathroom'] ?? $unit->reh_bathroom ?? '--',
+
+            'living' => $edited['is_the_housing_unit_or_living_habitable']
+                ?? $unit->is_the_housing_unit_or_living_habitable
+                ?? '--',
+
+            'rooms' => $edited['number_of_rooms']
+                ?? $unit->number_of_rooms
+                ?? '--',
+
+            'occupied' => $edited['occupied']
+                ?? $unit->occupied
+                ?? '--',
+
+            'external_finishing' => $edited['external_finishing_of_the_unit']
+                ?? $unit->external_finishing_of_the_unit
+                ?? '',
+
+            'internal_finishing' => $edited['internal_finishing_of_the_unit']
+                ?? $unit->internal_finishing_of_the_unit
+                ?? '',
+        ];
+        $normalizeYesNo = function ($value) {
+            if (blank($value) || $value === '-') {
+                return null;
+            }
+
+            $value = strtolower(trim((string) $value));
+
+            return match ($value) {
+                'yes', 'yes3', '1', 'true' => 'yes',
+                'no', 'no3', '0', 'false' => 'no',
+                default => $value,
+            };
+        };
+        $filters = Filter::whereIn('list_name', [
+            'reh_kitchen',
+            'reh_bathroom',
+            'is_the_housing_unit_or_living_habitable',
+            'occupied',
+            'external_finishing_of_the_unit',
+            'internal_finishing_of_the_unit',
+        ])->get()->groupBy('list_name');
+
         return response()->json([
-            'unit_area' => '--',
-            'unit_owner' => '--',
-            'kitchen' => '--',
-            'bathroom' => '--',
-            'living' => '--',
-            'rooms' => '--',
-            'occupied' => '--',
-            'external_finishing' => '""',
-            'internal_finishing' => '""',
+            'unit_area' => $values['unit_area'],
+
+            'unit_owner' => $values['unit_owner'],
+
+            'kitchen' => getFilterLabel(
+                $filters,
+                'reh_kitchen',
+                $normalizeYesNo($values['kitchen'])
+            ),
+
+            'bathroom' => getFilterLabel(
+                $filters,
+                'reh_bathroom',
+                $normalizeYesNo($values['bathroom'])
+            ),
+
+            'living' => getFilterLabel(
+                $filters,
+                'is_the_housing_unit_or_living_habitable',
+                $values['living']
+            ),
+
+            'rooms' => $values['rooms'],
+
+            'occupied' => getFilterLabel(
+                $filters,
+                'occupied',
+                $values['occupied']
+            ),
+
+            'external_finishing' => blank($values['external_finishing'])
+                ? '""'
+                : getFilterLabel(
+                    $filters,
+                    'external_finishing_of_the_unit',
+                    $values['external_finishing']
+                ),
+
+            'internal_finishing' => blank($values['internal_finishing'])
+                ? '""'
+                : getFilterLabel(
+                    $filters,
+                    'internal_finishing_of_the_unit',
+                    $values['internal_finishing']
+                ),
         ]);
     }
-
-    $fields = [
-        'damaged_area_m2',
-        'unit_owner',
-        'reh_kitchen',
-        'reh_bathroom',
-        'is_the_housing_unit_or_living_habitable',
-        'number_of_rooms',
-        'occupied',
-        'external_finishing_of_the_unit',
-        'internal_finishing_of_the_unit',
-    ];
-
-    $latestIds = DB::table('edit_assessments')
-        ->selectRaw('MAX(id) as id')
-        ->where('type', 'housing_table')
-        ->where('global_id', $unit->globalid)
-        ->whereIn('field_name', $fields)
-        ->groupBy('field_name');
-
-    $edited = DB::table('edit_assessments as ea')
-        ->joinSub($latestIds, 'latest', function ($join) {
-            $join->on('ea.id', '=', 'latest.id');
-        })
-        ->pluck('ea.field_value', 'ea.field_name');
-
-    $values = [
-        'unit_area' => $edited['damaged_area_m2'] ?? $unit->damaged_area_m2 ?? '--',
-
-        'unit_owner' => $edited['unit_owner'] ?? $unit->unit_owner ?? '--',
-
-        'kitchen' => $edited['reh_kitchen'] ?? $unit->reh_kitchen ?? '--',
-
-        'bathroom' => $edited['reh_bathroom'] ?? $unit->reh_bathroom ?? '--',
-
-        'living' => $edited['is_the_housing_unit_or_living_habitable']
-            ?? $unit->is_the_housing_unit_or_living_habitable
-            ?? '--',
-
-        'rooms' => $edited['number_of_rooms']
-            ?? $unit->number_of_rooms
-            ?? '--',
-
-        'occupied' => $edited['occupied']
-            ?? $unit->occupied
-            ?? '--',
-
-        'external_finishing' => $edited['external_finishing_of_the_unit']
-            ?? $unit->external_finishing_of_the_unit
-            ?? '',
-
-        'internal_finishing' => $edited['internal_finishing_of_the_unit']
-            ?? $unit->internal_finishing_of_the_unit
-            ?? '',
-    ];
-
-    $filters = Filter::whereIn('list_name', [
-        'reh_kitchen',
-        'reh_bathroom',
-        'is_the_housing_unit_or_living_habitable',
-        'occupied',
-        'external_finishing_of_the_unit',
-        'internal_finishing_of_the_unit',
-    ])->get()->groupBy('list_name');
-
-    return response()->json([
-        'unit_area' => $values['unit_area'],
-
-        'unit_owner' => $values['unit_owner'],
-
-        'kitchen' => getFilterLabel(
-            $filters,
-            'reh_kitchen',
-            $values['kitchen']
-        ),
-
-        'bathroom' => getFilterLabel(
-            $filters,
-            'reh_bathroom',
-            $values['bathroom']
-        ),
-
-        'living' => getFilterLabel(
-            $filters,
-            'is_the_housing_unit_or_living_habitable',
-            $values['living']
-        ),
-
-        'rooms' => $values['rooms'],
-
-        'occupied' => getFilterLabel(
-            $filters,
-            'occupied',
-            $values['occupied']
-        ),
-
-        'external_finishing' => blank($values['external_finishing'])
-            ? '""'
-            : getFilterLabel(
-                $filters,
-                'external_finishing_of_the_unit',
-                $values['external_finishing']
-            ),
-
-        'internal_finishing' => blank($values['internal_finishing'])
-            ? '""'
-            : getFilterLabel(
-                $filters,
-                'internal_finishing_of_the_unit',
-                $values['internal_finishing']
-            ),
-    ]);
-}
 
     public function importFinalApprove(Request $request)
     {
