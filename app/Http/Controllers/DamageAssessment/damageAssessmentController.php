@@ -623,6 +623,10 @@ class damageAssessmentController extends Controller
 
     private function updateValue($value)
     {
+
+        if ($value == 1 || $value == 2 || $value == 3 || $value == 4) {
+            return $value;
+        }
         return match ($value) {
             'yes', 'yes1', 'yes2', 'yes3', 'yes4', 'yes5', 'Yes' => __('ui.options.yes'),
             'no', 'no1', 'no2', 'no3', 'no4', 'no5', 'No' => __('ui.options.no'),
