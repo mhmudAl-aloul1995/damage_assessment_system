@@ -175,6 +175,10 @@
 							<button id="btn_assign_to_engineer" class="btn btn-info btn-sm">
 								{{ __('ui.audit.assign_to_engineer') }} <i class="ki-duotone ki-plus"></i>
 							</button>
+							<button id="btn_import_final_approve" class="btn btn-dark btn-sm">
+								استيراد ObjectIDs Final Approve
+								<i class="ki-duotone ki-file-up"></i>
+							</button>
 						@endunless
 					</div>
 				</div>
@@ -293,6 +297,49 @@
 			</div>
 		</div>
 	</div>
+	<div class="modal fade" id="importFinalApproveModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered mw-650px">
+			<div class="modal-content">
+				<form id="importFinalApproveForm" enctype="multipart/form-data">
+					@csrf
+
+					<div class="modal-header">
+						<h2 class="fw-bold">استيراد ObjectIDs لاعتماد نهائي</h2>
+						<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+							<i class="ki-duotone ki-cross fs-1"></i>
+						</div>
+					</div>
+
+					<div class="modal-body">
+						<div class="alert alert-info">
+							ملف Excel يجب أن يحتوي عمود باسم:
+							<strong>objectid</strong>
+							أو
+							<strong>objectid</strong>
+						</div>
+
+						<div class="mb-5">
+							<label class="form-label required">ملف Excel</label>
+							<input type="file" name="file" id="final_approve_file" class="form-control form-control-solid"
+								accept=".xlsx,.xls,.csv" required>
+						</div>
+					</div>
+
+					<div class="modal-footer">
+						<button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+
+						<button type="submit" class="btn btn-warning" id="btn_submit_import_final_approve">
+							<span class="indicator-label">اعتماد نهائي من Excel</span>
+							<span class="indicator-progress">
+								الرجاء الانتظار...
+								<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+							</span>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 @endsection
 
 
@@ -306,6 +353,67 @@
 
 	<script>
 		$(document).ready(function () {
+
+			$('#btn_import_final_approve').on('click', function () {
+				$('#importFinalApproveForm')[0].reset();
+				$('#importFinalApproveModal').modal('show');
+			});
+
+			$('#importFinalApproveForm').on('submit', function (e) {
+				e.preventDefault();
+
+				let formData = new FormData(this);
+				let btn = $('#btn_submit_import_final_approve');
+
+				$.ajax({
+					url: "{{ route('audit.building.finalApprove.import') }}",
+					type: "POST",
+					data: formData,
+					processData: false,
+					contentType: false,
+					beforeSend: function () {
+						btn.attr('data-kt-indicator', 'on');
+						btn.prop('disabled', true);
+					},
+					success: function (response) {
+						$('#importFinalApproveModal').modal('hide');
+
+						Swal.fire({
+							icon: 'success',
+							title: 'تمت العملية',
+							html: response.message,
+							confirmButtonText: 'موافق',
+							buttonsStyling: false,
+							customClass: {
+								confirmButton: "btn btn-primary"
+							}
+						}).then(function () {
+							$('#kt_datatable_audits').DataTable().ajax.reload(null, false);
+						});
+					},
+					error: function (xhr) {
+						let message = 'فشل استيراد الملف';
+
+						if (xhr.responseJSON && xhr.responseJSON.message) {
+							message = xhr.responseJSON.message;
+						}
+
+						Swal.fire({
+							icon: 'error',
+							text: message,
+							confirmButtonText: 'موافق',
+							buttonsStyling: false,
+							customClass: {
+								confirmButton: "btn btn-primary"
+							}
+						});
+					},
+					complete: function () {
+						btn.removeAttr('data-kt-indicator');
+						btn.prop('disabled', false);
+					}
+				});
+			});
 			let fromPicker = flatpickr("#filter_from_date", {
 				dateFormat: "Y-m-d",
 				allowInput: true,
@@ -355,10 +463,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																																			<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																																				<input class="form-check-input" type="checkbox"
-																																					data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																																			</div>`
+																																						<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																																							<input class="form-check-input" type="checkbox"
+																																								data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																																						</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'housing_status_progress', name: 'housing_status_progress', searchable: false, orderable: false },
@@ -557,10 +665,10 @@
 
 				$('#notesHistoryModalTitle').text(@json(__('ui.audit.status_history')) + ' - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-																				<tr>
-																					<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
-																				</tr>
-																			`);
+																							<tr>
+																								<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
+																							</tr>
+																						`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -574,40 +682,40 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-																								<tr>
-																									<td>${item.status_name}</td>
-																									<td>${item.user_name}</td>
-																									<td>${item.role_name}</td>
-																									<td>${item.notes}</td>
-																									<td>${item.created_at}</td>
-																									<td>
-																										${item.can_delete ? `
-																											<button type="button"
-																												class="btn btn-sm btn-light-danger btn-delete-history"
-																												data-id="${item.id}">
-																												${@json(__('ui.audit.delete_record'))}
-																											</button>
-																										` : '-'}
-																									</td>
-																								</tr>
-																							`;
+																											<tr>
+																												<td>${item.status_name}</td>
+																												<td>${item.user_name}</td>
+																												<td>${item.role_name}</td>
+																												<td>${item.notes}</td>
+																												<td>${item.created_at}</td>
+																												<td>
+																													${item.can_delete ? `
+																														<button type="button"
+																															class="btn btn-sm btn-light-danger btn-delete-history"
+																															data-id="${item.id}">
+																															${@json(__('ui.audit.delete_record'))}
+																														</button>
+																													` : '-'}
+																												</td>
+																											</tr>
+																										`;
 							});
 						} else {
 							rows = `
-																							<tr>
-																								<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																							</tr>
-																						`;
+																										<tr>
+																											<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																										</tr>
+																									`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-																						<tr>
-																							<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
-																						</tr>
-																					`);
+																									<tr>
+																										<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
+																									</tr>
+																								`);
 					}
 				});
 			});
@@ -635,10 +743,10 @@
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
-																						<tr>
-																							<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																						</tr>
-																					`);
+																									<tr>
+																										<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																									</tr>
+																								`);
 							}
 						} else {
 							toastr.error(response.message || @json(__('ui.audit.delete_failed')));

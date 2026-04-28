@@ -4629,4 +4629,119 @@ COALESCE(
             'rooms' => $values['rooms'],
         ]);
     }
+
+    public function importFinalApprove(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv'],
+        ]);
+
+        $rows = Excel::toArray([], $request->file('file'))[0] ?? [];
+
+        if (count($rows) < 2) {
+            return response()->json([
+                'message' => 'ملف Excel فارغ أو لا يحتوي بيانات.'
+            ], 422);
+        }
+
+        $headers = array_map(function ($header) {
+            return strtolower(trim((string) $header));
+        }, $rows[0]);
+
+        $objectIdIndex = array_search('objectid', $headers);
+
+        if ($objectIdIndex === false) {
+            $objectIdIndex = array_search('objectsid', $headers);
+        }
+
+        if ($objectIdIndex === false) {
+            return response()->json([
+                'message' => 'يجب أن يحتوي ملف Excel على عمود باسم objectid أو objectsid.'
+            ], 422);
+        }
+
+        $objectIds = [];
+
+        foreach (array_slice($rows, 1) as $row) {
+            $value = $row[$objectIdIndex] ?? null;
+
+            if ($value !== null && trim((string) $value) !== '') {
+                $objectIds[] = (int) trim((string) $value);
+            }
+        }
+
+        $objectIds = array_values(array_unique(array_filter($objectIds)));
+
+        if (empty($objectIds)) {
+            return response()->json([
+                'message' => 'لم يتم العثور على ObjectIDs داخل الملف.'
+            ], 422);
+        }
+
+        $finalStatus = AssessmentStatus::query()
+            ->whereRaw('LOWER(TRIM(name)) = ?', ['final_approval'])
+            ->first();
+
+        if (!$finalStatus) {
+            return response()->json([
+                'message' => 'حالة final_approval غير موجودة في جدول assessment_statuses.'
+            ], 422);
+        }
+
+        $buildings = Building::query()
+            ->whereIn('objectid', $objectIds)
+            ->get(['objectid', 'globalid']);
+
+        $foundIds = $buildings->pluck('objectid')->map(fn($id) => (int) $id)->toArray();
+        $notFoundIds = array_values(array_diff($objectIds, $foundIds));
+
+        $approvedCount = 0;
+        $skippedCount = 0;
+
+        DB::transaction(function () use ($buildings, $finalStatus, &$approvedCount, &$skippedCount) {
+            foreach ($buildings as $building) {
+                $alreadyApproved = BuildingStatus::query()
+                    ->where('building_id', $building->objectid)
+                    ->where('status_id', $finalStatus->id)
+                    ->exists();
+
+                if ($alreadyApproved) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                BuildingStatus::updateOrCreate(
+                    [
+                        'building_id' => $building->objectid,
+                    ],
+                    [
+                        'status_id' => $finalStatus->id,
+                        'user_id' => auth()->id(),
+                        'notes' => 'Final approve imported from Excel',
+                        'type' => 'final_approval',
+                    ]
+                );
+
+                BuildingStatusHistory::create([
+                    'building_id' => $building->objectid,
+                    'status_id' => $finalStatus->id,
+                    'user_id' => auth()->id(),
+                    'notes' => 'Final approve imported from Excel',
+                    'type' => 'final_approval',
+                ]);
+
+                $approvedCount++;
+            }
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => "
+            تم اعتماد <strong>{$approvedCount}</strong> مبنى بنجاح.<br>
+            تم تخطي <strong>{$skippedCount}</strong> لأنه معتمد مسبقًا.<br>
+            غير موجود في النظام: <strong>" . count($notFoundIds) . "</strong>
+        ",
+            'not_found' => $notFoundIds,
+        ]);
+    }
 }

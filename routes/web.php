@@ -55,8 +55,8 @@ Route::middleware('auth')->group(function () {
 
 
 
-Route::get('/system-logs', [SystemLogController::class, 'index'])->name('system.logs');
-Route::get('/system-logs/data', [SystemLogController::class, 'data'])->name('system.logs.data');
+    Route::get('/system-logs', [SystemLogController::class, 'index'])->name('system.logs');
+    Route::get('/system-logs/data', [SystemLogController::class, 'data'])->name('system.logs.data');
 
     Route::get('/gitPush', [engineerController::class, 'gitPush']);
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -338,7 +338,8 @@ Route::get('/system-logs/data', [SystemLogController::class, 'data'])->name('sys
     Route::get('/auditBuilding', [auditController::class, 'auditBuilding'])->name('audit.auditBuilding');
     Route::get('/engineer-table', [AuditController::class, 'engineerTable']);
     Route::get('/lawyer-table', [AuditController::class, 'lawyerTable']);
-
+    Route::post('/audit/buildings/final-approve/import', [auditController::class, 'importFinalApprove'])
+        ->name('audit.building.finalApprove.import');
     // attendence
 
     // assessmentAudit
