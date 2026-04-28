@@ -976,7 +976,8 @@
             weather: ['0. Introduction', 2],
             security_situation: ['0. Introduction', 3],
             security_info: ['0. Introduction', 4],
-            building_name: ['0. Introduction', 5],
+            obstacle_type: ['0. Obstacle Type', 5],
+            building_name: ['0. Introduction', 6],
 
             building_damage_status: ['1. Building Information', 100],
             building_type: ['1. Building Information', 101],
