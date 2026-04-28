@@ -1786,15 +1786,15 @@ VALUES
     
     
     
-    ('external_finishing', 'west_bank_stone', 'west bank stone / حجر قدسي'),
-    ('external_finishing', 'free_lime_plastering', 'free lime plastering / قصارة باطون'),
-    ('external_finishing', 'plastering', 'plastering / قصارة ناعمة'),
-    ('external_finishing', 'tyroleen', 'tyroleen / قصارة مع رشقة'),
-    ('external_finishing', 'painted_tyrloeen', 'painted tyroleen / قصارة رشقة مع دهان'),
-    ('external_finishing', 'painted_plastering', 'painted plastering / قصارة ناعمة مع دهان'),
-    ('external_finishing', 'unfinished2', 'unfinished / بدون تشطيب'),
-    ('external_finishing', 'italian_plastering', 'شلخته ايطالية / italian plastering'),
-    ('external_finishing', 'other_finishing', 'other / أخرى'),
+    ('external_finishing_of_the_unit', 'west_bank_stone', 'west bank stone / حجر قدسي'),
+    ('external_finishing_of_the_unit', 'free_lime_plastering', 'free lime plastering / قصارة باطون'),
+    ('external_finishing_of_the_unit', 'plastering', 'plastering / قصارة ناعمة'),
+    ('external_finishing_of_the_unit', 'tyroleen', 'tyroleen / قصارة مع رشقة'),
+    ('external_finishing_of_the_unit', 'painted_tyrloeen', 'painted tyroleen / قصارة رشقة مع دهان'),
+    ('external_finishing_of_the_unit', 'painted_plastering', 'painted plastering / قصارة ناعمة مع دهان'),
+    ('external_finishing_of_the_unit', 'unfinished2', 'unfinished / بدون تشطيب'),
+    ('external_finishing_of_the_unit', 'italian_plastering', 'شلخته ايطالية / italian plastering'),
+    ('external_finishing_of_the_unit', 'other_finishing', 'other / أخرى'),
     
     
     ('internal_finishing', 'super_lux', 'super lux / فاخر'),
