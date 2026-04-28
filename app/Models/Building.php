@@ -156,6 +156,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $editdate
  * @property string|null $editor
  * @property string|null $security_info
+ * @property string|null $obstacle_type
  * @property string|null $is_draft
  * @property string|null $service_ownership
  * @property string|null $service_ownership_name
@@ -234,6 +235,7 @@ class Building extends Model
         'note09',
         'weather',
         'security_situation',
+        'obstacle_type',
         'building_damage_status',
         'building_type',
         'building_type_other',
@@ -352,7 +354,7 @@ class Building extends Model
         'governorate',
         'municipalitie',
         'neighborhood',
-        'obstacle_type'
+        
     ];
 
     /**

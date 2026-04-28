@@ -32,6 +32,7 @@ VALUES
     ('weather', 'weather', 'حال الطقس', NULL, '0'),
     ('security_situation', 'security situation', 'هل يوجد عائق يمنع عملية الحصر', NULL, '0'),
     ('security_info', 'security information', 'ما هو العائق', NULL, '0'),
+    ('obstacle_type', 'obstacle type', 'نوع العائق', NULL, '0'),
     ('g1', 'current damage status', '', NULL, '0'),
     ('building_damage_status', 'what is the current damage status of the building?', 'ما هي حالة الضرر الحالية للمبنى؟', NULL, '0'),
     ('building_information', 'building information', 'معلومات المبنى', NULL, '0'),
