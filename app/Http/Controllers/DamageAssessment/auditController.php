@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Yajra\Datatables\Datatables;
-
+use Maatwebsite\Excel\Facades\Excel;
 class auditController extends Controller
 {
     public function __construct()
