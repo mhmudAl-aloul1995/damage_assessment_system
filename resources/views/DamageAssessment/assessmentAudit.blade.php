@@ -2087,9 +2087,9 @@
                 $('#sidebar_bathroom').text(res.bathroom || '--');
                 $('#sidebar_living').text(res.living || '--');
                 $('#sidebar_rooms').text(res.rooms || '--');
-                $('#sidebar_occupied').text(data.occupied ?? '--');
-                $('#sidebar_external_finishing').text(data.external_finishing_of_the_unit ?? '--');
-                $('#sidebar_internal_finishing').text(data.internal_finishing_of_the_unit ?? '--');
+                $('#sidebar_occupied').text(data.occupied || '--');
+                $('#sidebar_external_finishing').text(data.external_finishing_of_the_unit || '--');
+                $('#sidebar_internal_finishing').text(data.internal_finishing_of_the_unit || '--');
             }).fail(function () {
                 $('#sidebar_unit_area,#sidebar_unit_owner,#sidebar_kitchen,#sidebar_bathroom,#sidebar_living,#sidebar_rooms').text('--');
             });
