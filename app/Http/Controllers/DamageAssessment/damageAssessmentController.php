@@ -297,6 +297,7 @@ class damageAssessmentController extends Controller
         $record = $model?->toArray() ?? [];
 
         $fillable = (new $modelClass)->getFillable();
+
         $assessments = Assessment::query()->whereIn('name', $fillable);
 
         $allEdits = collect();
