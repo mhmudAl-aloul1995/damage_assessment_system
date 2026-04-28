@@ -4567,6 +4567,7 @@ COALESCE(
         ];
     }
 
+
     public function housingSummary(Request $request)
     {
         $unit = HousingUnit::where('globalid', $request->globalid)->first();
@@ -4579,15 +4580,22 @@ COALESCE(
                 'bathroom' => '--',
                 'living' => '--',
                 'rooms' => '--',
+                'occupied' => '--',
+                'external_finishing' => '--',
+                'internal_finishing' => '--',
             ]);
         }
 
         $fields = [
             'damaged_area_m2',
+            'unit_owner',
             'reh_kitchen',
             'reh_bathroom',
             'is_the_housing_unit_or_living_habitable',
             'number_of_rooms',
+            'occupied',
+            'external_finishing_of_the_unit',
+            'internal_finishing_of_the_unit',
         ];
 
         $latestIds = DB::table('edit_assessments')
@@ -4612,12 +4620,23 @@ COALESCE(
                 ?? $unit->is_the_housing_unit_or_living_habitable
                 ?? '--',
             'rooms' => $edited['number_of_rooms'] ?? $unit->number_of_rooms ?? '--',
+
+            'occupied' => $edited['occupied'] ?? $unit->occupied ?? '--',
+            'external_finishing' => $edited['external_finishing_of_the_unit']
+                ?? $unit->external_finishing_of_the_unit
+                ?? '--',
+            'internal_finishing' => $edited['internal_finishing_of_the_unit']
+                ?? $unit->internal_finishing_of_the_unit
+                ?? '--',
         ];
 
         $filters = Filter::whereIn('list_name', [
             'reh_kitchen',
             'reh_bathroom',
             'is_the_housing_unit_or_living_habitable',
+            'occupied',
+            'external_finishing_of_the_unit',
+            'internal_finishing_of_the_unit',
         ])->get()->groupBy('list_name');
 
         return response()->json([
@@ -4627,6 +4646,10 @@ COALESCE(
             'bathroom' => getFilterLabel($filters, 'reh_bathroom', $values['bathroom']),
             'living' => getFilterLabel($filters, 'is_the_housing_unit_or_living_habitable', $values['living']),
             'rooms' => $values['rooms'],
+
+            'occupied' => getFilterLabel($filters, 'occupied', $values['occupied']),
+            'external_finishing' => getFilterLabel($filters, 'external_finishing_of_the_unit', $values['external_finishing']),
+            'internal_finishing' => getFilterLabel($filters, 'internal_finishing_of_the_unit', $values['internal_finishing']),
         ]);
     }
 
