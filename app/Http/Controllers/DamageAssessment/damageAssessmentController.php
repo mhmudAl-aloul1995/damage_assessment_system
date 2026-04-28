@@ -340,8 +340,7 @@ class damageAssessmentController extends Controller
                 $arcgis->getAttachments($model->objectid, $layerId, $token)
             );
         }
-        $filtersMap = Filter::whereNotIn('name', ['1', '2', '3', '4'])
-            ->pluck('label', 'name');
+        $filtersMap = Filter::pluck('label', 'name');
         return DataTables::of($assessments)
             ->addColumn('rowClass', function ($row) use ($record, $allEdits) {
 
