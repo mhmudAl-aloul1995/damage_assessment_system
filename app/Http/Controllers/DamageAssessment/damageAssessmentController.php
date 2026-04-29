@@ -29,7 +29,7 @@ class damageAssessmentController extends Controller
         $token = $arcgis->getToken();
 
         $startDate = '2026-01-01';
-        $endDate = Carbon::today()->toDateString();
+        $endDate = '2026-03-31'; // Carbon::today()->toDateString();
 
         $data = [
             'buildings' => Building::whereBetween('creationdate', [$startDate, $endDate])
@@ -62,112 +62,111 @@ class damageAssessmentController extends Controller
             'bodies' => $data['buildings']->bodies,
             'debris' => $data['buildings']->debris,
         ];
+$publicBuildingStats = [
+    'total_surveys' => PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->count(),
 
-        $publicBuildingStats = [
-            'total_surveys' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->count(),
+    'damaged_buildings' => PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->whereNotNull('building_damage_status')
+        ->where('building_damage_status', '!=', '')
+        ->count(),
 
-            'damaged_buildings' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('building_damage_status')
-                ->where('building_damage_status', '!=', '')
-                ->count(),
+    'total_units' => (int) PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->withCount('units')
+        ->get()
+        ->sum('units_count'),
 
-            'total_units' => (int) PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->withCount('units')
-                ->get()
-                ->sum('units_count'),
+    'municipalities' => PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->whereNotNull('municipalitie')
+        ->where('municipalitie', '!=', '')
+        ->distinct()
+        ->count('municipalitie'),
 
-            'municipalities' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('municipalitie')
-                ->where('municipalitie', '!=', '')
-                ->distinct()
-                ->count('municipalitie'),
+    'neighborhoods' => PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->whereNotNull('neighborhood')
+        ->where('neighborhood', '!=', '')
+        ->distinct()
+        ->count('neighborhood'),
 
-            'neighborhoods' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('neighborhood')
-                ->where('neighborhood', '!=', '')
-                ->distinct()
-                ->count('neighborhood'),
+    'assigned_staff' => PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->whereNotNull('assigned_to')
+        ->where('assigned_to', '!=', '')
+        ->distinct()
+        ->count('assigned_to'),
 
-            'assigned_staff' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('assigned_to')
-                ->where('assigned_to', '!=', '')
-                ->distinct()
-                ->count('assigned_to'),
+    'occupied_buildings' => PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->where('is_building_occupied', 'yes')
+        ->count(),
 
-            'occupied_buildings' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('is_building_occupied', 'yes')
-                ->count(),
+    'bodies_present' => PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->where('is_bodies', 'yes')
+        ->count(),
 
-            'bodies_present' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('is_bodies', 'yes')
-                ->count(),
+    'uxo_present' => PublicBuildingSurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->where('is_uxo', 'yes')
+        ->count(),
+];
 
-            'uxo_present' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('is_uxo', 'yes')
-                ->count(),
-        ];
+$roadFacilityStats = [
+    'total_surveys' => RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->count(),
 
-        $roadFacilityStats = [
-            'total_surveys' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->count(),
+    'damaged_roads' => RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->whereNotNull('road_damage_level')
+        ->where('road_damage_level', '!=', '')
+        ->count(),
 
-            'damaged_roads' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('road_damage_level')
-                ->where('road_damage_level', '!=', '')
-                ->count(),
+    'total_items' => (int) RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->withCount('items')
+        ->get()
+        ->sum('items_count'),
 
-            'total_items' => (int) RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->withCount('items')
-                ->get()
-                ->sum('items_count'),
+    'municipalities' => RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->whereNotNull('municipalitie')
+        ->where('municipalitie', '!=', '')
+        ->distinct()
+        ->count('municipalitie'),
 
-            'municipalities' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('municipalitie')
-                ->where('municipalitie', '!=', '')
-                ->distinct()
-                ->count('municipalitie'),
+    'neighborhoods' => RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->whereNotNull('neighborhood')
+        ->where('neighborhood', '!=', '')
+        ->distinct()
+        ->count('neighborhood'),
 
-            'neighborhoods' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('neighborhood')
-                ->where('neighborhood', '!=', '')
-                ->distinct()
-                ->count('neighborhood'),
+    'potholes_locations' => RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->where('potholes_exist', 'yes')
+        ->count(),
 
-            'potholes_locations' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('potholes_exist', 'yes')
-                ->count(),
+    'obstacle_locations' => RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->where('obstacle_exist', 'yes')
+        ->count(),
 
-            'obstacle_locations' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('obstacle_exist', 'yes')
-                ->count(),
+    'buried_bodies_locations' => RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->where('buried_bodies', 'yes')
+        ->count(),
 
-            'buried_bodies_locations' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('buried_bodies', 'yes')
-                ->count(),
-
-            'uxo_locations' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('uxo_present', 'yes')
-                ->count(),
-        ];
+    'uxo_locations' => RoadFacilitySurvey::query()
+        ->whereDate('created_at', '<=', '2026-03-31')
+        ->where('uxo_present', 'yes')
+        ->count(),
+];
         $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
         $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
 
