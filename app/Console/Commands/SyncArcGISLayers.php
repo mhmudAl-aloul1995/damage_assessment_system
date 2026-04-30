@@ -43,6 +43,23 @@ class SyncArcGISLayers extends Command
                 'unique' => 'objectid',
                 'referer' => config('services.arcgis.road_facility_survey_referer', config('app.url')),
             ],
+            'public_building_survey_units' => [
+                'table' => 'public_building_survey_units',
+                'url' => config('services.arcgis.public_building_survey_units_layer_url'),
+                'unique' => 'objectid',
+                'returnGeometry' => false,
+                'where' => '1=1',
+                'referer' => config('services.arcgis.public_building_survey_referer'),
+            ],
+
+            'road_facility_survey_items' => [
+                'table' => 'road_facility_survey_items',
+                'url' => config('services.arcgis.road_facility_survey_items_layer_url'),
+                'unique' => 'objectid',
+                'returnGeometry' => false,
+                'where' => '1=1',
+                'referer' => config('services.arcgis.road_facility_survey_referer', config('app.url')),
+            ],
         ];
 
         $tableOnly = $this->argument('table');
