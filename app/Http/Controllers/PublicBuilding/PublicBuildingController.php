@@ -65,13 +65,13 @@ class PublicBuildingController extends Controller
     {
         return DataTables::eloquent($this->filteredQuery($request))
             ->addColumn('actions', function (PublicBuildingSurvey $survey): string {
-                return '<a href="'.route('public-buildings.show', $survey).'" class="btn btn-light btn-sm">View</a>';
+                return '<a href="' . route('public-buildings.show', $survey) . '" class="btn btn-light btn-sm">View</a>';
             })
             ->editColumn('date_of_damage', function (PublicBuildingSurvey $survey): string {
                 return $survey->date_of_damage?->format('Y-m-d') ?? '-';
             })
             ->editColumn('building_damage_status', function (PublicBuildingSurvey $survey): string {
-                return '<span class="badge badge-light-primary">'.e($survey->building_damage_status ?? '-').'</span>';
+                return '<span class="badge badge-light-primary">' . e($survey->building_damage_status ?? '-') . '</span>';
             })
             ->rawColumns(['actions', 'building_damage_status'])
             ->toJson();
@@ -84,57 +84,85 @@ class PublicBuildingController extends Controller
         abort_unless(in_array($format, ['xlsx', 'csv', 'pdf'], true), 404);
 
         $surveys = $this->filteredQuery($request)->get();
-        $fileBaseName = 'public_buildings_'.now()->format('Ymd_His');
+        $fileBaseName = 'public_buildings_' . now()->format('Ymd_His');
 
         if ($format === 'pdf') {
             return Pdf::loadView('PublicBuilding.export_pdf', [
                 'surveys' => $surveys,
                 'filters' => $request->validated(),
-            ])->setPaper('a4', 'landscape')->download($fileBaseName.'.pdf');
+            ])->setPaper('a4', 'landscape')->download($fileBaseName . '.pdf');
         }
 
         return Excel::download(
             new PublicBuildingSurveysExport($surveys),
-            $fileBaseName.'.'.$format,
+            $fileBaseName . '.' . $format,
             $format === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX,
         );
     }
 
     public function show(PublicBuildingSurvey $publicBuilding): View
     {
-        $publicBuilding->load('units');
-        $unitLayoutSections = XlsFormLayout::sections($this->xlsFormPath(), 'Unit_Information');
+        $publicBuilding->load(['units' => fn($q) => $q->orderBy('objectid')]);
 
         return view('PublicBuilding.show', [
             'survey' => $publicBuilding,
             'sections' => $this->buildSurveySections($publicBuilding),
             'unitSections' => $publicBuilding->units
-                ->sortBy('repeat_index')
                 ->values()
-                ->flatMap(function ($unit) use ($unitLayoutSections): array {
-                    $unitNumber = ($unit->repeat_index ?? 0) + 1;
-
-                    return collect($unitLayoutSections)
-                        ->map(fn (array $section): array => [
-                            'title' => 'Unit / Floor '.$unitNumber.' - '.$section['title'],
-                            'rows' => $this->rowsFromXlsFields($unit, $section['fields']),
-                        ])
-                        ->filter(fn (array $section): bool => $section['rows'] !== [])
-                        ->values()
-                        ->all();
+                ->map(function ($unit, int $index): array {
+                    return [
+                        'title' => 'Unit / Floor ' . ($index + 1),
+                        'rows' => $this->rowsFromMap($unit, [
+                            'objectid' => 'Object ID',
+                            'unit_name' => 'Unit / Floor Name',
+                            'occupied' => 'Occupied before conflict?',
+                            'unit_ownership' => 'Unit Ownership',
+                            'other_unit_ownership' => 'Other Unit Ownership',
+                            'unctional_use' => 'Functional Use',
+                            'floor_number' => 'Floor Number',
+                            'housing_unit_number' => 'Housing Unit Number',
+                            'the_unit_resident_time_damage' => 'Resident at Time of Damage',
+                            'damaged_area_m2' => 'Damaged Area m²',
+                            'rentee_resident_full_name' => 'Resident Full Name',
+                            'rentee_mobile_number' => 'Resident Mobile',
+                            'work_type' => 'Work Type',
+                            'other_work' => 'Other Work',
+                            'external_finishing_of_the_unit' => 'External Finishing',
+                            'internal_finishing_of_the_unit' => 'Internal Finishing',
+                            'percentage_of_damaged_furniture' => 'Damaged Furniture %',
+                            'rubble_removal_is_needed' => 'Rubble Removal Needed',
+                            'activation_of_uxo_ha_d_material_clearance' => 'UXO/Hazard Clearance',
+                            'inspection_inside_the_housing_unit' => 'Inspection Inside Unit',
+                            'is_the_housing_unit_or_living_habitable' => 'Habitable',
+                            'general_notes_about_the_unit' => 'General Notes',
+                            'has_fire' => 'Fire',
+                            'fire_extent' => 'Fire Extent',
+                            'fire_severity' => 'Fire Severity',
+                            'fire_locations' => 'Fire Locations',
+                            'fire_rooms_count' => 'Fire Rooms Count',
+                            'fire_area' => 'Fire Area',
+                            'unit_stripping' => 'Unit Stripping',
+                            'unit_stripping_details' => 'Stripping Details',
+                            'stripping_area' => 'Stripping Area',
+                            'stripping_locations' => 'Stripping Locations',
+                            'unit_support_needed' => 'Support Needed',
+                            'parentglobalid' => 'Parent Global ID',
+                        ]),
+                    ];
                 })
+                ->filter(fn($section) => $section['rows'] !== [])
+                ->values()
                 ->all(),
         ]);
     }
-
     private function buildSurveySections(PublicBuildingSurvey $survey): array
     {
         $sections = collect(XlsFormLayout::sections($this->xlsFormPath()))
-            ->map(fn (array $section): array => [
+            ->map(fn(array $section): array => [
                 'title' => $section['title'],
                 'rows' => $this->rowsFromXlsFields($survey, $section['fields']),
             ])
-            ->filter(fn (array $section): bool => $section['rows'] !== [])
+            ->filter(fn(array $section): bool => $section['rows'] !== [])
             ->values()
             ->all();
 
@@ -232,9 +260,9 @@ class PublicBuildingController extends Controller
             if (array_is_list($value)) {
                 $items = collect($value)
                     ->flatten()
-                    ->map(fn ($item) => is_scalar($item) ? trim((string) $item) : null)
+                    ->map(fn($item) => is_scalar($item) ? trim((string) $item) : null)
                     ->filter()
-                    ->map(fn (string $item) => Str::of($item)->replace('_', ' ')->headline()->toString())
+                    ->map(fn(string $item) => Str::of($item)->replace('_', ' ')->headline()->toString())
                     ->values();
 
                 return $items->isEmpty() ? null : $items->implode(', ');
@@ -254,9 +282,9 @@ class PublicBuildingController extends Controller
         if (is_iterable($value)) {
             $items = collect($value)
                 ->flatten()
-                ->map(fn ($item) => is_scalar($item) ? trim((string) $item) : null)
+                ->map(fn($item) => is_scalar($item) ? trim((string) $item) : null)
                 ->filter()
-                ->map(fn (string $item) => Str::of($item)->replace('_', ' ')->headline()->toString())
+                ->map(fn(string $item) => Str::of($item)->replace('_', ' ')->headline()->toString())
                 ->values();
 
             return $items->isEmpty() ? null : $items->implode(', ');
@@ -336,12 +364,12 @@ class PublicBuildingController extends Controller
         if ($search !== '') {
             $query->where(function (Builder $nested) use ($search): void {
                 $nested
-                    ->where('building_name', 'like', '%'.$search.'%')
-                    ->orWhere('municipalitie', 'like', '%'.$search.'%')
-                    ->orWhere('neighborhood', 'like', '%'.$search.'%')
-                    ->orWhere('assigned_to', 'like', '%'.$search.'%')
-                    ->orWhere('objectid', 'like', '%'.$search.'%')
-                    ->orWhere('building_damage_status', 'like', '%'.$search.'%');
+                    ->where('building_name', 'like', '%' . $search . '%')
+                    ->orWhere('municipalitie', 'like', '%' . $search . '%')
+                    ->orWhere('neighborhood', 'like', '%' . $search . '%')
+                    ->orWhere('assigned_to', 'like', '%' . $search . '%')
+                    ->orWhere('objectid', 'like', '%' . $search . '%')
+                    ->orWhere('building_damage_status', 'like', '%' . $search . '%');
             });
         }
 
@@ -370,13 +398,13 @@ class PublicBuildingController extends Controller
             }
 
             if ($mode === 'json_like') {
-                $query->where($column, 'like', '%"'.$filterValue.'"%');
+                $query->where($column, 'like', '%"' . $filterValue . '"%');
 
                 continue;
             }
 
             if ($mode === 'raw_payload_like') {
-                $query->where('raw_payload', 'like', '%'.$filterValue.'%');
+                $query->where('raw_payload', 'like', '%' . $filterValue . '%');
             }
         }
     }
@@ -399,7 +427,7 @@ class PublicBuildingController extends Controller
             return $filterMappings[$filterName];
         }
 
-        if (! Schema::hasColumn('public_building_surveys', $filterName)) {
+        if (!Schema::hasColumn('public_building_surveys', $filterName)) {
             return ['column' => 'raw_payload', 'mode' => 'raw_payload_like'];
         }
 
