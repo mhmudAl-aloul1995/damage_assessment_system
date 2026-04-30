@@ -49,7 +49,7 @@ class PublicBuildingController extends Controller
         $filterOptions = [
             'municipalities' => PublicBuildingSurvey::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
             'neighborhoods' => PublicBuildingSurvey::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
-            'researchers' => PublicBuildingSurvey::query()->distinct()->orderBy('assigned_to')->pluck('assigned_to')->filter()->values(),
+            'researchers' => PublicBuildingSurvey::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
             'min_damage_date' => PublicBuildingSurvey::query()->whereNotNull('date_of_damage')->min('date_of_damage'),
             'max_damage_date' => PublicBuildingSurvey::query()->whereNotNull('date_of_damage')->max('date_of_damage'),
         ];
@@ -176,7 +176,7 @@ class PublicBuildingController extends Controller
                 'rows' => $this->rowsFromMap($survey, [
                     'objectid' => 'Object ID',
                     'building_name' => 'Building Name',
-                    'assigned_to' => 'Researcher',
+                    'assignedto' => 'Researcher',
                     'building_damage_status' => 'Building Damage Status',
                     'comments_recommendations' => 'Comments & Recommendations',
                 ]),
@@ -311,8 +311,8 @@ class PublicBuildingController extends Controller
             $query->where('neighborhood', $request->string('neighborhood')->toString());
         }
 
-        if ($request->filled('assigned_to')) {
-            $query->where('assigned_to', $request->string('assigned_to')->toString());
+        if ($request->filled('assignedto')) {
+            $query->where('assignedto', $request->string('assignedto')->toString());
         }
 
         if ($request->filled('from_date')) {
@@ -342,9 +342,9 @@ class PublicBuildingController extends Controller
                 ->where('neighborhood', '!=', '');
         }
 
-        if ($request->boolean('has_assigned_to')) {
-            $query->whereNotNull('assigned_to')
-                ->where('assigned_to', '!=', '');
+        if ($request->boolean('has_assignedto')) {
+            $query->whereNotNull('assignedto')
+                ->where('assignedto', '!=', '');
         }
 
         if ($request->boolean('occupied_only')) {
@@ -367,7 +367,7 @@ class PublicBuildingController extends Controller
                     ->where('building_name', 'like', '%' . $search . '%')
                     ->orWhere('municipalitie', 'like', '%' . $search . '%')
                     ->orWhere('neighborhood', 'like', '%' . $search . '%')
-                    ->orWhere('assigned_to', 'like', '%' . $search . '%')
+                    ->orWhere('assignedto', 'like', '%' . $search . '%')
                     ->orWhere('objectid', 'like', '%' . $search . '%')
                     ->orWhere('building_damage_status', 'like', '%' . $search . '%');
             });
