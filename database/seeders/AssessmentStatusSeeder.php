@@ -20,7 +20,7 @@ class AssessmentStatusSeeder extends Seeder
             ],
 
             [
-                'name' => 'assigned_to_engineer',
+                'name' => 'assignedto_engineer',
                 'label_en' => 'Assigned To Engineer',
                 'label_ar' => 'الاستمارة تم تحويلها للمهندس للتدقيق',
                 'stage' => 'engineer',
@@ -52,7 +52,7 @@ class AssessmentStatusSeeder extends Seeder
             ],
 
             [
-                'name' => 'assigned_to_lawyer',
+                'name' => 'assignedto_lawyer',
                 'label_en' => 'Assigned To Lawyer',
                 'label_ar' => 'الاستمارة تم تحويلها للمحامي للتدقيق',
                 'stage' => 'lawyer',

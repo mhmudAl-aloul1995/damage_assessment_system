@@ -11,6 +11,10 @@ class RoadFacilitySurvey extends Model
 {
     protected $guarded = [];
 
+    protected $appends = [
+        'assignedto',
+    ];
+
     public function getRouteKeyName(): string
     {
         return 'objectid';
@@ -19,7 +23,7 @@ class RoadFacilitySurvey extends Model
     protected function casts(): array
     {
         return [
-            'submission_date' => 'datetime',
+            'submissiondate' => 'datetime',
             'creationdate' => 'datetime',
             'editdate' => 'datetime',
             'blockage_reason' => 'array',
@@ -34,5 +38,10 @@ class RoadFacilitySurvey extends Model
     public function items(): HasMany
     {
         return $this->hasMany(RoadFacilitySurveyItem::class, 'parentglobalid', 'globalid');
+    }
+
+    public function getAssignedToAttribute(?string $value): ?string
+    {
+        return $value ?: ($this->attributes['assignedto'] ?? null);
     }
 }

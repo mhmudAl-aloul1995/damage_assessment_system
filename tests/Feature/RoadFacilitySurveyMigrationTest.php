@@ -19,7 +19,7 @@ it('creates the road facility survey tables with the expected columns', function
         'road_damage_level',
         'blockage_reason',
         'road_type',
-        'submission_date',
+        'submissiondate',
         'final_comments',
         'raw_payload',
     ]))->toBeTrue();

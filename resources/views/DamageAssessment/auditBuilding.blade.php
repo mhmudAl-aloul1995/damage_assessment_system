@@ -44,7 +44,7 @@
                                 data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
                                 <option></option>
                                 <option value="pending">Pending</option>
-                                <option value="assigned_to_engineer">Assigned To Engineer</option>
+                                <option value="assignedto_engineer">Assigned To Engineer</option>
                                 <option value="accepted_by_engineer">Accepted By Engineer</option>
                                 <option value="rejected_by_engineer">Rejected By Engineer</option>
                                 <option value="need_review">Need Review</option>
@@ -57,7 +57,7 @@
                                 data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
                                 <option></option>
                                 <option value="pending">Pending</option>
-                                <option value="assigned_to_lawyer">Assigned To Lawyer</option>
+                                <option value="assignedto_lawyer">Assigned To Lawyer</option>
                                 <option value="accepted_by_lawyer">Accepted By Lawyer</option>
                                 <option value="legal_notes">Legal Notes</option>
                             </select>

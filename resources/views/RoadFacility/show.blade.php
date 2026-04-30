@@ -39,7 +39,7 @@
             <div class="col-md-3">
                 <div class="border rounded p-4 h-100 bg-light-info">
                     <div class="text-muted fs-7 mb-1">Researcher</div>
-                    <div class="fw-bold fs-5">{{ $survey->assigned_to ?? '-' }}</div>
+                    <div class="fw-bold fs-5">{{ $survey->assignedto ?? '-' }}</div>
                 </div>
             </div>
             <div class="col-md-3">

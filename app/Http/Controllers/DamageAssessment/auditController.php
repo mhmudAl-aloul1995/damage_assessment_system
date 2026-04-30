@@ -4176,8 +4176,8 @@ COALESCE(
     private function getStatusBadge($statusName, $role = null)
     {
         return match ($statusName) {
-            'assigned_to_lawyer' => 'badge badge-light-primary fw-bold',
-            'assigned_to_engineer' => 'badge badge-light-primary fw-bold',
+            'assignedto_lawyer' => 'badge badge-light-primary fw-bold',
+            'assignedto_engineer' => 'badge badge-light-primary fw-bold',
             'accepted_by_engineer',
             'accepted' => 'badge badge-light-success fw-bold',
             'rejected_by_engineer',
@@ -4410,14 +4410,14 @@ COALESCE(
         $endDate = Carbon::parse($request->input('end_date', now()->toDateString()))->endOfDay();
 
         $engineerStatuses = [
-            'assigned_to_engineer' => 'Assigned',
+            'assignedto_engineer' => 'Assigned',
             'accepted_by_engineer' => 'Accepted',
             'rejected_by_engineer' => 'Rejected',
             'need_review' => 'Need Review',
         ];
 
         $lawyerStatuses = [
-            'assigned_to_lawyer' => 'Assigned',
+            'assignedto_lawyer' => 'Assigned',
             'accepted_by_lawyer' => 'Accepted',
             'legal_notes' => 'Legal Notes',
         ];

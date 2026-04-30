@@ -31,7 +31,7 @@
 				'units' => route('public-buildings.index').'?'.http_build_query(['with_units' => 1]),
 				'municipalities' => route('public-buildings.index').'?'.http_build_query(['has_municipality' => 1]),
 				'neighborhoods' => route('public-buildings.index').'?'.http_build_query(['has_neighborhood' => 1]),
-				'assigned_staff' => route('public-buildings.index').'?'.http_build_query(['has_assigned_to' => 1]),
+				'assigned_staff' => route('public-buildings.index').'?'.http_build_query(['has_assignedto' => 1]),
 				'occupied' => route('public-buildings.index').'?'.http_build_query(['occupied_only' => 1]),
 				'bodies' => route('public-buildings.index').'?'.http_build_query(['bodies_only' => 1]),
 				'uxo' => route('public-buildings.index').'?'.http_build_query(['uxo_only' => 1]),

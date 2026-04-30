@@ -243,8 +243,8 @@ class SurveyReportController extends Controller
 
     private function resolveRoadFacilityEffectiveDate(RoadFacilitySurvey $survey): ?Carbon
     {
-        if ($survey->submission_date !== null) {
-            return Carbon::parse($survey->submission_date);
+        if ($survey->submissiondate !== null) {
+            return Carbon::parse($survey->submissiondate);
         }
 
         if ($survey->created_at !== null) {

@@ -27,7 +27,7 @@ it('shows the public building survey pages and datatable data with dynamic filte
         'building_name' => 'Public School',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
-        'assigned_to' => 'Engineer Public',
+        'assignedto' => 'Engineer Public',
         'building_damage_status' => 'partially_damaged',
         'date_of_damage' => '2026-03-02',
         'building_type' => 'stan_alone_building',
@@ -38,6 +38,8 @@ it('shows the public building survey pages and datatable data with dynamic filte
         'building_status' => 'dangerous',
         'building_roof_type' => ['concrete'],
         'comments_recommendations' => 'Immediate maintenance required',
+        'other_building_use' => 'Emergency public shelter',
+        'raw_payload' => ['arcgis_extra_field' => 'Hidden extra value'],
     ]);
 
     PublicBuildingSurveyUnit::query()->create([
@@ -48,6 +50,10 @@ it('shows the public building survey pages and datatable data with dynamic filte
         'damaged_area_m2' => 75.5,
         'occupied' => 'yes',
         'final_comments' => 'Repair windows',
+        'raw_payload' => [
+            'PM1' => 2,
+            'ID_photo' => 'unit-id-photo.jpg',
+        ],
     ]);
 
     PublicBuildingSurvey::query()->create([
@@ -58,7 +64,7 @@ it('shows the public building survey pages and datatable data with dynamic filte
         'building_name' => 'Health Center',
         'municipalitie' => 'North Gaza',
         'neighborhood' => 'Camp',
-        'assigned_to' => 'Engineer Other',
+        'assignedto' => 'Engineer Other',
         'building_damage_status' => 'fully_damaged',
         'date_of_damage' => '2026-04-11',
         'building_type' => 'apartment',
@@ -134,7 +140,13 @@ it('shows the public building survey pages and datatable data with dynamic filte
     $showResponse->assertSee('Immediate maintenance required');
     $showResponse->assertSee('Ground Floor');
     $showResponse->assertSee('Repair windows');
+    $showResponse->assertSee('PM1-Complete solar heating system');
+    $showResponse->assertSee('unit-id-photo.jpg');
     $showResponse->assertSee('Linked Units');
+    $showResponse->assertSee('2.4.1 If Other, Specify');
+    $showResponse->assertSee('Emergency public shelter');
+    $showResponse->assertDontSee('Additional DB Fields');
+    $showResponse->assertDontSee('Hidden extra value');
 
     expect(PublicBuildingSurvey::query()->withCount('units')->find($survey->id)->units_count)->toBe(1);
 

@@ -99,7 +99,7 @@ it('renders separated area productivity reports for all supported datasets with 
     PublicBuildingSurvey::query()->create([
         'objectid' => 3001,
         'building_name' => 'School A',
-        'assigned_to' => 'eng-1',
+        'assignedto' => 'eng-1',
         'building_damage_status' => 'fully_damaged',
         'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
@@ -111,7 +111,7 @@ it('renders separated area productivity reports for all supported datasets with 
     PublicBuildingSurvey::query()->create([
         'objectid' => 3002,
         'building_name' => 'School B',
-        'assigned_to' => 'eng-2',
+        'assignedto' => 'eng-2',
         'building_damage_status' => 'committee_review',
         'governorate' => 'North Gaza',
         'municipalitie' => 'Jabalia',
@@ -123,7 +123,7 @@ it('renders separated area productivity reports for all supported datasets with 
     RoadFacilitySurvey::query()->create([
         'objectid' => 4001,
         'str_name' => 'Street A',
-        'assigned_to' => 'eng-1',
+        'assignedto' => 'eng-1',
         'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
@@ -136,7 +136,7 @@ it('renders separated area productivity reports for all supported datasets with 
     RoadFacilitySurvey::query()->create([
         'objectid' => 4002,
         'str_name' => 'Street B',
-        'assigned_to' => 'eng-1',
+        'assignedto' => 'eng-1',
         'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',

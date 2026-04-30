@@ -70,7 +70,7 @@
                 @endforeach
                 <div class="col-md-3">
                     <label class="form-label">Researcher</label>
-                    <select id="filter_assigned_to" class="form-select form-select-solid road-select2" data-placeholder="Select researcher" data-allow-clear="true">
+                    <select id="filter_assignedto" class="form-select form-select-solid road-select2" data-placeholder="Select researcher" data-allow-clear="true">
                         <option value=""></option>
                         @foreach ($filterOptions['researchers'] as $researcher)
                             <option value="{{ $researcher }}">{{ $researcher }}</option>
@@ -83,11 +83,11 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">From Date</label>
-                    <input id="filter_from_date" type="date" class="form-control form-control-solid" value="{{ $filterOptions['min_submission_date'] }}">
+                    <input id="filter_from_date" type="date" class="form-control form-control-solid" value="{{ $filterOptions['min_submissiondate'] }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">To Date</label>
-                    <input id="filter_to_date" type="date" class="form-control form-control-solid" value="{{ $filterOptions['max_submission_date'] }}">
+                    <input id="filter_to_date" type="date" class="form-control form-control-solid" value="{{ $filterOptions['max_submissiondate'] }}">
                 </div>
             </div>
         </div>
@@ -172,7 +172,7 @@
                 return {
                     municipalitie: $('#filter_municipalitie').val() || queryParams.get('municipalitie'),
                     neighborhood: $('#filter_neighborhood').val() || queryParams.get('neighborhood'),
-                    assigned_to: $('#filter_assigned_to').val() || queryParams.get('assigned_to'),
+                    assignedto: $('#filter_assignedto').val() || queryParams.get('assignedto'),
                     from_date: $('#filter_from_date').val() || queryParams.get('from_date'),
                     to_date: $('#filter_to_date').val() || queryParams.get('to_date'),
                     search: $('#filter_search').val() || queryParams.get('search'),
@@ -197,7 +197,7 @@
                         const filters = currentFilters();
                         d.municipalitie = filters.municipalitie;
                         d.neighborhood = filters.neighborhood;
-                        d.assigned_to = filters.assigned_to;
+                        d.assignedto = filters.assignedto;
                         d.from_date = filters.from_date;
                         d.to_date = filters.to_date;
                         d.search = filters.search;
@@ -220,9 +220,9 @@
                     { data: 'neighborhood', name: 'neighborhood' },
                     { data: 'road_damage_level', name: 'road_damage_level', orderable: false, searchable: false },
                     { data: 'road_access', name: 'road_access' },
-                    { data: 'submission_date', name: 'submission_date' },
+                    { data: 'submissiondate', name: 'submissiondate' },
                     { data: 'items_count', name: 'items_count', searchable: false },
-                    { data: 'assigned_to', name: 'assigned_to' },
+                    { data: 'assignedto', name: 'assignedto', orderable: false, searchable: false },
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' },
                 ]
             });
@@ -231,7 +231,7 @@
                 table.search(this.value).draw();
             });
 
-            $('#filter_municipalitie, #filter_neighborhood, #filter_assigned_to, #filter_from_date, #filter_to_date, .road-filter-select').on('change', function () {
+            $('#filter_municipalitie, #filter_neighborhood, #filter_assignedto, #filter_from_date, #filter_to_date, .road-filter-select').on('change', function () {
                 table.draw();
             });
 
@@ -240,7 +240,7 @@
                 const filters = currentFilters();
                 const query = new URLSearchParams();
 
-                ['municipalitie', 'neighborhood', 'assigned_to', 'from_date', 'to_date', 'search'].forEach(function (key) {
+                ['municipalitie', 'neighborhood', 'assignedto', 'from_date', 'to_date', 'search'].forEach(function (key) {
                     if (filters[key]) {
                         query.set(key, filters[key]);
                     }
@@ -257,7 +257,7 @@
                 $('#filter_search').val('');
                 $('#filter_municipalitie').val(null).trigger('change');
                 $('#filter_neighborhood').val(null).trigger('change');
-                $('#filter_assigned_to').val(null).trigger('change');
+                $('#filter_assignedto').val(null).trigger('change');
                 $('.road-filter-select').val(null).trigger('change');
                 $('#filter_from_date').val('');
                 $('#filter_to_date').val('');

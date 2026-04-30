@@ -27,7 +27,7 @@ it('shows the road facility survey page with all dynamic road filters and export
         'str_name' => 'Coastal Road',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
-        'assigned_to' => 'Engineer Roads',
+        'assignedto' => 'Engineer Roads',
         'road_damage_level' => 'severe',
         'road_access' => 'partial',
         'lane_count' => 'two',
@@ -36,7 +36,7 @@ it('shows the road facility survey page with all dynamic road filters and export
         'demolition_scope' => 'whole',
         'pole_material' => 'galvanized',
         'pole_voltage_level' => 'high',
-        'submission_date' => '2026-03-05 09:30:00',
+        'submissiondate' => '2026-03-05 09:30:00',
         'final_comments' => 'Clear rubble and restore asphalt',
         'raw_payload' => ['network_item' => 'pipe'],
     ]);
@@ -49,6 +49,10 @@ it('shows the road facility survey page with all dynamic road filters and export
         'unit' => 'item',
         'quantity' => 3,
         'other_comments' => 'Replace immediately',
+        'raw_payload' => [
+            'unit_001' => 'piece',
+            'quantity_001' => 7,
+        ],
     ]);
 
     RoadFacilitySurvey::query()->create([
@@ -58,7 +62,7 @@ it('shows the road facility survey page with all dynamic road filters and export
         'str_name' => 'Northern Street',
         'municipalitie' => 'North Gaza',
         'neighborhood' => 'Camp',
-        'assigned_to' => 'Engineer Other',
+        'assignedto' => 'Engineer Other',
         'road_damage_level' => 'minor',
         'road_access' => 'open',
         'lane_count' => 'one',
@@ -67,7 +71,7 @@ it('shows the road facility survey page with all dynamic road filters and export
         'demolition_scope' => 'partial',
         'pole_material' => 'wooden',
         'pole_voltage_level' => 'low',
-        'submission_date' => '2026-04-11 13:00:00',
+        'submissiondate' => '2026-04-11 13:00:00',
         'raw_payload' => ['network_item' => 'fittings'],
     ]);
 
@@ -126,6 +130,10 @@ it('shows the road facility survey page with all dynamic road filters and export
     $showResponse->assertOk();
     $showResponse->assertSee('Coastal Road');
     $showResponse->assertSee('Traffic sign replacement');
+    $showResponse->assertSee('13.3 الوحدة');
+    $showResponse->assertSee('piece');
+    $showResponse->assertSee('13.4 الكمية');
+    $showResponse->assertSee('7');
     $showResponse->assertSee('Linked Required Items');
 
     expect(RoadFacilitySurvey::query()->withCount('items')->find($survey->id)->items_count)->toBe(1);

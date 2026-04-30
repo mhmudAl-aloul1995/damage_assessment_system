@@ -25,7 +25,7 @@ class PermissionController extends Controller
         $permissions = Permission::with('roles')->select('permissions.*');
 
         return DataTables::of($permissions)
-            ->addColumn('assigned_to', function ($permission) {
+            ->addColumn('assignedto', function ($permission) {
                 if ($permission->roles->isEmpty()) {
                     return '<span class="text-muted">'.e(__('ui.permissions.not_assigned')).'</span>';
                 }
@@ -84,7 +84,7 @@ class PermissionController extends Controller
                     </div>
                 ';
             })
-            ->rawColumns(['assigned_to', 'action'])
+            ->rawColumns(['assignedto', 'action'])
             ->make(true);
     }
 

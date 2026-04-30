@@ -70,7 +70,7 @@
                 @endforeach
                 <div class="col-md-3">
                     <label class="form-label">Researcher</label>
-                    <select id="filter_assigned_to" class="form-select form-select-solid public-building-select2" data-placeholder="Select researcher" data-allow-clear="true">
+                    <select id="filter_assignedto" class="form-select form-select-solid public-building-select2" data-placeholder="Select researcher" data-allow-clear="true">
                         <option value=""></option>
                         @foreach ($filterOptions['researchers'] as $researcher)
                             <option value="{{ $researcher }}">{{ $researcher }}</option>
@@ -145,7 +145,7 @@
 
             const initialQueryParams = new URLSearchParams(window.location.search);
 
-            ['municipalitie', 'neighborhood', 'assigned_to'].forEach(function (key) {
+            ['municipalitie', 'neighborhood', 'assignedto'].forEach(function (key) {
                 const value = initialQueryParams.get(key);
 
                 if (value) {
@@ -194,7 +194,7 @@
                 return {
                     municipalitie: $('#filter_municipalitie').val() || queryParams.get('municipalitie'),
                     neighborhood: $('#filter_neighborhood').val() || queryParams.get('neighborhood'),
-                    assigned_to: $('#filter_assigned_to').val() || queryParams.get('assigned_to'),
+                    assignedto: $('#filter_assignedto').val() || queryParams.get('assignedto'),
                     from_date: $('#filter_from_date').val() || queryParams.get('from_date'),
                     to_date: $('#filter_to_date').val() || queryParams.get('to_date'),
                     search: $('#filter_search').val() || queryParams.get('search'),
@@ -202,7 +202,7 @@
                     with_units: queryParams.get('with_units'),
                     has_municipality: queryParams.get('has_municipality'),
                     has_neighborhood: queryParams.get('has_neighborhood'),
-                    has_assigned_to: queryParams.get('has_assigned_to'),
+                    has_assignedto: queryParams.get('has_assignedto'),
                     occupied_only: queryParams.get('occupied_only'),
                     bodies_only: queryParams.get('bodies_only'),
                     uxo_only: queryParams.get('uxo_only'),
@@ -219,7 +219,7 @@
                         const filters = currentFilters();
                         d.municipalitie = filters.municipalitie;
                         d.neighborhood = filters.neighborhood;
-                        d.assigned_to = filters.assigned_to;
+                        d.assignedto = filters.assignedto;
                         d.from_date = filters.from_date;
                         d.to_date = filters.to_date;
                         d.search = filters.search;
@@ -227,7 +227,7 @@
                         d.with_units = filters.with_units;
                         d.has_municipality = filters.has_municipality;
                         d.has_neighborhood = filters.has_neighborhood;
-                        d.has_assigned_to = filters.has_assigned_to;
+                        d.has_assignedto = filters.has_assignedto;
                         d.occupied_only = filters.occupied_only;
                         d.bodies_only = filters.bodies_only;
                         d.uxo_only = filters.uxo_only;
@@ -243,7 +243,7 @@
                     { data: 'building_damage_status', name: 'building_damage_status', orderable: false, searchable: false },
                     { data: 'date_of_damage', name: 'date_of_damage' },
                     { data: 'units_count', name: 'units_count', searchable: false },
-                    { data: 'assigned_to', name: 'assigned_to' },
+                    { data: 'assignedto', name: 'assignedto' },
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' },
                 ]
             });
@@ -252,7 +252,7 @@
                 table.search(this.value).draw();
             });
 
-            $('#filter_municipalitie, #filter_neighborhood, #filter_assigned_to, #filter_from_date, #filter_to_date, .public-building-filter-select').on('change', function () {
+            $('#filter_municipalitie, #filter_neighborhood, #filter_assignedto, #filter_from_date, #filter_to_date, .public-building-filter-select').on('change', function () {
                 table.draw();
             });
 
@@ -261,7 +261,7 @@
                 const filters = currentFilters();
                 const query = new URLSearchParams();
 
-                ['municipalitie', 'neighborhood', 'assigned_to', 'from_date', 'to_date', 'search'].forEach(function (key) {
+                ['municipalitie', 'neighborhood', 'assignedto', 'from_date', 'to_date', 'search'].forEach(function (key) {
                     if (filters[key]) {
                         query.set(key, filters[key]);
                     }
@@ -278,7 +278,7 @@
                 $('#filter_search').val('');
                 $('#filter_municipalitie').val(null).trigger('change');
                 $('#filter_neighborhood').val(null).trigger('change');
-                $('#filter_assigned_to').val(null).trigger('change');
+                $('#filter_assignedto').val(null).trigger('change');
                 $('.public-building-filter-select').val(null).trigger('change');
                 $('#filter_from_date').val('');
                 $('#filter_to_date').val('');

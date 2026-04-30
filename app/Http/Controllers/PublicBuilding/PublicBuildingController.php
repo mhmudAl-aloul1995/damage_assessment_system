@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PublicBuilding\PublicBuildingFilterRequest;
 use App\Models\PublicBuildingFilter;
 use App\Models\PublicBuildingSurvey;
+use App\Support\XlsFormLayout;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -47,7 +49,7 @@ class PublicBuildingController extends Controller
         $filterOptions = [
             'municipalities' => PublicBuildingSurvey::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
             'neighborhoods' => PublicBuildingSurvey::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
-            'researchers' => PublicBuildingSurvey::query()->distinct()->orderBy('assigned_to')->pluck('assigned_to')->filter()->values(),
+            'researchers' => PublicBuildingSurvey::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
             'min_damage_date' => PublicBuildingSurvey::query()->whereNotNull('date_of_damage')->min('date_of_damage'),
             'max_damage_date' => PublicBuildingSurvey::query()->whereNotNull('date_of_damage')->max('date_of_damage'),
         ];
@@ -101,6 +103,7 @@ class PublicBuildingController extends Controller
     public function show(PublicBuildingSurvey $publicBuilding): View
     {
         $publicBuilding->load('units');
+        $unitLayoutSections = XlsFormLayout::sections($this->xlsFormPath(), 'Unit_Information');
 
         return view('PublicBuilding.show', [
             'survey' => $publicBuilding,
@@ -108,70 +111,46 @@ class PublicBuildingController extends Controller
             'unitSections' => $publicBuilding->units
                 ->sortBy('repeat_index')
                 ->values()
-                ->map(fn ($unit) => [
-                    'title' => 'Unit / Floor '.(($unit->repeat_index ?? 0) + 1),
-                    'rows' => $this->rowsFromMap($unit, [
-                        'unit_name' => 'Unit Name',
-                        'floor_number' => 'Floor Number',
-                        'damaged_area_m2' => 'Damaged Area (m2)',
-                        'occupied' => 'Occupied',
-                        'documented_ownership' => 'Documented Ownership',
-                        'use_of_unit' => 'Use of Unit',
-                        'unit_type' => 'Unit Type',
-                        'unit_damage_status' => 'Unit Damage Status',
-                        'final_comments' => 'Final Comments',
-                    ]),
-                ])
+                ->flatMap(function ($unit) use ($unitLayoutSections): array {
+                    $unitNumber = ($unit->repeat_index ?? 0) + 1;
+
+                    return collect($unitLayoutSections)
+                        ->map(fn (array $section): array => [
+                            'title' => 'Unit / Floor '.$unitNumber.' - '.$section['title'],
+                            'rows' => $this->rowsFromXlsFields($unit, $section['fields']),
+                        ])
+                        ->filter(fn (array $section): bool => $section['rows'] !== [])
+                        ->values()
+                        ->all();
+                })
                 ->all(),
         ]);
     }
 
     private function buildSurveySections(PublicBuildingSurvey $survey): array
     {
+        $sections = collect(XlsFormLayout::sections($this->xlsFormPath()))
+            ->map(fn (array $section): array => [
+                'title' => $section['title'],
+                'rows' => $this->rowsFromXlsFields($survey, $section['fields']),
+            ])
+            ->filter(fn (array $section): bool => $section['rows'] !== [])
+            ->values()
+            ->all();
+
+        if ($sections !== []) {
+            return $sections;
+        }
+
         return [
             [
-                'title' => 'General Information',
+                'title' => 'Survey',
                 'rows' => $this->rowsFromMap($survey, [
                     'objectid' => 'Object ID',
                     'building_name' => 'Building Name',
-                    'assigned_to' => 'Researcher',
-                    'date_of_damage' => 'Date of Damage',
-                    'weather' => 'Weather',
-                    'security_situation' => 'Security Situation',
-                ]),
-            ],
-            [
-                'title' => 'Location',
-                'rows' => $this->rowsFromMap($survey, [
-                    'municipalitie' => 'Municipality',
-                    'neighborhood' => 'Neighborhood',
-                    'street' => 'Street',
-                    'closest_landmark' => 'Closest Landmark',
-                    'address' => 'Address',
-                ]),
-            ],
-            [
-                'title' => 'Building Information',
-                'rows' => $this->rowsFromMap($survey, [
-                    'building_type' => 'Building Type',
-                    'building_age' => 'Building Age',
-                    'sector' => 'Sector',
-                    'facility_type' => 'Facility Type',
-                    'building_use' => 'Building Use',
-                    'building_status' => 'Building Status',
+                    'assignedto' => 'Researcher',
                     'building_damage_status' => 'Building Damage Status',
-                    'floor_nos' => 'Number of Floors',
-                    'units_nos' => 'Number of Units',
-                    'building_roof_type' => 'Roof Type',
-                    'benef_type' => 'Beneficiaries Type',
-                    'ground_floor_use' => 'Ground Floor Use',
-                ]),
-            ],
-            [
-                'title' => 'Assessment Notes',
-                'rows' => $this->rowsFromMap($survey, [
                     'comments_recommendations' => 'Comments & Recommendations',
-                    'further_notes' => 'Further Notes',
                 ]),
             ],
         ];
@@ -201,6 +180,38 @@ class PublicBuildingController extends Controller
             ->all();
     }
 
+    /**
+     * @param  array<int, array{name: string, label: string}>  $fields
+     * @return array<int, array{question: string, answer: string}>
+     */
+    private function rowsFromXlsFields(object $record, array $fields): array
+    {
+        return collect($fields)
+            ->map(function (array $field) use ($record): ?array {
+                $formattedValue = $this->formatSurveyValue(XlsFormLayout::value($record, $field['name']));
+
+                if ($formattedValue !== null) {
+                    return [
+                        'question' => $field['label'],
+                        'answer' => $formattedValue,
+                    ];
+                }
+
+                return null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function xlsFormPath(): string
+    {
+        return config(
+            'services.survey_forms.public_buildings_xlsx',
+            'C:\\Users\\hp\\Downloads\\PUBP01-Damage Assessment of Public Buildings (1).xlsx',
+        );
+    }
+
     private function formatSurveyValue(mixed $value): ?string
     {
         if ($value === null) {
@@ -218,11 +229,34 @@ class PublicBuildingController extends Controller
         }
 
         if (is_array($value)) {
+            if (array_is_list($value)) {
+                $items = collect($value)
+                    ->flatten()
+                    ->map(fn ($item) => is_scalar($item) ? trim((string) $item) : null)
+                    ->filter()
+                    ->map(fn (string $item) => Str::of($item)->replace('_', ' ')->headline()->toString())
+                    ->values();
+
+                return $items->isEmpty() ? null : $items->implode(', ');
+            }
+
+            $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            return $jsonValue === false || $jsonValue === '[]' ? null : $jsonValue;
+        }
+
+        if ($value instanceof \JsonSerializable) {
+            $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            return $encoded === false ? null : $encoded;
+        }
+
+        if (is_iterable($value)) {
             $items = collect($value)
                 ->flatten()
                 ->map(fn ($item) => is_scalar($item) ? trim((string) $item) : null)
                 ->filter()
-                ->map(fn (string $item) => \Illuminate\Support\Str::of($item)->replace('_', ' ')->headline()->toString())
+                ->map(fn (string $item) => Str::of($item)->replace('_', ' ')->headline()->toString())
                 ->values();
 
             return $items->isEmpty() ? null : $items->implode(', ');
@@ -249,8 +283,8 @@ class PublicBuildingController extends Controller
             $query->where('neighborhood', $request->string('neighborhood')->toString());
         }
 
-        if ($request->filled('assigned_to')) {
-            $query->where('assigned_to', $request->string('assigned_to')->toString());
+        if ($request->filled('assignedto')) {
+            $query->where('assignedto', $request->string('assignedto')->toString());
         }
 
         if ($request->filled('from_date')) {
@@ -280,9 +314,9 @@ class PublicBuildingController extends Controller
                 ->where('neighborhood', '!=', '');
         }
 
-        if ($request->boolean('has_assigned_to')) {
-            $query->whereNotNull('assigned_to')
-                ->where('assigned_to', '!=', '');
+        if ($request->boolean('has_assignedto')) {
+            $query->whereNotNull('assignedto')
+                ->where('assignedto', '!=', '');
         }
 
         if ($request->boolean('occupied_only')) {
@@ -305,7 +339,7 @@ class PublicBuildingController extends Controller
                     ->where('building_name', 'like', '%'.$search.'%')
                     ->orWhere('municipalitie', 'like', '%'.$search.'%')
                     ->orWhere('neighborhood', 'like', '%'.$search.'%')
-                    ->orWhere('assigned_to', 'like', '%'.$search.'%')
+                    ->orWhere('assignedto', 'like', '%'.$search.'%')
                     ->orWhere('objectid', 'like', '%'.$search.'%')
                     ->orWhere('building_damage_status', 'like', '%'.$search.'%');
             });

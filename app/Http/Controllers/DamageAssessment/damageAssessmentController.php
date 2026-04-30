@@ -96,10 +96,10 @@ class damageAssessmentController extends Controller
 
             'assigned_staff' => PublicBuildingSurvey::query()
                 // ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('assigned_to')
-                ->where('assigned_to', '!=', '')
+                ->whereNotNull('assignedto')
+                ->where('assignedto', '!=', '')
                 ->distinct()
-                ->count('assigned_to'),
+                ->count('assignedto'),
 
             'occupied_buildings' => PublicBuildingSurvey::query()
                 // ->whereBetween('created_at', [$startDate, $endDate])

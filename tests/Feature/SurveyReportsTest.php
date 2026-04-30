@@ -90,7 +90,7 @@ it('shows the road facilities report page with summary metrics and curve chart d
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'severe',
         'road_access' => 'partial',
-        'submission_date' => '2026-03-05 09:30:00',
+        'submissiondate' => '2026-03-05 09:30:00',
     ]);
 
     RoadFacilitySurveyItem::query()->create([
@@ -107,7 +107,7 @@ it('shows the road facilities report page with summary metrics and curve chart d
         'neighborhood' => 'Camp',
         'road_damage_level' => 'minor',
         'road_access' => 'open',
-        'submission_date' => '2026-04-11 13:00:00',
+        'submissiondate' => '2026-04-11 13:00:00',
     ]);
 
     RoadFacilitySurvey::query()->create([
@@ -118,7 +118,7 @@ it('shows the road facilities report page with summary metrics and curve chart d
         'neighborhood' => 'Zeitoun',
         'road_damage_level' => 'moderate',
         'road_access' => 'partial',
-        'submission_date' => null,
+        'submissiondate' => null,
         'created_at' => '2026-03-05 10:00:00',
         'updated_at' => '2026-03-05 10:00:00',
     ]);

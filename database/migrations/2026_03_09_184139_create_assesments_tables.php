@@ -65,13 +65,13 @@ return new class extends Migration
             // Metadata & Device Info
             $table->text('start')->nullable();
             $table->text('end')->nullable();
-            $table->text('today')->nullable();            
+            $table->text('today')->nullable();
             $table->text('username')->nullable();
             $table->text('simserial')->nullable();
             $table->text('subscriberid')->nullable();
             $table->text('deviceid')->nullable();
             $table->text('phonenumber')->nullable();
-            $table->dateTime('submission_date')->nullable();
+            $table->dateTime('submissiondate')->nullable();
 
             // Custom Notes
             foreach (range(1, 9) as $i) {
@@ -328,7 +328,7 @@ return new class extends Migration
             $table->text('fire_rooms_count')->nullable();
             $table->text('fire_area')->nullable();
             $table->text('furniture_ownership')->nullable();
-                        $table->text('tenant_name')->nullable();
+            $table->text('tenant_name')->nullable();
             $table->string('percentage_of_damaged_furniture', 250)->nullable();
             $table->text('unit_stripping')->nullable();
             $table->text('unit_stripping_details')->nullable();
@@ -569,8 +569,6 @@ return new class extends Migration
             $table->text('cm16')->nullable();
             $table->timestamps();
         });
-
-
 
         /*
         |--------------------------------------------------------------------------

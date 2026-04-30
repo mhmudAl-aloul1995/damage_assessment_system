@@ -29,7 +29,7 @@ it('shows eight summary statistics for public buildings and road facilities on t
         'building_name' => 'Clinic A',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
-        'assigned_to' => 'Field Team 1',
+        'assignedto' => 'Field Team 1',
         'building_damage_status' => 'fully_damaged',
         'is_building_occupied' => 'yes',
         'is_bodies' => 'yes',

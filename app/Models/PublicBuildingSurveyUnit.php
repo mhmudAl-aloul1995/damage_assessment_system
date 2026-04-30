@@ -16,6 +16,8 @@ class PublicBuildingSurveyUnit extends Model
         return [
             'select_document' => 'array',
             'raw_payload' => 'array',
+            'creationdate' => 'datetime',
+            'editdate' => 'datetime',
         ];
     }
 

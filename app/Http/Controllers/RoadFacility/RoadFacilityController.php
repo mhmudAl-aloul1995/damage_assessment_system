@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RoadFacility\RoadFacilityFilterRequest;
 use App\Models\RoadFacilityFilter;
 use App\Models\RoadFacilitySurvey;
+use App\Support\XlsFormLayout;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,12 +44,16 @@ class RoadFacilityController extends Controller
 
         $filterGroups = $databaseFilterGroups->isNotEmpty() ? $databaseFilterGroups : $this->fallbackFilterGroups();
 
+        $researcherColumn = $this->researcherColumn();
+
         $filterOptions = [
             'municipalities' => RoadFacilitySurvey::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
             'neighborhoods' => RoadFacilitySurvey::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
-            'researchers' => RoadFacilitySurvey::query()->distinct()->orderBy('assigned_to')->pluck('assigned_to')->filter()->values(),
-            'min_submission_date' => optional(RoadFacilitySurvey::query()->whereNotNull('submission_date')->min('submission_date'))?->format('Y-m-d'),
-            'max_submission_date' => optional(RoadFacilitySurvey::query()->whereNotNull('submission_date')->max('submission_date'))?->format('Y-m-d'),
+            'researchers' => $researcherColumn
+                ? RoadFacilitySurvey::query()->distinct()->orderBy($researcherColumn)->pluck($researcherColumn)->filter()->values()
+                : collect(),
+            'min_submissiondate' => optional(RoadFacilitySurvey::query()->whereNotNull('submissiondate')->min('submissiondate'))?->format('Y-m-d'),
+            'max_submissiondate' => optional(RoadFacilitySurvey::query()->whereNotNull('submissiondate')->max('submissiondate'))?->format('Y-m-d'),
         ];
 
         return view('RoadFacility.index', [
@@ -64,12 +69,13 @@ class RoadFacilityController extends Controller
             ->addColumn('actions', function (RoadFacilitySurvey $survey): string {
                 return '<a href="'.route('road-facilities.show', $survey).'" class="btn btn-light btn-sm">View</a>';
             })
-            ->editColumn('submission_date', function (RoadFacilitySurvey $survey): string {
-                return $survey->submission_date?->format('Y-m-d H:i') ?? '-';
+            ->editColumn('submissiondate', function (RoadFacilitySurvey $survey): string {
+                return $survey->submissiondate?->format('Y-m-d H:i') ?? '-';
             })
             ->editColumn('road_damage_level', function (RoadFacilitySurvey $survey): string {
                 return '<span class="badge badge-light-danger">'.e($survey->road_damage_level ?? '-').'</span>';
             })
+            ->addColumn('assignedto', fn (RoadFacilitySurvey $survey): string => $survey->assignedto ?? '-')
             ->rawColumns(['actions', 'road_damage_level'])
             ->toJson();
     }
@@ -107,30 +113,45 @@ class RoadFacilityController extends Controller
             'itemSections' => $roadFacility->items
                 ->sortBy('repeat_index')
                 ->values()
-                ->map(fn ($item) => [
-                    'title' => 'Required Item '.(($item->repeat_index ?? 0) + 1),
-                    'rows' => $this->rowsFromMap($item, [
-                        'item_required' => 'Item Required',
-                        'description' => 'Description',
-                        'unit' => 'Unit',
-                        'quantity' => 'Quantity',
-                        'other_comments' => 'Other Comments',
-                    ]),
-                ])
+                ->flatMap(function ($item): array {
+                    $itemNumber = ($item->repeat_index ?? 0) + 1;
+
+                    return collect(XlsFormLayout::sections($this->xlsFormPath(), 'R2'))
+                        ->map(fn (array $section): array => [
+                            'title' => 'Required Item '.$itemNumber.' - '.$section['title'],
+                            'rows' => $this->rowsFromXlsFields($item, $section['fields']),
+                        ])
+                        ->filter(fn (array $section): bool => $section['rows'] !== [])
+                        ->values()
+                        ->all();
+                })
                 ->all(),
         ]);
     }
 
     private function buildSurveySections(RoadFacilitySurvey $survey): array
     {
+        $sections = collect(XlsFormLayout::sections($this->xlsFormPath()))
+            ->map(fn (array $section): array => [
+                'title' => $section['title'],
+                'rows' => $this->rowsFromXlsFields($survey, $section['fields']),
+            ])
+            ->filter(fn (array $section): bool => $section['rows'] !== [])
+            ->values()
+            ->all();
+
+        if ($sections !== []) {
+            return $sections;
+        }
+
         return [
             [
                 'title' => 'General Information',
                 'rows' => $this->rowsFromMap($survey, [
                     'objectid' => 'Object ID',
                     'str_name' => 'Road Name',
-                    'assigned_to' => 'Researcher',
-                    'submission_date' => 'Submission Date',
+                    $this->researcherColumnForRows() => 'Researcher',
+                    'submissiondate' => 'Submission Date',
                     'governorate' => 'Governorate',
                 ]),
             ],
@@ -194,6 +215,30 @@ class RoadFacilityController extends Controller
             ->all();
     }
 
+    /**
+     * @param  array<int, array{name: string, label: string}>  $fields
+     * @return array<int, array{question: string, answer: string}>
+     */
+    private function rowsFromXlsFields(object $record, array $fields): array
+    {
+        return collect($fields)
+            ->map(function (array $field) use ($record): ?array {
+                $formattedValue = $this->formatSurveyValue(XlsFormLayout::value($record, $field['name']));
+
+                if ($formattedValue !== null) {
+                    return [
+                        'question' => $field['label'],
+                        'answer' => $formattedValue,
+                    ];
+                }
+
+                return null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
     private function formatSurveyValue(mixed $value): ?string
     {
         if ($value === null) {
@@ -242,16 +287,18 @@ class RoadFacilityController extends Controller
             $query->where('neighborhood', $request->string('neighborhood')->toString());
         }
 
-        if ($request->filled('assigned_to')) {
-            $query->where('assigned_to', $request->string('assigned_to')->toString());
+        $researcherColumn = $this->researcherColumn();
+
+        if ($request->filled('assignedto') && $researcherColumn) {
+            $query->where($researcherColumn, $request->string('assignedto')->toString());
         }
 
         if ($request->filled('from_date')) {
-            $query->whereDate('submission_date', '>=', $request->date('from_date')->toDateString());
+            $query->whereDate('submissiondate', '>=', $request->date('from_date')->toDateString());
         }
 
         if ($request->filled('to_date')) {
-            $query->whereDate('submission_date', '<=', $request->date('to_date')->toDateString());
+            $query->whereDate('submissiondate', '<=', $request->date('to_date')->toDateString());
         }
 
         if ($request->boolean('damaged_only')) {
@@ -297,12 +344,17 @@ class RoadFacilityController extends Controller
                     ->where('str_name', 'like', '%'.$search.'%')
                     ->orWhere('municipalitie', 'like', '%'.$search.'%')
                     ->orWhere('neighborhood', 'like', '%'.$search.'%')
-                    ->orWhere('assigned_to', 'like', '%'.$search.'%')
                     ->orWhere('objectid', 'like', '%'.$search.'%')
                     ->orWhere('road_damage_level', 'like', '%'.$search.'%')
                     ->orWhere('road_access', 'like', '%'.$search.'%')
                     ->orWhere('lane_count', 'like', '%'.$search.'%')
                     ->orWhere('blockage_reason', 'like', '%'.$search.'%');
+
+                $researcherColumn = $this->researcherColumn();
+
+                if ($researcherColumn) {
+                    $nested->orWhere($researcherColumn, 'like', '%'.$search.'%');
+                }
             });
         }
 
@@ -350,6 +402,32 @@ class RoadFacilityController extends Controller
                 $query->where('raw_payload', 'like', '%'.$filterValue.'%');
             }
         }
+    }
+
+    private function researcherColumn(): ?string
+    {
+        if (Schema::hasColumn('road_facility_surveys', 'assignedto')) {
+            return 'assignedto';
+        }
+
+        if (Schema::hasColumn('road_facility_surveys', 'assignedto')) {
+            return 'assignedto';
+        }
+
+        return null;
+    }
+
+    private function researcherColumnForRows(): string
+    {
+        return $this->researcherColumn() ?? 'assignedto';
+    }
+
+    private function xlsFormPath(): string
+    {
+        return config(
+            'services.survey_forms.road_facilities_xlsx',
+            'C:\\Users\\hp\\Downloads\\RD01-Damage Assessment of Roads Facilities.xlsx',
+        );
     }
 
     /**

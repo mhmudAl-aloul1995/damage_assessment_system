@@ -15,6 +15,8 @@ class RoadFacilitySurveyItem extends Model
     {
         return [
             'raw_payload' => 'array',
+            'creationdate' => 'datetime',
+            'editdate' => 'datetime',
         ];
     }
 

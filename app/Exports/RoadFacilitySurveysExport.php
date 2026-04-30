@@ -45,9 +45,9 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
             $row->neighborhood,
             $row->road_damage_level,
             $row->road_access,
-            $row->submission_date?->format('Y-m-d H:i'),
+            $row->submissiondate?->format('Y-m-d H:i'),
             $row->items_count,
-            $row->assigned_to,
+            $row->assignedto,
         ];
     }
 }

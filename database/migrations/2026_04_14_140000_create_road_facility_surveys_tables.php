@@ -18,12 +18,12 @@ return new class extends Migration
                 $table->string('governorate')->nullable();
                 $table->string('municipalitie')->nullable();
                 $table->string('neighborhood')->nullable();
-                $table->string('assigned_to')->nullable();
+                $table->string('assignedto')->nullable();
                 $table->integer('group_number')->nullable();
                 $table->string('zone_code')->nullable();
                 $table->string('audit')->nullable();
                 $table->string('audit_low')->nullable();
-                $table->dateTime('submission_date')->nullable();
+                $table->dateTime('submissiondate')->nullable();
                 $table->string('weather')->nullable();
                 $table->string('security_situation')->nullable();
                 $table->text('security_info')->nullable();
