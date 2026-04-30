@@ -18,7 +18,7 @@ class PublicBuildingSurveyImporter
         'PARCEL_NO1' => 'parcel_no1',
         'BLOCK_NO1' => 'block_no1',
         'OWNER_NA' => 'owner_na',
-        'AssignedTo' => 'assignedto',
+        'AssignedTo' => 'assigned_to',
         'objectid' => 'objectid',
         'Governorate' => 'governorate',
         'Municipalitie' => 'municipalitie',

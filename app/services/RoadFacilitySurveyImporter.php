@@ -18,7 +18,7 @@ class RoadFacilitySurveyImporter
         'Governorate' => 'governorate',
         'Municipalitie' => 'municipalitie',
         'Neighborhood' => 'neighborhood',
-        'AssignedTo' => 'assignedto',
+        'AssignedTo' => 'assigned_to',
         'GroupNumber' => 'group_number',
         'Zone_Code' => 'zone_code',
         'audit' => 'audit',

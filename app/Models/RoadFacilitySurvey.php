@@ -12,7 +12,7 @@ class RoadFacilitySurvey extends Model
     protected $guarded = [];
 
     protected $appends = [
-        'assignedto',
+        'assigned_to',
     ];
 
     public function getRouteKeyName(): string

@@ -63,8 +63,8 @@ class AreaProductivityReportService
     {
         return match ($type) {
             self::TYPE_HOUSING_UNITS, self::TYPE_BUILDINGS => $this->buildingBackedFilterOptions(),
-            self::TYPE_PUBLIC_BUILDINGS => $this->surveyFilterOptions(PublicBuildingSurvey::query(), 'assignedto', false),
-            self::TYPE_ROAD_FACILITIES => $this->surveyFilterOptions(RoadFacilitySurvey::query(), 'assignedto', true),
+            self::TYPE_PUBLIC_BUILDINGS => $this->surveyFilterOptions(PublicBuildingSurvey::query(), 'assigned_to', false),
+            self::TYPE_ROAD_FACILITIES => $this->surveyFilterOptions(RoadFacilitySurvey::query(), 'assigned_to', true),
             default => throw new InvalidArgumentException("Unsupported area productivity report type [{$type}]."),
         };
     }
@@ -165,7 +165,7 @@ class AreaProductivityReportService
                 {$this->preferredValueExpression('public_building_surveys.governorate')} as governorate,
                 {$this->preferredValueExpression('public_building_surveys.municipalitie')} as municipalitie,
                 {$this->preferredValueExpression('public_building_surveys.neighborhood')} as neighborhood,
-                COUNT(DISTINCT public_building_surveys.assignedto) as no_eng,
+                COUNT(DISTINCT public_building_surveys.assigned_to) as no_eng,
                 SUM(CASE WHEN public_building_surveys.building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN public_building_surveys.building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN public_building_surveys.building_damage_status IN ('committee_review', 'commite_review') THEN 1 ELSE 0 END) as cra_range,
@@ -178,7 +178,7 @@ class AreaProductivityReportService
             'governorate' => 'public_building_surveys.governorate',
             'municipalitie' => 'public_building_surveys.municipalitie',
             'neighborhood' => 'public_building_surveys.neighborhood',
-            'assignedto' => 'public_building_surveys.assignedto',
+            'assignedto' => 'public_building_surveys.assigned_to',
         ], 'public_building_surveys.created_at', $fromDate, $toDate);
 
         return $query;
@@ -193,7 +193,7 @@ class AreaProductivityReportService
                 {$this->preferredValueExpression('road_facility_surveys.governorate')} as governorate,
                 {$this->preferredValueExpression('road_facility_surveys.municipalitie')} as municipalitie,
                 {$this->preferredValueExpression('road_facility_surveys.neighborhood')} as neighborhood,
-                COUNT(DISTINCT road_facility_surveys.assignedto) as no_eng,
+                COUNT(DISTINCT road_facility_surveys.assigned_to) as no_eng,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('destroyed', 'severe') THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('moderate', 'minor') THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('No_Damage', 'no_damage') THEN 1 ELSE 0 END) as cra_range,
@@ -207,7 +207,7 @@ class AreaProductivityReportService
             'municipalitie' => 'road_facility_surveys.municipalitie',
             'neighborhood' => 'road_facility_surveys.neighborhood',
             'zone_code' => 'road_facility_surveys.zone_code',
-            'assignedto' => 'road_facility_surveys.assignedto',
+            'assignedto' => 'road_facility_surveys.assigned_to',
         ], 'road_facility_surveys.created_at', $fromDate, $toDate);
 
         return $query;

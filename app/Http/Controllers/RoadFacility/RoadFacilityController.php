@@ -75,7 +75,7 @@ class RoadFacilityController extends Controller
             ->editColumn('road_damage_level', function (RoadFacilitySurvey $survey): string {
                 return '<span class="badge badge-light-danger">'.e($survey->road_damage_level ?? '-').'</span>';
             })
-            ->addColumn('assignedto', fn (RoadFacilitySurvey $survey): string => $survey->assignedto ?? '-')
+            ->addColumn('assigned_to', fn (RoadFacilitySurvey $survey): string => $survey->assigned_to ?? '-')
             ->rawColumns(['actions', 'road_damage_level'])
             ->toJson();
     }
@@ -103,31 +103,39 @@ class RoadFacilityController extends Controller
         );
     }
 
-    public function show(RoadFacilitySurvey $roadFacility): View
-    {
-        $roadFacility->load('items');
+  public function show(RoadFacilitySurvey $roadFacility): View
+{
+    $roadFacility->load(['items' => fn ($q) => $q->orderBy('objectid')]);
 
-        return view('RoadFacility.show', [
-            'survey' => $roadFacility,
-            'sections' => $this->buildSurveySections($roadFacility),
-            'itemSections' => $roadFacility->items
-                ->sortBy('repeat_index')
-                ->values()
-                ->flatMap(function ($item): array {
-                    $itemNumber = ($item->repeat_index ?? 0) + 1;
-
-                    return collect(XlsFormLayout::sections($this->xlsFormPath(), 'R2'))
-                        ->map(fn (array $section): array => [
-                            'title' => 'Required Item '.$itemNumber.' - '.$section['title'],
-                            'rows' => $this->rowsFromXlsFields($item, $section['fields']),
-                        ])
-                        ->filter(fn (array $section): bool => $section['rows'] !== [])
-                        ->values()
-                        ->all();
-                })
-                ->all(),
-        ]);
-    }
+    return view('RoadFacility.show', [
+        'survey' => $roadFacility,
+        'sections' => $this->buildSurveySections($roadFacility),
+        'itemSections' => $roadFacility->items
+            ->values()
+            ->map(function ($item, int $index): array {
+                return [
+                    'title' => 'Required Item '.($index + 1),
+                    'rows' => $this->rowsFromMap($item, [
+                        'objectid' => 'Object ID',
+                        'globalid' => 'Global ID',
+                        'item_required' => 'Required Item',
+                        'description' => 'Description',
+                        'unit_001' => 'Unit',
+                        'quantity_001' => 'Quantity',
+                        'other_comments' => 'Other Comments',
+                        'parentglobalid' => 'Parent Global ID',
+                        'creationdate' => 'Creation Date',
+                        'creator' => 'Creator',
+                        'editdate' => 'Edit Date',
+                        'editor' => 'Editor',
+                    ]),
+                ];
+            })
+            ->filter(fn ($section) => $section['rows'] !== [])
+            ->values()
+            ->all(),
+    ]);
+}
 
     private function buildSurveySections(RoadFacilitySurvey $survey): array
     {
@@ -289,8 +297,8 @@ class RoadFacilityController extends Controller
 
         $researcherColumn = $this->researcherColumn();
 
-        if ($request->filled('assignedto') && $researcherColumn) {
-            $query->where($researcherColumn, $request->string('assignedto')->toString());
+        if ($request->filled('assigned_to') && $researcherColumn) {
+            $query->where($researcherColumn, $request->string('assigned_to')->toString());
         }
 
         if ($request->filled('from_date')) {
@@ -406,8 +414,8 @@ class RoadFacilityController extends Controller
 
     private function researcherColumn(): ?string
     {
-        if (Schema::hasColumn('road_facility_surveys', 'assignedto')) {
-            return 'assignedto';
+        if (Schema::hasColumn('road_facility_surveys', 'assigned_to')) {
+            return 'assigned_to';
         }
 
         if (Schema::hasColumn('road_facility_surveys', 'assignedto')) {
@@ -419,7 +427,7 @@ class RoadFacilityController extends Controller
 
     private function researcherColumnForRows(): string
     {
-        return $this->researcherColumn() ?? 'assignedto';
+        return $this->researcherColumn() ?? 'assigned_to';
     }
 
     private function xlsFormPath(): string
