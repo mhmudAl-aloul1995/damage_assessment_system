@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\Assessment;
+use App\Models\AssessmentStatus;
 use App\Models\Building;
+use App\Models\BuildingStatus;
 use App\Models\EditAssessment;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -11,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
@@ -174,4 +177,76 @@ it('returns inline edit metadata and field history when saving an audit edit', f
             'value' => 'Updated Building',
             'user_name' => 'Audit Editor',
         ]);
+});
+
+it('allows auditing supervisors to final approve from the assessment audit page', function () {
+    $role = Role::query()->create([
+        'name' => 'Auditing Supervisor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $engineerStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $lawyerStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_lawyer',
+        'label_en' => 'Accepted By Lawyer',
+        'label_ar' => 'Accepted By Lawyer',
+        'stage' => 'lawyer',
+        'order_step' => 2,
+    ]);
+
+    $finalStatus = AssessmentStatus::query()->create([
+        'name' => 'final_approval',
+        'label_en' => 'Final Approval',
+        'label_ar' => 'Final Approval',
+        'stage' => 'system',
+        'order_step' => 3,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 901,
+        'globalid' => 'audit-final-building',
+        'building_name' => 'Final Building',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $engineerStatus->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $lawyerStatus->id,
+        'user_id' => $user->id,
+        'type' => 'Legal Auditor',
+    ]);
+
+    $this->actingAs($user)
+        ->get("showAssessmentAudit/{$building->globalid}")
+        ->assertOk()
+        ->assertSee('btn_show_assessment_final_approve');
+
+    $this->actingAs($user)
+        ->postJson(route('audit.building.finalApprove'), [
+            'building_ids' => [$building->objectid],
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    $this->assertDatabaseHas('building_statuses', [
+        'building_id' => $building->objectid,
+        'status_id' => $finalStatus->id,
+        'type' => 'final',
+    ]);
 });

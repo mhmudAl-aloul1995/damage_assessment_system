@@ -478,6 +478,13 @@
                                         onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
                                     <button type="button" class="btn btn-sm btn-light-primary ms-3"
                                         onclick="reloadBuildingAssessmentTable()">تحديث</button>
+                                    @if (auth()->user()->hasAnyRole(['Auditing Supervisor', 'Database Officer']))
+                                        <button type="button" id="btn_show_assessment_final_approve"
+                                            class="btn btn-sm btn-light-warning"
+                                            onclick="finalApproveCurrentBuilding()">
+                                            Final Approve
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -795,6 +802,8 @@
         let currentApprovalLocked = false;
         let urlHousingGlobalId = @json($housingGlobalid ?? null);
         let buildingCurrentStatus = @json($buildingCurrentStatus);
+        let buildingFinalStatus = @json($buildingFinalStatus ?? null);
+        let buildingObjectId = @json($building?->objectid);
         let initialHousingSelectionDone = false;
         let pendingHousingGlobalId = null;
         let inlineSaveLocks = new Set();
@@ -809,6 +818,7 @@
             KTBuildingUnitsList.init();
             KTHousingAssessmentList.init();
             setActiveStatusButton('.building-status-btn', normalizeStatus(buildingCurrentStatus));
+            syncFinalApproveButton();
             selectInitialHousingOption();
         });
 
@@ -2121,6 +2131,79 @@
             }
 
             return cleanAuditText(value);
+        }
+
+        function syncFinalApproveButton() {
+            let btn = $('#btn_show_assessment_final_approve');
+
+            if (!btn.length) return;
+
+            let isApproved = String(buildingFinalStatus || '').toLowerCase() === 'final_approval';
+
+            btn
+                .toggleClass('btn-light-warning', !isApproved)
+                .toggleClass('btn-light-success is-active', isApproved)
+                .prop('disabled', isApproved)
+                .text(isApproved ? 'Final Approved' : 'Final Approve');
+        }
+
+        function finalApproveCurrentBuilding() {
+            let btn = $('#btn_show_assessment_final_approve');
+
+            if (!buildingObjectId || btn.prop('disabled')) {
+                return;
+            }
+
+            let submitApproval = function () {
+                $.ajax({
+                    url: "{{ route('audit.building.finalApprove') }}",
+                    type: "POST",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        building_ids: [buildingObjectId]
+                    },
+                    beforeSend: function () {
+                        btn.prop('disabled', true).attr('data-kt-indicator', 'on');
+                    },
+                    success: function (response) {
+                        buildingFinalStatus = 'final_approval';
+                        syncFinalApproveButton();
+                        reloadBuildingUnitsTable();
+                        toastr.success(response.message || 'Final approval saved successfully');
+                    },
+                    error: function (xhr) {
+                        let message = xhr.responseJSON?.message || 'Final approval failed';
+                        toastr.error(message);
+                        btn.prop('disabled', false);
+                    },
+                    complete: function () {
+                        btn.removeAttr('data-kt-indicator');
+                    }
+                });
+            };
+
+            if (typeof Swal === 'undefined') {
+                submitApproval();
+                return;
+            }
+
+            Swal.fire({
+                title: 'Final Approve',
+                text: 'Do you want to final approve this building?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Approve',
+                cancelButtonText: 'Cancel',
+                buttonsStyling: false,
+                customClass: {
+                    confirmButton: 'btn btn-warning',
+                    cancelButton: 'btn btn-light'
+                }
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    submitApproval();
+                }
+            });
         }
 
         function editHistoryCollapseId(type, globalid, field) {
