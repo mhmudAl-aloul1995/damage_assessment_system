@@ -47,9 +47,14 @@ return [
         'public_building_survey_referer' => env('ARCGIS_PUBLIC_BUILDING_SURVEY_REFERER', 'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_409593086b6249549601f0f8c6a3007a/FeatureServer/0'),
         'road_facility_survey_layer_url' => env('ARCGIS_ROAD_FACILITY_SURVEY_LAYER_URL', 'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_8d4df706500f47a8864206fd1b251739_form/FeatureServer'),
         'road_facility_survey_referer' => env('ARCGIS_ROAD_FACILITY_SURVEY_REFERER', 'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_8d4df706500f47a8864206fd1b251739_form/FeatureServer/0'),
-        'public_building_survey_units_layer_url' => env('ARCGIS_PUBLIC_BUILDING_SURVEY_UNITS_LAYER_URL'),
-        'road_facility_survey_items_layer_url' => env('ARCGIS_ROAD_FACILITY_SURVEY_ITEMS_LAYER_URL'),
-
+        'public_building_survey_units_layer_url' => env(
+            'ARCGIS_PUBLIC_BUILDING_SURVEY_UNITS_LAYER_URL',
+            'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_409593086b6249549601f0f8c6a3007a/FeatureServer/1'
+        ),
+        'road_facility_survey_items_layer_url' => env(
+            'ARCGIS_ROAD_FACILITY_SURVEY_ITEMS_LAYER_URL',
+            'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_8d4df706500f47a8864206fd1b251739_form/FeatureServer/1'
+        ),
     ],
     'committee_decisions' => [
         'telegram' => [

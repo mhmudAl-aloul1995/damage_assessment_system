@@ -26,7 +26,7 @@ it('creates the road facility survey tables with the expected columns', function
 
     expect(Schema::connection('mysql')->hasTable('road_facility_survey_items'))->toBeTrue();
     expect(Schema::connection('mysql')->hasColumns('road_facility_survey_items', [
-        'road_facility_survey_id',
+        'parentglobalid',
         'repeat_index',
         'item_required',
         'description',

@@ -20,6 +20,6 @@ class RoadFacilitySurveyItem extends Model
 
     public function survey(): BelongsTo
     {
-        return $this->belongsTo(RoadFacilitySurvey::class, 'road_facility_survey_id');
+        return $this->belongsTo(RoadFacilitySurvey::class, 'parentglobalid', 'globalid');
     }
 }

@@ -22,6 +22,7 @@ it('shows the road facility survey page with all dynamic road filters and export
 
     $survey = RoadFacilitySurvey::query()->create([
         'objectid' => 9201,
+        'globalid' => 'road-facility-survey-9201',
         'governorate' => 'Gaza',
         'str_name' => 'Coastal Road',
         'municipalitie' => 'Gaza',
@@ -41,7 +42,7 @@ it('shows the road facility survey page with all dynamic road filters and export
     ]);
 
     RoadFacilitySurveyItem::query()->create([
-        'road_facility_survey_id' => $survey->id,
+        'parentglobalid' => $survey->globalid,
         'repeat_index' => 0,
         'item_required' => 'Traffic sign replacement',
         'description' => 'Damaged stop sign',
@@ -52,6 +53,7 @@ it('shows the road facility survey page with all dynamic road filters and export
 
     RoadFacilitySurvey::query()->create([
         'objectid' => 9202,
+        'globalid' => 'road-facility-survey-9202',
         'governorate' => 'North',
         'str_name' => 'Northern Street',
         'municipalitie' => 'North Gaza',
@@ -124,6 +126,9 @@ it('shows the road facility survey page with all dynamic road filters and export
     $showResponse->assertOk();
     $showResponse->assertSee('Coastal Road');
     $showResponse->assertSee('Traffic sign replacement');
+    $showResponse->assertSee('Linked Required Items');
+
+    expect(RoadFacilitySurvey::query()->withCount('items')->find($survey->id)->items_count)->toBe(1);
 
     $objectIdResponse = $this->actingAs($user)->get('/road-facilities/'.$survey->objectid);
     $objectIdResponse->assertOk();

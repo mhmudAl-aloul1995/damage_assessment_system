@@ -31,6 +31,6 @@ class PublicBuildingSurvey extends Model
 
     public function units(): HasMany
     {
-        return $this->hasMany(PublicBuildingSurveyUnit::class);
+        return $this->hasMany(PublicBuildingSurveyUnit::class, 'parentglobalid', 'globalid');
     }
 }

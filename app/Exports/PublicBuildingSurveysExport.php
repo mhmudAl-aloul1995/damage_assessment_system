@@ -29,7 +29,7 @@ class PublicBuildingSurveysExport implements FromCollection, ShouldAutoSize, Wit
             'Neighborhood',
             'Damage Status',
             'Date Of Damage',
-            'Units',
+            'Linked Units',
             'Researcher',
         ];
     }

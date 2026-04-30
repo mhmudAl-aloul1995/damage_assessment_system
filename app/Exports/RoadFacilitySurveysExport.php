@@ -30,7 +30,7 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
             'Road Damage Level',
             'Road Access',
             'Submission Date',
-            'Items',
+            'Linked Items',
             'Researcher',
         ];
     }

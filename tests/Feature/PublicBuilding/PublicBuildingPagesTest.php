@@ -21,6 +21,7 @@ it('shows the public building survey pages and datatable data with dynamic filte
 
     $survey = PublicBuildingSurvey::query()->create([
         'objectid' => 801,
+        'globalid' => 'public-building-survey-801',
         'weather' => 'fine',
         'security_situation' => 'Safe',
         'building_name' => 'Public School',
@@ -40,7 +41,7 @@ it('shows the public building survey pages and datatable data with dynamic filte
     ]);
 
     PublicBuildingSurveyUnit::query()->create([
-        'public_building_survey_id' => $survey->id,
+        'parentglobalid' => $survey->globalid,
         'repeat_index' => 0,
         'unit_name' => 'Ground Floor',
         'floor_number' => 0,
@@ -51,6 +52,7 @@ it('shows the public building survey pages and datatable data with dynamic filte
 
     PublicBuildingSurvey::query()->create([
         'objectid' => 802,
+        'globalid' => 'public-building-survey-802',
         'weather' => 'windy',
         'security_situation' => 'Unsafe',
         'building_name' => 'Health Center',
@@ -132,6 +134,9 @@ it('shows the public building survey pages and datatable data with dynamic filte
     $showResponse->assertSee('Immediate maintenance required');
     $showResponse->assertSee('Ground Floor');
     $showResponse->assertSee('Repair windows');
+    $showResponse->assertSee('Linked Units');
+
+    expect(PublicBuildingSurvey::query()->withCount('units')->find($survey->id)->units_count)->toBe(1);
 
     $objectIdResponse = $this->actingAs($user)->get('/public-buildings/'.$survey->objectid);
     $objectIdResponse->assertOk();

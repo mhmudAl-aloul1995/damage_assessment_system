@@ -24,6 +24,7 @@ it('shows the public buildings report page with summary metrics and curve chart 
 
     $firstSurvey = PublicBuildingSurvey::query()->create([
         'objectid' => 1801,
+        'globalid' => 'public-building-survey-1801',
         'building_name' => 'School A',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
@@ -32,13 +33,14 @@ it('shows the public buildings report page with summary metrics and curve chart 
     ]);
 
     PublicBuildingSurveyUnit::query()->create([
-        'public_building_survey_id' => $firstSurvey->id,
+        'parentglobalid' => $firstSurvey->globalid,
         'repeat_index' => 0,
         'unit_name' => 'Ground Floor',
     ]);
 
     PublicBuildingSurvey::query()->create([
         'objectid' => 1802,
+        'globalid' => 'public-building-survey-1802',
         'building_name' => 'Clinic B',
         'municipalitie' => 'North Gaza',
         'neighborhood' => 'Camp',
@@ -82,6 +84,7 @@ it('shows the road facilities report page with summary metrics and curve chart d
 
     $firstSurvey = RoadFacilitySurvey::query()->create([
         'objectid' => 2901,
+        'globalid' => 'road-facility-survey-2901',
         'str_name' => 'Coastal Road',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
@@ -91,13 +94,14 @@ it('shows the road facilities report page with summary metrics and curve chart d
     ]);
 
     RoadFacilitySurveyItem::query()->create([
-        'road_facility_survey_id' => $firstSurvey->id,
+        'parentglobalid' => $firstSurvey->globalid,
         'repeat_index' => 0,
         'item_required' => 'Signage',
     ]);
 
     RoadFacilitySurvey::query()->create([
         'objectid' => 2902,
+        'globalid' => 'road-facility-survey-2902',
         'str_name' => 'North Road',
         'municipalitie' => 'North Gaza',
         'neighborhood' => 'Camp',
@@ -108,6 +112,7 @@ it('shows the road facilities report page with summary metrics and curve chart d
 
     RoadFacilitySurvey::query()->create([
         'objectid' => 2903,
+        'globalid' => 'road-facility-survey-2903',
         'str_name' => 'Fallback Road',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Zeitoun',

@@ -4,10 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
-        if (!Schema::hasTable('public_building_surveys')) {
+        if (! Schema::hasTable('public_building_surveys')) {
 
             Schema::create('public_building_surveys', function (Blueprint $table): void {
                 $table->id();
@@ -115,13 +116,11 @@ return new class extends Migration {
                 $table->timestamps();
             });
         }
-        if (!Schema::hasTable('public_building_survey_units')) {
+        if (! Schema::hasTable('public_building_survey_units')) {
 
             Schema::create('public_building_survey_units', function (Blueprint $table): void {
                 $table->id();
-                $table->foreignId('public_building_survey_id')
-                    ->constrained('public_building_surveys')
-                    ->cascadeOnDelete();
+                $table->string('parentglobalid', 50)->nullable();
                 $table->unsignedInteger('repeat_index')->default(0);
 
                 $table->string('unit_name')->nullable();
@@ -328,7 +327,7 @@ return new class extends Migration {
                 $table->json('raw_payload')->nullable();
                 $table->timestamps();
 
-                $table->index(['public_building_survey_id', 'repeat_index'], 'pbs_units_survey_repeat_idx');
+                $table->index(['parentglobalid', 'repeat_index'], 'pbs_units_survey_repeat_idx');
             });
         }
     }

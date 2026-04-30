@@ -15,6 +15,7 @@ it('imports a road facility survey payload with repeated items', function () {
 
     $survey = $importer->import([
         'objectid' => 8101,
+        'globalid' => 'road-facility-survey-8101',
         'Field_status' => 'COMPLETED',
         'Str_Name' => 'Al Rasheed Road',
         'road_damage_level' => 'severe',
@@ -39,6 +40,7 @@ it('imports a road facility survey payload with repeated items', function () {
     expect($survey->blockage_reason)->toBe(['rubble', 'craters']);
     expect($survey->road_type)->toBe(['water_network', 'sewer_network']);
     expect($survey->items)->toHaveCount(1);
+    expect($survey->items->first()->parentglobalid)->toBe($survey->globalid);
     expect($survey->items->first()->item_required)->toBe('Traffic light replacement');
     expect($survey->items->first()->unit)->toBe('item');
     expect($survey->items->first()->quantity)->toBe(2);

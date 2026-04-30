@@ -33,6 +33,6 @@ class RoadFacilitySurvey extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(RoadFacilitySurveyItem::class);
+        return $this->hasMany(RoadFacilitySurveyItem::class, 'parentglobalid', 'globalid');
     }
 }

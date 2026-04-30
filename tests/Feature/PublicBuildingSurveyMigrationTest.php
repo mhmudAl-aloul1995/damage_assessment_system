@@ -25,7 +25,7 @@ it('creates the public building survey tables with the expected columns', functi
 
     expect(Schema::connection('mysql')->hasTable('public_building_survey_units'))->toBeTrue();
     expect(Schema::connection('mysql')->hasColumns('public_building_survey_units', [
-        'public_building_survey_id',
+        'parentglobalid',
         'repeat_index',
         'unit_name',
         'damaged_area_m2',

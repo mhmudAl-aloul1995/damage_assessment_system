@@ -117,7 +117,7 @@
                             <th>Damage Level</th>
                             <th>Road Access</th>
                             <th>Submission Date</th>
-                            <th>Items</th>
+                            <th>Linked Items</th>
                             <th>Researcher</th>
                             <th class="text-end">Actions</th>
                         </tr>

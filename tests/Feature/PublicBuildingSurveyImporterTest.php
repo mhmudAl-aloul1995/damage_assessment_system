@@ -15,6 +15,7 @@ it('imports a public building survey payload with repeated units', function () {
 
     $survey = $importer->import([
         'objectid' => 7001,
+        'globalid' => 'public-building-survey-7001',
         'Field_status' => 'COMPLETED',
         'building_name' => 'Municipality HQ',
         'building_damage_status' => 'partially_damaged',
@@ -41,6 +42,7 @@ it('imports a public building survey payload with repeated units', function () {
     expect($survey->benef_type)->toBe(['staff', 'visitors']);
     expect($survey->building_roof_type)->toBe(['concrete', 'clay_tile']);
     expect($survey->units)->toHaveCount(1);
+    expect($survey->units->first()->parentglobalid)->toBe($survey->globalid);
     expect($survey->units->first()->unit_name)->toBe('First Floor');
     expect((float) $survey->units->first()->damaged_area_m2)->toBe(125.5);
     expect($survey->units->first()->select_document)->toBe(['ID_photo', 'municipal_permit']);

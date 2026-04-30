@@ -87,7 +87,7 @@
                 <th>Neighborhood</th>
                 <th>Damage Status</th>
                 <th>Date Of Damage</th>
-                <th>Units</th>
+                <th>Linked Units</th>
                 <th>Researcher</th>
             </tr>
         </thead>

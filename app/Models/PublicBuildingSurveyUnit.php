@@ -21,6 +21,6 @@ class PublicBuildingSurveyUnit extends Model
 
     public function survey(): BelongsTo
     {
-        return $this->belongsTo(PublicBuildingSurvey::class, 'public_building_survey_id');
+        return $this->belongsTo(PublicBuildingSurvey::class, 'parentglobalid', 'globalid');
     }
 }

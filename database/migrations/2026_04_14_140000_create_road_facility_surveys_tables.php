@@ -4,10 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
-        if (!Schema::hasTable('road_facility_surveys')) {
+        if (! Schema::hasTable('road_facility_surveys')) {
 
             Schema::create('road_facility_surveys', function (Blueprint $table): void {
                 $table->id();
@@ -106,13 +107,11 @@ return new class extends Migration {
                 $table->timestamps();
             });
         }
-        if (!Schema::hasTable('road_facility_survey_items')) {
+        if (! Schema::hasTable('road_facility_survey_items')) {
 
             Schema::create('road_facility_survey_items', function (Blueprint $table): void {
                 $table->id();
-                $table->foreignId('road_facility_survey_id')
-                    ->constrained('road_facility_surveys')
-                    ->cascadeOnDelete();
+                $table->string('parentglobalid', 50)->nullable();
                 $table->unsignedInteger('repeat_index')->default(0);
                 $table->string('item_required')->nullable();
                 $table->text('description')->nullable();
@@ -122,7 +121,7 @@ return new class extends Migration {
                 $table->json('raw_payload')->nullable();
                 $table->timestamps();
 
-                $table->index(['road_facility_survey_id', 'repeat_index'], 'rfs_items_survey_repeat_idx');
+                $table->index(['parentglobalid', 'repeat_index'], 'rfs_items_survey_repeat_idx');
             });
         }
     }

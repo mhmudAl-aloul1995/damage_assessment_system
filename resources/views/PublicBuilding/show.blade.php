@@ -9,6 +9,7 @@
         <div class="card-title d-flex flex-column">
             <h2 class="mb-1">{{ $survey->building_name ?? 'Public Building Survey' }}</h2>
             <div class="text-muted">Object ID: {{ $survey->objectid ?? '-' }}</div>
+            <div class="text-muted">Global ID: {{ $survey->globalid ?? '-' }}</div>
         </div>
         <div class="card-toolbar">
             <a href="{{ route('public-buildings.index') }}" class="btn btn-sm btn-light">Back</a>
@@ -39,6 +40,12 @@
                 <div class="border rounded p-4 h-100 bg-light-info">
                     <div class="text-muted fs-7 mb-1">Researcher</div>
                     <div class="fw-bold fs-5">{{ $survey->assigned_to ?? '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="border rounded p-4 h-100 bg-light">
+                    <div class="text-muted fs-7 mb-1">Linked Units / Floors</div>
+                    <div class="fw-bold fs-5">{{ $survey->units->count() }}</div>
                 </div>
             </div>
         </div>
