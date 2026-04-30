@@ -18,7 +18,7 @@ class PublicBuildingFilterRequest extends FormRequest
         return [
             'municipalitie' => ['nullable', 'string', 'max:255'],
             'neighborhood' => ['nullable', 'string', 'max:255'],
-            'assignedto' => ['nullable', 'string', 'max:255'],
+            'assigned_to' => ['nullable', 'string', 'max:255'],
             'filters' => ['nullable', 'array'],
             'filters.*' => ['nullable', 'string', 'max:255'],
             'from_date' => ['nullable', 'date'],
@@ -27,7 +27,7 @@ class PublicBuildingFilterRequest extends FormRequest
             'with_units' => ['nullable', 'boolean'],
             'has_municipality' => ['nullable', 'boolean'],
             'has_neighborhood' => ['nullable', 'boolean'],
-            'has_assignedto' => ['nullable', 'boolean'],
+            'has_assigned_to' => ['nullable', 'boolean'],
             'occupied_only' => ['nullable', 'boolean'],
             'bodies_only' => ['nullable', 'boolean'],
             'uxo_only' => ['nullable', 'boolean'],
