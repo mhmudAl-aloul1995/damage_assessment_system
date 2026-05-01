@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
-
+use App\Models\SystemOperationLog;
 class SyncArcGISLayers extends Command
 {
     protected $signature = 'sync:arcgis-layers 
@@ -136,7 +136,7 @@ class SyncArcGISLayers extends Command
         $token = $this->getToken();
 
         if (!$token) {
-            $this->error('ArcGIS token is empty. Check username/password/referer.');
+            $this->error('ArcGIS token is empty.');
             return;
         }
 
@@ -150,8 +150,19 @@ class SyncArcGISLayers extends Command
 
         $this->newLine();
         $this->info("Syncing {$name}");
-        $this->line("Table: {$table}");
-        $this->line("URL  : {$url}");
+
+        // ✅ إنشاء Log
+        $log = SystemOperationLog::create([
+            'operation_type' => 'sync_layer',
+            'status' => 'processing',
+            'connection_name' => config('database.default'),
+            'layer_name' => $name,
+            'started_at' => now(),
+            'total_records' => 0,
+            'inserted' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+        ]);
 
         while (true) {
             $where = '1=1';
@@ -159,8 +170,6 @@ class SyncArcGISLayers extends Command
             if ($this->option('only-objectid')) {
                 $where = 'objectid = ' . (int) $this->option('only-objectid');
             }
-
-            $this->line("Fetching offset: {$offset}");
 
             try {
                 $response = Http::timeout(120)
@@ -178,8 +187,18 @@ class SyncArcGISLayers extends Command
 
                 $json = $response->json();
 
+                // ❌ ArcGIS error
                 if (isset($json['error'])) {
-                    $this->error(json_encode($json['error'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+                    $message = json_encode($json['error'], JSON_UNESCAPED_UNICODE);
+
+                    $this->error($message);
+
+                    $log->update([
+                        'status' => 'failed',
+                        'finished_at' => now(),
+                        'message' => $message,
+                    ]);
+
                     return;
                 }
 
@@ -199,10 +218,6 @@ class SyncArcGISLayers extends Command
                             continue;
                         }
 
-                        if ($offset === 0 && $this->option('debug-fields')) {
-                            $this->debugFields($table, $columns, $attr);
-                        }
-
                         $row = $this->buildRow(
                             attributes: $attr,
                             columns: $columns,
@@ -216,9 +231,21 @@ class SyncArcGISLayers extends Command
                         }
 
                         $this->upsertRow($table, $row, $objectid, $inserted, $updated, $skipped);
+
                     } catch (Throwable $e) {
                         $failed++;
+                        $skipped++;
+
                         $this->error("Object failed: " . $e->getMessage());
+
+                        // تحديث جزئي للـ log
+                        $log->update([
+                            'total_records' => $inserted + $updated + $skipped,
+                            'inserted' => $inserted,
+                            'updated' => $updated,
+                            'skipped' => $skipped,
+                            'message' => "Last error: " . $e->getMessage(),
+                        ]);
                     }
                 }
 
@@ -227,19 +254,51 @@ class SyncArcGISLayers extends Command
                 }
 
                 $offset += $limit;
+
             } catch (Throwable $e) {
+
                 $this->error("Request failed: " . $e->getMessage());
-                break;
+
+                $log->update([
+                    'status' => 'failed',
+                    'finished_at' => now(),
+                    'total_records' => $inserted + $updated + $skipped,
+                    'inserted' => $inserted,
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                    'message' => $e->getMessage(),
+                ]);
+
+                return;
             }
         }
 
+        // ✅ الحساب النهائي
+        $duration = now()->diffInSeconds($log->started_at);
+        $total = $inserted + $updated + $skipped;
+        $speed = $total > 0 ? round($total / max($duration, 1), 2) : 0;
+
+        $log->update([
+            'status' => $failed > 0 ? 'success_with_errors' : 'success',
+            'finished_at' => now(),
+            'total_records' => $total,
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'message' => $failed > 0
+                ? "Failed: {$failed} | Speed: {$speed}/s | Duration: {$duration}s"
+                : "Speed: {$speed}/s | Duration: {$duration}s",
+        ]);
+
+        // console output
         $this->info("{$name} done.");
         $this->line("Inserted: {$inserted}");
         $this->line("Updated : {$updated}");
         $this->line("Skipped : {$skipped}");
         $this->line("Failed  : {$failed}");
+        $this->line("Speed   : {$speed}/s");
+        $this->line("Duration: {$duration}s");
     }
-
     private function buildRow(array $attributes, array $columns, array $explicitMap): array
     {
         $row = [];
