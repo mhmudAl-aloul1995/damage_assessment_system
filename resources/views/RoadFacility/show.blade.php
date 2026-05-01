@@ -39,7 +39,7 @@
             <div class="col-md-3">
                 <div class="border rounded p-4 h-100 bg-light-info">
                     <div class="text-muted fs-7 mb-1">Researcher</div>
-                    <div class="fw-bold fs-5">{{ $survey->assignedto ?? '-' }}</div>
+                    <div class="fw-bold fs-5">{{ $survey->assigned_to ?? '-' }}</div>
                 </div>
             </div>
             <div class="col-md-3">
@@ -83,7 +83,9 @@
                                         @forelse ($section['rows'] as $row)
                                             <tr>
                                                 <td class="fw-semibold text-gray-800">{{ $row['question'] }}</td>
-                                                <td class="text-gray-700">{{ $row['answer'] }}</td>
+                                                <td class="{{ ($row['empty'] ?? false) ? 'text-muted' : 'text-gray-700' }}">
+                                                    {{ $row['answer'] }}
+                                                </td>
                                             </tr>
                                         @empty
                                             <tr>
@@ -117,7 +119,9 @@
                                         @foreach ($section['rows'] as $row)
                                             <tr>
                                                 <td class="fw-semibold text-gray-800">{{ $row['question'] }}</td>
-                                                <td class="text-gray-700">{{ $row['answer'] }}</td>
+                                                <td class="{{ ($row['empty'] ?? false) ? 'text-muted' : 'text-gray-700' }}">
+                                                    {{ $row['answer'] }}
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>

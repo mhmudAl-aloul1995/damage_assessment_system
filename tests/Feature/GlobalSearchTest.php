@@ -26,6 +26,7 @@ it('returns grouped global search results for buildings surveys and road facilit
 
     $publicBuildingSurvey = PublicBuildingSurvey::query()->create([
         'objectid' => 7001,
+        'globalid' => 'public-building-alpha-globalid',
         'building_name' => 'Alpha School',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Tal Al Hawa',
@@ -33,6 +34,7 @@ it('returns grouped global search results for buildings surveys and road facilit
 
     $roadFacilitySurvey = RoadFacilitySurvey::query()->create([
         'objectid' => 9001,
+        'globalid' => 'road-facility-alpha-globalid',
         'str_name' => 'Alpha Street',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Sheikh Radwan',

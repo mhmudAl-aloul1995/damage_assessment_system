@@ -83,7 +83,9 @@
                                         @forelse ($section['rows'] as $row)
                                             <tr>
                                                 <td class="fw-semibold text-gray-800">{{ $row['question'] }}</td>
-                                                <td class="text-gray-700">{{ $row['answer'] }}</td>
+                                                <td class="{{ ($row['empty'] ?? false) ? 'text-muted' : 'text-gray-700' }}">
+                                                    {{ $row['answer'] }}
+                                                </td>
                                             </tr>
                                         @empty
                                             <tr>
@@ -117,7 +119,9 @@
                                         @foreach ($section['rows'] as $row)
                                             <tr>
                                                 <td class="fw-semibold text-gray-800">{{ $row['question'] }}</td>
-                                                <td class="text-gray-700">{{ $row['answer'] }}</td>
+                                                <td class="{{ ($row['empty'] ?? false) ? 'text-muted' : 'text-gray-700' }}">
+                                                    {{ $row['answer'] }}
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>

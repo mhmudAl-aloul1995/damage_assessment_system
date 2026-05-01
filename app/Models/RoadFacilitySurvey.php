@@ -17,7 +17,7 @@ class RoadFacilitySurvey extends Model
 
     public function getRouteKeyName(): string
     {
-        return 'objectid';
+        return 'globalid';
     }
 
     protected function casts(): array

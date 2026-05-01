@@ -129,18 +129,21 @@ it('shows the road facility survey page with all dynamic road filters and export
     $showResponse = $this->actingAs($user)->get(route('road-facilities.show', $survey));
     $showResponse->assertOk();
     $showResponse->assertSee('Coastal Road');
+    $showResponse->assertSee('4. Road Items');
+    $showResponse->assertSee('Required Item 1 - 13. بند آخر');
     $showResponse->assertSee('Traffic sign replacement');
     $showResponse->assertSee('13.3 الوحدة');
-    $showResponse->assertSee('piece');
+    $showResponse->assertSee('Piece');
     $showResponse->assertSee('13.4 الكمية');
     $showResponse->assertSee('7');
+    $showResponse->assertSee('لا يوجد جواب');
     $showResponse->assertSee('Linked Required Items');
 
     expect(RoadFacilitySurvey::query()->withCount('items')->find($survey->id)->items_count)->toBe(1);
 
-    $objectIdResponse = $this->actingAs($user)->get('/road-facilities/'.$survey->objectid);
-    $objectIdResponse->assertOk();
-    $objectIdResponse->assertSee('Coastal Road');
+    $globalIdResponse = $this->actingAs($user)->get('/road-facilities/'.$survey->globalid);
+    $globalIdResponse->assertOk();
+    $globalIdResponse->assertSee('Coastal Road');
 
     expect(RoadFacilityFilter::query()->count())->toBeGreaterThan(10);
     expect(RoadFacilityFilter::query()->where('list_name', 'traffic_signs_type')->count())->toBeGreaterThan(0);

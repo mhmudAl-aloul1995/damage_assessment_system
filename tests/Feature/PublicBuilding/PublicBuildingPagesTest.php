@@ -140,8 +140,13 @@ it('shows the public building survey pages and datatable data with dynamic filte
     $showResponse->assertSee('Immediate maintenance required');
     $showResponse->assertSee('Ground Floor');
     $showResponse->assertSee('Repair windows');
+    $showResponse->assertSee('Unit / Floor 1 - 07 Unit Technical Information');
+    $showResponse->assertSee('Unit / Floor 1 - Techncial-BOQ');
+    $showResponse->assertSee('Unit / Floor 1 - Plumping Works');
     $showResponse->assertSee('PM1-Complete solar heating system');
     $showResponse->assertSee('unit-id-photo.jpg');
+    $showResponse->assertSee('لا يوجد جواب');
+    $showResponse->assertSee('لا يوجد مرفق');
     $showResponse->assertSee('Linked Units');
     $showResponse->assertSee('2.4.1 If Other, Specify');
     $showResponse->assertSee('Emergency public shelter');
@@ -150,9 +155,9 @@ it('shows the public building survey pages and datatable data with dynamic filte
 
     expect(PublicBuildingSurvey::query()->withCount('units')->find($survey->id)->units_count)->toBe(1);
 
-    $objectIdResponse = $this->actingAs($user)->get('/public-buildings/'.$survey->objectid);
-    $objectIdResponse->assertOk();
-    $objectIdResponse->assertSee('Public School');
+    $globalIdResponse = $this->actingAs($user)->get('/public-buildings/'.$survey->globalid);
+    $globalIdResponse->assertOk();
+    $globalIdResponse->assertSee('Public School');
 
     Carbon::setTestNow();
 });

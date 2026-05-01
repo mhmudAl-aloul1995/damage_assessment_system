@@ -24,6 +24,7 @@ use App\Http\Controllers\Report\AreaProductivityReportController;
 use App\Http\Controllers\Report\reportController;
 use App\Http\Controllers\Report\SurveyReportController;
 use App\Http\Controllers\RoadFacility\RoadFacilityController;
+use App\Http\Controllers\SystemLogController;
 use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\roleController;
 use App\Http\Controllers\UserManagement\userController;
@@ -34,7 +35,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\SystemLogController;
+
 Route::get('/', function () {
 
     return redirect()->route('login');
@@ -52,8 +53,6 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-
-
 
     Route::get('/system-logs', [SystemLogController::class, 'index'])->name('system.logs');
     Route::get('/system-logs/data', [SystemLogController::class, 'data'])->name('system.logs.data');
@@ -90,10 +89,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="' . $safeRepo . '" add .',
-            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
-            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
-            'git -c safe.directory="' . $safeRepo . '" push',
+            'git -c safe.directory="'.$safeRepo.'" add .',
+            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
+            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
+            'git -c safe.directory="'.$safeRepo.'" push',
         ];
 
         $outputs = [];
@@ -113,7 +112,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (!$result->successful()) {
+            if (! $result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -216,7 +215,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
-        Route::get('/', fn() => redirect()->route('telegram.destinations.index'))->name('index');
+        Route::get('/', fn () => redirect()->route('telegram.destinations.index'))->name('index');
         Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
         Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
         Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
@@ -271,11 +270,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/public-buildings', [PublicBuildingController::class, 'index'])->name('public-buildings.index');
     Route::get('/public-buildings/data', [PublicBuildingController::class, 'data'])->name('public-buildings.data');
     Route::get('/public-buildings/export/{format}', [PublicBuildingController::class, 'export'])->name('public-buildings.export');
-    Route::get('/public-buildings/{publicBuilding}', [PublicBuildingController::class, 'show'])->name('public-buildings.show');
+    Route::get('/public-buildings/{publicBuilding:globalid}', [PublicBuildingController::class, 'show'])->name('public-buildings.show');
     Route::get('/road-facilities', [RoadFacilityController::class, 'index'])->name('road-facilities.index');
     Route::get('/road-facilities/data', [RoadFacilityController::class, 'data'])->name('road-facilities.data');
     Route::get('/road-facilities/export/{format}', [RoadFacilityController::class, 'export'])->name('road-facilities.export');
-    Route::get('/road-facilities/{roadFacility}', [RoadFacilityController::class, 'show'])->name('road-facilities.show');
+    Route::get('/road-facilities/{roadFacility:globalid}', [RoadFacilityController::class, 'show'])->name('road-facilities.show');
 
     // engineers
     Route::resource('engineer', controller: engineerController::class);
@@ -398,7 +397,6 @@ Route::post('/api/telegram/webhook/{secret}', [TelegramWebhookController::class,
     ->name('telegram.webhook');
 Route::post('/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
     ->withoutMiddleware([VerifyCsrfToken::class]);
-use Spatie\Browsershot\Browsershot;
 
 Route::get('/housing-summary', [auditController::class, 'housingSummary'])
     ->name('housing.summary');
@@ -408,4 +406,4 @@ Route::get('/import-buildings-test', [BuildingImportController::class, 'import']
 use App\Http\Controllers\HousingUnitImportController;
 
 Route::get('/import-housing-units', [HousingUnitImportController::class, 'import']);
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

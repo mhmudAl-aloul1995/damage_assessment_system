@@ -9,7 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RoadFacility\RoadFacilityFilterRequest;
 use App\Models\RoadFacilityFilter;
 use App\Models\RoadFacilitySurvey;
-use App\Support\XlsFormLayout;
+use App\Support\Forms\RoadFacilitySurveyLayout;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -103,184 +103,73 @@ class RoadFacilityController extends Controller
         );
     }
 
-  public function show(RoadFacilitySurvey $roadFacility): View
-{
-    $roadFacility->load(['items' => fn ($q) => $q->orderBy('objectid')]);
+    public function show(RoadFacilitySurvey $roadFacility): View
+    {
+        $roadFacility->load(['items' => fn ($q) => $q->orderBy('objectid')]);
+        $itemSections = RoadFacilitySurveyLayout::repeatSections('R2');
 
-    return view('RoadFacility.show', [
-        'survey' => $roadFacility,
-        'sections' => $this->buildSurveySections($roadFacility),
-        'itemSections' => $roadFacility->items
-            ->values()
-            ->map(function ($item, int $index): array {
-                return [
-                    'title' => 'Required Item '.($index + 1),
-                    'rows' => $this->rowsFromMap($item, [
-                        'objectid' => 'Object ID',
-                        'globalid' => 'Global ID',
-                        'item_required' => 'Required Item',
-                        'description' => 'Description',
-                        'unit_001' => 'Unit',
-                        'quantity_001' => 'Quantity',
-                        'other_comments' => 'Other Comments',
-                        'parentglobalid' => 'Parent Global ID',
-                        'creationdate' => 'Creation Date',
-                        'creator' => 'Creator',
-                        'editdate' => 'Edit Date',
-                        'editor' => 'Editor',
-                    ]),
-                ];
-            })
-            ->filter(fn ($section) => $section['rows'] !== [])
-            ->values()
-            ->all(),
-    ]);
-}
+        return view('RoadFacility.show', [
+            'survey' => $roadFacility,
+            'sections' => $this->buildSurveySections($roadFacility),
+            'itemSections' => $roadFacility->items
+                ->values()
+                ->flatMap(fn ($item, int $index): array => collect($itemSections)
+                    ->map(fn (array $section): array => [
+                        'title' => 'Required Item '.($index + 1).' - '.$this->sectionTitle($section),
+                        'name' => $section['name'],
+                        'rows' => $this->rowsFromLayoutFields($item, $section['fields']),
+                    ])
+                    ->values()
+                    ->all())
+                ->values()
+                ->all(),
+        ]);
+    }
 
     private function buildSurveySections(RoadFacilitySurvey $survey): array
     {
-        $sections = collect(XlsFormLayout::sections($this->xlsFormPath()))
+        return collect(RoadFacilitySurveyLayout::sections())
+            ->reject(fn (array $section): bool => ($section['type'] ?? 'group') === 'repeat')
             ->map(fn (array $section): array => [
-                'title' => $section['title'],
-                'rows' => $this->rowsFromXlsFields($survey, $section['fields']),
+                'title' => $this->sectionTitle($section),
+                'name' => $section['name'],
+                'rows' => $this->rowsFromLayoutFields($survey, $section['fields']),
             ])
-            ->filter(fn (array $section): bool => $section['rows'] !== [])
-            ->values()
-            ->all();
-
-        if ($sections !== []) {
-            return $sections;
-        }
-
-        return [
-            [
-                'title' => 'General Information',
-                'rows' => $this->rowsFromMap($survey, [
-                    'objectid' => 'Object ID',
-                    'str_name' => 'Road Name',
-                    $this->researcherColumnForRows() => 'Researcher',
-                    'submissiondate' => 'Submission Date',
-                    'governorate' => 'Governorate',
-                ]),
-            ],
-            [
-                'title' => 'Location',
-                'rows' => $this->rowsFromMap($survey, [
-                    'municipalitie' => 'Municipality',
-                    'neighborhood' => 'Neighborhood',
-                    'street' => 'Street',
-                    'locality' => 'Locality',
-                ]),
-            ],
-            [
-                'title' => 'Road Assessment',
-                'rows' => $this->rowsFromMap($survey, [
-                    'road_damage_level' => 'Road Damage Level',
-                    'road_access' => 'Road Access',
-                    'lane_count' => 'Lane Count',
-                    'blockage_reason' => 'Blockage Reason',
-                    'road_type' => 'Road Type',
-                    'sidewalk_damage_type' => 'Sidewalk Damage Type',
-                    'traffic_signs_type' => 'Traffic Signs Type',
-                    'demolition_scope' => 'Demolition Scope',
-                    'pole_material' => 'Pole Material',
-                    'pole_type' => 'Pole Type',
-                    'pole_voltage_level' => 'Pole Voltage Level',
-                    'cable_voltage_level' => 'Cable Voltage Level',
-                ]),
-            ],
-            [
-                'title' => 'Notes',
-                'rows' => $this->rowsFromMap($survey, [
-                    'final_comments' => 'Final Comments',
-                    'other_comments' => 'Other Comments',
-                ]),
-            ],
-        ];
-    }
-
-    /**
-     * @param  array<string, string>  $fieldMap
-     * @return array<int, array{question: string, answer: string}>
-     */
-    private function rowsFromMap(object $record, array $fieldMap): array
-    {
-        return collect($fieldMap)
-            ->map(function (string $label, string $field) use ($record): ?array {
-                $value = $this->formatSurveyValue(data_get($record, $field));
-
-                if ($value === null) {
-                    return null;
-                }
-
-                return [
-                    'question' => $label,
-                    'answer' => $value,
-                ];
-            })
-            ->filter()
             ->values()
             ->all();
     }
 
     /**
-     * @param  array<int, array{name: string, label: string}>  $fields
-     * @return array<int, array{question: string, answer: string}>
+     * @param  array<int, array{name: string, type: string, label: string, hint: ?string, list_name: ?string}>  $fields
+     * @return array<int, array{question: string, answer: string, empty: bool}>
      */
-    private function rowsFromXlsFields(object $record, array $fields): array
+    private function rowsFromLayoutFields(object $record, array $fields): array
     {
         return collect($fields)
-            ->map(function (array $field) use ($record): ?array {
-                $formattedValue = $this->formatSurveyValue(XlsFormLayout::value($record, $field['name']));
+            ->reject(fn (array $field): bool => ($field['type'] ?? null) === 'calculate')
+            ->map(function (array $field) use ($record): array {
+                $value = RoadFacilitySurveyLayout::value($record, $field['name']);
+                $answer = RoadFacilitySurveyLayout::displayValue($value, $field);
+                $isEmpty = $answer === null;
 
-                if ($formattedValue !== null) {
-                    return [
-                        'question' => $field['label'],
-                        'answer' => $formattedValue,
-                    ];
-                }
-
-                return null;
+                return [
+                    'question' => $field['label'] ?: $field['name'],
+                    'answer' => $answer ?? $this->emptyAnswerText($field),
+                    'empty' => $isEmpty,
+                ];
             })
-            ->filter()
             ->values()
             ->all();
     }
 
-    private function formatSurveyValue(mixed $value): ?string
+    private function sectionTitle(array $section): string
     {
-        if ($value === null) {
-            return null;
-        }
+        return (string) ($section['label'] ?? $section['name'] ?? 'Section');
+    }
 
-        if ($value instanceof \DateTimeInterface) {
-            return $value->format('Y-m-d H:i');
-        }
-
-        if (is_string($value)) {
-            $trimmed = trim($value);
-
-            return $trimmed === '' ? null : $trimmed;
-        }
-
-        if (is_array($value)) {
-            $items = collect($value)
-                ->flatten()
-                ->map(fn ($item) => is_scalar($item) ? trim((string) $item) : null)
-                ->filter()
-                ->map(fn (string $item) => \Illuminate\Support\Str::of($item)->replace('_', ' ')->headline()->toString())
-                ->values();
-
-            return $items->isEmpty() ? null : $items->implode(', ');
-        }
-
-        if (is_bool($value)) {
-            return $value ? 'Yes' : 'No';
-        }
-
-        $stringValue = trim((string) $value);
-
-        return $stringValue === '' ? null : $stringValue;
+    private function emptyAnswerText(array $field): string
+    {
+        return ($field['type'] ?? null) === 'image' ? 'لا يوجد مرفق' : 'لا يوجد جواب';
     }
 
     protected function filteredQuery(RoadFacilityFilterRequest $request): Builder
@@ -423,19 +312,6 @@ class RoadFacilityController extends Controller
         }
 
         return null;
-    }
-
-    private function researcherColumnForRows(): string
-    {
-        return $this->researcherColumn() ?? 'assigned_to';
-    }
-
-    private function xlsFormPath(): string
-    {
-        return config(
-            'services.survey_forms.road_facilities_xlsx',
-            'C:\\Users\\hp\\Downloads\\RD01-Damage Assessment of Roads Facilities.xlsx',
-        );
     }
 
     /**

@@ -11,9 +11,13 @@ class PublicBuildingSurvey extends Model
 {
     protected $guarded = [];
 
+    protected $appends = [
+        'assigned_to',
+    ];
+
     public function getRouteKeyName(): string
     {
-        return 'objectid';
+        return 'globalid';
     }
 
     protected function casts(): array
@@ -32,5 +36,10 @@ class PublicBuildingSurvey extends Model
     public function units(): HasMany
     {
         return $this->hasMany(PublicBuildingSurveyUnit::class, 'parentglobalid', 'globalid');
+    }
+
+    public function getAssignedToAttribute(?string $value): ?string
+    {
+        return $value ?: ($this->attributes['assignedto'] ?? null);
     }
 }

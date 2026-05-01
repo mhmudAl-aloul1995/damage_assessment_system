@@ -10,6 +10,58 @@
 
 @section('content')
     <style>
+        /* Units table auto-size */
+        #housing_table {
+            width: auto !important;
+            min-width: 100%;
+            table-layout: auto !important;
+        }
+
+        #housing_table th,
+        #housing_table td {
+            white-space: normal !important;
+            vertical-align: middle !important;
+            text-align: center;
+            padding: 0.75rem 0.9rem !important;
+        }
+
+        /* أعمدة الحالات تكون أضيق */
+        #housing_table th:nth-child(7),
+        #housing_table td:nth-child(7),
+        #housing_table th:nth-child(8),
+        #housing_table td:nth-child(8),
+        #housing_table th:nth-child(9),
+        #housing_table td:nth-child(9) {
+            width: 140px !important;
+            max-width: 140px !important;
+        }
+
+        /* اسم المالك لا يأخذ مساحة كبيرة */
+        #housing_table th:nth-child(5),
+        #housing_table td:nth-child(5) {
+            width: 120px !important;
+            max-width: 120px !important;
+            word-break: break-word;
+        }
+
+        /* نوع الوحدة وحالة الضرر */
+        #housing_table th:nth-child(1),
+        #housing_table td:nth-child(1),
+        #housing_table th:nth-child(2),
+        #housing_table td:nth-child(2) {
+            width: 130px !important;
+            max-width: 130px !important;
+        }
+
+        /* الأرقام */
+        #housing_table th:nth-child(3),
+        #housing_table td:nth-child(3),
+        #housing_table th:nth-child(4),
+        #housing_table td:nth-child(4) {
+            width: 80px !important;
+            max-width: 80px !important;
+        }
+
         .building-status-btn,
         .housing-status-btn {
             transition: all .2s ease-in-out
@@ -480,8 +532,7 @@
                                         onclick="reloadBuildingAssessmentTable()">تحديث</button>
                                     @if (auth()->user()->hasAnyRole(['Auditing Supervisor', 'Database Officer']))
                                         <button type="button" id="btn_show_assessment_final_approve"
-                                            class="btn btn-sm btn-light-warning"
-                                            onclick="finalApproveCurrentBuilding()">
+                                            class="btn btn-sm btn-light-warning" onclick="finalApproveCurrentBuilding()">
                                             Final Approve
                                         </button>
                                     @endif
@@ -545,15 +596,15 @@
                                     id="housing_table">
                                     <thead>
                                         <tr class="fw-bold fs-7 text-black-800 border-bottom border-gray-300">
-                                            <th class="px-6 py-4">نوع الوحدة</th>
-                                            <th class="px-6 py-4">حالة الضرر</th>
-                                            <th class="px-6 py-4">رقم الطابق</th>
-                                            <th class="px-6 py-4">رقم الوحدة</th>
-                                            <th class="px-6 py-4">اسم المالك</th>
-                                            <th class="px-6 py-4">اتجاه الوحدة</th>
-                                            <th class="px-6 py-4">التدقيق القانوني</th>
-                                            <th class="px-6 py-4">التدقيق الهندسي</th>
-                                            <th class="px-6 py-4">الاعتماد النهائي</th>
+                                            <th class="px-2 py-3">نوع الوحدة</th>
+                                            <th class="px-2 py-3">حالة الضرر</th>
+                                            <th class="px-2 py-3">رقم الطابق</th>
+                                            <th class="px-2 py-3">رقم الوحدة</th>
+                                            <th class="px-2 py-3">اسم المالك</th>
+                                            <th class="px-2 py-3">اتجاه الوحدة</th>
+                                            <th class="px-2 py-3">التدقيق القانوني</th>
+                                            <th class="px-2 py-3">التدقيق الهندسي</th>
+                                            <th class="px-2 py-3">الاعتماد النهائي</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -876,50 +927,50 @@
             let sectionId = prefix + '_section_' + index;
 
             let html = `
-                                                                                                                                            <div class="assessment-section mb-4">
-                                                                                                                                                <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
-                                                                                                                                                     data-bs-toggle="collapse"
-                                                                                                                                                     data-bs-target="#${sectionId}">
-                                                                                                                                                    <div>
-                                                                                                                                                        <div class="fw-bold fs-5 text-gray-800">${section}</div>
-                                                                                                                                                        <div class="section-progress-bar mt-2">
-                                                                                                                                                            <div class="section-progress-fill" style="width:${percent}%"></div>
+                                                                                                                                                    <div class="assessment-section mb-4">
+                                                                                                                                                        <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
+                                                                                                                                                             data-bs-toggle="collapse"
+                                                                                                                                                             data-bs-target="#${sectionId}">
+                                                                                                                                                            <div>
+                                                                                                                                                                <div class="fw-bold fs-5 text-gray-800">${section}</div>
+                                                                                                                                                                <div class="section-progress-bar mt-2">
+                                                                                                                                                                    <div class="section-progress-fill" style="width:${percent}%"></div>
+                                                                                                                                                                </div>
+                                                                                                                                                            </div>
+
+                                                                                                                                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                                                                <span class="badge badge-light-primary">${items.length} سؤال</span>
+                                                                                                                                                                <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
+                                                                                                                                                            </div>
                                                                                                                                                         </div>
-                                                                                                                                                    </div>
 
-                                                                                                                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                                                                                                                        <span class="badge badge-light-primary">${items.length} سؤال</span>
-                                                                                                                                                        <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
-                                                                                                                                                    </div>
-                                                                                                                                                </div>
-
-                                                                                                                                                <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
-                                                                                                                                        `;
+                                                                                                                                                        <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
+                                                                                                                                                `;
 
             items.forEach(function (row) {
                 let hasAnswer = isAnswered(row);
                 let edited = isEdited(row);
 
                 html += `
-                                                                    <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''} ${row.rowClass || ''}">                                                                                <div class="row g-4 align-items-start">
-                                                                                                                                                        <div class="col-xl-5 col-lg-12">
-                                                                                                                                                            <div class="assessment-question">${row.question || '-'}</div>
-                                                                                                                                                        </div>
+                                                                            <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''} ${row.rowClass || ''}">                                                                                <div class="row g-4 align-items-start">
+                                                                                                                                                                <div class="col-xl-5 col-lg-12">
+                                                                                                                                                                    <div class="assessment-question">${row.question || '-'}</div>
+                                                                                                                                                                </div>
 
-                                                                                                                                                        <div class="col-xl-3 col-lg-6">
-                                                                                                                                                            <div class="text-muted fs-8 mb-1">الجواب</div>
-                                                                                                                                                            <div class="assessment-answer">${row.answer || '-'}</div>
-                                                                                                                                                        </div>
+                                                                                                                                                                <div class="col-xl-3 col-lg-6">
+                                                                                                                                                                    <div class="text-muted fs-8 mb-1">الجواب</div>
+                                                                                                                                                                    <div class="assessment-answer">${row.answer || '-'}</div>
+                                                                                                                                                                </div>
 
-                                                                                                                                                      ${!isAreaManager ? `
-                                            <div class="col-xl-4 col-lg-6">
-                                                <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
-                                                <div class="assessment-edit">${row.editAnswer || '-'}</div>
-                                            </div>
-                                        ` : ''}
-                                                                                                                                                    </div>
-                                                                                                                                                </div>
-                                                                                                                                            `;
+                                                                                                                                                              ${!isAreaManager ? `
+                                                    <div class="col-xl-4 col-lg-6">
+                                                        <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
+                                                        <div class="assessment-edit">${row.editAnswer || '-'}</div>
+                                                    </div>
+                                                ` : ''}
+                                                                                                                                                            </div>
+                                                                                                                                                        </div>
+                                                                                                                                                    `;
             });
 
             html += `</div></div>`;
@@ -955,10 +1006,10 @@
             });
 
             $(target).html(html || `
-                                                                                                                                            <div class="alert alert-light-warning">
-                                                                                                                                                لا توجد نتائج مطابقة للفلتر الحالي.
-                                                                                                                                            </div>
-                                                                                                                                        `);
+                                                                                                                                                    <div class="alert alert-light-warning">
+                                                                                                                                                        لا توجد نتائج مطابقة للفلتر الحالي.
+                                                                                                                                                    </div>
+                                                                                                                                                `);
 
             setTimeout(function () {
                 initInlineEditors();
@@ -1466,13 +1517,13 @@
                     let rows = '';
                     history.forEach(function (item) {
                         rows += `
-                                                                                                                                                        <tr>
-                                                                                                                                                            <td>${escapeHtml(item.status_name ?? '-')}</td>
-                                                                                                                                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                                                                                                                            <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                                                                                                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                                                                                                                                        </tr>
-                                                                                                                                                    `;
+                                                                                                                                                                <tr>
+                                                                                                                                                                    <td>${escapeHtml(item.status_name ?? '-')}</td>
+                                                                                                                                                                    <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                                                                                                                    <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                                                                                    <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                                                                                                                </tr>
+                                                                                                                                                            `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -1917,16 +1968,19 @@
                         url: "{{ route('housing.units.by.building') }}",
                         data: function (d) { d.globalid = '{{ $buildingGlobalid }}'; }
                     },
-                    columns: [
-                        { data: 'housing_unit_type', name: 'housing_unit_type', className: 'text-start px-6 py-4' },
-                        { data: 'unit_damage_status', name: 'unit_damage_status', className: 'text-center px-6 py-4' },
-                        { data: 'floor_number', name: 'floor_number', className: 'text-center px-6 py-4' },
-                        { data: 'housing_unit_number', name: 'housing_unit_number', className: 'text-center px-6 py-4' },
-                        { data: 'owner_name', name: 'owner_name', className: 'text-start px-6 py-4 min-w-280px' },
-                        { data: 'unit_direction', name: 'unit_direction', className: 'text-center px-6 py-4' },
-                        { data: 'legal_audit_status', name: 'legal_audit_status', className: 'text-center px-6 py-4' },
-                        { data: 'engineering_audit_status', name: 'engineering_audit_status', className: 'text-center px-6 py-4' },
-                        { data: 'final_approval_status', name: 'final_approval_status', className: 'text-center px-6 py-4' }
+                    autoWidth: true,
+                    scrollX: false,
+                    responsive: false,
+                        columns: [
+                        { data: 'housing_unit_type', name: 'housing_unit_type', className: 'text-start px-2 py-3' },
+                        { data: 'unit_damage_status', name: 'unit_damage_status', className: 'text-center px-2 py-3' },
+                        { data: 'floor_number', name: 'floor_number', className: 'text-center px-2 py-3' },
+                        { data: 'housing_unit_number', name: 'housing_unit_number', className: 'text-center px-2 py-3' },
+                        { data: 'owner_name', name: 'owner_name', className: 'text-start px-2 py-3 min-w-280px' },
+                        { data: 'unit_direction', name: 'unit_direction', className: 'text-center px-2 py-3' },
+                        { data: 'legal_audit_status', name: 'legal_audit_status', className: 'text-center px-2 py-3' },
+                        { data: 'engineering_audit_status', name: 'engineering_audit_status', className: 'text-center px-2 py-3' },
+                        { data: 'final_approval_status', name: 'final_approval_status', className: 'text-center px-2 py-3' }
                     ],
                     createdRow: function (row) {
                         $(row).css('cursor', 'pointer');
@@ -2220,12 +2274,12 @@
 
             return history.map(function (item) {
                 return `
-                                                                                                                    <div class="border rounded p-2 mb-2 bg-light-info text-start">
-                                                                                                                        <div><span class="audit-label">القيمة</span>: <span class="fw-semibold">${escapeHtml(cleanAuditText(item.value))}</span></div>
-                                                                                                                        <div><span class="audit-label">المستخدم</span>: ${escapeHtml(item.user_name || '-')}</div>
-                                                                                                                        <div><span class="audit-label">الوقت</span>: ${escapeHtml(item.updated_at || '-')}</div>
-                                                                                                                    </div>
-                                                                                                                `;
+                                                                                                                            <div class="border rounded p-2 mb-2 bg-light-info text-start">
+                                                                                                                                <div><span class="audit-label">القيمة</span>: <span class="fw-semibold">${escapeHtml(cleanAuditText(item.value))}</span></div>
+                                                                                                                                <div><span class="audit-label">المستخدم</span>: ${escapeHtml(item.user_name || '-')}</div>
+                                                                                                                                <div><span class="audit-label">الوقت</span>: ${escapeHtml(item.updated_at || '-')}</div>
+                                                                                                                            </div>
+                                                                                                                        `;
             }).join('');
         }
 
@@ -2234,31 +2288,31 @@
             let historyCount = Array.isArray(history) ? history.length : 0;
 
             return `
-                                                                                                                <div class="audit-edit-card">
-                                                                                                                    <div class="audit-label">الأصل</div>
-                                                                                                                    <div class="audit-original-value">${escapeHtml(originalText)}</div>
+                                                                                                                        <div class="audit-edit-card">
+                                                                                                                            <div class="audit-label">الأصل</div>
+                                                                                                                            <div class="audit-original-value">${escapeHtml(originalText)}</div>
 
-                                                                                                                    <div class="audit-label text-warning mt-3">آخر تعديل</div>
-                                                                                                                    <div class="audit-new-value">${escapeHtml(displayValue)}</div>
+                                                                                                                            <div class="audit-label text-warning mt-3">آخر تعديل</div>
+                                                                                                                            <div class="audit-new-value">${escapeHtml(displayValue)}</div>
 
-                                                                                                                    <div class="audit-label text-primary mt-3">اسم المعدّل</div>
-                                                                                                                    <div>${escapeHtml(userName)}</div>
+                                                                                                                            <div class="audit-label text-primary mt-3">اسم المعدّل</div>
+                                                                                                                            <div>${escapeHtml(userName)}</div>
 
-                                                                                                                    <div class="audit-label text-primary mt-3">وقت التعديل</div>
-                                                                                                                    <div>${escapeHtml(updatedAt)}</div>
+                                                                                                                            <div class="audit-label text-primary mt-3">وقت التعديل</div>
+                                                                                                                            <div>${escapeHtml(updatedAt)}</div>
 
-                                                                                                                    <button type="button"
-                                                                                                                            class="btn btn-sm btn-light-primary mt-4"
-                                                                                                                            data-bs-toggle="collapse"
-                                                                                                                            data-bs-target="#${collapseId}">
-                                                                                                                        عرض سجل التعديلات (${historyCount})
-                                                                                                                    </button>
+                                                                                                                            <button type="button"
+                                                                                                                                    class="btn btn-sm btn-light-primary mt-4"
+                                                                                                                                    data-bs-toggle="collapse"
+                                                                                                                                    data-bs-target="#${collapseId}">
+                                                                                                                                عرض سجل التعديلات (${historyCount})
+                                                                                                                            </button>
 
-                                                                                                                    <div class="collapse mt-3" id="${collapseId}">
-                                                                                                                        ${renderEditHistoryItems(history)}
-                                                                                                                    </div>
-                                                                                                                </div>
-                                                                                                            `;
+                                                                                                                            <div class="collapse mt-3" id="${collapseId}">
+                                                                                                                                ${renderEditHistoryItems(history)}
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                    `;
         }
 
         function updateAnswerCardAfterSave(field, globalid, type, value, response) {

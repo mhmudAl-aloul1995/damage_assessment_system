@@ -2162,8 +2162,8 @@
 		(function () {
 			const publicBuildingLayerUrl = @json($publicBuildingLayerUrl);
 			const roadFacilityLayerUrl = @json($roadFacilityLayerUrl);
-			const publicBuildingShowUrlTemplate = @json(route('public-buildings.show', ['publicBuilding' => '__ID__']));
-			const roadFacilityShowUrlTemplate = @json(route('road-facilities.show', ['roadFacility' => '__ID__']));
+					const publicBuildingShowUrlTemplate = @json(route('public-buildings.show', ['publicBuilding' => '__GLOBALID__']));
+					const roadFacilityShowUrlTemplate = @json(route('road-facilities.show', ['roadFacility' => '__GLOBALID__']));
 			const arcgisToken = @json($token);
 
 			function initRemoteMapTable(config) {
@@ -2234,14 +2234,14 @@
 				Search,
 				ScaleBar
 			) {
-				function buildPopupTitle(event, nameField, urlTemplate) {
-					const attrs = event.graphic.attributes;
-					const recordName = attrs[nameField] || attrs.NAME || 'Record';
-					const objectId = attrs.OBJECTID || attrs.objectid;
-					const detailsUrl = urlTemplate.replace('__ID__', objectId);
+					function buildPopupTitle(event, nameField, urlTemplate) {
+						const attrs = event.graphic.attributes;
+						const recordName = attrs[nameField] || attrs.NAME || 'Record';
+						const globalId = attrs.globalid || attrs.GlobalID || attrs.GLOBALID;
+						const detailsUrl = globalId ? urlTemplate.replace('__GLOBALID__', globalId) : '#';
 
-					return `${recordName} <a target="_blank" style="color:red;" href="${detailsUrl}">Open</a>`;
-				}
+						return `${recordName} <a target="_blank" style="color:red;" href="${detailsUrl}">Open</a>`;
+					}
 
 				function createSelectionSymbol(geometryType) {
 					if (geometryType === 'polygon' || geometryType === 'extent') {
