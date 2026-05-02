@@ -3043,13 +3043,16 @@ class auditController extends Controller
                 $q->where('type', $type)
                     ->where('user_id', $user->id);
             });
-            $engStatus = $request->eng_status;
-
-            $statusMap = [
+                     $statusMap = [
                 'assignedto_engineer' => 'assigned_to_engineer',
+                'assignedto_lawyer' => 'assigned_to_lawyer',
+
+                // fallback (optional but safe)
                 'assigned_to_engineer' => 'assigned_to_engineer',
+                'assigned_to_lawyer' => 'assigned_to_lawyer',
             ];
 
+            $engStatus = $request->input('eng_status');
             $engStatus = $statusMap[$engStatus] ?? $engStatus;
 
             if (!empty($engStatus)) {
@@ -3064,12 +3067,17 @@ class auditController extends Controller
                 }
             }
 
-            if ($request->filled('legal_status')) {
-                if ($request->legal_status === 'pending') {
+            $legalStatus = $request->input('legal_status');
+            $legalStatus = $statusMap[$legalStatus] ?? $legalStatus;
+
+            if (!empty($legalStatus)) {
+                if ($legalStatus === 'pending') {
                     $query->whereDoesntHave('lawyerStatus');
                 } else {
-                    $query->whereHas('lawyerStatus.assessment_status', function ($q) use ($request) {
-                        $q->where('name', $request->legal_status);
+                    $query->whereHas('lawyerStatus.assessment_status', function ($q) use ($legalStatus) {
+                        $q->whereRaw('LOWER(TRIM(name)) = ?', [
+                            strtolower(trim($legalStatus))
+                        ]);
                     });
                 }
             }
