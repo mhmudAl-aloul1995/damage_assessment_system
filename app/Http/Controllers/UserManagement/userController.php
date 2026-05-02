@@ -33,9 +33,7 @@ class userController extends Controller
     {
         $data['user'] = User::all();
         $data['roles'] = Role::all();
-          Mail::to('mhmudaloul@outlook.com')->send(
-            new WelcomeUserMail('mhmudaloul@outlook.com', 111111)
-        );
+       
 
         return View::make('UserManagement.users', $data);
     }
