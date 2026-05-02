@@ -2897,7 +2897,7 @@ class auditController extends Controller
                     }
                 });
             }
-
+/**k */
             $query->whereNotExists(function ($q) {
                 $q->selectRaw('1')
                     ->from('building_statuses as bs')
