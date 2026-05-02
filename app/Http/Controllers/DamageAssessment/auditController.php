@@ -2794,7 +2794,6 @@ class auditController extends Controller
                 '300ad1ff-3a35-4bcc-a1f7-b58e35c86136',
             ];
 
-
             $query = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
@@ -2815,13 +2814,17 @@ class auditController extends Controller
                 });
             }
 
-            $engStatus = $request->eng_status;
 
             $statusMap = [
                 'assignedto_engineer' => 'assigned_to_engineer',
+                'assignedto_lawyer' => 'assigned_to_lawyer',
+
+                // fallback (optional but safe)
                 'assigned_to_engineer' => 'assigned_to_engineer',
+                'assigned_to_lawyer' => 'assigned_to_lawyer',
             ];
 
+            $engStatus = $request->input('eng_status');
             $engStatus = $statusMap[$engStatus] ?? $engStatus;
 
             if (!empty($engStatus)) {
@@ -2835,12 +2838,18 @@ class auditController extends Controller
                     });
                 }
             }
-            if ($request->filled('legal_status')) {
-                if ($request->legal_status === 'pending') {
+
+            $legalStatus = $request->input('legal_status');
+            $legalStatus = $statusMap[$legalStatus] ?? $legalStatus;
+
+            if (!empty($legalStatus)) {
+                if ($legalStatus === 'pending') {
                     $query->whereDoesntHave('lawyerStatus');
                 } else {
-                    $query->whereHas('lawyerStatus.assessment_status', function ($q) use ($request) {
-                        $q->where('name', $request->legal_status);
+                    $query->whereHas('lawyerStatus.assessment_status', function ($q) use ($legalStatus) {
+                        $q->whereRaw('LOWER(TRIM(name)) = ?', [
+                            strtolower(trim($legalStatus))
+                        ]);
                     });
                 }
             }
@@ -2921,31 +2930,22 @@ class auditController extends Controller
                 // finalApproval
                 ->addColumn('finalApproval', function ($row) {
 
-                    $status = $row->finalApproval?->status?->label_en ?? 'Pending';
-
-                    $color = str_contains(strtolower($status), 'rejected')
-                        ? 'badge-light-danger'
-                        : 'badge-light-success';
-
-                    return '<span class="badge ' . $color . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    return $row->finalApproval?->status?->badge_html
+                        ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
                 })
 
                 // Engineer Status
                 ->addColumn('eng_status', function ($row) {
 
-                    $status = $row->engineerStatus?->status?->label_en ?? 'Pending';
-                    $statusName = $row->engineerStatus?->status?->name ?? 'Pending';
-
-                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return $row->engineerStatus?->status?->badge_html
+                        ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
                 })
 
                 // Lawyer Status
                 ->addColumn('law_status', function ($row) {
 
-                    $status = $row->lawyerStatus?->status?->label_en ?? 'Pending';
-                    $statusName = $row->engineerStatus?->status?->name ?? 'Pending';
-
-                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . $status . '</span>';
+                    return $row->lawyerStatus?->status?->badge_html
+                        ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
                 })
                 ->addColumn('actions', function ($row) {
                     $assessmentUrl = url("/showAssessmentAudit/{$row->globalid}");
@@ -3119,10 +3119,8 @@ class auditController extends Controller
                         ? $row->engineerStatus?->status
                         : $row->lawyerStatus?->status;
 
-                    $status = $statusModel?->label_en ?? 'Pending';
-                    $statusName = strtolower($statusModel?->name ?? 'pending');
-
-                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return $statusModel?->badge_html
+                        ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
                 })
                 ->editColumn('actions', function ($ctr) {
                     // Using route() helpers is cleaner than url()
@@ -3290,25 +3288,8 @@ COALESCE(
             |--------------------------------------------------------------------------
             */
             ->addColumn('final_approval_status', function ($row) {
-
-                $status = $row->finalApproval?->assessment_status?->label_en ?? 'Pending';
-                $statusName = strtolower($status);
-
-                $color = 'badge-secondary';
-
-                if (str_contains($statusName, 'reject')) {
-                    $color = 'badge-danger';
-                } elseif (str_contains($statusName, 'accepted')) {
-                    $color = 'badge-success';
-                } elseif (str_contains($statusName, 'review')) {
-                    $color = 'badge-warning';
-                } elseif (str_contains($statusName, 'assigned')) {
-                    $color = 'badge-primary';
-                }
-
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">'
-                    . e($status) .
-                    '</span>';
+                return $row->finalApproval?->assessment_status?->badge_html
+                    ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
             })
 
             /*
@@ -3317,25 +3298,8 @@ COALESCE(
             |--------------------------------------------------------------------------
             */
             ->addColumn('engineering_audit_status', function ($row) {
-
-                $status = $row->engineerStatus?->assessment_status?->label_en ?? 'Pending';
-                $statusName = strtolower($status);
-
-                $color = 'badge-secondary';
-
-                if (str_contains($statusName, 'reject')) {
-                    $color = 'badge-danger';
-                } elseif (str_contains($statusName, 'accepted')) {
-                    $color = 'badge-success';
-                } elseif (str_contains($statusName, 'review')) {
-                    $color = 'badge-warning';
-                } elseif (str_contains($statusName, 'assigned')) {
-                    $color = 'badge-primary';
-                }
-
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">'
-                    . e($status) .
-                    '</span>';
+                return $row->engineerStatus?->assessment_status?->badge_html
+                    ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
             })
 
             /*
@@ -3344,25 +3308,8 @@ COALESCE(
             |--------------------------------------------------------------------------
             */
             ->addColumn('legal_audit_status', function ($row) {
-
-                $status = $row->lawyerStatus?->assessment_status?->label_en ?? 'Pending';
-                $statusName = strtolower($status);
-
-                $color = 'badge-secondary';
-
-                if (str_contains($statusName, 'reject')) {
-                    $color = 'badge-danger';
-                } elseif (str_contains($statusName, 'accepted')) {
-                    $color = 'badge-success';
-                } elseif (str_contains($statusName, 'review')) {
-                    $color = 'badge-warning';
-                } elseif (str_contains($statusName, 'assigned')) {
-                    $color = 'badge-primary';
-                }
-
-                return '<span class="badge ' . $color . ' fw-bold px-4 py-3">'
-                    . e($status) .
-                    '</span>';
+                return $row->lawyerStatus?->assessment_status?->badge_html
+                    ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
             })
 
             ->rawColumns([
@@ -3911,10 +3858,8 @@ COALESCE(
                         ? $row->engineerStatus?->status
                         : $row->lawyerStatus?->status;
 
-                    $status = $statusModel?->label_en ?? 'Pending';
-                    $statusName = strtolower($statusModel?->name ?? 'pending');
-
-                    return '<span class="badge ' . $this->getStatusBadge($statusName) . ' fw-bold px-4 py-3">' . e($status) . '</span>';
+                    return $statusModel?->badge_html
+                        ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
                 })
 
                 ->addColumn('actions', function ($row) {

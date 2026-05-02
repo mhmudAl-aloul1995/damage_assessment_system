@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\DamageAssessment;
 
 use App\Http\Controllers\Controller;
+use App\Models\AssessmentStatus;
 use App\Models\Building;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -94,12 +95,10 @@ class AreaManagerRejectedBuildingsController extends Controller
             })
             ->orderColumn('latest_status_at', 'latest_history.created_at $1')
             ->editColumn('latest_status_label', function ($row): string {
-                $statusName = strtolower((string) $row->latest_status_name);
-                $badgeClass = str_contains($statusName, 'reject')
-                    ? 'badge badge-light-danger fw-bold'
-                    : 'badge badge-light-warning fw-bold';
-
-                return '<span class="'.$badgeClass.'">'.e((string) $row->latest_status_label).'</span>';
+                return AssessmentStatus::badgeHtmlFor(
+                    (string) $row->latest_status_name,
+                    (string) $row->latest_status_label
+                );
             })
             ->editColumn('latest_status_at', function ($row): string {
                 return $row->latest_status_at

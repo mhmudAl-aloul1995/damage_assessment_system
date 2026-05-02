@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\FieldEngineerReportExport;
 use App\Http\Requests\Report\FieldEngineerReportFilterRequest;
+use App\Models\AssessmentStatus;
 use App\Services\FieldEngineerReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -223,18 +224,7 @@ class FieldEngineerReportController extends Controller
 
     private function statusBadge(?string $statusName, ?string $statusLabel): string
     {
-        $resolvedStatus = strtolower((string) $statusName);
-        $badgeClass = 'badge badge-light-secondary fw-bold';
-
-        if (str_contains($resolvedStatus, 'accept')) {
-            $badgeClass = 'badge badge-light-success fw-bold';
-        } elseif (str_contains($resolvedStatus, 'reject')) {
-            $badgeClass = 'badge badge-light-danger fw-bold';
-        } elseif ($resolvedStatus === 'need_review') {
-            $badgeClass = 'badge badge-light-warning fw-bold';
-        }
-
-        return '<span class="'.$badgeClass.'">'.e($statusLabel ?: '-').'</span>';
+        return AssessmentStatus::badgeHtmlFor($statusName, $statusLabel);
     }
 
     private function emptyDataTableResponse(int $draw): JsonResponse
