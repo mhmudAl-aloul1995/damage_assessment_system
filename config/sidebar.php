@@ -82,7 +82,7 @@ return [
                 'title' => 'menu.reports.public_buildings_area_productivity',
                 'url' => 'reports/area-productivity/public-buildings',
                 'pattern' => 'reports/area-productivity/public-buildings*',
-                'roles' => ['Database Officer','Team Leader -INF','Project Officer', 'Area Manager'],
+                'roles' => ['Database Officer', 'Team Leader -INF', 'Project Officer', 'Area Manager'],
             ],
             [
                 'title' => 'menu.reports.road_facilities_area_productivity',
@@ -94,7 +94,7 @@ return [
                 'title' => 'menu.reports.field_engineer',
                 'url' => 'reports/field-engineer',
                 'pattern' => 'reports/field-engineer*',
-                'roles' => ['Database Officer', 'Project Officer', 'Area Manager','Team Leader -INF','Team Leader' ,'Auditing Supervisor'],
+                'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'Team Leader -INF', 'Team Leader', 'Auditing Supervisor'],
             ],
             [
                 'title' => 'menu.reports.engineer_productivity',
@@ -124,7 +124,7 @@ return [
                 'title' => 'menu.reports.export_data',
                 'url' => 'export-data',
                 'pattern' => 'export-data*',
-                'roles' => ['Database Officer', 'Project Officer', 'QC/QA Engineer', 'Team Leader -INF','Team Leader', 'Area Manager'],
+                'roles' => ['Database Officer', 'Project Officer', 'QC/QA Engineer', 'Team Leader -INF', 'Team Leader', 'Area Manager'],
             ],
         ],
     ],
@@ -147,7 +147,7 @@ return [
                 'title' => 'menu.audit.home',
                 'url' => 'audit',
                 'pattern' => 'audit',
-                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer','Area Manager'],
+                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Area Manager'],
             ],
             [
                 'title' => 'menu.audit.building_audit',
@@ -267,6 +267,12 @@ return [
                 'title' => 'menu.user_management.permissions',
                 'url' => 'user-management/permissions',
                 'pattern' => 'user',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Login Logs',
+                'url' => 'login-logs',
+                'pattern' => 'login-logs*',
                 'roles' => ['Database Officer'],
             ],
         ],
