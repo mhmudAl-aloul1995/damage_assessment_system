@@ -47,7 +47,7 @@ class userController extends Controller
 
     public function show(Request $request)
     {
-        $users = User::with(['roles', 'telegramDestinations.linkSessions'])->where('id', '!=', Auth::id());
+        $users = User::with(['roles', 'telegramDestinations.linkSessions'])->where('id', '!=', Auth::id())->orderByDesc('created_at');
 
         return DataTables::of($users)
             ->addColumn('checkbox', function ($user) {
