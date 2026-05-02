@@ -3043,7 +3043,7 @@ class auditController extends Controller
                 $q->where('type', $type)
                     ->where('user_id', $user->id);
             });
-                     $statusMap = [
+            $statusMap = [
                 'assignedto_engineer' => 'assigned_to_engineer',
                 'assignedto_lawyer' => 'assigned_to_lawyer',
 
@@ -3329,6 +3329,8 @@ COALESCE(
             ->make(true);
     }
 
+
+
     public function finalApproveSelected(Request $request)
     {
         abort_unless(auth()->user()?->hasAnyRole(['Auditing Supervisor', 'Database Officer']), 403);
@@ -3341,119 +3343,183 @@ COALESCE(
         DB::beginTransaction();
 
         try {
-            $user = Auth::user();
+            $userId = auth()->id();
 
-            $finalStatus = AssessmentStatus::whereRaw('LOWER(TRIM(name)) = ?', ['final_approval'])->first();
+            $finalStatus = DB::table('assessment_statuses')
+                ->whereRaw("LOWER(TRIM(name)) = 'final_approval'")
+                ->first();
 
             if (!$finalStatus) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'حالة final_approval غير موجودة في جدول assessment_statuses.',
+                    'message' => 'حالة final_approval غير موجودة.',
                 ], 422);
             }
 
-            $updated = 0;
-            $skipped = [];
+            $requestedIds = collect($request->building_ids)->map(fn($id) => (int) $id)->values();
+
+            $buildings = DB::table('buildings as b')
+                ->whereIn('b.objectid', $requestedIds)
+                ->select(
+                    'b.objectid',
+                    'b.globalid',
+                    DB::raw("COALESCE(b.owner_na, b.building_name, b.owner_name, '-') as building_name")
+                )
+                ->get()
+                ->keyBy('objectid');
+
+            $acceptedBuildings = DB::table('buildings as b')
+                ->whereIn('b.objectid', $requestedIds)
+                ->whereExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('building_statuses as bs')
+                        ->join('assessment_statuses as s', 's.id', '=', 'bs.status_id')
+                        ->whereColumn('bs.building_id', 'b.objectid')
+                        ->where('bs.type', 'QC/QA Engineer')
+                        ->whereRaw("LOWER(TRIM(s.name)) = 'accepted_by_engineer'");
+                })
+                ->pluck('b.objectid', 'b.globalid');
+
+            $allBuildingGlobalIds = $buildings->pluck('globalid')->filter()->values();
+
+            $invalidUnits = DB::table('housing_units as hu')
+                ->join('buildings as b', 'b.globalid', '=', 'hu.parentglobalid')
+                ->leftJoin('housing_statuses as hs', function ($join) {
+                    $join->on('hs.housing_id', '=', 'hu.objectid')
+                        ->where('hs.type', '=', 'QC/QA Engineer');
+                })
+                ->leftJoin('assessment_statuses as s', 's.id', '=', 'hs.status_id')
+                ->whereIn('hu.parentglobalid', $allBuildingGlobalIds)
+                ->where(function ($q) {
+                    $q->whereNull('hs.id')
+                        ->orWhereRaw("LOWER(TRIM(s.name)) != 'accepted_by_engineer'");
+                })
+                ->select(
+                    'hu.objectid',
+                    'hu.globalid',
+                    'hu.parentglobalid',
+                    's.name as status_name',
+                    DB::raw("COALESCE(hu.unit_owner, '-') as owner_name"),
+                    DB::raw("COALESCE(b.owner_na, b.building_name, b.owner_name, '-') as building_name")
+                )
+                ->get()
+                ->groupBy('parentglobalid');
+
+            $latestBuildingStatuses = DB::table('building_statuses as bs')
+                ->join('assessment_statuses as s', 's.id', '=', 'bs.status_id')
+                ->whereIn('bs.building_id', $requestedIds)
+                ->where('bs.type', 'QC/QA Engineer')
+                ->select('bs.building_id', 's.name', 'bs.id')
+                ->orderByDesc('bs.id')
+                ->get()
+                ->unique('building_id')
+                ->keyBy('building_id');
+
+            $eligibleBuildings = [];
             $blockedBuildings = [];
 
-            foreach ($request->building_ids as $buildingId) {
-                $building = Building::where('objectid', $buildingId)->first();
+            foreach ($requestedIds as $buildingId) {
+                $building = $buildings->get($buildingId);
 
                 if (!$building) {
                     continue;
                 }
 
-                $engineerStatus = BuildingStatus::with('status')
-                    ->where('building_id', $building->objectid)
-                    ->where('type', 'QC/QA Engineer')
-                    ->orderByDesc('id')
-                    ->first();
+                $statusName = strtolower(trim($latestBuildingStatuses[$buildingId]->name ?? ''));
 
-                $lawyerStatus = BuildingStatus::with('status')
-                    ->where('building_id', $building->objectid)
-                    ->where('type', 'Legal Auditor')
-                    ->orderByDesc('id')
-                    ->first();
+                $buildingEngineerAccepted = $statusName === 'accepted_by_engineer';
 
-                $finalCurrentStatus = BuildingStatus::with('status')
-                    ->where('building_id', $building->objectid)
-                    ->where('type', 'final')
-                    ->orderByDesc('id')
-                    ->first();
+                $failedUnits = ($invalidUnits[$building->globalid] ?? collect())
+                    ->map(function ($u) {
+                        return [
+                            'objectid' => $u->objectid,
+                            'globalid' => $u->globalid,
+                            'owner_name' => $u->owner_name,
+                            'building_name' => $u->building_name,
+                            'engineer_status' => $u->status_name,
+                            'reason' => $u->status_name
+                                ? 'الوحدة غير مقبولة هندسياً'
+                                : 'لا يوجد تدقيق هندسي للوحدة',
+                        ];
+                    })
+                    ->values();
 
-                $engineerStatusName = strtolower(trim($engineerStatus->status->name ?? ''));
-                $lawyerStatusName = strtolower(trim($lawyerStatus->status->name ?? ''));
-                $finalCurrentName = strtolower(trim($finalCurrentStatus->status->name ?? ''));
-                $newStatusName = strtolower(trim($finalStatus->name ?? ''));
-
-                $allowedEngineerStatuses = [
-                    'accepted_by_engineer',
-                    'rejected_by_engineer',
-                ];
-
-                $allowedLawyerStatuses = [
-                    'accepted_by_lawyer',
-                    'rejected_by_lawyer',
-                    'legal_notes',
-                ];
-                // لا تعتمد نهائي إلا إذا كانت آخر حالة للمهندس والمحامي ضمن الحالات المسموحة
-                if (
-                    !in_array($engineerStatusName, $allowedEngineerStatuses) ||
-                    !in_array($lawyerStatusName, $allowedLawyerStatuses)
-                ) {
+                if (!$buildingEngineerAccepted || $failedUnits->isNotEmpty()) {
+                    $reason = match ($statusName) {
+                        'rejected_by_engineer' => 'المبنى مرفوض هندسياً',
+                        'need_review' => 'المبنى بحاجة مراجعة',
+                        'assigned_to_engineer' => 'المبنى لم يتم تدقيقه بعد',
+                        'accepted_by_engineer' => 'يوجد وحدات غير مقبولة',
+                        default => 'لا يوجد تدقيق هندسي للمبنى',
+                    };
 
                     $blockedBuildings[] = [
                         'building_id' => $building->objectid,
-                        'engineer_status' => $engineerStatusName ?: null,
-                        'lawyer_status' => $lawyerStatusName ?: null,
+                        'building_globalid' => $building->globalid,
+                        'building_name' => $building->building_name,
+                        'reason' => $reason,
+                        'engineer_status' => $statusName ?: null,
+                        'failed_units' => $failedUnits,
                     ];
 
                     continue;
                 }
 
-                // إذا already final approved
-                if ($finalCurrentName === $newStatusName) {
-                    $skipped[] = $building->objectid;
+                $eligibleBuildings[] = $building->objectid;
+            }
 
-                    continue;
-                }
+            if (!empty($eligibleBuildings)) {
+                $rows = DB::table('buildings')
+                    ->select([
+                        DB::raw('objectid as building_id'),
+                        DB::raw($finalStatus->id . ' as status_id'),
+                        DB::raw($userId . ' as user_id'),
+                        DB::raw("'final' as type"),
+                        DB::raw('NOW() as created_at'),
+                        DB::raw('NOW() as updated_at'),
+                    ])
+                    ->whereIn('objectid', $eligibleBuildings)
+                    ->get()
+                    ->map(fn($row) => (array) $row)
+                    ->toArray();
 
-                BuildingStatus::updateOrCreate(
-                    [
-                        'building_id' => $building->objectid,
-                        'type' => 'final',
-                    ],
-                    [
-                        'status_id' => $finalStatus->id,
-                        'user_id' => $user->id,
-                        'updated_at' => now(),
-                        'created_at' => now(),
-                    ]
+                DB::table('building_statuses')->upsert(
+                    $rows,
+                    ['building_id', 'type'],
+                    ['status_id', 'user_id', 'updated_at']
                 );
 
-                BuildingStatusHistory::create([
-                    'building_id' => $building->objectid,
-                    'status_id' => $finalStatus->id,
-                    'user_id' => $user->id,
-                    'notes' => 'Final Approved',
-                    'type' => 'final',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                $updated++;
+                DB::table('building_status_histories')->insert(
+                    collect($rows)->map(function ($row) use ($userId) {
+                        return [
+                            'building_id' => $row['building_id'],
+                            'status_id' => $row['status_id'],
+                            'user_id' => $userId,
+                            'type' => 'final',
+                            'notes' => 'Final Approved BULK',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    })->toArray()
+                );
             }
 
             DB::commit();
 
             return response()->json([
                 'status' => true,
-                'message' => $updated > 0
-                    ? "تم اعتماد {$updated} مبنى نهائياً بنجاح."
-                    : 'لم يتم اعتماد أي مبنى.',
-                'skipped' => $skipped,
+                'message' => count($eligibleBuildings) > 0
+                    ? "تم اعتماد " . count($eligibleBuildings) . " مبنى نهائياً"
+                    : "لم يتم اعتماد أي مبنى",
+
+                'approved_count' => count($eligibleBuildings),
+
+                // 🔥 هذا أهم سطر
+                'approved_ids' => $eligibleBuildings,
+
                 'blocked_buildings' => $blockedBuildings,
             ]);
+
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -3463,7 +3529,6 @@ COALESCE(
             ], 500);
         }
     }
-
     public function setStatus(Request $request)
     {
         $request->validate([

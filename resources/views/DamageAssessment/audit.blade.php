@@ -72,7 +72,7 @@
 								<option value="pending">Pending</option>
 								<option value="accepted_by_engineer">Accepted By Engineer</option>
 								<option value="rejected_by_engineer">Rejected By Engineer</option>
-								<option value="assignedto_engineer">Assigned To Engineer</option>
+								<option value="assigned_to_engineer">Assigned To Engineer</option>
 								<option value="need_review">Need Review</option>
 							</select>
 						</div>
@@ -83,7 +83,7 @@
 								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option></option>
 								<option value="pending">Pending</option>
-								<option value="assignedto_lawyer">Assigned To Lawyer</option>
+								<option value="assigned_to_lawyer">Assigned To Lawyer</option>
 								<option value="accepted_by_lawyer">Accepted By Lawyer</option>
 								<option value="legal_notes">Legal Notes</option>
 							</select>
@@ -340,6 +340,27 @@
 			</div>
 		</div>
 	</div>
+
+	<div class="modal fade" id="failedUnitsModal" tabindex="-1">
+		<div class="modal-dialog modal-dialog-centered mw-900px">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 class="fw-bold">تفاصيل الوحدات غير المقبولة</h3>
+					<div class="btn btn-icon btn-sm" data-bs-dismiss="modal">
+						✕
+					</div>
+				</div>
+
+				<div class="modal-body">
+					<div id="failedUnitsContainer"></div>
+				</div>
+
+				<div class="modal-footer">
+					<button class="btn btn-light" data-bs-dismiss="modal">إغلاق</button>
+				</div>
+			</div>
+		</div>
+	</div>
 @endsection
 
 
@@ -463,10 +484,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																																						<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																																							<input class="form-check-input" type="checkbox"
-																																								data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																																						</div>`
+																																													<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																																														<input class="form-check-input" type="checkbox"
+																																															data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																																													</div>`
 					},
 					{ data: 'building_name', name: 'building_name' },
 					{ data: 'housing_status_progress', name: 'housing_status_progress', searchable: false, orderable: false },
@@ -665,10 +686,10 @@
 
 				$('#notesHistoryModalTitle').text(@json(__('ui.audit.status_history')) + ' - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-																							<tr>
-																								<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
-																							</tr>
-																						`);
+																														<tr>
+																															<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
+																														</tr>
+																													`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -682,40 +703,40 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-																											<tr>
-																												<td>${item.status_name}</td>
-																												<td>${item.user_name}</td>
-																												<td>${item.role_name}</td>
-																												<td>${item.notes}</td>
-																												<td>${item.created_at}</td>
-																												<td>
-																													${item.can_delete ? `
-																														<button type="button"
-																															class="btn btn-sm btn-light-danger btn-delete-history"
-																															data-id="${item.id}">
-																															${@json(__('ui.audit.delete_record'))}
-																														</button>
-																													` : '-'}
-																												</td>
-																											</tr>
-																										`;
+																																		<tr>
+																																			<td>${item.status_name}</td>
+																																			<td>${item.user_name}</td>
+																																			<td>${item.role_name}</td>
+																																			<td>${item.notes}</td>
+																																			<td>${item.created_at}</td>
+																																			<td>
+																																				${item.can_delete ? `
+																																					<button type="button"
+																																						class="btn btn-sm btn-light-danger btn-delete-history"
+																																						data-id="${item.id}">
+																																						${@json(__('ui.audit.delete_record'))}
+																																					</button>
+																																				` : '-'}
+																																			</td>
+																																		</tr>
+																																	`;
 							});
 						} else {
 							rows = `
-																										<tr>
-																											<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																										</tr>
-																									`;
+																																	<tr>
+																																		<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																																	</tr>
+																																`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-																									<tr>
-																										<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
-																									</tr>
-																								`);
+																																<tr>
+																																	<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
+																																</tr>
+																															`);
 					}
 				});
 			});
@@ -743,10 +764,10 @@
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
-																									<tr>
-																										<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																									</tr>
-																								`);
+																																<tr>
+																																	<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																																</tr>
+																															`);
 							}
 						} else {
 							toastr.error(response.message || @json(__('ui.audit.delete_failed')));
@@ -809,16 +830,118 @@
 							$('#btn_final_approve').attr('data-kt-indicator', 'on');
 							$('#btn_final_approve').prop('disabled', true);
 						},
+
 						success: function (response) {
+
+							if (response.blocked_buildings && response.blocked_buildings.length > 0) {
+
+								let html = `
+					<div class="alert alert-danger mb-5">
+						عدد المباني غير المعتمدة: ${response.blocked_buildings.length}
+					</div>
+				`;
+
+								response.blocked_buildings.forEach(function (b) {
+
+									html += `
+						<div class="mb-7 border border-danger border-dashed p-4 rounded bg-light-danger">
+							<div class="d-flex justify-content-between align-items-start mb-3">
+								<div>
+									<h5 class="text-danger mb-1">
+										Building ID: ${b.building_id}
+									</h5>
+
+									<div class="text-dark fw-bold">
+										اسم المبنى: ${b.building_name ?? '-'}
+									</div>
+
+									<div class="text-muted fs-7">
+										GlobalID: ${b.building_globalid ?? '-'}
+									</div>
+								</div>
+
+								<span class="badge badge-light-danger">
+									${b.engineer_status ?? '-'}
+								</span>
+							</div>
+					`;
+
+									if (b.failed_units && b.failed_units.length > 0) {
+
+										html += `
+							<div class="table-responsive">
+								<table class="table table-row-bordered table-striped align-middle">
+									<thead>
+										<tr class="fw-bold text-gray-800">
+											<th>ObjectID</th>
+											<th>GlobalID</th>
+											<th>اسم المالك</th>
+											<th>اسم المبنى</th>
+											<th>Status</th>
+											<th>Reason</th>
+										</tr>
+									</thead>
+									<tbody>
+						`;
+
+										b.failed_units.forEach(function (u) {
+
+											let statusColor = 'badge-light-danger';
+
+											if (u.engineer_status === 'accepted_by_engineer') {
+												statusColor = 'badge-light-success';
+											} else if (u.engineer_status === 'need_review') {
+												statusColor = 'badge-light-warning';
+											} else if (u.engineer_status === 'assigned_to_engineer') {
+												statusColor = 'badge-light-info';
+											}
+
+											html += `
+								<tr>
+									<td>${u.objectid ?? '-'}</td>
+									<td>${u.globalid ?? '-'}</td>
+									<td class="fw-bold text-dark">${u.owner_name ?? '-'}</td>
+									<td class="text-primary fw-bold">${u.building_name ?? b.building_name ?? '-'}</td>
+									<td>
+										<span class="badge ${statusColor}">
+											${u.engineer_status ?? '-'}
+										</span>
+									</td>
+									<td class="text-danger fw-bold">${u.reason ?? '-'}</td>
+								</tr>
+							`;
+										});
+
+										html += `
+									</tbody>
+								</table>
+							</div>
+						`;
+
+									} else {
+										html += `
+							<div class="alert alert-warning mb-0 fw-bold">
+								${b.reason ?? 'لا يوجد سبب واضح'}
+							</div>
+						`;
+									}
+
+									html += `</div>`;
+								});
+
+								$('#failedUnitsContainer').html(html);
+								$('#failedUnitsModal').modal('show');
+							}
+
 							Swal.fire({
-								text: response.message || @json(__('ui.audit.approved_success')),
-								icon: "success",
+								text: response.message || 'تمت العملية',
+								icon: response.approved_count > 0 ? "success" : "warning",
+								confirmButtonText: "موافق",
 								buttonsStyling: false,
-								confirmButtonText: @json(__('ui.buttons.ok')),
 								customClass: {
 									confirmButton: "btn btn-primary"
 								}
-							}).then(function () {
+							}).then(() => {
 								$('#kt_datatable_audits').DataTable().ajax.reload(null, false);
 								$("[type='checkbox']").prop('checked', false);
 							});

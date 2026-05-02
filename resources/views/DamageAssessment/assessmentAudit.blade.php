@@ -840,6 +840,24 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="failedUnitsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered mw-1200px">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="fw-bold text-danger">تفاصيل المباني غير المعتمدة</h3>
+                    <div class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal">✖</div>
+                </div>
+
+                <div class="modal-body" id="failedUnitsContainer">
+                    جاري التحميل...
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-light" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script')
@@ -927,50 +945,50 @@
             let sectionId = prefix + '_section_' + index;
 
             let html = `
-                                                                                                                                                    <div class="assessment-section mb-4">
-                                                                                                                                                        <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
-                                                                                                                                                             data-bs-toggle="collapse"
-                                                                                                                                                             data-bs-target="#${sectionId}">
-                                                                                                                                                            <div>
-                                                                                                                                                                <div class="fw-bold fs-5 text-gray-800">${section}</div>
-                                                                                                                                                                <div class="section-progress-bar mt-2">
-                                                                                                                                                                    <div class="section-progress-fill" style="width:${percent}%"></div>
+                                                                                                                                                            <div class="assessment-section mb-4">
+                                                                                                                                                                <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
+                                                                                                                                                                     data-bs-toggle="collapse"
+                                                                                                                                                                     data-bs-target="#${sectionId}">
+                                                                                                                                                                    <div>
+                                                                                                                                                                        <div class="fw-bold fs-5 text-gray-800">${section}</div>
+                                                                                                                                                                        <div class="section-progress-bar mt-2">
+                                                                                                                                                                            <div class="section-progress-fill" style="width:${percent}%"></div>
+                                                                                                                                                                        </div>
+                                                                                                                                                                    </div>
+
+                                                                                                                                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                                                                        <span class="badge badge-light-primary">${items.length} سؤال</span>
+                                                                                                                                                                        <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
+                                                                                                                                                                    </div>
                                                                                                                                                                 </div>
-                                                                                                                                                            </div>
 
-                                                                                                                                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                                                                                                                                <span class="badge badge-light-primary">${items.length} سؤال</span>
-                                                                                                                                                                <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
-                                                                                                                                                            </div>
-                                                                                                                                                        </div>
-
-                                                                                                                                                        <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
-                                                                                                                                                `;
+                                                                                                                                                                <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
+                                                                                                                                                        `;
 
             items.forEach(function (row) {
                 let hasAnswer = isAnswered(row);
                 let edited = isEdited(row);
 
                 html += `
-                                                                            <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''} ${row.rowClass || ''}">                                                                                <div class="row g-4 align-items-start">
-                                                                                                                                                                <div class="col-xl-5 col-lg-12">
-                                                                                                                                                                    <div class="assessment-question">${row.question || '-'}</div>
-                                                                                                                                                                </div>
+                                                                                    <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''} ${row.rowClass || ''}">                                                                                <div class="row g-4 align-items-start">
+                                                                                                                                                                        <div class="col-xl-5 col-lg-12">
+                                                                                                                                                                            <div class="assessment-question">${row.question || '-'}</div>
+                                                                                                                                                                        </div>
 
-                                                                                                                                                                <div class="col-xl-3 col-lg-6">
-                                                                                                                                                                    <div class="text-muted fs-8 mb-1">الجواب</div>
-                                                                                                                                                                    <div class="assessment-answer">${row.answer || '-'}</div>
-                                                                                                                                                                </div>
+                                                                                                                                                                        <div class="col-xl-3 col-lg-6">
+                                                                                                                                                                            <div class="text-muted fs-8 mb-1">الجواب</div>
+                                                                                                                                                                            <div class="assessment-answer">${row.answer || '-'}</div>
+                                                                                                                                                                        </div>
 
-                                                                                                                                                              ${!isAreaManager ? `
-                                                    <div class="col-xl-4 col-lg-6">
-                                                        <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
-                                                        <div class="assessment-edit">${row.editAnswer || '-'}</div>
-                                                    </div>
-                                                ` : ''}
-                                                                                                                                                            </div>
-                                                                                                                                                        </div>
-                                                                                                                                                    `;
+                                                                                                                                                                      ${!isAreaManager ? `
+                                                            <div class="col-xl-4 col-lg-6">
+                                                                <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
+                                                                <div class="assessment-edit">${row.editAnswer || '-'}</div>
+                                                            </div>
+                                                        ` : ''}
+                                                                                                                                                                    </div>
+                                                                                                                                                                </div>
+                                                                                                                                                            `;
             });
 
             html += `</div></div>`;
@@ -1006,10 +1024,10 @@
             });
 
             $(target).html(html || `
-                                                                                                                                                    <div class="alert alert-light-warning">
-                                                                                                                                                        لا توجد نتائج مطابقة للفلتر الحالي.
-                                                                                                                                                    </div>
-                                                                                                                                                `);
+                                                                                                                                                            <div class="alert alert-light-warning">
+                                                                                                                                                                لا توجد نتائج مطابقة للفلتر الحالي.
+                                                                                                                                                            </div>
+                                                                                                                                                        `);
 
             setTimeout(function () {
                 initInlineEditors();
@@ -1517,13 +1535,13 @@
                     let rows = '';
                     history.forEach(function (item) {
                         rows += `
-                                                                                                                                                                <tr>
-                                                                                                                                                                    <td>${escapeHtml(item.status_name ?? '-')}</td>
-                                                                                                                                                                    <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                                                                                                                                    <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                                                                                                                                    <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                                                                                                                                                </tr>
-                                                                                                                                                            `;
+                                                                                                                                                                        <tr>
+                                                                                                                                                                            <td>${escapeHtml(item.status_name ?? '-')}</td>
+                                                                                                                                                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                                                                                                                            <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                                                                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                                                                                                                        </tr>
+                                                                                                                                                                    `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -1971,7 +1989,7 @@
                     autoWidth: true,
                     scrollX: false,
                     responsive: false,
-                        columns: [
+                    columns: [
                         { data: 'housing_unit_type', name: 'housing_unit_type', className: 'text-start px-2 py-3' },
                         { data: 'unit_damage_status', name: 'unit_damage_status', className: 'text-center px-2 py-3' },
                         { data: 'floor_number', name: 'floor_number', className: 'text-center px-2 py-3' },
@@ -2201,6 +2219,7 @@
                 .text(isApproved ? 'Final Approved' : 'Final Approve');
         }
 
+
         function finalApproveCurrentBuilding() {
             let btn = $('#btn_show_assessment_final_approve');
 
@@ -2220,10 +2239,87 @@
                         btn.prop('disabled', true).attr('data-kt-indicator', 'on');
                     },
                     success: function (response) {
-                        buildingFinalStatus = 'final_approval';
-                        syncFinalApproveButton();
-                        reloadBuildingUnitsTable();
-                        toastr.success(response.message || 'Final approval saved successfully');
+
+                        // إذا فشل الاعتماد، اعرض السبب ولا تعتبره approved
+                        if (response.blocked_buildings && response.blocked_buildings.length > 0) {
+                            let b = response.blocked_buildings[0];
+
+                            let html = `
+                            <div class="alert alert-warning fw-bold mb-5">
+                                ${b.reason ?? 'لا يمكن الاعتماد النهائي'}
+                            </div>
+
+                            <div class="mb-5">
+                                <div><strong>Building ID:</strong> ${b.building_id ?? '-'}</div>
+                                <div><strong>اسم المبنى:</strong> ${b.building_name ?? '-'}</div>
+                                <div><strong>GlobalID:</strong> ${b.building_globalid ?? '-'}</div>
+                                <div><strong>Status:</strong> ${b.engineer_status ?? '-'}</div>
+                            </div>
+                        `;
+
+                            if (b.failed_units && b.failed_units.length > 0) {
+                                html += `
+                                <div class="table-responsive">
+                                    <table class="table table-row-bordered table-striped align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>ObjectID</th>
+                                                <th>GlobalID</th>
+                                                <th>اسم المالك</th>
+                                                <th>Status</th>
+                                                <th>Reason</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                            `;
+
+                                b.failed_units.forEach(function (u) {
+                                    html += `
+                                    <tr>
+                                        <td>${u.objectid ?? '-'}</td>
+                                        <td>${u.globalid ?? '-'}</td>
+                                        <td>${u.owner_name ?? '-'}</td>
+                                        <td>${u.engineer_status ?? '-'}</td>
+                                        <td class="text-danger fw-bold">${u.reason ?? '-'}</td>
+                                    </tr>
+                                `;
+                                });
+
+                                html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `;
+                            }
+
+                            $('#failedUnitsContainer').html(html);
+                            $('#failedUnitsModal').modal('show');
+
+                            toastr.warning(response.message || 'لم يتم اعتماد المبنى. راجع الأسباب.');
+                            btn.prop('disabled', false);
+                            return;
+                        }
+
+                        // لا تحدّث الواجهة إلا إذا تم اعتماد هذا المبنى فعلاً
+                        let approvedIds = response.approved_ids || [];
+
+                        if (
+                            response.approved_count > 0 &&
+                            (
+                                approvedIds.length === 0 ||
+                                approvedIds.includes(parseInt(buildingObjectId)) ||
+                                approvedIds.includes(String(buildingObjectId))
+                            )
+                        ) {
+                            buildingFinalStatus = 'final_approval';
+                            syncFinalApproveButton();
+                            reloadBuildingUnitsTable();
+
+                            toastr.success(response.message || 'تم الاعتماد النهائي بنجاح');
+                        } else {
+                            toastr.warning(response.message || 'لم يتم اعتماد أي مبنى.');
+                            btn.prop('disabled', false);
+                        }
                     },
                     error: function (xhr) {
                         let message = xhr.responseJSON?.message || 'Final approval failed';
@@ -2274,12 +2370,12 @@
 
             return history.map(function (item) {
                 return `
-                                                                                                                            <div class="border rounded p-2 mb-2 bg-light-info text-start">
-                                                                                                                                <div><span class="audit-label">القيمة</span>: <span class="fw-semibold">${escapeHtml(cleanAuditText(item.value))}</span></div>
-                                                                                                                                <div><span class="audit-label">المستخدم</span>: ${escapeHtml(item.user_name || '-')}</div>
-                                                                                                                                <div><span class="audit-label">الوقت</span>: ${escapeHtml(item.updated_at || '-')}</div>
-                                                                                                                            </div>
-                                                                                                                        `;
+                                                                                                                                    <div class="border rounded p-2 mb-2 bg-light-info text-start">
+                                                                                                                                        <div><span class="audit-label">القيمة</span>: <span class="fw-semibold">${escapeHtml(cleanAuditText(item.value))}</span></div>
+                                                                                                                                        <div><span class="audit-label">المستخدم</span>: ${escapeHtml(item.user_name || '-')}</div>
+                                                                                                                                        <div><span class="audit-label">الوقت</span>: ${escapeHtml(item.updated_at || '-')}</div>
+                                                                                                                                    </div>
+                                                                                                                                `;
             }).join('');
         }
 
@@ -2288,31 +2384,31 @@
             let historyCount = Array.isArray(history) ? history.length : 0;
 
             return `
-                                                                                                                        <div class="audit-edit-card">
-                                                                                                                            <div class="audit-label">الأصل</div>
-                                                                                                                            <div class="audit-original-value">${escapeHtml(originalText)}</div>
+                                                                                                                                <div class="audit-edit-card">
+                                                                                                                                    <div class="audit-label">الأصل</div>
+                                                                                                                                    <div class="audit-original-value">${escapeHtml(originalText)}</div>
 
-                                                                                                                            <div class="audit-label text-warning mt-3">آخر تعديل</div>
-                                                                                                                            <div class="audit-new-value">${escapeHtml(displayValue)}</div>
+                                                                                                                                    <div class="audit-label text-warning mt-3">آخر تعديل</div>
+                                                                                                                                    <div class="audit-new-value">${escapeHtml(displayValue)}</div>
 
-                                                                                                                            <div class="audit-label text-primary mt-3">اسم المعدّل</div>
-                                                                                                                            <div>${escapeHtml(userName)}</div>
+                                                                                                                                    <div class="audit-label text-primary mt-3">اسم المعدّل</div>
+                                                                                                                                    <div>${escapeHtml(userName)}</div>
 
-                                                                                                                            <div class="audit-label text-primary mt-3">وقت التعديل</div>
-                                                                                                                            <div>${escapeHtml(updatedAt)}</div>
+                                                                                                                                    <div class="audit-label text-primary mt-3">وقت التعديل</div>
+                                                                                                                                    <div>${escapeHtml(updatedAt)}</div>
 
-                                                                                                                            <button type="button"
-                                                                                                                                    class="btn btn-sm btn-light-primary mt-4"
-                                                                                                                                    data-bs-toggle="collapse"
-                                                                                                                                    data-bs-target="#${collapseId}">
-                                                                                                                                عرض سجل التعديلات (${historyCount})
-                                                                                                                            </button>
+                                                                                                                                    <button type="button"
+                                                                                                                                            class="btn btn-sm btn-light-primary mt-4"
+                                                                                                                                            data-bs-toggle="collapse"
+                                                                                                                                            data-bs-target="#${collapseId}">
+                                                                                                                                        عرض سجل التعديلات (${historyCount})
+                                                                                                                                    </button>
 
-                                                                                                                            <div class="collapse mt-3" id="${collapseId}">
-                                                                                                                                ${renderEditHistoryItems(history)}
-                                                                                                                            </div>
-                                                                                                                        </div>
-                                                                                                                    `;
+                                                                                                                                    <div class="collapse mt-3" id="${collapseId}">
+                                                                                                                                        ${renderEditHistoryItems(history)}
+                                                                                                                                    </div>
+                                                                                                                                </div>
+                                                                                                                            `;
         }
 
         function updateAnswerCardAfterSave(field, globalid, type, value, response) {
