@@ -4759,6 +4759,7 @@ COALESCE(
         ]);
     }
 
+
     public function importFinalApprove(Request $request)
     {
         $request->validate([
@@ -4769,13 +4770,12 @@ COALESCE(
 
         if (count($rows) < 2) {
             return response()->json([
+                'status' => false,
                 'message' => 'ملف Excel فارغ أو لا يحتوي بيانات.',
             ], 422);
         }
 
-        $headers = array_map(function ($header) {
-            return strtolower(trim((string) $header));
-        }, $rows[0]);
+        $headers = array_map(fn($header) => strtolower(trim((string) $header)), $rows[0]);
 
         $objectIdIndex = array_search('objectid', $headers);
 
@@ -4785,6 +4785,7 @@ COALESCE(
 
         if ($objectIdIndex === false) {
             return response()->json([
+                'status' => false,
                 'message' => 'يجب أن يحتوي ملف Excel على عمود باسم objectid أو objectsid.',
             ], 422);
         }
@@ -4803,75 +4804,15 @@ COALESCE(
 
         if (empty($objectIds)) {
             return response()->json([
+                'status' => false,
                 'message' => 'لم يتم العثور على ObjectIDs داخل الملف.',
             ], 422);
         }
 
-        $finalStatus = AssessmentStatus::query()
-            ->whereRaw('LOWER(TRIM(name)) = ?', ['final_approval'])
-            ->first();
-
-        if (!$finalStatus) {
-            return response()->json([
-                'message' => 'حالة final_approval غير موجودة في جدول assessment_statuses.',
-            ], 422);
-        }
-
-        $buildings = Building::query()
-            ->whereIn('objectid', $objectIds)
-            ->get(['objectid', 'globalid']);
-
-        $foundIds = $buildings->pluck('objectid')->map(fn($id) => (int) $id)->toArray();
-        $notFoundIds = array_values(array_diff($objectIds, $foundIds));
-
-        $approvedCount = 0;
-        $skippedCount = 0;
-
-        DB::transaction(function () use ($buildings, $finalStatus, &$approvedCount, &$skippedCount) {
-            foreach ($buildings as $building) {
-                $alreadyApproved = BuildingStatus::query()
-                    ->where('building_id', $building->objectid)
-                    ->where('status_id', $finalStatus->id)
-                    ->exists();
-
-                if ($alreadyApproved) {
-                    $skippedCount++;
-
-                    continue;
-                }
-
-                BuildingStatus::updateOrCreate(
-                    [
-                        'building_id' => $building->objectid,
-                    ],
-                    [
-                        'status_id' => $finalStatus->id,
-                        'user_id' => auth()->id(),
-                        'notes' => 'Final approve imported from Excel',
-                        'type' => 'final_approval',
-                    ]
-                );
-
-                BuildingStatusHistory::create([
-                    'building_id' => $building->objectid,
-                    'status_id' => $finalStatus->id,
-                    'user_id' => auth()->id(),
-                    'notes' => 'Final approve imported from Excel',
-                    'type' => 'final_approval',
-                ]);
-
-                $approvedCount++;
-            }
-        });
-
-        return response()->json([
-            'status' => true,
-            'message' => "
-            تم اعتماد <strong>{$approvedCount}</strong> مبنى بنجاح.<br>
-            تم تخطي <strong>{$skippedCount}</strong> لأنه معتمد مسبقًا.<br>
-            غير موجود في النظام: <strong>" . count($notFoundIds) . '</strong>
-        ',
-            'not_found' => $notFoundIds,
+        $request->merge([
+            'building_ids' => $objectIds,
         ]);
+
+        return $this->finalApproveSelected($request);
     }
 }
