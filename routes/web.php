@@ -35,6 +35,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\LoginLogController;
 
 Route::get('/', function () {
 
@@ -89,10 +90,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="'.$safeRepo.'" add .',
-            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
-            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
-            'git -c safe.directory="'.$safeRepo.'" push',
+            'git -c safe.directory="' . $safeRepo . '" add .',
+            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
+            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
+            'git -c safe.directory="' . $safeRepo . '" push',
         ];
 
         $outputs = [];
@@ -112,7 +113,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (! $result->successful()) {
+            if (!$result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -215,7 +216,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
-        Route::get('/', fn () => redirect()->route('telegram.destinations.index'))->name('index');
+        Route::get('/', fn() => redirect()->route('telegram.destinations.index'))->name('index');
         Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
         Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
         Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
@@ -390,6 +391,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/exports/check/{id}', [ExportDataController::class, 'check']);
     Route::post('/exports/{id}/cancel', [ExportDataController::class, 'cancel']);
 
+    Route::middleware(['auth', 'role:Database Officer'])->group(function () {
+        Route::get('/login-logs', [LoginLogController::class, 'index'])
+            ->name('login-logs.index');
+
+        Route::get('/login-logs/data', [LoginLogController::class, 'data'])
+            ->name('login-logs.data');
+    });
 });
 
 Route::post('/api/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
@@ -406,4 +414,4 @@ Route::get('/import-buildings-test', [BuildingImportController::class, 'import']
 use App\Http\Controllers\HousingUnitImportController;
 
 Route::get('/import-housing-units', [HousingUnitImportController::class, 'import']);
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
