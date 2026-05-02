@@ -101,7 +101,7 @@ class FieldEngineerReportService
             return $this->emptySummary();
         }
 
-        $cacheKey = 'field-engineer-report:summary:'.md5(json_encode($filters));
+        $cacheKey = 'field-engineer-report:summary:editdate-v2:'.md5(json_encode($filters));
 
         return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($filters) {
             return $this->calculateSummary($filters);
