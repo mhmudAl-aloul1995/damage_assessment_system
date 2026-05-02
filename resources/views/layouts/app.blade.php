@@ -1385,10 +1385,30 @@
 					<div
 						class="app-container container-fluid d-flex flex-column flex-md-row flex-center flex-md-stack py-3">
 						<!--begin::Copyright-->
-						<div class="text-dark order-2 order-md-1">
-							<span class="text-muted fw-semibold me-1">2023&copy;</span>
-							<a href="https://keenthemes.com" target="_blank"
-								class="text-gray-800 text-hover-primary">PHC</a>
+						<div class="text-dark order-2 order-md-1 d-flex flex-column flex-md-row align-items-center">
+
+							<span class="text-muted fw-semibold me-2">
+								{{ date('Y') }} ©
+							</span>
+
+							<span class="fw-bold text-gray-800">
+								Palestinian Housing Council (PHC)
+							</span>
+
+							<span class="mx-2 text-muted">|</span>
+
+							<span class="fw-semibold text-gray-700">
+								Eng Mahmoud Osama Al-Aloul
+							</span>
+
+							<span class="badge badge-light-primary ms-3">
+								Database Officer
+							</span>
+
+							<span class="text-muted ms-2">
+								Damage Assessment Project
+							</span>
+
 						</div>
 						<!--end::Copyright-->
 						<!--begin::Menu-->
