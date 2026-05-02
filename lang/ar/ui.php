@@ -216,6 +216,8 @@ return [
         'damage_status' => 'حالة الضرر',
         'from_creation_date' => 'من تاريخ الإنشاء',
         'to_creation_date' => 'إلى تاريخ الإنشاء',
+        'from_status_date' => 'من تاريخ الحالة',
+        'to_status_date' => 'إلى تاريخ الحالة',
         'apply_filters' => 'تطبيق الفلاتر',
         'search_buildings' => 'بحث المباني',
         'refresh' => 'تحديث',

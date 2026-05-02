@@ -2,6 +2,7 @@
 
 use App\Models\AssessmentStatus;
 use App\Models\Building;
+use App\Models\BuildingStatus;
 use App\Models\HousingStatus;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -60,6 +61,37 @@ it('includes the housing units status progress in the audit table response', fun
         'notes' => 'Audited',
     ]);
 
+    $currentStatus = BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+    $currentStatus->forceFill([
+        'created_at' => '2026-04-26 10:00:00',
+        'updated_at' => '2026-04-26 10:00:00',
+    ])->save();
+
+    $olderStatusBuilding = Building::query()->create([
+        'objectid' => 7002,
+        'globalid' => 'audit-building-old-status',
+        'building_name' => 'Audit Old Status Building',
+        'assignedto' => 'Engineer A',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-04-25 10:00:00',
+    ]);
+
+    $olderStatus = BuildingStatus::query()->create([
+        'building_id' => $olderStatusBuilding->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+    $olderStatus->forceFill([
+        'created_at' => '2026-03-20 10:00:00',
+        'updated_at' => '2026-03-20 10:00:00',
+    ])->save();
+
     $this->actingAs($user)
         ->getJson(route('audit.index', [
             'draw' => 1,
@@ -73,5 +105,23 @@ it('includes the housing units status progress in the audit table response', fun
             'housing_status_progress' => '1 / 2',
             'housing_units_count' => 2,
             'housing_units_with_status_count' => 1,
+        ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'status_from_date' => '2026-04-25',
+            'status_to_date' => '2026-04-30',
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'globalid' => $building->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $olderStatusBuilding->globalid,
         ]);
 });

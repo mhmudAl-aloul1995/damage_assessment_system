@@ -216,6 +216,8 @@ return [
         'damage_status' => 'Damage status',
         'from_creation_date' => 'From creation date',
         'to_creation_date' => 'To creation date',
+        'from_status_date' => 'From status date',
+        'to_status_date' => 'To status date',
         'apply_filters' => 'Apply filters',
         'search_buildings' => 'Search buildings',
         'refresh' => 'Refresh',

@@ -137,6 +137,17 @@
 							<input type="date" id="filter_to_date" placeholder="{{ __('ui.audit.to_creation_date') }}"
 								class="form-control form-control-solid">
 						</div>
+						<div class="col-md-3">
+							<label class="form-label fw-semibold">{{ __('ui.audit.from_status_date') }}</label>
+							<input type="date" id="filter_status_from_date" placeholder="{{ __('ui.audit.from_status_date') }}"
+								class="form-control form-control-solid">
+						</div>
+
+						<div class="col-md-3">
+							<label class="form-label fw-semibold">{{ __('ui.audit.to_status_date') }}</label>
+							<input type="date" id="filter_status_to_date" placeholder="{{ __('ui.audit.to_status_date') }}"
+								class="form-control form-control-solid">
+						</div>
 						<div class="col-md-3 d-flex align-items-end">
 							<button type="button" class="btn btn-primary w-100" id="applyFilters">
 								{{ __('ui.audit.apply_filters') }}
@@ -515,6 +526,21 @@
 					fromPicker.set('maxDate', selectedDates[0]);
 				}
 			});
+			let statusFromPicker = flatpickr("#filter_status_from_date", {
+				dateFormat: "Y-m-d",
+				allowInput: true,
+				onChange: function (selectedDates) {
+					statusToPicker.set('minDate', selectedDates[0]);
+				}
+			});
+
+			let statusToPicker = flatpickr("#filter_status_to_date", {
+				dateFormat: "Y-m-d",
+				allowInput: true,
+				onChange: function (selectedDates) {
+					statusFromPicker.set('maxDate', selectedDates[0]);
+				}
+			});
 			var table = $('#kt_datatable_audits').DataTable({
 				processing: true,
 				serverSide: true,
@@ -532,6 +558,8 @@
 						d.damage_status = $('#filter_damage_status').val();
 						d.filter_from_date = $('#filter_from_date').val();
 						d.filter_to_date = $('#filter_to_date').val();
+						d.status_from_date = $('#filter_status_from_date').val();
+						d.status_to_date = $('#filter_status_to_date').val();
 					}
 				},
 				lengthMenu: [[10, 20, 25, 50], [10, 20, 25, 50]],
