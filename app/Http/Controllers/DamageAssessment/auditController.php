@@ -2885,6 +2885,13 @@ class auditController extends Controller
                 $query->whereExists(function ($statusDateQuery) use ($request) {
                     $statusDateQuery->selectRaw('1')
                         ->from('building_statuses')
+                        ->join('assessment_statuses as status_date_statuses', 'building_statuses.status_id', '=', 'status_date_statuses.id')
+                        ->whereNotIn(DB::raw('LOWER(TRIM(status_date_statuses.name))'), [
+                            'assigned_to_engineer',
+                            'assignedto_engineer',
+                            'assigned_to_lawyer',
+                            'assignedto_lawyer',
+                        ])
                         ->whereColumn('building_statuses.building_id', 'buildings.objectid');
 
                     if ($request->filled('status_from_date')) {

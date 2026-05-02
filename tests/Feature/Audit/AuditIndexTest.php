@@ -32,6 +32,14 @@ it('includes the housing units status progress in the audit table response', fun
         'order_step' => 1,
     ]);
 
+    $assignedStatus = AssessmentStatus::query()->create([
+        'name' => 'assigned_to_engineer',
+        'label_en' => 'Assigned To Engineer',
+        'label_ar' => 'assigned ar',
+        'stage' => 'engineer',
+        'order_step' => 2,
+    ]);
+
     $building = Building::query()->create([
         'objectid' => 7001,
         'globalid' => 'audit-building-units-count',
@@ -92,6 +100,26 @@ it('includes the housing units status progress in the audit table response', fun
         'updated_at' => '2026-03-20 10:00:00',
     ])->save();
 
+    $assignedOnlyBuilding = Building::query()->create([
+        'objectid' => 7003,
+        'globalid' => 'audit-building-assigned-status',
+        'building_name' => 'Audit Assigned Status Building',
+        'assignedto' => 'Engineer A',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-04-25 10:00:00',
+    ]);
+
+    $assignedOnlyStatus = BuildingStatus::query()->create([
+        'building_id' => $assignedOnlyBuilding->objectid,
+        'status_id' => $assignedStatus->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+    $assignedOnlyStatus->forceFill([
+        'created_at' => '2026-04-27 10:00:00',
+        'updated_at' => '2026-04-27 10:00:00',
+    ])->save();
+
     $this->actingAs($user)
         ->getJson(route('audit.index', [
             'draw' => 1,
@@ -123,5 +151,8 @@ it('includes the housing units status progress in the audit table response', fun
         ])
         ->assertJsonMissing([
             'globalid' => $olderStatusBuilding->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $assignedOnlyBuilding->globalid,
         ]);
 });
