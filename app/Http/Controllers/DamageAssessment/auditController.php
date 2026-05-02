@@ -2886,14 +2886,7 @@ class auditController extends Controller
                 $query->whereExists(function ($q) use ($request) {
                     $q->selectRaw('1')
                         ->from('building_statuses as bs')
-                        ->join('assessment_statuses as s', 'bs.status_id', '=', 's.id')
-                        ->whereColumn('bs.building_id', 'buildings.objectid')
-                        ->whereNotIn('s.name', [
-                            'assigned_to_engineer',
-                            'assignedto_engineer',
-                            'assigned_to_lawyer',
-                            'assignedto_lawyer',
-                        ]);
+                        ->whereColumn('bs.building_id', 'buildings.objectid');
 
                     if ($request->filled('status_from_date')) {
                         $q->whereDate('bs.updated_at', '>=', $request->status_from_date);
@@ -2904,6 +2897,17 @@ class auditController extends Controller
                     }
                 });
             }
+
+            // استثناء المباني المعيّنة مسبقاً
+            $query->whereNotExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('assigned_assessment_users as aau')
+                    ->whereColumn('aau.building_id', 'buildings.objectid')
+                    ->whereIn('aau.type', [
+                        'engineer',
+                        'lawyer',
+                    ]);
+            });
 
             $housingStatusCounts = function ($row): array {
                 static $countsByBuilding = [];
