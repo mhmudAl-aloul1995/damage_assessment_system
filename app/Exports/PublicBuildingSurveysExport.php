@@ -45,7 +45,7 @@ class PublicBuildingSurveysExport implements FromCollection, ShouldAutoSize, Wit
             $row->building_damage_status,
             $row->date_of_damage?->format('Y-m-d'),
             $row->units_count,
-            $row->assignedto,
+            $row->assigned_to,
         ];
     }
 }

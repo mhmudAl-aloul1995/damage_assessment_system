@@ -17,7 +17,7 @@ return new class extends Migration
                 $table->integer('parcel_no1')->nullable();
                 $table->integer('block_no1')->nullable();
                 $table->integer('owner_na')->nullable();
-                $table->string('assignedto')->nullable();
+                $table->string('assigned_to')->nullable();
                 $table->integer('objectid')->nullable()->unique();
                 $table->string('governorate')->nullable();
                 $table->string('municipalitie')->nullable();

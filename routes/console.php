@@ -15,7 +15,7 @@ Schedule::command('queue:work database --stop-when-empty --tries=1 --timeout=360
     ->runInBackground();
 
 Schedule::command('sync:arcgis-layers')
-    ->dailyAt(config('database_backup.schedule_time', '00:00'))
+    ->dailyAt(config('database_backup.schedule_time', '01:00'))
     ->withoutOverlapping()
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->appendOutputTo(storage_path('logs/schedule.log'))

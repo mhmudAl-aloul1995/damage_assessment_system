@@ -18,7 +18,7 @@ return new class extends Migration
                 $table->string('governorate')->nullable();
                 $table->string('municipalitie')->nullable();
                 $table->string('neighborhood')->nullable();
-                $table->string('assignedto')->nullable();
+                $table->string('assigned_to')->nullable();
                 $table->integer('group_number')->nullable();
                 $table->string('zone_code')->nullable();
                 $table->string('audit')->nullable();

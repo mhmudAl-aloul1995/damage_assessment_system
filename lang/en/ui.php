@@ -168,7 +168,7 @@ return [
         'title' => 'Permissions',
         'search_placeholder' => 'Search permissions',
         'name' => 'Name',
-        'assignedto' => 'Assigned to',
+        'assigned_to' => 'Assigned to',
         'created_at' => 'Created Date',
         'actions' => 'Actions',
         'not_assigned' => 'Not assigned',
