@@ -326,7 +326,7 @@ class SyncArcGISLayers extends Command
 
             $totalRecords = $inserted + $updated + $skipped;
             $speed = $totalRecords > 0 ? round($totalRecords / max($duration, 1), 2) : 0;
-
+/**x */
             $log->update([
                 'status' => 'success',
                 'finished_at' => $finishedAt,
