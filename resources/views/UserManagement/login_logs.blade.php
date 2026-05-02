@@ -40,7 +40,7 @@
                                 <option value="">All Users</option>
                                 @foreach($users as $user)
                                     <option value="{{ $user->id }}">
-                                        {{ $user->name }} - {{ $user->email ?? $user->username }}
+                                        {{ $user->name }} - {{ $user->email ?? $user->name }}
                                     </option>
                                 @endforeach
                             </select>
@@ -92,7 +92,7 @@
                                 <th>#</th>
                                 <th>User</th>
                                 <th>Email</th>
-                                <th>Username</th>
+                                <th>name</th>
                                 <th>Role</th>
                                 <th>IP</th>
                                 <th>Status</th>
@@ -152,7 +152,7 @@
                 { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                 { data: 'user_name', name: 'name' },
                 { data: 'email', name: 'email', defaultContent: '-' },
-                { data: 'username', name: 'username', defaultContent: '-' },
+                { data: 'name', name: 'name', defaultContent: '-' },
                 { data: 'role', name: 'role', defaultContent: '-' },
                 { data: 'ip_address', name: 'ip_address', defaultContent: '-' },
                 { data: 'status_badge', name: 'is_success', orderable: false, searchable: false },

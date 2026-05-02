@@ -12,11 +12,11 @@ class LoginLogController extends Controller
     public function index()
     {
         $users = User::query()
-            ->select('id', 'name', 'email', 'username')
+            ->select('id', 'name', 'email')
             ->orderBy('name')
             ->get();
 
-        return view('login_logs.index', compact('users'));
+        return view('UserManagement.login_logs', compact('users'));
     }
 
     public function data(Request $request)
