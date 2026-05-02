@@ -13,7 +13,8 @@
                         <span class="path2"></span>
                     </i>
                     <input type="text" data-kt-user-table-filter="search"
-                        class="form-control form-control-solid w-250px ps-13" placeholder="{{ __('ui.users.search_placeholder') }}" />
+                        class="form-control form-control-solid w-250px ps-13"
+                        placeholder="{{ __('ui.users.search_placeholder') }}" />
                 </div>
             </div>
 
@@ -39,13 +40,13 @@
                         <th class="w-10px pe-2"></th>
                         <th class="min-w-150px">{{ __('ui.users.full_name') }}</th>
                         <th class="min-w-150px">{{ __('ui.users.name_en') }}</th>
-                        <th class="min-w-150px">ArcGIS Username</th>
-                        <th class="min-w-175px">{{ __('multilingual.user_management.telegram.connection') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.email') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.id_no') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.contract_type') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.phone') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.created_at') }}</th>
+                        <th class="min-w-150px">ArcGIS Username</th>
+                        <th class="min-w-175px">{{ __('multilingual.user_management.telegram.connection') }}</th>
                         <th class="text-end min-w-100px">{{ __('ui.users.actions') }}</th>
                     </tr>
                 </thead>
@@ -90,10 +91,12 @@
                                     }
                                 </style>
 
-                                <div class="image-input image-input-outline image-input-placeholder" data-kt-image-input="true">
+                                <div class="image-input image-input-outline image-input-placeholder"
+                                    data-kt-image-input="true">
                                     <div class="image-input-wrapper w-125px h-125px" id="user_avatar_preview"></div>
 
-                                    <label class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                    <label
+                                        class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                         data-kt-image-input-action="change" data-bs-toggle="tooltip"
                                         title="{{ __('ui.users.change_avatar') }}">
                                         <i class="ki-duotone ki-pencil fs-7">
@@ -104,16 +107,20 @@
                                         <input type="hidden" name="avatar_remove" />
                                     </label>
 
-                                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
-                                        data-kt-image-input-action="cancel" data-bs-toggle="tooltip" title="{{ __('ui.users.cancel_avatar') }}">
+                                    <span
+                                        class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                        data-kt-image-input-action="cancel" data-bs-toggle="tooltip"
+                                        title="{{ __('ui.users.cancel_avatar') }}">
                                         <i class="ki-duotone ki-cross fs-2">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
                                         </i>
                                     </span>
 
-                                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
-                                        data-kt-image-input-action="remove" data-bs-toggle="tooltip" title="{{ __('ui.users.remove_avatar') }}">
+                                    <span
+                                        class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                        data-kt-image-input-action="remove" data-bs-toggle="tooltip"
+                                        title="{{ __('ui.users.remove_avatar') }}">
                                         <i class="ki-duotone ki-cross fs-2">
                                             <span class="path1"></span>
                                             <span class="path2"></span>
@@ -331,27 +338,27 @@
                     const shareableLink = response.shareable_link ?? '';
                     const linkHtml = shareableLink
                         ? `<div class="mt-4">
-                                <label class="form-label fw-semibold">${userTranslations.telegramLinkButton}</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control form-control-solid" id="telegram_shareable_link" value="${shareableLink}" readonly>
-                                    <button type="button" class="btn btn-primary" onclick="copyTelegramLink()">${userTranslations.telegramCopyLink}</button>
-                                </div>
-                            </div>`
+                                        <label class="form-label fw-semibold">${userTranslations.telegramLinkButton}</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control form-control-solid" id="telegram_shareable_link" value="${shareableLink}" readonly>
+                                            <button type="button" class="btn btn-primary" onclick="copyTelegramLink()">${userTranslations.telegramCopyLink}</button>
+                                        </div>
+                                    </div>`
                         : `<div class="alert alert-warning mt-4 mb-0">${userTranslations.telegramNotConfigured}</div>`;
 
                     Swal.fire({
                         title: response.message ?? userTranslations.telegramLinkReady,
                         html: `
-                            <div class="text-start">
-                                <div class="mb-3">
-                                    <span class="badge badge-light-info">${response.status_label ?? ''}</span>
-                                </div>
-                                ${linkHtml}
-                                <div class="mt-4">
-                                    <a href="${response.destination_url}" class="btn btn-light-primary">${userTranslations.telegramOpenDestination}</a>
-                                </div>
-                            </div>
-                        `,
+                                    <div class="text-start">
+                                        <div class="mb-3">
+                                            <span class="badge badge-light-info">${response.status_label ?? ''}</span>
+                                        </div>
+                                        ${linkHtml}
+                                        <div class="mt-4">
+                                            <a href="${response.destination_url}" class="btn btn-light-primary">${userTranslations.telegramOpenDestination}</a>
+                                        </div>
+                                    </div>
+                                `,
                         icon: 'success',
                         buttonsStyling: false,
                         confirmButtonText: userTranslations.ok,
@@ -417,14 +424,15 @@
                     { data: 'checkbox', name: 'checkbox', searchable: false, orderable: false },
                     { data: 'name', name: 'name' },
                     { data: 'name_en', name: 'name_en' },
-                    { data: 'username_arcgis', name: 'username_arcgis' },
-                    { data: 'telegram_destination', name: 'telegram_destination', searchable: false, orderable: false },
                     { data: 'email', name: 'email' },
                     { data: 'id_no', name: 'id_no' },
                     { data: 'contract_type', name: 'contract_type' },
                     { data: 'phone', name: 'phone' },
                     { data: 'created_at', name: 'created_at' },
+                    { data: 'username_arcgis', name: 'username_arcgis' },
+                    { data: 'telegram_destination', name: 'telegram_destination', searchable: false, orderable: false },
                     { data: 'action', name: 'action', searchable: false, orderable: false }
+
                 ],
                 drawCallback: function () {
                     if (typeof KTMenu !== 'undefined') {
