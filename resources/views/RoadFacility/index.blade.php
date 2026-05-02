@@ -41,8 +41,7 @@
             <div class="row g-5">
                 <div class="col-md-3">
                     <label class="form-label">Municipality</label>
-                    <select id="filter_municipalitie" class="form-select form-select-solid road-select2" data-placeholder="Select municipality" data-allow-clear="true">
-                        <option value=""></option>
+                    <select id="filter_municipalitie" class="form-select form-select-solid road-select2" data-placeholder="Select municipality" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['municipalities'] as $municipality)
                             <option value="{{ $municipality }}">{{ $municipality }}</option>
                         @endforeach
@@ -50,8 +49,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Neighborhood</label>
-                    <select id="filter_neighborhood" class="form-select form-select-solid road-select2" data-placeholder="Select neighborhood" data-allow-clear="true">
-                        <option value=""></option>
+                    <select id="filter_neighborhood" class="form-select form-select-solid road-select2" data-placeholder="Select neighborhood" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['neighborhoods'] as $neighborhood)
                             <option value="{{ $neighborhood }}">{{ $neighborhood }}</option>
                         @endforeach
@@ -60,8 +58,7 @@
                 @foreach ($filterGroups as $groupName => $items)
                     <div class="col-md-3">
                         <label class="form-label">{{ str($groupName)->replace('_', ' ')->title() }}</label>
-                        <select id="filter_{{ $groupName }}" class="form-select form-select-solid road-filter-select road-select2" data-filter-key="{{ $groupName }}" data-placeholder="Select {{ str($groupName)->replace('_', ' ')->lower() }}" data-allow-clear="true">
-                            <option value=""></option>
+                        <select id="filter_{{ $groupName }}" class="form-select form-select-solid road-filter-select road-select2" data-filter-key="{{ $groupName }}" data-placeholder="Select {{ str($groupName)->replace('_', ' ')->lower() }}" data-allow-clear="true" data-close-on-select="false" multiple>
                             @foreach ($items as $item)
                                 <option value="{{ $item->name }}">{{ $item->label }}</option>
                             @endforeach
@@ -70,8 +67,7 @@
                 @endforeach
                 <div class="col-md-3">
                     <label class="form-label">Researcher</label>
-                    <select id="filter_assignedto" class="form-select form-select-solid road-select2" data-placeholder="Select researcher" data-allow-clear="true">
-                        <option value=""></option>
+                    <select id="filter_assignedto" class="form-select form-select-solid road-select2" data-placeholder="Select researcher" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['researchers'] as $researcher)
                             <option value="{{ $researcher }}">{{ $researcher }}</option>
                         @endforeach
@@ -140,6 +136,7 @@
                 $(this).select2({
                     placeholder: placeholder,
                     allowClear: allowClear,
+                    closeOnSelect: false,
                     width: '100%'
                 });
             });
@@ -151,7 +148,7 @@
                     const key = $(this).data('filter-key');
                     const value = $(this).val();
 
-                    if (value) {
+                    if (value && value.length !== 0) {
                         filters[key] = value;
                     }
                 });
@@ -241,13 +238,23 @@
                 const query = new URLSearchParams();
 
                 ['municipalitie', 'neighborhood', 'assignedto', 'from_date', 'to_date', 'search'].forEach(function (key) {
-                    if (filters[key]) {
+                    if (Array.isArray(filters[key])) {
+                        filters[key].forEach(function (value) {
+                            query.append(key + '[]', value);
+                        });
+                    } else if (filters[key]) {
                         query.set(key, filters[key]);
                     }
                 });
 
                 Object.entries(filters.filters).forEach(function (entry) {
-                    query.append('filters[' + entry[0] + ']', entry[1]);
+                    if (Array.isArray(entry[1])) {
+                        entry[1].forEach(function (value) {
+                            query.append('filters[' + entry[0] + '][]', value);
+                        });
+                    } else {
+                        query.append('filters[' + entry[0] + ']', entry[1]);
+                    }
                 });
 
                 window.location.href = exportRouteTemplate.replace('__FORMAT__', format) + '?' + query.toString();

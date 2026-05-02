@@ -45,8 +45,8 @@
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.engineer') }}</label>
 							<select id="filter_engineer" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_engineer') }}">
-								<option></option>
+								data-allow-clear="true" data-close-on-select="false" multiple
+								data-placeholder="{{ __('ui.audit.select_engineer') }}">
 								@foreach($engineers as $engineer)
 									<option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
 								@endforeach
@@ -56,8 +56,8 @@
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.lawyer') }}</label>
 							<select id="filter_lawyer" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_lawyer') }}">
-								<option></option>
+								data-allow-clear="true" data-close-on-select="false" multiple
+								data-placeholder="{{ __('ui.audit.select_lawyer') }}">
 								@foreach($lawyers as $lawyer)
 									<option value="{{ $lawyer->id }}">{{ $lawyer->name }}</option>
 								@endforeach
@@ -67,8 +67,8 @@
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.engineering_status') }}</label>
 							<select id="filter_eng_status" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
-								<option></option>
+								data-allow-clear="true" data-close-on-select="false" multiple
+								data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option value="pending">Pending</option>
 								<option value="accepted_by_engineer">Accepted By Engineer</option>
 								<option value="rejected_by_engineer">Rejected By Engineer</option>
@@ -80,8 +80,8 @@
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.legal_status') }}</label>
 							<select id="filter_legal_status" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
-								<option></option>
+								data-allow-clear="true" data-close-on-select="false" multiple
+								data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option value="pending">Pending</option>
 								<option value="assigned_to_lawyer">Assigned To Lawyer</option>
 								<option value="accepted_by_lawyer">Accepted By Lawyer</option>
@@ -92,8 +92,8 @@
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.final_approval') }}</label>
 							<select id="filter_final_status" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
-								<option></option>
+								data-allow-clear="true" data-close-on-select="false" multiple
+								data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option value="pending">Pending</option>
 								<option value="approved">Approved</option>
 								<option value="rejected">Rejected</option>
@@ -108,8 +108,8 @@
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.field_engineer') }}</label>
 							<select id="filter_field_engineer" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_field_engineer') }}">
-								<option></option>
+								data-allow-clear="true" data-close-on-select="false" multiple
+								data-placeholder="{{ __('ui.audit.select_field_engineer') }}">
 								@foreach($assignedTo as $eng)
 									<option value="{{ $eng->assignedto }}">{{ $eng->assignedto }}</option>
 								@endforeach
@@ -119,8 +119,8 @@
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.damage_status') }}</label>
 							<select id="filter_damage_status" class="form-select form-select-solid" data-control="select2"
-								data-allow-clear="true" data-placeholder="{{ __('ui.audit.select_status') }}">
-								<option></option>
+								data-allow-clear="true" data-close-on-select="false" multiple
+								data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option value="fully_damaged">Fully Damaged</option>
 								<option value="partially_damaged">Partially Damaged</option>
 								<option value="committee_review">Committee Review </option>
@@ -147,11 +147,6 @@
 							<label class="form-label fw-semibold">{{ __('ui.audit.to_status_date') }}</label>
 							<input type="date" id="filter_status_to_date" placeholder="{{ __('ui.audit.to_status_date') }}"
 								class="form-control form-control-solid">
-						</div>
-						<div class="col-md-3 d-flex align-items-end">
-							<button type="button" class="btn btn-primary w-100" id="applyFilters">
-								{{ __('ui.audit.apply_filters') }}
-							</button>
 						</div>
 					</div>
 				</div>
@@ -625,6 +620,24 @@
 				});
 
 			});
+			let filterReloadTimer = null;
+			let isResettingFilters = false;
+			let scheduleFilterReload = function () {
+				if (isResettingFilters) {
+					return;
+				}
+
+				clearTimeout(filterReloadTimer);
+				filterReloadTimer = setTimeout(function () {
+					table.ajax.reload(null, true);
+				}, 350);
+			};
+
+			$('#filter_engineer, #filter_lawyer, #filter_eng_status, #filter_legal_status, #filter_final_status, #filter_field_engineer, #filter_damage_status')
+				.on('change', scheduleFilterReload);
+
+			$('#filter_building_name, #filter_area, #filter_from_date, #filter_to_date, #filter_status_from_date, #filter_status_to_date')
+				.on('input change', scheduleFilterReload);
 			$('#resetFilters').on('click', function () {
 				/* 			$('#filter_building_name').val('');
 							$('#filter_engineer').val(null).trigger('change');
@@ -633,8 +646,11 @@
 							$('#filter_legal_status').val(null).trigger('change');
 							$('#filter_final_status').val(null).trigger('change');
 							$('#filter_area').val(''); */
+				isResettingFilters = true;
 				$('select').val(null).trigger('change');
 				$('input').val('');
+				isResettingFilters = false;
+				table.ajax.reload(null, true);
 
 
 			});

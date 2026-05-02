@@ -219,18 +219,21 @@ class PublicBuildingController extends Controller
     {
         $query = PublicBuildingSurvey::query()->withCount('units');
 
-        if ($request->filled('municipalitie')) {
-            $query->where('municipalitie', $request->string('municipalitie')->toString());
+        $municipalities = $this->requestValues($request, 'municipalitie');
+        if ($municipalities !== []) {
+            $query->whereIn('municipalitie', $municipalities);
         }
 
-        if ($request->filled('neighborhood')) {
-            $query->where('neighborhood', $request->string('neighborhood')->toString());
+        $neighborhoods = $this->requestValues($request, 'neighborhood');
+        if ($neighborhoods !== []) {
+            $query->whereIn('neighborhood', $neighborhoods);
         }
 
         $researcherColumn = $this->researcherColumn();
 
-        if ($request->filled('assigned_to') && $researcherColumn) {
-            $query->where($researcherColumn, $request->string('assigned_to')->toString());
+        $assignedTo = $this->requestValues($request, 'assigned_to', 'assignedto');
+        if ($assignedTo !== [] && $researcherColumn) {
+            $query->whereIn($researcherColumn, $assignedTo);
         }
 
         if ($request->filled('from_date')) {
@@ -257,22 +260,65 @@ class PublicBuildingController extends Controller
 
             $column = $resolvedFilter['column'];
             $mode = $resolvedFilter['mode'];
-            $filterValue = (string) $value;
+            $filterValues = $this->normalizeValues($value);
+
+            if ($filterValues === []) {
+                continue;
+            }
 
             if ($mode === 'json_like') {
-                $query->where($column, 'like', '%"'.$filterValue.'"%');
+                $query->where(function (Builder $nested) use ($column, $filterValues): void {
+                    foreach ($filterValues as $filterValue) {
+                        $nested->orWhere($column, 'like', '%"'.$filterValue.'"%');
+                    }
+                });
 
                 continue;
             }
 
             if ($mode === 'raw_payload_like') {
-                $query->where('raw_payload', 'like', '%'.$filterValue.'%');
+                $query->where(function (Builder $nested) use ($filterValues): void {
+                    foreach ($filterValues as $filterValue) {
+                        $nested->orWhere('raw_payload', 'like', '%'.$filterValue.'%');
+                    }
+                });
 
                 continue;
             }
 
-            $query->where($column, $filterValue);
+            $query->whereIn($column, $filterValues);
         }
+    }
+
+    private function requestValues(Request $request, string ...$keys): array
+    {
+        foreach ($keys as $key) {
+            $values = $this->normalizeValues($request->input($key));
+
+            if ($values !== []) {
+                return $values;
+            }
+        }
+
+        return [];
+    }
+
+    private function normalizeValues(mixed $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        if (! is_array($value)) {
+            $value = [$value];
+        }
+
+        return collect($value)
+            ->map(fn ($item) => trim((string) $item))
+            ->filter(fn ($item) => $item !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

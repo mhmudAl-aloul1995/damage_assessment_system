@@ -16,11 +16,17 @@ class RoadFacilityFilterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'municipalitie' => ['nullable', 'string', 'max:255'],
-            'neighborhood' => ['nullable', 'string', 'max:255'],
-            'assigned_to' => ['nullable', 'string', 'max:255'],
+            'municipalitie' => ['nullable'],
+            'municipalitie.*' => ['nullable', 'string', 'max:255'],
+            'neighborhood' => ['nullable'],
+            'neighborhood.*' => ['nullable', 'string', 'max:255'],
+            'assigned_to' => ['nullable'],
+            'assigned_to.*' => ['nullable', 'string', 'max:255'],
+            'assignedto' => ['nullable'],
+            'assignedto.*' => ['nullable', 'string', 'max:255'],
             'filters' => ['nullable', 'array'],
-            'filters.*' => ['nullable', 'string', 'max:255'],
+            'filters.*' => ['nullable'],
+            'filters.*.*' => ['nullable', 'string', 'max:255'],
             'from_date' => ['nullable', 'date'],
             'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
             'damaged_only' => ['nullable', 'boolean'],

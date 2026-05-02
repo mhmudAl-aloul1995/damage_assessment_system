@@ -140,6 +140,8 @@ it('includes the housing units status progress in the audit table response', fun
             'draw' => 1,
             'start' => 0,
             'length' => 10,
+            'field_engineer' => ['Engineer A'],
+            'eng_status' => ['accepted_by_engineer', 'need_review'],
             'status_from_date' => '2026-04-25',
             'status_to_date' => '2026-04-30',
         ]), [
