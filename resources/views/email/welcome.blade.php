@@ -20,7 +20,7 @@
 
                         <img src="{{ $message->embed(public_path('logo-email.jpg')) }}"
                              alt="Damage Assessment Project"
-                             width="220"
+                             width="350"
                              style="display:block; border:0; outline:none; text-decoration:none; margin:0 auto 15px auto;">
 
                         <div style="color:#ffffff; font-size:24px; font-weight:bold; letter-spacing:1px;">
