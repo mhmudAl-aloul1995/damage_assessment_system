@@ -63,8 +63,8 @@ class AreaProductivityReportService
     {
         return match ($type) {
             self::TYPE_HOUSING_UNITS, self::TYPE_BUILDINGS => $this->buildingBackedFilterOptions(),
-            self::TYPE_PUBLIC_BUILDINGS => $this->surveyFilterOptions(PublicBuildingSurvey::query(), 'assigned_to', false),
-            self::TYPE_ROAD_FACILITIES => $this->surveyFilterOptions(RoadFacilitySurvey::query(), 'assigned_to', true),
+            self::TYPE_PUBLIC_BUILDINGS => $this->surveyFilterOptions(PublicBuildingSurvey::query(), false),
+            self::TYPE_ROAD_FACILITIES => $this->surveyFilterOptions(RoadFacilitySurvey::query(), true),
             default => throw new InvalidArgumentException("Unsupported area productivity report type [{$type}]."),
         };
     }
@@ -110,8 +110,19 @@ class AreaProductivityReportService
                 COUNT(DISTINCT buildings.assignedto) as no_eng,
                 SUM(CASE WHEN housing_units.unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN housing_units.unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END) as pda_range,
-                SUM(CASE WHEN housing_units.unit_damage_status IN ('committee_review2', 'committee_review', 'commite_review') THEN 1 ELSE 0 END) as cra_range,
-                COUNT(housing_units.id) as total_count
+                SUM(CASE WHEN housing_units.unit_damage_status IN ('committee_review2', 'committee_review', 'commite_review', 'commitee_review2', 'commitee_review') THEN 1 ELSE 0 END) as cra_range,
+                SUM(CASE
+                    WHEN housing_units.unit_damage_status IN (
+                        'fully_damaged2',
+                        'partially_damaged2',
+                        'committee_review2',
+                        'committee_review',
+                        'commite_review',
+                        'commitee_review2',
+                        'commitee_review'
+                    ) THEN 1
+                    ELSE 0
+                END) as total_count
             ")
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
@@ -139,7 +150,7 @@ class AreaProductivityReportService
                 COUNT(DISTINCT buildings.assignedto) as no_eng,
                 SUM(CASE WHEN buildings.building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN buildings.building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END) as pda_range,
-                SUM(CASE WHEN buildings.building_damage_status IN ('committee_review', 'commite_review') THEN 1 ELSE 0 END) as cra_range,
+                SUM(CASE WHEN buildings.building_damage_status IN ('committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1 ELSE 0 END) as cra_range,
                 COUNT(buildings.id) as total_count
             ")
             ->groupByRaw($groupKey)
@@ -159,16 +170,17 @@ class AreaProductivityReportService
     private function publicBuildingsQuery(array $filters, Carbon $fromDate, Carbon $toDate): Builder
     {
         $groupKey = $this->normalizedGroupExpression('public_building_surveys.neighborhood');
+        $assignedExpression = $this->assignedValueExpression('public_building_surveys');
 
         $query = PublicBuildingSurvey::query()
             ->selectRaw("
                 {$this->preferredValueExpression('public_building_surveys.governorate')} as governorate,
                 {$this->preferredValueExpression('public_building_surveys.municipalitie')} as municipalitie,
                 {$this->preferredValueExpression('public_building_surveys.neighborhood')} as neighborhood,
-                COUNT(DISTINCT public_building_surveys.assigned_to) as no_eng,
+                COUNT(DISTINCT NULLIF({$assignedExpression}, '')) as no_eng,
                 SUM(CASE WHEN public_building_surveys.building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN public_building_surveys.building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END) as pda_range,
-                SUM(CASE WHEN public_building_surveys.building_damage_status IN ('committee_review', 'commite_review') THEN 1 ELSE 0 END) as cra_range,
+                SUM(CASE WHEN public_building_surveys.building_damage_status IN ('committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1 ELSE 0 END) as cra_range,
                 COUNT(public_building_surveys.id) as total_count
             ")
             ->groupByRaw($groupKey)
@@ -178,7 +190,7 @@ class AreaProductivityReportService
             'governorate' => 'public_building_surveys.governorate',
             'municipalitie' => 'public_building_surveys.municipalitie',
             'neighborhood' => 'public_building_surveys.neighborhood',
-            'assignedto' => 'public_building_surveys.assigned_to',
+            'assignedto' => $assignedExpression,
         ], 'public_building_surveys.created_at', $fromDate, $toDate);
 
         return $query;
@@ -187,13 +199,14 @@ class AreaProductivityReportService
     private function roadFacilitiesQuery(array $filters, Carbon $fromDate, Carbon $toDate): Builder
     {
         $groupKey = $this->normalizedGroupExpression('road_facility_surveys.neighborhood');
+        $assignedExpression = $this->assignedValueExpression('road_facility_surveys');
 
         $query = RoadFacilitySurvey::query()
             ->selectRaw("
                 {$this->preferredValueExpression('road_facility_surveys.governorate')} as governorate,
                 {$this->preferredValueExpression('road_facility_surveys.municipalitie')} as municipalitie,
                 {$this->preferredValueExpression('road_facility_surveys.neighborhood')} as neighborhood,
-                COUNT(DISTINCT road_facility_surveys.assigned_to) as no_eng,
+                COUNT(DISTINCT NULLIF({$assignedExpression}, '')) as no_eng,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('destroyed', 'severe') THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('moderate', 'minor') THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('No_Damage', 'no_damage') THEN 1 ELSE 0 END) as cra_range,
@@ -207,7 +220,7 @@ class AreaProductivityReportService
             'municipalitie' => 'road_facility_surveys.municipalitie',
             'neighborhood' => 'road_facility_surveys.neighborhood',
             'zone_code' => 'road_facility_surveys.zone_code',
-            'assignedto' => 'road_facility_surveys.assigned_to',
+            'assignedto' => $assignedExpression,
         ], 'road_facility_surveys.created_at', $fromDate, $toDate);
 
         return $query;
@@ -223,7 +236,11 @@ class AreaProductivityReportService
     ): void {
         foreach ($columnMap as $filterKey => $column) {
             if (filled($filters[$filterKey] ?? null)) {
-                $query->where($column, (string) $filters[$filterKey]);
+                if (str_contains($column, '(')) {
+                    $query->whereRaw("{$column} = ?", [(string) $filters[$filterKey]]);
+                } else {
+                    $query->where($column, (string) $filters[$filterKey]);
+                }
             }
         }
 
@@ -264,12 +281,21 @@ class AreaProductivityReportService
         ];
     }
 
-    private function surveyFilterOptions(Builder $query, string $assignedColumn, bool $withZoneCode): array
+    private function surveyFilterOptions(Builder $query, bool $withZoneCode): array
     {
+        $table = $query->getModel()->getTable();
+        $assignedExpression = $this->assignedValueExpression($table);
+
         $governorates = (clone $query)->orderBy('governorate')->pluck('governorate')->filter()->unique()->values();
         $municipalities = (clone $query)->orderBy('municipalitie')->pluck('municipalitie')->filter()->unique()->values();
         $neighborhoods = (clone $query)->orderBy('neighborhood')->pluck('neighborhood')->filter()->unique()->values();
-        $assignedto = (clone $query)->orderBy($assignedColumn)->pluck($assignedColumn)->filter()->unique()->values();
+        $assignedto = (clone $query)
+            ->selectRaw("DISTINCT {$assignedExpression} as assignedto_value")
+            ->orderBy('assignedto_value')
+            ->pluck('assignedto_value')
+            ->filter()
+            ->unique()
+            ->values();
         $zoneCodes = $withZoneCode
             ? (clone $query)->orderBy('zone_code')->pluck('zone_code')->filter()->unique()->values()
             : collect();
@@ -326,5 +352,10 @@ class AreaProductivityReportService
     private function preferredValueExpression(string $column): string
     {
         return "COALESCE(MAX(NULLIF(TRIM({$column}), '')), MAX(TRIM({$column})), '')";
+    }
+
+    private function assignedValueExpression(string $table): string
+    {
+        return "COALESCE(NULLIF(TRIM({$table}.assigned_to), ''), NULLIF(TRIM({$table}.assignedto), ''), '')";
     }
 }

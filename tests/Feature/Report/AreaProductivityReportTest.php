@@ -96,6 +96,14 @@ it('renders separated area productivity reports for all supported datasets with 
         'creationdate' => '2026-04-11 13:00:00',
     ]);
 
+    HousingUnit::query()->create([
+        'objectid' => 2004,
+        'globalid' => 'housing-unclassified',
+        'parentglobalid' => 'building-2',
+        'unit_damage_status' => 'no_damage2',
+        'creationdate' => '2026-04-11 14:00:00',
+    ]);
+
     PublicBuildingSurvey::query()->create([
         'objectid' => 3001,
         'building_name' => 'School A',
@@ -157,7 +165,13 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('Grand Totals:', false)
         ->assertSee('3', false)
-        ->assertSee('1', false);
+        ->assertSee('1', false)
+        ->assertViewHas('summary', function (array $summary): bool {
+            return $summary['total_records'] === 3
+                && $summary['tda'] === 1
+                && $summary['pda'] === 1
+                && $summary['cra'] === 1;
+        });
 
     $this->actingAs($user)
         ->get(route('reports.area-productivity.buildings', [
