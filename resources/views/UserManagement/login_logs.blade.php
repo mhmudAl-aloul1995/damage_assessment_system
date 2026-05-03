@@ -4,6 +4,35 @@
 @section('pageName', 'Login Logs')
 
 @section('content')
+    <style>
+        <style>.login-logs-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        #kt_datatable_login_logs {
+            width: 100% !important;
+            min-width: 1600px;
+            white-space: nowrap;
+        }
+
+        #kt_datatable_login_logs th,
+        #kt_datatable_login_logs td {
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        #kt_datatable_login_logs td {
+            font-size: 13px;
+        }
+
+        #kt_datatable_login_logs .badge {
+            white-space: nowrap;
+        }
+    </style>
+
+    </style>
     <div class="app-content flex-column-fluid">
         <div class="app-container container-xxl">
 
@@ -89,10 +118,9 @@
 
                         </form>
                     </div>
-
-                    <div class="table-responsive">
+                    <div class="table-responsive login-logs-table-wrapper">
                         <table id="kt_datatable_login_logs"
-                            class="table table-row-bordered table-row-gray-300 align-middle gy-4">
+                            class="table table-row-bordered table-row-gray-300 align-middle gy-3 nowrap w-100">
                             <thead>
                                 <tr class="fw-bold text-muted bg-light">
                                     <th>#</th>
@@ -143,6 +171,9 @@
             let table = $('#kt_datatable_login_logs').DataTable({
                 processing: true,
                 serverSide: true,
+                scrollX: true,
+                autoWidth: false,
+                responsive: false,
                 pageLength: 25,
                 lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
                 order: [[0, 'desc']],
@@ -189,7 +220,8 @@
                         next: "Next",
                         previous: "Previous"
                     }
-                }
+                },
+
             });
 
             $('#btn_filter').on('click', function () {
@@ -210,6 +242,13 @@
                 table.ajax.reload(null, false);
             });
 
+            setTimeout(function () {
+                table.columns.adjust();
+            }, 300);
+
+            $('button[data-bs-toggle="collapse"]').on('shown.bs.collapse hidden.bs.collapse', function () {
+                table.columns.adjust();
+            });
         });
     </script>
 @endsection

@@ -34,7 +34,7 @@
             <thead>
                 <tr class="text-start text-gray-400 fw-bold fs-7 text-uppercase gs-0">
                     <th>{{ __('ui.permissions.name') }}</th>
-                    <th>{{ __('ui.permissions.assignedto') }}</th>
+                    <th>{{ __('ui.permissions.assigned_to') }}</th>
                     <th>{{ __('ui.permissions.created_at') }}</th>
                     <th class="text-end">{{ __('ui.permissions.actions') }}</th>
                 </tr>
@@ -171,7 +171,7 @@
             },
             columns: [
                 { data: 'name', name: 'name' },
-                { data: 'assignedto', name: 'assignedto', orderable: false, searchable: false },
+                { data: 'assigned_to', name: 'assigned_to', orderable: false, searchable: false },
                 { data: 'created_at', name: 'created_at' },
                 { data: 'action', name: 'action', orderable: false, searchable: false }
             ],
