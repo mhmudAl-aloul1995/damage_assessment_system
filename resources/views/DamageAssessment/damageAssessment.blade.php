@@ -1059,7 +1059,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.damaged') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $publicBuildingStats['damaged_buildings'] }}</div>
+									{{ $publicBuildingStats['damaged_buildings'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1073,7 +1074,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.units') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $publicBuildingStats['total_units'] }}</div>
+									{{ $publicBuildingStats['total_units'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1087,7 +1089,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.municipalities') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $publicBuildingStats['municipalities'] }}</div>
+									{{ $publicBuildingStats['municipalities'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1101,7 +1104,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.neighborhoods') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $publicBuildingStats['neighborhoods'] }}</div>
+									{{ $publicBuildingStats['neighborhoods'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1115,7 +1119,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.assigned_staff') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $publicBuildingStats['assigned_staff'] }}</div>
+									{{ $publicBuildingStats['assigned_staff'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1129,7 +1134,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.occupied') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $publicBuildingStats['occupied_buildings'] }}</div>
+									{{ $publicBuildingStats['occupied_buildings'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1143,7 +1149,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.bodies') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $publicBuildingStats['bodies_present'] }}</div>
+									{{ $publicBuildingStats['bodies_present'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1157,7 +1164,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.uxo') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $publicBuildingStats['uxo_present'] }}</div>
+									{{ $publicBuildingStats['uxo_present'] }}
+								</div>
 							</div>
 						</div>
 					</div>
@@ -1199,7 +1207,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.damaged') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $roadFacilityStats['damaged_roads'] }}</div>
+									{{ $roadFacilityStats['damaged_roads'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1228,7 +1237,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.municipalities') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $roadFacilityStats['municipalities'] }}</div>
+									{{ $roadFacilityStats['municipalities'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1242,7 +1252,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.neighborhoods') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $roadFacilityStats['neighborhoods'] }}</div>
+									{{ $roadFacilityStats['neighborhoods'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1256,7 +1267,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.potholes') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $roadFacilityStats['potholes_locations'] }}</div>
+									{{ $roadFacilityStats['potholes_locations'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1270,7 +1282,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.obstacles') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $roadFacilityStats['obstacle_locations'] }}</div>
+									{{ $roadFacilityStats['obstacle_locations'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1284,7 +1297,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.buried_bodies') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $roadFacilityStats['buried_bodies_locations'] }}</div>
+									{{ $roadFacilityStats['buried_bodies_locations'] }}
+								</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1298,7 +1312,8 @@
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.uxo') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $roadFacilityStats['uxo_locations'] }}</div>
+									{{ $roadFacilityStats['uxo_locations'] }}
+								</div>
 							</div>
 						</div>
 					</div>
@@ -1593,7 +1608,7 @@
 								<tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
 
 									<!-- 										<th class="min-w-70px"> إسم الباحث</th>
-																																												 -->
+																																													 -->
 									<th class="min-w-70px"> المنطقة </th>
 									<th class="min-w-70px"> رقم المبنى </th>
 									<th class="min-w-70px"> إسم المبنى </th>
@@ -1727,9 +1742,9 @@
 
 		var buildingsOptions = {
 			series: [
-							{{ $buildingStats['fully_damaged'] ?? 0 }},
-							{{ $buildingStats['partially_damaged'] ?? 0 }},
-							{{ $buildingStats['committee_review'] ?? 0 }},
+								{{ $buildingStats['fully_damaged'] ?? 0 }},
+								{{ $buildingStats['partially_damaged'] ?? 0 }},
+								{{ $buildingStats['committee_review'] ?? 0 }},
 				{{ $buildingStats['security_unsafe'] ?? 0 }}
 			],
 			chart: {
@@ -1756,8 +1771,8 @@
 
 		var housingOptions = {
 			series: [
-							{{ $unitStats['fully_damaged'] ?? 0 }},
-							{{ $unitStats['partially_damaged'] ?? 0 }},
+								{{ $unitStats['fully_damaged'] ?? 0 }},
+								{{ $unitStats['partially_damaged'] ?? 0 }},
 				{{ $unitStats['committee_review'] ?? 0 }}
 			],
 			chart: {
@@ -1797,7 +1812,8 @@
 			"esri/widgets/Legend",
 			"esri/widgets/Search",
 			"esri/widgets/ScaleBar",
-			"esri/geometry/support/webMercatorUtils"
+			"esri/geometry/support/webMercatorUtils",
+			 "esri/widgets/Expand"
 		], function (
 			Map,
 			MapView,
@@ -1809,7 +1825,8 @@
 			Legend,
 			Search,
 			ScaleBar,
-			webMercatorUtils 
+			webMercatorUtils,
+			Expand
 		) {
 
 			const assessmentBaseUrl = "{{ url('assessment') }}";
@@ -1908,78 +1925,78 @@
 						expression: "$feature.building_name"
 					}
 				}],
-			popupTemplate: {
-    title: function (event) {
-        const attrs = event.graphic.attributes;
-        const g = attrs.globalid || attrs.GLOBALID || "";
-        const name = attrs.building_name || "";
+				popupTemplate: {
+					title: function (event) {
+						const attrs = event.graphic.attributes;
+						const g = attrs.globalid || attrs.GLOBALID || "";
+						const name = attrs.building_name || "";
 
-        return `${@json(__('ui.damage_dashboard.building_name'))}: ${name}
-            <a target="_blank" style="color:red;" href="${assessmentBaseUrl}/${g}">
-                ${@json(__('ui.damage_dashboard.assessment'))}
-            </a>`;
-    },
+						return `${@json(__('ui.damage_dashboard.building_name'))}: ${name}
+				<a target="_blank" style="color:red;" href="${assessmentBaseUrl}/${g}">
+					${@json(__('ui.damage_dashboard.assessment'))}
+				</a>`;
+					},
 
-    content: function (event) {
-        const graphic = event.graphic;
-        const attrs = graphic.attributes || {};
-        const coords = getLatLong(graphic);
+					content: function (event) {
+						const graphic = event.graphic;
+						const attrs = graphic.attributes || {};
+						const coords = getLatLong(graphic);
 
-        const lat = coords?.lat ? Number(coords.lat).toFixed(6) : "-";
-        const lng = coords?.lng ? Number(coords.lng).toFixed(6) : "-";
-        const googleUrl = coords?.lat && coords?.lng
-            ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}`
-            : "#";
+						const lat = coords?.lat ? Number(coords.lat).toFixed(6) : "-";
+						const lng = coords?.lng ? Number(coords.lng).toFixed(6) : "-";
+						const googleUrl = coords?.lat && coords?.lng
+							? `https://www.google.com/maps?q=${coords.lat},${coords.lng}`
+							: "#";
 
-        return `
-            <table class="esri-widget__table">
-                <tbody>
-                    <tr>
-                        <th>objectid</th>
-                        <td>${attrs.objectid || attrs.OBJECTID || "-"}</td>
-                    </tr>
-                    <tr>
-                        <th>building_name</th>
-                        <td>${attrs.building_name || "-"}</td>
-                    </tr>
-                    <tr>
-                        <th>AssignedTo</th>
-                        <td>${attrs.assignedto || attrs.AssignedTo || "-"}</td>
-                    </tr>
-                    <tr>
-                        <th>building_damage_status</th>
-                        <td>${attrs.building_damage_status || "-"}</td>
-                    </tr>
-                    <tr>
-                        <th>Latitude</th>
-                        <td>${lat}</td>
-                    </tr>
-                    <tr>
-                        <th>Longitude</th>
-                        <td>${lng}</td>
-                    </tr>
-                </tbody>
-            </table>
+						return `
+				<table class="esri-widget__table">
+					<tbody>
+						<tr>
+							<th>objectid</th>
+							<td>${attrs.objectid || attrs.OBJECTID || "-"}</td>
+						</tr>
+						<tr>
+							<th>building_name</th>
+							<td>${attrs.building_name || "-"}</td>
+						</tr>
+						<tr>
+							<th>AssignedTo</th>
+							<td>${attrs.assignedto || attrs.AssignedTo || "-"}</td>
+						</tr>
+						<tr>
+							<th>building_damage_status</th>
+							<td>${attrs.building_damage_status || "-"}</td>
+						</tr>
+						<tr>
+							<th>Latitude</th>
+							<td>${lat}</td>
+						</tr>
+						<tr>
+							<th>Longitude</th>
+							<td>${lng}</td>
+						</tr>
+					</tbody>
+				</table>
 
-            <div class="mt-3 d-flex gap-2">
-                <button type="button"
-                    class="btn btn-sm btn-light-primary"
-                    onclick="navigator.clipboard.writeText('${lat},${lng}')">
-                    نسخ الإحداثيات
-                </button>
+				<div class="mt-3 d-flex gap-2">
+					<button type="button"
+						class="btn btn-sm btn-light-primary"
+						onclick="navigator.clipboard.writeText('${lat},${lng}')">
+						نسخ الإحداثيات
+					</button>
 
-                <a target="_blank"
-                   class="btn btn-sm btn-light-success"
-                   href="${googleUrl}">
-                    فتح في Google Maps
-                </a>
-            </div>
-        `;
-    },
+					<a target="_blank"
+					   class="btn btn-sm btn-light-success"
+					   href="${googleUrl}">
+						فتح في Google Maps
+					</a>
+				</div>
+			`;
+					},
 
-    actions: [measureThisAction]
-}
-			
+					actions: [measureThisAction]
+				}
+
 			});
 
 			// طبقة خاصة للتحديد الثابت
@@ -2016,6 +2033,60 @@
 
 			view.ui.add(basemapToggle, "top-left");
 
+			// Toggle لإخفاء / إظهار Symbology على الخريطة نفسها
+const symbologyToggleBtn = document.createElement("button");
+symbologyToggleBtn.type = "button";
+symbologyToggleBtn.className = "esri-widget esri-widget--button esri-interactive";
+symbologyToggleBtn.title = "إخفاء الرموز";
+symbologyToggleBtn.innerHTML = `<span style="font-size:16px; font-weight:bold;">S</span>`;
+
+let symbologyVisible = true; // ظاهر افتراضيًا
+
+const noSymbologyRenderer = {
+	type: "simple",
+	symbol: {
+		type: "simple-fill",
+		color: [0, 0, 0, 0],
+		outline: {
+			color: [255, 255, 255, 1],
+			width: 1
+		}
+	}
+};
+
+symbologyToggleBtn.addEventListener("click", function () {
+	symbologyVisible = !symbologyVisible;
+
+	featureLayer.renderer = symbologyVisible
+		? damageRenderer
+		: noSymbologyRenderer;
+
+	symbologyToggleBtn.title = symbologyVisible ? "إخفاء الرموز" : "إظهار الرموز";
+	symbologyToggleBtn.style.backgroundColor = symbologyVisible ? "" : "#f8d7da";
+});
+
+// فوق زر الـ Basemap
+view.ui.add(symbologyToggleBtn, {
+	position: "top-left",
+	index: 0
+});
+
+
+
+// وضع زر Symbology فوق زر Basemap بدون حذف الكود القديم
+view.ui.add(symbologyToggleBtn, {
+	position: "top-left",
+	index: 0
+});
+
+const symbologyDiv = document.createElement("div");
+symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
+    const symbologyExpand = new Expand({
+        view: view,
+        content: symbologyDiv,
+        expanded: false
+    });
+	
 			const legend = new Legend({
 				view: view,
 				container: "externalLegendDiv",
@@ -2053,6 +2124,7 @@
 				position: "bottom-left"
 			});
 
+			
 			let selectedObjectId = null;
 			let selectedFeature = null;
 			let selectedGraphic = null;
@@ -2067,21 +2139,21 @@
 			}
 
 			function getLatLong(feature) {
-    if (!feature.geometry) return null;
+				if (!feature.geometry) return null;
 
-    let point = feature.geometry.extent
-        ? feature.geometry.extent.center
-        : feature.geometry;
+				let point = feature.geometry.extent
+					? feature.geometry.extent.center
+					: feature.geometry;
 
-    if (point.spatialReference?.isWebMercator) {
-        point = webMercatorUtils.webMercatorToGeographic(point);
-    }
+				if (point.spatialReference?.isWebMercator) {
+					point = webMercatorUtils.webMercatorToGeographic(point);
+				}
 
-    return {
-        lat: point.latitude ?? point.y,
-        lng: point.longitude ?? point.x
-    };
-}
+				return {
+					lat: point.latitude ?? point.y,
+					lng: point.longitude ?? point.x
+				};
+			}
 
 			function getSelectionSymbol(geometryType) {
 				if (geometryType === "polygon" || geometryType === "extent") {
@@ -2131,33 +2203,34 @@
 
 
 			function selectFeature(feature, doZoom = true) {
-    selectedFeature = feature;
-    selectedObjectId = getObjectId(feature);
+				selectedFeature = feature;
+				selectedObjectId = getObjectId(feature);
 
-    drawPersistentSelection(feature);
+				drawPersistentSelection(feature);
 
-    view.popup.open({
-        features: [feature],
-        location: feature.geometry.extent
-            ? feature.geometry.extent.center
-            : feature.geometry
-    });
+				view.popup.open({
+					features: [feature],
+					location: feature.geometry.extent
+						? feature.geometry.extent.center
+						: feature.geometry
+				});
 
-    if (doZoom) {
-        const zoomTarget = feature.geometry.extent
-            ? feature.geometry.extent.expand(1.5)
-            : { target: feature.geometry, zoom: 20 };
+				if (doZoom) {
+					const zoomTarget = feature.geometry.extent
+						? feature.geometry.extent.expand(1.5)
+						: { target: feature.geometry, zoom: 20 };
 
-        view.goTo(zoomTarget, {
-            duration: 2000,
-            easing: "in-out-expo"
-        }).catch(function (error) {
-            if (error.name !== "AbortError") {
-                console.error("GoTo failed:", error);
-            }
-        });
-    }
-}
+					view.goTo(zoomTarget, {
+						duration: 2000,
+						easing: "in-out-expo"
+					}).catch(function (error) {
+						if (error.name !== "AbortError") {
+							console.error("GoTo failed:", error);
+						}
+					});
+				}
+			}
+			
 			function zoomToFeatureByGlobalId(globalId) {
 				const query = featureLayer.createQuery();
 				query.where = "GLOBALID = '" + globalId + "'";
@@ -2177,22 +2250,22 @@
 				});
 			}
 
-view.on("click", function (event) {
-    view.hitTest(event).then(function (response) {
-        const result = response.results.find(function (r) {
-            return r.graphic && r.graphic.layer === featureLayer;
-        });
+			view.on("click", function (event) {
+				view.hitTest(event).then(function (response) {
+					const result = response.results.find(function (r) {
+						return r.graphic && r.graphic.layer === featureLayer;
+					});
 
-        if (result) {
-            selectFeature(result.graphic, false);
-        } else {
-            clearSelectionGraphic();
-            view.popup.close();
-        }
-    });
-});
+					if (result) {
+						selectFeature(result.graphic, false);
+					} else {
+						clearSelectionGraphic();
+						view.popup.close();
+					}
+				});
+			});
 
-			
+
 			// عند الضغط من الجدول
 			$('#kt_table_building tbody').on('click', 'tr', function () {
 				var globalid = this.id;
