@@ -21,6 +21,7 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Chart\Chart;
 use PhpOffice\PhpSpreadsheet\Chart\DataSeries;
 use PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues;
+use PhpOffice\PhpSpreadsheet\Chart\Layout;
 use PhpOffice\PhpSpreadsheet\Chart\Legend;
 use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
 use PhpOffice\PhpSpreadsheet\Chart\Title;
@@ -345,11 +346,20 @@ class BuildingProductivityNeighborhoodPieSheet implements FromCollection, WithCh
                     ],
                 );
 
+                $plotLayout = new Layout([
+                    'showPercent' => true,
+                    'showVal' => false,
+                    'showCatName' => false,
+                    'showSerName' => false,
+                    'dLblPos' => 'bestFit',
+                    'numFmtCode' => '0%',
+                ]);
+
                 $chart = new Chart(
                     'neighborhood_pie_'.$index,
                     new Title((string) $row['name']),
                     new Legend(Legend::POSITION_BOTTOM, null, false),
-                    new PlotArea(null, [$series]),
+                    new PlotArea($plotLayout, [$series]),
                     false,
                 );
 
