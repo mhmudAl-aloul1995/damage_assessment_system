@@ -2818,12 +2818,12 @@ class auditController extends Controller
             }
 
             $statusMap = [
-                'assignedto_engineer' => 'assignedto_engineer',
-                'assignedto_lawyer' => 'assignedto_lawyer',
+                'assigned_to_engineer' => 'assigned_to_engineer',
+                'assigned_to_lawyer' => 'assigned_to_lawyer',
 
                 // fallback (optional but safe)
-                'assignedto_engineer' => 'assignedto_engineer',
-                'assignedto_lawyer' => 'assignedto_lawyer',
+                'assigned_to_engineer' => 'assigned_to_engineer',
+                'assigned_to_lawyer' => 'assigned_to_lawyer',
             ];
 
             $this->applyStatusValuesFilter($query, 'engineerStatus', $this->filterValues($request, 'eng_status', $statusMap));
@@ -2885,10 +2885,10 @@ class auditController extends Controller
                     ->join('assessment_statuses as s', 'bs.status_id', '=', 's.id')
                     ->whereColumn('bs.building_id', 'buildings.objectid')
                     ->whereIn('s.name', [
-                        'assignedto_engineer',
-                        'assignedto_engineer',
-                        'assignedto_lawyer',
-                        'assignedto_lawyer',
+                        'assigned_to_engineer',
+                        'assigned_to_engineer',
+                        'assigned_to_lawyer',
+                        'assigned_to_lawyer',
                     ])
                     ->whereRaw('bs.updated_at = (
             SELECT MAX(bs2.updated_at)
@@ -3100,8 +3100,8 @@ class auditController extends Controller
                     ->where('user_id', $user->id);
             });
             $statusMap = [
-                'assignedto_engineer' => 'assigned_to_engineer',
-                'assignedto_lawyer' => 'assigned_to_lawyer',
+                'assigned_to_engineer' => 'assigned_to_engineer',
+                'assigned_to_lawyer' => 'assigned_to_lawyer',
 
                 // fallback (optional but safe)
                 'assigned_to_engineer' => 'assigned_to_engineer',
@@ -4484,14 +4484,14 @@ COALESCE(
         $endDate = Carbon::parse($request->input('end_date', now()->toDateString()))->endOfDay();
 
         $engineerStatuses = [
-            'assignedto_engineer' => 'Assigned',
+            'assigned_to_engineer' => 'Assigned',
             'accepted_by_engineer' => 'Accepted',
             'rejected_by_engineer' => 'Rejected',
             'need_review' => 'Need Review',
         ];
 
         $lawyerStatuses = [
-            'assignedto_lawyer' => 'Assigned',
+            'assigned_to_lawyer' => 'Assigned',
             'accepted_by_lawyer' => 'Accepted',
             'legal_notes' => 'Legal Notes',
         ];

@@ -39,7 +39,7 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
     $secondLawyer->assignRole($lawyerRole);
 
     $assignedStatus = AssessmentStatus::query()->create([
-        'name' => 'assignedto_lawyer',
+        'name' => 'assigned_to_lawyer',
         'label_en' => 'Assigned To Lawyer',
         'label_ar' => 'assigned ar',
         'stage' => 'lawyer',

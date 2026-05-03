@@ -6,7 +6,7 @@ it('resolves reusable badge classes labels and html from status names', function
     app()->setLocale('ar');
 
     $status = new AssessmentStatus([
-        'name' => 'assignedto_engineer',
+        'name' => 'assigned_to_engineer',
         'label_en' => 'Assigned To Engineer',
         'label_ar' => 'محول للمهندس',
         'stage' => 'engineer',

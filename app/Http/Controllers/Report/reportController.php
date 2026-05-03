@@ -317,13 +317,13 @@ class reportController extends Controller
             ->where('housing_statuses.type', 'Legal Auditor')
             ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', [
-                'assignedto_lawyer',
+                'assigned_to_lawyer',
                 'accepted_by_lawyer',
                 'legal_notes',
             ])
             ->select(
                 'housing_statuses.user_id',
-                DB::raw("SUM(CASE WHEN assessment_statuses.name = 'assignedto_lawyer' THEN 1 ELSE 0 END) as assigned_count"),
+                DB::raw("SUM(CASE WHEN assessment_statuses.name = 'assigned_to_lawyer' THEN 1 ELSE 0 END) as assigned_count"),
                 DB::raw("SUM(CASE WHEN assessment_statuses.name = 'accepted_by_lawyer' THEN 1 ELSE 0 END) as accepted_count"),
                 DB::raw("SUM(CASE WHEN assessment_statuses.name = 'legal_notes' THEN 1 ELSE 0 END) as legal_notes_count")
             )
