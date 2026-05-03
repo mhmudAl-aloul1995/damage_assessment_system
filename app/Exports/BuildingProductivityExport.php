@@ -9,6 +9,7 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCharts;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -269,7 +270,7 @@ class BuildingProductivityNeighborhoodChartSheet implements FromCollection, Shou
     }
 }
 
-class BuildingProductivityNeighborhoodPieSheet implements FromCollection, WithCharts, WithEvents, WithTitle
+class BuildingProductivityNeighborhoodPieSheet implements FromCollection, WithCharts, WithCustomStartCell, WithEvents, WithTitle
 {
     public function __construct(private readonly Collection $rows) {}
 
@@ -280,7 +281,22 @@ class BuildingProductivityNeighborhoodPieSheet implements FromCollection, WithCh
 
     public function collection(): Collection
     {
-        return collect();
+        return collect([
+            ['Completed', 'Not Completed', 'Gov', 'Name'],
+        ])->concat(
+            $this->detailRows()
+                ->map(fn (array $row): array => [
+                    (int) $row['completed'],
+                    (int) $row['not_completed'],
+                    $row['gov'],
+                    $row['name'],
+                ])
+        );
+    }
+
+    public function startCell(): string
+    {
+        return 'AA1';
     }
 
     public function charts(): array
@@ -334,6 +350,7 @@ class BuildingProductivityNeighborhoodPieSheet implements FromCollection, WithCh
                     new Title((string) $row['name']),
                     new Legend(Legend::POSITION_BOTTOM, null, false),
                     new PlotArea(null, [$series]),
+                    false,
                 );
 
                 $chart->setTopLeftPosition(Coordinate::stringFromColumnIndex($startColumn).$startRow);
@@ -349,20 +366,6 @@ class BuildingProductivityNeighborhoodPieSheet implements FromCollection, WithCh
         return [
             AfterSheet::class => function (AfterSheet $event): void {
                 $sheet = $event->sheet->getDelegate();
-
-                $sheet->setCellValue('AA1', 'Completed');
-                $sheet->setCellValue('AB1', 'Not Completed');
-                $sheet->setCellValue('AC1', 'Gov');
-                $sheet->setCellValue('AD1', 'Name');
-
-                foreach ($this->detailRows()->values() as $index => $row) {
-                    $rowNumber = $index + 2;
-
-                    $sheet->setCellValue("AA{$rowNumber}", (int) $row['completed']);
-                    $sheet->setCellValue("AB{$rowNumber}", (int) $row['not_completed']);
-                    $sheet->setCellValue("AC{$rowNumber}", $row['gov']);
-                    $sheet->setCellValue("AD{$rowNumber}", $row['name']);
-                }
 
                 foreach (['AA', 'AB', 'AC', 'AD'] as $column) {
                     $sheet->getColumnDimension($column)->setVisible(false);
