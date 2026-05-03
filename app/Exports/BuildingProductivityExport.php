@@ -364,7 +364,7 @@ class BuildingProductivityNeighborhoodPieSheet implements FromCollection, WithCh
                     $sheet->setCellValue("AD{$rowNumber}", $row['name']);
                 }
 
-                foreach (range('AA', 'AD') as $column) {
+                foreach (['AA', 'AB', 'AC', 'AD'] as $column) {
                     $sheet->getColumnDimension($column)->setVisible(false);
                 }
 
