@@ -60,7 +60,6 @@
                             <thead>
                                 <tr class="fw-bold text-muted bg-light">
                                     <th>ObjectID</th>
-                                    <th>GlobalID</th>
                                     <th>{{ __('multilingual.committee_decisions.columns.building_name') }}</th>
                                     <th>{{ __('multilingual.committee_decisions.columns.neighborhood') }}</th>
                                     <th>{{ __('multilingual.committee_decisions.columns.field_engineer') }}</th>
@@ -81,7 +80,6 @@
                             <thead>
                                 <tr class="fw-bold text-muted bg-light">
                                     <th>ObjectID</th>
-                                    <th>GlobalID</th>
                                     <th>{{ __('multilingual.committee_decisions.columns.owner_name') }}</th>
                                     <th>{{ __('multilingual.committee_decisions.columns.building') }}</th>
                                     <th>{{ __('multilingual.committee_decisions.columns.neighborhood') }}</th>
@@ -111,7 +109,6 @@
                 order: [[0, 'desc']],
                 columns: [
                     { data: 'objectid', name: 'objectid' },
-                    { data: 'globalid', name: 'globalid' },
                     { data: 'building_name', name: 'building_name' },
                     { data: 'neighborhood', name: 'neighborhood' },
                     { data: 'assignedto', name: 'assignedto' },
@@ -131,7 +128,6 @@
                 order: [[0, 'desc']],
                 columns: [
                     { data: 'objectid', name: 'objectid' },
-                    { data: 'globalid', name: 'globalid' },
                     { data: 'full_name', name: 'full_name', defaultContent: '-', orderable: false, searchable: false },
                     { data: 'building_name', name: 'building_name', orderable: false, searchable: false },
                     { data: 'neighborhood', name: 'neighborhood' },

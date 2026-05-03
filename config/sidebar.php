@@ -211,8 +211,8 @@ return [
                 'pattern' => 'committee-members*',
                 'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
             ],
-            [
-                'title' => 'menu.committee.telegram_integrations',
+           /* [
+                 'title' => 'menu.committee.telegram_integrations',
                 'url' => 'telegram/destinations',
                 'pattern' => 'telegram/destinations*',
                 'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor'],
@@ -234,7 +234,7 @@ return [
                 'url' => 'telegram/broadcasts',
                 'pattern' => 'telegram/broadcasts*',
                 'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
-            ],
+            ], */
         ],
     ],
     [
