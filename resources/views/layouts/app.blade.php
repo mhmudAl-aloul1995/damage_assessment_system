@@ -1723,23 +1723,63 @@
 			$('#appContainerLoading').removeClass('show');
 		}
 
+		let appLoaderTimer = null;
+
+		function shouldIgnoreLoader(settings) {
+			let url = settings?.url || '';
+
+			return url.includes('arcgis.com')
+				|| url.includes('FeatureServer')
+				|| url.includes('global-search')
+				|| url.includes('datatables')
+				|| url.includes('map');
+		}
+
 		/* Ajax */
-		$(document).ajaxStart(function () {
+		$(document).ajaxSend(function (event, xhr, settings) {
+			if (shouldIgnoreLoader(settings)) {
+				return;
+			}
+
+			clearTimeout(appLoaderTimer);
 			showAppLoading();
+		});
+
+		$(document).ajaxComplete(function (event, xhr, settings) {
+			if (shouldIgnoreLoader(settings)) {
+				return;
+			}
+
+			hideAppLoading();
+		});
+
+		$(document).ajaxError(function () {
+			hideAppLoading();
 		});
 
 		$(document).ajaxStop(function () {
 			hideAppLoading();
 		});
 
-		/* submit forms */
-		$(document).on('submit', 'form', function () {
-			showAppLoading();
+		/* حماية لو علق */
+		setInterval(function () {
+			if ($.active === 0) {
+				hideAppLoading();
+			}
+		}, 1000);
+
+		/* لا تشغل اللودينج على كل فورم تلقائيًا */
+		$(document).on('submit', 'form:not([data-show-loader="true"])', function () {
+			return true;
 		});
 
-		/* links */
-		$(document).on('click', 'a[href]:not([href^="#"]):not([target="_blank"])', function () {
+		/* فقط الروابط العادية */
+		$(document).on('click', 'a[href]:not([href^="#"]):not([target="_blank"]):not([data-no-loader="true"])', function () {
 			showAppLoading();
+
+			setTimeout(function () {
+				hideAppLoading();
+			}, 5000);
 		});
 	</script>
 </body>
