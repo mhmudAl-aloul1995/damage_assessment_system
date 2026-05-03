@@ -44,7 +44,7 @@
                                 data-allow-clear="true" data-close-on-select="false" multiple
                                 data-placeholder="{{ __('ui.audit.select_status') }}">
                                 <option value="pending">Pending</option>
-                                <option value="assignedto_engineer">Assigned To Engineer</option>
+                                <option value="assigned_to_engineer">Assigned To Engineer</option>
                                 <option value="accepted_by_engineer">Accepted By Engineer</option>
                                 <option value="rejected_by_engineer">Rejected By Engineer</option>
                                 <option value="need_review">Need Review</option>

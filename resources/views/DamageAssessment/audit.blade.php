@@ -72,7 +72,7 @@
 								<option value="pending">Pending</option>
 								<option value="accepted_by_engineer">Accepted By Engineer</option>
 								<option value="rejected_by_engineer">Rejected By Engineer</option>
-								<option value="assignedto_engineer">Assigned To Engineer</option>
+								<option value="assigned_to_engineer">Assigned To Engineer</option>
 								<option value="need_review">Need Review</option>
 							</select>
 						</div>
@@ -1000,7 +1000,7 @@
 												statusColor = 'badge-light-success';
 											} else if (u.engineer_status === 'need_review') {
 												statusColor = 'badge-light-warning';
-											} else if (u.engineer_status === 'assignedto_engineer') {
+											} else if (u.engineer_status === 'assigned_to_engineer') {
 												statusColor = 'badge-light-info';
 											}
 
