@@ -73,7 +73,7 @@ class LoginLogController extends Controller
             })
 
             ->addColumn('duration', function ($row) {
-                if (! $row->logged_in_at || ! $row->logged_out_at) {
+                if (!$row->logged_in_at || !$row->logged_out_at) {
                     return '-';
                 }
 
@@ -89,7 +89,50 @@ class LoginLogController extends Controller
             ->setRowClass(function ($row) {
                 return $row->is_success ? '' : 'table-danger';
             })
+            ->addColumn('security_status', function ($row) {
+                if ($row->is_suspicious) {
+                    return '<span class="badge badge-light-danger">Suspicious</span>';
+                }
 
+                if (!$row->is_success) {
+                    return '<span class="badge badge-light-warning">Failed</span>';
+                }
+
+                return '<span class="badge badge-light-success">Safe</span>';
+            })
+
+            ->addColumn('device_info', function ($row) {
+                return ($row->device ?? '-') . ' / ' . ($row->browser ?? '-') . ' / ' . ($row->platform ?? '-');
+            })
+
+            ->addColumn('suspicious_reason_badge', function ($row) {
+                return $row->suspicious_reason
+                    ? '<span class="text-danger fw-bold">' . e($row->suspicious_reason) . '</span>'
+                    : '-';
+            })
+
+            ->setRowClass(function ($row) {
+                if ($row->is_suspicious) {
+                    return 'table-danger';
+                }
+
+                if (!$row->is_success) {
+                    return 'table-warning';
+                }
+
+                if ($row->is_success && !$row->logged_out_at) {
+                    return 'table-success';
+                }
+
+                return '';
+            })
+
+            ->rawColumns([
+                'status_badge',
+                'browser',
+                'security_status',
+                'suspicious_reason_badge',
+            ])
             ->rawColumns(['status_badge', 'browser'])
             ->make(true);
     }
