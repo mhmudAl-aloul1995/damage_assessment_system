@@ -42,6 +42,74 @@
             margin-top: .25rem;
         }
 
+        .neighborhood-pie-chart-wrap {
+            position: relative;
+            height: 235px;
+            margin-top: .25rem;
+        }
+
+        .neighborhood-pie-chart-wrap .neighborhood-pie-chart {
+            height: 235px;
+            margin-top: 0;
+        }
+
+        .neighborhood-pie-inner-percent {
+            position: absolute;
+            z-index: 3;
+            min-width: 48px;
+            padding: .25rem .45rem;
+            background: #fff;
+            border: 1px solid #d8dde8;
+            border-radius: .35rem;
+            color: #181c32;
+            font-weight: 900;
+            line-height: 1;
+            box-shadow: 0 .35rem .8rem rgba(15, 23, 42, .16);
+            pointer-events: none;
+        }
+
+        .neighborhood-pie-inner-percent.completed {
+            top: 46%;
+            left: 58%;
+            transform: translate(-50%, -50%);
+        }
+
+        .neighborhood-pie-inner-percent.not-completed {
+            top: 32%;
+            left: 39%;
+            transform: translate(-50%, -50%);
+        }
+
+        .neighborhood-pie-percent-row {
+            display: flex;
+            justify-content: center;
+            gap: .65rem;
+            flex-wrap: wrap;
+            margin-top: -.35rem;
+            margin-bottom: .5rem;
+        }
+
+        .neighborhood-pie-percent {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            min-width: 76px;
+            justify-content: center;
+            padding: .35rem .6rem;
+            border-radius: .45rem;
+            color: #fff;
+            font-weight: 800;
+            box-shadow: 0 .35rem .8rem rgba(15, 23, 42, .18);
+        }
+
+        .neighborhood-pie-percent.completed {
+            background: #6ead47;
+        }
+
+        .neighborhood-pie-percent.not-completed {
+            background: #e96c73;
+        }
+
         .neighborhood-pie-legend {
             display: inline-flex;
             align-items: center;
@@ -259,7 +327,23 @@
                             <div class="neighborhood-pie-subtitle">
                                 {{ $pie['subtitle'] }} | {{ number_format($pie['buildings_count']) }} buildings
                             </div>
-                            <div id="{{ $pie['id'] }}" class="neighborhood-pie-chart"></div>
+                            <div class="neighborhood-pie-chart-wrap">
+                                <div id="{{ $pie['id'] }}" class="neighborhood-pie-chart"></div>
+                                <span class="neighborhood-pie-inner-percent completed">
+                                    {{ $pie['completed_percent'] }}%
+                                </span>
+                                <span class="neighborhood-pie-inner-percent not-completed">
+                                    {{ $pie['not_completed_percent'] }}%
+                                </span>
+                            </div>
+                            <div class="neighborhood-pie-percent-row">
+                                <span class="neighborhood-pie-percent completed">
+                                    {{ $pie['completed_percent'] }}%
+                                </span>
+                                <span class="neighborhood-pie-percent not-completed">
+                                    {{ $pie['not_completed_percent'] }}%
+                                </span>
+                            </div>
                             <div class="neighborhood-pie-legend">
                                 <span class="neighborhood-pie-legend-item">
                                     <span class="neighborhood-pie-dot completed"></span>
@@ -489,14 +573,15 @@
                         width: 3,
                         colors: ['#ffffff']
                     },
-                    dataLabels: {
-                        enabled: true,
-                        formatter: function (value) {
-                            return Math.round(value) + '%';
-                        },
-                        style: {
-                            fontSize: '14px',
-                            fontWeight: 800,
+                        dataLabels: {
+                            enabled: true,
+                            formatter: function (value) {
+                                return Math.round(value) + '%';
+                            },
+                            minAngleToShowLabel: 0,
+                            style: {
+                                fontSize: '14px',
+                                fontWeight: 800,
                             colors: ['#ffffff']
                         },
                         background: {

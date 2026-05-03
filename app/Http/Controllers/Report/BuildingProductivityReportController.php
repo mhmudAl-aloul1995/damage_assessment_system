@@ -311,6 +311,8 @@ class BuildingProductivityReportController extends Controller
                         (int) $row['not_completed'],
                     ],
                     'buildings_count' => (int) $row['buildings_count'],
+                    'completed_percent' => round(((float) $row['completed_percent']) * 100),
+                    'not_completed_percent' => round(((float) $row['not_completed_percent']) * 100),
                 ])
                 ->all(),
         ];
