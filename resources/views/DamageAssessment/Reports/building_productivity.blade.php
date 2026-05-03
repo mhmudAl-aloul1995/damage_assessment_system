@@ -573,34 +573,8 @@
                         width: 3,
                         colors: ['#ffffff']
                     },
-                        dataLabels: {
-                            enabled: true,
-                            formatter: function (value) {
-                                return Math.round(value) + '%';
-                            },
-                            minAngleToShowLabel: 0,
-                            style: {
-                                fontSize: '14px',
-                                fontWeight: 800,
-                            colors: ['#ffffff']
-                        },
-                        background: {
-                            enabled: true,
-                            foreColor: '#ffffff',
-                            borderRadius: 2,
-                            padding: 5,
-                            opacity: .92,
-                            borderWidth: 0,
-                            dropShadow: {
-                                enabled: true,
-                                top: 1,
-                                left: 1,
-                                blur: 2,
-                                color: '#000000',
-                                opacity: .35
-                            }
-                        },
-                        dropShadow: { enabled: false }
+                    dataLabels: {
+                        enabled: false
                     },
                     tooltip: {
                         y: {
