@@ -3100,12 +3100,12 @@ class auditController extends Controller
                     ->where('user_id', $user->id);
             });
             $statusMap = [
-                'assignedto_engineer' => 'assignedto_engineer',
-                'assignedto_lawyer' => 'assignedto_lawyer',
+                'assignedto_engineer' => 'assigned_to_engineer',
+                'assignedto_lawyer' => 'assigned_to_lawyer',
 
                 // fallback (optional but safe)
-                'assignedto_engineer' => 'assignedto_engineer',
-                'assignedto_lawyer' => 'assignedto_lawyer',
+                'assigned_to_engineer' => 'assigned_to_engineer',
+                'assigned_to_lawyer' => 'assigned_to_lawyer',
             ];
 
             $this->applyStatusValuesFilter($query, 'engineerStatus', $this->filterValues($request, 'eng_status', $statusMap));
@@ -3118,7 +3118,7 @@ class auditController extends Controller
 
             $fieldEngineers = $this->filterValues($request, 'field_engineer');
             if ($fieldEngineers !== []) {
-                $query->whereIn(DB::raw('LOWER(TRIM(assignedto))'), $fieldEngineers);
+                $query->whereIn(DB::raw('LOWER(TRIM(assigned_to))'), $fieldEngineers);
             }
 
             $finalStatuses = $this->filterValues($request, 'final_status');
@@ -3481,7 +3481,7 @@ COALESCE(
                     $reason = match ($statusName) {
                         'rejected_by_engineer' => 'المبنى مرفوض هندسياً',
                         'need_review' => 'المبنى بحاجة مراجعة',
-                        'assignedto_engineer' => 'المبنى لم يتم تدقيقه بعد',
+                        'assigned_to_engineer' => 'المبنى لم يتم تدقيقه بعد',
                         'accepted_by_engineer' => 'يوجد وحدات غير مقبولة',
                         default => 'لا يوجد تدقيق هندسي للمبنى',
                     };
@@ -4250,8 +4250,8 @@ COALESCE(
     private function getStatusBadge($statusName, $role = null)
     {
         return match ($statusName) {
-            'assignedto_lawyer' => 'badge badge-light-primary fw-bold',
-            'assignedto_engineer' => 'badge badge-light-primary fw-bold',
+            'assigned_to_lawyer' => 'badge badge-light-primary fw-bold',
+            'assigned_to_engineer' => 'badge badge-light-primary fw-bold',
             'accepted_by_engineer',
             'accepted' => 'badge badge-light-success fw-bold',
             'rejected_by_engineer',
