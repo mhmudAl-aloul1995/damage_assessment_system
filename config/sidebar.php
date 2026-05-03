@@ -91,6 +91,12 @@ return [
                 'roles' => ['Database Officer', 'Team Leader -INF', 'Project Officer', 'Area Manager'],
             ],
             [
+                'title' => 'menu.reports.building_productivity',
+                'url' => 'reports/building-productivity',
+                'pattern' => 'reports/building-productivity*',
+                'roles' => ['Database Officer', 'Project Officer', 'Team Leader -INF', 'Team Leader', 'Area Manager'],
+            ],
+            [
                 'title' => 'menu.reports.field_engineer',
                 'url' => 'reports/field-engineer',
                 'pattern' => 'reports/field-engineer*',
@@ -211,7 +217,7 @@ return [
                 'pattern' => 'committee-members*',
                 'roles' => ['Database Officer', 'Project Officer', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
             ],
-           /* [
+            /* [
                  'title' => 'menu.committee.telegram_integrations',
                 'url' => 'telegram/destinations',
                 'pattern' => 'telegram/destinations*',

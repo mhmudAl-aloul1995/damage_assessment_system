@@ -12,6 +12,7 @@ return [
         'engineers' => 'الباحثين',
     ],
     'reports' => [
+        'building_productivity' => 'تقرير إنتاجية حصر المباني',
         'title' => 'التقارير',
         'area_productivity' => 'إنتاجية المناطق',
         'buildings_area_productivity' => 'إنتاجية مناطق المباني',
