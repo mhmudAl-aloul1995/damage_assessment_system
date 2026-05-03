@@ -86,9 +86,7 @@ class LoginLogController extends Controller
                     : '-';
             })
 
-            ->setRowClass(function ($row) {
-                return $row->is_success ? '' : 'table-danger';
-            })
+         
             ->addColumn('security_status', function ($row) {
                 if ($row->is_suspicious) {
                     return '<span class="badge badge-light-danger">Suspicious</span>';
@@ -126,6 +124,17 @@ class LoginLogController extends Controller
 
                 return '';
             })
+            ->addColumn('security_status', function ($row) {
+                if ($row->is_suspicious) {
+                    return '<span class="badge badge-light-danger fw-bold">⚠ Suspicious</span>';
+                }
+
+                if (!$row->is_success) {
+                    return '<span class="badge badge-light-warning fw-bold">Failed</span>';
+                }
+
+                return '<span class="badge badge-light-success fw-bold">Safe</span>';
+            })
 
             ->rawColumns([
                 'status_badge',
@@ -133,7 +142,6 @@ class LoginLogController extends Controller
                 'security_status',
                 'suspicious_reason_badge',
             ])
-            ->rawColumns(['status_badge', 'browser'])
             ->make(true);
     }
 }
