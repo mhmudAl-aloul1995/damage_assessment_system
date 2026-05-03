@@ -72,7 +72,7 @@
 								<option value="pending">Pending</option>
 								<option value="accepted_by_engineer">Accepted By Engineer</option>
 								<option value="rejected_by_engineer">Rejected By Engineer</option>
-								<option value="assigned_to_engineer">Assigned To Engineer</option>
+								<option value="assignedto_engineer">Assigned To Engineer</option>
 								<option value="need_review">Need Review</option>
 							</select>
 						</div>
@@ -83,7 +83,7 @@
 								data-allow-clear="true" data-close-on-select="false" multiple
 								data-placeholder="{{ __('ui.audit.select_status') }}">
 								<option value="pending">Pending</option>
-								<option value="assigned_to_lawyer">Assigned To Lawyer</option>
+								<option value="assignedto_lawyer">Assigned To Lawyer</option>
 								<option value="accepted_by_lawyer">Accepted By Lawyer</option>
 								<option value="legal_notes">Legal Notes</option>
 							</select>
@@ -1000,7 +1000,7 @@
 												statusColor = 'badge-light-success';
 											} else if (u.engineer_status === 'need_review') {
 												statusColor = 'badge-light-warning';
-											} else if (u.engineer_status === 'assigned_to_engineer') {
+											} else if (u.engineer_status === 'assignedto_engineer') {
 												statusColor = 'badge-light-info';
 											}
 

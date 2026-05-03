@@ -24,7 +24,7 @@
     <div class="filters">
         @if (! empty($filters['municipalitie']))<span><strong>Municipality:</strong> {{ $filters['municipalitie'] }}</span>@endif
         @if (! empty($filters['road_damage_level']))<span><strong>Damage Level:</strong> {{ $filters['road_damage_level'] }}</span>@endif
-        @if (! empty($filters['assigned_to']))<span><strong>Researcher:</strong> {{ $filters['assigned_to'] }}</span>@endif
+        @if (! empty($filters['assignedto']))<span><strong>Researcher:</strong> {{ $filters['assignedto'] }}</span>@endif
         @if (! empty($filters['from_date']))<span><strong>From:</strong> {{ $filters['from_date'] }}</span>@endif
         @if (! empty($filters['to_date']))<span><strong>To:</strong> {{ $filters['to_date'] }}</span>@endif
     </div>
@@ -54,7 +54,7 @@
                     <td>{{ $survey->road_access }}</td>
                     <td>{{ $survey->submissiondate?->format('Y-m-d H:i') }}</td>
                     <td>{{ $survey->items_count }}</td>
-                    <td>{{ $survey->assigned_to }}</td>
+                    <td>{{ $survey->assignedto }}</td>
                 </tr>
             @empty
                 <tr>

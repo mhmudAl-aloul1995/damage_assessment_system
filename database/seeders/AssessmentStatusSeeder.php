@@ -16,15 +16,15 @@ class AssessmentStatusSeeder extends Seeder
                 'label_en' => 'Pending',
                 'label_ar' => 'استمارة لم يتم تدقيقها في الموقع',
                 'stage' => 'system',
-                'order_step' => 1
+                'order_step' => 1,
             ],
 
             [
-                'name' => 'assigned_to_engineer',
+                'name' => 'assignedto_engineer',
                 'label_en' => 'Assigned To Engineer',
                 'label_ar' => 'الاستمارة تم تحويلها للمهندس للتدقيق',
                 'stage' => 'engineer',
-                'order_step' => 2
+                'order_step' => 2,
             ],
 
             [
@@ -32,7 +32,7 @@ class AssessmentStatusSeeder extends Seeder
                 'label_en' => 'Rejected By Engineer',
                 'label_ar' => 'مرفوضة بواسطة المهندس',
                 'stage' => 'engineer',
-                'order_step' => 3
+                'order_step' => 3,
             ],
 
             [
@@ -40,7 +40,7 @@ class AssessmentStatusSeeder extends Seeder
                 'label_en' => 'Accepted By Engineer',
                 'label_ar' => 'مقبولة بواسطة المهندس',
                 'stage' => 'engineer',
-                'order_step' => 4
+                'order_step' => 4,
             ],
 
             [
@@ -48,15 +48,15 @@ class AssessmentStatusSeeder extends Seeder
                 'label_en' => 'Need Review',
                 'label_ar' => 'يحتاج الى مراجعة',
                 'stage' => 'engineer',
-                'order_step' => 5
+                'order_step' => 5,
             ],
 
             [
-                'name' => 'assigned_to_lawyer',
+                'name' => 'assignedto_lawyer',
                 'label_en' => 'Assigned To Lawyer',
                 'label_ar' => 'الاستمارة تم تحويلها للمحامي للتدقيق',
                 'stage' => 'lawyer',
-                'order_step' => 6
+                'order_step' => 6,
             ],
 
             [
@@ -64,7 +64,7 @@ class AssessmentStatusSeeder extends Seeder
                 'label_en' => 'Legal Notes',
                 'label_ar' => 'ملاحظات قانونية',
                 'stage' => 'lawyer',
-                'order_step' => 7
+                'order_step' => 7,
             ],
 
             [
@@ -72,7 +72,7 @@ class AssessmentStatusSeeder extends Seeder
                 'label_en' => 'Accepted By Lawyer',
                 'label_ar' => 'مقبولة بواسطة المحامي',
                 'stage' => 'lawyer',
-                'order_step' => 8
+                'order_step' => 8,
             ],
 
             [
@@ -80,7 +80,7 @@ class AssessmentStatusSeeder extends Seeder
                 'label_en' => 'Final Approval',
                 'label_ar' => 'مقبولة نهائياً (من Team Leader)',
                 'stage' => 'team_leader',
-                'order_step' => 9
+                'order_step' => 9,
             ],
 
             [
@@ -88,7 +88,7 @@ class AssessmentStatusSeeder extends Seeder
                 'label_en' => 'Final Reject',
                 'label_ar' => 'مرفوضة نهائياً (من Team Leader)',
                 'stage' => 'team_leader',
-                'order_step' => 10
+                'order_step' => 10,
             ],
 
         ];

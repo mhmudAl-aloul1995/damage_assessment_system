@@ -30,7 +30,7 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
     $oldDay = Carbon::parse('2026-01-10 08:00:00');
 
     $assignedToEngineerStatus = AssessmentStatus::query()->create([
-        'name' => 'assigned_to_engineer',
+        'name' => 'assignedto_engineer',
         'label_en' => 'Assigned To Engineer',
         'label_ar' => 'assigned engineer ar',
         'stage' => 'engineer',

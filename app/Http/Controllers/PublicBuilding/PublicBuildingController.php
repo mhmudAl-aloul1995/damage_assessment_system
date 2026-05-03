@@ -82,8 +82,8 @@ class PublicBuildingController extends Controller
                 fn ($survey) => '<a href="'.route('public-buildings.show', $survey).'" class="btn btn-light btn-sm">View</a>'
             )
             ->addColumn(
-                'assigned_to',
-                fn ($survey) => $survey->{$this->researcherColumn() ?? 'assigned_to'} ?? '-'
+                'assignedto',
+                fn ($survey) => $survey->{$this->researcherColumn() ?? 'assignedto'} ?? '-'
             )
             ->editColumn(
                 'date_of_damage',
@@ -204,8 +204,8 @@ class PublicBuildingController extends Controller
 
     private function researcherColumn(): ?string
     {
-        if (Schema::hasColumn('public_building_surveys', 'assigned_to')) {
-            return 'assigned_to';
+        if (Schema::hasColumn('public_building_surveys', 'assignedto')) {
+            return 'assignedto';
         }
 
         if (Schema::hasColumn('public_building_surveys', 'assignedto')) {
@@ -231,7 +231,7 @@ class PublicBuildingController extends Controller
 
         $researcherColumn = $this->researcherColumn();
 
-        $assignedTo = $this->requestValues($request, 'assigned_to', 'assignedto');
+        $assignedTo = $this->requestValues($request, 'assignedto', 'assignedto');
         if ($assignedTo !== [] && $researcherColumn) {
             $query->whereIn($researcherColumn, $assignedTo);
         }

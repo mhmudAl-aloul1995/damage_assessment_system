@@ -11,6 +11,7 @@ use App\Models\RoadFacilitySurvey;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class AreaProductivityReportService
@@ -191,7 +192,7 @@ class AreaProductivityReportService
             'municipalitie' => 'public_building_surveys.municipalitie',
             'neighborhood' => 'public_building_surveys.neighborhood',
             'assignedto' => $assignedExpression,
-        ], 'public_building_surveys.created_at', $fromDate, $toDate);
+        ], $this->dateColumn('public_building_surveys'), $fromDate, $toDate);
 
         return $query;
     }
@@ -221,7 +222,7 @@ class AreaProductivityReportService
             'neighborhood' => 'road_facility_surveys.neighborhood',
             'zone_code' => 'road_facility_surveys.zone_code',
             'assignedto' => $assignedExpression,
-        ], 'road_facility_surveys.created_at', $fromDate, $toDate);
+        ], $this->dateColumn('road_facility_surveys'), $fromDate, $toDate);
 
         return $query;
     }
@@ -356,6 +357,29 @@ class AreaProductivityReportService
 
     private function assignedValueExpression(string $table): string
     {
-        return "COALESCE(NULLIF(TRIM({$table}.assigned_to), ''), NULLIF(TRIM({$table}.assignedto), ''), '')";
+        $columns = [];
+
+        if (Schema::hasColumn($table, 'assigned_to')) {
+            $columns[] = "NULLIF(TRIM({$table}.assigned_to), '')";
+        }
+
+        if (Schema::hasColumn($table, 'assignedto')) {
+            $columns[] = "NULLIF(TRIM({$table}.assignedto), '')";
+        }
+
+        if ($columns === []) {
+            return "''";
+        }
+
+        return 'COALESCE('.implode(', ', $columns).", '')";
+    }
+
+    private function dateColumn(string $table): string
+    {
+        if (Schema::hasColumn($table, 'creationdate')) {
+            return "{$table}.creationdate";
+        }
+
+        return "{$table}.created_at";
     }
 }

@@ -136,9 +136,17 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted">
+                                    <td class="text-center text-muted">
                                         {{ __('multilingual.area_productivity_reports.labels.empty') }}
                                     </td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -149,9 +157,10 @@
                                 <td class="text-warning">{{ $summary['pda'] }}</td>
                                 <td class="text-danger">{{ $summary['tda'] }}</td>
                                 <td>{{ $summary['engineers'] }}</td>
-                                <td colspan="4" class="text-end">
-                                    {{ __('multilingual.area_productivity_reports.labels.grand_totals') }}
-                                </td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td class="text-end">{{ __('multilingual.area_productivity_reports.labels.grand_totals') }}</td>
                             </tr>
                         </tfoot>
                     </table>

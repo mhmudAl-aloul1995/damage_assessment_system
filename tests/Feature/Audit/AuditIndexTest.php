@@ -33,7 +33,7 @@ it('includes the housing units status progress in the audit table response', fun
     ]);
 
     $assignedStatus = AssessmentStatus::query()->create([
-        'name' => 'assigned_to_engineer',
+        'name' => 'assignedto_engineer',
         'label_en' => 'Assigned To Engineer',
         'label_ar' => 'assigned ar',
         'stage' => 'engineer',

@@ -75,7 +75,7 @@ class RoadFacilityController extends Controller
             ->editColumn('road_damage_level', function (RoadFacilitySurvey $survey): string {
                 return '<span class="badge badge-light-danger">'.e($survey->road_damage_level ?? '-').'</span>';
             })
-            ->addColumn('assigned_to', fn (RoadFacilitySurvey $survey): string => $survey->assigned_to ?? '-')
+            ->addColumn('assignedto', fn (RoadFacilitySurvey $survey): string => $survey->assignedto ?? '-')
             ->rawColumns(['actions', 'road_damage_level'])
             ->toJson();
     }
@@ -188,7 +188,7 @@ class RoadFacilityController extends Controller
 
         $researcherColumn = $this->researcherColumn();
 
-        $assignedTo = $this->requestValues($request, 'assigned_to', 'assignedto');
+        $assignedTo = $this->requestValues($request, 'assignedto', 'assignedto');
         if ($assignedTo !== [] && $researcherColumn) {
             $query->whereIn($researcherColumn, $assignedTo);
         }
@@ -349,8 +349,8 @@ class RoadFacilityController extends Controller
 
     private function researcherColumn(): ?string
     {
-        if (Schema::hasColumn('road_facility_surveys', 'assigned_to')) {
-            return 'assigned_to';
+        if (Schema::hasColumn('road_facility_surveys', 'assignedto')) {
+            return 'assignedto';
         }
 
         if (Schema::hasColumn('road_facility_surveys', 'assignedto')) {

@@ -43,11 +43,11 @@ class AssessmentStatus extends Model
     {
         return match (self::normalizeName($name)) {
             'pending' => 'warning',
-            'assigned_to_engineer' => 'info',
+            'assignedto_engineer' => 'info',
             'rejected_by_engineer' => 'danger',
             'accepted_by_engineer' => 'success',
             'need_review' => 'warning',
-            'assigned_to_lawyer' => 'primary',
+            'assignedto_lawyer' => 'primary',
             'legal_notes' => 'warning',
             'accepted_by_lawyer' => 'success',
             'final_approval' => 'success',
@@ -74,8 +74,8 @@ class AssessmentStatus extends Model
     public static function aliasesForName(?string $name): array
     {
         return match (self::normalizeName($name)) {
-            'assigned_to_engineer' => ['assigned_to_engineer', 'assignedto_engineer'],
-            'assigned_to_lawyer' => ['assigned_to_lawyer', 'assignedto_lawyer'],
+            'assignedto_engineer' => ['assignedto_engineer', 'assignedto_engineer'],
+            'assignedto_lawyer' => ['assignedto_lawyer', 'assignedto_lawyer'],
             'final_reject' => ['final_reject', 'final_rejected'],
             default => [strtolower(trim((string) $name))],
         };
@@ -86,8 +86,8 @@ class AssessmentStatus extends Model
         $name = strtolower(trim((string) $name));
 
         return match ($name) {
-            'assignedto_engineer' => 'assigned_to_engineer',
-            'assignedto_lawyer' => 'assigned_to_lawyer',
+            'assignedto_engineer' => 'assignedto_engineer',
+            'assignedto_lawyer' => 'assignedto_lawyer',
             'final_rejected' => 'final_reject',
             default => $name,
         };

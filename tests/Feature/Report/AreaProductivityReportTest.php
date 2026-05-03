@@ -112,6 +112,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
+        'creationdate' => '2026-04-10 09:00:00',
         'created_at' => '2026-04-10 09:00:00',
         'updated_at' => '2026-04-10 09:00:00',
     ]);
@@ -124,6 +125,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'governorate' => 'North Gaza',
         'municipalitie' => 'Jabalia',
         'neighborhood' => 'Camp',
+        'creationdate' => '2026-04-10 09:00:00',
         'created_at' => '2026-04-10 09:00:00',
         'updated_at' => '2026-04-10 09:00:00',
     ]);
@@ -137,6 +139,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'destroyed',
         'zone_code' => 'RZ-1',
+        'creationdate' => '2026-04-10 09:00:00',
         'created_at' => '2026-04-10 09:00:00',
         'updated_at' => '2026-04-10 09:00:00',
     ]);
@@ -150,6 +153,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'moderate',
         'zone_code' => 'RZ-2',
+        'creationdate' => '2026-04-11 09:00:00',
         'created_at' => '2026-04-11 09:00:00',
         'updated_at' => '2026-04-11 09:00:00',
     ]);

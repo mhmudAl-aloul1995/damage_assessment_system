@@ -168,7 +168,7 @@ return [
         'title' => 'الصلاحيات',
         'search_placeholder' => 'بحث الصلاحيات',
         'name' => 'الاسم',
-        'assigned_to' => 'مخصص إلى',
+        'assignedto' => 'مخصص إلى',
         'created_at' => 'تاريخ الإنشاء',
         'actions' => 'الإجراءات',
         'not_assigned' => 'غير مخصص',

@@ -67,8 +67,8 @@
         @if (! empty($filters['building_damage_status']))
             <span><strong>Damage Status:</strong> {{ $filters['building_damage_status'] }}</span>
         @endif
-        @if (! empty($filters['assigned_to']))
-            <span><strong>Researcher:</strong> {{ $filters['assigned_to'] }}</span>
+        @if (! empty($filters['assignedto']))
+            <span><strong>Researcher:</strong> {{ $filters['assignedto'] }}</span>
         @endif
         @if (! empty($filters['from_date']))
             <span><strong>From:</strong> {{ $filters['from_date'] }}</span>
@@ -101,7 +101,7 @@
                     <td>{{ $survey->building_damage_status }}</td>
                     <td>{{ $survey->date_of_damage?->format('Y-m-d') }}</td>
                     <td>{{ $survey->units_count }}</td>
-                    <td>{{ $survey->assigned_to }}</td>
+                    <td>{{ $survey->assignedto }}</td>
                 </tr>
             @empty
                 <tr>
