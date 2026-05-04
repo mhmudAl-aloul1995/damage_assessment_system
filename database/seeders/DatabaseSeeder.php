@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AssessmentsSqlSeeder::class,
             AssessmentStatusSeeder::class,
+            InfAuditRolesSeeder::class,
+            InfAuditStatusesSeeder::class,
             FilterSeeder::class,
             PublicBuildingFilterSeeder::class,
             RolesAndPermissionsSeeder::class,

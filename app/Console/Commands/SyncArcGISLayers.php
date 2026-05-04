@@ -255,6 +255,19 @@ class SyncArcGISLayers extends Command
                         }
                     }
 
+                    // Handle _v1 fallback columns: if main column is null, use _v1 value
+                    foreach ($row as $column => $value) {
+                        if (($value === null || $value === '') && !str_ends_with($column, '_v1')) {
+                            $v1Key = strtolower($column . '_v1');
+                            if (array_key_exists($v1Key, $arcgisMap)) {
+                                $v1Value = $this->normalizeValue($arcgisMap[$v1Key], $column . '_v1', $table);
+                                if ($v1Value !== null && $v1Value !== '') {
+                                    $row[$column] = $v1Value;
+                                }
+                            }
+                        }
+                    }
+
                     $row[$unique] = $objectId;
 
                     if (in_array('all_data', $tableColumns, true)) {

@@ -14,6 +14,11 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        $this->call([
+            InfAuditRolesSeeder::class,
+            InfAuditStatusesSeeder::class,
+        ]);
+
         $permissions = [
             'view committee decisions',
             'create committee decisions',

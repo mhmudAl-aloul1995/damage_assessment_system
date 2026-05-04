@@ -25,6 +25,11 @@ return [
         'road_facilities' => 'تقرير مرافق الطرق',
         'export_data' => 'تصدير البيانات',
     ],
+    'inf_audit' => [
+        'title' => 'تدقيق البنية التحتية',
+        'public_buildings' => 'تدقيق المباني العامة',
+        'roads' => 'تدقيق الطرق',
+    ],
     'audit' => [
         'title' => 'التدقيق',
         'dashboard' => 'لوحة معلومات التدقيق',

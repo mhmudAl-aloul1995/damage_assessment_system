@@ -10,7 +10,7 @@ use App\Models\LoginLog;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
-use App\Support\LoginSecurity;
+use App\Support\Forms\LoginSecurity;
 class AppServiceProvider extends ServiceProvider
 {
     /**

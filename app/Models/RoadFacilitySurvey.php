@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class RoadFacilitySurvey extends Model
 {
@@ -38,6 +39,17 @@ class RoadFacilitySurvey extends Model
     public function items(): HasMany
     {
         return $this->hasMany(RoadFacilitySurveyItem::class, 'parentglobalid', 'globalid');
+    }
+
+    public function infAuditStatus(): HasOne
+    {
+        return $this->hasOne(RoadFacilityAuditStatus::class, 'globalid', 'globalid');
+    }
+
+    public function infAuditAssignment(): HasOne
+    {
+        return $this->hasOne(InfAuditAssignment::class, 'globalid', 'globalid')
+            ->where('type', 'road_facility');
     }
 
     public function getAssignedToAttribute(?string $value): ?string

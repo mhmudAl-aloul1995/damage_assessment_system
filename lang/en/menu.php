@@ -25,6 +25,11 @@ return [
         'road_facilities' => 'Road Facilities Report',
         'export_data' => 'Export Data',
     ],
+    'inf_audit' => [
+        'title' => 'Inf Audit',
+        'public_buildings' => 'Public Buildings Audit',
+        'roads' => 'Road Facilities Audit',
+    ],
     'audit' => [
         'title' => 'Audit',
         'dashboard' => 'Audit Dashboard',

@@ -59,6 +59,28 @@ return [
         ],
     ],
     [
+        'title' => 'menu.inf_audit.title',
+        'icon' => 'ki-shield-tick',
+        'roles' => ['Inf - QC/QA Engineer', 'inf Auditing Supervisor', 'Database Officer'],
+        'active_patterns' => [
+            'inf-audit*',
+        ],
+        'items' => [
+            [
+                'title' => 'menu.inf_audit.public_buildings',
+                'url' => 'inf-audit/public-buildings',
+                'pattern' => 'inf-audit/public-buildings*',
+                'roles' => ['Inf - QC/QA Engineer', 'inf Auditing Supervisor', 'Database Officer'],
+            ],
+            [
+                'title' => 'menu.inf_audit.roads',
+                'url' => 'inf-audit/roads',
+                'pattern' => 'inf-audit/roads*',
+                'roles' => ['Inf - QC/QA Engineer', 'inf Auditing Supervisor', 'Database Officer'],
+            ],
+        ],
+    ],
+    [
         'title' => 'menu.reports.title',
         'icon' => 'ki-chart-line',
         'roles' => ['Database Officer', 'Project Officer', 'Team Leader -INF', 'Team Leader', 'Area Manager', 'QC/QA Engineer'],

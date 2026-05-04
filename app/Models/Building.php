@@ -148,6 +148,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $mezzanine_status
  * @property string|null $roof_terrace_area
  * @property string|null $comments_recommendations
+ * @property string|null $comments_recommendations_v1
  * @property string|null $break01_note
  * @property float|null $shape__area
  * @property float|null $shape__length
@@ -339,6 +340,7 @@ class Building extends Model
         'mezzanine_status',
         'roof_terrace_area',
         'comments_recommendations',
+        'comments_recommendations_v1',
         'break01_note',
         'shape__area',
         'shape__length',
@@ -354,7 +356,7 @@ class Building extends Model
         'governorate',
         'municipalitie',
         'neighborhood',
-        
+
     ];
 
     /**
@@ -367,7 +369,6 @@ class Building extends Model
     /**
      * @return array<string, string>
      */
-
     protected array $editedFieldsCache = [];
 
     public function edits(): HasMany
@@ -378,11 +379,11 @@ class Building extends Model
 
     protected function getEditedFieldsMap(): array
     {
-        if (!empty($this->editedFieldsCache)) {
+        if (! empty($this->editedFieldsCache)) {
             return $this->editedFieldsCache;
         }
 
-        if (!$this->relationLoaded('edits')) {
+        if (! $this->relationLoaded('edits')) {
             $this->loadMissing('edits');
         }
 
@@ -401,18 +402,29 @@ class Building extends Model
     {
         $value = parent::getAttribute($key);
 
-        if (!is_string($key) || !array_key_exists($key, $this->attributes)) {
+        if (! is_string($key) || ! array_key_exists($key, $this->attributes)) {
             return $value;
         }
 
-        if (!$this->relationLoaded('edits')) {
+        if ($key === 'comments_recommendations' && $value === null) {
+            $value = parent::getAttribute('comments_recommendations_v1');
+        }
+
+        if (! $this->relationLoaded('edits')) {
             return $value;
         }
 
         $editedFields = $this->getEditedFieldsMap();
 
-        return $editedFields[$key] ?? $value;
+        $editedValue = $editedFields[$key] ?? $value;
+
+        if ($key === 'comments_recommendations' && $editedValue === null) {
+            return parent::getAttribute('comments_recommendations_v1');
+        }
+
+        return $editedValue;
     }
+
     public function housing_unit()
     {
         return $this->hasMany(HousingUnit::class, 'parentglobalid', 'globalid');
