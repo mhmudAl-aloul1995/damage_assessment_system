@@ -399,7 +399,13 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted">No matching data.</td>
+                                <td class="text-center text-muted">No matching data.</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
                             </tr>
                         @endforelse
                     </tbody>

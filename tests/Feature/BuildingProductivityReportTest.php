@@ -91,3 +91,19 @@ it('renders and exports the building productivity report with totals and charts'
         ]))
         ->assertOk();
 });
+
+it('renders the empty building productivity table without tbody colspan', function () {
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('reports.building-productivity.index'))
+        ->assertOk()
+        ->assertSee('No matching data.')
+        ->assertDontSee('colspan="7"', false);
+});
