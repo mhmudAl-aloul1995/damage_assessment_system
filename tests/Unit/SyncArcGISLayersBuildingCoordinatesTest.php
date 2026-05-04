@@ -55,6 +55,15 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
             'token' => 'arcgis-token',
         ]),
+        'https://example.com/FeatureServer/0?*' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'globalid', 'type' => 'esriFieldTypeString', 'length' => 64],
+                ['name' => 'building_name', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'New_ArcGIS_Field', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'Shape__Area', 'type' => 'esriFieldTypeDouble'],
+            ],
+        ]),
         'https://example.com/FeatureServer/0/query*' => function ($request) {
             $data = $request->data();
 

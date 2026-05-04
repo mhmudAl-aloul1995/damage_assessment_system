@@ -4,8 +4,10 @@ namespace App\Console\Commands;
 
 use App\Models\SystemOperationLog;
 use Illuminate\Console\Command;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class SyncArcGISLayers extends Command
@@ -135,6 +137,8 @@ class SyncArcGISLayers extends Command
             }
 
             $serviceUrl = $this->normalizeQueryUrl($url);
+            $this->syncSchemaFromArcgisMetadata($table, $url, $token);
+
             $tableColumns = Schema::getColumnListing($table);
             $tableColumns = $this->ensureBaseSyncColumns($table, $tableColumns);
 
@@ -204,8 +208,6 @@ class SyncArcGISLayers extends Command
 
                 foreach ($features as $feature) {
                     $attributes = $feature['attributes'] ?? [];
-                    $tableColumns = $this->ensureMissingColumnsForAttributes($table, $attributes, $tableColumns, $config);
-                    $syncColumns = $this->syncColumns($tableColumns, $ignoredColumns);
 
                     if (
                         in_array('location', $tableColumns, true)
@@ -485,86 +487,117 @@ class SyncArcGISLayers extends Command
         return Schema::getColumnListing($table);
     }
 
-    private function ensureMissingColumnsForAttributes(string $table, array $attributes, array $tableColumns, array $config): array
+    private function syncSchemaFromArcgisMetadata(string $table, string $url, string $token): void
     {
-        $missingColumns = [];
-        $knownColumns = array_flip($tableColumns);
+        try {
+            $metadataUrl = $this->normalizeLayerMetadataUrl($url);
+            $response = Http::timeout(60)->get($metadataUrl, [
+                'f' => 'json',
+                'token' => $token,
+            ]);
 
-        foreach ($attributes as $attributeName => $value) {
-            $column = $this->normalizeArcgisColumnName((string) $attributeName);
+            if (! $response->successful()) {
+                $message = "ArcGIS metadata request failed for {$table}: ".$response->body();
+                $this->warn($message);
+                Log::warning($message);
 
-            if ($this->shouldSkipDynamicColumn($column) || isset($knownColumns[$column])) {
-                continue;
+                return;
             }
 
-            $missingColumns[$column] = $value;
-            $knownColumns[$column] = true;
-        }
+            $metadata = $response->json();
 
-        foreach ($config['map'] ?? [] as $targetColumn => $sourceColumn) {
-            $column = $this->normalizeArcgisColumnName((string) $targetColumn);
-            $sourceKey = strtolower((string) $sourceColumn);
+            if (isset($metadata['error'])) {
+                $message = "ArcGIS metadata error for {$table}: ".($metadata['error']['message'] ?? 'Unknown error');
+                $this->warn($message);
+                Log::warning($message);
 
-            if (
-                $this->shouldSkipDynamicColumn($column)
-                || isset($knownColumns[$column])
-                || ! array_key_exists($sourceKey, array_change_key_case($attributes, CASE_LOWER))
-            ) {
-                continue;
+                return;
             }
 
-            $missingColumns[$column] = $attributes[$sourceColumn] ?? null;
-            $knownColumns[$column] = true;
-        }
+            $fields = $metadata['fields'] ?? [];
 
-        if ($missingColumns === []) {
-            return $tableColumns;
-        }
-
-        Schema::table($table, function ($schema) use ($missingColumns, $table): void {
-            foreach ($missingColumns as $column => $value) {
-                $this->addDynamicColumn($schema, $table, $column, $value);
+            if (! is_array($fields) || $fields === []) {
+                return;
             }
-        });
 
-        $this->line('Added missing columns to '.$table.': '.implode(', ', array_keys($missingColumns)));
+            $missingFields = collect($fields)
+                ->filter(fn (array $field): bool => ! $this->isSystemArcgisField((string) ($field['name'] ?? '')))
+                ->mapWithKeys(function (array $field): array {
+                    $column = $this->normalizeArcgisColumnName((string) ($field['name'] ?? ''));
 
-        return Schema::getColumnListing($table);
+                    return $column === '' ? [] : [$column => $field];
+                })
+                ->reject(fn (array $field, string $column): bool => Schema::hasColumn($table, $column))
+                ->all();
+
+            if ($missingFields === []) {
+                return;
+            }
+
+            Schema::table($table, function (Blueprint $schema) use ($missingFields): void {
+                foreach ($missingFields as $column => $field) {
+                    $this->addArcgisMetadataColumn($schema, $column, $field);
+                }
+            });
+
+            $this->line('Added missing metadata columns to '.$table.': '.implode(', ', array_keys($missingFields)));
+        } catch (\Throwable $exception) {
+            $message = "Could not sync ArcGIS schema for {$table}: ".$exception->getMessage();
+            $this->warn($message);
+            Log::warning($message, ['exception' => $exception]);
+        }
     }
 
-    private function addDynamicColumn($schema, string $table, string $column, mixed $value): void
+    private function addArcgisMetadataColumn(Blueprint $schema, string $column, array $field): void
     {
-        if ($this->isLikelyDateColumn($column)) {
-            $schema->dateTime($column)->nullable();
+        match ($this->laravelColumnTypeForArcgisField($field)) {
+            'integer' => $schema->integer($column)->nullable(),
+            'double' => $schema->double($column)->nullable(),
+            'timestamp' => $schema->timestamp($column)->nullable(),
+            'string' => $schema->string($column)->nullable(),
+            default => $schema->text($column)->nullable(),
+        };
+    }
 
-            return;
+    private function laravelColumnTypeForArcgisField(array $field): string
+    {
+        $type = $field['type'] ?? null;
+
+        if ($type === 'esriFieldTypeString') {
+            return (int) ($field['length'] ?? 255) > 255 ? 'text' : 'string';
         }
 
-        if ($this->isJsonColumn($table, $column) || is_array($value) || is_object($value)) {
-            $schema->longText($column)->nullable();
+        return match ($type) {
+            'esriFieldTypeInteger', 'esriFieldTypeSmallInteger', 'esriFieldTypeOID' => 'integer',
+            'esriFieldTypeDouble', 'esriFieldTypeSingle' => 'double',
+            'esriFieldTypeDate' => 'timestamp',
+            default => 'text',
+        };
+    }
 
-            return;
+    private function normalizeLayerMetadataUrl(string $url): string
+    {
+        $url = rtrim($url, '/');
+
+        if (str_ends_with(strtolower($url), '/query')) {
+            return preg_replace('#/query$#i', '', $url) ?: $url;
         }
 
-        if (is_int($value)) {
-            $schema->bigInteger($column)->nullable();
-
-            return;
+        if (preg_match('#/featureserver$#i', $url)) {
+            return $url.'/0';
         }
 
-        if (is_float($value)) {
-            $schema->double($column)->nullable();
+        return $url;
+    }
 
-            return;
-        }
-
-        if (is_string($value) && strlen($value) > 255) {
-            $schema->longText($column)->nullable();
-
-            return;
-        }
-
-        $schema->string($column)->nullable();
+    private function isSystemArcgisField(string $fieldName): bool
+    {
+        return in_array(strtolower($fieldName), [
+            'objectid',
+            'shape',
+            'shape__area',
+            'shape__length',
+        ], true);
     }
 
     private function syncColumns(array $tableColumns, array $ignoredColumns): array
