@@ -164,6 +164,42 @@ class engineerController extends Controller
                     ]);
             });
     }
+    private function detectChromiumBrowser(): string
+    {
+        $envPath = env('BROWSERSHOT_CHROME_PATH');
+
+        if ($envPath && file_exists($envPath)) {
+            return $envPath;
+        }
+
+        $paths = [
+            // Google Chrome
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+
+            // Microsoft Edge
+            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+
+            // Chromium
+            'C:\\Program Files\\Chromium\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe',
+
+            // Brave
+            'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+            'C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+        ];
+
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        throw new \RuntimeException(
+            'No Chromium browser found. Install Google Chrome, Microsoft Edge, Chromium, or Brave, or set BROWSERSHOT_CHROME_PATH in .env'
+        );
+    }
     public function show(Request $request)
     {
         $data = $request->all();
