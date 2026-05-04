@@ -21,12 +21,19 @@ class PublicBuildingFilterSeeder extends Seeder
         }
 
         $spreadsheet = IOFactory::load($path);
-        $sheet = $spreadsheet->getActiveSheet();
+
+        // ✅ قراءة من Sheet محدد
+        $sheet = $spreadsheet->getSheetByName('choices');
+
+        if (! $sheet) {
+            $this->command?->error("Sheet 'choices' not found in Excel file.");
+            return;
+        }
 
         $rows = collect($sheet->toArray(null, true, true, true));
 
         $data = $rows
-            ->skip(1)
+            ->skip(1) // تخطي الهيدر
             ->map(function (array $row): array {
                 $listName = trim((string) ($row['A'] ?? ''));
                 $name     = trim((string) ($row['B'] ?? ''));
@@ -46,12 +53,12 @@ class PublicBuildingFilterSeeder extends Seeder
                     'updated_at' => now(),
                 ];
             })
-            ->filter(fn (array $row): bool =>
+            ->filter(fn ($row) =>
                 $row['list_name'] !== ''
                 && strtolower($row['list_name']) !== 'list_name'
                 && $row['name'] !== ''
             )
-            ->unique(fn (array $row): string =>
+            ->unique(fn ($row) =>
                 Str::lower($row['list_name'].'|'.$row['name'])
             )
             ->values();
@@ -60,6 +67,6 @@ class PublicBuildingFilterSeeder extends Seeder
             DB::table('public_building_filters')->insert($chunk->all());
         }
 
-        $this->command?->info("Inserted {$data->count()} public building filter records.");
+        $this->command?->info("Inserted {$data->count()} records from 'choices' sheet.");
     }
 }
