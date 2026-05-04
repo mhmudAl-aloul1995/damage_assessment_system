@@ -43,7 +43,7 @@
             </div>
             <div class="card-toolbar d-flex gap-2 flex-wrap">
                 <a href="{{ $backRoute }}" class="btn btn-light">رجوع</a>
-                @role('Database Officer|inf Auditing Supervisor')
+                @role('Database Officer|Team Leader -INF')
                     <select id="status_assignee" class="form-select form-select-solid w-250px" data-placeholder="اختر المدقق">
                         <option value=""></option>
                         @foreach ($engineers as $engineer)
@@ -53,7 +53,7 @@
                     <button class="btn btn-light-info status-btn" data-status="assigned">إسناد</button>
                     <button class="btn btn-success status-btn" data-status="final_approval">اعتماد نهائي</button>
                 @endrole
-                @role('Database Officer|inf Auditing Supervisor|Inf - QC/QA Engineer')
+                @role('Database Officer|Team Leader -INF|Inf - QC/QA Engineer')
                     <button class="btn btn-light-success status-btn" data-status="accepted">مقبول</button>
                     <button class="btn btn-light-danger status-btn" data-status="rejected">مرفوض</button>
                     <button class="btn btn-light-warning status-btn" data-status="need_review">بحاجة لمراجعة</button>

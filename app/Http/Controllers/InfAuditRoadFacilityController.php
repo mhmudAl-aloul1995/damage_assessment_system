@@ -34,7 +34,7 @@ class InfAuditRoadFacilityController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Inf - QC/QA Engineer|inf Auditing Supervisor|Database Officer');
+        $this->middleware('role:Inf - QC/QA Engineer|Team Leader -INF|Database Officer');
     }
 
     public function index(): View
@@ -62,7 +62,7 @@ class InfAuditRoadFacilityController extends Controller
 
     public function bulkAssign(InfAuditBulkAssignRequest $request): JsonResponse
     {
-        abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'inf Auditing Supervisor']), 403);
+        abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF']), 403);
 
         $data = $request->validated();
         $status = InfAuditStatus::query()->where('name', 'assigned')->firstOrFail();
@@ -499,32 +499,32 @@ class InfAuditRoadFacilityController extends Controller
 
     private function scopeVisibleToUser(Builder $query): void
     {
-        if (Auth::user()?->hasRole('Inf - QC/QA Engineer') && ! Auth::user()?->hasAnyRole(['Database Officer', 'inf Auditing Supervisor'])) {
+        if (Auth::user()?->hasRole('Inf - QC/QA Engineer') && ! Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF'])) {
             $query->whereHas('infAuditAssignment', fn (Builder $statusQuery) => $statusQuery->where('user_id', Auth::id()));
         }
     }
 
     private function authorizeRecord(RoadFacilitySurvey $survey): void
     {
-        if (Auth::user()?->hasRole('Inf - QC/QA Engineer') && ! Auth::user()?->hasAnyRole(['Database Officer', 'inf Auditing Supervisor'])) {
+        if (Auth::user()?->hasRole('Inf - QC/QA Engineer') && ! Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF'])) {
             abort_unless((int) ($survey->infAuditAssignment?->user_id ?? $survey->infAuditStatus?->assigned_to ?? 0) === Auth::id(), 403);
         }
     }
 
     private function authorizeFieldEdit(RoadFacilitySurvey $survey): void
     {
-        abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'inf Auditing Supervisor']) || (Auth::user()?->hasRole('Inf - QC/QA Engineer') && (int) ($survey->infAuditAssignment?->user_id ?? $survey->infAuditStatus?->assigned_to ?? 0) === Auth::id()), 403);
+        abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF']) || (Auth::user()?->hasRole('Inf - QC/QA Engineer') && (int) ($survey->infAuditAssignment?->user_id ?? $survey->infAuditStatus?->assigned_to ?? 0) === Auth::id()), 403);
     }
 
     private function authorizeStatusChange(string $status): void
     {
         if (in_array($status, ['assigned', 'final_approval'], true)) {
-            abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'inf Auditing Supervisor']), 403);
+            abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF']), 403);
 
             return;
         }
 
-        abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'inf Auditing Supervisor', 'Inf - QC/QA Engineer']), 403);
+        abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF', 'Inf - QC/QA Engineer']), 403);
     }
 
     private function statusBadge(?InfAuditStatus $status): string

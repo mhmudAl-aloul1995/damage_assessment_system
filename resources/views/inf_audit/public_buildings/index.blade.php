@@ -10,7 +10,7 @@
                 <h2 class="fw-bold mb-0">تدقيق المباني العامة</h2>
             </div>
             <div class="card-toolbar d-flex gap-2 flex-wrap">
-                @role('Database Officer|inf Auditing Supervisor')
+                @role('Database Officer|Team Leader -INF')
                     <select id="bulk_assign_engineer" class="form-select form-select-solid w-250px" data-placeholder="اختر المدقق">
                         <option value=""></option>
                         @foreach ($engineers as $engineer)

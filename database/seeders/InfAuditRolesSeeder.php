@@ -12,7 +12,7 @@ class InfAuditRolesSeeder extends Seeder
      */
     public function run(): void
     {
-        foreach (['Inf - QC/QA Engineer', 'inf Auditing Supervisor'] as $roleName) {
+        foreach (['Inf - QC/QA Engineer', 'Team Leader -INF'] as $roleName) {
             Role::firstOrCreate([
                 'name' => $roleName,
                 'guard_name' => 'web',
