@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InfAudit\InfAuditBulkAssignRequest;
+use App\Http\Requests\InfAudit\InfAuditChildStoreRequest;
 use App\Http\Requests\InfAudit\InfAuditFieldUpdateRequest;
 use App\Http\Requests\InfAudit\InfAuditStatusRequest;
 use App\Models\InfAuditAssignment;
@@ -24,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
 
 class InfAuditPublicBuildingController extends Controller
@@ -140,10 +142,12 @@ class InfAuditPublicBuildingController extends Controller
             'editHistories' => $this->editHistories($publicBuilding),
             'statusRoute' => route('inf-audit.public-buildings.status', $publicBuilding),
             'fieldRoute' => route('inf-audit.public-buildings.field-update', $publicBuilding),
+            'childStoreRoute' => route('inf-audit.public-buildings.children.store', $publicBuilding),
             'backRoute' => route('inf-audit.public-buildings.index'),
             'title' => 'تدقيق المباني العامة',
             'mainSectionTitle' => 'بيانات المبنى العام',
             'childSectionTitle' => 'وحدات/طوابق المبنى العام',
+            'childAddLabel' => 'Ø¥Ø¶Ø§ÙØ© ÙˆØ­Ø¯Ø©/Ø·Ø§Ø¨Ù‚',
         ]);
     }
 
@@ -210,6 +214,37 @@ class InfAuditPublicBuildingController extends Controller
                 'manager_name' => $assignment?->manager?->name ?? '-',
                 'updated_at' => $assignment?->updated_at?->format('Y-m-d H:i') ?? '-',
             ],
+        ]);
+    }
+
+    public function storeChild(InfAuditChildStoreRequest $request, PublicBuildingSurvey $publicBuilding): JsonResponse
+    {
+        $this->authorizeFieldEdit($publicBuilding);
+
+        $attributes = [
+            'globalid' => (string) Str::uuid(),
+            'parentglobalid' => $publicBuilding->globalid,
+        ];
+
+        if (Schema::hasColumn('public_building_survey_units', 'creationdate')) {
+            $attributes['creationdate'] = now();
+        }
+
+        if (Schema::hasColumn('public_building_survey_units', 'editdate')) {
+            $attributes['editdate'] = now();
+        }
+
+        if (Schema::hasColumn('public_building_survey_units', 'raw_payload')) {
+            $attributes['raw_payload'] = [];
+        }
+
+        $unit = PublicBuildingSurveyUnit::query()->create($attributes);
+
+        return response()->json([
+            'message' => 'ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© ÙˆØ­Ø¯Ø©/Ø·Ø§Ø¨Ù‚ Ø¬Ø¯ÙŠØ¯ Ù„Ù„ØªØ¯Ù‚ÙŠÙ‚.',
+            'id' => $unit->id,
+            'globalid' => $unit->globalid,
+            'reload' => true,
         ]);
     }
 
@@ -335,8 +370,13 @@ class InfAuditPublicBuildingController extends Controller
             ->where('table_type', $tableType)
             ->where('field_name', $fieldName)
             ->where(function ($query) use ($record): void {
-                $query->where('objectid', $record->objectid ?? 0)
-                    ->orWhere('global_id', $record->globalid ?? '');
+                if (filled($record->objectid ?? null)) {
+                    $query->where('objectid', $record->objectid);
+                }
+
+                if (filled($record->globalid ?? null)) {
+                    $query->orWhere('global_id', $record->globalid);
+                }
             })
             ->latest()
             ->first();
@@ -376,8 +416,13 @@ class InfAuditPublicBuildingController extends Controller
             ->where('table_type', $tableType)
             ->where('field_name', $fieldName)
             ->where(function ($query) use ($record): void {
-                $query->where('objectid', $record->objectid ?? 0)
-                    ->orWhere('global_id', $record->globalid ?? '');
+                if (filled($record->objectid ?? null)) {
+                    $query->where('objectid', $record->objectid);
+                }
+
+                if (filled($record->globalid ?? null)) {
+                    $query->orWhere('global_id', $record->globalid);
+                }
             })
             ->latest()
             ->first();
@@ -430,8 +475,13 @@ class InfAuditPublicBuildingController extends Controller
             ->where('table_type', $tableType)
             ->where('field_name', $fieldName)
             ->where(function ($query) use ($record): void {
-                $query->where('objectid', $record->objectid ?? 0)
-                    ->orWhere('global_id', $record->globalid ?? '');
+                if (filled($record->objectid ?? null)) {
+                    $query->where('objectid', $record->objectid);
+                }
+
+                if (filled($record->globalid ?? null)) {
+                    $query->orWhere('global_id', $record->globalid);
+                }
             })
             ->latest()
             ->get()

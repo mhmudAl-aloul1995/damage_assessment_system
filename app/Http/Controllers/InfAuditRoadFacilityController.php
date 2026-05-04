@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InfAudit\InfAuditBulkAssignRequest;
+use App\Http\Requests\InfAudit\InfAuditChildStoreRequest;
 use App\Http\Requests\InfAudit\InfAuditFieldUpdateRequest;
 use App\Http\Requests\InfAudit\InfAuditStatusRequest;
 use App\Models\InfAuditAssignment;
@@ -24,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
 
 class InfAuditRoadFacilityController extends Controller
@@ -141,10 +143,12 @@ class InfAuditRoadFacilityController extends Controller
             'editHistories' => $this->editHistories($road),
             'statusRoute' => route('inf-audit.roads.status', $road),
             'fieldRoute' => route('inf-audit.roads.field-update', $road),
+            'childStoreRoute' => route('inf-audit.roads.children.store', $road),
             'backRoute' => route('inf-audit.roads.index'),
             'title' => 'تدقيق الطرق',
             'mainSectionTitle' => 'بيانات الطريق/المرفق',
             'childSectionTitle' => 'عناصر الطريق المطلوبة',
+            'childAddLabel' => 'Ø¥Ø¶Ø§ÙØ© Ø¹Ù†ØµØ± Ø·Ø±ÙŠÙ‚',
         ]);
     }
 
@@ -212,6 +216,37 @@ class InfAuditRoadFacilityController extends Controller
                 'manager_name' => $assignment?->manager?->name ?? '-',
                 'updated_at' => $assignment?->updated_at?->format('Y-m-d H:i') ?? '-',
             ],
+        ]);
+    }
+
+    public function storeChild(InfAuditChildStoreRequest $request, RoadFacilitySurvey $road): JsonResponse
+    {
+        $this->authorizeFieldEdit($road);
+
+        $attributes = [
+            'globalid' => (string) Str::uuid(),
+            'parentglobalid' => $road->globalid,
+        ];
+
+        if (Schema::hasColumn('road_facility_survey_items', 'creationdate')) {
+            $attributes['creationdate'] = now();
+        }
+
+        if (Schema::hasColumn('road_facility_survey_items', 'editdate')) {
+            $attributes['editdate'] = now();
+        }
+
+        if (Schema::hasColumn('road_facility_survey_items', 'raw_payload')) {
+            $attributes['raw_payload'] = [];
+        }
+
+        $item = RoadFacilitySurveyItem::query()->create($attributes);
+
+        return response()->json([
+            'message' => 'ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© Ø¹Ù†ØµØ± Ø·Ø±ÙŠÙ‚ Ø¬Ø¯ÙŠØ¯ Ù„Ù„ØªØ¯Ù‚ÙŠÙ‚.',
+            'id' => $item->id,
+            'globalid' => $item->globalid,
+            'reload' => true,
         ]);
     }
 
@@ -338,8 +373,13 @@ class InfAuditRoadFacilityController extends Controller
             ->where('table_type', $tableType)
             ->where('field_name', $fieldName)
             ->where(function ($query) use ($record): void {
-                $query->where('objectid', $record->objectid ?? 0)
-                    ->orWhere('global_id', $record->globalid ?? '');
+                if (filled($record->objectid ?? null)) {
+                    $query->where('objectid', $record->objectid);
+                }
+
+                if (filled($record->globalid ?? null)) {
+                    $query->orWhere('global_id', $record->globalid);
+                }
             })
             ->latest()
             ->first();
@@ -392,8 +432,13 @@ class InfAuditRoadFacilityController extends Controller
             ->where('table_type', $tableType)
             ->where('field_name', $fieldName)
             ->where(function ($query) use ($record): void {
-                $query->where('objectid', $record->objectid ?? 0)
-                    ->orWhere('global_id', $record->globalid ?? '');
+                if (filled($record->objectid ?? null)) {
+                    $query->where('objectid', $record->objectid);
+                }
+
+                if (filled($record->globalid ?? null)) {
+                    $query->orWhere('global_id', $record->globalid);
+                }
             })
             ->latest()
             ->get()

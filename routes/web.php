@@ -286,6 +286,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/public-buildings/assign', [InfAuditPublicBuildingController::class, 'bulkAssign'])->name('public-buildings.assign');
         Route::get('/public-buildings/{publicBuilding:globalid}', [InfAuditPublicBuildingController::class, 'show'])->name('public-buildings.show');
         Route::post('/public-buildings/{publicBuilding:globalid}/status', [InfAuditPublicBuildingController::class, 'updateStatus'])->name('public-buildings.status');
+        Route::post('/public-buildings/{publicBuilding:globalid}/children', [InfAuditPublicBuildingController::class, 'storeChild'])->name('public-buildings.children.store');
         Route::post('/public-buildings/{publicBuilding:globalid}/field-update', [InfAuditPublicBuildingController::class, 'updateField'])->name('public-buildings.field-update');
 
         Route::get('/roads', [InfAuditRoadFacilityController::class, 'index'])->name('roads.index');
@@ -293,6 +294,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/roads/assign', [InfAuditRoadFacilityController::class, 'bulkAssign'])->name('roads.assign');
         Route::get('/roads/{road:globalid}', [InfAuditRoadFacilityController::class, 'show'])->name('roads.show');
         Route::post('/roads/{road:globalid}/status', [InfAuditRoadFacilityController::class, 'updateStatus'])->name('roads.status');
+        Route::post('/roads/{road:globalid}/children', [InfAuditRoadFacilityController::class, 'storeChild'])->name('roads.children.store');
         Route::post('/roads/{road:globalid}/field-update', [InfAuditRoadFacilityController::class, 'updateField'])->name('roads.field-update');
     });
 

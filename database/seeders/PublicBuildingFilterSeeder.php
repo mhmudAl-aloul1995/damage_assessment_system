@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class PublicBuildingFilterSeeder extends Seeder
 {
@@ -12,37 +13,53 @@ class PublicBuildingFilterSeeder extends Seeder
     {
         DB::table('public_building_filters')->truncate();
 
-        $path = database_path('seeders/public_building_choices.txt');
+        $path = database_path('seeders/public_building_choices.xlsx');
 
         if (! file_exists($path)) {
+            $this->command?->warn("File not found: {$path}");
             return;
         }
 
-        $rows = collect(file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES))
-            ->map(static fn (string $line): array => array_map('trim', explode('|', $line)))
-            ->filter(function (array $parts): bool {
-                return count($parts) >= 3
-                    && $parts[0] !== ''
-                    && $parts[0] !== 'list_name'
-                    && $parts[1] !== '';
-            })
-            ->map(function (array $parts): array {
+        $spreadsheet = IOFactory::load($path);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $rows = collect($sheet->toArray(null, true, true, true));
+
+        $data = $rows
+            ->skip(1)
+            ->map(function (array $row): array {
+                $listName = trim((string) ($row['A'] ?? ''));
+                $name     = trim((string) ($row['B'] ?? ''));
+                $label    = trim((string) ($row['C'] ?? ''));
+                $gov      = trim((string) ($row['D'] ?? ''));
+                $order    = trim((string) ($row['E'] ?? ''));
+                $sector   = trim((string) ($row['F'] ?? ''));
+
                 return [
-                    'list_name' => $parts[0],
-                    'name' => $parts[1],
-                    'label' => $parts[2] !== '' ? $parts[2] : $parts[1],
-                    'gov' => $parts[3] !== '' ? $parts[3] : null,
-                    'sort_order' => $parts[4] !== '' ? $parts[4] : null,
-                    'sector' => $parts[5] !== '' ? $parts[5] : null,
+                    'list_name'  => $listName,
+                    'name'       => $name,
+                    'label'      => $label !== '' ? $label : $name,
+                    'gov'        => $gov !== '' ? $gov : null,
+                    'sort_order' => $order !== '' ? $order : null,
+                    'sector'     => $sector !== '' ? $sector : null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
             })
-            ->unique(static fn (array $row): string => Str::lower($row['list_name'].'|'.$row['name']))
+            ->filter(fn (array $row): bool =>
+                $row['list_name'] !== ''
+                && strtolower($row['list_name']) !== 'list_name'
+                && $row['name'] !== ''
+            )
+            ->unique(fn (array $row): string =>
+                Str::lower($row['list_name'].'|'.$row['name'])
+            )
             ->values();
 
-        foreach ($rows->chunk(200) as $chunk) {
+        foreach ($data->chunk(200) as $chunk) {
             DB::table('public_building_filters')->insert($chunk->all());
         }
+
+        $this->command?->info("Inserted {$data->count()} public building filter records.");
     }
 }

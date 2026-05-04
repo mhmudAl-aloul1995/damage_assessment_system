@@ -14,6 +14,7 @@ use App\Models\RoadFacilitySurveyItem;
 use App\Models\User;
 use Database\Seeders\InfAuditRolesSeeder;
 use Database\Seeders\InfAuditStatusesSeeder;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -141,6 +142,23 @@ test('database officer can assign and inf engineer can audit public building and
             'field_value' => 'Edited Floor 1',
         ])
         ->assertOk();
+
+    $this->actingAs($engineer)
+        ->postJson(route('inf-audit.public-buildings.children.store', $survey))
+        ->assertOk()
+        ->assertJsonPath('reload', true);
+
+    expect(PublicBuildingSurveyUnit::query()->where('parentglobalid', $survey->globalid)->count())->toBe(2);
+
+    $addedUnit = PublicBuildingSurveyUnit::query()->where('parentglobalid', $survey->globalid)->latest('id')->first();
+
+    if (Schema::hasColumn('public_building_survey_units', 'creationdate')) {
+        expect($addedUnit?->creationdate)->not->toBeNull();
+    }
+
+    if (Schema::hasColumn('public_building_survey_units', 'editdate')) {
+        expect($addedUnit?->editdate)->not->toBeNull();
+    }
 
     $this->assertDatabaseHas('inf_edit_assessments', [
         'table_type' => 'public_building_table',
@@ -288,6 +306,23 @@ test('database officer can assign and inf engineer can audit road facilities and
             'field_value' => 'Edited Asphalt',
         ])
         ->assertOk();
+
+    $this->actingAs($engineer)
+        ->postJson(route('inf-audit.roads.children.store', $road))
+        ->assertOk()
+        ->assertJsonPath('reload', true);
+
+    expect(RoadFacilitySurveyItem::query()->where('parentglobalid', $road->globalid)->count())->toBe(2);
+
+    $addedItem = RoadFacilitySurveyItem::query()->where('parentglobalid', $road->globalid)->latest('id')->first();
+
+    if (Schema::hasColumn('road_facility_survey_items', 'creationdate')) {
+        expect($addedItem?->creationdate)->not->toBeNull();
+    }
+
+    if (Schema::hasColumn('road_facility_survey_items', 'editdate')) {
+        expect($addedItem?->editdate)->not->toBeNull();
+    }
 
     expect(InfEditAssessment::query()->where('table_type', 'road_facility_item_table')->where('field_name', 'item_required')->exists())->toBeTrue();
 

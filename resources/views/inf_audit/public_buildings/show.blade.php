@@ -119,6 +119,16 @@
                 </div>
 
                 <div class="tab-pane fade" id="inf_audit_children_tab" role="tabpanel">
+                    @isset($childStoreRoute)
+                        @role('Database Officer|Team Leader -INF|Inf - QC/QA Engineer')
+                            <div class="d-flex justify-content-end mb-5">
+                                <button type="button" class="btn btn-light-primary" id="addChildAuditRecord">
+                                    {{ $childAddLabel ?? 'Ø¥Ø¶Ø§ÙØ© Ø³Ø¬Ù„ ØªØ§Ø¨Ø¹' }}
+                                </button>
+                            </div>
+                        @endrole
+                    @endisset
+
                     @forelse ($childGroups as $group)
                         <div class="card card-flush border shadow-sm mb-6">
                             <div class="card-header pt-6">
@@ -338,6 +348,21 @@
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('fieldEditModal')).hide();
                 }).fail(function (xhr) {
                     toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء الحفظ');
+                });
+            });
+
+            $('#addChildAuditRecord').on('click', function () {
+                const button = $(this);
+                button.prop('disabled', true);
+
+                $.post(@json($childStoreRoute ?? null), {
+                    _token: @json(csrf_token())
+                }).done(function (response) {
+                    toastr.success(response.message || 'تمت الإضافة بنجاح');
+                    window.location.reload();
+                }).fail(function (xhr) {
+                    toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء الإضافة');
+                    button.prop('disabled', false);
                 });
             });
 
