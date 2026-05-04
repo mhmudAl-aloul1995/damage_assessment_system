@@ -596,7 +596,6 @@ class SyncArcGISLayers extends Command
             'objectid',
             'shape',
             'shape__area',
-            'shape__length',
         ], true);
     }
 

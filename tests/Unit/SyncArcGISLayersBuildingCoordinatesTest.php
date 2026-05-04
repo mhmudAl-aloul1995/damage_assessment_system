@@ -62,6 +62,7 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
                 ['name' => 'building_name', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'New_ArcGIS_Field', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'Shape__Area', 'type' => 'esriFieldTypeDouble'],
+                ['name' => 'Shape__Length', 'type' => 'esriFieldTypeDouble'],
             ],
         ]),
         'https://example.com/FeatureServer/0/query*' => function ($request) {
@@ -78,6 +79,7 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
                             'globalid' => 'building-point-globalid',
                             'building_name' => 'Point Building',
                             'New_ArcGIS_Field' => 'new dynamic value',
+                            'Shape__Length' => 123.45,
                         ],
                         'geometry' => [
                             'x' => 34.501,
@@ -117,7 +119,9 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
     expect((float) $pointBuilding->latitude)->toBe(31.501);
     expect((float) $pointBuilding->longitude)->toBe(34.501);
     expect(Schema::connection('mysql')->hasColumn('buildings', 'new_arcgis_field'))->toBeTrue();
+    expect(Schema::connection('mysql')->hasColumn('buildings', 'shape__length'))->toBeTrue();
     expect($pointBuilding->new_arcgis_field)->toBe('new dynamic value');
+    expect((float) $pointBuilding->shape__length)->toBe(123.45);
     expect((float) $polygonBuilding->latitude)->toBe(31.5);
     expect((float) $polygonBuilding->longitude)->toBe(34.5);
 });

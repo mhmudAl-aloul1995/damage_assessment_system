@@ -42,25 +42,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
 
-    $response = Http::get($url, [
-        'where' => "globalid='{$globalid}'",
-        'outFields' => '*',
-        'returnGeometry' => 'true',
-        'f' => 'json',
-        'token' => $token,
-    ]);
-
-    $data = $response->json();
-
-    $geometry = $data['features'][0]['geometry'] ?? null;
-
-    $longitude = $geometry['x'] ?? null;
-    $latitude = $geometry['y'] ?? null;
-});
-Route::get('/geometry', function () {
-
     return redirect()->route('login');
 });
+
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
@@ -299,14 +283,12 @@ Route::middleware('auth')->group(function () {
     Route::prefix('inf-audit')->name('inf-audit.')->group(function () {
         Route::get('/public-buildings', [InfAuditPublicBuildingController::class, 'index'])->name('public-buildings.index');
         Route::get('/public-buildings/data', [InfAuditPublicBuildingController::class, 'data'])->name('public-buildings.data');
-        Route::post('/public-buildings/assign', [InfAuditPublicBuildingController::class, 'bulkAssign'])->name('public-buildings.assign');
         Route::get('/public-buildings/{publicBuilding:globalid}', [InfAuditPublicBuildingController::class, 'show'])->name('public-buildings.show');
         Route::post('/public-buildings/{publicBuilding:globalid}/status', [InfAuditPublicBuildingController::class, 'updateStatus'])->name('public-buildings.status');
         Route::post('/public-buildings/{publicBuilding:globalid}/field-update', [InfAuditPublicBuildingController::class, 'updateField'])->name('public-buildings.field-update');
 
         Route::get('/roads', [InfAuditRoadFacilityController::class, 'index'])->name('roads.index');
         Route::get('/roads/data', [InfAuditRoadFacilityController::class, 'data'])->name('roads.data');
-        Route::post('/roads/assign', [InfAuditRoadFacilityController::class, 'bulkAssign'])->name('roads.assign');
         Route::get('/roads/{road:globalid}', [InfAuditRoadFacilityController::class, 'show'])->name('roads.show');
         Route::post('/roads/{road:globalid}/status', [InfAuditRoadFacilityController::class, 'updateStatus'])->name('roads.status');
         Route::post('/roads/{road:globalid}/field-update', [InfAuditRoadFacilityController::class, 'updateField'])->name('roads.field-update');
