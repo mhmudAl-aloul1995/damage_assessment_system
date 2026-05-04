@@ -9,6 +9,7 @@ use App\Http\Requests\DamageAssessment\ObjectIdImportRequest;
 use App\Jobs\ExportDataJob;
 use App\Models\Assessment;
 use App\Models\Export;
+use App\Support\Exports\ExportDataColumns;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,8 +22,8 @@ class ExportDataController extends Controller
 
     public function index()
     {
-        $buildingColumns = DB::getSchemaBuilder()->getColumnListing('buildings');
-        $housingColumns = DB::getSchemaBuilder()->getColumnListing('housing_units');
+        $buildingColumns = ExportDataColumns::visibleBuildingColumns();
+        $housingColumns = ExportDataColumns::visibleHousingColumns();
 
         $assessmentMeta = DB::table('assessments')
             ->select('name', 'label', 'hint')
@@ -40,16 +41,6 @@ class ExportDataController extends Controller
             })
             ->toArray();
 
-        $assessmentNames = array_keys($assessmentMeta);
-
-        $buildingColumns = array_values(array_filter($buildingColumns, function ($column) use ($assessmentNames) {
-            return in_array(trim($column), $assessmentNames, true);
-        }));
-
-        $housingColumns = array_values(array_filter($housingColumns, function ($column) use ($assessmentNames) {
-            return in_array(trim($column), $assessmentNames, true);
-        }));
-
         $filters = DB::table('filters')
             ->select('list_name', 'name', 'label')
             ->orderBy('list_name')
@@ -64,16 +55,12 @@ class ExportDataController extends Controller
 
         $filters['building_states_auditig'] = $auditingStatuses;
 
-        $buildingUnitsCountColumn = 'housing_units_count';
+        $buildingUnitsCountColumn = ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN;
 
         $assessmentMeta[$buildingUnitsCountColumn] = [
             'label' => 'عدد الوحدات للمبنى',
             'hint' => 'حقل مخصص يعرض عدد الوحدات السكنية المرتبطة بالمبنى',
         ];
-
-        if (! in_array($buildingUnitsCountColumn, $buildingColumns, true)) {
-            $buildingColumns[] = $buildingUnitsCountColumn;
-        }
 
         $assessmentLabels = Assessment::pluck('label', 'name');
         $assessmentLabels['building_states_auditig'] = 'حالات المبنى - التدقيق';
