@@ -22,6 +22,8 @@ class SyncArcGISLayers extends Command
                 'url' => config('services.arcgis.buildings_url', env('ARCGIS_BUILDINGS_URL')),
                 'unique' => 'objectid',
                 'referer' => config('app.url'),
+                'returnGeometry' => true,
+                'outSR' => 4326,
             ],
             'housing_units' => [
                 'table' => 'housing_units',
@@ -77,9 +79,9 @@ class SyncArcGISLayers extends Command
         $tableOnly = $this->argument('table');
 
         if ($tableOnly) {
-            if (!isset($layers[$tableOnly])) {
+            if (! isset($layers[$tableOnly])) {
                 $this->error("Table '{$tableOnly}' not found in sync config.");
-                $this->info('Available tables: ' . implode(', ', array_keys($layers)));
+                $this->info('Available tables: '.implode(', ', array_keys($layers)));
 
                 return self::FAILURE;
             }
@@ -121,19 +123,20 @@ class SyncArcGISLayers extends Command
                 throw new \RuntimeException("Missing ArcGIS URL for {$name}. Check .env/services.php");
             }
 
-            if (!Schema::hasTable($table)) {
+            if (! Schema::hasTable($table)) {
                 throw new \RuntimeException("Table not found: {$table}");
             }
 
             $referer = $this->resolveReferer($config, $url);
             $token = $this->getArcgisToken($referer);
 
-            if (!$token) {
+            if (! $token) {
                 throw new \RuntimeException("Could not retrieve ArcGIS token for {$name}.");
             }
 
             $serviceUrl = $this->normalizeQueryUrl($url);
             $tableColumns = Schema::getColumnListing($table);
+            $tableColumns = $this->ensureBaseSyncColumns($table, $tableColumns);
 
             $ignoredColumns = [
                 'id',
@@ -146,10 +149,7 @@ class SyncArcGISLayers extends Command
             $hasArcgisHashColumn = in_array('arcgis_hash', $tableColumns, true);
             $hasArcgisSyncedAtColumn = in_array('arcgis_synced_at', $tableColumns, true);
 
-            $syncColumns = collect($tableColumns)
-                ->reject(fn($col) => in_array($col, $ignoredColumns, true))
-                ->values()
-                ->toArray();
+            $syncColumns = $this->syncColumns($tableColumns, $ignoredColumns);
 
             $offset = 0;
             $limit = (int) $this->option('chunk');
@@ -161,7 +161,8 @@ class SyncArcGISLayers extends Command
             while (true) {
                 $this->line("Fetching {$name} offset: {$offset}");
 
-                $response = Http::timeout(120)->get($serviceUrl, [
+                $returnGeometry = $this->normalizeBooleanQueryValue($config['returnGeometry'] ?? false);
+                $queryParams = [
                     'where' => $config['where'] ?? '1=1',
                     'outFields' => '*',
                     'f' => 'json',
@@ -169,11 +170,17 @@ class SyncArcGISLayers extends Command
                     'resultOffset' => $offset,
                     'resultRecordCount' => $limit,
                     'orderByFields' => 'objectid ASC',
-                    'returnGeometry' => $this->normalizeBooleanQueryValue($config['returnGeometry'] ?? false),
-                ]);
+                    'returnGeometry' => $returnGeometry,
+                ];
 
-                if (!$response->successful()) {
-                    throw new \RuntimeException("ArcGIS query failed for {$name}: " . $response->body());
+                if ($returnGeometry === 'true') {
+                    $queryParams['outSR'] = $config['outSR'] ?? 4326;
+                }
+
+                $response = Http::timeout(120)->get($serviceUrl, $queryParams);
+
+                if (! $response->successful()) {
+                    throw new \RuntimeException("ArcGIS query failed for {$name}: ".$response->body());
                 }
 
                 $data = $response->json();
@@ -185,7 +192,7 @@ class SyncArcGISLayers extends Command
                     $errorText = trim($message !== '' ? $message : $detailsText);
 
                     throw new \RuntimeException(
-                        "ArcGIS Query Error in {$name}: " . ($errorText !== '' ? $errorText : 'Unknown error')
+                        "ArcGIS Query Error in {$name}: ".($errorText !== '' ? $errorText : 'Unknown error')
                     );
                 }
 
@@ -197,6 +204,8 @@ class SyncArcGISLayers extends Command
 
                 foreach ($features as $feature) {
                     $attributes = $feature['attributes'] ?? [];
+                    $tableColumns = $this->ensureMissingColumnsForAttributes($table, $attributes, $tableColumns, $config);
+                    $syncColumns = $this->syncColumns($tableColumns, $ignoredColumns);
 
                     if (
                         in_array('location', $tableColumns, true)
@@ -210,11 +219,12 @@ class SyncArcGISLayers extends Command
 
                     foreach ($attributes as $key => $value) {
                         $arcgisMap[strtolower($key)] = $value;
+                        $arcgisMap[$this->normalizeArcgisColumnName((string) $key)] = $value;
                     }
 
                     $objectId = $arcgisMap[strtolower($unique)] ?? null;
 
-                    if (!$objectId) {
+                    if (! $objectId) {
                         continue;
                     }
 
@@ -225,6 +235,30 @@ class SyncArcGISLayers extends Command
 
                         if (array_key_exists($key, $arcgisMap)) {
                             $row[$column] = $this->normalizeValue($arcgisMap[$key], $column, $table);
+                        }
+                    }
+
+                    foreach ($config['map'] ?? [] as $targetColumn => $sourceColumn) {
+                        $targetColumn = $this->normalizeArcgisColumnName((string) $targetColumn);
+                        $sourceColumn = $this->normalizeArcgisColumnName((string) $sourceColumn);
+
+                        if (
+                            in_array($targetColumn, $syncColumns, true)
+                            && array_key_exists($sourceColumn, $arcgisMap)
+                        ) {
+                            $row[$targetColumn] = $this->normalizeValue($arcgisMap[$sourceColumn], $targetColumn, $table);
+                        }
+                    }
+
+                    if ($table === 'buildings') {
+                        $coords = $this->extractLatLngFromGeometry($feature['geometry'] ?? null);
+
+                        if (in_array('latitude', $tableColumns, true)) {
+                            $row['latitude'] = $coords['latitude'];
+                        }
+
+                        if (in_array('longitude', $tableColumns, true)) {
+                            $row['longitude'] = $coords['longitude'];
                         }
                     }
 
@@ -249,7 +283,7 @@ class SyncArcGISLayers extends Command
                                 ->where('objectid', $row['building_id'] ?? null)
                                 ->value('assigneto');
 
-                            if (!empty($buildingAssigneto)) {
+                            if (! empty($buildingAssigneto)) {
                                 $row['housing_unit'] = $buildingAssigneto;
                             }
                         }
@@ -257,10 +291,10 @@ class SyncArcGISLayers extends Command
 
                     // Handle _v1 fallback columns: if main column is null, use _v1 value
                     foreach ($row as $column => $value) {
-                        if (($value === null || $value === '') && !str_ends_with($column, '_v1')) {
-                            $v1Key = strtolower($column . '_v1');
+                        if (($value === null || $value === '') && ! str_ends_with($column, '_v1')) {
+                            $v1Key = strtolower($column.'_v1');
                             if (array_key_exists($v1Key, $arcgisMap)) {
-                                $v1Value = $this->normalizeValue($arcgisMap[$v1Key], $column . '_v1', $table);
+                                $v1Value = $this->normalizeValue($arcgisMap[$v1Key], $column.'_v1', $table);
                                 if ($v1Value !== null && $v1Value !== '') {
                                     $row[$column] = $v1Value;
                                 }
@@ -280,7 +314,7 @@ class SyncArcGISLayers extends Command
                         ->where($unique, $objectId)
                         ->first();
 
-                    if (!$existing) {
+                    if (! $existing) {
                         if ($hasArcgisHashColumn) {
                             $row['arcgis_hash'] = $newHash;
                         }
@@ -305,6 +339,7 @@ class SyncArcGISLayers extends Command
 
                     if ($hasArcgisHashColumn && ($existing->arcgis_hash ?? null) === $newHash) {
                         $skipped++;
+
                         continue;
                     }
 
@@ -329,7 +364,7 @@ class SyncArcGISLayers extends Command
 
                 $offset += $limit;
 
-                if (!($data['exceededTransferLimit'] ?? false)) {
+                if (! ($data['exceededTransferLimit'] ?? false)) {
                     break;
                 }
             }
@@ -339,7 +374,7 @@ class SyncArcGISLayers extends Command
 
             $totalRecords = $inserted + $updated + $skipped;
             $speed = $totalRecords > 0 ? round($totalRecords / max($duration, 1), 2) : 0;
-/**x */
+            /**x */
             $log->update([
                 'status' => 'success',
                 'finished_at' => $finishedAt,
@@ -386,7 +421,7 @@ class SyncArcGISLayers extends Command
         $data = $response->json();
 
         if (isset($data['error'])) {
-            $this->error('ArcGIS Token Error: ' . ($data['error']['message'] ?? 'Unknown error'));
+            $this->error('ArcGIS Token Error: '.($data['error']['message'] ?? 'Unknown error'));
 
             return null;
         }
@@ -403,11 +438,11 @@ class SyncArcGISLayers extends Command
         }
 
         if (preg_match('#/featureserver$#i', $url)) {
-            return $url . '/0/query';
+            return $url.'/0/query';
         }
 
         if (preg_match('#/featureserver/\d+$#i', $url)) {
-            return $url . '/query';
+            return $url.'/query';
         }
 
         return $url;
@@ -429,6 +464,140 @@ class SyncArcGISLayers extends Command
         return hash('sha256', json_encode($row, JSON_UNESCAPED_UNICODE));
     }
 
+    private function ensureBaseSyncColumns(string $table, array $tableColumns): array
+    {
+        if ($table !== 'buildings') {
+            return $tableColumns;
+        }
+
+        $missingColumns = array_values(array_diff(['latitude', 'longitude'], $tableColumns));
+
+        if ($missingColumns === []) {
+            return $tableColumns;
+        }
+
+        Schema::table($table, function ($schema) use ($missingColumns): void {
+            foreach ($missingColumns as $column) {
+                $schema->double($column)->nullable();
+            }
+        });
+
+        return Schema::getColumnListing($table);
+    }
+
+    private function ensureMissingColumnsForAttributes(string $table, array $attributes, array $tableColumns, array $config): array
+    {
+        $missingColumns = [];
+        $knownColumns = array_flip($tableColumns);
+
+        foreach ($attributes as $attributeName => $value) {
+            $column = $this->normalizeArcgisColumnName((string) $attributeName);
+
+            if ($this->shouldSkipDynamicColumn($column) || isset($knownColumns[$column])) {
+                continue;
+            }
+
+            $missingColumns[$column] = $value;
+            $knownColumns[$column] = true;
+        }
+
+        foreach ($config['map'] ?? [] as $targetColumn => $sourceColumn) {
+            $column = $this->normalizeArcgisColumnName((string) $targetColumn);
+            $sourceKey = strtolower((string) $sourceColumn);
+
+            if (
+                $this->shouldSkipDynamicColumn($column)
+                || isset($knownColumns[$column])
+                || ! array_key_exists($sourceKey, array_change_key_case($attributes, CASE_LOWER))
+            ) {
+                continue;
+            }
+
+            $missingColumns[$column] = $attributes[$sourceColumn] ?? null;
+            $knownColumns[$column] = true;
+        }
+
+        if ($missingColumns === []) {
+            return $tableColumns;
+        }
+
+        Schema::table($table, function ($schema) use ($missingColumns, $table): void {
+            foreach ($missingColumns as $column => $value) {
+                $this->addDynamicColumn($schema, $table, $column, $value);
+            }
+        });
+
+        $this->line('Added missing columns to '.$table.': '.implode(', ', array_keys($missingColumns)));
+
+        return Schema::getColumnListing($table);
+    }
+
+    private function addDynamicColumn($schema, string $table, string $column, mixed $value): void
+    {
+        if ($this->isLikelyDateColumn($column)) {
+            $schema->dateTime($column)->nullable();
+
+            return;
+        }
+
+        if ($this->isJsonColumn($table, $column) || is_array($value) || is_object($value)) {
+            $schema->longText($column)->nullable();
+
+            return;
+        }
+
+        if (is_int($value)) {
+            $schema->bigInteger($column)->nullable();
+
+            return;
+        }
+
+        if (is_float($value)) {
+            $schema->double($column)->nullable();
+
+            return;
+        }
+
+        if (is_string($value) && strlen($value) > 255) {
+            $schema->longText($column)->nullable();
+
+            return;
+        }
+
+        $schema->string($column)->nullable();
+    }
+
+    private function syncColumns(array $tableColumns, array $ignoredColumns): array
+    {
+        return collect($tableColumns)
+            ->reject(fn ($col) => in_array($col, $ignoredColumns, true))
+            ->values()
+            ->toArray();
+    }
+
+    private function shouldSkipDynamicColumn(string $column): bool
+    {
+        return $column === ''
+            || in_array($column, ['id', 'created_at', 'updated_at', 'arcgis_hash', 'arcgis_synced_at'], true);
+    }
+
+    private function normalizeArcgisColumnName(string $name): string
+    {
+        $column = strtolower(trim($name));
+        $column = preg_replace('/[^a-z0-9_]+/', '_', $column) ?: '';
+        $column = trim($column, '_');
+
+        if ($column === '') {
+            return '';
+        }
+
+        if (preg_match('/^[0-9]/', $column)) {
+            $column = 'field_'.$column;
+        }
+
+        return substr($column, 0, 60);
+    }
+
     private function normalizeValue($value, string $column, string $table)
     {
         if ($value === '' || $value === null) {
@@ -444,9 +613,7 @@ class SyncArcGISLayers extends Command
         if (
             is_numeric($value)
             && (
-                str_contains($column, 'date')
-                || str_contains($column, 'time')
-                || in_array($column, ['today', 'start', 'end', 'editdate', 'creationdate'], true)
+                $this->isLikelyDateColumn($column)
             )
         ) {
             return date('Y-m-d H:i:s', intval($value / 1000));
@@ -475,6 +642,15 @@ class SyncArcGISLayers extends Command
         return in_array($column, $jsonColumns[$table] ?? [], true);
     }
 
+    private function isLikelyDateColumn(string $column): bool
+    {
+        $column = strtolower($column);
+
+        return str_contains($column, 'date')
+            || str_contains($column, 'time')
+            || in_array($column, ['today', 'start', 'end', 'editdate', 'creationdate'], true);
+    }
+
     private function normalizeJsonValue(mixed $value): ?string
     {
         if ($value === null || $value === '') {
@@ -500,7 +676,7 @@ class SyncArcGISLayers extends Command
 
             $items = array_values(array_filter(
                 array_map('trim', explode(',', $trimmedValue)),
-                static fn($item) => $item !== ''
+                static fn ($item) => $item !== ''
             ));
 
             return json_encode($items === [] ? [$trimmedValue] : $items, JSON_UNESCAPED_UNICODE);
@@ -512,6 +688,50 @@ class SyncArcGISLayers extends Command
     private function normalizeBooleanQueryValue(bool|string|int|null $value): string
     {
         return filter_var($value, FILTER_VALIDATE_BOOL) ? 'true' : 'false';
+    }
+
+    private function extractLatLngFromGeometry(?array $geometry): array
+    {
+        $latitude = null;
+        $longitude = null;
+
+        if (! $geometry) {
+            return [
+                'latitude' => null,
+                'longitude' => null,
+            ];
+        }
+
+        if (isset($geometry['x'], $geometry['y'])) {
+            return [
+                'latitude' => (float) $geometry['y'],
+                'longitude' => (float) $geometry['x'],
+            ];
+        }
+
+        if (! empty($geometry['rings'][0]) && is_array($geometry['rings'][0])) {
+            $points = $geometry['rings'][0];
+
+            $lngs = [];
+            $lats = [];
+
+            foreach ($points as $point) {
+                if (is_array($point) && isset($point[0], $point[1])) {
+                    $lngs[] = (float) $point[0];
+                    $lats[] = (float) $point[1];
+                }
+            }
+
+            if (count($lngs) > 0 && count($lats) > 0) {
+                $longitude = array_sum($lngs) / count($lngs);
+                $latitude = array_sum($lats) / count($lats);
+            }
+        }
+
+        return [
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ];
     }
 
     private function resolveReferer(array $config, string $url): string
@@ -529,7 +749,7 @@ class SyncArcGISLayers extends Command
         }
 
         if (preg_match('#/featureserver$#i', $normalizedUrl)) {
-            return $normalizedUrl . '/0';
+            return $normalizedUrl.'/0';
         }
 
         return (string) config('app.url');

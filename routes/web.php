@@ -42,9 +42,25 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
 
+    $response = Http::get($url, [
+        'where' => "globalid='{$globalid}'",
+        'outFields' => '*',
+        'returnGeometry' => 'true',
+        'f' => 'json',
+        'token' => $token,
+    ]);
+
+    $data = $response->json();
+
+    $geometry = $data['features'][0]['geometry'] ?? null;
+
+    $longitude = $geometry['x'] ?? null;
+    $latitude = $geometry['y'] ?? null;
+});
+Route::get('/geometry', function () {
+
     return redirect()->route('login');
 });
-
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
