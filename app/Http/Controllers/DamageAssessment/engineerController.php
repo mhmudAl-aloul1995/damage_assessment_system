@@ -121,6 +121,7 @@ class engineerController extends Controller
         return View::make('DamageAssessment.assessment', compact('globalid', 'building', 'buildingTitle', 'assessments', 'HousingUnit'));
     }
 
+
     public function exportAssessmentPdf(string $globalid)
     {
         $building = Building::query()->where('globalid', $globalid)->firstOrFail();
@@ -146,21 +147,23 @@ class engineerController extends Controller
             'housingSections'
         ))
             ->format('a4')
-            ->name('assessment-'.($building->objectid ?? $building->globalid).'.pdf')
+            ->name('assessment-' . ($building->objectid ?? $building->globalid) . '.pdf')
             ->withBrowsershot(function (Browsershot $browsershot) {
                 $browsershot
                     ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
                     ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
                     ->setNodeModulePath(base_path('node_modules'))
-                    ->setChromePath('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe')
+                    ->setChromePath($this->detectChromiumBrowser())
                     ->showBackground()
+                    ->timeout(120)
                     ->addChromiumArguments([
                         '--no-sandbox',
                         '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-gpu',
                     ]);
             });
     }
-
     public function show(Request $request)
     {
         $data = $request->all();
@@ -184,7 +187,7 @@ class engineerController extends Controller
 															<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
 																<!--begin::Menu item-->
 																<div class="menu-item px-3">
-																	<a onclick="showModal(`user`,'.$ctr->id.')" href="javascript:;" class="menu-link px-3">تعديل</a>
+																	<a onclick="showModal(`user`,' . $ctr->id . ')" href="javascript:;" class="menu-link px-3">تعديل</a>
 																</div>
 																<!--end::Menu item-->
 																<!--begin::Menu item-->
@@ -201,7 +204,7 @@ class engineerController extends Controller
     private function resolveBuildingTitle(Building $building): string
     {
         return $building->building_name
-            ?: 'Building #'.($building->objectid ?? $building->globalid);
+            ?: 'Building #' . ($building->objectid ?? $building->globalid);
     }
 
     private function resolveHousingTitle(HousingUnit $housingUnit): string
@@ -209,16 +212,16 @@ class engineerController extends Controller
         $fullName = trim((string) ($housingUnit->full_name ?? ''));
 
         if ($fullName !== '') {
-            return 'Housing Unit - '.$fullName;
+            return 'Housing Unit - ' . $fullName;
         }
 
-        if (! empty($housingUnit->objectid)) {
-            return 'Housing Unit #'.$housingUnit->objectid;
+        if (!empty($housingUnit->objectid)) {
+            return 'Housing Unit #' . $housingUnit->objectid;
         }
 
-        return 'Housing Unit - '.$housingUnit->globalid;
+        return 'Housing Unit - ' . $housingUnit->globalid;
     }
-//9
+    //9
     private function buildAssessmentRows(Model $model, string $type): Collection
     {
         $record = $model->toArray();
@@ -269,12 +272,12 @@ class engineerController extends Controller
                 ->map(function (array $attachment) use ($arcgis, $layerId, $model, $token) {
                     $attachmentId = $attachment['id'] ?? null;
 
-                    if (! $attachmentId) {
+                    if (!$attachmentId) {
                         return null;
                     }
 
                     return [
-                        'name' => $attachment['name'] ?? ('Attachment '.$attachmentId),
+                        'name' => $attachment['name'] ?? ('Attachment ' . $attachmentId),
                         'content_type' => $attachment['contentType'] ?? '',
                         'url' => $arcgis->buildUrl($model->objectid, $attachmentId, $layerId, $token),
                     ];
@@ -301,7 +304,7 @@ class engineerController extends Controller
         $commitMessage = trim($request->input('message', 'update from system'));
 
         try {
-            if (! is_dir($repoPath.'/.git')) {
+            if (!is_dir($repoPath . '/.git')) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Git repository not found.',
@@ -311,7 +314,7 @@ class engineerController extends Controller
             // 1) git status
             $statusResult = Process::path($repoPath)
                 ->timeout(120)
-                ->run('cmd /c git -c safe.directory="'.$repoPath.'" status --short');
+                ->run('cmd /c git -c safe.directory="' . $repoPath . '" status --short');
 
             if ($statusResult->failed()) {
                 return response()->json([
@@ -338,7 +341,7 @@ class engineerController extends Controller
             // 2) git add .
             $addResult = Process::path($repoPath)
                 ->timeout(120)
-                ->run('cmd /c git -c safe.directory="'.$repoPath.'" add .');
+                ->run('cmd /c git -c safe.directory="' . $repoPath . '" add .');
 
             if ($addResult->failed()) {
                 return response()->json([
@@ -351,13 +354,13 @@ class engineerController extends Controller
             }
 
             // 3) git commit
-            $commitCommand = 'cmd /c git -c safe.directory="'.$repoPath.'" commit -m "'.addslashes($commitMessage).'"';
+            $commitCommand = 'cmd /c git -c safe.directory="' . $repoPath . '" commit -m "' . addslashes($commitMessage) . '"';
 
             $commitResult = Process::path($repoPath)
                 ->timeout(120)
                 ->run($commitCommand);
 
-            $commitOutput = trim($commitResult->output()."\n".$commitResult->errorOutput());
+            $commitOutput = trim($commitResult->output() . "\n" . $commitResult->errorOutput());
 
             // إذا لا يوجد شيء للـ commit بعد add
             if (
@@ -389,7 +392,7 @@ class engineerController extends Controller
             // 4) git push
             $pushResult = Process::path($repoPath)
                 ->timeout(300) // أو forever() إذا الريبو كبير
-                ->run('cmd /c git -c safe.directory="'.$repoPath.'" push');
+                ->run('cmd /c git -c safe.directory="' . $repoPath . '" push');
 
             if ($pushResult->failed()) {
                 return response()->json([
