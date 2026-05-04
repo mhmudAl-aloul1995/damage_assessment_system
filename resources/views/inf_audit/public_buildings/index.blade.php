@@ -26,6 +26,9 @@
         <div class="card-body">
             <div class="row g-3 mb-6">
                 <div class="col-md-2">
+                    <input id="filter_objectid" type="text" class="form-control form-control-solid audit-filter" placeholder="ObjectID">
+                </div>
+                <div class="col-md-2">
                     <select id="filter_municipalitie" class="form-select form-select-solid audit-filter audit-select" data-placeholder="البلدية">
                         <option value="">كل البلديات</option>
                         @foreach ($municipalities as $municipality)
@@ -98,6 +101,7 @@
                 ajax: {
                     url: @json(route('inf-audit.public-buildings.data')),
                     data: function (d) {
+                        d.objectid = $('#filter_objectid').val();
                         d.municipalitie = $('#filter_municipalitie').val();
                         d.neighborhood = $('#filter_neighborhood').val();
                         d.status = $('#filter_status').val();
@@ -120,6 +124,10 @@
             });
 
             $('.audit-filter').on('change', function () {
+                table.ajax.reload();
+            });
+
+            $('#filter_objectid').on('input', function () {
                 table.ajax.reload();
             });
 

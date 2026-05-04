@@ -163,7 +163,7 @@ class AreaManagerRejectedBuildingsController extends Controller
     private function applyFilters(Builder $query, Request $request): void
     {
         if ($request->filled('objectid')) {
-            $query->where('buildings.objectid', 'like', '%'.$request->string('objectid')->trim().'%');
+            $query->where('buildings.objectid', '=', $request->string('objectid')->trim());
         }
 
         if ($request->filled('building_name')) {

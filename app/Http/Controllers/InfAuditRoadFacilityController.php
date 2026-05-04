@@ -487,6 +487,8 @@ class InfAuditRoadFacilityController extends Controller
 
     private function applyFilters(Builder $query, Request $request): void
     {
+        $query->when($request->filled('objectid'), fn (Builder $q) => $q->where('objectid', '=', trim((string) $request->input('objectid'))));
+
         foreach (['municipalitie', 'neighborhood'] as $field) {
             $query->when($request->filled($field), fn (Builder $q) => $q->where($field, $request->string($field)));
         }

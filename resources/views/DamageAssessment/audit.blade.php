@@ -43,6 +43,12 @@
 						</div>
 
 						<div class="col-md-3">
+							<label class="form-label fw-semibold">ObjectID</label>
+							<input type="text" id="filter_objectid" class="form-control form-control-solid"
+								placeholder="ObjectID" />
+						</div>
+
+						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.engineer') }}</label>
 							<select id="filter_engineer" class="form-select form-select-solid" data-control="select2"
 								data-allow-clear="true" data-close-on-select="false" multiple
@@ -543,6 +549,7 @@
 					url: "{{ route('audit.index') }}",
 					data: function (d) {
 						d.building_name = $('#filter_building_name').val();
+						d.objectid = $('#filter_objectid').val();
 						d.engineer_id = $('#filter_engineer').val();
 						d.lawyer_id = $('#filter_lawyer').val();
 						d.eng_status = $('#filter_eng_status').val();
@@ -636,7 +643,7 @@
 			$('#filter_engineer, #filter_lawyer, #filter_eng_status, #filter_legal_status, #filter_final_status, #filter_field_engineer, #filter_damage_status')
 				.on('change', scheduleFilterReload);
 
-			$('#filter_building_name, #filter_area, #filter_from_date, #filter_to_date, #filter_status_from_date, #filter_status_to_date')
+			$('#filter_building_name, #filter_objectid, #filter_area, #filter_from_date, #filter_to_date, #filter_status_from_date, #filter_status_to_date')
 				.on('input change', scheduleFilterReload);
 			$('#resetFilters').on('click', function () {
 				/* 			$('#filter_building_name').val('');

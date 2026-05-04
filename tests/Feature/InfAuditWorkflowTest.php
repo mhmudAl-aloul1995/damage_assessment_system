@@ -91,6 +91,20 @@ test('database officer can assign and inf engineer can audit public building and
         'manager_id' => $officer->id,
     ]);
 
+    $this->actingAs($officer)
+        ->getJson(route('inf-audit.public-buildings.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'objectid' => '149',
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'objectid' => 149,
+        ]);
+
     $this->actingAs($engineer)
         ->get(route('inf-audit.public-buildings.show', $survey))
         ->assertOk()
@@ -212,6 +226,20 @@ test('database officer can assign and inf engineer can audit road facilities and
         'user_id' => $engineer->id,
         'manager_id' => $officer->id,
     ]);
+
+    $this->actingAs($officer)
+        ->getJson(route('inf-audit.roads.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'objectid' => '4361',
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'objectid' => 4361,
+        ]);
 
     $this->actingAs($engineer)
         ->get(route('inf-audit.roads.show', $road))

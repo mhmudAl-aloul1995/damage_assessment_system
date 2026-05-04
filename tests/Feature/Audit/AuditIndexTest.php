@@ -157,4 +157,21 @@ it('includes the housing units status progress in the audit table response', fun
         ->assertJsonMissing([
             'globalid' => $assignedOnlyBuilding->globalid,
         ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'objectid' => '7001',
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'globalid' => $building->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $olderStatusBuilding->globalid,
+        ]);
 });

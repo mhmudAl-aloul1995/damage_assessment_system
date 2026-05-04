@@ -2849,6 +2849,10 @@ class auditController extends Controller
                 $query->where('building_name', 'like', '%'.$request->building_name.'%');
             }
 
+            if ($request->filled('objectid')) {
+                $query->where('objectid', '=', trim((string) $request->objectid));
+            }
+
             if ($request->filled('area')) {
                 $query->where('neighborhood', 'like', '%'.$request->area.'%');
             }
@@ -3101,7 +3105,7 @@ class auditController extends Controller
                 'assigned_to_engineer' => 'assigned_to_engineer',
                 'assigned_to_lawyer' => 'assigned_to_lawyer',
 
-              /*   // fallback (optional but safe)
+                /*   // fallback (optional but safe)
                 'assigned_to_engineer' => 'assigned_to_engineer',
                 'assigned_to_lawyer' => 'assigned_to_lawyer', */
             ];
@@ -3127,6 +3131,10 @@ class auditController extends Controller
             }
             if ($request->filled('building_name')) {
                 $query->where('building_name', 'like', '%'.$request->building_name.'%');
+            }
+
+            if ($request->filled('objectid')) {
+                $query->where('objectid', '=', trim((string) $request->objectid));
             }
 
             if ($request->filled('area')) {
