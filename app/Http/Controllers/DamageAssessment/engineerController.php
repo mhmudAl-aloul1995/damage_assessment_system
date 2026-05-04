@@ -153,7 +153,19 @@ class engineerController extends Controller
                     ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
                     ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
                     ->setNodeModulePath(base_path('node_modules'))
-                    ->setChromePath($this->detectChromiumBrowser())
+                    ->withBrowsershot(function (Browsershot $browsershot) {
+                        $browsershot
+                            ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
+                            ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
+                            ->setNodeModulePath(base_path('node_modules')) // 👈 أهم سطر
+                            ->noSandbox()
+                            ->showBackground()
+                            ->timeout(120)
+                            ->addChromiumArguments([
+                                '--disable-dev-shm-usage',
+                                '--disable-gpu',
+                            ]);
+                    })
                     ->showBackground()
                     ->timeout(120)
                     ->addChromiumArguments([
@@ -349,7 +361,7 @@ class engineerController extends Controller
 
             // 1) git status
             $statusResult = Process::path($repoPath)
-                ->timeout(120)
+                ->timeout(300)
                 ->run('cmd /c git -c safe.directory="' . $repoPath . '" status --short');
 
             if ($statusResult->failed()) {
