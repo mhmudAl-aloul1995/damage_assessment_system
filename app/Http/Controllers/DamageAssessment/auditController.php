@@ -2886,8 +2886,6 @@ class auditController extends Controller
                     ->whereColumn('bs.building_id', 'buildings.objectid')
                     ->whereIn('s.name', [
                         'assigned_to_engineer',
-                        'assigned_to_engineer',
-                        'assigned_to_lawyer',
                         'assigned_to_lawyer',
                     ])
                     ->whereRaw('bs.updated_at = (
@@ -3103,9 +3101,9 @@ class auditController extends Controller
                 'assigned_to_engineer' => 'assigned_to_engineer',
                 'assigned_to_lawyer' => 'assigned_to_lawyer',
 
-                // fallback (optional but safe)
+              /*   // fallback (optional but safe)
                 'assigned_to_engineer' => 'assigned_to_engineer',
-                'assigned_to_lawyer' => 'assigned_to_lawyer',
+                'assigned_to_lawyer' => 'assigned_to_lawyer', */
             ];
 
             $this->applyStatusValuesFilter($query, 'engineerStatus', $this->filterValues($request, 'eng_status', $statusMap));
@@ -3118,7 +3116,7 @@ class auditController extends Controller
 
             $fieldEngineers = $this->filterValues($request, 'field_engineer');
             if ($fieldEngineers !== []) {
-                $query->whereIn(DB::raw('LOWER(TRIM(assigned_to))'), $fieldEngineers);
+                $query->whereIn(DB::raw('LOWER(TRIM(assignedto))'), $fieldEngineers);
             }
 
             $finalStatuses = $this->filterValues($request, 'final_status');
