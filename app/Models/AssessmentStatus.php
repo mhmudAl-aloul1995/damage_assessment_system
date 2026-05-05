@@ -42,7 +42,7 @@ class AssessmentStatus extends Model
     public static function colorForName(?string $name): string
     {
         return match (self::normalizeName($name)) {
-            'pending' => 'warning',
+            'pending' => 'secondary',
             'assigned_to_engineer' => 'info',
             'rejected_by_engineer' => 'danger',
             'accepted_by_engineer' => 'success',
