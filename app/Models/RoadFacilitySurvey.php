@@ -43,7 +43,7 @@ class RoadFacilitySurvey extends Model
 
     public function infAuditStatus(): HasOne
     {
-        return $this->hasOne(RoadFacilityAuditStatus::class, 'globalid', 'globalid');
+        return $this->hasOne(RoadFacilityAuditStatus::class, 'globalid', 'globalid')->latestOfMany();
     }
 
     public function infAuditAssignment(): HasOne

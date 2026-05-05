@@ -41,7 +41,7 @@ class PublicBuildingSurvey extends Model
 
     public function infAuditStatus(): HasOne
     {
-        return $this->hasOne(PublicBuildingAuditStatus::class, 'public_building_survey_id');
+        return $this->hasOne(PublicBuildingAuditStatus::class, 'public_building_survey_id')->latestOfMany();
     }
 
     public function infAuditAssignment(): HasOne

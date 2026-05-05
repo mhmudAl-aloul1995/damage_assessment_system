@@ -17,6 +17,7 @@ use App\Models\PublicBuildingFilter;
 use App\Models\PublicBuildingSurvey;
 use App\Models\PublicBuildingSurveyUnit;
 use App\Models\User;
+use App\services\ArcgisService;
 use App\Support\Forms\PublicBuildingSurveyLayout;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,6 +35,8 @@ class InfAuditPublicBuildingController extends Controller
 
     private const UNIT_TABLE_TYPE = 'public_building_unit_table';
 
+    private const FINAL_STATUS_NAMES = ['final_approval', 'accepted_final', 'final'];
+
     public function __construct()
     {
         $this->middleware('role:Inf - QC/QA Engineer|Team Leader -INF|Database Officer');
@@ -50,14 +53,30 @@ class InfAuditPublicBuildingController extends Controller
             ->with(['infAuditAssignment.user', 'infAuditStatus.status', 'infAuditStatus.assignee'])
             ->select('public_building_surveys.*');
 
+        $this->joinFieldEngineer($query);
         $this->scopeVisibleToUser($query);
+        $this->excludeFinalApproved($query);
         $this->applyFilters($query, $request);
 
         return DataTables::eloquent($query)
             ->addColumn('selection', fn (PublicBuildingSurvey $survey): string => '<input type="checkbox" class="form-check-input inf-audit-row-check" value="'.e((string) $survey->id).'">')
             ->addColumn('audit_status', fn (PublicBuildingSurvey $survey): string => $this->statusBadge($survey->infAuditStatus?->status))
+            ->addColumn('field_engineer', fn (PublicBuildingSurvey $survey): string => e($this->fieldEngineerName($survey)))
             ->addColumn('auditor', fn (PublicBuildingSurvey $survey): string => e($survey->infAuditAssignment?->user?->name ?? $survey->infAuditStatus?->assignee?->name ?? '-'))
             ->addColumn('actions', fn (PublicBuildingSurvey $survey): string => '<a class="btn btn-sm btn-light-primary" href="'.route('inf-audit.public-buildings.show', $survey).'">فتح التدقيق</a>')
+            ->filterColumn('field_engineer', function (Builder $query, string $keyword): void {
+                $query->where(function (Builder $builder) use ($keyword): void {
+                    $builder->where('public_building_surveys.assignedto', 'like', "%{$keyword}%");
+
+                    if (Schema::hasColumn('users', 'username_arcgis')) {
+                        $builder->orWhere('field_engineer_users.name', 'like', "%{$keyword}%");
+
+                        if (Schema::hasColumn('users', 'name_en')) {
+                            $builder->orWhere('field_engineer_users.name_en', 'like', "%{$keyword}%");
+                        }
+                    }
+                });
+            })
             ->rawColumns(['selection', 'audit_status', 'actions'])
             ->toJson();
     }
@@ -75,21 +94,24 @@ class InfAuditPublicBuildingController extends Controller
                 ->whereIn('id', $data['ids'])
                 ->get()
                 ->each(function (PublicBuildingSurvey $survey) use ($data, $status, &$updatedCount): void {
-                    $current = PublicBuildingAuditStatus::query()->firstOrNew([
-                        'public_building_survey_id' => $survey->id,
-                    ]);
+                    $current = $this->latestAuditStatus($survey);
 
-                    $isSameStatus = (int) $current->status_id === (int) $status->id
+                    $isSameStatus = (int) ($current?->status_id ?? 0) === (int) $status->id
                         && (int) ($current->assigned_to ?? 0) === (int) $data['assigned_to'];
 
-                    $current->fill([
+                    if ($isSameStatus) {
+                        return;
+                    }
+
+                    PublicBuildingAuditStatus::query()->create([
+                        'public_building_survey_id' => $survey->id,
                         'objectid' => $survey->objectid,
                         'globalid' => $survey->globalid,
                         'status_id' => $status->id,
                         'assigned_to' => $data['assigned_to'],
                         'updated_by' => Auth::id(),
                         'notes' => $data['notes'] ?? null,
-                    ])->save();
+                    ]);
 
                     InfAuditAssignment::query()->updateOrCreate(
                         [
@@ -102,17 +124,15 @@ class InfAuditPublicBuildingController extends Controller
                         ],
                     );
 
-                    if (! $isSameStatus) {
-                        PublicBuildingAuditHistory::query()->create([
-                            'public_building_survey_id' => $survey->id,
-                            'objectid' => $survey->objectid,
-                            'globalid' => $survey->globalid,
-                            'status_id' => $status->id,
-                            'assigned_to' => $data['assigned_to'],
-                            'user_id' => Auth::id(),
-                            'notes' => $data['notes'] ?? null,
-                        ]);
-                    }
+                    PublicBuildingAuditHistory::query()->create([
+                        'public_building_survey_id' => $survey->id,
+                        'objectid' => $survey->objectid,
+                        'globalid' => $survey->globalid,
+                        'status_id' => $status->id,
+                        'assigned_to' => $data['assigned_to'],
+                        'user_id' => Auth::id(),
+                        'notes' => $data['notes'] ?? null,
+                    ]);
 
                     $updatedCount++;
                 });
@@ -140,6 +160,8 @@ class InfAuditPublicBuildingController extends Controller
             'childGroups' => $this->unitGroups($publicBuilding),
             'assignment' => $this->assignment($publicBuilding->globalid),
             'editHistories' => $this->editHistories($publicBuilding),
+            'arcgisAttachments' => $this->arcgisAttachments($publicBuilding),
+            'currentStatusName' => $this->latestAuditStatus($publicBuilding)?->status?->name,
             'statusRoute' => route('inf-audit.public-buildings.status', $publicBuilding),
             'fieldRoute' => route('inf-audit.public-buildings.field-update', $publicBuilding),
             'childStoreRoute' => route('inf-audit.public-buildings.children.store', $publicBuilding),
@@ -158,27 +180,30 @@ class InfAuditPublicBuildingController extends Controller
         $status = InfAuditStatus::query()->where('name', $data['status'])->firstOrFail();
         $this->authorizeStatusChange($status->name);
 
-        $current = PublicBuildingAuditStatus::query()->firstOrNew([
-            'public_building_survey_id' => $publicBuilding->id,
-        ]);
+        $current = $this->latestAuditStatus($publicBuilding);
 
-        $assignedTo = array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $current->assigned_to;
+        $assignedTo = array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $current?->assigned_to;
 
         if ($status->name === 'assigned' && ! $assignedTo) {
             return response()->json(['message' => 'يرجى اختيار المدقق.'], 422);
         }
 
-        $isSameStatus = (int) $current->status_id === (int) $status->id
+        $isSameStatus = (int) ($current?->status_id ?? 0) === (int) $status->id
             && (int) ($current->assigned_to ?? 0) === (int) ($assignedTo ?? 0);
 
-        $current->fill([
+        if ($isSameStatus) {
+            return response()->json(['message' => 'لا يمكن تكرار نفس الحالة الحالية.'], 422);
+        }
+
+        $current = PublicBuildingAuditStatus::query()->create([
+            'public_building_survey_id' => $publicBuilding->id,
             'objectid' => $publicBuilding->objectid,
             'globalid' => $publicBuilding->globalid,
             'status_id' => $status->id,
             'assigned_to' => $assignedTo,
             'updated_by' => Auth::id(),
             'notes' => $data['notes'] ?? null,
-        ])->save();
+        ]);
 
         if ($status->name === 'assigned' && $assignedTo) {
             InfAuditAssignment::query()->updateOrCreate(
@@ -193,17 +218,15 @@ class InfAuditPublicBuildingController extends Controller
             );
         }
 
-        if (! $isSameStatus) {
-            PublicBuildingAuditHistory::query()->create([
-                'public_building_survey_id' => $publicBuilding->id,
-                'objectid' => $publicBuilding->objectid,
-                'globalid' => $publicBuilding->globalid,
-                'status_id' => $status->id,
-                'assigned_to' => $assignedTo,
-                'user_id' => Auth::id(),
-                'notes' => $data['notes'] ?? null,
-            ]);
-        }
+        PublicBuildingAuditHistory::query()->create([
+            'public_building_survey_id' => $publicBuilding->id,
+            'objectid' => $publicBuilding->objectid,
+            'globalid' => $publicBuilding->globalid,
+            'status_id' => $status->id,
+            'assigned_to' => $assignedTo,
+            'user_id' => Auth::id(),
+            'notes' => $data['notes'] ?? null,
+        ]);
 
         $assignment = $this->assignment($publicBuilding->globalid);
 
@@ -284,6 +307,7 @@ class InfAuditPublicBuildingController extends Controller
         return [
             'statuses' => InfAuditStatus::query()->orderBy('order_step')->get(),
             'engineers' => User::role('Inf - QC/QA Engineer')->orderBy('name')->get(['id', 'name']),
+            'fieldEngineers' => $this->fieldEngineerOptions(),
             'municipalities' => PublicBuildingSurvey::query()->whereNotNull('municipalitie')->distinct()->orderBy('municipalitie')->pluck('municipalitie'),
             'neighborhoods' => PublicBuildingSurvey::query()->whereNotNull('neighborhood')->distinct()->orderBy('neighborhood')->pluck('neighborhood'),
         ];
@@ -346,19 +370,26 @@ class InfAuditPublicBuildingController extends Controller
     {
         return collect($fields)
             ->reject(fn (array $field): bool => ($field['type'] ?? null) === 'calculate')
-            ->map(fn (array $field): array => [
-                'record_id' => $record->id,
-                'table_type' => $tableType,
-                'field_name' => $field['name'],
-                'field_type' => $field['type'] ?? null,
-                'list_name' => $field['list_name'] ?? null,
-                'label' => $field['label'] ?: $field['name'],
-                'value' => $this->displayValue($record, $field, $tableType),
-                'raw_value' => $this->rawValue($record, $field['name'], $tableType),
-                'options' => $this->fieldOptions($field['list_name'] ?? null),
-                'history_id' => 'inf_history_'.md5($tableType.'|'.$record->id.'|'.$field['name']),
-                'history' => $this->fieldHistory($record, $field['name'], $tableType),
-            ])
+            ->map(function (array $field) use ($record, $tableType): array {
+                $rawValue = $this->rawValue($record, $field['name'], $tableType);
+                $history = $this->fieldHistory($record, $field['name'], $tableType);
+
+                return [
+                    'record_id' => $record->id,
+                    'table_type' => $tableType,
+                    'field_name' => $field['name'],
+                    'field_type' => $field['type'] ?? null,
+                    'list_name' => $field['list_name'] ?? null,
+                    'label' => $field['label'] ?: $field['name'],
+                    'value' => $this->formatValue($rawValue, $field),
+                    'raw_value' => $rawValue,
+                    'has_answer' => filled($rawValue),
+                    'is_edited' => $history !== [],
+                    'options' => $this->fieldOptions($field['list_name'] ?? null),
+                    'history_id' => 'inf_history_'.md5($tableType.'|'.$record->id.'|'.$field['name']),
+                    'history' => $history,
+                ];
+            })
             ->values()
             ->all();
     }
@@ -582,9 +613,117 @@ class InfAuditPublicBuildingController extends Controller
         }
 
         $query->when($request->filled('auditor'), fn (Builder $q) => $q->whereHas('infAuditAssignment', fn (Builder $s) => $s->where('user_id', $request->integer('auditor'))));
-        $query->when($request->filled('status'), fn (Builder $q) => $q->whereHas('infAuditStatus.status', fn (Builder $s) => $s->where('name', $request->string('status'))));
+        $query->when($request->filled('field_engineer'), fn (Builder $q) => $q->where('public_building_surveys.assignedto', $request->string('field_engineer')));
+        $query->when($request->filled('status'), fn (Builder $q) => $this->whereLatestStatus($q, (string) $request->string('status')));
         $query->when($request->filled('from_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '>=', $request->date('from_date')?->toDateString()));
         $query->when($request->filled('to_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '<=', $request->date('to_date')?->toDateString()));
+    }
+
+    private function joinFieldEngineer(Builder $query): void
+    {
+        if (! Schema::hasColumn('public_building_surveys', 'assignedto') || ! Schema::hasColumn('users', 'username_arcgis')) {
+            return;
+        }
+
+        $query->leftJoin('users as field_engineer_users', 'public_building_surveys.assignedto', '=', 'field_engineer_users.username_arcgis')
+            ->addSelect([
+                'field_engineer_name' => DB::raw('field_engineer_users.name'),
+                'field_engineer_name_en' => DB::raw(Schema::hasColumn('users', 'name_en') ? 'field_engineer_users.name_en' : 'NULL'),
+            ]);
+    }
+
+    private function fieldEngineerName(PublicBuildingSurvey $survey): string
+    {
+        if (! filled($survey->assignedto)) {
+            return '-';
+        }
+
+        return $survey->field_engineer_name ?: $survey->field_engineer_name_en ?: $survey->assignedto;
+    }
+
+    private function fieldEngineerOptions(): array
+    {
+        if (! Schema::hasColumn('public_building_surveys', 'assignedto')) {
+            return [];
+        }
+
+        $assignedValues = PublicBuildingSurvey::query()
+            ->whereNotNull('assignedto')
+            ->where('assignedto', '<>', '')
+            ->distinct()
+            ->orderBy('assignedto')
+            ->pluck('assignedto');
+
+        $users = Schema::hasColumn('users', 'username_arcgis')
+            ? User::query()->whereIn('username_arcgis', $assignedValues)->get(['username_arcgis', 'name', 'name_en'])->keyBy('username_arcgis')
+            : collect();
+
+        return $assignedValues
+            ->map(fn (string $assignedTo): array => [
+                'value' => $assignedTo,
+                'label' => $users->get($assignedTo)?->name ?: $users->get($assignedTo)?->name_en ?: $assignedTo,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function excludeFinalApproved(Builder $query): void
+    {
+        $query->whereNotExists(function ($subQuery): void {
+            $subQuery->selectRaw('1')
+                ->from('public_building_audit_statuses as latest_public_building_status')
+                ->join('inf_audit_statuses', 'inf_audit_statuses.id', '=', 'latest_public_building_status.status_id')
+                ->whereColumn('latest_public_building_status.public_building_survey_id', 'public_building_surveys.id')
+                ->whereIn('inf_audit_statuses.name', self::FINAL_STATUS_NAMES)
+                ->whereRaw('latest_public_building_status.id = (select max(pbas.id) from public_building_audit_statuses as pbas where pbas.public_building_survey_id = public_building_surveys.id)');
+        });
+    }
+
+    private function whereLatestStatus(Builder $query, string $status): void
+    {
+        $query->whereExists(function ($subQuery) use ($status): void {
+            $subQuery->selectRaw('1')
+                ->from('public_building_audit_statuses as latest_public_building_status')
+                ->join('inf_audit_statuses', 'inf_audit_statuses.id', '=', 'latest_public_building_status.status_id')
+                ->whereColumn('latest_public_building_status.public_building_survey_id', 'public_building_surveys.id')
+                ->where('inf_audit_statuses.name', $status)
+                ->whereRaw('latest_public_building_status.id = (select max(pbas.id) from public_building_audit_statuses as pbas where pbas.public_building_survey_id = public_building_surveys.id)');
+        });
+    }
+
+    private function latestAuditStatus(PublicBuildingSurvey $survey): ?PublicBuildingAuditStatus
+    {
+        return PublicBuildingAuditStatus::query()
+            ->with(['status', 'assignee'])
+            ->where('public_building_survey_id', $survey->id)
+            ->latest('id')
+            ->first();
+    }
+
+    private function arcgisAttachments(PublicBuildingSurvey $survey): array
+    {
+        if (! filled($survey->objectid)) {
+            return [];
+        }
+
+        try {
+            $arcgis = app(ArcgisService::class);
+            $token = $arcgis->getToken();
+            $layerUrl = (string) config('services.arcgis.public_building_survey_layer_url');
+
+            return collect($arcgis->getAttachmentsFromLayerUrl($layerUrl, $survey->objectid, $token))
+                ->map(fn (array $attachment): array => [
+                    'id' => $attachment['id'] ?? null,
+                    'name' => $attachment['name'] ?? 'Attachment',
+                    'content_type' => $attachment['contentType'] ?? '',
+                    'url' => filled($attachment['id'] ?? null) ? $arcgis->buildUrlFromLayerUrl($layerUrl, $survey->objectid, $attachment['id'], $token) : null,
+                ])
+                ->filter(fn (array $attachment): bool => filled($attachment['url']))
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     private function scopeVisibleToUser(Builder $query): void
@@ -608,7 +747,7 @@ class InfAuditPublicBuildingController extends Controller
 
     private function authorizeStatusChange(string $status): void
     {
-        if (in_array($status, ['assigned', 'final_approval'], true)) {
+        if ($status === 'assigned' || in_array($status, self::FINAL_STATUS_NAMES, true)) {
             abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF']), 403);
 
             return;
@@ -626,6 +765,6 @@ class InfAuditPublicBuildingController extends Controller
 
     private function dateColumn(): string
     {
-        return Schema::hasColumn('public_building_surveys', 'creationdate') ? 'creationdate' : 'created_at';
+        return Schema::hasColumn('public_building_surveys', 'creationdate') ? 'public_building_surveys.creationdate' : 'public_building_surveys.created_at';
     }
 }

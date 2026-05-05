@@ -2,39 +2,40 @@
 
 namespace App\services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class ArcgisService
 {
-    protected string $baseUrl = "https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer";
+    protected string $baseUrl = 'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer';
 
     // =========================
     // GET TOKEN (WITH CACHE)
     // =========================
-public function getToken(): string
-{
-    return Cache::remember('arcgis_token', 50 * 60, function () {
+    public function getToken(): string
+    {
+        return Cache::remember('arcgis_token', 50 * 60, function () {
 
-        $response = Http::asForm()->withoutVerifying()->post(
-            'https://www.arcgis.com/sharing/rest/generateToken',
-            [
-                'username' => config('services.arcgis.username'),
-                'password' => config('services.arcgis.password'),
-                'client' => 'referer',
-                'referer' => config('app.url'),
-                'expiration' => 60,
-                'f' => 'json',
-            ]
-        );
+            $response = Http::asForm()->withoutVerifying()->post(
+                'https://www.arcgis.com/sharing/rest/generateToken',
+                [
+                    'username' => config('services.arcgis.username'),
+                    'password' => config('services.arcgis.password'),
+                    'client' => 'referer',
+                    'referer' => config('app.url'),
+                    'expiration' => 60,
+                    'f' => 'json',
+                ]
+            );
 
-        if (!$response->successful()) {
-            throw new \Exception('ArcGIS token failed: ' . $response->body());
-        }
+            if (! $response->successful()) {
+                throw new \Exception('ArcGIS token failed: '.$response->body());
+            }
 
-        return $response->json()['token'];
-    });
-}
+            return $response->json()['token'];
+        });
+    }
 
     // =========================
     // GET LAYER
@@ -60,11 +61,31 @@ public function getToken(): string
             'token' => $token,
         ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             return [];
         }
 
         return $response->json()['attachmentInfos'] ?? [];
+    }
+
+    public function getAttachmentsFromLayerUrl(string $layerUrl, int|string|null $objectId, string $token): array
+    {
+        if (! filled($layerUrl) || ! filled($objectId)) {
+            return [];
+        }
+
+        $url = $this->normalizeLayerUrl($layerUrl).'/'.$objectId.'/attachments';
+
+        $response = Http::asForm()->withoutVerifying()->post($url, [
+            'f' => 'json',
+            'token' => $token,
+        ]);
+
+        if (! $response->successful()) {
+            return [];
+        }
+
+        return $response->json('attachmentInfos') ?? [];
     }
 
     // =========================
@@ -73,5 +94,21 @@ public function getToken(): string
     public function buildUrl($objectId, $attachmentId, $layerId, $token): string
     {
         return "{$this->baseUrl}/{$layerId}/{$objectId}/attachments/{$attachmentId}?token={$token}";
+    }
+
+    public function buildUrlFromLayerUrl(string $layerUrl, int|string $objectId, int|string $attachmentId, string $token): string
+    {
+        return $this->normalizeLayerUrl($layerUrl).'/'.$objectId.'/attachments/'.$attachmentId.'?token='.urlencode($token);
+    }
+
+    private function normalizeLayerUrl(string $layerUrl): string
+    {
+        $url = rtrim($layerUrl, '/');
+
+        if (Str::endsWith($url, '/FeatureServer')) {
+            return $url.'/0';
+        }
+
+        return $url;
     }
 }

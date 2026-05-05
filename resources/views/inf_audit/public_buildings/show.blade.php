@@ -50,13 +50,13 @@
                             <option value="{{ $engineer->id }}" @selected(($assignment?->user_id ?? $survey->infAuditStatus?->assigned_to ?? null) === $engineer->id)>{{ $engineer->name }}</option>
                         @endforeach
                     </select>
-                    <button class="btn btn-light-info status-btn" data-status="assigned">إسناد</button>
-                    <button class="btn btn-success status-btn" data-status="final_approval">اعتماد نهائي</button>
+                    <button class="btn btn-light-info status-btn" data-status="assigned" @disabled(($currentStatusName ?? null) === 'assigned')>إسناد</button>
+                    <button class="btn btn-success status-btn" data-status="final_approval" @disabled(in_array(($currentStatusName ?? null), ['final_approval', 'accepted_final', 'final'], true))>اعتماد نهائي</button>
                 @endrole
                 @role('Database Officer|Team Leader -INF|Inf - QC/QA Engineer')
-                    <button class="btn btn-light-success status-btn" data-status="accepted">مقبول</button>
-                    <button class="btn btn-light-danger status-btn" data-status="rejected">مرفوض</button>
-                    <button class="btn btn-light-warning status-btn" data-status="need_review">بحاجة لمراجعة</button>
+                    <button class="btn btn-light-success status-btn" data-status="accepted" @disabled(($currentStatusName ?? null) === 'accepted')>مقبول</button>
+                    <button class="btn btn-light-danger status-btn" data-status="rejected" @disabled(($currentStatusName ?? null) === 'rejected')>مرفوض</button>
+                    <button class="btn btn-light-warning status-btn" data-status="need_review" @disabled(($currentStatusName ?? null) === 'need_review')>بحاجة لمراجعة</button>
                 @endrole
             </div>
         </div>
@@ -90,6 +90,49 @@
         </div>
     </div>
 
+    <div class="row g-6 mb-6">
+        @isset($roadLength)
+            <div class="col-md-4">
+                <div class="card card-flush shadow-sm h-100">
+                    <div class="card-header pt-5">
+                        <div class="card-title">
+                            <h3 class="fw-bold mb-0">طول الشارع</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <span class="fs-2 fw-bold">{{ $roadLength }}</span>
+                        <span class="text-muted fw-semibold">متر</span>
+                    </div>
+                </div>
+            </div>
+        @endisset
+
+        <div class="col-md-{{ isset($roadLength) ? '8' : '12' }}">
+            <div class="card card-flush shadow-sm h-100">
+                <div class="card-header pt-5">
+                    <div class="card-title">
+                        <h3 class="fw-bold mb-0">مرفقات ArcGIS</h3>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @forelse ($arcgisAttachments ?? [] as $attachment)
+                        @php($isImage = str_starts_with((string) $attachment['content_type'], 'image/'))
+                        <a href="{{ $attachment['url'] }}" target="_blank" class="d-inline-flex align-items-center gap-2 border rounded p-2 me-2 mb-2">
+                            @if ($isImage)
+                                <img src="{{ $attachment['url'] }}" alt="{{ $attachment['name'] }}" class="rounded" style="width: 76px; height: 58px; object-fit: cover;">
+                            @else
+                                <span class="badge badge-light-primary">ملف</span>
+                            @endif
+                            <span class="fw-semibold">{{ $attachment['name'] }}</span>
+                        </a>
+                    @empty
+                        <span class="text-muted">لا توجد مرفقات.</span>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card card-flush shadow-sm">
         <div class="card-header pt-5">
             <div class="card-title">
@@ -110,6 +153,12 @@
         </div>
 
         <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 mb-6" id="survey_field_filter">
+                <button type="button" class="btn btn-sm btn-primary survey-filter-btn" data-filter="all">الكل</button>
+                <button type="button" class="btn btn-sm btn-light-primary survey-filter-btn" data-filter="edited">المعدل</button>
+                <button type="button" class="btn btn-sm btn-light-primary survey-filter-btn" data-filter="answered">له جواب</button>
+                <button type="button" class="btn btn-sm btn-light-primary survey-filter-btn" data-filter="unanswered">ليس له جواب</button>
+            </div>
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="inf_audit_main_tab" role="tabpanel">
                     @include('inf_audit.public_buildings._audit_sections', [
@@ -219,6 +268,26 @@
                     ? String(rawValue).split(/[,\s]+/).filter(Boolean)
                     : String(rawValue);
             }
+
+            function applySurveyFilter(filter) {
+                $('[data-field-row]').each(function () {
+                    const row = $(this);
+                    const hasAnswer = row.attr('data-has-answer') === '1';
+                    const isEdited = row.attr('data-is-edited') === '1';
+                    const visible = filter === 'all'
+                        || (filter === 'edited' && isEdited)
+                        || (filter === 'answered' && hasAnswer)
+                        || (filter === 'unanswered' && !hasAnswer);
+
+                    row.toggle(visible);
+                });
+            }
+
+            $('.survey-filter-btn').on('click', function () {
+                $('.survey-filter-btn').removeClass('btn-primary').addClass('btn-light-primary');
+                $(this).removeClass('btn-light-primary').addClass('btn-primary');
+                applySurveyFilter($(this).data('filter'));
+            });
 
             function renderHistoryCard(response, historyId) {
                 const history = response.history || [];
@@ -339,6 +408,7 @@
                         const historyId = currentEditButton.attr('data-history-id');
 
                         row.find('.inf-audit-answer-cell').html(renderHistoryCard(response, historyId));
+                        row.attr('data-is-edited', '1').attr('data-has-answer', response.raw_value ? '1' : '0');
                         currentEditButton
                             .attr('data-value', response.display_value || '')
                             .attr('data-raw-value', response.raw_value || '')
@@ -367,12 +437,16 @@
             });
 
             $('.status-btn').on('click', function () {
+                const statusButton = $(this);
+
                 $.post(@json($statusRoute), {
                     _token: @json(csrf_token()),
-                    status: $(this).data('status'),
+                    status: statusButton.data('status'),
                     assigned_to: $('#status_assignee').val()
                 }).done(function (response) {
                     toastr.success(response.message || 'تم تحديث الحالة');
+                    $('.status-btn').prop('disabled', false);
+                    statusButton.prop('disabled', true);
                     if (response.assignment) {
                         $('#assignment_user_name').text(response.assignment.user_name || '-');
                         $('#assignment_manager_name').text(response.assignment.manager_name || '-');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\InfEditAssessment;
 use App\Models\PublicBuildingAuditHistory;
+use App\Models\PublicBuildingAuditStatus;
 use App\Models\PublicBuildingFilter;
 use App\Models\PublicBuildingSurvey;
 use App\Models\PublicBuildingSurveyUnit;
@@ -40,6 +41,10 @@ function infAuditUser(string $role): User
 test('database officer can assign and inf engineer can audit public building and units', function (): void {
     $officer = infAuditUser('Database Officer');
     $engineer = infAuditUser('Inf - QC/QA Engineer');
+    $fieldEngineer = User::factory()->create([
+        'name' => 'ArcGIS Field Engineer',
+        'username_arcgis' => 'arcgis.engineer',
+    ]);
 
     PublicBuildingFilter::query()->create([
         'list_name' => 'building_damage_status',
@@ -61,6 +66,7 @@ test('database officer can assign and inf engineer can audit public building and
         'building_name' => 'Public Building',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Al-Sabra',
+        'assignedto' => $fieldEngineer->username_arcgis,
         'raw_payload' => ['building_damage_status' => 'Moderate'],
     ]);
 
@@ -98,13 +104,15 @@ test('database officer can assign and inf engineer can audit public building and
             'start' => 0,
             'length' => 10,
             'objectid' => '149',
+            'field_engineer' => $fieldEngineer->username_arcgis,
         ]), [
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
         ->assertJsonFragment([
             'objectid' => 149,
-        ]);
+        ])
+        ->assertSee('ArcGIS Field Engineer');
 
     $this->actingAs($engineer)
         ->get(route('inf-audit.public-buildings.show', $survey))
@@ -184,14 +192,39 @@ test('database officer can assign and inf engineer can audit public building and
         ->postJson(route('inf-audit.public-buildings.status', $survey), [
             'status' => 'accepted',
         ])
-        ->assertOk();
+        ->assertStatus(422);
 
     expect(PublicBuildingAuditHistory::query()->where('public_building_survey_id', $survey->id)->count())->toBe($historyCount);
+
+    $this->actingAs($officer)
+        ->postJson(route('inf-audit.public-buildings.status', $survey), [
+            'status' => 'final_approval',
+        ])
+        ->assertOk();
+
+    $this->actingAs($officer)
+        ->getJson(route('inf-audit.public-buildings.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonMissing([
+            'objectid' => 149,
+        ]);
+
+    expect(PublicBuildingAuditStatus::query()->where('public_building_survey_id', $survey->id)->count())->toBeGreaterThan(1);
 });
 
 test('database officer can assign and inf engineer can audit road facilities and items', function (): void {
     $officer = infAuditUser('Database Officer');
     $engineer = infAuditUser('Inf - QC/QA Engineer');
+    $fieldEngineer = User::factory()->create([
+        'name' => 'Road Field Engineer',
+        'username_arcgis' => 'road.arcgis',
+    ]);
 
     RoadFacilityFilter::query()->create([
         'list_name' => 'road_damage_level',
@@ -220,6 +253,7 @@ test('database officer can assign and inf engineer can audit road facilities and
         'str_name' => 'Main Road',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Old City',
+        'assignedto' => $fieldEngineer->username_arcgis,
         'raw_payload' => ['road_damage_level' => 'High'],
     ]);
 
@@ -251,13 +285,15 @@ test('database officer can assign and inf engineer can audit road facilities and
             'start' => 0,
             'length' => 10,
             'objectid' => '4361',
+            'field_engineer' => $fieldEngineer->username_arcgis,
         ]), [
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
         ->assertJsonFragment([
             'objectid' => 4361,
-        ]);
+        ])
+        ->assertSee('Road Field Engineer');
 
     $this->actingAs($engineer)
         ->get(route('inf-audit.roads.show', $road))

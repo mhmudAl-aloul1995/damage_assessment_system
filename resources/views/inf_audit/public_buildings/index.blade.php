@@ -19,6 +19,7 @@
                     </select>
                     <button type="button" id="bulk_assign_btn" class="btn btn-light-info">إسناد المحدد</button>
                 @endrole
+                <button type="button" id="reset_filters_btn" class="btn btn-light">إعادة تعيين الفلاتر</button>
                 <button class="btn btn-light-primary" onclick="$('#inf_public_buildings_table').DataTable().ajax.reload(null, false)">تحديث</button>
             </div>
         </div>
@@ -61,6 +62,14 @@
                     </select>
                 </div>
                 <div class="col-md-2">
+                    <select id="filter_field_engineer" class="form-select form-select-solid audit-filter audit-select" data-placeholder="المهندس الميداني">
+                        <option value="">كل المهندسين الميدانيين</option>
+                        @foreach ($fieldEngineers as $fieldEngineer)
+                            <option value="{{ $fieldEngineer['value'] }}">{{ $fieldEngineer['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <input id="filter_from_date" type="date" class="form-control form-control-solid audit-filter">
                 </div>
                 <div class="col-md-2">
@@ -76,6 +85,7 @@
                                 <input type="checkbox" id="inf_audit_select_all" class="form-check-input">
                             </th>
                             <th>ObjectID</th>
+                            <th>المهندس الميداني</th>
                             <th>اسم المبنى</th>
                             <th>البلدية</th>
                             <th>الحي</th>
@@ -106,6 +116,7 @@
                         d.neighborhood = $('#filter_neighborhood').val();
                         d.status = $('#filter_status').val();
                         d.auditor = $('#filter_auditor').val();
+                        d.field_engineer = $('#filter_field_engineer').val();
                         d.from_date = $('#filter_from_date').val();
                         d.to_date = $('#filter_to_date').val();
                     }
@@ -113,6 +124,7 @@
                 columns: [
                     { data: 'selection', name: 'selection', orderable: false, searchable: false },
                     { data: 'objectid', name: 'objectid' },
+                    { data: 'field_engineer', name: 'field_engineer', defaultContent: '-' },
                     { data: 'building_name', name: 'building_name', defaultContent: '-' },
                     { data: 'municipalitie', name: 'municipalitie', defaultContent: '-' },
                     { data: 'neighborhood', name: 'neighborhood', defaultContent: '-' },
@@ -128,6 +140,12 @@
             });
 
             $('#filter_objectid').on('input', function () {
+                table.ajax.reload();
+            });
+
+            $('#reset_filters_btn').on('click', function () {
+                $('.audit-filter').val('').trigger('change.select2');
+                table.search('');
                 table.ajax.reload();
             });
 

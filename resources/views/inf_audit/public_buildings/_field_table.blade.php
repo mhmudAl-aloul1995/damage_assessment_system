@@ -9,7 +9,9 @@
                         $latestHistory = $history[0] ?? null;
                         $hasHistory = $latestHistory !== null;
                     @endphp
-                    <tr data-field-row="{{ $row['table_type'] }}-{{ $row['record_id'] }}-{{ $row['field_name'] }}">
+                    <tr data-field-row="{{ $row['table_type'] }}-{{ $row['record_id'] }}-{{ $row['field_name'] }}"
+                        data-has-answer="{{ ($row['has_answer'] ?? false) ? '1' : '0' }}"
+                        data-is-edited="{{ ($row['is_edited'] ?? false) ? '1' : '0' }}">
                         <th class="w-350px text-gray-800">
                             <div class="fw-bold">{{ $row['label'] }}</div>
                             <div class="text-muted small">{{ $row['field_name'] }}</div>

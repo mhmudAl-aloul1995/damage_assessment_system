@@ -17,6 +17,7 @@ use App\Models\RoadFacilityFilter;
 use App\Models\RoadFacilitySurvey;
 use App\Models\RoadFacilitySurveyItem;
 use App\Models\User;
+use App\services\ArcgisService;
 use App\Support\Forms\RoadFacilitySurveyLayout;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,6 +35,8 @@ class InfAuditRoadFacilityController extends Controller
 
     private const ITEM_TABLE_TYPE = 'road_facility_item_table';
 
+    private const FINAL_STATUS_NAMES = ['final_approval', 'accepted_final', 'final'];
+
     public function __construct()
     {
         $this->middleware('role:Inf - QC/QA Engineer|Team Leader -INF|Database Officer');
@@ -50,14 +53,30 @@ class InfAuditRoadFacilityController extends Controller
             ->with(['infAuditAssignment.user', 'infAuditStatus.status', 'infAuditStatus.assignee'])
             ->select('road_facility_surveys.*');
 
+        $this->joinFieldEngineer($query);
         $this->scopeVisibleToUser($query);
+        $this->excludeFinalApproved($query);
         $this->applyFilters($query, $request);
 
         return DataTables::eloquent($query)
             ->addColumn('selection', fn (RoadFacilitySurvey $survey): string => '<input type="checkbox" class="form-check-input inf-audit-row-check" value="'.e((string) $survey->id).'">')
             ->addColumn('audit_status', fn (RoadFacilitySurvey $survey): string => $this->statusBadge($survey->infAuditStatus?->status))
+            ->addColumn('field_engineer', fn (RoadFacilitySurvey $survey): string => e($this->fieldEngineerName($survey)))
             ->addColumn('auditor', fn (RoadFacilitySurvey $survey): string => e($survey->infAuditAssignment?->user?->name ?? $survey->infAuditStatus?->assignee?->name ?? '-'))
             ->addColumn('actions', fn (RoadFacilitySurvey $survey): string => '<a class="btn btn-sm btn-light-primary" href="'.route('inf-audit.roads.show', $survey).'">فتح التدقيق</a>')
+            ->filterColumn('field_engineer', function (Builder $query, string $keyword): void {
+                $query->where(function (Builder $builder) use ($keyword): void {
+                    $builder->where('road_facility_surveys.assignedto', 'like', "%{$keyword}%");
+
+                    if (Schema::hasColumn('users', 'username_arcgis')) {
+                        $builder->orWhere('field_engineer_users.name', 'like', "%{$keyword}%");
+
+                        if (Schema::hasColumn('users', 'name_en')) {
+                            $builder->orWhere('field_engineer_users.name_en', 'like', "%{$keyword}%");
+                        }
+                    }
+                });
+            })
             ->rawColumns(['selection', 'audit_status', 'actions'])
             ->toJson();
     }
@@ -75,14 +94,16 @@ class InfAuditRoadFacilityController extends Controller
                 ->whereIn('id', $data['ids'])
                 ->get()
                 ->each(function (RoadFacilitySurvey $survey) use ($data, $status, &$updatedCount): void {
-                    $current = RoadFacilityAuditStatus::query()->firstOrNew([
-                        'globalid' => $survey->globalid,
-                    ]);
+                    $current = $this->latestAuditStatus($survey);
 
-                    $isSameStatus = (int) $current->status_id === (int) $status->id
+                    $isSameStatus = (int) ($current?->status_id ?? 0) === (int) $status->id
                         && (int) ($current->assigned_to ?? 0) === (int) $data['assigned_to'];
 
-                    $current->fill([
+                    if ($isSameStatus) {
+                        return;
+                    }
+
+                    RoadFacilityAuditStatus::query()->create([
                         'road_facility_survey_id' => $survey->id,
                         'objectid' => $survey->objectid,
                         'globalid' => $survey->globalid,
@@ -90,7 +111,7 @@ class InfAuditRoadFacilityController extends Controller
                         'assigned_to' => $data['assigned_to'],
                         'updated_by' => Auth::id(),
                         'notes' => $data['notes'] ?? null,
-                    ])->save();
+                    ]);
 
                     InfAuditAssignment::query()->updateOrCreate(
                         [
@@ -103,17 +124,15 @@ class InfAuditRoadFacilityController extends Controller
                         ],
                     );
 
-                    if (! $isSameStatus) {
-                        RoadFacilityAuditHistory::query()->create([
-                            'road_facility_survey_id' => $survey->id,
-                            'objectid' => $survey->objectid,
-                            'globalid' => $survey->globalid,
-                            'status_id' => $status->id,
-                            'assigned_to' => $data['assigned_to'],
-                            'user_id' => Auth::id(),
-                            'notes' => $data['notes'] ?? null,
-                        ]);
-                    }
+                    RoadFacilityAuditHistory::query()->create([
+                        'road_facility_survey_id' => $survey->id,
+                        'objectid' => $survey->objectid,
+                        'globalid' => $survey->globalid,
+                        'status_id' => $status->id,
+                        'assigned_to' => $data['assigned_to'],
+                        'user_id' => Auth::id(),
+                        'notes' => $data['notes'] ?? null,
+                    ]);
 
                     $updatedCount++;
                 });
@@ -141,6 +160,9 @@ class InfAuditRoadFacilityController extends Controller
             'childGroups' => $this->itemGroups($road),
             'assignment' => $this->assignment($road->globalid),
             'editHistories' => $this->editHistories($road),
+            'arcgisAttachments' => $this->arcgisAttachments($road),
+            'currentStatusName' => $this->latestAuditStatus($road)?->status?->name,
+            'roadLength' => $this->roadLength($road),
             'statusRoute' => route('inf-audit.roads.status', $road),
             'fieldRoute' => route('inf-audit.roads.field-update', $road),
             'childStoreRoute' => route('inf-audit.roads.children.store', $road),
@@ -159,20 +181,22 @@ class InfAuditRoadFacilityController extends Controller
         $status = InfAuditStatus::query()->where('name', $data['status'])->firstOrFail();
         $this->authorizeStatusChange($status->name);
 
-        $current = RoadFacilityAuditStatus::query()->firstOrNew([
-            'globalid' => $road->globalid,
-        ]);
+        $current = $this->latestAuditStatus($road);
 
-        $assignedTo = array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $current->assigned_to;
+        $assignedTo = array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $current?->assigned_to;
 
         if ($status->name === 'assigned' && ! $assignedTo) {
             return response()->json(['message' => 'يرجى اختيار المدقق.'], 422);
         }
 
-        $isSameStatus = (int) $current->status_id === (int) $status->id
+        $isSameStatus = (int) ($current?->status_id ?? 0) === (int) $status->id
             && (int) ($current->assigned_to ?? 0) === (int) ($assignedTo ?? 0);
 
-        $current->fill([
+        if ($isSameStatus) {
+            return response()->json(['message' => 'لا يمكن تكرار نفس الحالة الحالية.'], 422);
+        }
+
+        $current = RoadFacilityAuditStatus::query()->create([
             'road_facility_survey_id' => $road->id,
             'objectid' => $road->objectid,
             'globalid' => $road->globalid,
@@ -180,7 +204,7 @@ class InfAuditRoadFacilityController extends Controller
             'assigned_to' => $assignedTo,
             'updated_by' => Auth::id(),
             'notes' => $data['notes'] ?? null,
-        ])->save();
+        ]);
 
         if ($status->name === 'assigned' && $assignedTo) {
             InfAuditAssignment::query()->updateOrCreate(
@@ -195,17 +219,15 @@ class InfAuditRoadFacilityController extends Controller
             );
         }
 
-        if (! $isSameStatus) {
-            RoadFacilityAuditHistory::query()->create([
-                'road_facility_survey_id' => $road->id,
-                'objectid' => $road->objectid,
-                'globalid' => $road->globalid,
-                'status_id' => $status->id,
-                'assigned_to' => $assignedTo,
-                'user_id' => Auth::id(),
-                'notes' => $data['notes'] ?? null,
-            ]);
-        }
+        RoadFacilityAuditHistory::query()->create([
+            'road_facility_survey_id' => $road->id,
+            'objectid' => $road->objectid,
+            'globalid' => $road->globalid,
+            'status_id' => $status->id,
+            'assigned_to' => $assignedTo,
+            'user_id' => Auth::id(),
+            'notes' => $data['notes'] ?? null,
+        ]);
 
         $assignment = $this->assignment($road->globalid);
 
@@ -286,6 +308,7 @@ class InfAuditRoadFacilityController extends Controller
         return [
             'statuses' => InfAuditStatus::query()->orderBy('order_step')->get(),
             'engineers' => User::role('Inf - QC/QA Engineer')->orderBy('name')->get(['id', 'name']),
+            'fieldEngineers' => $this->fieldEngineerOptions(),
             'municipalities' => RoadFacilitySurvey::query()->whereNotNull('municipalitie')->distinct()->orderBy('municipalitie')->pluck('municipalitie'),
             'neighborhoods' => RoadFacilitySurvey::query()->whereNotNull('neighborhood')->distinct()->orderBy('neighborhood')->pluck('neighborhood'),
         ];
@@ -345,19 +368,26 @@ class InfAuditRoadFacilityController extends Controller
     {
         return collect($fields)
             ->reject(fn (array $field): bool => ($field['type'] ?? null) === 'calculate')
-            ->map(fn (array $field): array => [
-                'record_id' => $record->id,
-                'table_type' => $tableType,
-                'field_name' => $field['name'],
-                'field_type' => $field['type'] ?? null,
-                'list_name' => $field['list_name'] ?? null,
-                'label' => $field['label'] ?: $field['name'],
-                'value' => $this->displayValue($record, $field, $tableType),
-                'raw_value' => $this->rawValue($record, $field['name'], $tableType),
-                'options' => $this->fieldOptions($field['list_name'] ?? null),
-                'history_id' => 'inf_history_'.md5($tableType.'|'.$record->id.'|'.$field['name']),
-                'history' => $this->fieldHistory($record, $field['name'], $tableType),
-            ])
+            ->map(function (array $field) use ($record, $tableType): array {
+                $rawValue = $this->rawValue($record, $field['name'], $tableType);
+                $history = $this->fieldHistory($record, $field['name'], $tableType);
+
+                return [
+                    'record_id' => $record->id,
+                    'table_type' => $tableType,
+                    'field_name' => $field['name'],
+                    'field_type' => $field['type'] ?? null,
+                    'list_name' => $field['list_name'] ?? null,
+                    'label' => $field['label'] ?: $field['name'],
+                    'value' => $this->formatValue($rawValue, $field),
+                    'raw_value' => $rawValue,
+                    'has_answer' => filled($rawValue),
+                    'is_edited' => $history !== [],
+                    'options' => $this->fieldOptions($field['list_name'] ?? null),
+                    'history_id' => 'inf_history_'.md5($tableType.'|'.$record->id.'|'.$field['name']),
+                    'history' => $history,
+                ];
+            })
             ->values()
             ->all();
     }
@@ -539,9 +569,128 @@ class InfAuditRoadFacilityController extends Controller
         }
 
         $query->when($request->filled('auditor'), fn (Builder $q) => $q->whereHas('infAuditAssignment', fn (Builder $s) => $s->where('user_id', $request->integer('auditor'))));
-        $query->when($request->filled('status'), fn (Builder $q) => $q->whereHas('infAuditStatus.status', fn (Builder $s) => $s->where('name', $request->string('status'))));
+        $query->when($request->filled('field_engineer'), fn (Builder $q) => $q->where('road_facility_surveys.assignedto', $request->string('field_engineer')));
+        $query->when($request->filled('status'), fn (Builder $q) => $this->whereLatestStatus($q, (string) $request->string('status')));
         $query->when($request->filled('from_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '>=', $request->date('from_date')?->toDateString()));
         $query->when($request->filled('to_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '<=', $request->date('to_date')?->toDateString()));
+    }
+
+    private function joinFieldEngineer(Builder $query): void
+    {
+        if (! Schema::hasColumn('road_facility_surveys', 'assignedto') || ! Schema::hasColumn('users', 'username_arcgis')) {
+            return;
+        }
+
+        $query->leftJoin('users as field_engineer_users', 'road_facility_surveys.assignedto', '=', 'field_engineer_users.username_arcgis')
+            ->addSelect([
+                'field_engineer_name' => DB::raw('field_engineer_users.name'),
+                'field_engineer_name_en' => DB::raw(Schema::hasColumn('users', 'name_en') ? 'field_engineer_users.name_en' : 'NULL'),
+            ]);
+    }
+
+    private function fieldEngineerName(RoadFacilitySurvey $survey): string
+    {
+        if (! filled($survey->assignedto)) {
+            return '-';
+        }
+
+        return $survey->field_engineer_name ?: $survey->field_engineer_name_en ?: $survey->assignedto;
+    }
+
+    private function fieldEngineerOptions(): array
+    {
+        if (! Schema::hasColumn('road_facility_surveys', 'assignedto')) {
+            return [];
+        }
+
+        $assignedValues = RoadFacilitySurvey::query()
+            ->whereNotNull('assignedto')
+            ->where('assignedto', '<>', '')
+            ->distinct()
+            ->orderBy('assignedto')
+            ->pluck('assignedto');
+
+        $users = Schema::hasColumn('users', 'username_arcgis')
+            ? User::query()->whereIn('username_arcgis', $assignedValues)->get(['username_arcgis', 'name', 'name_en'])->keyBy('username_arcgis')
+            : collect();
+
+        return $assignedValues
+            ->map(fn (string $assignedTo): array => [
+                'value' => $assignedTo,
+                'label' => $users->get($assignedTo)?->name ?: $users->get($assignedTo)?->name_en ?: $assignedTo,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function excludeFinalApproved(Builder $query): void
+    {
+        $query->whereNotExists(function ($subQuery): void {
+            $subQuery->selectRaw('1')
+                ->from('road_facility_audit_statuses as latest_road_status')
+                ->join('inf_audit_statuses', 'inf_audit_statuses.id', '=', 'latest_road_status.status_id')
+                ->whereColumn('latest_road_status.globalid', 'road_facility_surveys.globalid')
+                ->whereIn('inf_audit_statuses.name', self::FINAL_STATUS_NAMES)
+                ->whereRaw('latest_road_status.id = (select max(rfas.id) from road_facility_audit_statuses as rfas where rfas.globalid = road_facility_surveys.globalid)');
+        });
+    }
+
+    private function whereLatestStatus(Builder $query, string $status): void
+    {
+        $query->whereExists(function ($subQuery) use ($status): void {
+            $subQuery->selectRaw('1')
+                ->from('road_facility_audit_statuses as latest_road_status')
+                ->join('inf_audit_statuses', 'inf_audit_statuses.id', '=', 'latest_road_status.status_id')
+                ->whereColumn('latest_road_status.globalid', 'road_facility_surveys.globalid')
+                ->where('inf_audit_statuses.name', $status)
+                ->whereRaw('latest_road_status.id = (select max(rfas.id) from road_facility_audit_statuses as rfas where rfas.globalid = road_facility_surveys.globalid)');
+        });
+    }
+
+    private function latestAuditStatus(RoadFacilitySurvey $survey): ?RoadFacilityAuditStatus
+    {
+        return RoadFacilityAuditStatus::query()
+            ->with(['status', 'assignee'])
+            ->where('globalid', $survey->globalid)
+            ->latest('id')
+            ->first();
+    }
+
+    private function arcgisAttachments(RoadFacilitySurvey $survey): array
+    {
+        if (! filled($survey->objectid)) {
+            return [];
+        }
+
+        try {
+            $arcgis = app(ArcgisService::class);
+            $token = $arcgis->getToken();
+            $layerUrl = (string) config('services.arcgis.road_facility_survey_layer_url');
+
+            return collect($arcgis->getAttachmentsFromLayerUrl($layerUrl, $survey->objectid, $token))
+                ->map(fn (array $attachment): array => [
+                    'id' => $attachment['id'] ?? null,
+                    'name' => $attachment['name'] ?? 'Attachment',
+                    'content_type' => $attachment['contentType'] ?? '',
+                    'url' => filled($attachment['id'] ?? null) ? $arcgis->buildUrlFromLayerUrl($layerUrl, $survey->objectid, $attachment['id'], $token) : null,
+                ])
+                ->filter(fn (array $attachment): bool => filled($attachment['url']))
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function roadLength(RoadFacilitySurvey $survey): ?string
+    {
+        foreach (['shape_length', 'Shape__Length', 'shape__length', 'shape_leng'] as $column) {
+            if (Schema::hasColumn('road_facility_surveys', $column) && filled(data_get($survey, $column))) {
+                return number_format((float) data_get($survey, $column), 2);
+            }
+        }
+
+        return null;
     }
 
     private function scopeVisibleToUser(Builder $query): void
@@ -565,7 +714,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function authorizeStatusChange(string $status): void
     {
-        if (in_array($status, ['assigned', 'final_approval'], true)) {
+        if ($status === 'assigned' || in_array($status, self::FINAL_STATUS_NAMES, true)) {
             abort_unless(Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF']), 403);
 
             return;
@@ -583,6 +732,6 @@ class InfAuditRoadFacilityController extends Controller
 
     private function dateColumn(): string
     {
-        return Schema::hasColumn('road_facility_surveys', 'creationdate') ? 'creationdate' : 'created_at';
+        return Schema::hasColumn('road_facility_surveys', 'creationdate') ? 'road_facility_surveys.creationdate' : 'road_facility_surveys.created_at';
     }
 }
