@@ -373,10 +373,10 @@ class damageAssessmentController extends Controller
                 if (($row->type == 2) && is_numeric($value) && $value > $criteria) {
                     return 'table-danger';
                 }
-                if (
-                    (($row->type > 2 && $row->type < 15) || in_array($row->type, [19, 20, 21, 23]))
 
-                ) {
+
+                if
+                (($row->type > 2 && $row->type < 15) || in_array($row->type, [19, 20, 21, 23])) {
 
                     $columnNames = Assessment::where('type', $row->type)
                         ->pluck('name')
@@ -393,11 +393,13 @@ class damageAssessmentController extends Controller
                         return (float) ($record[$column] ?? 0);
                     });
 
+
                     if ($total > $newCriteria) {
 
                         return 'table-danger';
                     }
                 }
+
 
                 if (($row->type == 1) && is_numeric($value) && $newCriteria > 0 && $value > $newCriteria) {
                     if (in_array($row->name, ['mt8', 'mt9'], true) && is_numeric($value) && (float) $value == 1) {
@@ -406,8 +408,11 @@ class damageAssessmentController extends Controller
 
                     return 'table-danger';
                 }
-                if ($row->type > 2 && $row->type < 24 && is_numeric($value)) {
 
+
+
+                if (in_array($row->type, [15, 16, 17, 18,22,24,25])) {
+                
                     $columnNames = Assessment::where('type', $row->type)
                         ->pluck('name')
                         ->toArray();
