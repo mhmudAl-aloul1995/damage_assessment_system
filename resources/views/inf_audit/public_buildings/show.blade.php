@@ -123,7 +123,7 @@
                         @role('Database Officer|Team Leader -INF|Inf - QC/QA Engineer')
                             <div class="d-flex justify-content-end mb-5">
                                 <button type="button" class="btn btn-light-primary" id="addChildAuditRecord">
-                                    {{ $childAddLabel ?? 'Ø¥Ø¶Ø§ÙØ© Ø³Ø¬Ù„ ØªØ§Ø¨Ø¹' }}
+                                    {{ $childAddLabel ?? 'إضافة سجل تابع' }}
                                 </button>
                             </div>
                         @endrole

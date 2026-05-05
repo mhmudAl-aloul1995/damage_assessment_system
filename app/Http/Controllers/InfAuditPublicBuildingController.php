@@ -147,7 +147,7 @@ class InfAuditPublicBuildingController extends Controller
             'title' => 'تدقيق المباني العامة',
             'mainSectionTitle' => 'بيانات المبنى العام',
             'childSectionTitle' => 'وحدات/طوابق المبنى العام',
-            'childAddLabel' => 'Ø¥Ø¶Ø§ÙØ© ÙˆØ­Ø¯Ø©/Ø·Ø§Ø¨Ù‚',
+            'childAddLabel' => 'إضافة وحدة/طابق',
         ]);
     }
 
@@ -241,7 +241,7 @@ class InfAuditPublicBuildingController extends Controller
         $unit = PublicBuildingSurveyUnit::query()->create($attributes);
 
         return response()->json([
-            'message' => 'ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© ÙˆØ­Ø¯Ø©/Ø·Ø§Ø¨Ù‚ Ø¬Ø¯ÙŠØ¯ Ù„Ù„ØªØ¯Ù‚ÙŠÙ‚.',
+            'message' => 'تمت إضافة وحدة/طابق جديد للتدقيق.',
             'id' => $unit->id,
             'globalid' => $unit->globalid,
             'reload' => true,

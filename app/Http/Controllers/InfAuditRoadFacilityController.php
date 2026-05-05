@@ -148,7 +148,7 @@ class InfAuditRoadFacilityController extends Controller
             'title' => 'تدقيق الطرق',
             'mainSectionTitle' => 'بيانات الطريق/المرفق',
             'childSectionTitle' => 'عناصر الطريق المطلوبة',
-            'childAddLabel' => 'Ø¥Ø¶Ø§ÙØ© Ø¹Ù†ØµØ± Ø·Ø±ÙŠÙ‚',
+            'childAddLabel' => 'إضافة عنصر طريق',
         ]);
     }
 
@@ -243,7 +243,7 @@ class InfAuditRoadFacilityController extends Controller
         $item = RoadFacilitySurveyItem::query()->create($attributes);
 
         return response()->json([
-            'message' => 'ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© Ø¹Ù†ØµØ± Ø·Ø±ÙŠÙ‚ Ø¬Ø¯ÙŠØ¯ Ù„Ù„ØªØ¯Ù‚ÙŠÙ‚.',
+            'message' => 'تمت إضافة عنصر طريق جديد للتدقيق.',
             'id' => $item->id,
             'globalid' => $item->globalid,
             'reload' => true,
