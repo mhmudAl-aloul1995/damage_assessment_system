@@ -58,6 +58,9 @@ class AssessmentStatus extends Model
 
     public static function badgeClassForName(?string $name): string
     {
+        if($name=='pending') {
+            return 'badge badge-secondary';
+        }
         return 'badge badge-light-'.self::colorForName($name);
     }
 
