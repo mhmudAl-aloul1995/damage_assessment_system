@@ -115,8 +115,8 @@ class DamageStatisticsReportController extends Controller
             $this->section('تفاصيل عمل فرق الحصر اليومي'),
 
             $this->row(13, 'عدد فرق الحصر', $teamsCount, 'فريق'),
-            $this->row(14, 'ينجز الفريق في اليوم تقريبا', $averagePerTeamPerDay, 'وحدة سكنية'),
-            $this->row(15, 'تنجز كافة فرق الحصر في اليوم تقريبا', $totalTeamsPerDay, 'وحدة سكنية'),
+            $this->row(14, 'ينجز المهندس في اليوم تقريبا', $averagePerTeamPerDay, 'وحدة سكنية'),
+            $this->row(15, 'تنجز كافة المهندسين في اليوم تقريبا', $totalTeamsPerDay, 'وحدة سكنية'),
         ];
     }
 
