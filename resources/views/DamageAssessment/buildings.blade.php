@@ -44,7 +44,8 @@
 
 								<label class="fs-6 fw-semibold mb-2">{{ __('ui.buildings_page.neighborhood') }}</label>
 								<select data-allow-clear="true" class="form-select form-select-solid" data-control="select2"
-									data-hide-search="false" data-placeholder="{{ __('ui.buildings_page.neighborhood') }}" name="neighborhood">
+									data-hide-search="false" data-placeholder="{{ __('ui.buildings_page.neighborhood') }}"
+									name="neighborhood">
 
 									<option value=""></option>
 									@foreach ($neighborhoods as $value)
@@ -53,13 +54,19 @@
 								</select>
 
 							</div>
+							<div class="col-md-3 fv-row">
+								<label class="fs-6 fw-semibold mb-2">رقم الهوية</label>
+								<input type="text" name="owner_id" class="form-control form-control-solid"
+									placeholder="أدخل رقم الهوية">
+							</div>
 						</div>
 
 
 					</div>
 					<div class="card-footer">
 						<div class="text-center">
-							<button type="reset" class="btn btn-light me-3" data-kt-Buildings-filter-action="reset">{{ __('ui.buildings_page.reset') }}</button>
+							<button type="reset" class="btn btn-light me-3"
+								data-kt-Buildings-filter-action="reset">{{ __('ui.buildings_page.reset') }}</button>
 							<button onclick="$('#kt_table_Building').DataTable().ajax.reload()" type="submit"
 								class="btn btn-primary" data-kt-Building-table-filter="filter">
 								<span class="indicator-label">{{ __('ui.buildings_page.search') }}</span>
@@ -87,7 +94,8 @@
 							<span class="path2"></span>
 						</i>
 						<input type="text" data-kt-Building-table-filter="search"
-							class="form-control form-control-solid w-250px ps-13" placeholder="{{ __('ui.buildings_page.search') }}" />
+							class="form-control form-control-solid w-250px ps-13"
+							placeholder="{{ __('ui.buildings_page.search') }}" />
 					</div>
 					<!--end::Search-->
 				</div>
@@ -116,8 +124,8 @@
 						<!--end::Export-->
 						<!--begin::Add Building-->
 						<!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" onclick="resetFormValidation()"
-																																																																data-bs-target="#kt_modal_Building">
-																																																																<i class="ki-duotone ki-plus fs-2"></i> إضافة جديد</button> -->
+																																																																	data-bs-target="#kt_modal_Building">
+																																																																	<i class="ki-duotone ki-plus fs-2"></i> إضافة جديد</button> -->
 						<!--end::Add Building-->
 					</div>
 					<!--end::Toolbar-->
@@ -127,7 +135,8 @@
 						<div class="fw-bold me-5">
 							<span class="me-2" data-kt-Building-table-select="selected_count"></span>Selected
 						</div>
-						<button type="button" class="btn btn-danger" data-kt-Building-table-select="delete_selected">{{ __('ui.buildings_page.delete_selected') }}</button>
+						<button type="button" class="btn btn-danger"
+							data-kt-Building-table-select="delete_selected">{{ __('ui.buildings_page.delete_selected') }}</button>
 					</div>
 					<!--end::Group actions-->
 					<!--begin::Modal - Adjust Balance-->
@@ -161,13 +170,14 @@
 										<!--begin::Input group-->
 										<div class="fv-row mb-10">
 											<!--begin::Label-->
-											<label class="fs-6 fw-semibold form-label mb-2">{{ __('ui.buildings_page.select_columns') }}</label>
+											<label
+												class="fs-6 fw-semibold form-label mb-2">{{ __('ui.buildings_page.select_columns') }}</label>
 											<!--end::Label-->
 											<!--begin::Input-->
 											<select multiple data-allow-clear="true" data-close-on-select="false"
 												name="building_columns[]" data-control="select2"
-												data-placeholder="{{ __('ui.buildings_page.select_columns') }}" data-hide-search="false"
-												class="form-select form-select-solid fw-bold">
+												data-placeholder="{{ __('ui.buildings_page.select_columns') }}"
+												data-hide-search="false" class="form-select form-select-solid fw-bold">
 												<option value=""></option>
 												@foreach ($assessments as $value)
 													@if(Schema::hasColumn('buildings', $value->name))
@@ -189,8 +199,8 @@
 											<!--end::Label-->
 											<!--begin::Input-->
 											<select name="format" data-control="select2"
-												data-placeholder="{{ __('ui.buildings_page.export_format') }}" data-hide-search="false"
-												class="form-select form-select-solid fw-bold">
+												data-placeholder="{{ __('ui.buildings_page.export_format') }}"
+												data-hide-search="false" class="form-select form-select-solid fw-bold">
 												<option></option>
 												<option value="XLSX">Excel</option>
 												<option value="pdf">PDF</option>
@@ -454,5 +464,3 @@
 		});
 	</script>
 @endsection
-
-
