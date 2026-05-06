@@ -39,6 +39,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Report\DamageStatisticsReportController;
 
 Route::get('/', function () {
 
@@ -93,10 +94,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="'.$safeRepo.'" add .',
-            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
-            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
-            'git -c safe.directory="'.$safeRepo.'" push',
+            'git -c safe.directory="' . $safeRepo . '" add .',
+            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
+            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
+            'git -c safe.directory="' . $safeRepo . '" push',
         ];
 
         $outputs = [];
@@ -116,7 +117,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (! $result->successful()) {
+            if (!$result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -219,7 +220,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
-        Route::get('/', fn () => redirect()->route('telegram.destinations.index'))->name('index');
+        Route::get('/', fn() => redirect()->route('telegram.destinations.index'))->name('index');
         Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
         Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
         Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
@@ -298,6 +299,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/roads/{road:globalid}/field-update', [InfAuditRoadFacilityController::class, 'updateField'])->name('roads.field-update');
     });
 
+
+    Route::prefix('reports')
+        ->name('reports.')
+        ->group(function () {
+            Route::get('/damage-statistics', [DamageStatisticsReportController::class, 'index'])
+                ->name('damage-statistics.index');
+
+            Route::get('/damage-statistics/data', [DamageStatisticsReportController::class, 'data'])
+                ->name('damage-statistics.data');
+
+            Route::get('/damage-statistics/export', [DamageStatisticsReportController::class, 'export'])
+                ->name('damage-statistics.export');
+        });
     // engineers
     Route::resource('engineer', controller: engineerController::class);
     Route::get('engineerAssessments/{assignedto}', [engineerController::class, 'engineerAssessments']);
@@ -437,4 +451,4 @@ Route::get('/import-buildings-test', [BuildingImportController::class, 'import']
 use App\Http\Controllers\HousingUnitImportController;
 
 Route::get('/import-housing-units', [HousingUnitImportController::class, 'import']);
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
