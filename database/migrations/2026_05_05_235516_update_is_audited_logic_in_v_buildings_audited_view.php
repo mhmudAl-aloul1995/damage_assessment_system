@@ -27,13 +27,10 @@ CASE
             ON `ast`.`id` = `bs`.`status_id`
         WHERE `bs`.`building_id` = `b`.`objectid`
           AND `bs`.`status_id` IS NOT NULL
-          AND LOWER(TRIM(`ast`.`name`)) NOT IN (
-              'pending',
-              'assigned',
-              'assignedto',
-              'assigned_to',
-              'assigned_to_engineer',
-              'assigned_to_lawyer'
+          AND LOWER(TRIM(`ast`.`name`)) IN (
+              'need_review',
+              'accepted_by_engineer',
+              'rejected_by_engineer'
           )
     )
     THEN 1
