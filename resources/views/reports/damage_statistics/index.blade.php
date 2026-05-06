@@ -243,4 +243,4 @@ $(document).ready(function () {
     loadReport();
 });
 </script>
-@endpush
+@endsection
