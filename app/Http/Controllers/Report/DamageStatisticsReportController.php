@@ -90,17 +90,17 @@ class DamageStatisticsReportController extends Controller
 
         $totalTeamsPerDay = round($averagePerTeamPerDay * $teamsCount, 2);
         return [
-            $this->section('احصائيات المباني والوحدات السكنية في قطاع غزة'),
+            $this->section('احصائيات المباني والوحدات السكنية في مناطق العمل'),
 
-            $this->row(1, 'عدد المباني السكنية في قطاع غزة', DB::table('buildings')->count(), 'مبنى سكني'),
-            $this->row(2, 'عدد الوحدات السكنية في قطاع غزة', DB::table('housing_units')->count(), 'وحدة سكنية'),
+            $this->row(1, 'عدد المباني السكنية في مناطق العمل', DB::table('buildings')->count(), 'مبنى سكني'),
+            $this->row(2, 'عدد الوحدات السكنية في مناطق العمل', DB::table('housing_units')->count(), 'وحدة سكنية'),
 
             $this->section('احصائيات المباني والوحدات السكنية التي تم حصرها حسب تاريخ التعديل'),
 
             $this->row(3, 'عدد المباني السكنية التى تم حصرها', (clone $buildings)->count(), 'مبنى سكني'),
             $this->row(4, 'عدد الوحدات السكنية التى تم حصرها', (clone $housingUnits)->count(), 'وحدة سكنية'),
 
-            $this->section('تفاصيل احصائيات حصر اضرار المباني والوحدات السكنية في قطاع غزة'),
+            $this->section('تفاصيل احصائيات حصر اضرار المباني والوحدات السكنية في مناطق العمل'),
 
             $this->row(5, 'مباني سكنية ضرر كلي', (clone $buildings)->whereIn('b.building_damage_status', $this->fullDamageValues())->count(), 'مبنى سكني'),
             $this->row(6, 'مباني سكنية ضرر جزئي', (clone $buildings)->whereIn('b.building_damage_status', $this->partialDamageValues())->count(), 'مبنى سكني'),
