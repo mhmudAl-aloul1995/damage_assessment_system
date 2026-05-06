@@ -142,7 +142,7 @@
 </div>
 @endsection
 
-@push('scripts')
+@push('script')
 <script>
 $(document).ready(function () {
     $('.date-input').flatpickr({

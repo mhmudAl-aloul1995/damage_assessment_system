@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Report;
+namespace App\Http\Controllers\Reports;
 
 use App\Exports\DamageStatisticsReportExport;
 use App\Http\Controllers\Controller;
@@ -94,10 +94,10 @@ class DamageStatisticsReportController extends Controller
             $this->row(7, 'مباني سكنية بحاجة إلى لجنة فنية', (clone $buildings)->whereIn('b.building_damage_status', $this->committeeValues())->count(), 'مبنى سكني'),
             $this->row(8, 'مباني سكنية تواجه إعاقة في التقييم', (clone $buildings)->whereIn('b.building_damage_status', $this->obstacleValues())->count(), 'مبنى سكني'),
 
-            $this->row(9, 'وحدات سكنية ضرر كلي', (clone $housingUnits)->whereIn('hu.housing_damage_status', $this->fullDamageValues())->count(), 'وحدة سكنية'),
-            $this->row(10, 'وحدات سكنية ضرر جزئي', (clone $housingUnits)->whereIn('hu.housing_damage_status', $this->partialDamageValues())->count(), 'وحدة سكنية'),
-            $this->row(11, 'وحدات سكنية بحاجة إلى لجنة فنية', (clone $housingUnits)->whereIn('hu.housing_damage_status', $this->committeeValues())->count(), 'وحدة سكنية'),
-            $this->row(12, 'وحدات سكنية تواجه إعاقة في التقييم', (clone $housingUnits)->whereIn('hu.housing_damage_status', $this->obstacleValues())->count(), 'وحدة سكنية'),
+            $this->row(9, 'وحدات سكنية ضرر كلي', (clone $housingUnits)->whereIn('hu.unit_damage_status', $this->fullDamageValues())->count(), 'وحدة سكنية'),
+            $this->row(10, 'وحدات سكنية ضرر جزئي', (clone $housingUnits)->whereIn('hu.unit_damage_status', $this->partialDamageValues())->count(), 'وحدة سكنية'),
+            $this->row(11, 'وحدات سكنية بحاجة إلى لجنة فنية', (clone $housingUnits)->whereIn('hu.unit_damage_status', $this->committeeValues())->count(), 'وحدة سكنية'),
+            $this->row(12, 'وحدات سكنية تواجه إعاقة في التقييم', (clone $housingUnits)->whereIn('hu.unit_damage_status', $this->obstacleValues())->count(), 'وحدة سكنية'),
 
             $this->section('تفاصيل عمل فرق الحصر اليومي'),
 
