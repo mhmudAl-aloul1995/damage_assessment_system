@@ -34,7 +34,7 @@ class auditController extends Controller
     public function index(Request $request)
     {
 
-    dd(Building::where('objectid', 7168)->first());
+   // dd(Building::where('objectid', 7168)->first());
         if ($request->ajax()) {
 
             $globalIds = [
