@@ -114,15 +114,15 @@ class DamageStatisticsReportController extends Controller
 
             $this->section('تفاصيل عمل فرق الحصر اليومي'),
 
-            $this->row(13, 'عدد مهندسي الحصر', $teamsCount*2, 'فريق'),
-            $this->row(14, 'ينجز المهندس في اليوم تقريبا', (int)$averagePerTeamPerDay, 'وحدة سكنية'),
-            $this->row(15, 'تنجز كافة المهندسين في اليوم تقريبا', (int)$totalTeamsPerDay, 'وحدة سكنية'),
+            $this->row(13, 'عدد مهندسي الحصر', $teamsCount * 2, 'فريق'),
+            $this->row(14, 'ينجز المهندس في اليوم تقريبا', (int) $averagePerTeamPerDay, 'وحدة سكنية'),
+            $this->row(15, 'تنجز كافة المهندسين في اليوم تقريبا', (int) $totalTeamsPerDay, 'وحدة سكنية'),
         ];
     }
 
     private function buildingsQuery(Request $request)
     {
-        $query = DB::table('buildings as b where b.field_status = "COMPLETED"');
+        $query = DB::table('buildings as b');
 
         $this->applyFilters($query, $request);
 
@@ -142,6 +142,10 @@ class DamageStatisticsReportController extends Controller
     private function applyFilters($query, Request $request): void
     {
         // التقرير حسب تاريخ التعديل من جدول buildings فقط
+
+
+        $query->where('b.field_status', "COMPLETED");
+
         if ($request->filled('from_date')) {
             $query->whereDate('b.editdate', '>=', $request->from_date);
         }
@@ -165,6 +169,7 @@ class DamageStatisticsReportController extends Controller
         if ($request->filled('building_damage_status')) {
             $query->where('b.building_damage_status', $request->building_damage_status);
         }
+
     }
 
     private function section(string $title): array
