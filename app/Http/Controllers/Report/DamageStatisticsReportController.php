@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Reports;
+namespace App\Http\Controllers\Report;
 
 use App\Exports\DamageStatisticsReportExport;
 use App\Http\Controllers\Controller;
