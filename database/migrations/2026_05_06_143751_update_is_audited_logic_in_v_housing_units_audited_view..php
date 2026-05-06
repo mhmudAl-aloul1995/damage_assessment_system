@@ -25,7 +25,7 @@ CASE
         FROM `{$database}`.`housing_statuses` `hs`
         INNER JOIN `{$database}`.`assessment_statuses` `ast`
             ON `ast`.`id` = `hs`.`status_id`
-        WHERE `hs`.`housing_id` = `hu`.`objectid`
+        WHERE `hs`.`housing_id` = `h`.`objectid`
           AND `hs`.`status_id` IS NOT NULL
           AND LOWER(TRIM(`ast`.`name`)) IN (
               'need_review',
@@ -37,7 +37,6 @@ CASE
     ELSE 0
 END AS `is_audited`";
 
-        // استبدال أي CASE قديم
         $pattern = '/CASE\s+WHEN\s+.*?\s+END\s+AS\s+`is_audited`/is';
 
         $updatedSql = preg_replace($pattern, $newLogic, $createViewSql, 1, $count);
