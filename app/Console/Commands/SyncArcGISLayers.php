@@ -794,6 +794,7 @@ class SyncArcGISLayers extends Command
 
         return (string) config('app.url');
     }
+
     private function deleteMissingArcgisRows(string $table, string $unique, array $arcgisIds): int
     {
         $arcgisIds = array_values(array_unique(array_filter($arcgisIds)));
@@ -804,25 +805,13 @@ class SyncArcGISLayers extends Command
             return 0;
         }
 
-        $deleted = 0;
-
-        DB::table($table)
+        $query = DB::table($table)
             ->whereNotNull($unique)
-            ->whereNotIn($unique, $arcgisIds)
-            ->orderBy($unique)
-            ->chunkById(500, function ($rows) use ($table, $unique, &$deleted) {
-                $idsToDelete = $rows->pluck($unique)->filter()->values()->all();
+            ->whereNotIn($unique, $arcgisIds);
 
-                if (empty($idsToDelete)) {
-                    return;
-                }
+        $deleted = $query->count();
 
-                $count = DB::table($table)
-                    ->whereIn($unique, $idsToDelete)
-                    ->delete();
-
-                $deleted += $count;
-            }, $unique);
+        $query->delete();
 
         return $deleted;
     }

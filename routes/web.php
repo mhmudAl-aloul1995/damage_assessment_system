@@ -435,6 +435,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/login-logs/data', [LoginLogController::class, 'data'])
             ->name('login-logs.data');
     });
+
+    Route::get('/arcgis-count', function () {
+
+        $token = app(\App\Services\ArcgisService::class)->getToken();
+
+        $url = 'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/query';
+
+        $response = Http::get($url, [
+            'where' => '1=1',
+            'returnCountOnly' => 'true',
+            'f' => 'json',
+            'token' => $token,
+        ]);
+
+        return $response->json();
+    });
 });
 
 Route::post('/api/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])

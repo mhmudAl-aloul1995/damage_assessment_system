@@ -34,7 +34,7 @@ class ExportDataColumns
     {
         $columns = self::visibleTableColumns(self::BUILDINGS_TABLE);
 
-        if (! in_array(self::BUILDING_UNITS_COUNT_COLUMN, $columns, true)) {
+        if (!in_array(self::BUILDING_UNITS_COUNT_COLUMN, $columns, true)) {
             $columns[] = self::BUILDING_UNITS_COUNT_COLUMN;
         }
 
@@ -59,8 +59,8 @@ class ExportDataColumns
         $allowed = array_flip(array_merge(self::visibleTableColumns($table), $extraColumns));
 
         return collect($columns)
-            ->map(fn ($column) => trim((string) $column))
-            ->filter(fn ($column) => $column !== '' && isset($allowed[$column]))
+            ->map(fn($column) => trim((string) $column))
+            ->filter(fn($column) => $column !== '' && isset($allowed[$column]))
             ->unique()
             ->values()
             ->all();
@@ -71,15 +71,26 @@ class ExportDataColumns
      */
     private static function visibleTableColumns(string $table): array
     {
-        if (! Schema::hasTable($table)) {
+        $database = config('database.connections.mysql.database');
+
+        $columns = \DB::table('information_schema.columns')
+            ->where('table_schema', $database)
+            ->where('table_name', $table)
+            ->orderBy('ordinal_position')
+            ->pluck('column_name')
+            ->map(fn($column) => trim((string) $column))
+            ->filter()
+            ->values()
+            ->all();
+
+        if (empty($columns)) {
             return [];
         }
 
         $hidden = array_flip(self::HIDDEN_COLUMNS[$table] ?? []);
 
-        return collect(Schema::getColumnListing($table))
-            ->map(fn ($column) => trim((string) $column))
-            ->filter(fn ($column) => $column !== '' && ! isset($hidden[$column]))
+        return collect($columns)
+            ->filter(fn($column) => !isset($hidden[$column]))
             ->values()
             ->all();
     }

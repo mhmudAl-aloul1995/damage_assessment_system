@@ -278,7 +278,7 @@ class ExportDataJob implements ShouldQueue
                     $housingEdits = $paginateByHousing
                         ? $this->loadLatestEdits(
                             array_values(array_unique($housingGlobalIds)),
-                            'housing_unit_table'
+                            'housing_table'
                         )
                         : [];
 
