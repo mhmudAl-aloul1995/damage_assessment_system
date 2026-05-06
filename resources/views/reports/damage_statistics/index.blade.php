@@ -118,7 +118,7 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered table-row-dashed align-middle text-center" id="damage_statistics_table">
+                    <table class="table table-bordered table-row-dashed" id="damage_statistics_table">
                         <thead>
                             <tr class="fw-bold text-gray-800 bg-light">
                                 <th style="width:70px;">م</th>
