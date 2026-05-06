@@ -122,7 +122,7 @@ class DamageStatisticsReportController extends Controller
 
     private function buildingsQuery(Request $request)
     {
-        $query = DB::table('buildings as b');
+        $query = DB::table('buildings as b where b.field_status = "COMPLETED"');
 
         $this->applyFilters($query, $request);
 
