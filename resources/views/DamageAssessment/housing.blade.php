@@ -44,13 +44,13 @@
 
 						</div>
 						<div class="row g-9 mb-8">
-							@foreach ($filterName as $filter=>$value)
+							@foreach ($filterName as $filter => $value)
 
 
 								@if (Schema::hasColumn('housing_units', $value))
 
 									@php
-									
+
 										if ($value == 'governorate' || $value == 'municipalitie' || $value == 'neighborhood' || $value == 'locality') {
 
 											continue;
@@ -72,12 +72,11 @@
 								@endif
 							@endforeach
 
-
-
-
-
-
-
+							<div class="col-md-3 fv-row">
+								<label class="fs-6 fw-semibold mb-2">رقم الهوية</label>
+								<input type="text" class="form-control form-control-solid" placeholder="رقم الهوية"
+									name="id_number1">
+							</div>
 						</div>
 
 
@@ -142,8 +141,8 @@
 						<!--end::Export-->
 						<!--begin::Add Building-->
 						<!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" onclick="resetFormValidation()"
-																																																																																								data-bs-target="#kt_modal_Building">
-																																																																																								<i class="ki-duotone ki-plus fs-2"></i> إضافة جديد</button> -->
+																																																																																									data-bs-target="#kt_modal_Building">
+																																																																																									<i class="ki-duotone ki-plus fs-2"></i> إضافة جديد</button> -->
 						<!--end::Add Building-->
 					</div>
 					<!--end::Toolbar-->
@@ -501,5 +500,3 @@
 
 	</script>
 @endsection
-
-
