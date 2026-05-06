@@ -88,14 +88,14 @@ class ExportDataJob implements ShouldQueue
                 })
                 ->toArray();
 
-            $query = DB::table('buildings as b');
+            $query = DB::table('v_buildings_audited as b');
 
             if ($needsHousingJoin) {
-                $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
+                $query->leftJoin('v_housing_units_audited as h', 'b.globalid', '=', 'h.parentglobalid');
             }
 
             if ($needsHousingUnitsCount) {
-                $housingUnitsCountSub = DB::table('housing_units as hu_count')
+                $housingUnitsCountSub = DB::table('v_housing_units_audited as hu_count')
                     ->selectRaw('hu_count.parentglobalid, COUNT(*) as housing_units_count')
                     ->groupBy('hu_count.parentglobalid');
 
@@ -105,7 +105,7 @@ class ExportDataJob implements ShouldQueue
             }
 
             if ($needsFamily) {
-                $familySub = DB::table('housing_units as hf')
+                $familySub = DB::table('v_housing_units_audited as hf')
                     ->selectRaw("
                         hf.parentglobalid,
                         (
@@ -149,13 +149,13 @@ class ExportDataJob implements ShouldQueue
                     continue;
                 }
 
-                if (Schema::hasColumn('buildings', $column)) {
+                if (Schema::hasColumn('v_buildings_audited', $column)) {
                     $selects[] = "b.`{$column}` as `building_{$column}`";
                 }
             }
 
             foreach ($housingColumns as $column) {
-                if (Schema::hasColumn('housing_units', $column)) {
+                if (Schema::hasColumn('v_housing_units_audited', $column)) {
                     $selects[] = "h.`{$column}` as `housing_{$column}`";
                 }
             }
@@ -184,9 +184,9 @@ class ExportDataJob implements ShouldQueue
                     continue;
                 }
 
-                if (Schema::hasColumn('buildings', $field)) {
+                if (Schema::hasColumn('v_buildings_audited', $field)) {
                     $query->whereIn("b.$field", $values);
-                } elseif (Schema::hasColumn('housing_units', $field)) {
+                } elseif (Schema::hasColumn('v_housing_units_audited', $field)) {
                     $query->whereIn("h.$field", $values);
                 }
             }
