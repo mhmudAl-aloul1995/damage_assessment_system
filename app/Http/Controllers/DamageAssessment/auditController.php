@@ -37,7 +37,7 @@ class auditController extends Controller
    // dd(Building::where('objectid', 7168)->first());
         if ($request->ajax()) {
 
-            $globalIds = [
+          /*   $globalIds = [
                 '51ea2320-1c6b-4115-af83-e8103cb335c0',
                 '6480b68c-c0c7-4411-9f5d-3060cf30725c',
                 '21f0fa33-e4cf-4713-a585-c5c17902cd43',
@@ -2795,13 +2795,13 @@ class auditController extends Controller
                 '2819f05b-b3bf-4acc-bf2b-364961ecba6e',
                 '300ad1ff-3a35-4bcc-a1f7-b58e35c86136',
             ];
-
+ */
             $query = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
                 'lawyerStatus.status',
             ])
-                ->whereNotIn('globalid', $globalIds)
+            //    ->whereNotIn('globalid', $globalIds)
                 ->where('field_status', 'COMPLETED');
 
             $engineerIds = $this->filterValues($request, 'engineer_id');
