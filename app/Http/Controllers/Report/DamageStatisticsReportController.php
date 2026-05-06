@@ -179,6 +179,8 @@ class DamageStatisticsReportController extends Controller
     private function fullDamageValues(): array
     {
         return [
+            'fully_damaged',
+            'fully_damaged2',
             'totally_damaged',
             'total_damage',
             'full_damage',
@@ -192,6 +194,7 @@ class DamageStatisticsReportController extends Controller
     {
         return [
             'partially_damaged',
+            'partially_damaged2',
             'partial_damage',
             'partial',
             'جزئي',
@@ -202,6 +205,8 @@ class DamageStatisticsReportController extends Controller
     private function committeeValues(): array
     {
         return [
+            'committee_review',
+            'committee_review2',
             'need_committee',
             'needs_committee',
             'technical_committee',
