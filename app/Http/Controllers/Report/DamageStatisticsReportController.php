@@ -92,12 +92,12 @@ class DamageStatisticsReportController extends Controller
             $this->row(5, 'مباني سكنية ضرر كلي', (clone $buildings)->whereIn('b.building_damage_status', $this->fullDamageValues())->count(), 'مبنى سكني'),
             $this->row(6, 'مباني سكنية ضرر جزئي', (clone $buildings)->whereIn('b.building_damage_status', $this->partialDamageValues())->count(), 'مبنى سكني'),
             $this->row(7, 'مباني سكنية بحاجة إلى لجنة فنية', (clone $buildings)->whereIn('b.building_damage_status', $this->committeeValues())->count(), 'مبنى سكني'),
-            $this->row(8, 'مباني سكنية تواجه إعاقة في التقييم', (clone $buildings)->whereIn('b.building_damage_status', $this->obstacleValues())->count(), 'مبنى سكني'),
+            $this->row(8, 'مباني سكنية تواجه إعاقة في التقييم', (clone $buildings)->whereIn('b.assessment_obstacle', $this->obstacleValues())->count(), 'مبنى سكني'),
 
             $this->row(9, 'وحدات سكنية ضرر كلي', (clone $housingUnits)->whereIn('hu.unit_damage_status', $this->fullDamageValues())->count(), 'وحدة سكنية'),
             $this->row(10, 'وحدات سكنية ضرر جزئي', (clone $housingUnits)->whereIn('hu.unit_damage_status', $this->partialDamageValues())->count(), 'وحدة سكنية'),
             $this->row(11, 'وحدات سكنية بحاجة إلى لجنة فنية', (clone $housingUnits)->whereIn('hu.unit_damage_status', $this->committeeValues())->count(), 'وحدة سكنية'),
-            $this->row(12, 'وحدات سكنية تواجه إعاقة في التقييم', (clone $housingUnits)->whereIn('hu.unit_damage_status', $this->obstacleValues())->count(), 'وحدة سكنية'),
+            $this->row(12, 'وحدات سكنية تواجه إعاقة في التقييم', (clone $housingUnits)->whereIn('hu.security_situation_unit', 'Unsafe')->count(), 'وحدة سكنية'),
 
             $this->section('تفاصيل عمل فرق الحصر اليومي'),
 
@@ -218,6 +218,7 @@ class DamageStatisticsReportController extends Controller
     private function obstacleValues(): array
     {
         return [
+            'yes',
             'obstacle',
             'has_obstacle',
             'inaccessible',
