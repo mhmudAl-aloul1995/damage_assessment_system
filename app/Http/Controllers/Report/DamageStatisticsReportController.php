@@ -75,7 +75,20 @@ class DamageStatisticsReportController extends Controller
             ->where('b.assignedto', '!=', '')
             ->distinct('b.assignedto')
             ->count('b.assignedto');
+        $totalUnits = (clone $housingUnits)->count();
 
+        $workingDays = (clone $buildings)
+            ->whereNotNull('b.editdate')
+            ->selectRaw('COUNT(DISTINCT DATE(b.editdate)) as days_count')
+            ->value('days_count');
+
+        $averagePerTeamPerDay = 0;
+
+        if ($teamsCount > 0 && $workingDays > 0) {
+            $averagePerTeamPerDay = round($totalUnits / $teamsCount / $workingDays, 2);
+        }
+
+        $totalTeamsPerDay = round($averagePerTeamPerDay * $teamsCount, 2);
         return [
             $this->section('احصائيات المباني والوحدات السكنية في قطاع غزة'),
 
@@ -102,8 +115,8 @@ class DamageStatisticsReportController extends Controller
             $this->section('تفاصيل عمل فرق الحصر اليومي'),
 
             $this->row(13, 'عدد فرق الحصر', $teamsCount, 'فريق'),
-            $this->row(14, 'ينجز الفريق في اليوم تقريبا', 13, 'وحدة سكنية'),
-            $this->row(15, 'تنجز كافة فرق الحصر في اليوم تقريبا', $teamsCount * 13, 'وحدة سكنية'),
+            $this->row(14, 'ينجز الفريق في اليوم تقريبا', $averagePerTeamPerDay, 'وحدة سكنية'),
+            $this->row(15, 'تنجز كافة فرق الحصر في اليوم تقريبا', $totalTeamsPerDay, 'وحدة سكنية'),
         ];
     }
 
