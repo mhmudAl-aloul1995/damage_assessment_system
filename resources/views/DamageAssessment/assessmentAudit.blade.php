@@ -1131,7 +1131,7 @@
             security_info: ['0. Introduction', 4],
             obstacle_type: ['0. Introduction', 5],
             building_name: ['0. Introduction', 6],
-            comments_recommendations: ['Engineer Comments', 7],
+            comments_recommendations: ['0. Introduction', 7],
 
             building_damage_status: ['1. Building Information', 100],
             building_type: ['1. Building Information', 101],
@@ -1239,7 +1239,7 @@
             has_mezzanine: ['5. Building Accessories', 514],
             mezzanine_status: ['5. Building Accessories', 515],
             roof_terrace_area: ['5. Building Accessories', 516],
-            comments_recommendations: ['6. Engineer Comments', 600],
+           // comments_recommendations: ['6. Engineer Comments', 600],
             building_image: ['6. Engineer Comments', 601],
             building_image2: ['6. Engineer Comments', 602],
         };
@@ -1382,7 +1382,7 @@
 
             techncial_boq: ['17. Techncial-BOQ', 1700],
             tech_boq: ['17. Techncial-BOQ', 1701],
-            final_comments: ['3. ملاحظات الوحدة', 301],
+           // final_comments: ['3. ملاحظات الوحدة', 301],
 
         };
 
