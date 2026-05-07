@@ -4980,6 +4980,10 @@ COALESCE(
                         : $value;
 
                     $displayValue = getFilterLabel($filters, $field, $filterValue);
+
+                    if ($displayValue === '-') {
+                        $displayValue = $value;
+                    }
                 }
 
                 if (blank($displayValue) || trim((string) $displayValue, "\"' ") === '') {

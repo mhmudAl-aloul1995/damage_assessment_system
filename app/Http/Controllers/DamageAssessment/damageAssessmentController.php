@@ -426,6 +426,24 @@ class damageAssessmentController extends Controller
             ->addColumn('question', function ($row) {
                 return $row->label.'<br>'.$row->hint;
             })
+            ->addColumn('summaryValue', function ($row) use ($record, $allEdits, $filtersMap) {
+                if ($row->name === 'attachments') {
+                    return null;
+                }
+
+                $lastEdit = $allEdits->get($row->name, collect())->first();
+                $rawValue = $lastEdit?->field_value;
+
+                if ($rawValue === null || $rawValue === '') {
+                    $rawValue = $record[$row->name] ?? null;
+                }
+
+                if ($rawValue === null || $rawValue === '') {
+                    return null;
+                }
+
+                return $this->updateValue($filtersMap[$rawValue] ?? $rawValue);
+            })
             ->addColumn('answer', function ($row) use ($record, $allEdits, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersMap) {
                 if ($row->name === 'attachments') {
                     if (! $model || ! $model->objectid || ! $token || $attachments->isEmpty()) {

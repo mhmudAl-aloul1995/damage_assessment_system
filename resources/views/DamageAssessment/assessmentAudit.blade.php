@@ -2280,7 +2280,7 @@
                 <div class="col-12">
                     <div class="summary-box bg-light">
                         <div class="summary-title">ملخص الوحدة</div>
-                        <div class="summary-value text-muted">--</div>
+                        <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
                     </div>
                 </div>`);
         }
@@ -2294,8 +2294,8 @@
                     return normalizeSurveyName(item.name) === field;
                 });
 
-                let value = row ? cleanAuditText($('<div>').html(row.answer || '').text()) : '-';
-                if (!value || value === '-') value = '-';
+                let value = row ? cleanAuditText(row.summaryValue || $('<div>').html(row.answer || '').text()) : '-';
+                if (!value) value = '-';
 
                 let color = colors[index % colors.length];
                 html += `
@@ -2311,7 +2311,7 @@
                 <div class="col-12">
                     <div class="summary-box bg-light">
                         <div class="summary-title">ملخص المبنى</div>
-                        <div class="summary-value text-muted">--</div>
+                        <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
                     </div>
                 </div>`);
         }
