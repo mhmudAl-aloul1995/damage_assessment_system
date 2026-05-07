@@ -1073,12 +1073,6 @@
 
         function renderAccordion(target, rows, filter, prefix) {
             rows = applyAuditFilter(rows, filter);
-            rows = rows.filter(function (row) {
-                return !(
-                    (prefix === 'building' && row.section === '1. ملخص المبنى')
-                    || (prefix === 'housing' && row.section === '1. ملخص الوحدة')
-                );
-            });
 
             let groups = {};
             rows.forEach(function (row) {

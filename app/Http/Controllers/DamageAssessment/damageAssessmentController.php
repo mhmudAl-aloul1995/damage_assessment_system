@@ -300,8 +300,9 @@ class damageAssessmentController extends Controller
 
         $allEdits = collect();
 
-        if (! empty(request()->search['value'])) {
-            $search = request()->search['value'];
+        $search = request()->input('search.value');
+
+        if (! empty($search)) {
 
             $assessments->where(function ($query) use ($search) {
                 $query->where('label', 'like', "%{$search}%")
@@ -339,8 +340,15 @@ class damageAssessmentController extends Controller
             );
         }
         $filtersMap = Filter::pluck('label', 'name');
+        $assessmentRows = $this->withSummaryAssessmentRows(
+            $assessments->get(),
+            $type,
+            $record,
+            $allEdits,
+            $search
+        );
 
-        return DataTables::of($assessments)
+        return DataTables::of($assessmentRows)
             ->addColumn('rowClass', function ($row) use ($record, $allEdits) {
 
                 $original = $record[$row->name] ?? null;
@@ -630,6 +638,77 @@ class damageAssessmentController extends Controller
             })
             ->rawColumns(['answer', 'question', 'editAnswer', 'rowClass'])
             ->make(true);
+    }
+
+    private function withSummaryAssessmentRows($assessmentRows, string $type, array $record, $allEdits, ?string $search)
+    {
+        $assessmentRows = collect($assessmentRows);
+        $existingNames = $assessmentRows->pluck('name')->filter()->flip();
+
+        foreach ($this->summaryFallbackFields($type, $record, $allEdits) as $field => $label) {
+            if ($existingNames->has($field)) {
+                continue;
+            }
+
+            if ($search && ! str_contains(strtolower($field.' '.$label), strtolower($search))) {
+                continue;
+            }
+
+            $row = new Assessment;
+            $row->forceFill([
+                'name' => $field,
+                'label' => $label,
+                'hint' => '',
+                'type' => 0,
+                'criteria' => 0,
+            ]);
+
+            $assessmentRows->push($row);
+        }
+
+        return $assessmentRows;
+    }
+
+    private function summaryFallbackFields(string $type, array $record, $allEdits): array
+    {
+        if ($type === 'building_table') {
+            return [
+                'floor_nos' => 'عدد الطوابق',
+                'ground_floor_area__m2' => 'مساحة الطابق الأرضي',
+                'floor_area_m2' => 'مساحة الطابق المتكرر',
+                'building_roof_type' => 'نوع سطح المبنى',
+                'concrete_area' => 'مساحة الباطون',
+                'aspestos_area' => 'مساحة الصاج',
+            ];
+        }
+
+        if ($type !== 'housing_table') {
+            return [];
+        }
+
+        $damageEdit = collect($allEdits->get('unit_damage_status', collect()))->first();
+        $damageStatus = strtolower(trim((string) ($damageEdit?->field_value ?? $record['unit_damage_status'] ?? '')));
+
+        if (str_contains($damageStatus, 'total')) {
+            return [
+                'unit_owner' => 'مالك الوحدة',
+                'damaged_area_m2' => 'مساحة الوحدة',
+                'external_finishing_of_the_unit' => 'تشطيب الوحدة من الخارج',
+                'internal_finishing_of_the_unit' => 'تشطيب الوحدة من الداخل',
+                'floor_number' => 'رقم الطابق',
+                'housing_unit_number' => 'رقم الوحدة',
+            ];
+        }
+
+        return [
+            'unit_owner' => 'مالك الوحدة',
+            'damaged_area_m2' => 'مساحة الوحدة',
+            'reh_kitchen' => 'تأهيل مطبخ',
+            'reh_bathroom' => 'تأهيل حمام',
+            'is_the_housing_unit_or_living_habitable' => 'ملائمة للسكن',
+            'external_finishing_of_the_unit' => 'تشطيب الوحدة من الخارج',
+            'internal_finishing_of_the_unit' => 'تشطيب الوحدة من الداخل',
+        ];
     }
 
     private function updateValue($value)
