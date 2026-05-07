@@ -26,8 +26,8 @@ class damageAssessmentController extends Controller
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
 
-        $startDate = '2026-01-01';
-        $endDate = Carbon::today()->toDateString();
+        $startDate = '2026-04-01';
+        $endDate = '2026-04-30';//Carbon::today()->toDateString();
 
         $data = [
             'buildings' => Building::whereBetween('creationdate', [$startDate, $endDate])
@@ -63,106 +63,106 @@ class damageAssessmentController extends Controller
 
         $publicBuildingStats = [
             'total_surveys' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->count(),
 
             'damaged_buildings' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereNotNull('building_damage_status')
                 ->where('building_damage_status', '!=', '')
                 ->count(),
 
             'total_units' => (int) PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->withCount('units')
                 ->get()
                 ->sum('units_count'),
 
             'municipalities' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereNotNull('municipalitie')
                 ->where('municipalitie', '!=', '')
                 ->distinct()
                 ->count('municipalitie'),
 
             'neighborhoods' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereNotNull('neighborhood')
                 ->where('neighborhood', '!=', '')
                 ->distinct()
                 ->count('neighborhood'),
 
             'assigned_staff' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereNotNull('assignedto')
                 ->where('assignedto', '!=', '')
                 ->distinct()
                 ->count('assignedto'),
 
             'occupied_buildings' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->where('is_building_occupied', 'yes')
                 ->count(),
 
             'bodies_present' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->where('is_bodies', 'yes')
                 ->count(),
 
             'uxo_present' => PublicBuildingSurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->where('is_uxo', 'yes')
                 ->count(),
         ];
 
         $roadFacilityStats = [
             'total_surveys' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->count(),
 
             'damaged_roads' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereNotNull('road_damage_level')
                 ->where('road_damage_level', '!=', '')
                 ->count(),
 
             'total_items' => (int) RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->withCount('items')
                 ->get()
                 ->sum('items_count'),
 
             'municipalities' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereNotNull('municipalitie')
                 ->where('municipalitie', '!=', '')
                 ->distinct()
                 ->count('municipalitie'),
 
             'neighborhoods' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereNotNull('neighborhood')
                 ->where('neighborhood', '!=', '')
                 ->distinct()
                 ->count('neighborhood'),
 
             'potholes_locations' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->where('potholes_exist', 'yes')
                 ->count(),
 
             'obstacle_locations' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->where('obstacle_exist', 'yes')
                 ->count(),
 
             'buried_bodies_locations' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->where('buried_bodies', 'yes')
                 ->count(),
 
             'uxo_locations' => RoadFacilitySurvey::query()
-                // ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->where('uxo_present', 'yes')
                 ->count(),
         ];
