@@ -512,43 +512,9 @@
                             </div>
 
                             <div class="card-toolbar">
-                                <div class="audit-toolbar-sticky d-flex justify-content-end align-items-center gap-2 flex-wrap">
-                                    @role('Legal Auditor')
-                                    <button type="button" class="btn btn-sm btn-light-success building-status-btn"
-                                        data-status="accepted" onclick="setBuildingStatus('accepted')">مقبول</button>
-                                    <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
-                                        data-status="legal_notes" onclick="setBuildingStatus('legal_notes')">ملاحظات
-                                        قانونية</button>
-                                    @endrole
+                                <div
+                                    class="audit-toolbar-sticky d-flex justify-content-end align-items-center gap-2 flex-wrap">
 
-                                    @role('QC/QA Engineer')
-                                    <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
-                                        data-status="rejected" onclick="setBuildingStatus('rejected')">مرفوض</button>
-                                    <button type="button" class="btn btn-sm btn-light-success building-status-btn"
-                                        data-status="accepted" onclick="setBuildingStatus('accepted')">مقبول</button>
-                                    <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
-                                        data-status="need_review" onclick="setBuildingStatus('need_review')">بحاجة
-                                        لمراجعة</button>
-                                    @endrole
-
-                                    @hasanyrole('Database Officer|undp-Project Manager')
-                                    <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
-                                        data-status="undp_final_approve" onclick="setBuildingStatus('undp_final_approve')">
-                                        UNDP Final Approve</button>
-                                    @endhasanyrole
-
-                                    <button type="button" class="btn btn-sm btn-light-dark"
-                                        onclick="openNotesModal('building','history')">ملاحظات</button>
-                                    <button type="button" class="btn btn-sm btn-light-info"
-                                        onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
-                                    <button type="button" class="btn btn-sm btn-light-primary ms-3"
-                                        onclick="reloadBuildingAssessmentTable()">تحديث</button>
-                                    @if (auth()->user()->hasAnyRole(['Auditing Supervisor', 'Database Officer']))
-                                        <button type="button" id="btn_show_assessment_final_approve"
-                                            class="btn btn-sm btn-light-warning" onclick="finalApproveCurrentBuilding()">
-                                            Final Approve
-                                        </button>
-                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -578,19 +544,61 @@
 
                                 <div class="col-12 col-lg-9 col-xl-10">
                                     <div class="audit-toolbar-sticky mb-4">
-                                <div class="d-flex flex-wrap gap-2">
-                                    <button type="button"
-                                        class="btn btn-sm btn-light-primary audit-filter-btn building-filter-btn is-active"
-                                        data-filter="all">الكل</button>
-                                    <button type="button"
-                                        class="btn btn-sm btn-light-danger audit-filter-btn building-filter-btn"
-                                        data-filter="missing">الفارغ فقط</button>
-                                    <button type="button"
-                                        class="btn btn-sm btn-light-info audit-filter-btn building-filter-btn"
-                                        data-filter="edited">المعدّل فقط</button>
-                                    <button type="button"
-                                        class="btn btn-sm btn-light-success audit-filter-btn building-filter-btn"
-                                        data-filter="answered">المجاب فقط</button>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button type="button"
+                                                class="btn btn-sm btn-light-primary audit-filter-btn building-filter-btn is-active"
+                                                data-filter="all">الكل</button>
+                                            <button type="button"
+                                                class="btn btn-sm btn-light-danger audit-filter-btn building-filter-btn"
+                                                data-filter="missing">الفارغ فقط</button>
+                                            <button type="button"
+                                                class="btn btn-sm btn-light-info audit-filter-btn building-filter-btn"
+                                                data-filter="edited">المعدّل فقط</button>
+                                            <button type="button"
+                                                class="btn btn-sm btn-light-success audit-filter-btn building-filter-btn"
+                                                data-filter="answered">المجاب فقط</button>
+                                            <span class="separator">__</span>
+                                            @role('Legal Auditor')
+                                            <button type="button" class="btn btn-sm btn-light-success building-status-btn"
+                                                data-status="accepted"
+                                                onclick="setBuildingStatus('accepted')">مقبول</button>
+                                            <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
+                                                data-status="legal_notes" onclick="setBuildingStatus('legal_notes')">ملاحظات
+                                                قانونية</button>
+                                            @endrole
+
+                                            @role('QC/QA Engineer')
+                                            <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
+                                                data-status="rejected"
+                                                onclick="setBuildingStatus('rejected')">مرفوض</button>
+                                            <button type="button" class="btn btn-sm btn-light-success building-status-btn"
+                                                data-status="accepted"
+                                                onclick="setBuildingStatus('accepted')">مقبول</button>
+                                            <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
+                                                data-status="need_review" onclick="setBuildingStatus('need_review')">بحاجة
+                                                لمراجعة</button>
+                                            @endrole
+
+                                            @hasanyrole('Database Officer|undp-Project Manager')
+                                            <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
+                                                data-status="undp_final_approve"
+                                                onclick="setBuildingStatus('undp_final_approve')">
+                                                UNDP Final Approve</button>
+                                            @endhasanyrole
+
+                                            <button type="button" class="btn btn-sm btn-light-dark"
+                                                onclick="openNotesModal('building','history')">ملاحظات</button>
+                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
+                                            <button type="button" class="btn btn-sm btn-light-primary ms-3"
+                                                onclick="reloadBuildingAssessmentTable()">تحديث</button>
+                                            @if (auth()->user()->hasAnyRole(['Auditing Supervisor', 'Database Officer']))
+                                                <button type="button" id="btn_show_assessment_final_approve"
+                                                    class="btn btn-sm btn-light-warning"
+                                                    onclick="finalApproveCurrentBuilding()">
+                                                    Final Approve
+                                                </button>
+                                            @endif
                                         </div>
                                     </div>
 
@@ -751,42 +759,6 @@
                                                 </select>
                                             </div>
 
-                                            @role('Legal Auditor')
-                                            <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                                data-status="accepted" onclick="setHousingStatus('accepted')">مقبول</button>
-                                            <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                                data-status="legal_notes" onclick="setHousingStatus('legal_notes')">بحاجة
-                                                لمراجعة</button>
-                                            @endrole
-
-                                            @role('QC/QA Engineer')
-                                            <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
-                                                data-status="rejected" onclick="setHousingStatus('rejected')">مرفوض</button>
-                                            <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                                data-status="accepted" onclick="setHousingStatus('accepted')">مقبول</button>
-                                            <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                                data-status="need_review" onclick="setHousingStatus('need_review')">بحاجة
-                                                لمراجعة</button>
-                                            @endrole
-
-                                            @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
-                                            <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
-                                                data-status="undp_final_approve" onclick="setHousingStatus('undp_final_approve')">
-                                                UNDP Final Approve</button>
-                                            @endhasanyrole
-
-                                            <button type="button" class="btn btn-sm btn-light-dark"
-                                                onclick="openNotesModal('housing','history')">ملاحظات</button>
-                                            <button type="button" class="btn btn-sm btn-light-info"
-                                                onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
-                                            <button type="button" class="btn btn-sm btn-light-primary"
-                                                onclick="reloadHousingAssessmentTable();">
-                                                <i class="ki-duotone ki-arrows-circle fs-6">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                </i>
-                                                تحديث
-                                            </button>
 
                                         </div>
                                     </div>
@@ -810,6 +782,44 @@
                                             <button type="button"
                                                 class="btn btn-sm btn-light-warning audit-filter-btn housing-filter-btn"
                                                 data-filter="attachments">المرفقات</button>
+                                            <span class="separator">__</span>
+                                            @role('Legal Auditor')
+                                            <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
+                                                data-status="accepted" onclick="setHousingStatus('accepted')">مقبول</button>
+                                            <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
+                                                data-status="legal_notes" onclick="setHousingStatus('legal_notes')">بحاجة
+                                                لمراجعة</button>
+                                            @endrole
+
+                                            @role('QC/QA Engineer')
+                                            <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
+                                                data-status="rejected" onclick="setHousingStatus('rejected')">مرفوض</button>
+                                            <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
+                                                data-status="accepted" onclick="setHousingStatus('accepted')">مقبول</button>
+                                            <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
+                                                data-status="need_review" onclick="setHousingStatus('need_review')">بحاجة
+                                                لمراجعة</button>
+                                            @endrole
+
+                                            <!--    @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
+                                                    <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
+                                                        data-status="undp_final_approve"
+                                                        onclick="setHousingStatus('undp_final_approve')">
+                                                        UNDP Final Approve</button>
+                                                    @endhasanyrole -->
+
+                                            <button type="button" class="btn btn-sm btn-light-dark"
+                                                onclick="openNotesModal('housing','history')">ملاحظات</button>
+                                            <button type="button" class="btn btn-sm btn-light-info"
+                                                onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
+                                            <button type="button" class="btn btn-sm btn-light-primary"
+                                                onclick="reloadHousingAssessmentTable();">
+                                                <i class="ki-duotone ki-arrows-circle fs-6">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                تحديث
+                                            </button>
                                         </div>
                                     </div>
 
@@ -1008,50 +1018,50 @@
             let sectionId = prefix + '_section_' + index;
 
             let html = `
-                                                                                                                                                            <div class="assessment-section mb-4">
-                                                                                                                                                                <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
-                                                                                                                                                                     data-bs-toggle="collapse"
-                                                                                                                                                                     data-bs-target="#${sectionId}">
-                                                                                                                                                                    <div>
-                                                                                                                                                                        <div class="fw-bold fs-5 text-gray-800">${section}</div>
-                                                                                                                                                                        <div class="section-progress-bar mt-2">
-                                                                                                                                                                            <div class="section-progress-fill" style="width:${percent}%"></div>
-                                                                                                                                                                        </div>
-                                                                                                                                                                    </div>
+                                                                                                                                                                            <div class="assessment-section mb-4">
+                                                                                                                                                                                <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
+                                                                                                                                                                                     data-bs-toggle="collapse"
+                                                                                                                                                                                     data-bs-target="#${sectionId}">
+                                                                                                                                                                                    <div>
+                                                                                                                                                                                        <div class="fw-bold fs-5 text-gray-800">${section}</div>
+                                                                                                                                                                                        <div class="section-progress-bar mt-2">
+                                                                                                                                                                                            <div class="section-progress-fill" style="width:${percent}%"></div>
+                                                                                                                                                                                        </div>
+                                                                                                                                                                                    </div>
 
-                                                                                                                                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                                                                                                                                        <span class="badge badge-light-primary">${items.length} سؤال</span>
-                                                                                                                                                                        <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
-                                                                                                                                                                    </div>
-                                                                                                                                                                </div>
+                                                                                                                                                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                                                                                        <span class="badge badge-light-primary">${items.length} سؤال</span>
+                                                                                                                                                                                        <span class="badge badge-light-success assessment-progress">${percent}% مكتمل</span>
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                </div>
 
-                                                                                                                                                                <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
-                                                                                                                                                        `;
+                                                                                                                                                                                <div id="${sectionId}" class="collapse ${opened ? 'show' : ''}">
+                                                                                                                                                                        `;
 
             items.forEach(function (row) {
                 let hasAnswer = isAnswered(row);
                 let edited = isEdited(row);
 
                 html += `
-                                                                                    <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''} ${row.rowClass || ''}">                                                                                <div class="row g-4 align-items-start">
-                                                                                                                                                                        <div class="col-xl-5 col-lg-12">
-                                                                                                                                                                            <div class="assessment-question">${row.question || '-'}</div>
-                                                                                                                                                                        </div>
+                                                                                                    <div class="assessment-item ${hasAnswer ? 'has-answer' : 'is-missing'} ${edited ? 'is-edited' : ''} ${row.rowClass || ''}">                                                                                <div class="row g-4 align-items-start">
+                                                                                                                                                                                        <div class="col-xl-5 col-lg-12">
+                                                                                                                                                                                            <div class="assessment-question">${row.question || '-'}</div>
+                                                                                                                                                                                        </div>
 
-                                                                                                                                                                        <div class="col-xl-3 col-lg-6">
-                                                                                                                                                                            <div class="text-muted fs-8 mb-1">الجواب</div>
-                                                                                                                                                                            <div class="assessment-answer">${row.answer || '-'}</div>
-                                                                                                                                                                        </div>
+                                                                                                                                                                                        <div class="col-xl-3 col-lg-6">
+                                                                                                                                                                                            <div class="text-muted fs-8 mb-1">الجواب</div>
+                                                                                                                                                                                            <div class="assessment-answer">${row.answer || '-'}</div>
+                                                                                                                                                                                        </div>
 
-                                                                                                                                                                      ${!isAreaManager ? `
-                                                            <div class="col-xl-4 col-lg-6">
-                                                                <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
-                                                                <div class="assessment-edit">${row.editAnswer || '-'}</div>
-                                                            </div>
-                                                        ` : ''}
-                                                                                                                                                                    </div>
-                                                                                                                                                                </div>
-                                                                                                                                                            `;
+                                                                                                                                                                                      ${!isAreaManager ? `
+                                                                            <div class="col-xl-4 col-lg-6">
+                                                                                <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
+                                                                                <div class="assessment-edit">${row.editAnswer || '-'}</div>
+                                                                            </div>
+                                                                        ` : ''}
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                </div>
+                                                                                                                                                                            `;
             });
 
             html += `</div></div>`;
@@ -1089,10 +1099,10 @@
             });
 
             $(target).html(html || `
-                                                                                                                                                            <div class="alert alert-light-warning">
-                                                                                                                                                                لا توجد نتائج مطابقة للفلتر الحالي.
-                                                                                                                                                            </div>
-                                                                                                                                                        `);
+                                                                                                                                                                            <div class="alert alert-light-warning">
+                                                                                                                                                                                لا توجد نتائج مطابقة للفلتر الحالي.
+                                                                                                                                                                            </div>
+                                                                                                                                                                        `);
 
             setTimeout(function () {
                 initInlineEditors();
@@ -1239,7 +1249,7 @@
             has_mezzanine: ['5. Building Accessories', 514],
             mezzanine_status: ['5. Building Accessories', 515],
             roof_terrace_area: ['5. Building Accessories', 516],
-           // comments_recommendations: ['6. Engineer Comments', 600],
+            // comments_recommendations: ['6. Engineer Comments', 600],
             building_image: ['6. Engineer Comments', 601],
             building_image2: ['6. Engineer Comments', 602],
         };
@@ -1382,7 +1392,7 @@
 
             techncial_boq: ['17. Techncial-BOQ', 1700],
             tech_boq: ['17. Techncial-BOQ', 1701],
-           // final_comments: ['3. ملاحظات الوحدة', 301],
+            // final_comments: ['3. ملاحظات الوحدة', 301],
 
         };
 
@@ -1610,13 +1620,13 @@
                     let rows = '';
                     history.forEach(function (item) {
                         rows += `
-                                                                                                                                                                        <tr>
-                                                                                                                                                                            <td>${escapeHtml(item.status_name ?? '-')}</td>
-                                                                                                                                                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                                                                                                                                            <td>${escapeHtml(item.notes ?? '-')}</td>
-                                                                                                                                                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
-                                                                                                                                                                        </tr>
-                                                                                                                                                                    `;
+                                                                                                                                                                                        <tr>
+                                                                                                                                                                                            <td>${escapeHtml(item.status_name ?? '-')}</td>
+                                                                                                                                                                                            <td>${escapeHtml(item.user_name ?? '-')}</td>
+                                                                                                                                                                                            <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                                                                                                            <td>${escapeHtml(item.created_at ?? '-')}</td>
+                                                                                                                                                                                        </tr>
+                                                                                                                                                                                    `;
                     });
 
                     $('#statusHistoryTable').html(rows);
@@ -1789,18 +1799,18 @@
 
                     if (
                         type === 'housing_table' &&
-                            [
-                                'damaged_area_m2',
-                                'unit_owner',
-                                'reh_kitchen',
-                                'reh_bathroom',
-                                'is_the_housing_unit_or_living_habitable',
-                                'external_finishing_of_the_unit',
-                                'internal_finishing_of_the_unit',
-                                'floor_number',
-                                'housing_unit_number',
-                                'unit_damage_status'
-                            ].includes(field)
+                        [
+                            'damaged_area_m2',
+                            'unit_owner',
+                            'reh_kitchen',
+                            'reh_bathroom',
+                            'is_the_housing_unit_or_living_habitable',
+                            'external_finishing_of_the_unit',
+                            'internal_finishing_of_the_unit',
+                            'floor_number',
+                            'housing_unit_number',
+                            'unit_damage_status'
+                        ].includes(field)
                     ) {
                         loadHousingSidebarSummary();
                     }
@@ -2263,21 +2273,21 @@
             (items || []).forEach(function (item, index) {
                 let color = colors[index % colors.length];
                 html += `
-                    <div class="col-6 col-lg-12">
-                        <div class="summary-box bg-light-${color}">
-                            <div class="summary-title">${escapeHtml(item.label || '')}</div>
-                            <div class="summary-value text-${color}">${escapeHtml(item.value || '--')}</div>
-                        </div>
-                    </div>`;
+                                    <div class="col-6 col-lg-12">
+                                        <div class="summary-box bg-light-${color}">
+                                            <div class="summary-title">${escapeHtml(item.label || '')}</div>
+                                            <div class="summary-value text-${color}">${escapeHtml(item.value || '--')}</div>
+                                        </div>
+                                    </div>`;
             });
 
             $('#housing_summary_items').html(html || `
-                <div class="col-12">
-                    <div class="summary-box bg-light">
-                        <div class="summary-title">ملخص الوحدة</div>
-                        <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
-                    </div>
-                </div>`);
+                                <div class="col-12">
+                                    <div class="summary-box bg-light">
+                                        <div class="summary-title">ملخص الوحدة</div>
+                                        <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
+                                    </div>
+                                </div>`);
         }
 
         function renderBuildingSummaryItems(rows) {
@@ -2294,21 +2304,21 @@
 
                 let color = colors[index % colors.length];
                 html += `
-                    <div class="col-6 col-lg-12">
-                        <div class="summary-box bg-light-${color}">
-                            <div class="summary-title">${escapeHtml(BUILDING_SUMMARY_LABELS[field] || field)}</div>
-                            <div class="summary-value text-${color}">${escapeHtml(value)}</div>
-                        </div>
-                    </div>`;
+                                    <div class="col-6 col-lg-12">
+                                        <div class="summary-box bg-light-${color}">
+                                            <div class="summary-title">${escapeHtml(BUILDING_SUMMARY_LABELS[field] || field)}</div>
+                                            <div class="summary-value text-${color}">${escapeHtml(value)}</div>
+                                        </div>
+                                    </div>`;
             });
 
             $('#building_summary_items').html(html || `
-                <div class="col-12">
-                    <div class="summary-box bg-light">
-                        <div class="summary-title">ملخص المبنى</div>
-                        <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
-                    </div>
-                </div>`);
+                                <div class="col-12">
+                                    <div class="summary-box bg-light">
+                                        <div class="summary-title">ملخص المبنى</div>
+                                        <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
+                                    </div>
+                                </div>`);
         }
 
         function cleanAuditText(text) {
@@ -2379,51 +2389,51 @@
                             let b = response.blocked_buildings[0];
 
                             let html = `
-                            <div class="alert alert-warning fw-bold mb-5">
-                                ${b.reason ?? 'لا يمكن الاعتماد النهائي'}
-                            </div>
+                                            <div class="alert alert-warning fw-bold mb-5">
+                                                ${b.reason ?? 'لا يمكن الاعتماد النهائي'}
+                                            </div>
 
-                            <div class="mb-5">
-                                <div><strong>Building ID:</strong> ${b.building_id ?? '-'}</div>
-                                <div><strong>اسم المبنى:</strong> ${b.building_name ?? '-'}</div>
-                                <div><strong>GlobalID:</strong> ${b.building_globalid ?? '-'}</div>
-                                <div><strong>Status:</strong> ${b.engineer_status ?? '-'}</div>
-                            </div>
-                        `;
+                                            <div class="mb-5">
+                                                <div><strong>Building ID:</strong> ${b.building_id ?? '-'}</div>
+                                                <div><strong>اسم المبنى:</strong> ${b.building_name ?? '-'}</div>
+                                                <div><strong>GlobalID:</strong> ${b.building_globalid ?? '-'}</div>
+                                                <div><strong>Status:</strong> ${b.engineer_status ?? '-'}</div>
+                                            </div>
+                                        `;
 
                             if (b.failed_units && b.failed_units.length > 0) {
                                 html += `
-                                <div class="table-responsive">
-                                    <table class="table table-row-bordered table-striped align-middle">
-                                        <thead>
-                                            <tr>
-                                                <th>ObjectID</th>
-                                                <th>GlobalID</th>
-                                                <th>اسم المالك</th>
-                                                <th>Status</th>
-                                                <th>Reason</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                            `;
+                                                <div class="table-responsive">
+                                                    <table class="table table-row-bordered table-striped align-middle">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>ObjectID</th>
+                                                                <th>GlobalID</th>
+                                                                <th>اسم المالك</th>
+                                                                <th>Status</th>
+                                                                <th>Reason</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                            `;
 
                                 b.failed_units.forEach(function (u) {
                                     html += `
-                                    <tr>
-                                        <td>${u.objectid ?? '-'}</td>
-                                        <td>${u.globalid ?? '-'}</td>
-                                        <td>${u.owner_name ?? '-'}</td>
-                                        <td>${u.engineer_status ?? '-'}</td>
-                                        <td class="text-danger fw-bold">${u.reason ?? '-'}</td>
-                                    </tr>
-                                `;
+                                                    <tr>
+                                                        <td>${u.objectid ?? '-'}</td>
+                                                        <td>${u.globalid ?? '-'}</td>
+                                                        <td>${u.owner_name ?? '-'}</td>
+                                                        <td>${u.engineer_status ?? '-'}</td>
+                                                        <td class="text-danger fw-bold">${u.reason ?? '-'}</td>
+                                                    </tr>
+                                                `;
                                 });
 
                                 html += `
-                                        </tbody>
-                                    </table>
-                                </div>
-                            `;
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            `;
                             }
 
                             $('#failedUnitsContainer').html(html);
@@ -2504,12 +2514,12 @@
 
             return history.map(function (item) {
                 return `
-                                                                                                                                    <div class="border rounded p-2 mb-2 bg-light-info text-start">
-                                                                                                                                        <div><span class="audit-label">القيمة</span>: <span class="fw-semibold">${escapeHtml(cleanAuditText(item.value))}</span></div>
-                                                                                                                                        <div><span class="audit-label">المستخدم</span>: ${escapeHtml(item.user_name || '-')}</div>
-                                                                                                                                        <div><span class="audit-label">الوقت</span>: ${escapeHtml(item.updated_at || '-')}</div>
-                                                                                                                                    </div>
-                                                                                                                                `;
+                                                                                                                                                    <div class="border rounded p-2 mb-2 bg-light-info text-start">
+                                                                                                                                                        <div><span class="audit-label">القيمة</span>: <span class="fw-semibold">${escapeHtml(cleanAuditText(item.value))}</span></div>
+                                                                                                                                                        <div><span class="audit-label">المستخدم</span>: ${escapeHtml(item.user_name || '-')}</div>
+                                                                                                                                                        <div><span class="audit-label">الوقت</span>: ${escapeHtml(item.updated_at || '-')}</div>
+                                                                                                                                                    </div>
+                                                                                                                                                `;
             }).join('');
         }
 
@@ -2518,31 +2528,31 @@
             let historyCount = Array.isArray(history) ? history.length : 0;
 
             return `
-                                                                                                                                <div class="audit-edit-card">
-                                                                                                                                    <div class="audit-label">الأصل</div>
-                                                                                                                                    <div class="audit-original-value">${escapeHtml(originalText)}</div>
+                                                                                                                                                <div class="audit-edit-card">
+                                                                                                                                                    <div class="audit-label">الأصل</div>
+                                                                                                                                                    <div class="audit-original-value">${escapeHtml(originalText)}</div>
 
-                                                                                                                                    <div class="audit-label text-warning mt-3">آخر تعديل</div>
-                                                                                                                                    <div class="audit-new-value">${escapeHtml(displayValue)}</div>
+                                                                                                                                                    <div class="audit-label text-warning mt-3">آخر تعديل</div>
+                                                                                                                                                    <div class="audit-new-value">${escapeHtml(displayValue)}</div>
 
-                                                                                                                                    <div class="audit-label text-primary mt-3">اسم المعدّل</div>
-                                                                                                                                    <div>${escapeHtml(userName)}</div>
+                                                                                                                                                    <div class="audit-label text-primary mt-3">اسم المعدّل</div>
+                                                                                                                                                    <div>${escapeHtml(userName)}</div>
 
-                                                                                                                                    <div class="audit-label text-primary mt-3">وقت التعديل</div>
-                                                                                                                                    <div>${escapeHtml(updatedAt)}</div>
+                                                                                                                                                    <div class="audit-label text-primary mt-3">وقت التعديل</div>
+                                                                                                                                                    <div>${escapeHtml(updatedAt)}</div>
 
-                                                                                                                                    <button type="button"
-                                                                                                                                            class="btn btn-sm btn-light-primary mt-4"
-                                                                                                                                            data-bs-toggle="collapse"
-                                                                                                                                            data-bs-target="#${collapseId}">
-                                                                                                                                        عرض سجل التعديلات (${historyCount})
-                                                                                                                                    </button>
+                                                                                                                                                    <button type="button"
+                                                                                                                                                            class="btn btn-sm btn-light-primary mt-4"
+                                                                                                                                                            data-bs-toggle="collapse"
+                                                                                                                                                            data-bs-target="#${collapseId}">
+                                                                                                                                                        عرض سجل التعديلات (${historyCount})
+                                                                                                                                                    </button>
 
-                                                                                                                                    <div class="collapse mt-3" id="${collapseId}">
-                                                                                                                                        ${renderEditHistoryItems(history)}
-                                                                                                                                    </div>
-                                                                                                                                </div>
-                                                                                                                            `;
+                                                                                                                                                    <div class="collapse mt-3" id="${collapseId}">
+                                                                                                                                                        ${renderEditHistoryItems(history)}
+                                                                                                                                                    </div>
+                                                                                                                                                </div>
+                                                                                                                                            `;
         }
 
         function updateAnswerCardAfterSave(field, globalid, type, value, response) {
