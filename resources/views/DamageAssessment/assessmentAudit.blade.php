@@ -1998,10 +1998,6 @@
                         dataSrc: function (json) {
                             let rows = json.data || [];
 
-                            rows = rows.filter(function (row) {
-                                return getBuildingMap(row) !== null;
-                            });
-
                             rows.forEach(function (row) {
                                 row.section = getBuildingSection(row);
                                 row.sort_order = getBuildingSort(row);
@@ -2155,10 +2151,6 @@
                                 name: r.name,
                                 rowClass: r.rowClass
                             })));
-                            rows = rows.filter(function (row) {
-                                return getHousingMap(row) !== null;
-                            });
-
                             rows.forEach(function (row) {
                                 row.section = getHousingSection(row);
                                 row.sort_order = getHousingSort(row);
