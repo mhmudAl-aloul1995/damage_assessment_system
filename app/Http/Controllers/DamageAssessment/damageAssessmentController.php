@@ -27,7 +27,7 @@ class damageAssessmentController extends Controller
         $token = $arcgis->getToken();
 
         $startDate = '2026-04-01';
-        $endDate = '2026-04-30';//Carbon::today()->toDateString();
+        $endDate = Carbon::today()->toDateString();
 
         $data = [
             'buildings' => Building::whereBetween('creationdate', [$startDate, $endDate])
