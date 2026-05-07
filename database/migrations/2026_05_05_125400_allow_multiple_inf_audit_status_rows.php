@@ -9,6 +9,18 @@ return new class extends Migration
 {
     private function indexExists(string $table, string $index): bool
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $rows = DB::select("PRAGMA index_list('{$table}')");
+
+            foreach ($rows as $row) {
+                if (($row->name ?? null) === $index) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         $rows = DB::select("SHOW INDEX FROM `{$table}` WHERE Key_name = ?", [$index]);
 
         return count($rows) > 0;

@@ -91,6 +91,14 @@ class AssessmentStatusSeeder extends Seeder
                 'order_step' => 10,
             ],
 
+            [
+                'name' => 'undp_final_approve',
+                'label_en' => 'UNDP Final Approve',
+                'label_ar' => 'اعتماد نهائي UNDP',
+                'stage' => 'system',
+                'order_step' => 11,
+            ],
+
         ];
 
         foreach ($statuses as &$status) {
@@ -98,10 +106,28 @@ class AssessmentStatusSeeder extends Seeder
             $status['updated_at'] = now();
         }
 
-        DB::table('assessment_statuses')->upsert(
-            $statuses,
-            ['name'], // unique column
-            ['label_en', 'label_ar', 'stage', 'order_step', 'updated_at']
-        );
+        foreach ($statuses as $status) {
+            $values = [
+                'label_en' => $status['label_en'],
+                'label_ar' => $status['label_ar'],
+                'stage' => $status['stage'],
+                'order_step' => $status['order_step'],
+                'updated_at' => $status['updated_at'],
+            ];
+
+            if (DB::table('assessment_statuses')->where('name', $status['name'])->exists()) {
+                DB::table('assessment_statuses')
+                    ->where('name', $status['name'])
+                    ->update($values);
+
+                continue;
+            }
+
+            DB::table('assessment_statuses')->insert([
+                'name' => $status['name'],
+                ...$values,
+                'created_at' => $status['created_at'],
+            ]);
+        }
     }
 }

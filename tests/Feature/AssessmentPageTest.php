@@ -4,6 +4,7 @@ use App\Models\Assessment;
 use App\Models\AssessmentStatus;
 use App\Models\Building;
 use App\Models\BuildingStatus;
+use App\Models\BuildingStatusHistory;
 use App\Models\EditAssessment;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -248,5 +249,218 @@ it('allows auditing supervisors to final approve from the assessment audit page'
         'building_id' => $building->objectid,
         'status_id' => $finalStatus->id,
         'type' => 'final',
+    ]);
+});
+
+it('requires building final approval before undp final approval status', function () {
+    $role = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $finalStatus = AssessmentStatus::query()->create([
+        'name' => 'final_approval',
+        'label_en' => 'Final Approval',
+        'label_ar' => 'Final Approval',
+        'stage' => 'team_leader',
+        'order_step' => 9,
+    ]);
+
+    $undpStatus = AssessmentStatus::query()->where('name', 'undp_final_approve')->firstOrFail();
+
+    $building = Building::query()->create([
+        'objectid' => 9301,
+        'globalid' => 'undp-building',
+        'building_name' => 'UNDP Building',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'undp_final_approve',
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'لا يمكن اعتماد UNDP Final Approve قبل الاعتماد النهائي للمبنى.');
+
+    BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $finalStatus->id,
+        'user_id' => $user->id,
+        'type' => 'final',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'undp_final_approve',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.status_name', 'undp_final_approve');
+
+    $this->assertDatabaseHas('building_status_histories', [
+        'building_id' => $building->objectid,
+        'status_id' => $undpStatus->id,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'undp_final_approve',
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'لا يمكن تكرار نفس الحالة الحالية.');
+});
+
+it('checks parent building final approval before housing undp final approval status', function () {
+    $role = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $finalStatus = AssessmentStatus::query()->create([
+        'name' => 'final_approval',
+        'label_en' => 'Final Approval',
+        'label_ar' => 'Final Approval',
+        'stage' => 'team_leader',
+        'order_step' => 9,
+    ]);
+
+    $undpStatus = AssessmentStatus::query()->where('name', 'undp_final_approve')->firstOrFail();
+
+    $building = Building::query()->create([
+        'objectid' => 9401,
+        'globalid' => 'undp-parent-building',
+        'building_name' => 'UNDP Parent Building',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 9402,
+        'globalid' => 'undp-housing',
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Owner',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.set.status'), [
+            'globalid' => $housing->globalid,
+            'status' => 'undp_final_approve',
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'لا يمكن اعتماد UNDP Final Approve قبل الاعتماد النهائي للمبنى.');
+
+    BuildingStatusHistory::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $finalStatus->id,
+        'user_id' => $user->id,
+        'type' => 'final',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.set.status'), [
+            'globalid' => $housing->globalid,
+            'status' => 'undp_final_approve',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.status_name', 'undp_final_approve');
+
+    $this->assertDatabaseHas('housing_statuses', [
+        'housing_id' => $housing->objectid,
+        'status_id' => $undpStatus->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.set.status'), [
+            'globalid' => $housing->globalid,
+            'status' => 'undp_final_approve',
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'لا يمكن تكرار نفس الحالة الحالية.');
+});
+
+it('allows database officers to set undp final approval only after final approval', function () {
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $finalStatus = AssessmentStatus::query()->create([
+        'name' => 'final_approval',
+        'label_en' => 'Final Approval',
+        'label_ar' => 'Final Approval',
+        'stage' => 'team_leader',
+        'order_step' => 9,
+    ]);
+
+    $undpStatus = AssessmentStatus::query()->where('name', 'undp_final_approve')->firstOrFail();
+
+    $building = Building::query()->create([
+        'objectid' => 9501,
+        'globalid' => 'database-officer-undp-building',
+        'building_name' => 'Database Officer UNDP Building',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $finalStatus->id,
+        'user_id' => $user->id,
+        'type' => 'final',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'accepted',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'undp_final_approve',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.type', 'Database Officer')
+        ->assertJsonPath('data.status_name', 'undp_final_approve');
+
+    $this->assertDatabaseHas('building_statuses', [
+        'building_id' => $building->objectid,
+        'status_id' => $undpStatus->id,
+        'type' => 'Database Officer',
+    ]);
+
+    $bulkBuilding = Building::query()->create([
+        'objectid' => 9502,
+        'globalid' => 'database-officer-undp-bulk-building',
+        'building_name' => 'Database Officer UNDP Bulk Building',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $bulkBuilding->objectid,
+        'status_id' => $finalStatus->id,
+        'user_id' => $user->id,
+        'type' => 'final',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('audit.building.undpFinalApprove'), [
+            'building_ids' => [$bulkBuilding->objectid],
+        ])
+        ->assertOk()
+        ->assertJsonPath('approved_count', 1);
+
+    $this->assertDatabaseHas('building_statuses', [
+        'building_id' => $bulkBuilding->objectid,
+        'status_id' => $undpStatus->id,
+        'type' => 'Database Officer',
     ]);
 });

@@ -34,7 +34,7 @@ class BuildingProductivityReportController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Database Officer|Project Officer|Auditing Supervisor|Area Manager|Team Leader|Team Leader -INF');
+        $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|Team Leader|Team Leader -INF');
     }
 
     public function index(Request $request): View

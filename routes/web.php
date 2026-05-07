@@ -25,6 +25,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicBuilding\PublicBuildingController;
 use App\Http\Controllers\Report\AreaProductivityReportController;
 use App\Http\Controllers\Report\BuildingProductivityReportController;
+use App\Http\Controllers\Report\DamageStatisticsReportController;
 use App\Http\Controllers\Report\reportController;
 use App\Http\Controllers\Report\SurveyReportController;
 use App\Http\Controllers\RoadFacility\RoadFacilityController;
@@ -39,7 +40,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Report\DamageStatisticsReportController;
 
 Route::get('/', function () {
 
@@ -94,10 +94,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="' . $safeRepo . '" add .',
-            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
-            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
-            'git -c safe.directory="' . $safeRepo . '" push',
+            'git -c safe.directory="'.$safeRepo.'" add .',
+            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
+            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
+            'git -c safe.directory="'.$safeRepo.'" push',
         ];
 
         $outputs = [];
@@ -117,7 +117,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (!$result->successful()) {
+            if (! $result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -220,7 +220,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
-        Route::get('/', fn() => redirect()->route('telegram.destinations.index'))->name('index');
+        Route::get('/', fn () => redirect()->route('telegram.destinations.index'))->name('index');
         Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
         Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
         Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
@@ -298,7 +298,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/roads/{road:globalid}/children', [InfAuditRoadFacilityController::class, 'storeChild'])->name('roads.children.store');
         Route::post('/roads/{road:globalid}/field-update', [InfAuditRoadFacilityController::class, 'updateField'])->name('roads.field-update');
     });
-
 
     Route::prefix('reports')
         ->name('reports.')
@@ -384,6 +383,8 @@ Route::middleware('auth')->group(function () {
     Route::get('showAssessmentAudit/{buildingGlobalid}/{housingGlobalid?}', [auditController::class, 'showAssessmentAudit']);
     Route::post('audit/building/final-approve', [auditController::class, 'finalApproveSelected'])
         ->name('audit.building.finalApprove');
+    Route::post('audit/building/undp-final-approve', [auditController::class, 'undpFinalApproveSelected'])
+        ->name('audit.building.undpFinalApprove');
     Route::post('/assessment/inline-update', [auditController::class, 'updateInlineAssessment'])
         ->name('assessment.inline.update');
     Route::get('/assessment/inline-history', [auditController::class, 'inlineAssessmentHistory'])
@@ -467,4 +468,4 @@ Route::get('/import-buildings-test', [BuildingImportController::class, 'import']
 use App\Http\Controllers\HousingUnitImportController;
 
 Route::get('/import-housing-units', [HousingUnitImportController::class, 'import']);
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

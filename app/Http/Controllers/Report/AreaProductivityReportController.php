@@ -16,7 +16,7 @@ class AreaProductivityReportController extends Controller
 {
     public function __construct(private readonly AreaProductivityReportService $reportService)
     {
-        $this->middleware('role:Database Officer|Project Officer|Auditing Supervisor|Area Manager');
+        $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager');
     }
 
     public function housingUnits(AreaProductivityReportFilterRequest $request): View

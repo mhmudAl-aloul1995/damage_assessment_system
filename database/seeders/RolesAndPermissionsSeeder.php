@@ -90,6 +90,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'name' => 'QC/QA Engineer',
             'guard_name' => 'web',
         ]);
+        $undpProjectManager = Role::firstOrCreate([
+            'name' => 'undp-Project Manager',
+            'guard_name' => 'web',
+        ]);
         $legalAuditor = Role::firstOrCreate([
             'name' => 'Legal Auditor',
             'guard_name' => 'web',
@@ -127,6 +131,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'view committee decisions',
             'sign committee decisions',
             'view telegram integrations',
+        ]);
+        $undpProjectManager->givePermissionTo([
+            'view committee decisions',
+            'create committee decisions',
+            'edit committee decisions',
+            'manage committee members',
+            'manage committee decision content',
+            'send committee telegram',
+            'sync committee decision arcgis',
+            'view telegram integrations',
+            'manage telegram integrations',
         ]);
         $legalAuditor->givePermissionTo([
             'view committee decisions',

@@ -99,6 +99,13 @@
             color: #fff !important
         }
 
+        .building-status-btn.btn-light-primary.is-active,
+        .housing-status-btn.btn-light-primary.is-active {
+            background: var(--bs-primary) !important;
+            border-color: var(--bs-primary) !important;
+            color: #fff !important
+        }
+
         .building-status-btn:disabled,
         .housing-status-btn:disabled {
             cursor: not-allowed;
@@ -166,9 +173,9 @@
         .audit-toolbar-sticky {
             position: sticky;
             top: 70px;
-            z-index: 30;
+            z-index: 50;
             background: #fff;
-            padding: .75rem 0;
+            padding: 10px 0;
             border-bottom: 1px solid #eef1f5
         }
 
@@ -505,7 +512,7 @@
                             </div>
 
                             <div class="card-toolbar">
-                                <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap">
+                                <div class="audit-toolbar-sticky d-flex justify-content-end align-items-center gap-2 flex-wrap">
                                     @role('Legal Auditor')
                                     <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                         data-status="accepted" onclick="setBuildingStatus('accepted')">مقبول</button>
@@ -524,6 +531,12 @@
                                         لمراجعة</button>
                                     @endrole
 
+                                    @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
+                                    <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
+                                        data-status="undp_final_approve" onclick="setBuildingStatus('undp_final_approve')">
+                                        UNDP Final Approve</button>
+                                    @endhasanyrole
+
                                     <button type="button" class="btn btn-sm btn-light-dark"
                                         onclick="openNotesModal('building','history')">ملاحظات</button>
                                     <button type="button" class="btn btn-sm btn-light-info"
@@ -541,7 +554,30 @@
                         </div>
 
                         <div class="card-body pt-0 pb-4">
-                            <div class="audit-toolbar-sticky mb-4">
+                            <div class="row g-7">
+                                <div class="col-12 col-lg-3 col-xl-2">
+                                    <div class="audit-sticky-menu bg-white border rounded-3 shadow-sm">
+                                        <div class="card-header py-3 px-4">
+                                            <div class="card-title m-0">
+                                                <h3 class="fw-bold fs-4 mb-0">ملخص المبنى</h3>
+                                            </div>
+                                        </div>
+
+                                        <div class="card-body p-3">
+                                            <div class="row g-3" id="building_summary_items">
+                                                <div class="col-12">
+                                                    <div class="summary-box bg-light">
+                                                        <div class="summary-title">ملخص المبنى</div>
+                                                        <div class="summary-value text-muted">--</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-9 col-xl-10">
+                                    <div class="audit-toolbar-sticky mb-4">
                                 <div class="d-flex flex-wrap gap-2">
                                     <button type="button"
                                         class="btn btn-sm btn-light-primary audit-filter-btn building-filter-btn is-active"
@@ -555,10 +591,12 @@
                                     <button type="button"
                                         class="btn btn-sm btn-light-success audit-filter-btn building-filter-btn"
                                         data-filter="answered">المجاب فقط</button>
+                                        </div>
+                                    </div>
+
+                                    <div id="building_assessment_accordion" class="accordion accordion-icon-toggle"></div>
                                 </div>
                             </div>
-
-                            <div id="building_assessment_accordion" class="accordion accordion-icon-toggle"></div>
 
                             <table class="d-none" id="kt_table_building_assessment">
                                 <thead>
@@ -623,7 +661,7 @@
                                 </div>
 
                                 <div class="card-body p-3">
-                                    <div class="row g-3">
+                                    <div class="row g-3" id="housing_summary_items">
                                         <div class="col-6 col-lg-12">
                                             <div class="summary-box bg-light-info">
                                                 <div class="summary-title">مالك الوحدة</div>
@@ -700,7 +738,7 @@
                                     </div>
 
                                     <div class="card-toolbar">
-                                        <div class="d-flex align-items-center flex-wrap fw-bold gap-2">
+                                        <div class="audit-toolbar-sticky d-flex align-items-center flex-wrap fw-bold gap-2">
                                             <div class="me-3">
                                                 <select name="globalid" class="form-select form-select-solid w-250px"
                                                     data-control="select2" data-placeholder="إختر الوحدة">
@@ -730,6 +768,12 @@
                                                 data-status="need_review" onclick="setHousingStatus('need_review')">بحاجة
                                                 لمراجعة</button>
                                             @endrole
+
+                                            @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
+                                            <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
+                                                data-status="undp_final_approve" onclick="setHousingStatus('undp_final_approve')">
+                                                UNDP Final Approve</button>
+                                            @endhasanyrole
 
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('housing','history')">ملاحظات</button>
@@ -898,12 +942,31 @@
         function normalizeStatus(statusName) {
             if (!statusName) return null;
             statusName = String(statusName).toLowerCase();
+            if (statusName.includes('undp_final_approve')) return 'undp_final_approve';
             if (statusName.includes('accepted')) return 'accepted';
             if (statusName.includes('rejected')) return 'rejected';
             if (statusName.includes('need_review')) return 'need_review';
             if (statusName.includes('legal_notes')) return 'legal_notes';
             return null;
         }
+
+        const BUILDING_SUMMARY_FIELDS = [
+            'floor_nos',
+            'ground_floor_area__m2',
+            'floor_area_m2',
+            'building_roof_type',
+            'concrete_area',
+            'aspestos_area'
+        ];
+
+        const BUILDING_SUMMARY_LABELS = {
+            floor_nos: 'عدد الطوابق',
+            ground_floor_area__m2: 'مساحة الطابق الأرضي',
+            floor_area_m2: 'مساحة الطابق المتكرر',
+            building_roof_type: 'نوع سطح المبنى',
+            concrete_area: 'مساحة الباطون',
+            aspestos_area: 'مساحة الصاج'
+        };
 
         function isAnswered(row) {
             let text = $('<div>').html(row.answer || '').text().trim();
@@ -1010,6 +1073,12 @@
 
         function renderAccordion(target, rows, filter, prefix) {
             rows = applyAuditFilter(rows, filter);
+            rows = rows.filter(function (row) {
+                return !(
+                    (prefix === 'building' && row.section === '1. ملخص المبنى')
+                    || (prefix === 'housing' && row.section === '1. ملخص الوحدة')
+                );
+            });
 
             let groups = {};
             rows.forEach(function (row) {
@@ -1019,7 +1088,9 @@
             });
 
             let html = '';
-            Object.keys(groups).forEach(function (section, index) {
+            Object.keys(groups).sort(function (a, b) {
+                return sectionSortWeight(a, prefix) - sectionSortWeight(b, prefix);
+            }).forEach(function (section, index) {
                 html += sectionHtml(section, groups[section], index, prefix, true);
             });
 
@@ -1033,6 +1104,15 @@
                 initInlineEditors();
                 if (typeof KTMenu !== 'undefined') KTMenu.createInstances();
             }, 100);
+        }
+
+        function sectionSortWeight(section, prefix) {
+            const buildingOrder = ['1. ملخص المبنى', '2. مرفقات المبنى', '3. ملاحظات المبنى'];
+            const housingOrder = ['1. ملخص الوحدة', '2. مرفقات الوحدة', '3. ملاحظات الوحدة'];
+            const preferredOrder = prefix === 'housing' ? housingOrder : buildingOrder;
+            const index = preferredOrder.indexOf(section);
+
+            return index >= 0 ? index : 100;
         }
 
         $(document).on('click', '.housing-filter-btn', function () {
@@ -1068,9 +1148,9 @@
             other_material: ['1. Building Information', 107],
             building_age: ['1. Building Information', 108],
             land_area: ['1. Building Information', 109],
-            floor_nos: ['1. Building Information', 110],
-            ground_floor_area__m2: ['1. Building Information', 111],
-            floor_area_m2: ['1. Building Information', 112],
+            floor_nos: ['1. ملخص المبنى', 10],
+            ground_floor_area__m2: ['1. ملخص المبنى', 11],
+            floor_area_m2: ['1. ملخص المبنى', 12],
             units_nos: ['1. Building Information', 112],
             damaged_units_nos: ['1. Building Information', 113],
             occupied_units_nos: ['1. Building Information', 114],
@@ -1084,10 +1164,10 @@
             bodies_present: ['1. Building Information', 122],
             estimated_number_of_bodies: ['1. Building Information', 123],
             building_status_visit: ['1. Building Information', 124],
-            building_roof_type: ['1.18 Building Status at the Time of Visit', 180],
+            building_roof_type: ['1. ملخص المبنى', 13],
             clay_tile_area: ['1.18 Building Status at the Time of Visit', 181],
-            concrete_area: ['1.18 Building Status at the Time of Visit', 182],
-            aspestos_area: ['1.18 Building Status at the Time of Visit', 183],
+            concrete_area: ['1. ملخص المبنى', 14],
+            aspestos_area: ['1. ملخص المبنى', 15],
             scorite_area: ['1.18 Building Status at the Time of Visit', 184],
             other_roof: ['1.18 Building Status at the Time of Visit', 185],
             other_roof_area: ['1.18 Building Status at the Time of Visit', 186],
@@ -1113,17 +1193,17 @@
             agreement_type: ['2. Ownership Information', 218],
             agreement_duration: ['2. Ownership Information', 219],
 
-            has_documents: ['3. Building Attachments', 300],
-            doc_types_available: ['3. Building Attachments', 301],
-            doc_types_other: ['3. Building Attachments', 302],
-            no_documents_reason: ['3. Building Attachments', 303],
-            need_renew_docs: ['3. Building Attachments', 304],
-            doc_challenges: ['3. Building Attachments', 305],
-            doc_challenges_other: ['3. Building Attachments', 306],
-            id_number_photo: ['3. Building Attachments', 307],
-            land_ownership_photo: ['3. Building Attachments', 308],
-            municipal_permit_photo: ['3. Building Attachments', 309],
-            other_documents_photo: ['3. Building Attachments', 310],
+            has_documents: ['4. مستندات المبنى', 400],
+            doc_types_available: ['4. مستندات المبنى', 401],
+            doc_types_other: ['4. مستندات المبنى', 402],
+            no_documents_reason: ['4. مستندات المبنى', 403],
+            need_renew_docs: ['4. مستندات المبنى', 404],
+            doc_challenges: ['4. مستندات المبنى', 405],
+            doc_challenges_other: ['4. مستندات المبنى', 406],
+            id_number_photo: ['4. مستندات المبنى', 407],
+            land_ownership_photo: ['4. مستندات المبنى', 408],
+            municipal_permit_photo: ['4. مستندات المبنى', 409],
+            other_documents_photo: ['4. مستندات المبنى', 410],
 
             has_elevator: ['4. Building Services', 400],
             elevator_number: ['4. Building Services', 401],
@@ -1164,23 +1244,23 @@
             has_mezzanine: ['5. Building Accessories', 514],
             mezzanine_status: ['5. Building Accessories', 515],
             roof_terrace_area: ['5. Building Accessories', 516],
-            comments_recommendations: ['6. Engineer Comments', 600],
-            building_image: ['6. Engineer Comments', 601],
-            building_image2: ['6. Engineer Comments', 602],
+            comments_recommendations: ['3. ملاحظات المبنى', 300],
+            building_image: ['5. صور المبنى', 500],
+            building_image2: ['5. صور المبنى', 501],
         };
 
         const HOUSING_SURVEY_MAP = {
-            attachments: ['0. Introduction', 0],
+            attachments: ['7. Unit Introduction', 700],
 
             housing_unit_group: ['7. Unit Introduction', 701],
             housing_unit_type: ['7. Unit Introduction', 702],
             unit_damage_status: ['7. Unit Introduction', 703],
 
             page8: ['8. Unit Information', 800],
-            floor_number: ['8. Unit Information', 801],
-            housing_unit_number: ['8. Unit Information', 802],
+            floor_number: ['1. ملخص الوحدة', 10],
+            housing_unit_number: ['1. ملخص الوحدة', 11],
             unit_direction: ['8. Unit Information', 803],
-            damaged_area_m2: ['8. Unit Information', 804],
+            damaged_area_m2: ['1. ملخص الوحدة', 12],
             infra_type2: ['8. Unit Information', 805],
             house_unit_ownership: ['8. Unit Information', 806],
             other_ownership: ['8. Unit Information', 807],
@@ -1192,7 +1272,7 @@
             id_number1: ['9. Household and Unit Information', 902],
             passport1: ['9. Household and Unit Information', 903],
             other_id1: ['9. Household and Unit Information', 904],
-            unit_owner: ['9. Household and Unit Information', 905],
+            unit_owner: ['1. ملخص الوحدة', 13],
             q_9_3_1_first_name: ['9. Household and Unit Information', 906],
             q_9_3_2_second_name__father: ['9. Household and Unit Information', 907],
             q_9_3_3_third_name__grandfather: ['9. Household and Unit Information', 908],
@@ -1261,10 +1341,10 @@
             other_work: ['13. Household and Rentee', 1310],
 
             page14: ['14. Unit Finishing and Internal Damaged', 1400],
-            external_finishing_of_the_unit: ['14. Unit Finishing and Internal Damaged', 1401],
+            external_finishing_of_the_unit: ['1. ملخص الوحدة', 14],
             other_external_finishing: ['14. Unit Finishing and Internal Damaged', 1402],
             is_finished: ['14. Unit Finishing and Internal Damaged', 1403],
-            internal_finishing_of_the_unit: ['14. Unit Finishing and Internal Damaged', 1404],
+            internal_finishing_of_the_unit: ['1. ملخص الوحدة', 15],
             finishing_extent: ['14. Unit Finishing and Internal Damaged', 1405],
             finishing_partial_types: ['14. Unit Finishing and Internal Damaged', 1406],
             has_fire: ['14. Unit Finishing and Internal Damaged', 1407],
@@ -1282,7 +1362,7 @@
             rubble_removal_is_needed: ['14. Unit Finishing and Internal Damaged', 1419],
             activation_of_uxo_ha_d_material_clearance: ['14. Unit Finishing and Internal Damaged', 1420],
             unit_support_needed: ['14. Unit Finishing and Internal Damaged', 1421],
-            is_the_housing_unit_or_living_habitable: ['14. Unit Finishing and Internal Damaged', 1422],
+            is_the_housing_unit_or_living_habitable: ['1. ملخص الوحدة', 16],
 
             mhpss: ['15. Mental Health and Psychosocial Support (MHPSS)', 1500],
             mhpss_experinced: ['15. Mental Health and Psychosocial Support (MHPSS)', 1501],
@@ -1299,15 +1379,15 @@
             other_prefab_types: ['16. Community Needs and Preferences Survey', 1605],
             prefab_pref: ['16. Community Needs and Preferences Survey', 1606],
             ce2: ['16. Community Needs and Preferences Survey', 1607],
-            reh_kitchen: ['16. Community Needs and Preferences Survey', 1608],
-            reh_bathroom: ['16. Community Needs and Preferences Survey', 1609],
+            reh_kitchen: ['1. ملخص الوحدة', 17],
+            reh_bathroom: ['1. ملخص الوحدة', 18],
             reh_type: ['16. Community Needs and Preferences Survey', 1610],
             ce3: ['16. Community Needs and Preferences Survey', 1611],
-            additional_comments: ['16. Community Needs and Preferences Survey', 1612],
+            additional_comments: ['3. ملاحظات الوحدة', 300],
 
             techncial_boq: ['17. Techncial-BOQ', 1700],
             tech_boq: ['17. Techncial-BOQ', 1701],
-            final_comments: ['18. Attachments & Final Comments', 1996],
+            final_comments: ['3. ملاحظات الوحدة', 301],
 
         };
 
@@ -1714,13 +1794,18 @@
 
                     if (
                         type === 'housing_table' &&
-                        [
-                            'damaged_area_m2',
-                            'reh_kitchen',
-                            'reh_bathroom',
-                            'is_the_housing_unit_or_living_habitable',
-                            'number_of_rooms'
-                        ].includes(field)
+                            [
+                                'damaged_area_m2',
+                                'unit_owner',
+                                'reh_kitchen',
+                                'reh_bathroom',
+                                'is_the_housing_unit_or_living_habitable',
+                                'external_finishing_of_the_unit',
+                                'internal_finishing_of_the_unit',
+                                'floor_number',
+                                'housing_unit_number',
+                                'unit_damage_status'
+                            ].includes(field)
                     ) {
                         loadHousingSidebarSummary();
                     }
@@ -1925,6 +2010,7 @@
                             rows.sort((a, b) => a.sort_order - b.sort_order);
 
                             lastBuildingRows = rows;
+                            renderBuildingSummaryItems(rows);
                             renderAccordion('#building_assessment_accordion', rows, currentBuildingFilter, 'building');
 
                             return rows;
@@ -2158,11 +2244,16 @@
             let globalid = $('[name="globalid"]').val();
 
             if (!globalid) {
+                renderHousingSummaryItems([]);
                 $('#sidebar_unit_area,#sidebar_kitchen,#sidebar_bathroom,#sidebar_living,#sidebar_rooms').text('--');
                 return;
             }
 
             $.get("{{ route('housing.summary') }}", { globalid: globalid }, function (res) {
+                if (Array.isArray(res.summary_items)) {
+                    renderHousingSummaryItems(res.summary_items);
+                }
+
                 $('#sidebar_unit_area').text(res.unit_area || '--');
                 $('#sidebar_unit_owner').text(res.unit_owner || '--');
                 $('#sidebar_kitchen').text(res.kitchen || '--');
@@ -2173,8 +2264,64 @@
                 $('#sidebar_external_finishing').text(res.external_finishing || '--');
                 $('#sidebar_internal_finishing').text(res.internal_finishing || '--');
             }).fail(function () {
+                renderHousingSummaryItems([]);
                 $('#sidebar_unit_area,#sidebar_unit_owner,#sidebar_kitchen,#sidebar_bathroom,#sidebar_living,#sidebar_rooms').text('--');
             });
+        }
+
+        function renderHousingSummaryItems(items) {
+            const colors = ['info', 'primary', 'warning', 'success', 'danger'];
+            let html = '';
+
+            (items || []).forEach(function (item, index) {
+                let color = colors[index % colors.length];
+                html += `
+                    <div class="col-6 col-lg-12">
+                        <div class="summary-box bg-light-${color}">
+                            <div class="summary-title">${escapeHtml(item.label || '')}</div>
+                            <div class="summary-value text-${color}">${escapeHtml(item.value || '--')}</div>
+                        </div>
+                    </div>`;
+            });
+
+            $('#housing_summary_items').html(html || `
+                <div class="col-12">
+                    <div class="summary-box bg-light">
+                        <div class="summary-title">ملخص الوحدة</div>
+                        <div class="summary-value text-muted">--</div>
+                    </div>
+                </div>`);
+        }
+
+        function renderBuildingSummaryItems(rows) {
+            const colors = ['info', 'primary', 'warning', 'success', 'danger'];
+            let html = '';
+
+            BUILDING_SUMMARY_FIELDS.forEach(function (field, index) {
+                let row = (rows || []).find(function (item) {
+                    return normalizeSurveyName(item.name) === field;
+                });
+
+                let value = row ? cleanAuditText($('<div>').html(row.answer || '').text()) : '-';
+                if (!value || value === '-') value = '-';
+
+                let color = colors[index % colors.length];
+                html += `
+                    <div class="col-6 col-lg-12">
+                        <div class="summary-box bg-light-${color}">
+                            <div class="summary-title">${escapeHtml(BUILDING_SUMMARY_LABELS[field] || field)}</div>
+                            <div class="summary-value text-${color}">${escapeHtml(value)}</div>
+                        </div>
+                    </div>`;
+            });
+
+            $('#building_summary_items').html(html || `
+                <div class="col-12">
+                    <div class="summary-box bg-light">
+                        <div class="summary-title">ملخص المبنى</div>
+                        <div class="summary-value text-muted">--</div>
+                    </div>
+                </div>`);
         }
 
         function cleanAuditText(text) {

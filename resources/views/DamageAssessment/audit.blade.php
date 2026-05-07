@@ -180,6 +180,12 @@
 								{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
 							</button>
 
+							@hasanyrole('Database Officer|undp-Project Manager')
+							<button id="btn_undp_final_approve" class="btn btn-light-primary btn-sm">
+								UNDP Final Approve <i class="ki-duotone ki-check-circle"></i>
+							</button>
+							@endhasanyrole
+
 							<button id="btn_assign_to_lawyer" class="btn btn-primary btn-sm">
 								{{ __('ui.audit.assign_to_lawyer') }} <i class="ki-duotone ki-plus"></i>
 							</button>
@@ -1080,6 +1086,107 @@
 						complete: function () {
 							$('#btn_final_approve').removeAttr('data-kt-indicator');
 							$('#btn_final_approve').prop('disabled', false);
+						}
+					});
+				});
+			});
+
+			$('#btn_undp_final_approve').on('click', function () {
+				const selectedIds = [];
+
+				$('#kt_datatable_audits tbody input[type="checkbox"]:checked').each(function () {
+					selectedIds.push($(this).val());
+				});
+
+				if (selectedIds.length === 0) {
+					Swal.fire({
+						text: @json(__('ui.audit.select_at_least_one_building')),
+						icon: "warning",
+						buttonsStyling: false,
+						confirmButtonText: @json(__('ui.buttons.ok')),
+						customClass: {
+							confirmButton: "btn btn-primary"
+						}
+					});
+					return;
+				}
+
+				Swal.fire({
+					title: 'UNDP Final Approve',
+					text: 'سيتم اعتماد المباني المحددة كـ UNDP Final Approve بعد التحقق من الاعتماد النهائي.',
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonText: 'اعتماد UNDP',
+					cancelButtonText: @json(__('ui.buttons.cancel')),
+					buttonsStyling: false,
+					customClass: {
+						confirmButton: "btn btn-primary",
+						cancelButton: "btn btn-light"
+					}
+				}).then(function (result) {
+					if (!result.isConfirmed) return;
+
+					$.ajax({
+						url: "{{ route('audit.building.undpFinalApprove') }}",
+						type: "POST",
+						data: {
+							_token: "{{ csrf_token() }}",
+							building_ids: selectedIds
+						},
+						beforeSend: function () {
+							$('#btn_undp_final_approve').attr('data-kt-indicator', 'on');
+							$('#btn_undp_final_approve').prop('disabled', true);
+						},
+						success: function (response) {
+							if (response.blocked_buildings && response.blocked_buildings.length > 0) {
+								let html = `
+									<div class="alert alert-danger mb-5">
+										عدد المباني غير المعتمدة UNDP: ${response.blocked_buildings.length}
+									</div>
+								`;
+
+								response.blocked_buildings.forEach(function (b) {
+									html += `
+										<div class="mb-7 border border-danger border-dashed p-4 rounded bg-light-danger">
+											<h5 class="text-danger mb-1">Building ID: ${b.building_id}</h5>
+											<div class="text-dark fw-bold">اسم المبنى: ${b.building_name ?? '-'}</div>
+											<div class="text-muted fs-7 mb-3">GlobalID: ${b.building_globalid ?? '-'}</div>
+											<div class="alert alert-warning mb-0 fw-bold">${b.reason ?? '-'}</div>
+										</div>
+									`;
+								});
+
+								$('#failedUnitsContainer').html(html);
+								$('#failedUnitsModal').modal('show');
+							}
+
+							Swal.fire({
+								text: response.message || 'تمت العملية',
+								icon: response.approved_count > 0 ? "success" : "warning",
+								confirmButtonText: "موافق",
+								buttonsStyling: false,
+								customClass: {
+									confirmButton: "btn btn-primary"
+								}
+							}).then(() => {
+								$('#kt_datatable_audits').DataTable().ajax.reload(null, false);
+								$("[type='checkbox']").prop('checked', false);
+							});
+						},
+						error: function (xhr) {
+							Swal.fire({
+								text: xhr.responseJSON?.message || 'حدث خطأ أثناء اعتماد UNDP Final Approve',
+								icon: "error",
+								buttonsStyling: false,
+								confirmButtonText: @json(__('ui.buttons.ok')),
+								customClass: {
+									confirmButton: "btn btn-primary"
+								}
+							});
+						},
+						complete: function () {
+							$('#btn_undp_final_approve').removeAttr('data-kt-indicator');
+							$('#btn_undp_final_approve').prop('disabled', false);
 						}
 					});
 				});

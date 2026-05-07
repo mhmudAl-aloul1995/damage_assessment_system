@@ -9,6 +9,10 @@ return new class extends Migration
 
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         $database = DB::getDatabaseName();
 
         $row = DB::selectOne("SHOW CREATE VIEW `{$this->viewName}`");
@@ -57,6 +61,10 @@ END AS `is_audited`";
 
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         $row = DB::selectOne("SHOW CREATE VIEW `{$this->viewName}`");
         $createViewSql = $row->{'Create View'} ?? null;
 
@@ -64,11 +72,11 @@ END AS `is_audited`";
             throw new RuntimeException("Cannot read CREATE VIEW for {$this->viewName}");
         }
 
-        $oldLogic = "
+        $oldLogic = '
 CASE
     WHEN `audit_meta`.`global_id` IS NULL THEN 0
     ELSE 1
-END AS `is_audited`";
+END AS `is_audited`';
 
         $pattern = '/CASE\s+WHEN\s+EXISTS\s*\(.*?END\s+AS\s+`is_audited`/is';
 

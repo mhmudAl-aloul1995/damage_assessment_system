@@ -51,6 +51,7 @@ class AssessmentStatus extends Model
             'legal_notes' => 'warning',
             'accepted_by_lawyer' => 'success',
             'final_approval' => 'success',
+            'undp_final_approve' => 'primary',
             'final_reject' => 'danger',
             default => 'light',
         };
@@ -58,9 +59,10 @@ class AssessmentStatus extends Model
 
     public static function badgeClassForName(?string $name): string
     {
-        if($name=='pending') {
+        if ($name == 'pending') {
             return 'badge badge-secondary';
         }
+
         return 'badge badge-light-'.self::colorForName($name);
     }
 
