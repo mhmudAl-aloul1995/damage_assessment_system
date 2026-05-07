@@ -531,7 +531,7 @@
                                         لمراجعة</button>
                                     @endrole
 
-                                    @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
+                                    @hasanyrole('Database Officer|undp-Project Manager')
                                     <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
                                         data-status="undp_final_approve" onclick="setBuildingStatus('undp_final_approve')">
                                         UNDP Final Approve</button>
