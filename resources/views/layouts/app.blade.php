@@ -154,6 +154,114 @@
 		align-items: center;
 		text-align: center;
 	}
+
+	#kt_app_sidebar {
+		background: #111827;
+	}
+
+	#kt_app_sidebar_logo {
+		border-bottom: 1px solid rgba(255, 255, 255, .08);
+	}
+
+	#kt_app_sidebar_menu_scroll {
+		padding-bottom: 1rem;
+	}
+
+	#kt_app_sidebar_menu .menu-item.phc-sidebar-section {
+		margin-bottom: .35rem;
+	}
+
+	#kt_app_sidebar_menu .menu-item.phc-sidebar-section>.menu-link {
+		min-height: 46px;
+		margin-bottom: .15rem;
+		border-radius: .65rem;
+		color: #d1d5db;
+		transition: background-color .18s ease, color .18s ease;
+	}
+
+	#kt_app_sidebar_menu .menu-item.phc-sidebar-section>.menu-link:hover,
+	#kt_app_sidebar_menu .menu-item.phc-sidebar-section.show>.menu-link,
+	#kt_app_sidebar_menu .menu-item.phc-sidebar-section.phc-sidebar-section-active>.menu-link {
+		background: rgba(255, 255, 255, .08);
+		color: #fff;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-section-active>.menu-link {
+		box-shadow: inset 3px 0 0 #3e97ff;
+	}
+
+	body.locale-rtl #kt_app_sidebar_menu .phc-sidebar-section-active>.menu-link {
+		box-shadow: inset -3px 0 0 #3e97ff;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-icon {
+		display: inline-flex;
+		width: 34px;
+		height: 34px;
+		align-items: center;
+		justify-content: center;
+		border-radius: .55rem;
+		background: rgba(62, 151, 255, .12);
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-item-count {
+		min-width: 24px;
+		height: 24px;
+		padding-inline: .45rem;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, .1);
+		color: #d1d5db;
+		font-size: .72rem;
+		line-height: 24px;
+		text-align: center;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-link {
+		position: relative;
+		min-height: 40px;
+		margin-block: .1rem;
+		border-radius: .55rem;
+		color: #cbd5e1;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-link:hover {
+		background: rgba(255, 255, 255, .06);
+		color: #fff;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-link.active {
+		background: rgba(62, 151, 255, .16);
+		color: #fff;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-link.active .bullet-dot {
+		background-color: #3e97ff;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-link.active::after {
+		position: absolute;
+		top: 10px;
+		bottom: 10px;
+		left: .35rem;
+		width: 3px;
+		border-radius: 999px;
+		background: #3e97ff;
+		content: "";
+	}
+
+	body.locale-rtl #kt_app_sidebar_menu .phc-sidebar-link.active::after {
+		right: .35rem;
+		left: auto;
+	}
+
+	#kt_app_sidebar_menu .menu-sub-accordion {
+		margin-bottom: .5rem;
+		padding-top: .15rem;
+	}
+
+	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-item-count {
+		display: none;
+	}
 </style>
 
 <body id="kt_app_body" data-kt-app-layout="dark-sidebar" data-kt-app-header-fixed="true"
@@ -1025,26 +1133,34 @@
 
 										{{-- لا تعرض القسم إذا لم يكن فيه عناصر ظاهرة --}}
 										@if($visibleItems->isNotEmpty())
+											@php
+												$isSectionActive = request()->is(...($menu['active_patterns'] ?? []));
+											@endphp
 											<div data-kt-menu-trigger="click"
-												class="menu-item menu-accordion {{ request()->is(...($menu['active_patterns'] ?? [])) ? 'show' : '' }}">
+												class="menu-item menu-accordion phc-sidebar-section {{ $isSectionActive ? 'show phc-sidebar-section-active' : '' }}">
 
-												<span class="menu-link">
+												<span class="menu-link" title="{{ __($menu['title']) }}"
+													data-bs-toggle="tooltip" data-bs-placement="{{ $isRtl ? 'left' : 'right' }}">
 													<span class="menu-icon">
-														<i class="ki-duotone {{ $menu['icon'] }} fs-2">
-															<span class="path1"></span>
-															<span class="path2"></span>
-														</i>
+														<span class="phc-sidebar-icon">
+															<i class="ki-duotone {{ $menu['icon'] }} fs-2">
+																<span class="path1"></span>
+																<span class="path2"></span>
+															</i>
+														</span>
 													</span>
 
 													<span class="menu-title">{{ __($menu['title']) }}</span>
+													<span class="phc-sidebar-item-count">{{ $visibleItems->count() }}</span>
 													<span class="menu-arrow"></span>
 												</span>
 
 												<div class="menu-sub menu-sub-accordion">
 													@foreach($visibleItems as $item)
 														<div class="menu-item">
-															<a class="menu-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
-																href="{{ url($item['url']) }}">
+															<a class="menu-link phc-sidebar-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
+																href="{{ url($item['url']) }}" title="{{ __($item['title']) }}"
+																data-bs-toggle="tooltip" data-bs-placement="{{ $isRtl ? 'left' : 'right' }}">
 																<span class="menu-bullet">
 																	<span class="bullet bullet-dot"></span>
 																</span>

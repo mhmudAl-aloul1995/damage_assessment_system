@@ -37,6 +37,9 @@ it('shows the sidebar menu for infrastructure Team Leaders', function () {
         ->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
+        ->assertSee('phc-sidebar-section', false)
+        ->assertSee('phc-sidebar-link', false)
+        ->assertSee('data-bs-toggle="tooltip"', false)
         ->assertSee(__('menu.damage_assessment.title'), false)
         ->assertSee(__('menu.committee.title'), false);
 });
