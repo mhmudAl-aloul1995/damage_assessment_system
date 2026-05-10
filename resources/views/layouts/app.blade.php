@@ -307,14 +307,14 @@
 													data-kt-search-element="category-title">{{ __('ui.search.users') }}
 												</h3>
 												<!--end::Category title-->
-												
+
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pt-5 pb-5"
 													data-kt-search-element="category-title">
 													{{ __('ui.search.customers') }}
 												</h3>
 												<!--end::Category title-->
-							
+
 												<!--begin::Category title-->
 												<h3 class="fs-5 text-muted m-0 pt-5 pb-5"
 													data-kt-search-element="category-title">
@@ -344,7 +344,7 @@
 													</div>
 													<!--end::Title-->
 												</a>
-											
+
 											</div>
 											<!--end::Items-->
 										</div>
@@ -1477,14 +1477,23 @@
 		let appLoaderTimer = null;
 
 		function shouldIgnoreLoader(settings) {
-			let url = settings?.url || '';
+			let url = (settings?.url || '').toLowerCase();
 
-			return url.includes('arcgis.com')
-				|| url.includes('FeatureServer')
-				|| url.includes('global-search')
-				|| url.includes('search')
-				|| url.includes('datatables')
-				|| url.includes('map');
+			const ignoredPatterns = [
+				'arcgis.com',
+				'featureserver',
+				'global-search',
+				'search',
+				'datatables',
+				'map',
+				'sidebar',
+				'menu',
+				'navigation',
+				'aside',
+				'layout',
+			];
+
+			return ignoredPatterns.some(pattern => url.includes(pattern));
 		}
 
 		/* Ajax */
