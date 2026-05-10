@@ -20,7 +20,10 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('auditExportForm')
         ->toContain("route('audit.export')")
         ->toContain('building_columns[]')
-        ->toContain('housing_columns[]');
+        ->toContain('housing_columns[]')
+        ->toContain('toggle_select_column')
+        ->toContain('const selectColumn = table.column(0)')
+        ->toContain('visible: false');
 
     expect($controller)
         ->toContain('building_status_notes')

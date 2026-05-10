@@ -269,6 +269,10 @@
 						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
 							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
 						</button>
+						<button type="button" id="toggle_select_column" class="btn btn-light-primary btn-sm"
+							data-select-visible="false">
+							إظهار التحديد <i class="ki-duotone ki-check-square"></i>
+						</button>
 						@unless(auth()->user()->hasRole('Area Manager'))
 							<button id="btn_final_approve" class="btn btn-warning btn-sm">
 								{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
@@ -870,6 +874,7 @@
 				columnDefs: [
 					{
 						targets: 0,
+						visible: false,
 						orderable: false,
 						searchable: false,
 						width: '3%',
@@ -966,6 +971,17 @@
 					});
 				},
 
+			});
+
+			$('#toggle_select_column').on('click', function () {
+				const button = $(this);
+				const selectColumn = table.column(0);
+				const shouldShow = !selectColumn.visible();
+
+				selectColumn.visible(shouldShow);
+				$("[type='checkbox']").prop('checked', false);
+				button.attr('data-select-visible', shouldShow ? 'true' : 'false');
+				button.html((shouldShow ? 'إخفاء التحديد' : 'إظهار التحديد') + ' <i class="ki-duotone ki-check-square"></i>');
 			});
 
 			$('#applyFilters').on('click', function () {
