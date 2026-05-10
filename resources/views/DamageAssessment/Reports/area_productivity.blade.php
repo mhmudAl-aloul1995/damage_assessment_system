@@ -4,6 +4,18 @@
 @section('pageName', __($title_key))
 
 @section('content')
+    <style>
+        #area_productivity_table th,
+        #area_productivity_table td {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        #area_productivity_table tfoot td {
+            text-align: center !important;
+        }
+    </style>
+
     <div class="row">
         <div class="col-md-12">
             <div class="card">
@@ -191,6 +203,12 @@
             $('#area_productivity_table').DataTable({
                 pageLength: 25,
                 order: [[0, 'desc']],
+                columnDefs: [
+                    {
+                        targets: '_all',
+                        className: 'text-center align-middle'
+                    }
+                ],
                 language: {
                     url: @json(app()->getLocale() === 'ar' ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json')
                 }
