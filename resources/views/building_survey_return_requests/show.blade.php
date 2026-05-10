@@ -13,7 +13,7 @@
         };
         $autoAreaManager = $buildingRegion ? $areaManagers->firstWhere('region', $buildingRegion) : null;
         $canTeamLeaderApprove =
-            auth()->user()->hasAnyRole(['Team Leader', 'Team leader']) &&
+            auth()->user()->hasAnyRole(['Team Leader', 'Team Leader']) &&
             (int) $returnRequest->team_leader_id === (int) auth()->id() &&
             $returnRequest->current_step === 'team_leader';
         $canAreaManagerApprove =

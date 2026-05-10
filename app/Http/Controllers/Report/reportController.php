@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Report;
 
 use App\Exports\AreaProductivityExport;
+use App\Exports\DailyAchievementExport;
 use App\Exports\ProductivityExport;
 use App\Http\Controllers\Controller;
 use App\Models\Building;
@@ -16,6 +17,7 @@ use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use View;
 
 class reportController extends Controller
@@ -198,6 +200,36 @@ class reportController extends Controller
         return $this->renderDailyAchievementReport($request, $request->input('tab', 'engineers'));
     }
 
+    public function exportDailyAchievement(Request $request): BinaryFileResponse
+    {
+        $startDate = Carbon::parse($request->input('start_date', now()->toDateString()))->toDateString();
+        $endDate = Carbon::parse($request->input('end_date', $startDate))->toDateString();
+
+        return Excel::download(
+            new DailyAchievementExport([
+                $this->buildDailyAchievementExportSheet(
+                    title: 'Engineers',
+                    reportTitle: 'Daily Achievement Report For Auditing Engineers',
+                    role: 'QC/QA Engineer',
+                    statusType: 'QC/QA Engineer',
+                    statusNames: ['accepted_by_engineer', 'rejected_by_engineer', 'need_review'],
+                    startDate: $startDate,
+                    endDate: $endDate,
+                ),
+                $this->buildDailyAchievementExportSheet(
+                    title: 'Lawyers',
+                    reportTitle: 'Daily Achievement Report For Auditing Lawyers',
+                    role: 'Legal Auditor',
+                    statusType: 'Legal Auditor',
+                    statusNames: ['assigned_to_lawyer', 'accepted_by_lawyer', 'legal_notes'],
+                    startDate: $startDate,
+                    endDate: $endDate,
+                ),
+            ]),
+            'daily-achievement-'.$startDate.'-to-'.$endDate.'.xlsx'
+        );
+    }
+
     public function auditorsDailyAchievement(Request $request)
     {
         return $this->renderDailyAchievementReport($request, 'engineers');
@@ -263,7 +295,7 @@ class reportController extends Controller
                 'need_review_count' => $needReviewCount,
                 'total_count' => $acceptedCount + $rejectedCount + $needReviewCount,
             ];
-        });
+        })->sort($this->sortDailyAchievementRowsByTotal(...))->values();
 
         $totals = [
             'accepted_count' => $rows->sum('accepted_count'),
@@ -345,7 +377,7 @@ class reportController extends Controller
                 'legal_notes_count' => $legalNotesCount,
                 'total_count' => $assignedCount + $acceptedCount + $legalNotesCount,
             ];
-        });
+        })->sort($this->sortDailyAchievementRowsByTotal(...))->values();
 
         $totals = [
             'assigned_count' => $rows->sum('assigned_count'),
@@ -381,6 +413,78 @@ class reportController extends Controller
                 ['label' => 'Total', 'key' => 'total_count', 'class' => 'primary'],
             ],
             'emptyMessage' => 'No lawyers found.',
+        ];
+    }
+
+    private function sortDailyAchievementRowsByTotal(array $first, array $second): int
+    {
+        $totalComparison = $second['total_count'] <=> $first['total_count'];
+
+        if ($totalComparison !== 0) {
+            return $totalComparison;
+        }
+
+        return strcmp((string) $first['name'], (string) $second['name']);
+    }
+
+    private function buildDailyAchievementExportSheet(
+        string $title,
+        string $reportTitle,
+        string $role,
+        string $statusType,
+        array $statusNames,
+        string $startDate,
+        string $endDate,
+    ): array {
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end = Carbon::parse($endDate)->endOfDay();
+
+        $dailyCounts = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('housing_statuses.type', $statusType)
+            ->whereBetween('housing_statuses.updated_at', [$start, $end])
+            ->whereIn('assessment_statuses.name', $statusNames)
+            ->select(
+                'housing_statuses.user_id',
+                DB::raw('DATE(housing_statuses.updated_at) as achievement_date'),
+                DB::raw('COUNT(*) as total_count')
+            )
+            ->groupBy('housing_statuses.user_id', DB::raw('DATE(housing_statuses.updated_at)'))
+            ->get()
+            ->groupBy('achievement_date')
+            ->map(fn ($rows) => $rows->pluck('total_count', 'user_id')->map(fn ($count): int => (int) $count)->all())
+            ->all();
+
+        $totalsByUser = collect($dailyCounts)
+            ->flatMap(fn (array $dateCounts) => collect($dateCounts)->map(fn (int $count, int|string $userId): array => [
+                'user_id' => (int) $userId,
+                'count' => $count,
+            ]))
+            ->groupBy('user_id')
+            ->map(fn ($rows): int => (int) $rows->sum('count'));
+
+        $users = User::role($role)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'total' => (int) ($totalsByUser->get($user->id, 0)),
+            ])
+            ->sortBy([
+                ['total', 'desc'],
+                ['name', 'asc'],
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'title' => $title,
+            'report_title' => $reportTitle,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'users' => $users,
+            'daily_counts' => $dailyCounts,
         ];
     }
 

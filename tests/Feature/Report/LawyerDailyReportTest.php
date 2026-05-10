@@ -25,6 +25,11 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
         'guard_name' => 'web',
     ]);
 
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
     $viewer = User::factory()->create();
     $viewer->assignRole($viewerRole);
 
@@ -160,11 +165,15 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
     $response->assertOk();
     $response->assertSee('Lawyer One');
     $response->assertSee('Lawyer Two');
+    $response->assertSee('daily_achievement_export_btn');
+    $response->assertSee('reports/daily-achievement/export', false);
     $response->assertViewHas('rows', function ($rows) {
+        $firstVisibleRow = collect($rows)->first();
         $firstRow = collect($rows)->firstWhere('name', 'Lawyer One');
         $secondRow = collect($rows)->firstWhere('name', 'Lawyer Two');
 
-        return $firstRow !== null
+        return $firstVisibleRow['name'] === 'Lawyer One'
+            && $firstRow !== null
             && $firstRow['assigned_count'] === 1
             && $firstRow['accepted_count'] === 1
             && $firstRow['legal_notes_count'] === 1
@@ -189,4 +198,12 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
             && $chartMetrics['housing_units']['total_count'] === 3
             && $chartMetrics['housing_units']['percentage'] === 66.7;
     });
+
+    $this
+        ->actingAs($viewer)
+        ->get(route('reports.daily-achievement.export', [
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+        ]))
+        ->assertOk();
 });

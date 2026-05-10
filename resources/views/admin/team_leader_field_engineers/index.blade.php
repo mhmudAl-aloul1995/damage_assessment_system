@@ -78,7 +78,7 @@
         event.preventDefault();
 
         $.ajax({
-            url: "{{ route('team-leader-field-engineers.store') }}",
+            url: "{{ route('admin.team-leader-field-engineers.store') }}",
             method: 'POST',
             data: $(this).serialize(),
             success: function (response) {

@@ -288,7 +288,7 @@ class BuildingSurveyReturnRequestController extends Controller
 
     private function currentUserIsTeamLeader(): bool
     {
-        return auth()->user()->hasAnyRole(['Team Leader', 'Team leader']);
+        return auth()->user()->hasAnyRole(['Team Leader', 'Team Leader']);
     }
 
     private function areaManagerForBuildingGovernorate(Building $building): ?User

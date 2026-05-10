@@ -91,10 +91,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="' . $safeRepo . '" add .',
-            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
-            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
-            'git -c safe.directory="' . $safeRepo . '" push',
+            'git -c safe.directory="'.$safeRepo.'" add .',
+            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
+            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
+            'git -c safe.directory="'.$safeRepo.'" push',
         ];
 
         $outputs = [];
@@ -114,7 +114,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (!$result->successful()) {
+            if (! $result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -342,6 +342,7 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/field-engineer/assignments/data', [FieldEngineerReportController::class, 'assignments'])->name('reports.field-engineer.assignments');
     Route::get('reports/field-engineer/export/{tab}/{format}', [FieldEngineerReportController::class, 'export'])->name('reports.field-engineer.export');
     Route::get('reports/daily-achievement', [reportController::class, 'dailyAchievement'])->name('reports.daily-achievement');
+    Route::get('reports/daily-achievement/export', [reportController::class, 'exportDailyAchievement'])->name('reports.daily-achievement.export');
     Route::get('reports/auditors-daily', [reportController::class, 'auditorsDailyAchievement'])->name('reports.auditors-daily');
     Route::get('reports/lawyers-daily', [reportController::class, 'lawyersDailyAchievement'])->name('reports.lawyers-daily');
     Route::get('reports/public-buildings', [SurveyReportController::class, 'publicBuildings'])->name('reports.public-buildings');
@@ -412,12 +413,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/team-leader-field-engineers', [TeamLeaderFieldEngineerController::class, 'index'])
-            ->name('team-leader-field-engineers.index')
-            ->middleware('permission:team-leader-field-engineers.view');
+            ->name('team-leader-field-engineers.index');
 
-        Route::get('/team-leader-field-engineers/data', [TeamLeaderFieldEngineerController::class, 'data'])
-            ->name('team-leader-field-engineers.data')
-            ->middleware('permission:team-leader-field-engineers.view');
+        Route::get('/team-leader-field-engineers/data', [TeamLeaderFieldEngineerController::class, 'datatable'])
+            ->name('team-leader-field-engineers.data');
 
         Route::get('/team-leader-field-engineers/select/team-leaders', [TeamLeaderFieldEngineerController::class, 'teamLeadersSelect'])
             ->name('team-leader-field-engineers.select.team-leaders');
@@ -426,18 +425,17 @@ Route::middleware('auth')->group(function () {
             ->name('team-leader-field-engineers.select.field-engineers');
 
         Route::post('/team-leader-field-engineers', [TeamLeaderFieldEngineerController::class, 'store'])
-            ->name('team-leader-field-engineers.store')
-            ->middleware('permission:team-leader-field-engineers.create');
+            ->name('team-leader-field-engineers.store');
 
         Route::delete('/team-leader-field-engineers/{teamLeaderFieldEngineer}', [TeamLeaderFieldEngineerController::class, 'destroy'])
-            ->name('team-leader-field-engineers.destroy')
-            ->middleware('permission:team-leader-field-engineers.delete');
+            ->name('team-leader-field-engineers.destroy');
 
         Route::get('/team-leader-field-engineers/export', [TeamLeaderFieldEngineerController::class, 'export'])
-            ->name('team-leader-field-engineers.export')
-            ->middleware('permission:team-leader-field-engineers.export');
-    });
+            ->name('team-leader-field-engineers.export');
 
+        Route::get('/team-leader-field-engineers/data', [TeamLeaderFieldEngineerController::class, 'data'])
+            ->name('team-leader-field-engineers.data');
+    });
     Route::middleware(['auth', 'role:Database Officer'])->group(function () {
         Route::get('/login-logs', [LoginLogController::class, 'index'])
             ->name('login-logs.index');
@@ -471,4 +469,4 @@ Route::get('/import-buildings-test', [BuildingImportController::class, 'import']
 use App\Http\Controllers\HousingUnitImportController;
 
 Route::get('/import-housing-units', [HousingUnitImportController::class, 'import']);
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

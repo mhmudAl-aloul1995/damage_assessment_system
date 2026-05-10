@@ -39,6 +39,15 @@
                                     </span>
                                 </div>
 
+                                <a href="{{ route('reports.daily-achievement.export', ['start_date' => $startDateValue, 'end_date' => $endDateValue]) }}"
+                                    class="btn btn-light-success" id="daily_achievement_export_btn">
+                                    <i class="ki-duotone ki-file-down fs-3">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                    Excel
+                                </a>
+
                                 <button type="submit" class="btn btn-primary">Filter</button>
                             </div>
                         </form>
@@ -150,6 +159,17 @@
 @section('script')
     <script>
         $(document).ready(function () {
+            const exportBaseUrl = "{{ route('reports.daily-achievement.export') }}";
+
+            function updateExportUrl() {
+                const params = new URLSearchParams({
+                    start_date: $('#start_date').val(),
+                    end_date: $('#end_date').val()
+                });
+
+                $('#daily_achievement_export_btn').attr('href', exportBaseUrl + '?' + params.toString());
+            }
+
             $('#kt_daily_achievement_daterangepicker').daterangepicker({
                 startDate: moment("{{ $startDateValue }}"),
                 endDate: moment("{{ $endDateValue }}"),
@@ -163,7 +183,13 @@
                 $('#kt_daily_achievement_daterangepicker').val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
                 $('#start_date').val(start.format('YYYY-MM-DD'));
                 $('#end_date').val(end.format('YYYY-MM-DD'));
+                updateExportUrl();
             });
+
+            $('#kt_daily_achievement_daterangepicker').val(
+                moment("{{ $startDateValue }}").format('MM/DD/YYYY') + ' - ' + moment("{{ $endDateValue }}").format('MM/DD/YYYY')
+            );
+            updateExportUrl();
 
             const chartOptions = function (series, colors) {
                 return {

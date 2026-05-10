@@ -32,7 +32,7 @@ beforeEach(function () {
     }
 
     Role::query()->create([
-        'name' => 'Team leader',
+        'name' => 'Team Leader',
         'guard_name' => 'web',
     ]);
 });
@@ -46,7 +46,7 @@ it('links a team leader with a field engineer and prevents duplicates', function
     $fieldEngineer->assignRole('Field Engineer');
 
     $this->actingAs($admin)
-        ->postJson(route('team-leader-field-engineers.store'), [
+        ->postJson(route('admin.team-leader-field-engineers.store'), [
             'team_leader_id' => $teamLeader->id,
             'field_engineer_id' => $fieldEngineer->id,
         ])
@@ -60,7 +60,7 @@ it('links a team leader with a field engineer and prevents duplicates', function
     ]);
 
     $this->actingAs($admin)
-        ->postJson(route('team-leader-field-engineers.store'), [
+        ->postJson(route('admin.team-leader-field-engineers.store'), [
             'team_leader_id' => $teamLeader->id,
             'field_engineer_id' => $fieldEngineer->id,
         ])
@@ -325,7 +325,7 @@ it('shows team leader requests for lowercase team leader users even when they al
     $teamLeader = User::factory()->create();
 
     $fieldEngineer->assignRole('Field Engineer');
-    $teamLeader->assignRole('Team leader');
+    $teamLeader->assignRole('Team Leader');
     $teamLeader->assignRole('Field Engineer');
 
     $building = Building::query()->create([
