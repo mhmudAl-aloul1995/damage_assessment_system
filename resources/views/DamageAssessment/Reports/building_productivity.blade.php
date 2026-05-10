@@ -104,17 +104,11 @@
             font-weight: 700;
         }
 
-        .location-primary-body {
-            display: grid;
-            grid-template-columns: minmax(280px, 400px) 1fr;
-            gap: 1rem;
-            padding: 1rem;
-            align-items: start;
-        }
-
         .location-primary-summary {
             display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: .75rem;
+            padding: 1rem 1rem .75rem;
         }
 
         .location-summary-tile {
@@ -198,150 +192,8 @@
             background: #f1416c;
         }
 
-        .neighborhood-pie-card {
-            min-height: 335px;
-            padding: 12px 12px 14px;
-            text-align: center;
-            border: 1px solid #edf0f5;
-            border-radius: .65rem;
-            background: #fff;
-        }
-
-        .neighborhood-pie-card.primary {
-            max-width: 380px;
-            margin-inline: auto;
-            border-color: #cfe2ff;
-            box-shadow: 0 .45rem 1.2rem rgba(15, 23, 42, .06);
-        }
-
-        .neighborhood-pie-title {
-            color: #3f4254;
-            font-size: 1.25rem;
-            font-weight: 800;
-            line-height: 1.25;
-            margin-bottom: .15rem;
-        }
-
-        .neighborhood-pie-subtitle {
-            min-height: 18px;
-            color: #7e8299;
-            font-size: .78rem;
-            font-weight: 700;
-        }
-
-        .neighborhood-pie-chart {
-            height: 235px;
-            margin-top: .25rem;
-        }
-
-        .neighborhood-pie-chart-wrap {
-            position: relative;
-            height: 235px;
-            margin-top: .25rem;
-        }
-
-        .neighborhood-pie-chart-wrap .neighborhood-pie-chart {
-            height: 235px;
-            margin-top: 0;
-        }
-
-        .neighborhood-pie-inner-percent {
-            position: absolute;
-            z-index: 3;
-            min-width: 48px;
-            padding: .25rem .45rem;
-            background: #fff;
-            border: 1px solid #d8dde8;
-            border-radius: .35rem;
-            color: #181c32;
-            font-weight: 900;
-            line-height: 1;
-            box-shadow: 0 .35rem .8rem rgba(15, 23, 42, .16);
-            pointer-events: none;
-        }
-
-        .neighborhood-pie-inner-percent.completed {
-            top: 46%;
-            left: 58%;
-            transform: translate(-50%, -50%);
-        }
-
-        .neighborhood-pie-inner-percent.not-completed {
-            top: 32%;
-            left: 39%;
-            transform: translate(-50%, -50%);
-        }
-
-        .neighborhood-pie-percent-row {
-            display: flex;
-            justify-content: center;
-            gap: .65rem;
-            flex-wrap: wrap;
-            margin-top: -.35rem;
-            margin-bottom: .5rem;
-        }
-
-        .neighborhood-pie-percent {
-            display: inline-flex;
-            align-items: center;
-            gap: .35rem;
-            min-width: 76px;
-            justify-content: center;
-            padding: .35rem .6rem;
-            border-radius: .45rem;
-            color: #fff;
-            font-weight: 800;
-            box-shadow: 0 .35rem .8rem rgba(15, 23, 42, .18);
-        }
-
-        .neighborhood-pie-percent.completed {
-            background: #6ead47;
-        }
-
-        .neighborhood-pie-percent.not-completed {
-            background: #e96c73;
-        }
-
-        .neighborhood-pie-legend {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-            padding: .45rem .9rem;
-            background: #fafafa;
-            color: #3f4254;
-            font-size: .92rem;
-            line-height: 1.2;
-        }
-
-        .neighborhood-pie-legend-item {
-            display: inline-flex;
-            align-items: center;
-            gap: .35rem;
-            white-space: nowrap;
-        }
-
-        .neighborhood-pie-dot {
-            width: 10px;
-            height: 10px;
-            display: inline-block;
-        }
-
-        .neighborhood-pie-dot.completed {
-            background: #8cc36b;
-        }
-
-        .neighborhood-pie-dot.not-completed {
-            background: #ff8f95;
-        }
-
         @media (max-width: 575px) {
-            .neighborhood-pie-card {
-                min-height: 310px;
-            }
-
-            .location-primary-body {
+            .location-primary-summary {
                 grid-template-columns: 1fr;
             }
         }
@@ -352,11 +204,6 @@
         $dateRangeLabel = $filters['from_date'] && $filters['to_date']
             ? $filters['from_date'] . ' to ' . $filters['to_date']
             : '';
-        $locationPieCharts = [];
-
-        foreach ($charts['location_pies'] as $municipalityNode) {
-            $locationPieCharts[] = $municipalityNode['pie'];
-        }
     @endphp
 
     <div class="card card-flush shadow-sm mb-6">
@@ -541,33 +388,26 @@
 
                             <div id="collapse_{{ $municipalityPie['id'] }}"
                                 class="collapse location-pie-collapse {{ $loop->first ? 'show' : '' }}">
-                                <div class="location-primary-body">
-                                    @include('DamageAssessment.Reports.partials.location_productivity_pie', [
-                                        'pie' => $municipalityPie,
-                                        'variant' => 'primary',
-                                    ])
-
-                                    <div class="location-primary-summary">
-                                        <div class="location-summary-tile">
-                                            <span class="location-summary-label">Completed</span>
-                                            <span class="location-summary-value text-success">
-                                                {{ number_format($municipalityPie['series'][0]) }}
-                                                ({{ $municipalityPie['completed_percent'] }}%)
-                                            </span>
-                                        </div>
-                                        <div class="location-summary-tile">
-                                            <span class="location-summary-label">Not Completed</span>
-                                            <span class="location-summary-value text-danger">
-                                                {{ number_format($municipalityPie['series'][1]) }}
-                                                ({{ $municipalityPie['not_completed_percent'] }}%)
-                                            </span>
-                                        </div>
-                                        <div class="location-summary-tile">
-                                            <span class="location-summary-label">Neighborhoods</span>
-                                            <span class="location-summary-value">
-                                                {{ number_format(count($municipalityNode['neighborhoods'])) }}
-                                            </span>
-                                        </div>
+                                <div class="location-primary-summary">
+                                    <div class="location-summary-tile">
+                                        <span class="location-summary-label">Completed</span>
+                                        <span class="location-summary-value text-success">
+                                            {{ number_format($municipalityPie['series'][0]) }}
+                                            ({{ $municipalityPie['completed_percent'] }}%)
+                                        </span>
+                                    </div>
+                                    <div class="location-summary-tile">
+                                        <span class="location-summary-label">Not Completed</span>
+                                        <span class="location-summary-value text-danger">
+                                            {{ number_format($municipalityPie['series'][1]) }}
+                                            ({{ $municipalityPie['not_completed_percent'] }}%)
+                                        </span>
+                                    </div>
+                                    <div class="location-summary-tile">
+                                        <span class="location-summary-label">Neighborhoods</span>
+                                        <span class="location-summary-value">
+                                            {{ number_format(count($municipalityNode['neighborhoods'])) }}
+                                        </span>
                                     </div>
                                 </div>
 
@@ -813,63 +653,6 @@
                 grid: { borderColor: '#eff2f5' }
             }).render();
 
-            const locationPieCharts = @json($locationPieCharts);
-            const renderedLocationPieCharts = new Set();
-
-            function renderLocationPieChart(pie) {
-                if (renderedLocationPieCharts.has(pie.id)) {
-                    return;
-                }
-
-                const element = document.getElementById(pie.id);
-
-                if (!element || element.offsetParent === null) {
-                    return;
-                }
-
-                renderedLocationPieCharts.add(pie.id);
-
-                new ApexCharts(element, {
-                    series: pie.series,
-                    chart: {
-                        type: 'donut',
-                        height: 235,
-                        toolbar: { show: false },
-                        animations: { enabled: true }
-                    },
-                    labels: pie.labels,
-                    colors: ['#8CC36B', '#FF8F95'],
-                    legend: { show: false },
-                    stroke: {
-                        width: 3,
-                        colors: ['#ffffff']
-                    },
-                    dataLabels: { enabled: false },
-                    tooltip: {
-                        y: {
-                            formatter: function (value) {
-                                return value + ' buildings';
-                            }
-                        }
-                    },
-                    plotOptions: {
-                        pie: {
-                            expandOnClick: false,
-                            donut: { size: '62%' }
-                        }
-                    }
-                }).render();
-            }
-
-            function renderVisibleLocationPieCharts() {
-                locationPieCharts.forEach(renderLocationPieChart);
-            }
-
-            renderVisibleLocationPieCharts();
-
-            document.querySelectorAll('.location-pie-collapse').forEach(function (collapseElement) {
-                collapseElement.addEventListener('shown.bs.collapse', renderVisibleLocationPieCharts);
-            });
         });
     </script>
 @endsection
