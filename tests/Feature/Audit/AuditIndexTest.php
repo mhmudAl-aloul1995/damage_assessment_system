@@ -66,6 +66,7 @@ it('includes the housing units status progress in the audit table response', fun
         'status_id' => $status->id,
         'user_id' => $user->id,
         'type' => 'QC/QA Engineer',
+        'notes' => 'Building status note',
         'notes' => 'Audited',
     ]);
 
@@ -183,11 +184,13 @@ it('includes the housing units status progress in the audit table response', fun
                 'objectid',
                 'building_name',
                 'housing_status_progress',
+                'building_status_notes',
             ],
             'housing_columns' => [
                 'building_objectid',
                 'objectid',
                 'parentglobalid',
+                'housing_status_notes',
             ],
         ]))
         ->assertOk()

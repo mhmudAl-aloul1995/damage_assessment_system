@@ -3061,6 +3061,7 @@ class auditController extends Controller
                     'engineerStatus.assessment_status',
                     'lawyerStatus.assessment_status',
                     'finalApproval.assessment_status',
+                    'housingStatuses',
                 ])
                 ->whereIn('parentglobalid', $buildingsByGlobalId->keys()->all())
                 ->orderBy('parentglobalid')
@@ -3106,6 +3107,7 @@ class auditController extends Controller
             'housing_status_progress' => 'تقدم الوحدات',
             'housing_units_count' => 'عدد الوحدات',
             'housing_units_with_status_count' => 'وحدات لها حالة',
+            'building_status_notes' => 'ملاحظة حالة المبنى',
         ];
     }
 
@@ -3128,6 +3130,7 @@ class auditController extends Controller
             'engineer_status' => 'حالة المهندس',
             'lawyer_status' => 'حالة القانوني',
             'final_status' => 'الحالة النهائية',
+            'housing_status_notes' => 'ملاحظة حالة الوحدة',
         ];
     }
 
@@ -3162,6 +3165,7 @@ class auditController extends Controller
                 'engineerStatus.status',
                 'lawyerStatus.status',
                 'finalApproval.status',
+                'buildingStatuses',
             ])
             ->where('field_status', 'COMPLETED');
 
@@ -3268,6 +3272,7 @@ class auditController extends Controller
         $housingStatusCounts = $this->getHousingStatusCountsForBuilding((string) $building->globalid);
         $engineer = $building->assignedUsers->firstWhere('type', 'QC/QA Engineer')?->user?->name;
         $lawyer = $building->assignedUsers->firstWhere('type', 'Legal Auditor')?->user?->name;
+        $latestBuildingStatus = $this->latestBuildingStatusRecord($building);
 
         $values = [
             'objectid' => $building->objectid,
@@ -3287,6 +3292,7 @@ class auditController extends Controller
             'housing_status_progress' => $housingStatusCounts['housing_units_with_status_count'].' / '.$housingStatusCounts['housing_units_count'],
             'housing_units_count' => $housingStatusCounts['housing_units_count'],
             'housing_units_with_status_count' => $housingStatusCounts['housing_units_with_status_count'],
+            'building_status_notes' => $latestBuildingStatus?->notes,
         ];
 
         return collect(array_keys($columns))
@@ -3301,6 +3307,7 @@ class auditController extends Controller
     private function auditHousingExportRow(HousingUnit $unit, array $columns, ?Building $building): array
     {
         $building ??= $unit->building;
+        $latestHousingStatus = $this->latestHousingStatusRecord($unit);
 
         $values = [
             'building_objectid' => $building?->objectid,
@@ -3316,11 +3323,33 @@ class auditController extends Controller
             'engineer_status' => $this->auditStatusLabel($unit->engineerStatus?->assessment_status),
             'lawyer_status' => $this->auditStatusLabel($unit->lawyerStatus?->assessment_status),
             'final_status' => $this->auditStatusLabel($unit->finalApproval?->assessment_status),
+            'housing_status_notes' => $latestHousingStatus?->notes,
         ];
 
         return collect(array_keys($columns))
             ->map(fn (string $column): mixed => $values[$column] ?? '')
             ->all();
+    }
+
+    private function latestBuildingStatusRecord(Building $building): ?BuildingStatus
+    {
+        return $building->buildingStatuses
+            ->sortByDesc(fn (BuildingStatus $status): string => $this->statusSortKey($status->updated_at, $status->id))
+            ->first();
+    }
+
+    private function latestHousingStatusRecord(HousingUnit $unit): ?HousingStatus
+    {
+        return $unit->housingStatuses
+            ->sortByDesc(fn (HousingStatus $status): string => $this->statusSortKey($status->updated_at, $status->id))
+            ->first();
+    }
+
+    private function statusSortKey(mixed $date, mixed $id): string
+    {
+        $timestamp = blank($date) ? '00000000000000' : Carbon::parse($date)->format('YmdHis');
+
+        return $timestamp.str_pad((string) $id, 12, '0', STR_PAD_LEFT);
     }
 
     private function auditStatusLabel(?AssessmentStatus $status): string

@@ -2,6 +2,7 @@
 
 test('audit table keeps all columns with responsive text cells', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/resources/views/DamageAssessment/audit.blade.php');
+    $controller = file_get_contents(dirname(__DIR__, 2).'/app/Http/Controllers/DamageAssessment/auditController.php');
 
     expect($view)
         ->toContain('audit-table-wrapper')
@@ -20,6 +21,12 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain("route('audit.export')")
         ->toContain('building_columns[]')
         ->toContain('housing_columns[]');
+
+    expect($controller)
+        ->toContain('building_status_notes')
+        ->toContain('housing_status_notes')
+        ->toContain('ملاحظة حالة المبنى')
+        ->toContain('ملاحظة حالة الوحدة');
 });
 
 test('assessment audit inline edits resolve missing global ids before saving', function () {

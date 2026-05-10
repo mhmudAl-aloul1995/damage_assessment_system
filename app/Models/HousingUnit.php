@@ -787,6 +787,11 @@ class HousingUnit extends Model
         return $this->hasMany(BuildingStatus::class);
     }
 
+    public function housingStatuses(): HasMany
+    {
+        return $this->hasMany(HousingStatus::class, 'housing_id', 'objectid');
+    }
+
     public function engineerStatus()
     {
         return $this->hasOne(HousingStatus::class, 'housing_id', 'objectid')
