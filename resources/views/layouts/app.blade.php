@@ -1482,6 +1482,7 @@
 			return url.includes('arcgis.com')
 				|| url.includes('FeatureServer')
 				|| url.includes('global-search')
+				|| url.includes('search')
 				|| url.includes('datatables')
 				|| url.includes('map');
 		}
