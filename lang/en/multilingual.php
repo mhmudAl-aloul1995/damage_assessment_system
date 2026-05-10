@@ -150,7 +150,7 @@ return [
         'labels' => [
             'not_available' => 'N/A',
             'empty' => 'No data found for the selected filters.',
-            'grand_totals' => 'Grand Totals:',
+            'grand_totals' => 'Grand Totals',
             'to' => 'to',
         ],
     ],

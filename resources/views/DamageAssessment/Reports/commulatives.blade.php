@@ -95,7 +95,7 @@
                         </tbody>
                         <tfoot class="border-top-2">
                             <tr class="fw-bold bg-light">
-                                <td colspan="4" class="text-center">Grand Totals:</td>
+                                <td colspan="4" class="text-center">Grand Totals</td>
                                 <td class="text-center">{{ $grandTotalEng }}</td>
                                 <td class="text-center text-danger">{{ $grandTotalTDA }}</td>
                                 <td class="text-center text-warning">{{ $grandTotalPDA }}</td>

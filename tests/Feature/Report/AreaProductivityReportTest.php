@@ -167,7 +167,7 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertOk()
         ->assertSee(__('multilingual.area_productivity_reports.titles.housing_units'), false)
         ->assertSee('<td>Rimal</td>', false)
-        ->assertSee('Grand Totals:', false)
+        ->assertSee('Grand Totals', false)
         ->assertSee('3', false)
         ->assertSee('1', false)
         ->assertViewHas('summary', function (array $summary): bool {
@@ -188,7 +188,7 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('3', false)
         ->assertDontSee('<td>Camp</td>', false)
-        ->assertSee('Grand Totals:', false)
+        ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.buildings'), false)
         ->assertSeeInOrder(['<td>Gaza</td>', '<td>Buildings</td>'], false);
 
@@ -203,7 +203,7 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('1', false)
         ->assertDontSee('<td>Camp</td>', false)
-        ->assertSee('Grand Totals:', false);
+        ->assertSee('Grand Totals', false);
 
     $this->actingAs($user)
         ->get(route('reports.area-productivity.road-facilities', [
@@ -215,7 +215,7 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee(__('multilingual.area_productivity_reports.titles.road_facilities'), false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('2', false)
-        ->assertSee('Grand Totals:', false)
+        ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.road_facilities'), false);
 
     $this->actingAs($user)
