@@ -3037,25 +3037,28 @@ class auditController extends Controller
             $this->auditHousingExportColumns()
         );
 
-        $buildings = $this->auditExportQuery($request)->get();
-        $buildingRows = $buildings
-            ->map(fn (Building $building): array => $this->auditBuildingExportRow($building, $buildingColumns))
-            ->values()
-            ->all();
-
         $includeHousingUnits = $request->input('export_type') === 'buildings_with_units';
-        $housingRows = [];
+        $baseBuildingQuery = $this->auditExportQuery($request);
+        $buildingQuery = (clone $baseBuildingQuery)
+            ->withCount([
+                'housing_unit as housing_units_count',
+                'housing_unit as housing_units_with_status_count' => function (Builder $query): void {
+                    $query->whereHas('housingStatuses');
+                },
+            ]);
+        $housingQuery = null;
 
         if ($includeHousingUnits) {
             if ($housingColumns === []) {
                 $housingColumns = $this->auditHousingExportColumns();
             }
 
-            $buildingsByGlobalId = $buildings
-                ->filter(fn (Building $building): bool => filled($building->globalid))
-                ->keyBy('globalid');
+            $buildingGlobalIdsQuery = (clone $baseBuildingQuery)
+                ->setEagerLoads([])
+                ->reorder()
+                ->select('buildings.globalid');
 
-            $housingRows = HousingUnit::query()
+            $housingQuery = HousingUnit::query()
                 ->with([
                     'building',
                     'engineerStatus.assessment_status',
@@ -3063,23 +3066,15 @@ class auditController extends Controller
                     'finalApproval.assessment_status',
                     'housingStatuses',
                 ])
-                ->whereIn('parentglobalid', $buildingsByGlobalId->keys()->all())
+                ->whereIn('parentglobalid', $buildingGlobalIdsQuery)
                 ->orderBy('parentglobalid')
-                ->orderBy('objectid')
-                ->get()
-                ->map(fn (HousingUnit $unit): array => $this->auditHousingExportRow(
-                    $unit,
-                    $housingColumns,
-                    $buildingsByGlobalId->get($unit->parentglobalid)
-                ))
-                ->values()
-                ->all();
+                ->orderBy('objectid');
         }
 
         $fileName = 'audit-export-'.now()->format('Y-m-d-His').'.xlsx';
 
         return Excel::download(
-            new AuditBuildingsExport($buildingColumns, $buildingRows, $includeHousingUnits, $housingColumns, $housingRows),
+            new AuditBuildingsExport($buildingColumns, $buildingQuery, $includeHousingUnits, $housingColumns, $housingQuery),
             $fileName
         );
     }
