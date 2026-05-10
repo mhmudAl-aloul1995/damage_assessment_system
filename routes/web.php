@@ -350,6 +350,7 @@ Route::middleware('auth')->group(function () {
 
     // Ensure this matches your URL: phc/audit
     Route::get('/audit', [auditController::class, 'index'])->name('audit.index');
+    Route::get('/audit/export', [auditController::class, 'export'])->name('audit.export');
     Route::get('/audit/dashboard', [auditController::class, 'dashboard'])->name('audit.dashboard');
     Route::post('/assign', [auditController::class, 'assign'])->name('audit.assign');
     Route::get('/auditBuilding', [auditController::class, 'auditBuilding'])->name('audit.auditBuilding');

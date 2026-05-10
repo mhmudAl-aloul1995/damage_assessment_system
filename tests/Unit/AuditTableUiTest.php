@@ -14,7 +14,12 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('width: 100% !important')
         ->toContain('min-width: 1180px')
         ->toContain('font-size: clamp')
-        ->toContain('overflow-x: auto');
+        ->toContain('overflow-x: auto')
+        ->toContain('auditExportModal')
+        ->toContain('auditExportForm')
+        ->toContain("route('audit.export')")
+        ->toContain('building_columns[]')
+        ->toContain('housing_columns[]');
 });
 
 test('assessment audit inline edits resolve missing global ids before saving', function () {

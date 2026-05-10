@@ -262,6 +262,10 @@
 						</div>
 					</div>
 					<div class="card-toolbar gap-3 flex-wrap justify-content-end">
+						<button type="button" class="btn btn-light-success btn-sm" data-bs-toggle="modal"
+							data-bs-target="#auditExportModal">
+							تصدير Excel <i class="ki-duotone ki-file-down"></i>
+						</button>
 						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
 							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
 						</button>
@@ -442,6 +446,97 @@
 							<span class="indicator-label">اعتماد نهائي من Excel</span>
 							<span class="indicator-progress">
 								الرجاء الانتظار...
+								<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+							</span>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="auditExportModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered mw-900px">
+			<div class="modal-content">
+				<form id="auditExportForm">
+					<div class="modal-header">
+						<h2 class="fw-bold">تصدير بيانات التدقيق</h2>
+						<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+							<i class="ki-duotone ki-cross fs-1"></i>
+						</div>
+					</div>
+
+					<div class="modal-body scroll-y mx-5 mx-xl-10 my-7">
+						<div class="mb-7">
+							<label class="form-label fw-semibold required">نوع التصدير</label>
+							<select name="export_type" id="audit_export_type" class="form-select form-select-solid"
+								data-control="select2" data-dropdown-parent="#auditExportModal">
+								<option value="buildings">المباني فقط</option>
+								<option value="buildings_with_units">المباني مع الوحدات السكنية</option>
+							</select>
+						</div>
+
+						<div class="separator separator-dashed my-6"></div>
+
+						<div class="d-flex flex-stack flex-wrap gap-3 mb-4">
+							<div>
+								<h4 class="fw-bold mb-1">أعمدة المباني</h4>
+								<div class="text-muted fs-7">اختر الأعمدة التي تريد ظهورها في ملف Excel.</div>
+							</div>
+							<div class="d-flex gap-2">
+								<button type="button" class="btn btn-sm btn-light-primary audit-column-toggle"
+									data-target=".audit-building-column" data-action="select">تحديد الكل</button>
+								<button type="button" class="btn btn-sm btn-light audit-column-toggle"
+									data-target=".audit-building-column" data-action="clear">إلغاء الكل</button>
+							</div>
+						</div>
+
+						<div class="row g-4 mb-8">
+							@foreach ($buildingExportColumns as $columnKey => $columnLabel)
+								<div class="col-md-4">
+									<label class="form-check form-check-custom form-check-solid">
+										<input class="form-check-input audit-building-column" type="checkbox"
+											name="building_columns[]" value="{{ $columnKey }}" checked>
+										<span class="form-check-label fw-semibold">{{ $columnLabel }}</span>
+									</label>
+								</div>
+							@endforeach
+						</div>
+
+						<div id="audit_housing_columns_wrapper" class="d-none">
+							<div class="separator separator-dashed my-6"></div>
+							<div class="d-flex flex-stack flex-wrap gap-3 mb-4">
+								<div>
+									<h4 class="fw-bold mb-1">أعمدة الوحدات السكنية</h4>
+									<div class="text-muted fs-7">تظهر هذه الأعمدة عند اختيار التصدير مع الوحدات.</div>
+								</div>
+								<div class="d-flex gap-2">
+									<button type="button" class="btn btn-sm btn-light-primary audit-column-toggle"
+										data-target=".audit-housing-column" data-action="select">تحديد الكل</button>
+									<button type="button" class="btn btn-sm btn-light audit-column-toggle"
+										data-target=".audit-housing-column" data-action="clear">إلغاء الكل</button>
+								</div>
+							</div>
+
+							<div class="row g-4">
+								@foreach ($housingExportColumns as $columnKey => $columnLabel)
+									<div class="col-md-4">
+										<label class="form-check form-check-custom form-check-solid">
+											<input class="form-check-input audit-housing-column" type="checkbox"
+												name="housing_columns[]" value="{{ $columnKey }}" checked>
+											<span class="form-check-label fw-semibold">{{ $columnLabel }}</span>
+										</label>
+									</div>
+								@endforeach
+							</div>
+						</div>
+					</div>
+
+					<div class="modal-footer">
+						<button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+						<button type="submit" class="btn btn-success" id="auditExportSubmit">
+							<span class="indicator-label">تصدير Excel</span>
+							<span class="indicator-progress">يرجى الانتظار...
 								<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
 							</span>
 						</button>
@@ -649,26 +744,122 @@
 			const renderAuditLtrCell = function (data) {
 				return `<span class="audit-cell-text audit-cell-ltr">${escapeAuditCell(data)}</span>`;
 			};
+			const auditFilterPayload = function () {
+				return {
+					building_name: $('#filter_building_name').val(),
+					objectid: $('#filter_objectid').val(),
+					engineer_id: $('#filter_engineer').val(),
+					lawyer_id: $('#filter_lawyer').val(),
+					eng_status: $('#filter_eng_status').val(),
+					legal_status: $('#filter_legal_status').val(),
+					final_status: $('#filter_final_status').val(),
+					area: $('#filter_area').val(),
+					field_engineer: $('#filter_field_engineer').val(),
+					damage_status: $('#filter_damage_status').val(),
+					filter_from_date: $('#filter_from_date').val(),
+					filter_to_date: $('#filter_to_date').val(),
+					status_from_date: $('#filter_status_from_date').val(),
+					status_to_date: $('#filter_status_to_date').val()
+				};
+			};
+			const appendAuditExportParams = function (params, key, value) {
+				if (Array.isArray(value)) {
+					value.forEach(function (item) {
+						if (item !== null && item !== undefined && item !== '') {
+							params.append(`${key}[]`, item);
+						}
+					});
+					return;
+				}
+
+				if (value !== null && value !== undefined && value !== '') {
+					params.append(key, value);
+				}
+			};
+
+			$('#audit_export_type').select2({
+				dir: 'rtl',
+				width: '100%',
+				dropdownParent: $('#auditExportModal'),
+				minimumResultsForSearch: Infinity
+			});
+
+			$('#audit_export_type').on('change', function () {
+				$('#audit_housing_columns_wrapper').toggleClass('d-none', $(this).val() !== 'buildings_with_units');
+			});
+
+			$('.audit-column-toggle').on('click', function () {
+				const checked = $(this).data('action') === 'select';
+				$($(this).data('target')).prop('checked', checked);
+			});
+
+			$('#auditExportForm').on('submit', function (event) {
+				event.preventDefault();
+
+				const submitButton = $('#auditExportSubmit');
+				const selectedBuildingColumns = $('.audit-building-column:checked');
+				const selectedHousingColumns = $('.audit-housing-column:checked');
+				const exportType = $('#audit_export_type').val();
+
+				if (selectedBuildingColumns.length === 0) {
+					Swal.fire({
+						icon: 'warning',
+						text: 'يرجى اختيار عمود واحد على الأقل من أعمدة المباني.',
+						confirmButtonText: @json(__('ui.buttons.ok')),
+						buttonsStyling: false,
+						customClass: {
+							confirmButton: "btn btn-primary"
+						}
+					});
+					return;
+				}
+
+				if (exportType === 'buildings_with_units' && selectedHousingColumns.length === 0) {
+					Swal.fire({
+						icon: 'warning',
+						text: 'يرجى اختيار عمود واحد على الأقل من أعمدة الوحدات السكنية.',
+						confirmButtonText: @json(__('ui.buttons.ok')),
+						buttonsStyling: false,
+						customClass: {
+							confirmButton: "btn btn-primary"
+						}
+					});
+					return;
+				}
+
+				const params = new URLSearchParams();
+				appendAuditExportParams(params, 'export_type', exportType);
+
+				selectedBuildingColumns.each(function () {
+					params.append('building_columns[]', $(this).val());
+				});
+
+				if (exportType === 'buildings_with_units') {
+					selectedHousingColumns.each(function () {
+						params.append('housing_columns[]', $(this).val());
+					});
+				}
+
+				const filters = auditFilterPayload();
+				Object.keys(filters).forEach(function (key) {
+					appendAuditExportParams(params, key, filters[key]);
+				});
+
+				submitButton.attr('data-kt-indicator', 'on').prop('disabled', true);
+				window.location.href = "{{ route('audit.export') }}?" + params.toString();
+
+				setTimeout(function () {
+					submitButton.removeAttr('data-kt-indicator').prop('disabled', false);
+					bootstrap.Modal.getOrCreateInstance(document.getElementById('auditExportModal')).hide();
+				}, 800);
+			});
 			var table = $('#kt_datatable_audits').DataTable({
 				processing: true,
 				serverSide: true,
 				ajax: {
 					url: "{{ route('audit.index') }}",
 					data: function (d) {
-						d.building_name = $('#filter_building_name').val();
-						d.objectid = $('#filter_objectid').val();
-						d.engineer_id = $('#filter_engineer').val();
-						d.lawyer_id = $('#filter_lawyer').val();
-						d.eng_status = $('#filter_eng_status').val();
-						d.legal_status = $('#filter_legal_status').val();
-						d.final_status = $('#filter_final_status').val();
-						d.area = $('#filter_area').val();
-						d.field_engineer = $('#filter_field_engineer').val();
-						d.damage_status = $('#filter_damage_status').val();
-						d.filter_from_date = $('#filter_from_date').val();
-						d.filter_to_date = $('#filter_to_date').val();
-						d.status_from_date = $('#filter_status_from_date').val();
-						d.status_to_date = $('#filter_status_to_date').val();
+						Object.assign(d, auditFilterPayload());
 					}
 				},
 				lengthMenu: [[10, 20, 25, 50], [10, 20, 25, 50]],

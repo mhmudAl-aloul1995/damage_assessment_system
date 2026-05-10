@@ -174,4 +174,22 @@ it('includes the housing units status progress in the audit table response', fun
         ->assertJsonMissing([
             'globalid' => $olderStatusBuilding->globalid,
         ]);
+
+    $this->actingAs($user)
+        ->get(route('audit.export', [
+            'export_type' => 'buildings_with_units',
+            'objectid' => '7001',
+            'building_columns' => [
+                'objectid',
+                'building_name',
+                'housing_status_progress',
+            ],
+            'housing_columns' => [
+                'building_objectid',
+                'objectid',
+                'parentglobalid',
+            ],
+        ]))
+        ->assertOk()
+        ->assertHeader('content-disposition');
 });

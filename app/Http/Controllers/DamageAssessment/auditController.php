@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\DamageAssessment;
 
+use App\Exports\AuditBuildingsExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DamageAssessment\AuditExportRequest;
 use App\Models\Assessment;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
@@ -23,6 +25,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Yajra\Datatables\Datatables;
 
 class auditController extends Controller
@@ -3014,10 +3017,332 @@ class auditController extends Controller
         $engineers = User::role('QC/QA Engineer')->get();
         $lawyers = User::role('Legal Auditor')->get();
 
+        $buildingExportColumns = $this->auditBuildingExportColumns();
+        $housingExportColumns = $this->auditHousingExportColumns();
+
         return View::make(
             'DamageAssessment.audit',
-            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments')
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns')
         );
+    }
+
+    public function export(AuditExportRequest $request): BinaryFileResponse
+    {
+        $buildingColumns = $this->selectedAuditExportColumns(
+            $request->input('building_columns', []),
+            $this->auditBuildingExportColumns()
+        );
+        $housingColumns = $this->selectedAuditExportColumns(
+            $request->input('housing_columns', []),
+            $this->auditHousingExportColumns()
+        );
+
+        $buildings = $this->auditExportQuery($request)->get();
+        $buildingRows = $buildings
+            ->map(fn (Building $building): array => $this->auditBuildingExportRow($building, $buildingColumns))
+            ->values()
+            ->all();
+
+        $includeHousingUnits = $request->input('export_type') === 'buildings_with_units';
+        $housingRows = [];
+
+        if ($includeHousingUnits) {
+            if ($housingColumns === []) {
+                $housingColumns = $this->auditHousingExportColumns();
+            }
+
+            $buildingsByGlobalId = $buildings
+                ->filter(fn (Building $building): bool => filled($building->globalid))
+                ->keyBy('globalid');
+
+            $housingRows = HousingUnit::query()
+                ->with([
+                    'building',
+                    'engineerStatus.assessment_status',
+                    'lawyerStatus.assessment_status',
+                    'finalApproval.assessment_status',
+                ])
+                ->whereIn('parentglobalid', $buildingsByGlobalId->keys()->all())
+                ->orderBy('parentglobalid')
+                ->orderBy('objectid')
+                ->get()
+                ->map(fn (HousingUnit $unit): array => $this->auditHousingExportRow(
+                    $unit,
+                    $housingColumns,
+                    $buildingsByGlobalId->get($unit->parentglobalid)
+                ))
+                ->values()
+                ->all();
+        }
+
+        $fileName = 'audit-export-'.now()->format('Y-m-d-His').'.xlsx';
+
+        return Excel::download(
+            new AuditBuildingsExport($buildingColumns, $buildingRows, $includeHousingUnits, $housingColumns, $housingRows),
+            $fileName
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function auditBuildingExportColumns(): array
+    {
+        return [
+            'objectid' => 'ObjectID',
+            'globalid' => 'GlobalID',
+            'building_name' => 'اسم المبنى',
+            'governorate' => 'المحافظة',
+            'municipality' => 'البلدية',
+            'neighborhood' => 'الحي',
+            'assignedto' => 'المهندس الميداني',
+            'building_damage_status' => 'حالة الضرر',
+            'creationdate' => 'تاريخ الإنشاء',
+            'engineer' => 'مهندس QC/QA',
+            'lawyer' => 'المدقق القانوني',
+            'engineer_status' => 'حالة المهندس',
+            'lawyer_status' => 'حالة القانوني',
+            'final_status' => 'الحالة النهائية',
+            'housing_status_progress' => 'تقدم الوحدات',
+            'housing_units_count' => 'عدد الوحدات',
+            'housing_units_with_status_count' => 'وحدات لها حالة',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function auditHousingExportColumns(): array
+    {
+        return [
+            'building_objectid' => 'ObjectID المبنى',
+            'building_name' => 'اسم المبنى',
+            'objectid' => 'ObjectID الوحدة',
+            'globalid' => 'GlobalID الوحدة',
+            'parentglobalid' => 'GlobalID المبنى',
+            'housing_unit_number' => 'رقم الوحدة',
+            'floor_number' => 'الطابق',
+            'housing_unit_type' => 'نوع الوحدة',
+            'unit_damage_status' => 'حالة ضرر الوحدة',
+            'unit_owner' => 'مالك الوحدة',
+            'engineer_status' => 'حالة المهندس',
+            'lawyer_status' => 'حالة القانوني',
+            'final_status' => 'الحالة النهائية',
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $requestedColumns
+     * @param  array<string, string>  $allowedColumns
+     * @return array<string, string>
+     */
+    private function selectedAuditExportColumns(array $requestedColumns, array $allowedColumns): array
+    {
+        $selected = collect($requestedColumns)
+            ->map(fn ($column): string => (string) $column)
+            ->filter(fn (string $column): bool => array_key_exists($column, $allowedColumns))
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($selected === []) {
+            return $allowedColumns;
+        }
+
+        return collect($selected)
+            ->mapWithKeys(fn (string $column): array => [$column => $allowedColumns[$column]])
+            ->all();
+    }
+
+    private function auditExportQuery(Request $request): Builder
+    {
+        $query = Building::query()
+            ->with([
+                'assignedUsers.user',
+                'engineerStatus.status',
+                'lawyerStatus.status',
+                'finalApproval.status',
+            ])
+            ->where('field_status', 'COMPLETED');
+
+        $engineerIds = $this->filterValues($request, 'engineer_id');
+        if ($engineerIds !== []) {
+            $query->whereHas('engineerAssignment', function (Builder $assignmentQuery) use ($engineerIds): void {
+                $assignmentQuery->whereIn('user_id', $engineerIds);
+            });
+        }
+
+        $lawyerIds = $this->filterValues($request, 'lawyer_id');
+        if ($lawyerIds !== []) {
+            $query->whereHas('lawyerAssignment', function (Builder $assignmentQuery) use ($lawyerIds): void {
+                $assignmentQuery->whereIn('user_id', $lawyerIds);
+            });
+        }
+
+        $statusMap = [
+            'assigned_to_engineer' => 'assigned_to_engineer',
+            'assigned_to_lawyer' => 'assigned_to_lawyer',
+        ];
+
+        $this->applyStatusValuesFilter($query, 'engineerStatus', $this->filterValues($request, 'eng_status', $statusMap));
+        $this->applyStatusValuesFilter($query, 'lawyerStatus', $this->filterValues($request, 'legal_status', $statusMap));
+
+        $damageStatuses = $this->filterValues($request, 'damage_status');
+        if ($damageStatuses !== []) {
+            $query->whereIn('building_damage_status', $damageStatuses);
+        }
+
+        $fieldEngineers = $this->filterValues($request, 'field_engineer');
+        if ($fieldEngineers !== []) {
+            $query->whereIn(DB::raw('LOWER(TRIM(assignedto))'), $fieldEngineers);
+        }
+
+        $finalStatuses = $this->filterValues($request, 'final_status');
+        if ($finalStatuses !== []) {
+            $query->whereHas('finalApproval.assessment_status', function (Builder $statusQuery) use ($finalStatuses): void {
+                $statusQuery->whereIn(DB::raw('LOWER(TRIM(name))'), $finalStatuses);
+            });
+        }
+
+        if ($request->filled('building_name')) {
+            $query->where('building_name', 'like', '%'.$request->string('building_name').'%');
+        }
+
+        if ($request->filled('objectid')) {
+            $query->where('objectid', $request->input('objectid'));
+        }
+
+        if ($request->filled('area')) {
+            $query->where('neighborhood', 'like', '%'.$request->string('area').'%');
+        }
+
+        if ($request->filled('filter_from_date')) {
+            $query->whereDate('creationdate', '>=', $request->input('filter_from_date'));
+        }
+
+        if ($request->filled('filter_to_date')) {
+            $query->whereDate('buildings.creationdate', '<=', $request->input('filter_to_date'));
+        }
+
+        if ($request->filled('status_from_date') || $request->filled('status_to_date')) {
+            $query->whereExists(function ($statusQuery) use ($request): void {
+                $statusQuery->selectRaw('1')
+                    ->from('building_statuses as bs')
+                    ->whereColumn('bs.building_id', 'buildings.objectid');
+
+                if ($request->filled('status_from_date')) {
+                    $statusQuery->whereDate('bs.updated_at', '>=', $request->input('status_from_date'));
+                }
+
+                if ($request->filled('status_to_date')) {
+                    $statusQuery->whereDate('bs.updated_at', '<=', $request->input('status_to_date'));
+                }
+            });
+        }
+
+        $query->whereNotExists(function ($statusQuery): void {
+            $statusQuery->selectRaw('1')
+                ->from('building_statuses as bs')
+                ->join('assessment_statuses as s', 'bs.status_id', '=', 's.id')
+                ->whereColumn('bs.building_id', 'buildings.objectid')
+                ->whereIn('s.name', [
+                    'assigned_to_engineer',
+                    'assigned_to_lawyer',
+                ])
+                ->whereRaw('bs.updated_at = (
+                    SELECT MAX(bs2.updated_at)
+                    FROM building_statuses bs2
+                    WHERE bs2.building_id = bs.building_id
+                )');
+        });
+
+        return $query->orderByDesc('objectid');
+    }
+
+    /**
+     * @param  array<string, string>  $columns
+     * @return array<int, mixed>
+     */
+    private function auditBuildingExportRow(Building $building, array $columns): array
+    {
+        $housingStatusCounts = $this->getHousingStatusCountsForBuilding((string) $building->globalid);
+        $engineer = $building->assignedUsers->firstWhere('type', 'QC/QA Engineer')?->user?->name;
+        $lawyer = $building->assignedUsers->firstWhere('type', 'Legal Auditor')?->user?->name;
+
+        $values = [
+            'objectid' => $building->objectid,
+            'globalid' => $building->globalid,
+            'building_name' => $building->building_name,
+            'governorate' => $building->governorate,
+            'municipality' => $building->municipality,
+            'neighborhood' => $building->neighborhood,
+            'assignedto' => $building->assignedto,
+            'building_damage_status' => $building->building_damage_status,
+            'creationdate' => $this->formatAuditExportDate($building->creationdate),
+            'engineer' => $engineer,
+            'lawyer' => $lawyer,
+            'engineer_status' => $this->auditStatusLabel($building->engineerStatus?->status),
+            'lawyer_status' => $this->auditStatusLabel($building->lawyerStatus?->status),
+            'final_status' => $this->auditStatusLabel($building->finalApproval?->status),
+            'housing_status_progress' => $housingStatusCounts['housing_units_with_status_count'].' / '.$housingStatusCounts['housing_units_count'],
+            'housing_units_count' => $housingStatusCounts['housing_units_count'],
+            'housing_units_with_status_count' => $housingStatusCounts['housing_units_with_status_count'],
+        ];
+
+        return collect(array_keys($columns))
+            ->map(fn (string $column): mixed => $values[$column] ?? '')
+            ->all();
+    }
+
+    /**
+     * @param  array<string, string>  $columns
+     * @return array<int, mixed>
+     */
+    private function auditHousingExportRow(HousingUnit $unit, array $columns, ?Building $building): array
+    {
+        $building ??= $unit->building;
+
+        $values = [
+            'building_objectid' => $building?->objectid,
+            'building_name' => $building?->building_name,
+            'objectid' => $unit->objectid,
+            'globalid' => $unit->globalid,
+            'parentglobalid' => $unit->parentglobalid,
+            'housing_unit_number' => $unit->housing_unit_number,
+            'floor_number' => $unit->floor_number,
+            'housing_unit_type' => $unit->housing_unit_type,
+            'unit_damage_status' => $unit->unit_damage_status,
+            'unit_owner' => $unit->unit_owner,
+            'engineer_status' => $this->auditStatusLabel($unit->engineerStatus?->assessment_status),
+            'lawyer_status' => $this->auditStatusLabel($unit->lawyerStatus?->assessment_status),
+            'final_status' => $this->auditStatusLabel($unit->finalApproval?->assessment_status),
+        ];
+
+        return collect(array_keys($columns))
+            ->map(fn (string $column): mixed => $values[$column] ?? '')
+            ->all();
+    }
+
+    private function auditStatusLabel(?AssessmentStatus $status): string
+    {
+        if ($status === null) {
+            return 'Pending';
+        }
+
+        return (string) ($status->label_ar ?: $status->label_en ?: $status->name);
+    }
+
+    private function formatAuditExportDate(mixed $value): string
+    {
+        if (blank($value)) {
+            return '';
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d H:i');
+        } catch (\Throwable) {
+            return (string) $value;
+        }
     }
 
     private function filterValues(Request $request, string $key, array $map = []): array
