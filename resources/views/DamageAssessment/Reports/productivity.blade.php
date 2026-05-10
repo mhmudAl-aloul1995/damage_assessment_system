@@ -69,7 +69,7 @@
                     <!-- .table-responsive enables horizontal scrolling -->
 
                     <div class="table-responsive">
-                        <table class="table table-bordered table-stripped  text-center align-middle">
+                        <table class="table table-bordered table-striped text-center align-middle">
                             <thead style="  background-color: #ffc107;"> 
                                 <tr>
                                     <th>Day</th>

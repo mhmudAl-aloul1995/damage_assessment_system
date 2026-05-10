@@ -42,7 +42,7 @@
                 </div>
 
                 <div class="card-body py-4">
-                    <table class="table table-rounded table-striped table-row-bordered gy-7" id="commulative_report">
+                    <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle" id="commulative_report">
                         <thead>
                             <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
                                 <th>Sector</th>
@@ -95,7 +95,7 @@
                         </tbody>
                         <tfoot class="border-top-2">
                             <tr class="fw-bold bg-light">
-                                <td colspan="4" class="text-end">Grand Totals:</td>
+                                <td colspan="4" class="text-center">Grand Totals:</td>
                                 <td class="text-center">{{ $grandTotalEng }}</td>
                                 <td class="text-center text-danger">{{ $grandTotalTDA }}</td>
                                 <td class="text-center text-warning">{{ $grandTotalPDA }}</td>

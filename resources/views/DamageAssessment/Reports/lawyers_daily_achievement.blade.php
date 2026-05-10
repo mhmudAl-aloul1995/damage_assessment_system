@@ -117,10 +117,10 @@
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-rounded table-striped table-row-bordered gy-7 align-middle">
+                        <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle">
                             <thead>
                                 <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
-                                    <th>Lawyer Name</th>
+                                    <th class="text-center">Lawyer Name</th>
                                     <th class="text-center">Assigned Units</th>
                                     <th class="text-center">Accepted Units</th>
                                     <th class="text-center">Legal Notes</th>
@@ -144,7 +144,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="fw-bold bg-light">
-                                    <td>Total</td>
+                                    <td class="text-center">Total</td>
                                     <td class="text-center text-info">{{ $totals['assigned_count'] }}</td>
                                     <td class="text-center text-success">{{ $totals['accepted_count'] }}</td>
                                     <td class="text-center text-warning">{{ $totals['legal_notes_count'] }}</td>

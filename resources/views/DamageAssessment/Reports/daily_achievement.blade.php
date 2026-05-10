@@ -117,10 +117,10 @@
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-rounded table-striped table-row-bordered gy-7 align-middle">
+                        <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle">
                             <thead>
                                 <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
-                                    <th>{{ $tableTitle }}</th>
+                                    <th class="text-center">{{ $tableTitle }}</th>
                                     @foreach ($tableColumns as $column)
                                         <th class="text-center">{{ $column['label'] }}</th>
                                     @endforeach
@@ -142,7 +142,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="fw-bold bg-light">
-                                    <td>Total</td>
+                                    <td class="text-center">Total</td>
                                     @foreach ($tableColumns as $column)
                                         <td class="text-center text-{{ $column['class'] }}">{{ $totals[$column['key']] }}</td>
                                     @endforeach

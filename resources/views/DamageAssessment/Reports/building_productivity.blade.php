@@ -372,11 +372,11 @@
 
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-rounded table-row-bordered table-striped align-middle gy-4" id="building_productivity_table">
+                <table class="table table-rounded table-row-bordered table-striped text-center align-middle gy-4" id="building_productivity_table">
                     <thead>
                         <tr class="fw-bold fs-6 text-gray-800 text-uppercase bg-light">
-                            <th>Gov</th>
-                            <th>Name</th>
+                            <th class="text-center">Gov</th>
+                            <th class="text-center">Name</th>
                             <th class="text-center">Completed</th>
                             <th class="text-center">Not Completed</th>
                             <th class="text-center">Buildings Count</th>
@@ -411,8 +411,8 @@
                     </tbody>
                     <tfoot>
                         <tr class="fw-bold bg-light-primary fs-6">
-                            <td>{{ $grandTotal['gov'] }}</td>
-                            <td>{{ $grandTotal['name'] }}</td>
+                            <td class="text-center">{{ $grandTotal['gov'] }}</td>
+                            <td class="text-center">{{ $grandTotal['name'] }}</td>
                             <td class="text-center text-success">{{ number_format($grandTotal['completed']) }}</td>
                             <td class="text-center text-danger">{{ number_format($grandTotal['not_completed']) }}</td>
                             <td class="text-center">{{ number_format($grandTotal['buildings_count']) }}</td>

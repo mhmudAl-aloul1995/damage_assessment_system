@@ -348,7 +348,7 @@
                 <div class="tab-content">
                     <div class="tab-pane fade {{ $currentTab === 'buildings' ? 'show active' : '' }}" id="tab-buildings">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                            <table class="table table-row-bordered table-striped gy-5 text-center align-middle w-100"
                                 id="fieldEngineerBuildingsTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
@@ -373,7 +373,7 @@
                     <div class="tab-pane fade {{ $currentTab === 'housing_units' ? 'show active' : '' }}"
                         id="tab-housing_units">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                            <table class="table table-row-bordered table-striped gy-5 text-center align-middle w-100"
                                 id="fieldEngineerHousingTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
@@ -392,7 +392,7 @@
 
                     <div class="tab-pane fade {{ $currentTab === 'edits' ? 'show active' : '' }}" id="tab-edits">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                            <table class="table table-row-bordered table-striped gy-5 text-center align-middle w-100"
                                 id="fieldEngineerEditsTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
@@ -412,7 +412,7 @@
                     <div class="tab-pane fade {{ $currentTab === 'status_history' ? 'show active' : '' }}"
                         id="tab-status_history">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                            <table class="table table-row-bordered table-striped gy-5 text-center align-middle w-100"
                                 id="fieldEngineerStatusHistoryTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
@@ -430,7 +430,7 @@
                     <div class="tab-pane fade {{ $currentTab === 'assignments' ? 'show active' : '' }}"
                         id="tab-assignments">
                         <div class="table-responsive print-target">
-                            <table class="table table-row-bordered table-striped gy-5 align-middle w-100"
+                            <table class="table table-row-bordered table-striped gy-5 text-center align-middle w-100"
                                 id="fieldEngineerAssignmentsTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">

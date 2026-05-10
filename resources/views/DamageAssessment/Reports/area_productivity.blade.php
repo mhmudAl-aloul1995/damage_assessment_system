@@ -107,7 +107,7 @@
                 </div>
 
                 <div class="card-body py-4">
-                    <table class="table table-rounded table-striped table-row-bordered gy-7" id="area_productivity_table">
+                    <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle" id="area_productivity_table">
                         <thead>
                             <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
                                 <th>{{ __('multilingual.area_productivity_reports.columns.total_count') }}</th>
@@ -136,17 +136,9 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td class="text-center text-muted">
+                                    <td colspan="9" class="text-center text-muted">
                                         {{ __('multilingual.area_productivity_reports.labels.empty') }}
                                     </td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -157,10 +149,7 @@
                                 <td class="text-warning">{{ $summary['pda'] }}</td>
                                 <td class="text-danger">{{ $summary['tda'] }}</td>
                                 <td>{{ $summary['engineers'] }}</td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td class="text-end">{{ __('multilingual.area_productivity_reports.labels.grand_totals') }}</td>
+                                <td colspan="4" class="text-center">{{ __('multilingual.area_productivity_reports.labels.grand_totals') }}</td>
                             </tr>
                         </tfoot>
                     </table>
