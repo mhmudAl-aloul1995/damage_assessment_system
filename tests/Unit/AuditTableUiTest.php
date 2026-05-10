@@ -10,9 +10,11 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('renderAuditLtrCell')
         ->toContain('audit-cell-date')
         ->toContain('autoWidth: false')
-        ->toContain('scrollX: false')
+        ->toContain('scrollX: true')
         ->toContain('width: 100% !important')
-        ->toContain('overflow-x: visible');
+        ->toContain('min-width: 1180px')
+        ->toContain('font-size: clamp')
+        ->toContain('overflow-x: auto');
 });
 
 test('assessment audit inline edits resolve missing global ids before saving', function () {

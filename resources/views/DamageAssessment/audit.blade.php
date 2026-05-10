@@ -16,18 +16,20 @@
 		}
 
 		.audit-table-wrapper {
-			overflow-x: visible;
+			overflow-x: auto;
 			width: 100%;
+			-webkit-overflow-scrolling: touch;
 		}
 
 		#kt_datatable_audits {
 			width: 100% !important;
-			table-layout: fixed;
+			min-width: 1180px;
+			table-layout: auto;
 		}
 
 		#kt_datatable_audits th,
 		#kt_datatable_audits td {
-			padding-inline: 0.35rem !important;
+			padding: clamp(0.65rem, 0.45rem + 0.35vw, 1rem) clamp(0.55rem, 0.35rem + 0.35vw, 0.95rem) !important;
 			vertical-align: middle;
 		}
 
@@ -37,14 +39,15 @@
 		}
 
 		#kt_datatable_audits thead th {
-			font-size: 0.68rem;
-			line-height: 1.5;
+			font-size: clamp(0.78rem, 0.68rem + 0.18vw, 0.94rem);
+			line-height: 1.45;
 			white-space: normal;
 			overflow-wrap: anywhere;
 		}
 
 		#kt_datatable_audits tbody td {
-			font-size: 0.76rem;
+			font-size: clamp(0.84rem, 0.76rem + 0.16vw, 0.98rem);
+			line-height: 1.55;
 		}
 
 		#kt_datatable_audits .audit-cell-text,
@@ -73,10 +76,10 @@
 			display: inline-flex;
 			max-width: 100%;
 			min-height: 30px;
-			padding: 0.35rem 0.45rem;
+			padding: 0.4rem 0.6rem;
 			justify-content: center;
 			align-items: center;
-			font-size: 0.72rem;
+			font-size: clamp(0.78rem, 0.7rem + 0.14vw, 0.9rem);
 			line-height: 1.35;
 			text-align: center;
 			white-space: normal;
@@ -87,21 +90,20 @@
 		}
 
 		#kt_datatable_audits .btn {
-			padding-inline: 0.45rem;
+			padding-inline: 0.65rem;
 			white-space: normal;
 		}
 
-		@media (max-width: 1399.98px) {
-			#kt_datatable_audits thead th {
-				font-size: 1rem !important;
+		@media (min-width: 1600px) {
+			#kt_datatable_audits {
+				min-width: 100%;
 			}
+		}
 
-			#kt_datatable_audits tbody td {
-				font-size: 0.7rem;
-			}
-
-			#kt_datatable_audits .badge {
-				font-size: 0.66rem;
+		@media (max-width: 991.98px) {
+			.audit-table-wrapper {
+				margin-inline: -0.75rem;
+				padding-inline: 0.75rem;
 			}
 		}
 	</style>
@@ -291,30 +293,30 @@
 
 				<div class="card-body pt-0">
 					<div class="audit-table-wrapper">
-					<table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_datatable_audits">
-						<thead>
-							<tr class="text-muted fw-bold fs-7 text-uppercase gs-0">
-								<th class="w-10px pe-2">
-									<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-										<input class="form-check-input" type="checkbox" data-kt-check="true"
-											data-kt-check-target="#kt_datatable_audits .form-check-input" value="1" />
-									</div>
-								</th>
-								<th>{{ __('ui.audit.building_name') }}</th>
-								<th>{{ __('ui.audit.total_cases_col') }}</th>
-								<th>{{ __('ui.audit.field_engineer_col') }}</th>
-								<th>{{ __('ui.audit.engineer_col') }}</th>
-								<th>{{ __('ui.audit.lawyer_col') }}</th>
-								<th>{{ __('ui.audit.eng_status_col') }}</th>
-								<th>{{ __('ui.audit.legal_status_col') }}</th>
-								<th>{{ __('ui.audit.final_approval_col') }}</th>
-								<th>{{ __('ui.audit.creation_date_col') }}</th>
-								<th>{{ __('ui.audit.actions') }}</th>
-							</tr>
-						</thead>
-						<tbody class="text-gray-600 fw-semibold">
-						</tbody>
-					</table>
+						<table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_datatable_audits">
+							<thead>
+								<tr class="text-muted fw-bold fs-7 text-uppercase gs-0">
+									<th class="w-10px pe-2">
+										<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+											<input class="form-check-input" type="checkbox" data-kt-check="true"
+												data-kt-check-target="#kt_datatable_audits .form-check-input" value="1" />
+										</div>
+									</th>
+									<th>{{ __('ui.audit.building_name') }}</th>
+									<th>{{ __('ui.audit.total_cases_col') }}</th>
+									<th>{{ __('ui.audit.field_engineer_col') }}</th>
+									<th>{{ __('ui.audit.engineer_col') }}</th>
+									<th>{{ __('ui.audit.lawyer_col') }}</th>
+									<th>{{ __('ui.audit.eng_status_col') }}</th>
+									<th>{{ __('ui.audit.legal_status_col') }}</th>
+									<th>{{ __('ui.audit.final_approval_col') }}</th>
+									<th>{{ __('ui.audit.creation_date_col') }}</th>
+									<th>{{ __('ui.audit.actions') }}</th>
+								</tr>
+							</thead>
+							<tbody class="text-gray-600 fw-semibold">
+							</tbody>
+						</table>
 					</div>
 				</div>
 			</div>
@@ -672,7 +674,7 @@
 				lengthMenu: [[10, 20, 25, 50], [10, 20, 25, 50]],
 				pageLength: 20,
 				autoWidth: false,
-				scrollX: false,
+				scrollX: true,
 				responsive: false,
 				columnDefs: [
 					{
