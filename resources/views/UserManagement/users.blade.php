@@ -46,7 +46,6 @@
                         <th class="min-w-125px">{{ __('ui.users.phone') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.created_at') }}</th>
                         <th class="min-w-150px">ArcGIS Username</th>
-                        <th class="min-w-175px">{{ __('multilingual.user_management.telegram.connection') }}</th>
                         <th class="text-end min-w-100px">{{ __('ui.users.actions') }}</th>
                     </tr>
                 </thead>
@@ -248,13 +247,6 @@
             retry: @json(__('ui.buttons.try_again')),
             loadFailed: @json(__('ui.users.load_failed')),
             saved: @json(__('ui.users.saved')),
-            telegramLinkReady: @json(__('multilingual.user_management.telegram.link_ready')),
-            telegramLinkButton: @json(__('multilingual.user_management.telegram.generate_link')),
-            telegramCopyLink: @json(__('multilingual.telegram_integrations.actions.copy_link')),
-            telegramCopySuccess: @json(__('multilingual.telegram_integrations.messages.link_copied')),
-            telegramCopyFailed: @json(__('multilingual.telegram_integrations.messages.link_copy_failed')),
-            telegramOpenDestination: @json(__('multilingual.user_management.telegram.open_destination')),
-            telegramNotConfigured: @json(__('multilingual.user_management.telegram.link_not_available')),
             dataTableLanguageUrl: @json(app()->getLocale() === 'ar' ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json'),
         };
 
@@ -330,76 +322,6 @@
             });
         }
 
-        function generateTelegramLink(id) {
-            $.ajax({
-                url: "{{ url('user-management/user') }}/" + id + "/telegram-link",
-                type: "POST",
-                success: function (response) {
-                    const shareableLink = response.shareable_link ?? '';
-                    const linkHtml = shareableLink
-                        ? `<div class="mt-4">
-                                        <label class="form-label fw-semibold">${userTranslations.telegramLinkButton}</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control form-control-solid" id="telegram_shareable_link" value="${shareableLink}" readonly>
-                                            <button type="button" class="btn btn-primary" onclick="copyTelegramLink()">${userTranslations.telegramCopyLink}</button>
-                                        </div>
-                                    </div>`
-                        : `<div class="alert alert-warning mt-4 mb-0">${userTranslations.telegramNotConfigured}</div>`;
-
-                    Swal.fire({
-                        title: response.message ?? userTranslations.telegramLinkReady,
-                        html: `
-                                    <div class="text-start">
-                                        <div class="mb-3">
-                                            <span class="badge badge-light-info">${response.status_label ?? ''}</span>
-                                        </div>
-                                        ${linkHtml}
-                                        <div class="mt-4">
-                                            <a href="${response.destination_url}" class="btn btn-light-primary">${userTranslations.telegramOpenDestination}</a>
-                                        </div>
-                                    </div>
-                                `,
-                        icon: 'success',
-                        buttonsStyling: false,
-                        confirmButtonText: userTranslations.ok,
-                        customClass: {
-                            confirmButton: 'btn btn-primary'
-                        }
-                    });
-
-                    usersTable.ajax.reload(null, false);
-                },
-                error: function (xhr) {
-                    showSwalError(xhr.responseJSON?.message ?? userTranslations.error);
-                }
-            });
-        }
-
-        function copyTelegramLink() {
-            const input = document.getElementById('telegram_shareable_link');
-
-            if (!input) {
-                showSwalError(userTranslations.telegramNotConfigured);
-                return;
-            }
-
-            navigator.clipboard.writeText(input.value)
-                .then(() => {
-                    Swal.fire({
-                        text: userTranslations.telegramCopySuccess,
-                        icon: 'success',
-                        buttonsStyling: false,
-                        confirmButtonText: userTranslations.ok,
-                        customClass: {
-                            confirmButton: 'btn btn-primary'
-                        }
-                    });
-                })
-                .catch(() => {
-                    showSwalError(userTranslations.telegramCopyFailed);
-                });
-        }
-
         $(document).ready(function () {
             $.ajaxSetup({
                 headers: {
@@ -430,7 +352,6 @@
                     { data: 'phone', name: 'phone' },
                     { data: 'created_at', name: 'created_at' },
                     { data: 'username_arcgis', name: 'username_arcgis' },
-                    { data: 'telegram_destination', name: 'telegram_destination', searchable: false, orderable: false },
                     { data: 'action', name: 'action', searchable: false, orderable: false }
 
                 ],

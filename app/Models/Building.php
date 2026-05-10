@@ -179,6 +179,15 @@ class Building extends Model
 
     public $timestamps = false;
 
+    public function getConnectionName(): ?string
+    {
+        if (app()->environment('testing')) {
+            return config('database.default');
+        }
+
+        return $this->connection;
+    }
+
     /*
         protected function dateOfDamage(): Attribute
         {

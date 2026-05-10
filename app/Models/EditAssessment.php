@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EditAssessment extends Model
 {
-
     protected $guarded = [];
+
     protected $fillable = [
         'global_id',
         'type',
@@ -26,10 +27,13 @@ class EditAssessment extends Model
         return $this->belongsTo(HousingUnit::class);
     }
 
-
-
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function histories(): HasMany
+    {
+        return $this->hasMany(AssessmentEditHistory::class);
     }
 }

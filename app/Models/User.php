@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -36,7 +38,6 @@ class User extends Authenticatable
         'region',
         'name_en',
         'username_arcgis',
-        'telegram_chat_id',
         'preferred_locale',
     ];
 
@@ -64,7 +65,6 @@ class User extends Authenticatable
             'avatar' => 'string',
             'address' => 'string',
             'username_arcgis' => 'string',
-            'telegram_chat_id' => 'string',
             'preferred_locale' => 'string',
             'email_verified_at' => 'datetime',
             'password' => 'string',
@@ -100,13 +100,20 @@ class User extends Authenticatable
         return $this->hasMany(CommitteeDecision::class, 'committee_manager_id');
     }
 
-    public function telegramIntegrations()
+    public function teamLeaderFieldEngineers(): HasMany
     {
-        return $this->hasMany(TelegramIntegration::class);
+        return $this->hasMany(TeamLeaderFieldEngineer::class, 'team_leader_id');
     }
 
-    public function telegramDestinations()
+    public function fieldEngineers(): BelongsToMany
     {
-        return $this->morphMany(TelegramDestination::class, 'relatedModel', 'related_model_type', 'related_model_id');
+        return $this->belongsToMany(User::class, 'team_leader_field_engineers', 'team_leader_id', 'field_engineer_id')
+            ->withTimestamps();
+    }
+
+    public function assignedTeamLeaders(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'team_leader_field_engineers', 'field_engineer_id', 'team_leader_id')
+            ->withTimestamps();
     }
 }

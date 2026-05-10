@@ -7,6 +7,7 @@ return [
         'assessments' => 'Assessments',
         'buildings' => 'Buildings',
         'housing_units' => 'Housing Units',
+        'building_survey_return_requests' => 'Building Survey Return Requests',
         'public_buildings' => 'Public Buildings',
         'road_facilities' => 'Road Facilities',
         'engineers' => 'Researchers',
@@ -45,10 +46,6 @@ return [
         'title' => 'Committee Decisions',
         'decisions' => 'Committee Decisions',
         'members' => 'Committee Members',
-        'telegram_integrations' => 'Telegram Destinations',
-        'telegram_settings' => 'Telegram Settings',
-        'telegram_discovered_chats' => 'Discovered Chats',
-        'telegram_broadcasts' => 'Telegram Broadcasts',
     ],
     'user_management' => [
         'title' => 'User Management',
@@ -56,5 +53,6 @@ return [
         'attendance' => 'Attendance',
         'roles' => 'Roles',
         'permissions' => 'Permissions',
+        'team_leader_field_engineers' => 'Team Leader Field Engineers',
     ],
 ];

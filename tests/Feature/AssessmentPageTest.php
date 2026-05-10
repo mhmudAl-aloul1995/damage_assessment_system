@@ -9,19 +9,10 @@ use App\Models\EditAssessment;
 use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
 use Spatie\Permission\Models\Role;
-
-beforeEach(function () {
-    config()->set('database.connections.mysql', config('database.connections.sqlite'));
-    config()->set('database.default', 'mysql');
-    DB::purge('mysql');
-    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
-});
 
 it('shows the building name and pdf export action on the assessment page', function () {
     $user = User::factory()->create();
@@ -173,11 +164,20 @@ it('returns inline edit metadata and field history when saving an audit edit', f
         ->assertJsonPath('status', true)
         ->assertJsonPath('field_value', 'Updated Building')
         ->assertJsonPath('user_name', 'Audit Editor')
-        ->assertJsonCount(2, 'history')
+        ->assertJsonCount(1, 'history')
         ->assertJsonFragment([
             'value' => 'Updated Building',
             'user_name' => 'Audit Editor',
         ]);
+
+    $this->assertDatabaseHas('assessment_edit_histories', [
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'building_name',
+        'old_value' => 'Previous Building',
+        'new_value' => 'Updated Building',
+        'edited_by' => $user->id,
+    ]);
 });
 
 it('allows auditing supervisors to final approve from the assessment audit page', function () {

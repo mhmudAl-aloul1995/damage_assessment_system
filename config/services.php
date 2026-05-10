@@ -34,12 +34,6 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    'telegram' => [
-        'base_url' => env('TELEGRAM_API_BASE_URL', 'https://api.telegram.org'),
-        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
-        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
-        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
-    ],
     'arcgis' => [
         'username' => env('ARCGIS_USERNAME'),
         'password' => env('ARCGIS_PASSWORD'),
@@ -75,9 +69,6 @@ return [
         ),
     ],
     'committee_decisions' => [
-        'telegram' => [
-            'preference_key' => 'notify_status_changes',
-        ],
         'arcgis' => [
             'base_url' => env('COMMITTEE_ARCGIS_BASE_URL', ''),
             'token' => env('COMMITTEE_ARCGIS_TOKEN', ''),
@@ -87,8 +78,13 @@ return [
             'housing_unit_layer_id' => env('COMMITTEE_ARCGIS_HOUSING_UNIT_LAYER_ID', 1),
             'identifier_field' => env('COMMITTEE_ARCGIS_IDENTIFIER_FIELD', 'objectid'),
             'status_field' => env('COMMITTEE_ARCGIS_STATUS_FIELD', 'field_status'),
-            'status_value' => env('COMMITTEE_ARCGIS_STATUS_VALUE', 'not_completed'),
+            'status_value' => env('COMMITTEE_ARCGIS_STATUS_VALUE', 'Not_Completed'),
             'unit_target' => env('COMMITTEE_ARCGIS_UNIT_TARGET', 'unit'),
+            'timeout' => env('COMMITTEE_ARCGIS_TIMEOUT', 90),
+            'connect_timeout' => env('COMMITTEE_ARCGIS_CONNECT_TIMEOUT', 30),
+            'retry_times' => env('COMMITTEE_ARCGIS_RETRY_TIMES', 2),
+            'retry_sleep' => env('COMMITTEE_ARCGIS_RETRY_SLEEP', 1000),
+            'verify_ssl' => env('COMMITTEE_ARCGIS_VERIFY_SSL', false),
         ],
     ],
 

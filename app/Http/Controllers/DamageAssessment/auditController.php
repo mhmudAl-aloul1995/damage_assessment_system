@@ -15,6 +15,7 @@ use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
 use App\Models\User;
+use App\Services\AssessmentEditService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -3506,14 +3507,15 @@ COALESCE(
             }
 
             if (! empty($eligibleBuildings)) {
+                $timestamp = now()->toDateTimeString();
                 $rows = DB::table('buildings')
                     ->select([
                         DB::raw('objectid as building_id'),
                         DB::raw($finalStatus->id.' as status_id'),
                         DB::raw($userId.' as user_id'),
                         DB::raw("'final' as type"),
-                        DB::raw('NOW() as created_at'),
-                        DB::raw('NOW() as updated_at'),
+                        DB::raw("'".$timestamp."' as created_at"),
+                        DB::raw("'".$timestamp."' as updated_at"),
                     ])
                     ->whereIn('objectid', $eligibleBuildings)
                     ->get()
@@ -4214,13 +4216,43 @@ COALESCE(
         return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit'));
     }
 
-    public function updateInlineAssessment(Request $request)
+    public function updateInlineAssessment(Request $request, AssessmentEditService $assessmentEditService)
     {
         $request->validate([
             'type' => 'required|in:building_table,housing_table',
             'globalid' => 'required|string',
             'field' => 'required|string',
             'value' => 'nullable',
+        ]);
+
+        $result = $assessmentEditService->save(
+            (string) $request->type,
+            (string) $request->globalid,
+            (string) $request->field,
+            $request->value,
+            $request
+        );
+
+        if (! $result['changed']) {
+            return response()->json([
+                'status' => false,
+                'success' => false,
+                'message' => 'لا يوجد تغيير في القيمة.',
+                'history' => $this->inlineAssessmentHistoryRows($request->type, $request->globalid, $request->field),
+            ]);
+        }
+
+        $edit = $result['edit'];
+
+        return response()->json([
+            'status' => true,
+            'success' => true,
+            'message' => 'تم حفظ التعديل بنجاح',
+            'edit_id' => $edit->id,
+            'field_value' => $edit->field_value,
+            'user_name' => $edit->user?->name ?? '-',
+            'updated_at' => $edit->updated_at?->format('Y-m-d h:i A'),
+            'history' => $this->inlineAssessmentHistoryRows($request->type, $request->globalid, $request->field),
         ]);
 
         $modelClass = $request->type === 'building_table'
@@ -4281,20 +4313,24 @@ COALESCE(
 
     private function inlineAssessmentHistoryRows(string $type, string $globalid, string $field): array
     {
-        return EditAssessment::query()
+        return \App\Models\AssessmentEditHistory::query()
             ->with('user')
             ->where('type', $type)
             ->where('global_id', $globalid)
             ->where('field_name', $field)
-            ->latest('updated_at')
+            ->latest('created_at')
             ->latest('id')
             ->limit(20)
             ->get()
-            ->map(fn (EditAssessment $edit): array => [
-                'id' => $edit->id,
-                'value' => $edit->field_value,
-                'user_name' => $edit->user?->name ?? '-',
-                'updated_at' => $edit->updated_at?->format('Y-m-d h:i A') ?? '-',
+            ->map(fn (\App\Models\AssessmentEditHistory $history): array => [
+                'id' => $history->id,
+                'value' => $history->new_value,
+                'old_value' => $history->old_value,
+                'new_value' => $history->new_value,
+                'user_name' => $history->user?->name ?? '-',
+                'updated_at' => $history->created_at?->format('Y-m-d h:i A') ?? '-',
+                'source' => $history->source ?? '-',
+                'return_request_id' => $history->return_request_id,
             ])
             ->all();
     }

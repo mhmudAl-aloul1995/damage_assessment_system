@@ -4,7 +4,7 @@ return [
     [
         'title' => 'menu.damage_assessment.title',
         'icon' => 'ki-abstract-28',
-        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
         'active_patterns' => [
             'damageAssessment*',
             'building*',
@@ -12,6 +12,7 @@ return [
             'engineer*',
             'public-buildings*',
             'road-facilities*',
+            'field-engineer/building-survey-return-requests*',
         ],
         'items' => [
             [
@@ -25,6 +26,12 @@ return [
                 'url' => 'assessmentAll',
                 'pattern' => 'assessmentAll*',
                 'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+            ],
+            [
+                'title' => 'menu.damage_assessment.building_survey_return_requests',
+                'url' => 'field-engineer/building-survey-return-requests',
+                'pattern' => 'field-engineer/building-survey-return-requests*',
+                'roles' => ['Database Officer', 'Field Engineer', 'Team Leader', 'Team leader', 'Area Manager'],
             ],
             [
                 'title' => 'menu.damage_assessment.buildings',
@@ -220,11 +227,6 @@ return [
         'active_patterns' => [
             'committee-decisions*',
             'committee-members*',
-            'telegram-integrations*',
-            'telegram/settings*',
-            'telegram/destinations*',
-            'telegram/discovered-chats*',
-            'telegram/broadcasts*',
         ],
         'items' => [
             [
@@ -239,30 +241,6 @@ return [
                 'pattern' => 'committee-members*',
                 'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
             ],
-            /* [
-                 'title' => 'menu.committee.telegram_integrations',
-                'url' => 'telegram/destinations',
-                'pattern' => 'telegram/destinations*',
-                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor'],
-            ],
-            [
-                'title' => 'menu.committee.telegram_settings',
-                'url' => 'telegram/settings',
-                'pattern' => 'telegram/settings*',
-                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
-            ],
-            [
-                'title' => 'menu.committee.telegram_discovered_chats',
-                'url' => 'telegram/discovered-chats',
-                'pattern' => 'telegram/discovered-chats*',
-                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
-            ],
-            [
-                'title' => 'menu.committee.telegram_broadcasts',
-                'url' => 'telegram/broadcasts',
-                'pattern' => 'telegram/broadcasts*',
-                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
-            ], */
         ],
     ],
     [
@@ -271,6 +249,7 @@ return [
         'roles' => ['Database Officer'],
         'active_patterns' => [
             'user*',
+            'admin/team-leader-field-engineers*',
         ],
         'items' => [
             [
@@ -295,6 +274,12 @@ return [
                 'title' => 'menu.user_management.permissions',
                 'url' => 'user-management/permissions',
                 'pattern' => 'user',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'menu.user_management.team_leader_field_engineers',
+                'url' => 'admin/team-leader-field-engineers',
+                'pattern' => 'admin/team-leader-field-engineers*',
                 'roles' => ['Database Officer'],
             ],
             [

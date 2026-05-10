@@ -2,24 +2,20 @@
 
 namespace App\Providers;
 
-use App\services\Messaging\MessagingProvider;
-use App\services\Messaging\TelegramMessagingProvider;
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Event;
 use App\Models\LoginLog;
+use App\Support\Forms\LoginSecurity;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
-use App\Support\Forms\LoginSecurity;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
-        $this->app->bind(MessagingProvider::class, TelegramMessagingProvider::class);
-    }
+    public function register(): void {}
 
     /**
      * Bootstrap any application services.
@@ -43,7 +39,7 @@ class AppServiceProvider extends ServiceProvider
 
             if ($isNewIp) {
                 $reason = $reason
-                    ? $reason . ' + New IP for this user'
+                    ? $reason.' + New IP for this user'
                     : 'New IP for this user';
             }
 
@@ -100,7 +96,7 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
         Event::listen(Logout::class, function (Logout $event) {
-            if (!$event->user) {
+            if (! $event->user) {
                 return;
             }
 
@@ -109,7 +105,7 @@ class AppServiceProvider extends ServiceProvider
                 ->whereNull('logged_out_at')
                 ->latest('logged_in_at')
                 ->first()
-                    ?->update([
+                ?->update([
                     'logged_out_at' => now(),
                 ]);
         });

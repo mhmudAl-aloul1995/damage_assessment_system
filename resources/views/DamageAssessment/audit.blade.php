@@ -5,16 +5,104 @@
 
 @section('content')
 	<style>
-		/* Reduce the gap on the right of the text */
 		table.dataTable thead th.sorting,
 		table.dataTable thead th.sorting_asc,
 		table.dataTable thead th.sorting_desc {
 			padding-right: 15px !important;
-			/* Adjust this value as needed */
 		}
 
 		.container-loader {
 			display: none !important;
+		}
+
+		.audit-table-wrapper {
+			overflow-x: visible;
+			width: 100%;
+		}
+
+		#kt_datatable_audits {
+			width: 100% !important;
+			table-layout: fixed;
+		}
+
+		#kt_datatable_audits th,
+		#kt_datatable_audits td {
+			padding-inline: 0.35rem !important;
+			vertical-align: middle;
+		}
+
+		#kt_datatable_audits thead th,
+		#kt_datatable_audits tbody td {
+			text-align: center;
+		}
+
+		#kt_datatable_audits thead th {
+			font-size: 0.68rem;
+			line-height: 1.5;
+			white-space: normal;
+			overflow-wrap: anywhere;
+		}
+
+		#kt_datatable_audits tbody td {
+			font-size: 0.76rem;
+		}
+
+		#kt_datatable_audits .audit-cell-text,
+		#kt_datatable_audits .audit-cell-name {
+			display: block;
+			line-height: 1.55;
+			white-space: normal;
+			overflow-wrap: anywhere;
+			word-break: normal;
+		}
+
+		#kt_datatable_audits .audit-cell-ltr {
+			direction: ltr;
+			text-align: center;
+			unicode-bidi: plaintext;
+		}
+
+		#kt_datatable_audits .audit-cell-date {
+			display: block;
+			direction: ltr;
+			line-height: 1.45;
+			white-space: normal;
+		}
+
+		#kt_datatable_audits .badge {
+			display: inline-flex;
+			max-width: 100%;
+			min-height: 30px;
+			padding: 0.35rem 0.45rem;
+			justify-content: center;
+			align-items: center;
+			font-size: 0.72rem;
+			line-height: 1.35;
+			text-align: center;
+			white-space: normal;
+		}
+
+		#kt_datatable_audits .form-check {
+			min-height: 1rem;
+		}
+
+		#kt_datatable_audits .btn {
+			padding-inline: 0.45rem;
+			white-space: normal;
+		}
+
+		@media (max-width: 1399.98px) {
+			#kt_datatable_audits thead th {
+				font-size: 1rem !important;
+			}
+
+			#kt_datatable_audits tbody td {
+				font-size: 0.7rem;
+			}
+
+			#kt_datatable_audits .badge {
+				font-size: 0.66rem;
+			}
 		}
 	</style>
 
@@ -171,7 +259,7 @@
 								placeholder="{{ __('ui.audit.search_buildings') }}" />
 						</div>
 					</div>
-					<div class="card-toolbar gap-3">
+					<div class="card-toolbar gap-3 flex-wrap justify-content-end">
 						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
 							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
 						</button>
@@ -202,30 +290,32 @@
 				</div>
 
 				<div class="card-body pt-0">
+					<div class="audit-table-wrapper">
 					<table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_datatable_audits">
 						<thead>
-							<tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+							<tr class="text-muted fw-bold fs-7 text-uppercase gs-0">
 								<th class="w-10px pe-2">
 									<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
 										<input class="form-check-input" type="checkbox" data-kt-check="true"
 											data-kt-check-target="#kt_datatable_audits .form-check-input" value="1" />
 									</div>
 								</th>
-								<th>Building Name</th>
-								<th>إجمالي الحالات</th>
-								<th> Field Engineer</th>
-								<th>Engineer</th>
-								<th>Lawyer</th>
-								<th>Eng Status</th>
-								<th>Legal Status</th>
-								<th>Final Approval</th>
-								<th>creationdate</th>
-								<th>Actions</th>
+								<th>{{ __('ui.audit.building_name') }}</th>
+								<th>{{ __('ui.audit.total_cases_col') }}</th>
+								<th>{{ __('ui.audit.field_engineer_col') }}</th>
+								<th>{{ __('ui.audit.engineer_col') }}</th>
+								<th>{{ __('ui.audit.lawyer_col') }}</th>
+								<th>{{ __('ui.audit.eng_status_col') }}</th>
+								<th>{{ __('ui.audit.legal_status_col') }}</th>
+								<th>{{ __('ui.audit.final_approval_col') }}</th>
+								<th>{{ __('ui.audit.creation_date_col') }}</th>
+								<th>{{ __('ui.audit.actions') }}</th>
 							</tr>
 						</thead>
 						<tbody class="text-gray-600 fw-semibold">
 						</tbody>
 					</table>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -290,7 +380,7 @@
 					<div class="table-responsive">
 						<table class="table table-row-bordered table-striped gy-5 gs-7">
 							<thead>
-								<tr class="fw-bold fs-6 text-gray-800">
+								<tr class="fw-bold fs-4 text-gray-800">
 									<th>{{ __('ui.audit.status') }}</th>
 									<th>{{ __('ui.audit.user') }}</th>
 									<th>{{ __('ui.audit.role') }}</th>
@@ -548,6 +638,15 @@
 					statusFromPicker.set('maxDate', selectedDates[0]);
 				}
 			});
+			const escapeAuditCell = function (value) {
+				return $('<div>').text(value ?? '-').html();
+			};
+			const renderAuditTextCell = function (data) {
+				return `<span class="audit-cell-text">${escapeAuditCell(data)}</span>`;
+			};
+			const renderAuditLtrCell = function (data) {
+				return `<span class="audit-cell-text audit-cell-ltr">${escapeAuditCell(data)}</span>`;
+			};
 			var table = $('#kt_datatable_audits').DataTable({
 				processing: true,
 				serverSide: true,
@@ -572,11 +671,55 @@
 				},
 				lengthMenu: [[10, 20, 25, 50], [10, 20, 25, 50]],
 				pageLength: 20,
-				columnDefs: [{
-					targets: 0,
-					orderable: false,
-					searchable: false
-				}],
+				autoWidth: false,
+				scrollX: false,
+				responsive: false,
+				columnDefs: [
+					{
+						targets: 0,
+						orderable: false,
+						searchable: false,
+						width: '3%',
+						className: 'text-center'
+					},
+					{
+						targets: 1,
+						width: '16%',
+						className: 'text-start'
+					},
+					{
+						targets: 2,
+						width: '7%',
+						className: 'text-center'
+					},
+					{
+						targets: 3,
+						width: '10%',
+						className: 'audit-cell-ltr'
+					},
+					{
+						targets: [4, 5],
+						width: '9%',
+						className: 'text-center'
+					},
+					{
+						targets: [6, 7, 8],
+						width: '10%',
+						className: 'text-center'
+					},
+					{
+						targets: 9,
+						width: '8%',
+						className: 'text-center'
+					},
+					{
+						targets: 10,
+						orderable: false,
+						searchable: false,
+						width: '4%',
+						className: 'text-center'
+					}
+				],
 				order: [[9, 'desc']],
 				columns: [
 					{
@@ -590,15 +733,28 @@
 																																																data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
 																																														</div>`
 					},
-					{ data: 'building_name', name: 'building_name' },
-					{ data: 'housing_status_progress', name: 'housing_status_progress', searchable: false, orderable: false },
-					{ data: 'assignedto', name: 'assignedto' },
-					{ data: 'engineer', name: 'engineer', searchable: false },
-					{ data: 'lawyer', name: 'lawyer', searchable: false },
+					{
+						data: 'building_name',
+						name: 'building_name',
+						render: (data) => `<span class="audit-cell-name">${data ?? '-'}</span>`
+					},
+					{
+						data: 'housing_status_progress',
+						name: 'housing_status_progress',
+						searchable: false,
+						orderable: false,
+						render: renderAuditTextCell
+					},
+					{ data: 'assignedto', name: 'assignedto', render: renderAuditLtrCell },
+					{ data: 'engineer', name: 'engineer', searchable: false, render: renderAuditTextCell },
+					{ data: 'lawyer', name: 'lawyer', searchable: false, render: renderAuditTextCell },
 					{ data: 'eng_status', name: 'eng_status' },
 					{ data: 'law_status', name: 'law_status' },
 					{ data: 'finalApproval' },
-					{ data: 'creationdate' },
+					{
+						data: 'creationdate',
+						render: (data) => `<span class="audit-cell-date">${escapeAuditCell(data)}</span>`
+					},
 					{ data: 'actions' }
 				],
 				language: {

@@ -26,10 +26,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'sign committee decisions',
             'manage committee members',
             'manage committee decision content',
-            'send committee telegram',
             'sync committee decision arcgis',
-            'view telegram integrations',
-            'manage telegram integrations',
         /* 'dashboard.view',
 
             'users.view',
@@ -110,27 +107,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit committee decisions',
             'manage committee members',
             'manage committee decision content',
-            'send committee telegram',
             'sync committee decision arcgis',
-            'view telegram integrations',
-            'manage telegram integrations',
         ]);
         $teamLeader->givePermissionTo([
             'view committee decisions',
             'create committee decisions',
             'edit committee decisions',
             'manage committee decision content',
-            'view telegram integrations',
         ]);
         $auditing->givePermissionTo([
             'view committee decisions',
             'sign committee decisions',
-            'view telegram integrations',
         ]);
         $fieldEngineer->givePermissionTo([
             'view committee decisions',
             'sign committee decisions',
-            'view telegram integrations',
         ]);
         $undpProjectManager->givePermissionTo([
             'view committee decisions',
@@ -138,21 +129,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit committee decisions',
             'manage committee members',
             'manage committee decision content',
-            'send committee telegram',
             'sync committee decision arcgis',
-            'view telegram integrations',
-            'manage telegram integrations',
         ]);
         $legalAuditor->givePermissionTo([
             'view committee decisions',
             'sign committee decisions',
-            'view telegram integrations',
         ]);
         $operationalLead->givePermissionTo([
             'view committee decisions',
             'manage committee members',
             'manage committee decision content',
-            'view telegram integrations',
         ]);
         /*
         $systemManager->syncPermissions($permissions);

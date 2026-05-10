@@ -7,6 +7,7 @@ return [
         'assessments' => 'الاستبيانات',
         'buildings' => 'المباني',
         'housing_units' => 'الوحدات السكنية',
+        'building_survey_return_requests' => 'طلبات إرجاع الاستبيان',
         'public_buildings' => 'المباني العامة',
         'road_facilities' => 'مرافق الطرق',
         'engineers' => 'الباحثين',
@@ -46,10 +47,6 @@ return [
         'title' => 'قرارات اللجنة',
         'decisions' => 'قرارات اللجنة',
         'members' => 'أعضاء اللجنة',
-        'telegram_integrations' => 'وجهات تيليجرام',
-        'telegram_settings' => 'إعدادات تيليجرام',
-        'telegram_discovered_chats' => 'القروبات المكتشفة',
-        'telegram_broadcasts' => 'البث الجماعي',
     ],
     'user_management' => [
         'title' => 'إدارة المستخدمين',
@@ -57,5 +54,6 @@ return [
         'attendance' => 'حضور/غياب',
         'roles' => 'الأدوار',
         'permissions' => 'الصلاحيات',
+        'team_leader_field_engineers' => 'ربط قادة الفرق بالمهندسين',
     ],
 ];

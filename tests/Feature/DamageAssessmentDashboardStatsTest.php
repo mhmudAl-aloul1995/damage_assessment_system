@@ -1,9 +1,12 @@
 <?php
 
+use App\Models\Building;
+use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
 use App\Models\User;
 use App\Services\ArcgisService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
@@ -29,6 +32,7 @@ it('shows eight summary statistics for public buildings and road facilities on t
         'building_name' => 'Clinic A',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
+        'creationdate' => Carbon::today()->toDateString(),
         'assignedto' => 'Field Team 1',
         'building_damage_status' => 'fully_damaged',
         'is_building_occupied' => 'yes',
@@ -41,6 +45,7 @@ it('shows eight summary statistics for public buildings and road facilities on t
         'str_name' => 'Road A',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
+        'creationdate' => Carbon::today()->toDateString(),
         'road_damage_level' => 'severe',
         'potholes_exist' => 'yes',
         'obstacle_exist' => 'yes',
@@ -59,5 +64,131 @@ it('shows eight summary statistics for public buildings and road facilities on t
         ->assertSee('UXO')
         ->assertSee('Potholes')
         ->assertSee('Obstacles')
-        ->assertSee('Buried Bodies');
+        ->assertSee('Buried Bodies')
+        ->assertSee('Period by neighborhood')
+        ->assertSee('Filter By')
+        ->assertSee('Select neighborhood')
+        ->assertSee('All neighborhoods')
+        ->assertSee('Date range')
+        ->assertSee('data-period="all"', false)
+        ->assertSee('Rimal');
+});
+
+it('filters dashboard map tables by period and neighborhood', function () {
+    $user = User::factory()->create();
+    $today = Carbon::today()->toDateString();
+
+    Building::query()->create([
+        'objectid' => 501,
+        'globalid' => 'building-rimal',
+        'building_name' => 'Home A',
+        'neighborhood' => 'Rimal',
+        'creationdate' => '2026-01-01',
+        'editdate' => $today,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 502,
+        'globalid' => 'building-sabra',
+        'building_name' => 'Home B',
+        'neighborhood' => 'Sabra',
+        'creationdate' => '2026-01-01',
+        'editdate' => $today,
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 601,
+        'globalid' => 'unit-rimal',
+        'parentglobalid' => 'building-rimal',
+        'unit_damage_status' => 'fully_damaged2',
+        'creationdate' => '2026-01-01',
+        'editdate' => $today,
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 602,
+        'globalid' => 'unit-sabra',
+        'parentglobalid' => 'building-sabra',
+        'unit_damage_status' => 'partially_damaged2',
+        'creationdate' => '2026-01-01',
+        'editdate' => $today,
+    ]);
+
+    PublicBuildingSurvey::query()->create([
+        'objectid' => 1001,
+        'building_name' => 'Clinic A',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'creationdate' => $today,
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    PublicBuildingSurvey::query()->create([
+        'objectid' => 1002,
+        'building_name' => 'Clinic B',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Sabra',
+        'creationdate' => $today,
+        'building_damage_status' => 'partially_damaged',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 2001,
+        'str_name' => 'Road A',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'creationdate' => $today,
+        'road_damage_level' => 'severe',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 2002,
+        'str_name' => 'Road B',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Sabra',
+        'creationdate' => $today,
+        'road_damage_level' => 'minor',
+    ]);
+
+    $filters = [
+        'neighborhood' => 'Rimal',
+        'from_date' => $today,
+        'to_date' => $today,
+    ];
+
+    $this->actingAs($user)->getJson(route('housing-units-map', $filters))
+        ->assertOk()
+        ->assertJsonPath('recordsFiltered', 1)
+        ->assertJsonPath('data.0.neighborhood', 'Rimal');
+
+    $this->actingAs($user)->getJson(route('public-buildings-map', $filters))
+        ->assertOk()
+        ->assertJsonPath('recordsFiltered', 1)
+        ->assertJsonPath('data.0.neighborhood', 'Rimal');
+
+    $this->actingAs($user)->getJson(route('road-facilities-map', $filters))
+        ->assertOk()
+        ->assertJsonPath('recordsFiltered', 1)
+        ->assertJsonPath('data.0.neighborhood', 'Rimal');
+});
+
+it('accepts a flatpickr date range string in dashboard filters', function () {
+    $user = User::factory()->create();
+
+    PublicBuildingSurvey::query()->create([
+        'objectid' => 1001,
+        'building_name' => 'Clinic A',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'creationdate' => '2026-05-15',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    $this->actingAs($user)->getJson(route('public-buildings-map', [
+        'neighborhood' => 'Rimal',
+        'from_date' => '2026-05-12 to 2026-05-21',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('recordsFiltered', 1)
+        ->assertJsonPath('data.0.neighborhood', 'Rimal');
 });

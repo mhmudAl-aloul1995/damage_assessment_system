@@ -4,12 +4,9 @@ namespace App\Http\Controllers\UserManagement;
 
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeUserMail;
-use App\Models\TelegramDestination;
 use App\Models\User;
 use App\Services\ImageService;
-use App\services\TelegramConnectionService;
 use Hash;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +20,7 @@ class userController extends Controller
 {
     protected ImageService $imageService;
 
-    public function __construct(ImageService $imageService, private readonly TelegramConnectionService $telegramConnectionService)
+    public function __construct(ImageService $imageService)
     {
         $this->imageService = $imageService;
         $this->middleware('role:Database Officer');
@@ -33,7 +30,6 @@ class userController extends Controller
     {
         $data['user'] = User::all();
         $data['roles'] = Role::all();
-       
 
         return View::make('UserManagement.users', $data);
     }
@@ -47,7 +43,7 @@ class userController extends Controller
 
     public function show(Request $request)
     {
-        $users = User::with(['roles', 'telegramDestinations.linkSessions'])->where('id', '!=', Auth::id())->orderByDesc('created_at');
+        $users = User::with('roles')->where('id', '!=', Auth::id())->orderByDesc('created_at');
 
         return DataTables::of($users)
             ->addColumn('checkbox', function ($user) {
@@ -58,7 +54,6 @@ class userController extends Controller
             ->editColumn('name', fn ($user) => $user->name ?? '-')
             ->editColumn('name_en', fn ($user) => $user->name_en ?? '-')
             ->editColumn('username_arcgis', fn ($user) => $user->username_arcgis ?? '-')
-            ->addColumn('telegram_destination', fn ($user) => $this->telegramDestinationSummary($user))
             ->editColumn('email', fn ($user) => $user->email ?? '-')
             ->editColumn('id_no', fn ($user) => $user->id_no ?? '-')
             ->editColumn('contract_type', fn ($user) => strtoupper($user->contract_type ?? '-'))
@@ -75,15 +70,12 @@ class userController extends Controller
                 <a href="javascript:;" onclick="showUser('.$user->id.')" class="menu-link px-3">'.e(__('ui.buttons.edit')).'</a>
             </div>
             <div class="menu-item px-3">
-                <a href="javascript:;" onclick="generateTelegramLink('.$user->id.')" class="menu-link px-3">'.e(__('multilingual.user_management.telegram.generate_link')).'</a>
-            </div>
-            <div class="menu-item px-3">
                 <a href="javascript:;" class="menu-link px-3">'.e(__('ui.buttons.delete')).'</a>
             </div>
         </div>
     ';
             })
-            ->rawColumns(['checkbox', 'telegram_destination', 'action'])
+            ->rawColumns(['checkbox', 'action'])
             ->make(true);
     }
 
@@ -325,63 +317,5 @@ class userController extends Controller
         }
 
         return response(['message' => __('ui.users.delete_failed')], 500);
-    }
-
-    public function telegramLink(User $user): JsonResponse
-    {
-        abort_unless(Auth::user()?->can('manage telegram integrations'), 403);
-
-        $destination = $this->telegramConnectionService->ensureUserDestinationLink($user, Auth::user());
-        $link = $this->telegramConnectionService->shareableLink($destination);
-
-        return response()->json([
-            'message' => __('multilingual.user_management.telegram.link_ready'),
-            'destination_id' => $destination->id,
-            'destination_url' => route('telegram.destinations.show', $destination),
-            'shareable_link' => $link,
-            'status' => $destination->status,
-            'status_label' => $this->telegramStatusLabel($destination->status),
-        ]);
-    }
-
-    private function telegramDestinationSummary(User $user): string
-    {
-        $destination = $user->telegramDestinations->sortByDesc('id')->first();
-
-        if (! $destination instanceof TelegramDestination) {
-            return '<span class="text-muted">-</span>';
-        }
-
-        $details = array_filter([
-            $destination->telegram_username ? '@'.$destination->telegram_username : null,
-            $destination->chat_id,
-        ]);
-
-        return sprintf(
-            '<div class="d-flex flex-column gap-1"><span class="badge badge-light-%s align-self-start">%s</span><span class="text-muted fs-8">%s</span></div>',
-            $this->telegramStatusColor($destination->status),
-            e($this->telegramStatusLabel($destination->status)),
-            e($details === [] ? '-' : implode(' | ', $details))
-        );
-    }
-
-    private function telegramStatusLabel(string $status): string
-    {
-        return match ($status) {
-            TelegramDestination::STATUS_CONNECTED => __('multilingual.telegram_integrations.statuses.connected'),
-            TelegramDestination::STATUS_FAILED => __('multilingual.telegram_integrations.statuses.failed'),
-            TelegramDestination::STATUS_DISABLED => __('multilingual.telegram_integrations.statuses.disabled'),
-            default => __('multilingual.telegram_integrations.statuses.pending'),
-        };
-    }
-
-    private function telegramStatusColor(string $status): string
-    {
-        return match ($status) {
-            TelegramDestination::STATUS_CONNECTED => 'success',
-            TelegramDestination::STATUS_FAILED => 'danger',
-            TelegramDestination::STATUS_DISABLED => 'secondary',
-            default => 'info',
-        };
     }
 }

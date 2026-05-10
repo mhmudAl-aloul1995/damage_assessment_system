@@ -1,13 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\TeamLeaderFieldEngineerController;
+use App\Http\Controllers\AssessmentEditHistoryController;
 use App\Http\Controllers\Attendance\AttendanceController;
 use App\Http\Controllers\Committee\CommitteeDecisionController;
 use App\Http\Controllers\Committee\CommitteeMemberController;
-use App\Http\Controllers\Committee\TelegramBroadcastController;
-use App\Http\Controllers\Committee\TelegramDestinationController;
-use App\Http\Controllers\Committee\TelegramDiscoveredChatController;
-use App\Http\Controllers\Committee\TelegramSettingsController;
-use App\Http\Controllers\Committee\TelegramWebhookController;
 use App\Http\Controllers\DamageAssessment\ArcGISController;
 use App\Http\Controllers\DamageAssessment\AreaManagerRejectedBuildingsController;
 use App\Http\Controllers\DamageAssessment\auditController;
@@ -16,6 +13,7 @@ use App\Http\Controllers\DamageAssessment\damageAssessmentController;
 use App\Http\Controllers\DamageAssessment\engineerController;
 use App\Http\Controllers\DamageAssessment\ExportDataController;
 use App\Http\Controllers\DamageAssessment\housingController;
+use App\Http\Controllers\FieldEngineer\BuildingSurveyReturnRequestController;
 use App\Http\Controllers\FieldEngineerReportController;
 use App\Http\Controllers\InfAuditPublicBuildingController;
 use App\Http\Controllers\InfAuditRoadFacilityController;
@@ -36,7 +34,6 @@ use App\Http\Controllers\UserManagement\userController;
 use App\Models\Attendance;
 use App\Models\AttendanceImportLog;
 use App\Models\User;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
@@ -150,8 +147,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [userController::class, 'store'])->name('users.store');
 
         Route::get('/{user}/edit', [userController::class, 'edit'])->name('users.edit');
-        Route::post('/{user}/telegram-link', [userController::class, 'telegramLink'])->name('users.telegram-link');
-
         Route::put('/{user}', [userController::class, 'update'])->name('users.update');
 
         Route::delete('/{user}', [userController::class, 'destroy'])->name('users.destroy');
@@ -200,6 +195,30 @@ Route::middleware('auth')->group(function () {
         Route::get('/data', [AreaManagerRejectedBuildingsController::class, 'data'])->name('data');
     });
 
+    Route::prefix('admin/team-leader-field-engineers')
+        ->name('team-leader-field-engineers.')
+        ->group(function () {
+            Route::get('/', [TeamLeaderFieldEngineerController::class, 'index'])->name('index');
+            Route::post('/', [TeamLeaderFieldEngineerController::class, 'store'])->name('store');
+            Route::get('/datatable', [TeamLeaderFieldEngineerController::class, 'datatable'])->name('datatable');
+            Route::delete('/{teamLeaderFieldEngineer}', [TeamLeaderFieldEngineerController::class, 'destroy'])->name('destroy');
+        });
+
+    Route::prefix('field-engineer/building-survey-return-requests')
+        ->name('building-survey-return-requests.')
+        ->group(function () {
+            Route::get('/', [BuildingSurveyReturnRequestController::class, 'index'])->name('index');
+            Route::get('/create', [BuildingSurveyReturnRequestController::class, 'create'])->name('create');
+            Route::post('/', [BuildingSurveyReturnRequestController::class, 'store'])->name('store');
+            Route::get('/{returnRequest}', [BuildingSurveyReturnRequestController::class, 'show'])->name('show');
+            Route::post('/{returnRequest}/team-leader-approve', [BuildingSurveyReturnRequestController::class, 'approveByTeamLeader'])->name('team-leader.approve');
+            Route::post('/{returnRequest}/area-manager-approve', [BuildingSurveyReturnRequestController::class, 'approveByAreaManager'])->name('area-manager.approve');
+            Route::post('/{returnRequest}/reject', [BuildingSurveyReturnRequestController::class, 'reject'])->name('reject');
+        });
+
+    Route::get('/assessment-edit-histories', [AssessmentEditHistoryController::class, 'index'])
+        ->name('assessment-edit-histories.index');
+
     Route::prefix('committee-decisions')->name('committee-decisions.')->group(function () {
         Route::get('/', [CommitteeDecisionController::class, 'index'])->name('index');
         Route::get('/buildings/data', [CommitteeDecisionController::class, 'buildingsData'])->name('buildings.data');
@@ -208,7 +227,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/housing-units/{housingUnit}', [CommitteeDecisionController::class, 'showHousingUnit'])->name('housing-units.show');
         Route::put('/{committeeDecision}', [CommitteeDecisionController::class, 'update'])->name('update');
         Route::post('/{committeeDecision}/sign', [CommitteeDecisionController::class, 'sign'])->name('sign');
-        Route::post('/{committeeDecision}/retry-telegram', [CommitteeDecisionController::class, 'retryTelegram'])->name('retry-telegram');
+        Route::post('/{committeeDecision}/retry-arcgis', [CommitteeDecisionController::class, 'retryArcgis'])->name('retry-arcgis');
     });
 
     Route::prefix('committee-members')->name('committee-members.')->group(function () {
@@ -217,45 +236,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [CommitteeMemberController::class, 'store'])->name('store');
         Route::put('/{committeeMember}', [CommitteeMemberController::class, 'update'])->name('update');
         Route::delete('/{committeeMember}', [CommitteeMemberController::class, 'destroy'])->name('destroy');
-    });
-
-    Route::prefix('telegram-integrations')->name('telegram-integrations.')->group(function () {
-        Route::get('/', fn () => redirect()->route('telegram.destinations.index'))->name('index');
-        Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
-        Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
-        Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
-        Route::post('/{telegramDestination}/disable', [TelegramDestinationController::class, 'disable'])->name('disable');
-        Route::delete('/{telegramDestination}', [TelegramDestinationController::class, 'destroy'])->name('destroy');
-    });
-
-    Route::prefix('telegram/settings')->name('telegram.settings.')->group(function () {
-        Route::get('/', [TelegramSettingsController::class, 'index'])->name('index');
-        Route::put('/', [TelegramSettingsController::class, 'update'])->name('update');
-    });
-
-    Route::prefix('telegram/destinations')->name('telegram.destinations.')->group(function () {
-        Route::get('/', [TelegramDestinationController::class, 'index'])->name('index');
-        Route::get('/data', [TelegramDestinationController::class, 'data'])->name('data');
-        Route::post('/', [TelegramDestinationController::class, 'store'])->name('store');
-        Route::get('/{telegramDestination}', [TelegramDestinationController::class, 'show'])->name('show');
-        Route::put('/{telegramDestination}/preferences', [TelegramDestinationController::class, 'updatePreferences'])->name('preferences.update');
-        Route::post('/{telegramDestination}/regenerate-link', [TelegramDestinationController::class, 'regenerateLink'])->name('regenerate-link');
-        Route::post('/{telegramDestination}/refresh', [TelegramDestinationController::class, 'refresh'])->name('refresh');
-        Route::post('/{telegramDestination}/unlink', [TelegramDestinationController::class, 'unlink'])->name('unlink');
-        Route::post('/{telegramDestination}/disable', [TelegramDestinationController::class, 'disable'])->name('disable');
-        Route::delete('/{telegramDestination}', [TelegramDestinationController::class, 'destroy'])->name('destroy');
-    });
-
-    Route::prefix('telegram/discovered-chats')->name('telegram.discovered.')->group(function () {
-        Route::get('/', [TelegramDiscoveredChatController::class, 'index'])->name('index');
-        Route::get('/data', [TelegramDiscoveredChatController::class, 'data'])->name('data');
-        Route::post('/{telegramDiscoveredChat}/promote', [TelegramDiscoveredChatController::class, 'promote'])->name('promote');
-    });
-
-    Route::prefix('telegram/broadcasts')->name('telegram.broadcasts.')->group(function () {
-        Route::get('/', [TelegramBroadcastController::class, 'index'])->name('index');
-        Route::get('/data', [TelegramBroadcastController::class, 'data'])->name('data');
-        Route::post('/', [TelegramBroadcastController::class, 'store'])->name('store');
     });
 
     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);
@@ -453,12 +433,6 @@ Route::middleware('auth')->group(function () {
         return $response->json();
     });
 });
-
-Route::post('/api/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('telegram.webhook');
-Route::post('/telegram/webhook/{secret}', [TelegramWebhookController::class, 'handle'])
-    ->withoutMiddleware([VerifyCsrfToken::class]);
 
 Route::get('/housing-summary', [auditController::class, 'housingSummary'])
     ->name('housing.summary');

@@ -348,6 +348,15 @@ class HousingUnit extends Model
 
     public $timestamps = false;
 
+    public function getConnectionName(): ?string
+    {
+        if (app()->environment('testing')) {
+            return config('database.default');
+        }
+
+        return $this->connection;
+    }
+
     /**
      * The attributes that are mass assignable.
      *
@@ -700,7 +709,7 @@ class HousingUnit extends Model
     {
 
         return Attribute::make(
-            get: fn($value, $attributes) => implode(' ', array_filter([
+            get: fn ($value, $attributes) => implode(' ', array_filter([
                 $attributes['q_9_3_1_first_name'] ?? '',
                 $attributes['q_9_3_2_second_name__father'] ?? '',
                 $attributes['q_9_3_4_last_name'] ?? '',
@@ -718,7 +727,7 @@ class HousingUnit extends Model
 
     protected function getEditedFieldsMap(): array
     {
-        if (!empty($this->editedFieldsCache)) {
+        if (! empty($this->editedFieldsCache)) {
             return $this->editedFieldsCache;
         }
 
@@ -729,7 +738,7 @@ class HousingUnit extends Model
         $this->editedFieldsCache = $edits
             ->sortByDesc('id')
             ->unique('field_name')
-            ->mapWithKeys(fn($edit) => [$edit->field_name => $edit->field_value])
+            ->mapWithKeys(fn ($edit) => [$edit->field_name => $edit->field_value])
             ->toArray();
 
         return $this->editedFieldsCache;
@@ -739,11 +748,11 @@ class HousingUnit extends Model
     {
         $value = parent::getAttribute($key);
 
-        if (!is_string($key) || !array_key_exists($key, $this->attributes)) {
+        if (! is_string($key) || ! array_key_exists($key, $this->attributes)) {
             return $value;
         }
 
-        if (!$this->relationLoaded('edits')) {
+        if (! $this->relationLoaded('edits')) {
             return $value;
         }
 
@@ -762,6 +771,7 @@ class HousingUnit extends Model
 
         return $data;
     }
+
     public function building()
     {
         return $this->belongsTo(Building::class, 'parentglobalid', 'globalid'); // Post::class is the related model

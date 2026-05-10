@@ -149,10 +149,115 @@
     </div>
 </div>
 
+<div class="modal fade" id="assessmentEditHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="fw-bold">سجل تعديلات الحقل</h3>
+                <div class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal">
+                    <i class="ki-duotone ki-cross fs-1">
+                        <span class="path1"></span>
+                        <span class="path2"></span>
+                    </i>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-row-bordered align-middle">
+                        <thead>
+                            <tr class="fw-bold text-muted">
+                                <th>#</th>
+                                <th>اسم الحقل</th>
+                                <th>القيمة السابقة</th>
+                                <th>القيمة الجديدة</th>
+                                <th>عدّل بواسطة</th>
+                                <th>تاريخ التعديل</th>
+                                <th>المصدر</th>
+                                <th>رقم طلب الإرجاع</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assessmentEditHistoryBody">
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">جاري التحميل...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('script')
 <script>
+    function escapeAssessmentHistoryHtml(value) {
+        if (value === null || value === undefined || value === '') {
+            return '-';
+        }
+
+        return $('<div>').text(value).html();
+    }
+
+    $(document).on('click', '.js-assessment-history', function () {
+        const button = $(this);
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('assessmentEditHistoryModal'));
+
+        $('#assessmentEditHistoryBody').html('<tr><td colspan="8" class="text-center text-muted">جاري التحميل...</td></tr>');
+        modal.show();
+
+        $.ajax({
+            url: "{{ route('assessment-edit-histories.index') }}",
+            method: "GET",
+            data: {
+                global_id: button.data('global-id'),
+                type: button.data('type'),
+                field_name: button.data('field-name')
+            },
+            success: function (response) {
+                if (response && response.status === false) {
+                    if (typeof toastr !== 'undefined') {
+                        toastr.info(response.message || 'لا يوجد تغيير في القيمة.');
+                    }
+
+                    if (callback) {
+                        callback(false);
+                    }
+
+                    return;
+                }
+                const rows = response.data || [];
+
+                if (!rows.length) {
+                    $('#assessmentEditHistoryBody').html('<tr><td colspan="8" class="text-center text-muted">لا يوجد سجل تعديلات.</td></tr>');
+                    return;
+                }
+
+                let html = '';
+                rows.forEach(function (item, index) {
+                    html += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${escapeAssessmentHistoryHtml(item.label || item.field_name)}</td>
+                            <td>${escapeAssessmentHistoryHtml(item.old_value)}</td>
+                            <td>${escapeAssessmentHistoryHtml(item.new_value)}</td>
+                            <td>${escapeAssessmentHistoryHtml(item.edited_by)}</td>
+                            <td>${escapeAssessmentHistoryHtml(item.created_at)}</td>
+                            <td>${escapeAssessmentHistoryHtml(item.source)}</td>
+                            <td>${escapeAssessmentHistoryHtml(item.return_request_id)}</td>
+                        </tr>
+                    `;
+                });
+
+                $('#assessmentEditHistoryBody').html(html);
+            },
+            error: function () {
+                $('#assessmentEditHistoryBody').html('<tr><td colspan="8" class="text-center text-danger">فشل تحميل السجل.</td></tr>');
+            }
+        });
+    });
+
     function initInlineEditors() {
         $('.inline-edit-select').each(function () {
             if (!$(this).hasClass('select2-hidden-accessible')) {

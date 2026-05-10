@@ -7,11 +7,11 @@ namespace App\Http\Controllers\Committee;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Committee\SaveCommitteeDecisionRequest;
 use App\Http\Requests\Committee\SignCommitteeDecisionRequest;
-use App\Jobs\SendCommitteeDecisionTelegramJob;
 use App\Models\Building;
 use App\Models\CommitteeDecision;
 use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
+use App\services\ArcGisStatusUpdaterService;
 use App\services\CommitteeDecisionWorkflowService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,7 +21,10 @@ use Yajra\DataTables\Facades\DataTables;
 
 class CommitteeDecisionController extends Controller
 {
-    public function __construct(private readonly CommitteeDecisionWorkflowService $workflowService) {}
+    public function __construct(
+        private readonly CommitteeDecisionWorkflowService $workflowService,
+        private readonly ArcGisStatusUpdaterService $arcGisStatusUpdaterService,
+    ) {}
 
     public function index(): View
     {
@@ -39,9 +42,8 @@ class CommitteeDecisionController extends Controller
                 : '<span class="badge badge-light-warning">لا يوجد</span>')
             ->addColumn('signatures_count', fn (Building $building): string => $this->signatureBadge($building->committeeDecision))
             ->addColumn('arcgis_status', fn (Building $building): string => $this->syncBadge($building->committeeDecision?->arcgis_sync_status, 'ArcGIS'))
-            ->addColumn('telegram_status', fn (Building $building): string => $this->syncBadge($building->committeeDecision?->telegram_status, 'Telegram'))
-            ->addColumn('actions', fn (Building $building): string => '<a class="btn btn-light-primary btn-sm" href="'.route('committee-decisions.buildings.show', $building).'">فتح القرار</a>')
-            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'telegram_status', 'actions'])
+            ->addColumn('actions', fn (Building $building): string => $this->actionButtons($building))
+            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'actions'])
             ->toJson();
     }
 
@@ -55,9 +57,8 @@ class CommitteeDecisionController extends Controller
                 : '<span class="badge badge-light-warning">لا يوجد</span>')
             ->addColumn('signatures_count', fn (HousingUnit $unit): string => $this->signatureBadge($unit->committeeDecision))
             ->addColumn('arcgis_status', fn (HousingUnit $unit): string => $this->syncBadge($unit->committeeDecision?->arcgis_sync_status, 'ArcGIS'))
-            ->addColumn('telegram_status', fn (HousingUnit $unit): string => $this->syncBadge($unit->committeeDecision?->telegram_status, 'Telegram'))
-            ->addColumn('actions', fn (HousingUnit $unit): string => '<a class="btn btn-light-primary btn-sm" href="'.route('committee-decisions.housing-units.show', $unit).'">فتح القرار</a>')
-            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'telegram_status', 'actions'])
+            ->addColumn('actions', fn (HousingUnit $unit): string => $this->actionButtons($unit))
+            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'actions'])
             ->toJson();
     }
 
@@ -95,21 +96,25 @@ class CommitteeDecisionController extends Controller
             ->with('success', 'تم تسجيل التوقيع بنجاح.');
     }
 
-    public function retryTelegram(CommitteeDecision $committeeDecision): RedirectResponse
+    public function retryArcgis(CommitteeDecision $committeeDecision): RedirectResponse
     {
-        abort_unless(auth()->user()->can('send committee telegram'), 403);
-        abort_unless($committeeDecision->isCompleted(), 422, 'لا يمكن إعادة محاولة تيليجرام قبل اكتمال القرار.');
+        abort_unless(auth()->user()?->can('sync committee decision arcgis'), 403);
+        abort_unless($committeeDecision->isCompleted(), 422, 'لا يمكن مزامنة ArcGIS قبل اكتمال القرار.');
 
         $committeeDecision->forceFill([
-            'telegram_status' => 'retrying',
-            'telegram_last_error' => null,
+            'arcgis_sync_status' => 'retrying',
+            'arcgis_last_error' => null,
+            'arcgis_last_response' => null,
         ])->save();
 
-        SendCommitteeDecisionTelegramJob::dispatch($committeeDecision->id)->afterCommit();
+        $this->workflowService->markArcGisResult(
+            $committeeDecision,
+            $this->arcGisStatusUpdaterService->syncDecisionStatus($committeeDecision->load('decisionable')),
+        );
 
         return redirect()
             ->back()
-            ->with('success', 'تمت جدولة إعادة محاولة إرسال تيليجرام.');
+            ->with('success', 'تمت محاولة مزامنة ArcGIS.');
     }
 
     private function buildingQuery(): Builder
@@ -159,7 +164,7 @@ class CommitteeDecisionController extends Controller
             'recordType' => $recordType,
             'canManageContent' => auth()->user()->can('manage committee decision content'),
             'canSign' => auth()->user()->can('sign committee decisions'),
-            'canRetryTelegram' => auth()->user()->can('send committee telegram'),
+            'canRetryArcgis' => auth()->user()->can('sync committee decision arcgis'),
             'decisionTypes' => [
                 'accepted' => 'مقبول',
                 'rejected' => 'مرفوض',
@@ -196,11 +201,30 @@ class CommitteeDecisionController extends Controller
         );
     }
 
+    private function actionButtons(Building|HousingUnit $record): string
+    {
+        $decision = $record->committeeDecision;
+        $showRoute = $record instanceof Building
+            ? route('committee-decisions.buildings.show', $record)
+            : route('committee-decisions.housing-units.show', $record);
+
+        $buttons = '<div class="d-flex gap-2 justify-content-end flex-wrap">';
+        $buttons .= '<a class="btn btn-light-primary btn-sm" href="'.$showRoute.'">فتح القرار</a>';
+
+        if ($decision?->isCompleted() && $decision->arcgis_sync_status !== 'synced' && auth()->user()?->can('sync committee decision arcgis')) {
+            $buttons .= '<form method="POST" action="'.route('committee-decisions.retry-arcgis', $decision).'">';
+            $buttons .= csrf_field();
+            $buttons .= '<button type="submit" class="btn btn-light-warning btn-sm">مزامنة ArcGIS</button>';
+            $buttons .= '</form>';
+        }
+
+        return $buttons.'</div>';
+    }
+
     private function syncBadge(?string $status, string $label): string
     {
         $map = [
             'synced' => 'success',
-            'sent' => 'success',
             'missing_chat_id' => 'warning',
             'not_configured' => 'warning',
             'failed' => 'danger',

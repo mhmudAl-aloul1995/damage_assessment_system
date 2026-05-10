@@ -99,6 +99,100 @@
 
 		}
 
+		.damage-dashboard-toolbar {
+			background: var(--bs-body-bg);
+			border-bottom: 1px solid var(--bs-gray-200);
+			box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+			margin: -0.5rem -0.5rem 2rem;
+			min-height: 68px;
+			padding: 0.75rem 1.65rem;
+		}
+
+		.damage-dashboard-toolbar-main {
+			align-items: center;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 1rem;
+			justify-content: space-between;
+		}
+
+		.damage-dashboard-toolbar-actions {
+			align-items: center;
+			direction: ltr;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.75rem;
+		}
+
+		.damage-dashboard-toolbar .toolbar-label {
+			color: var(--bs-gray-700);
+			direction: rtl;
+			font-weight: 700;
+			white-space: nowrap;
+		}
+
+		.damage-dashboard-toolbar .toolbar-icon-button {
+			background: var(--bs-gray-100);
+			border-radius: 8px;
+			height: 44px;
+			width: 44px;
+		}
+
+		.damage-dashboard-toolbar .toolbar-icon-button.active {
+			background: var(--bs-primary-light);
+		}
+
+		.damage-dashboard-toolbar .toolbar-period-button {
+			background: var(--bs-gray-100);
+			border-radius: 8px;
+			color: var(--bs-gray-600);
+			font-weight: 700;
+			min-width: 72px;
+		}
+
+		.damage-dashboard-toolbar .toolbar-period-button.active {
+			background: var(--bs-primary-light);
+			color: var(--bs-primary);
+		}
+
+		.damage-dashboard-toolbar .toolbar-neighborhood-wrap {
+			width: 168px;
+		}
+
+		.damage-dashboard-toolbar .toolbar-date-range-wrap {
+			width: 210px;
+		}
+
+		.damage-dashboard-toolbar .toolbar-neighborhood-select,
+		.damage-dashboard-toolbar .toolbar-date-range-input,
+		.damage-dashboard-toolbar .toolbar-neighborhood-wrap .select2-selection {
+			background-color: var(--bs-gray-100) !important;
+			border-color: transparent !important;
+			border-radius: 8px !important;
+			min-height: 44px;
+		}
+
+		@media (max-width: 767.98px) {
+			.damage-dashboard-toolbar {
+				margin-inline: 0;
+				padding-inline: 1rem;
+			}
+
+			.damage-dashboard-toolbar-main,
+			.damage-dashboard-toolbar-actions {
+				align-items: stretch;
+				width: 100%;
+			}
+
+			.damage-dashboard-toolbar .toolbar-neighborhood-wrap {
+				width: 100% !important;
+			}
+
+			.damage-dashboard-toolbar .toolbar-date-range-wrap {
+				width: 100% !important;
+			}
+		}
+
 		.damage-dashboard-stats {
 			--summary-card-height: 700px;
 			--summary-header-height: 230px;
@@ -249,6 +343,66 @@
 		}
 	</style>
 
+	<div class="damage-dashboard-toolbar">
+		<div class="damage-dashboard-toolbar-main">
+			<div class="damage-dashboard-toolbar-actions">
+				
+
+				<div class="d-flex align-items-center gap-2">
+					<div class="toolbar-neighborhood-wrap">
+						<select id="dashboard_toolbar_neighborhood"
+							class="form-select form-select-sm toolbar-neighborhood-select"
+							data-control="select2"
+							data-placeholder="{{ __('ui.damage_dashboard.select_neighborhood') }}"
+							data-allow-clear="true">
+							<option value="">{{ __('ui.damage_dashboard.all_neighborhoods') }}</option>
+							@foreach ($neighborhoods as $neighborhood)
+								<option value="{{ $neighborhood }}" @selected($dashboardFilters['selectedNeighborhood'] === $neighborhood)>
+									{{ $neighborhood }}
+								</option>
+							@endforeach
+						</select>
+					</div>
+					<span class="toolbar-label">{{ __('ui.damage_dashboard.period_by_neighborhood') }}:</span>
+				</div>
+
+				<div class="separator separator-vertical h-30px d-none d-md-block"></div>
+
+				<div class="d-flex align-items-center gap-2">
+					<div class="toolbar-date-range-wrap">
+						<input type="text"
+							id="dashboard_toolbar_date_range"
+							class="form-control form-control-sm toolbar-date-range-input"
+							placeholder="{{ __('ui.damage_dashboard.date_range') }}"
+							value="{{ $dashboardFilters['startDate'] && $dashboardFilters['endDate'] ? $dashboardFilters['startDate'] . ' - ' . $dashboardFilters['endDate'] : '' }}"
+							readonly>
+					</div>
+					<span class="toolbar-label">{{ __('ui.damage_dashboard.date_range') }}:</span>
+				</div>
+
+				<div class="separator separator-vertical h-30px d-none d-md-block"></div>
+
+				<div class="d-flex align-items-center flex-wrap gap-2" data-kt-buttons="true">
+					<button type="button"
+						class="btn btn-sm toolbar-period-button dashboard-toolbar-period @if ($dashboardFilters['period'] === 'day') active @endif"
+						data-period="yesterday">{{ __('ui.damage_dashboard.yesterday') }}</button>
+					<button type="button"
+						class="btn btn-sm toolbar-period-button dashboard-toolbar-period @if ($dashboardFilters['period'] === 'week') active @endif"
+						data-period="week">{{ __('ui.damage_dashboard.week') }}</button>
+					<button type="button"
+						class="btn btn-sm toolbar-period-button dashboard-toolbar-period @if ($dashboardFilters['period'] === 'today') active @endif"
+						data-period="today">{{ __('ui.damage_dashboard.today') }}</button>
+					<button type="button"
+						class="btn btn-sm toolbar-period-button dashboard-toolbar-period @if ($dashboardFilters['period'] === 'all') active @endif"
+						data-period="all">{{ __('ui.damage_dashboard.all') }}</button>
+					<span class="toolbar-label">{{ __('ui.damage_dashboard.filter_by') }}:</span>
+				</div>
+			</div>
+
+		
+		</div>
+	</div>
+
 	<div class="row g-5 g-xl-8 damage-dashboard-stats">
 		<!--begin::Col-->
 		<!-- 1. Changed to responsive column: col-sm-6 col-xl-3 -->
@@ -274,7 +428,7 @@
 							<span
 								class="fw-semibold fs-7 text-wrap">{{ __('ui.damage_dashboard.assessed_buildings') }}</span>
 							<span
-								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $buildingStats['fully_damaged'] + $buildingStats['partially_damaged'] + $buildingStats['committee_review'] + $buildingStats['security_unsafe'] }}</span>
+								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $buildingStats['completed'] }}</span>
 						</div>
 					</div>
 
@@ -638,7 +792,7 @@
 						<div class="d-flex text-center flex-column text-white pt-8">
 							<span class="fw-semibold fs-7">{{ __('ui.damage_dashboard.total_housing_units') }}</span>
 							<span
-								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['fully_damaged'] + $unitStats['partially_damaged'] + $unitStats['committee_review'] + $unitStats['security_unsafe'] }}</span>
+								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['total_units']}}</span>
 						</div>
 						<!--end::Balance-->
 					</div>
@@ -1349,10 +1503,7 @@
 								@php
 									$totalAssessed = $buildingStats['fully_damaged'] + $buildingStats['partially_damaged'] + $buildingStats['committee_review'];
 
-									function getPercent($val, $total)
-									{
-										return $total > 0 ? round(($val / $total) * 100, 1) : 0;
-									}
+									$getPercent = fn($val, $total) => $total > 0 ? round(($val / $total) * 100, 1) : 0;
 								@endphp
 
 								<tr>
@@ -1363,10 +1514,10 @@
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
 											<span
-												class="text-muted fw-bold me-2">{{ getPercent($buildingStats['fully_damaged'], $totalAssessed) }}%</span>
+												class="text-muted fw-bold me-2">{{ $getPercent($buildingStats['fully_damaged'], $totalAssessed) }}%</span>
 											<div class="progress h-6px w-100px">
 												<div class="progress-bar bg-danger" role="progressbar"
-													style="width: {{ getPercent($buildingStats['fully_damaged'], $totalAssessed) }}%">
+													style="width: {{ $getPercent($buildingStats['fully_damaged'], $totalAssessed) }}%">
 												</div>
 											</div>
 										</div>
@@ -1381,10 +1532,10 @@
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
 											<span
-												class="text-muted fw-bold me-2">{{ getPercent($buildingStats['partially_damaged'], $totalAssessed) }}%</span>
+												class="text-muted fw-bold me-2">{{ $getPercent($buildingStats['partially_damaged'], $totalAssessed) }}%</span>
 											<div class="progress h-6px w-100px">
 												<div class="progress-bar bg-warning" role="progressbar"
-													style="width: {{ getPercent($buildingStats['partially_damaged'], $totalAssessed) }}%">
+													style="width: {{ $getPercent($buildingStats['partially_damaged'], $totalAssessed) }}%">
 												</div>
 											</div>
 										</div>
@@ -1399,10 +1550,10 @@
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
 											<span
-												class="text-muted fw-bold me-2">{{ getPercent($buildingStats['committee_review'], $totalAssessed) }}%</span>
+												class="text-muted fw-bold me-2">{{ $getPercent($buildingStats['committee_review'], $totalAssessed) }}%</span>
 											<div class="progress h-6px w-100px">
 												<div class="progress-bar bg-primary" role="progressbar"
-													style="width: {{ getPercent($buildingStats['committee_review'], $totalAssessed) }}%">
+													style="width: {{ $getPercent($buildingStats['committee_review'], $totalAssessed) }}%">
 												</div>
 											</div>
 										</div>
@@ -1466,10 +1617,10 @@
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
 											<span
-												class="text-muted fw-bold me-2">{{ getPercent($uFully, $totalUnitsAssessed) }}%</span>
+												class="text-muted fw-bold me-2">{{ $getPercent($uFully, $totalUnitsAssessed) }}%</span>
 											<div class="progress h-6px w-100px">
 												<div class="progress-bar bg-danger" role="progressbar"
-													style="width: {{ getPercent($uFully, $totalUnitsAssessed) }}%">
+													style="width: {{ $getPercent($uFully, $totalUnitsAssessed) }}%">
 												</div>
 											</div>
 										</div>
@@ -1484,10 +1635,10 @@
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
 											<span
-												class="text-muted fw-bold me-2">{{ getPercent($uPartially, $totalUnitsAssessed) }}%</span>
+												class="text-muted fw-bold me-2">{{ $getPercent($uPartially, $totalUnitsAssessed) }}%</span>
 											<div class="progress h-6px w-100px">
 												<div class="progress-bar bg-warning" role="progressbar"
-													style="width: {{ getPercent($uPartially, $totalUnitsAssessed) }}%">
+													style="width: {{ $getPercent($uPartially, $totalUnitsAssessed) }}%">
 												</div>
 											</div>
 										</div>
@@ -1502,10 +1653,10 @@
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
 											<span
-												class="text-muted fw-bold me-2">{{ getPercent($uCommittee, $totalUnitsAssessed) }}%</span>
+												class="text-muted fw-bold me-2">{{ $getPercent($uCommittee, $totalUnitsAssessed) }}%</span>
 											<div class="progress  h-6px w-100px">
 												<div class="progress-bar bg-primary" role="progressbar"
-													style="width: {{ getPercent($uCommittee, $totalUnitsAssessed) }}%">
+													style="width: {{ $getPercent($uCommittee, $totalUnitsAssessed) }}%">
 												</div>
 											</div>
 										</div>
@@ -1908,6 +2059,7 @@
 				// ADD THESE TWO LINES:
 				minScale: 0, // Keeps it visible when zooming out
 				maxScale: 0, // Keeps it visible when zooming in (Fixes the Legend)
+				definitionExpression: dashboardLayerDefinition(getDashboardToolbarFilters(), 'editdate'),
 				labelingInfo: [{
 					symbol: {
 						type: "text",
@@ -2002,6 +2154,11 @@
 			// طبقة خاصة للتحديد الثابت
 			const selectionLayer = new GraphicsLayer({
 				listMode: "hide"
+			});
+
+			window.addEventListener('damage-dashboard-toolbar:changed', function (event) {
+				featureLayer.definitionExpression = dashboardLayerDefinition(event.detail, 'editdate');
+				selectionLayer.removeAll();
 			});
 
 			const map = new Map({
@@ -2277,6 +2434,145 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 		});
 
 
+		function dashboardToolbarDate(period) {
+			const date = new Date();
+
+			if (period === 'week') {
+				date.setDate(date.getDate() - 6);
+			}
+
+			if (period === 'day') {
+				date.setDate(date.getDate() - 1);
+			}
+
+			return date.toISOString().slice(0, 10);
+		}
+
+		function getDashboardToolbarFilters() {
+			const activePeriod = document.querySelector('.dashboard-toolbar-period.active');
+			const period = activePeriod ? activePeriod.dataset.period : 'day';
+			const dateRangeInput = document.getElementById('dashboard_toolbar_date_range');
+			const dateRangeParts = dateRangeInput && dateRangeInput.value
+				? dateRangeInput.value.split(/\s+(?:-|to)\s+/).map(function (value) {
+					return value.trim();
+				})
+				: [];
+			const fromDate = period === 'all' ? '' : (dateRangeParts[0] || dashboardToolbarDate(period));
+			const toDate = period === 'all' ? '' : (dateRangeParts[1] || (period === 'day' ? fromDate : new Date().toISOString().slice(0, 10)));
+
+			return {
+				period: period,
+				from_date: fromDate,
+				to_date: toDate,
+				neighborhood: $('#dashboard_toolbar_neighborhood').val() || ''
+			};
+		}
+
+		function addDashboardToolbarFilters(data) {
+			const filters = getDashboardToolbarFilters();
+
+			data.period = filters.period;
+			data.from_date = filters.from_date;
+			data.to_date = filters.to_date;
+			data.neighborhood = filters.neighborhood;
+		}
+
+		function notifyDashboardToolbarChanged() {
+			window.dispatchEvent(new CustomEvent('damage-dashboard-toolbar:changed', {
+				detail: getDashboardToolbarFilters()
+			}));
+		}
+
+		function reloadDashboardWithToolbarFilters() {
+			const filters = getDashboardToolbarFilters();
+			const url = new URL(window.location.href);
+
+			url.searchParams.set('period', filters.period);
+			if (filters.from_date) {
+				url.searchParams.set('from_date', filters.from_date);
+			} else {
+				url.searchParams.delete('from_date');
+			}
+
+			if (filters.to_date) {
+				url.searchParams.set('to_date', filters.to_date);
+			} else {
+				url.searchParams.delete('to_date');
+			}
+
+			if (filters.neighborhood) {
+				url.searchParams.set('neighborhood', filters.neighborhood);
+			} else {
+				url.searchParams.delete('neighborhood');
+			}
+
+			window.location.href = url.toString();
+		}
+
+		function dashboardLayerDefinition(filters, dateColumn) {
+			const clauses = [];
+			const filterDateColumn = dateColumn || 'creationdate';
+
+			if (filters.neighborhood) {
+				clauses.push("neighborhood = '" + String(filters.neighborhood).replace(/'/g, "''") + "'");
+			}
+
+			if (filters.from_date) {
+				clauses.push(filterDateColumn + " >= DATE '" + filters.from_date + "'");
+			}
+
+			if (filters.to_date) {
+				clauses.push(filterDateColumn + " <= DATE '" + filters.to_date + "'");
+			}
+
+			return clauses.length ? clauses.join(' AND ') : '1=1';
+		}
+
+		KTUtil.onDOMContentLoaded(function () {
+			if (typeof flatpickr !== 'undefined') {
+				flatpickr('#dashboard_toolbar_date_range', {
+					mode: 'range',
+					dateFormat: 'Y-m-d',
+					locale: {
+						rangeSeparator: ' - '
+					},
+					defaultDate: @json($dashboardFilters['startDate'] && $dashboardFilters['endDate'] ? [$dashboardFilters['startDate'], $dashboardFilters['endDate']] : null),
+					onClose: function (selectedDates, dateStr, instance) {
+						if (selectedDates.length === 2) {
+							document.querySelectorAll('.dashboard-toolbar-period').forEach(function (item) {
+								item.classList.remove('active');
+							});
+
+							instance.input.value = instance.formatDate(selectedDates[0], 'Y-m-d') + ' - ' + instance.formatDate(selectedDates[1], 'Y-m-d');
+							notifyDashboardToolbarChanged();
+							reloadDashboardWithToolbarFilters();
+						}
+					}
+				});
+			}
+
+			$('#dashboard_toolbar_neighborhood').on('change', function () {
+				notifyDashboardToolbarChanged();
+				reloadDashboardWithToolbarFilters();
+			});
+
+			document.querySelectorAll('.dashboard-toolbar-period').forEach(function (button) {
+				button.addEventListener('click', function () {
+					document.querySelectorAll('.dashboard-toolbar-period').forEach(function (item) {
+						item.classList.remove('active');
+					});
+
+					button.classList.add('active');
+					document.getElementById('dashboard_toolbar_date_range').value = button.dataset.period === 'all'
+						? ''
+						: dashboardToolbarDate(button.dataset.period) + ' - ' + (button.dataset.period === 'day' ? dashboardToolbarDate(button.dataset.period) : new Date().toISOString().slice(0, 10));
+
+					notifyDashboardToolbarChanged();
+					reloadDashboardWithToolbarFilters();
+				});
+			});
+		});
+
 		var KTEngineersList = function () {
 			var table = document.getElementById('kt_table_building');
 			var datatable;
@@ -2288,6 +2584,7 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 						url: "{{ route('housing-units-map') }}",
 						data: function (d) {
 							d.hompage_building = 1;
+							addDashboardToolbarFilters(d);
 						},
 						type: "GET"
 					},
@@ -2317,6 +2614,10 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 
 				datatable.on('draw', function () {
 					KTMenu.createInstances();
+				});
+
+				window.addEventListener('damage-dashboard-toolbar:changed', function () {
+					datatable.ajax.reload();
 				});
 			};
 
@@ -2402,7 +2703,10 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 					serverSide: true,
 					ajax: {
 						url: config.ajaxUrl,
-						type: 'GET'
+						type: 'GET',
+						data: function (data) {
+							addDashboardToolbarFilters(data);
+						}
 					},
 					dom:
 						"<'table-responsive'tr>" +
@@ -2422,6 +2726,10 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 
 				datatable.on('draw', function () {
 					KTMenu.createInstances();
+				});
+
+				window.addEventListener('damage-dashboard-toolbar:changed', function () {
+					datatable.ajax.reload();
 				});
 
 				const filterSearch = document.querySelector(config.searchSelector);
@@ -2517,6 +2825,7 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 						outFields: ['*'],
 						minScale: 0,
 						maxScale: 0,
+						definitionExpression: dashboardLayerDefinition(getDashboardToolbarFilters()),
 						popupTemplate: {
 							title: function (event) {
 								return buildPopupTitle(event, config.nameField, config.showUrlTemplate);
@@ -2539,6 +2848,11 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 						map: map,
 						center: [34.460987, 31.514266],
 						zoom: 14
+					});
+
+					window.addEventListener('damage-dashboard-toolbar:changed', function (event) {
+						featureLayer.definitionExpression = dashboardLayerDefinition(event.detail);
+						selectionLayer.removeAll();
 					});
 
 					view.popup.dockEnabled = true;

@@ -96,6 +96,37 @@ class ArcgisService
         return "{$this->baseUrl}/{$layerId}/{$objectId}/attachments/{$attachmentId}?token={$token}";
     }
 
+    public function updateBuildingFieldStatus(int|string $objectId, string $status = 'Not_Completed'): array
+    {
+        $token = $this->getToken();
+        $layerId = $this->getLayerId(\App\Models\Building::class);
+
+        $response = Http::asForm()
+            ->withoutVerifying()
+            ->acceptJson()
+            ->post("{$this->baseUrl}/{$layerId}/updateFeatures", [
+                'f' => 'json',
+                'token' => $token,
+                'features' => json_encode([
+                    [
+                        'attributes' => [
+                            'objectid' => $objectId,
+                            'field_status' => $status,
+                        ],
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            ]);
+
+        $body = $response->json();
+        $success = $response->successful() && (bool) data_get($body, 'updateResults.0.success', false);
+
+        return [
+            'success' => $success,
+            'status' => $success ? 'synced' : 'failed',
+            'message' => $response->body(),
+        ];
+    }
+
     public function buildUrlFromLayerUrl(string $layerUrl, int|string $objectId, int|string $attachmentId, string $token): string
     {
         return $this->normalizeLayerUrl($layerUrl).'/'.$objectId.'/attachments/'.$attachmentId.'?token='.urlencode($token);

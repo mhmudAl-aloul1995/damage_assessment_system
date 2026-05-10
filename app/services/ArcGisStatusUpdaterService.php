@@ -30,8 +30,8 @@ class ArcGisStatusUpdaterService
 
             $identifierField = (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid');
             $statusField = (string) config('services.committee_decisions.arcgis.status_field', 'field_status');
-            $statusValue = (string) config('services.committee_decisions.arcgis.status_value', 'not_completed');
-            $baseUrl = rtrim((string) config('services.committee_decisions.arcgis.base_url', ''), '/');
+            $statusValue = (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed');
+            $baseUrl = $this->resolveBaseUrl();
 
             if ($baseUrl === '') {
                 return [
@@ -70,8 +70,7 @@ class ArcGisStatusUpdaterService
             }
 
             /** @var Response $response */
-            $response = Http::asForm()
-                ->acceptJson()
+            $response = $this->arcGisHttpClient()
                 ->post(sprintf('%s/%s/updateFeatures', $baseUrl, $layerId), $payload);
 
             $body = $response->json();
@@ -122,7 +121,7 @@ class ArcGisStatusUpdaterService
         }
 
         return Cache::remember('committee_arcgis_token', now()->addMinutes(50), function () use ($tokenUrl, $username, $password, $referer): string {
-            $response = Http::asForm()->acceptJson()->post($tokenUrl, [
+            $response = $this->arcGisHttpClient()->post($tokenUrl, [
                 'username' => $username,
                 'password' => $password,
                 'client' => 'referer',
@@ -137,6 +136,23 @@ class ArcGisStatusUpdaterService
 
             return (string) data_get($response->json(), 'token', '');
         });
+    }
+
+    private function resolveBaseUrl(): string
+    {
+        $configuredBaseUrl = rtrim((string) config('services.committee_decisions.arcgis.base_url', ''), '/');
+
+        if ($configuredBaseUrl !== '') {
+            return $configuredBaseUrl;
+        }
+
+        $buildingsLayerUrl = rtrim((string) config('services.arcgis.buildings_url', ''), '/');
+
+        if ($buildingsLayerUrl === '') {
+            return '';
+        }
+
+        return preg_replace('/\/\d+$/', '', $buildingsLayerUrl) ?: '';
     }
 
     private function resolveFeatureRecord(CommitteeDecision $decision): array
@@ -156,5 +172,24 @@ class ArcGisStatusUpdaterService
         }
 
         return [$decisionable, config('services.committee_decisions.arcgis.housing_unit_layer_id', 1)];
+    }
+
+    private function arcGisHttpClient(): \Illuminate\Http\Client\PendingRequest
+    {
+        $request = Http::asForm()
+            ->acceptJson()
+            ->timeout((int) config('services.committee_decisions.arcgis.timeout', 90))
+            ->connectTimeout((int) config('services.committee_decisions.arcgis.connect_timeout', 30))
+            ->retry(
+                (int) config('services.committee_decisions.arcgis.retry_times', 2),
+                (int) config('services.committee_decisions.arcgis.retry_sleep', 1000),
+                throw: false,
+            );
+
+        if (! (bool) config('services.committee_decisions.arcgis.verify_ssl', false)) {
+            $request->withoutVerifying();
+        }
+
+        return $request;
     }
 }

@@ -12,32 +12,61 @@ use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
 use App\Services\ArcgisService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Yajra\Datatables\Datatables;
 
 class damageAssessmentController extends Controller
 {
-    public function __construct() {}
-
-    public function index($objectid = null)
+    public function index(Request $request, $objectid = null)
     {
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
 
-        $startDate = '2026-04-01';
-        $endDate = '2026-04-30';//Carbon::today()->toDateString();
+        [$startDate, $endDate, $period] = $this->dashboardDateRange($request);
+        $selectedNeighborhood = $request->filled('neighborhood')
+            ? (string) $request->string('neighborhood')
+            : '';
+
+        $buildingQuery = Building::query();
+        $this->applyDashboardMapFilters($buildingQuery, $request, '', 'end');
+
+        $housingUnitQuery = HousingUnit::query();
+        $this->applyDashboardHousingFilters($housingUnitQuery, $request);
 
         $data = [
-            'buildings' => Building::whereBetween('creationdate', [$startDate, $endDate])
-                ->selectRaw("COALESCE(SUM(field_status = 'Not_Completed'), 0) as not_completed,COALESCE(SUM(field_status = 'COMPLETED'), 0) as completed,COALESCE(SUM(field_status NOT IN ('COMPLETED', 'Not_Completed')), 0) as pending,COALESCE(SUM(building_damage_status = 'fully_damaged'), 0) as fully_damaged,COALESCE(SUM(building_damage_status = 'partially_damaged'), 0) as partially_damaged,COALESCE(SUM(building_damage_status = 'committee_review'), 0) as committee_review,COALESCE(SUM(security_situation = 'Unsafe'), 0) as security_unsafe,COALESCE(SUM(uxo_present = 'yes3'), 0) as uxo,COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris")
+            'buildings' => $buildingQuery
+                ->selectRaw("COALESCE(SUM(field_status = 'Not_Completed'), 0) as not_completed,
+                COALESCE(SUM(field_status = 'COMPLETED'), 0) as completed,
+                COALESCE(SUM(field_status NOT IN ('COMPLETED', 'Not_Completed')), 0) as pending,
+                COALESCE(SUM(building_damage_status = 'fully_damaged'), 0) as fully_damaged,
+                COALESCE(SUM(building_damage_status = 'partially_damaged'), 0) as partially_damaged,
+                COALESCE(SUM(building_damage_status = 'committee_review'), 0) as committee_review,
+                COALESCE(SUM(security_situation = 'Unsafe'), 0) as security_unsafe,
+                COALESCE(SUM(uxo_present = 'yes3'), 0) as uxo,
+                COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
+                COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris")
                 ->first(),
-            'units' => HousingUnit::whereBetween('creationdate', [$startDate, $endDate])->selectRaw("COALESCE(SUM(unit_damage_status = 'fully_damaged2'), 0) as fully_damaged,COALESCE(SUM(unit_damage_status = 'partially_damaged2'), 0) as partially_damaged,COALESCE(SUM(unit_damage_status = 'committee_review2'), 0) as committee_review,COALESCE(SUM(has_fire = 'yes'), 0) as has_fire,COALESCE(SUM(unit_stripping = 'yes'), 0) as has_strip,COALESCE(SUM(is_the_housing_unit_or_living_habitable = 'yes'), 0) as habitable,COALESCE(SUM(security_situation_unit = 'Unsafe'), 0) as security_unsafe,COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed")
+            'units' => $housingUnitQuery
+                ->selectRaw("
+                COUNT(*) as total_units,
+                COALESCE(SUM(unit_damage_status = 'fully_damaged2'), 0) as fully_damaged,
+                COALESCE(SUM(unit_damage_status = 'partially_damaged2'), 0) as partially_damaged,
+                COALESCE(SUM(unit_damage_status = 'committee_review2'), 0) as committee_review,
+                COALESCE(SUM(has_fire = 'yes'), 0) as has_fire,
+                COALESCE(SUM(unit_stripping = 'yes'), 0) as has_strip,
+                COALESCE(SUM(is_the_housing_unit_or_living_habitable = 'yes'), 0) as habitable,
+                COALESCE(SUM(security_situation_unit = 'Unsafe'), 0) as security_unsafe,
+                COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,
+                COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed")
                 ->first(),
         ];
 
         $unitStats = [
+            'total_units' => $data['units']->total_units,
             'fully_damaged' => $data['units']->fully_damaged,
             'partially_damaged' => $data['units']->partially_damaged,
             'committee_review' => $data['units']->committee_review,
@@ -62,112 +91,96 @@ class damageAssessmentController extends Controller
         ];
 
         $publicBuildingStats = [
-            'total_surveys' => PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'total_surveys' => $this->dashboardPublicBuildingQuery($request)
                 ->count(),
 
-            'damaged_buildings' => PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'damaged_buildings' => $this->dashboardPublicBuildingQuery($request)
                 ->whereNotNull('building_damage_status')
                 ->where('building_damage_status', '!=', '')
                 ->count(),
 
-            'total_units' => (int) PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'total_units' => (int) $this->dashboardPublicBuildingQuery($request)
                 ->withCount('units')
                 ->get()
                 ->sum('units_count'),
 
-            'municipalities' => PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'municipalities' => $this->dashboardPublicBuildingQuery($request)
                 ->whereNotNull('municipalitie')
                 ->where('municipalitie', '!=', '')
                 ->distinct()
                 ->count('municipalitie'),
 
-            'neighborhoods' => PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'neighborhoods' => $this->dashboardPublicBuildingQuery($request)
                 ->whereNotNull('neighborhood')
                 ->where('neighborhood', '!=', '')
                 ->distinct()
                 ->count('neighborhood'),
 
-            'assigned_staff' => PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'assigned_staff' => $this->dashboardPublicBuildingQuery($request)
                 ->whereNotNull('assignedto')
                 ->where('assignedto', '!=', '')
                 ->distinct()
                 ->count('assignedto'),
 
-            'occupied_buildings' => PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'occupied_buildings' => $this->dashboardPublicBuildingQuery($request)
                 ->where('is_building_occupied', 'yes')
                 ->count(),
 
-            'bodies_present' => PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'bodies_present' => $this->dashboardPublicBuildingQuery($request)
                 ->where('is_bodies', 'yes')
                 ->count(),
 
-            'uxo_present' => PublicBuildingSurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'uxo_present' => $this->dashboardPublicBuildingQuery($request)
                 ->where('is_uxo', 'yes')
                 ->count(),
         ];
 
         $roadFacilityStats = [
-            'total_surveys' => RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'total_surveys' => $this->dashboardRoadFacilityQuery($request)
                 ->count(),
 
-            'damaged_roads' => RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'damaged_roads' => $this->dashboardRoadFacilityQuery($request)
                 ->whereNotNull('road_damage_level')
                 ->where('road_damage_level', '!=', '')
                 ->count(),
 
-            'total_items' => (int) RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'total_items' => (int) $this->dashboardRoadFacilityQuery($request)
                 ->withCount('items')
                 ->get()
                 ->sum('items_count'),
 
-            'municipalities' => RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'municipalities' => $this->dashboardRoadFacilityQuery($request)
                 ->whereNotNull('municipalitie')
                 ->where('municipalitie', '!=', '')
                 ->distinct()
                 ->count('municipalitie'),
 
-            'neighborhoods' => RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'neighborhoods' => $this->dashboardRoadFacilityQuery($request)
                 ->whereNotNull('neighborhood')
                 ->where('neighborhood', '!=', '')
                 ->distinct()
                 ->count('neighborhood'),
 
-            'potholes_locations' => RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'potholes_locations' => $this->dashboardRoadFacilityQuery($request)
                 ->where('potholes_exist', 'yes')
                 ->count(),
 
-            'obstacle_locations' => RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'obstacle_locations' => $this->dashboardRoadFacilityQuery($request)
                 ->where('obstacle_exist', 'yes')
                 ->count(),
 
-            'buried_bodies_locations' => RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'buried_bodies_locations' => $this->dashboardRoadFacilityQuery($request)
                 ->where('buried_bodies', 'yes')
                 ->count(),
 
-            'uxo_locations' => RoadFacilitySurvey::query()
-                ->whereBetween('creationdate', [$startDate, $endDate])
+            'uxo_locations' => $this->dashboardRoadFacilityQuery($request)
                 ->where('uxo_present', 'yes')
                 ->count(),
         ];
         $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
         $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
+        $neighborhoods = $this->dashboardNeighborhoods();
+        $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedNeighborhood');
 
         return View::make(
             'DamageAssessment.damageAssessment',
@@ -179,6 +192,8 @@ class damageAssessmentController extends Controller
                 'roadFacilityStats',
                 'publicBuildingLayerUrl',
                 'roadFacilityLayerUrl',
+                'neighborhoods',
+                'dashboardFilters',
             )
         );
     }
@@ -232,6 +247,8 @@ class damageAssessmentController extends Controller
             'building_damage_status',
         ]);
 
+        $this->applyDashboardMapFilters($query, $request);
+
         return DataTables::of($query)
             ->editColumn('building_damage_status', function ($row) {
                 return match ($row->building_damage_status) {
@@ -255,6 +272,8 @@ class damageAssessmentController extends Controller
             'neighborhood',
             'road_damage_level',
         ]);
+
+        $this->applyDashboardMapFilters($query, $request);
 
         return DataTables::of($query)
             ->editColumn('road_damage_level', function ($row) {
@@ -555,6 +574,18 @@ class damageAssessmentController extends Controller
             </div>
         ';
 
+                $modalHistoryButton = '
+            <div class="mt-2">
+                <button class="btn btn-sm btn-light-info js-assessment-history"
+                        type="button"
+                        data-global-id="'.e($globalid).'"
+                        data-type="'.e($type).'"
+                        data-field-name="'.e($row->name).'">
+                    عرض سجل التعديلات
+                </button>
+            </div>
+        ';
+
                 return '
             <div class="audit-edit-card audit-existing-edit-card">
                 <div class="mb-2">
@@ -577,7 +608,7 @@ class damageAssessmentController extends Controller
                     <span class="text-gray-600">'.e($editedAt ?? '-').'</span>
                 </div>
 
-                '.$historyHtml.'
+                '.$modalHistoryButton.$historyHtml.'
             </div>
         ';
             })
@@ -837,6 +868,8 @@ class damageAssessmentController extends Controller
                 DB::raw($fullNameExpression.' as full_name1'),
             ]);
 
+        $this->applyDashboardBuildingUnitTableFilters($query, $request);
+
         return DataTables::of($query)
             ->filterColumn('full_name1', function ($query, $keyword) use ($fullNameExpression) {
                 $query->whereRaw($fullNameExpression.' LIKE ?', ["%{$keyword}%"]);
@@ -885,5 +918,152 @@ class damageAssessmentController extends Controller
         }
 
         return "TRIM(CONCAT_WS(' ', housing_units.q_9_3_1_first_name, housing_units.q_9_3_4_last_name))";
+    }
+
+    private function dashboardNeighborhoods(): Collection
+    {
+        return collect()
+            ->merge(Building::query()->whereNotNull('neighborhood')->where('neighborhood', '!=', '')->distinct()->pluck('neighborhood'))
+            ->merge(PublicBuildingSurvey::query()->whereNotNull('neighborhood')->where('neighborhood', '!=', '')->distinct()->pluck('neighborhood'))
+            ->merge(RoadFacilitySurvey::query()->whereNotNull('neighborhood')->where('neighborhood', '!=', '')->distinct()->pluck('neighborhood'))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
+    private function dashboardDateRange(Request $request): array
+    {
+        $period = in_array((string) $request->string('period'), ['all', 'today', 'week', 'day'], true)
+            ? (string) $request->string('period')
+            : 'all';
+
+        $today = Carbon::today();
+        $startDate = match ($period) {
+            'all' => null,
+            'week' => $today->copy()->subDays(6)->toDateString(),
+            'day' => $today->copy()->subDay()->toDateString(),
+            default => $today->toDateString(),
+        };
+        $endDate = match ($period) {
+            'all' => null,
+            'day' => $startDate,
+            default => $today->toDateString(),
+        };
+
+        $fromDateInput = (string) $request->string('from_date');
+        $toDateInput = (string) $request->string('to_date');
+
+        if (str_contains($fromDateInput, ' to ') || str_contains($fromDateInput, ' - ')) {
+            [$fromDateInput, $rangeEndDate] = preg_split('/\s+(?:to|-)\s+/', $fromDateInput, 2);
+            $toDateInput = $toDateInput !== '' ? $toDateInput : $rangeEndDate;
+        }
+
+        if ($fromDateInput !== '') {
+            $startDate = Carbon::parse($fromDateInput)->toDateString();
+        }
+
+        if ($toDateInput !== '') {
+            $endDate = Carbon::parse($toDateInput)->toDateString();
+        }
+
+        return [$startDate, $endDate, $period];
+    }
+
+    private function dashboardPublicBuildingQuery(Request $request): Builder
+    {
+        $query = PublicBuildingSurvey::query();
+        $this->applyDashboardMapFilters($query, $request, '', 'creationdate');
+
+        return $query;
+    }
+
+    private function dashboardRoadFacilityQuery(Request $request): Builder
+    {
+        $query = RoadFacilitySurvey::query();
+        $this->applyDashboardMapFilters($query, $request, '', 'creationdate');
+
+        return $query;
+    }
+
+    private function applyDashboardHousingFilters(Builder $query, Request $request): void
+    {
+        [$startDate, $endDate] = $this->dashboardDateRange($request);
+
+        if ($startDate !== null) {
+            $query->whereDate('editdate', '>=', $startDate);
+        }
+
+        if ($endDate !== null) {
+            $query->whereDate('editdate', '<=', $endDate);
+        }
+
+        if ($request->filled('neighborhood')) {
+            $query->whereIn('parentglobalid', Building::query()
+                ->select('globalid')
+                ->where('neighborhood', (string) $request->string('neighborhood')));
+        }
+    }
+
+    private function applyDashboardBuildingUnitTableFilters(Builder $query, Request $request): void
+    {
+        [$startDate, $endDate] = $this->dashboardDateRange($request);
+
+        if ($request->filled('neighborhood')) {
+            $query->where('buildings.neighborhood', (string) $request->string('neighborhood'));
+        }
+
+        if ($startDate !== null && $endDate !== null) {
+            $query->where(function (Builder $dateQuery) use ($startDate, $endDate) {
+                $dateQuery
+                    ->whereBetween(DB::raw('DATE(housing_units.editdate)'), [$startDate, $endDate])
+                    ->orWhere(function (Builder $buildingDateQuery) use ($startDate, $endDate) {
+                        $buildingDateQuery
+                            ->whereNull('housing_units.id')
+                            ->whereBetween(DB::raw('DATE(buildings.editdate)'), [$startDate, $endDate]);
+                    });
+            });
+        } elseif ($startDate !== null) {
+            $query->where(function (Builder $dateQuery) use ($startDate) {
+                $dateQuery
+                    ->whereDate('housing_units.editdate', '>=', $startDate)
+                    ->orWhere(function (Builder $buildingDateQuery) use ($startDate) {
+                        $buildingDateQuery
+                            ->whereNull('housing_units.id')
+                            ->whereDate('buildings.editdate', '>=', $startDate);
+                    });
+            });
+        } elseif ($endDate !== null) {
+            $query->where(function (Builder $dateQuery) use ($endDate) {
+                $dateQuery
+                    ->whereDate('housing_units.editdate', '<=', $endDate)
+                    ->orWhere(function (Builder $buildingDateQuery) use ($endDate) {
+                        $buildingDateQuery
+                            ->whereNull('housing_units.id')
+                            ->whereDate('buildings.editdate', '<=', $endDate);
+                    });
+            });
+        }
+    }
+
+    private function applyDashboardMapFilters(
+        Builder $query,
+        Request $request,
+        string $tablePrefix = '',
+        string $dateColumn = 'creationdate'
+    ): void {
+        [$startDate, $endDate] = $this->dashboardDateRange($request);
+
+        if ($request->filled('neighborhood')) {
+            $query->where($tablePrefix.'neighborhood', (string) $request->string('neighborhood'));
+        }
+
+        if ($startDate !== null) {
+            $query->whereDate($tablePrefix.$dateColumn, '>=', $startDate);
+        }
+
+        if ($endDate !== null) {
+            $query->whereDate($tablePrefix.$dateColumn, '<=', $endDate);
+        }
     }
 }

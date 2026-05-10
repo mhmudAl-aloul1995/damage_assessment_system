@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\services;
 
-use App\Jobs\SendCommitteeDecisionTelegramJob;
-use App\Jobs\SyncCommitteeDecisionArcGisJob;
 use App\Models\Building;
+use App\Models\BuildingSurveyArchiveObject;
 use App\Models\CommitteeDecision;
 use App\Models\CommitteeDecisionSignature;
 use App\Models\CommitteeMember;
@@ -18,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 
 class CommitteeDecisionWorkflowService
 {
+    public function __construct(private readonly ArcGisStatusUpdaterService $arcGisStatusUpdaterService) {}
+
     public function findOrCreateDecision(Model $decisionable, User $user): CommitteeDecision
     {
         /** @var CommitteeDecision $decision */
@@ -64,7 +65,7 @@ class CommitteeDecisionWorkflowService
             ])->save();
 
             $this->ensureSignatureSlots($decision);
-            $this->refreshDecisionStatus($decision);
+            $this->refreshDecisionStatus($decision, $user);
 
             return $decision->load([
                 'decisionable',
@@ -102,7 +103,7 @@ class CommitteeDecisionWorkflowService
                 'signed_by_user_id' => $data['status'] === 'pending' ? null : $user->id,
             ])->save();
 
-            $this->refreshDecisionStatus($decision);
+            $this->refreshDecisionStatus($decision, $user);
 
             return $signature->load(['committeeMember.user', 'signedByUser']);
         });
@@ -123,7 +124,7 @@ class CommitteeDecisionWorkflowService
             });
     }
 
-    public function refreshDecisionStatus(CommitteeDecision $decision): CommitteeDecision
+    public function refreshDecisionStatus(CommitteeDecision $decision, ?User $archiver = null): CommitteeDecision
     {
         $decision->loadMissing(['signatures.committeeMember', 'decisionable']);
 
@@ -153,8 +154,11 @@ class CommitteeDecisionWorkflowService
                     'completed_at' => now(),
                 ])->save();
 
-                SendCommitteeDecisionTelegramJob::dispatch($decision->id)->afterCommit();
-                SyncCommitteeDecisionArcGisJob::dispatch($decision->id)->afterCommit();
+                $this->archiveDecisionObject($decision, $archiver);
+                $this->markArcGisResult(
+                    $decision,
+                    $this->arcGisStatusUpdaterService->syncDecisionStatus($decision),
+                );
             }
 
             return $decision;
@@ -187,16 +191,6 @@ class CommitteeDecisionWorkflowService
                     ->orWhere('name_en', $building->assignedto);
             })
             ->first();
-    }
-
-    public function markTelegramResult(CommitteeDecision $decision, array $result): void
-    {
-        $decision->forceFill([
-            'telegram_status' => $result['status'] ?? null,
-            'telegram_last_attempt_at' => now(),
-            'telegram_sent_at' => ($result['success'] ?? false) ? now() : $decision->telegram_sent_at,
-            'telegram_last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? null),
-        ])->save();
     }
 
     public function markArcGisResult(CommitteeDecision $decision, array $result): void
@@ -233,5 +227,31 @@ class CommitteeDecisionWorkflowService
         if ($linkedUserId === null && ! $user->can('sign committee decisions')) {
             abort(403, 'المستخدم الحالي لا يملك صلاحية التوقيع.');
         }
+    }
+
+    private function archiveDecisionObject(CommitteeDecision $decision, ?User $archiver): void
+    {
+        $decision->loadMissing('decisionable');
+
+        $decisionable = $decision->decisionable;
+        $building = $decisionable instanceof HousingUnit ? $decisionable->building : $decisionable;
+
+        if (! $building instanceof Building) {
+            return;
+        }
+
+        BuildingSurveyArchiveObject::query()->updateOrCreate([
+            'source_type' => 'committee_decision',
+            'committee_decision_id' => $decision->id,
+        ], [
+            'building_objectid' => $building->objectid,
+            'building_globalid' => $building->globalid,
+            'housing_unit_objectid' => $decisionable instanceof HousingUnit ? $decisionable->objectid : null,
+            'housing_unit_globalid' => $decisionable instanceof HousingUnit ? $decisionable->globalid : null,
+            'return_request_id' => null,
+            'archived_by' => $archiver?->id ?? $decision->committee_manager_id ?? $decision->updated_by ?? $decision->created_by,
+            'archived_at' => now(),
+            'notes' => $decision->notes,
+        ]);
     }
 }

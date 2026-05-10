@@ -65,15 +65,11 @@
                         <div class="text-muted fs-7">{{ __('multilingual.committee_decision_show.arcgis_status') }}</div>
                         <div class="fw-bold">{{ $decision->arcgis_sync_status ?: 'pending' }}</div>
                     </div>
-                    <div>
-                        <div class="text-muted fs-7">{{ __('multilingual.committee_decision_show.telegram_status') }}</div>
-                        <div class="fw-bold">{{ $decision->telegram_status ?: 'pending' }}</div>
-                    </div>
-                    @if ($canRetryTelegram && $decision->isCompleted() && $decision->telegram_status !== 'sent')
+                    @if ($canRetryArcgis && $decision->isCompleted() && $decision->arcgis_sync_status !== 'synced')
                         <div class="mt-6">
-                            <form method="POST" action="{{ route('committee-decisions.retry-telegram', $decision) }}">
+                            <form method="POST" action="{{ route('committee-decisions.retry-arcgis', $decision) }}">
                                 @csrf
-                                <button type="submit" class="btn btn-light-success btn-sm">{{ __('multilingual.committee_decision_show.retry_telegram') }}</button>
+                                <button type="submit" class="btn btn-light-warning btn-sm">إعادة مزامنة ArcGIS</button>
                             </form>
                         </div>
                     @endif
