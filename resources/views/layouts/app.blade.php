@@ -1478,8 +1478,9 @@
 
 		function shouldIgnoreLoader(settings) {
 			let url = (settings?.url || '').toLowerCase();
-			if ($(settings.context).hasClass('select2-hidden-accessible')) {
-				return;
+
+			if (settings?.context && $(settings.context).hasClass('select2-hidden-accessible')) {
+				return true;
 			}
 			const ignoredPatterns = [
 				'arcgis.com',
@@ -1537,13 +1538,22 @@
 		});
 
 		/* فقط الروابط العادية */
-		$(document).on('click', 'a[href]:not([href^="#"]):not([target="_blank"]):not([data-no-loader="true"])', function () {
-			showAppLoading();
+		$(document).on(
+			'click',
+			'a[href]:not([href^="#"]):not([target="_blank"]):not([data-no-loader="true"])',
+			function () {
+				// تجاهل روابط السايدبار
+				if ($(this).closest('#kt_app_sidebar, #kt_app_sidebar_menu').length) {
+					return true;
+				}
 
-			setTimeout(function () {
-				hideAppLoading();
-			}, 5000);
-		});
+				showAppLoading();
+
+				setTimeout(function () {
+					hideAppLoading();
+				}, 5000);
+			}
+		);
 	</script>
 </body>
 <!--end::Body-->
