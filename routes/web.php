@@ -91,10 +91,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="'.$safeRepo.'" add .',
-            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
-            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
-            'git -c safe.directory="'.$safeRepo.'" push',
+            'git -c safe.directory="' . $safeRepo . '" add .',
+            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
+            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
+            'git -c safe.directory="' . $safeRepo . '" push',
         ];
 
         $outputs = [];
@@ -114,7 +114,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (! $result->successful()) {
+            if (!$result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -409,6 +409,35 @@ Route::middleware('auth')->group(function () {
     Route::get('/exports/check/{id}', [ExportDataController::class, 'check']);
     Route::post('/exports/{id}/cancel', [ExportDataController::class, 'cancel']);
 
+    Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+
+        Route::get('/team-leader-field-engineers', [TeamLeaderFieldEngineerController::class, 'index'])
+            ->name('team-leader-field-engineers.index')
+            ->middleware('permission:team-leader-field-engineers.view');
+
+        Route::get('/team-leader-field-engineers/data', [TeamLeaderFieldEngineerController::class, 'data'])
+            ->name('team-leader-field-engineers.data')
+            ->middleware('permission:team-leader-field-engineers.view');
+
+        Route::get('/team-leader-field-engineers/select/team-leaders', [TeamLeaderFieldEngineerController::class, 'teamLeadersSelect'])
+            ->name('team-leader-field-engineers.select.team-leaders');
+
+        Route::get('/team-leader-field-engineers/select/field-engineers', [TeamLeaderFieldEngineerController::class, 'fieldEngineersSelect'])
+            ->name('team-leader-field-engineers.select.field-engineers');
+
+        Route::post('/team-leader-field-engineers', [TeamLeaderFieldEngineerController::class, 'store'])
+            ->name('team-leader-field-engineers.store')
+            ->middleware('permission:team-leader-field-engineers.create');
+
+        Route::delete('/team-leader-field-engineers/{teamLeaderFieldEngineer}', [TeamLeaderFieldEngineerController::class, 'destroy'])
+            ->name('team-leader-field-engineers.destroy')
+            ->middleware('permission:team-leader-field-engineers.delete');
+
+        Route::get('/team-leader-field-engineers/export', [TeamLeaderFieldEngineerController::class, 'export'])
+            ->name('team-leader-field-engineers.export')
+            ->middleware('permission:team-leader-field-engineers.export');
+    });
+
     Route::middleware(['auth', 'role:Database Officer'])->group(function () {
         Route::get('/login-logs', [LoginLogController::class, 'index'])
             ->name('login-logs.index');
@@ -442,4 +471,4 @@ Route::get('/import-buildings-test', [BuildingImportController::class, 'import']
 use App\Http\Controllers\HousingUnitImportController;
 
 Route::get('/import-housing-units', [HousingUnitImportController::class, 'import']);
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
