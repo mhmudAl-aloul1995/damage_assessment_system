@@ -33,20 +33,66 @@
             background: #f9fbff;
             text-align: start;
             cursor: pointer;
+            transition: background-color .2s ease, box-shadow .2s ease;
         }
 
-        .location-pie-section-toggle::after {
-            width: .65rem;
-            height: .65rem;
-            border-right: 2px solid #7e8299;
-            border-bottom: 2px solid #7e8299;
-            transform: rotate(45deg);
-            transition: transform .2s ease;
+        .location-pie-section-toggle:hover,
+        .location-municipality-toggle:hover {
+            background: #f1f7ff;
+        }
+
+        .location-collapse-cue {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            color: #3699ff;
+            font-size: .75rem;
+            font-weight: 800;
+        }
+
+        .location-collapse-cue .when-open {
+            display: none;
+        }
+
+        .location-pie-section-toggle[aria-expanded="true"] .when-open,
+        .location-municipality-toggle[aria-expanded="true"] .when-open {
+            display: inline;
+        }
+
+        .location-pie-section-toggle[aria-expanded="true"] .when-closed,
+        .location-municipality-toggle[aria-expanded="true"] .when-closed {
+            display: none;
+        }
+
+        .location-collapse-icon {
+            width: 2rem;
+            height: 2rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            border: 1px solid #bcdcff;
+            border-radius: 50%;
+            background: #fff;
+            color: #3699ff;
+            box-shadow: 0 .25rem .75rem rgba(54, 153, 255, .18);
+            transition: transform .2s ease, background-color .2s ease;
+        }
+
+        .location-collapse-icon::before {
+            width: .55rem;
+            height: .55rem;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            transform: rotate(45deg) translate(-1px, -1px);
             content: "";
         }
 
-        .location-pie-section-toggle[aria-expanded="true"]::after {
-            transform: rotate(-135deg);
+        .location-pie-section-toggle[aria-expanded="true"] .location-collapse-icon,
+        .location-municipality-toggle[aria-expanded="true"] .location-collapse-icon {
+            background: #3699ff;
+            color: #fff;
+            transform: rotate(180deg);
         }
 
         .location-pie-section-title {
@@ -124,20 +170,7 @@
             background: #fcfcfd;
             text-align: start;
             cursor: pointer;
-        }
-
-        .location-municipality-toggle::after {
-            width: .55rem;
-            height: .55rem;
-            border-right: 2px solid #7e8299;
-            border-bottom: 2px solid #7e8299;
-            transform: rotate(45deg);
-            transition: transform .2s ease;
-            content: "";
-        }
-
-        .location-municipality-toggle[aria-expanded="true"]::after {
-            transform: rotate(-135deg);
+            transition: background-color .2s ease;
         }
 
         .location-municipality-title {
@@ -557,7 +590,12 @@
                                     <span class="location-pie-section-meta">
                                         Governorate | {{ number_format($governoratePie['buildings_count']) }} buildings
                                     </span>
+                                    <span class="location-collapse-cue d-block mt-1">
+                                        <span class="when-closed">Click to expand</span>
+                                        <span class="when-open">Click to collapse</span>
+                                    </span>
                                 </span>
+                                <span class="location-collapse-icon" aria-hidden="true"></span>
                             </button>
 
                             <div id="collapse_{{ $governoratePie['id'] }}"
@@ -608,7 +646,12 @@
                                                         {{ number_format($municipalityPie['buildings_count']) }} buildings |
                                                         {{ count($municipalityNode['neighborhoods']) }} neighborhoods
                                                     </span>
+                                                    <span class="location-collapse-cue d-block mt-1">
+                                                        <span class="when-closed">Click to expand</span>
+                                                        <span class="when-open">Click to collapse</span>
+                                                    </span>
                                                 </span>
+                                                <span class="location-collapse-icon" aria-hidden="true"></span>
                                             </button>
 
                                             <div id="collapse_{{ $municipalityPie['id'] }}"
