@@ -77,7 +77,10 @@ it('renders and exports the building productivity report with totals and charts'
         ->assertSee('Completed vs Not Completed by Gov')
         ->assertSee('Top Neighborhoods Completed %')
         ->assertSee('Every Neighborhood Productivity')
-        ->assertSee('Neighborhood Pie Charts')
+        ->assertSee('Location Pie Charts')
+        ->assertSee('Governorate | 2 buildings')
+        ->assertSee('Municipality: Gaza')
+        ->assertSee('Neighborhoods under Gaza')
         ->assertSee('<td>Gaza</td>', false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('Grand Total');

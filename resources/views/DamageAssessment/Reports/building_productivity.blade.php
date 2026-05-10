@@ -13,6 +13,65 @@
             background: #fff;
         }
 
+        .location-pie-tree {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            padding: 1.25rem;
+            background: #f8fafc;
+        }
+
+        .location-pie-section {
+            border: 1px solid #d8dde8;
+            border-radius: .75rem;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .location-pie-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #edf0f5;
+            background: #f9fbff;
+        }
+
+        .location-pie-section-title {
+            margin: 0;
+            color: #181c32;
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+
+        .location-pie-section-meta {
+            color: #7e8299;
+            font-size: .8rem;
+            font-weight: 700;
+        }
+
+        .location-pie-level {
+            padding: 1rem;
+        }
+
+        .location-pie-level.municipality {
+            padding-inline-start: 2rem;
+            background: #fcfcfd;
+        }
+
+        .location-pie-level.neighborhood {
+            padding-inline-start: 3rem;
+            background: #fff;
+        }
+
+        .location-pie-level-title {
+            margin: .25rem 0 .75rem;
+            color: #3f4254;
+            font-size: .95rem;
+            font-weight: 800;
+        }
+
         .neighborhood-pie-card {
             min-height: 335px;
             padding: 12px 12px 14px;
@@ -313,47 +372,48 @@
         <div class="card-header pt-6">
             <div class="card-title">
                 <div>
-                    <h3 class="fw-bold mb-0">Neighborhood Pie Charts</h3>
-                    <div class="text-muted fs-7">Excel-style chart for every neighborhood.</div>
+                    <h3 class="fw-bold mb-0">Location Pie Charts</h3>
+                    <div class="text-muted fs-7">Governorate, municipality, and neighborhood charts.</div>
                 </div>
             </div>
         </div>
         <div class="card-body p-0">
-            @if (count($charts['neighborhood_pies']))
-                <div class="neighborhood-pie-grid">
-                    @foreach ($charts['neighborhood_pies'] as $pie)
-                        <div class="neighborhood-pie-card">
-                            <div class="neighborhood-pie-title">{{ $pie['title'] }}</div>
-                            <div class="neighborhood-pie-subtitle">
-                                {{ $pie['subtitle'] }} | {{ number_format($pie['buildings_count']) }} buildings
-                            </div>
-                            <div class="neighborhood-pie-chart-wrap">
-                                <div id="{{ $pie['id'] }}" class="neighborhood-pie-chart"></div>
-                                <span class="neighborhood-pie-inner-percent completed">
-                                    {{ $pie['completed_percent'] }}%
-                                </span>
-                                <span class="neighborhood-pie-inner-percent not-completed">
-                                    {{ $pie['not_completed_percent'] }}%
+            @if (count($charts['location_pies']))
+                <div class="location-pie-tree">
+                    @foreach ($charts['location_pies'] as $governorateNode)
+                        @php($governoratePie = $governorateNode['pie'])
+                        <div class="location-pie-section">
+                            <div class="location-pie-section-header">
+                                <h4 class="location-pie-section-title">{{ $governoratePie['title'] }}</h4>
+                                <span class="location-pie-section-meta">
+                                    Governorate | {{ number_format($governoratePie['buildings_count']) }} buildings
                                 </span>
                             </div>
-                            <div class="neighborhood-pie-percent-row">
-                                <span class="neighborhood-pie-percent completed">
-                                    {{ $pie['completed_percent'] }}%
-                                </span>
-                                <span class="neighborhood-pie-percent not-completed">
-                                    {{ $pie['not_completed_percent'] }}%
-                                </span>
+
+                            <div class="location-pie-level">
+                                <div class="neighborhood-pie-grid">
+                                    @include('DamageAssessment.Reports.partials.location_productivity_pie', ['pie' => $governoratePie])
+                                </div>
                             </div>
-                            <div class="neighborhood-pie-legend">
-                                <span class="neighborhood-pie-legend-item">
-                                    <span class="neighborhood-pie-dot completed"></span>
-                                    Completed
-                                </span>
-                                <span class="neighborhood-pie-legend-item">
-                                    <span class="neighborhood-pie-dot not-completed"></span>
-                                    Not Completed
-                                </span>
-                            </div>
+
+                            @foreach ($governorateNode['municipalities'] as $municipalityNode)
+                                @php($municipalityPie = $municipalityNode['pie'])
+                                <div class="location-pie-level municipality">
+                                    <div class="location-pie-level-title">Municipality: {{ $municipalityPie['title'] }}</div>
+                                    <div class="neighborhood-pie-grid">
+                                        @include('DamageAssessment.Reports.partials.location_productivity_pie', ['pie' => $municipalityPie])
+                                    </div>
+                                </div>
+
+                                <div class="location-pie-level neighborhood">
+                                    <div class="location-pie-level-title">Neighborhoods under {{ $municipalityPie['title'] }}</div>
+                                    <div class="neighborhood-pie-grid">
+                                        @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
+                                            @include('DamageAssessment.Reports.partials.location_productivity_pie', ['pie' => $neighborhoodPie])
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                     @endforeach
                 </div>
@@ -563,38 +623,16 @@
                 grid: { borderColor: '#eff2f5' }
             }).render();
 
-            @foreach ($charts['neighborhood_pies'] as $pie)
-                new ApexCharts(document.querySelector('#{{ $pie['id'] }}'), {
-                    series: @json($pie['series']),
-                    chart: {
-                        type: 'pie',
-                        height: 235,
-                        toolbar: { show: false },
-                        animations: { enabled: true }
-                    },
-                    labels: @json($pie['labels']),
-                    colors: ['#8CC36B', '#FF8F95'],
-                    legend: { show: false },
-                    stroke: {
-                        width: 3,
-                        colors: ['#ffffff']
-                    },
-                    dataLabels: {
-                        enabled: false
-                    },
-                    tooltip: {
-                        y: {
-                            formatter: function (value) {
-                                return value + ' buildings';
-                            }
-                        }
-                    },
-                    plotOptions: {
-                        pie: {
-                            expandOnClick: false
-                        }
-                    }
-                }).render();
+            @foreach ($charts['location_pies'] as $governorateNode)
+                @include('DamageAssessment.Reports.partials.location_productivity_pie_script', ['pie' => $governorateNode['pie']])
+
+                @foreach ($governorateNode['municipalities'] as $municipalityNode)
+                    @include('DamageAssessment.Reports.partials.location_productivity_pie_script', ['pie' => $municipalityNode['pie']])
+
+                    @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
+                        @include('DamageAssessment.Reports.partials.location_productivity_pie_script', ['pie' => $neighborhoodPie])
+                    @endforeach
+                @endforeach
             @endforeach
         });
     </script>

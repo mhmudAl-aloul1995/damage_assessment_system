@@ -145,7 +145,7 @@ class BuildingProductivityReportController extends Controller
                 'areas_count' => $baseRows->pluck('gov')->unique()->count(),
                 'neighborhoods_count' => $baseRows->count(),
             ],
-            'charts' => $this->chartData($baseRows, $grandTotal),
+            'charts' => $this->chartData($baseRows, $grandTotal, $filters),
         ];
     }
 
@@ -175,6 +175,57 @@ class BuildingProductivityReportController extends Controller
                 $completedStatuses,
             )
             ->groupBy('gov', 'name');
+
+        if ($filters['from_date']) {
+            $query->whereDate(self::DATE_FIELD, '>=', $filters['from_date']);
+        }
+
+        if ($filters['to_date']) {
+            $query->whereDate(self::DATE_FIELD, '<=', $filters['to_date']);
+        }
+
+        if ($filters['gov']) {
+            $query->where(function (Builder $nested) use ($filters): void {
+                $nested
+                    ->where('governorate', $filters['gov'])
+                    ->orWhere('municipalitie', $filters['gov']);
+            });
+        }
+
+        if ($filters['neighborhood']) {
+            $query->where('neighborhood', $filters['neighborhood']);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param  array{from_date: string|null, to_date: string|null, gov: string|null, neighborhood: string|null}  $filters
+     */
+    private function locationReportQuery(array $filters): Builder
+    {
+        $completedStatuses = collect(self::COMPLETED_STATUSES)
+            ->map(fn (string $status): string => strtolower(trim($status)))
+            ->values()
+            ->all();
+
+        $query = Building::query()
+            ->selectRaw("COALESCE(NULLIF(TRIM(governorate), ''), 'Not Available') as governorate_name")
+            ->selectRaw("COALESCE(NULLIF(TRIM(municipalitie), ''), 'Not Available') as municipality_name")
+            ->selectRaw("COALESCE(NULLIF(TRIM(neighborhood), ''), 'Not Available') as neighborhood_name")
+            ->selectRaw(
+                "SUM(CASE WHEN LOWER(TRIM(COALESCE(field_status, ''))) IN (".
+                implode(',', array_fill(0, count($completedStatuses), '?')).
+                ') THEN 1 ELSE 0 END) as completed',
+                $completedStatuses,
+            )
+            ->selectRaw(
+                "SUM(CASE WHEN LOWER(TRIM(COALESCE(field_status, ''))) IN (".
+                implode(',', array_fill(0, count($completedStatuses), '?')).
+                ') THEN 0 ELSE 1 END) as not_completed',
+                $completedStatuses,
+            )
+            ->groupBy('governorate_name', 'municipality_name', 'neighborhood_name');
 
         if ($filters['from_date']) {
             $query->whereDate(self::DATE_FIELD, '>=', $filters['from_date']);
@@ -243,7 +294,7 @@ class BuildingProductivityReportController extends Controller
      * @param  array<string, mixed>  $grandTotal
      * @return array<string, mixed>
      */
-    private function chartData(Collection $baseRows, array $grandTotal): array
+    private function chartData(Collection $baseRows, array $grandTotal, array $filters): array
     {
         $govRows = $baseRows
             ->groupBy('gov')
@@ -268,6 +319,19 @@ class BuildingProductivityReportController extends Controller
                 ['name', 'asc'],
             ])
             ->values();
+
+        $locationRows = $this->locationReportQuery($filters)
+            ->orderBy('governorate_name')
+            ->orderBy('municipality_name')
+            ->orderBy('neighborhood_name')
+            ->get()
+            ->map(fn ($row): array => [
+                'governorate' => (string) ($row->governorate_name ?: 'Not Available'),
+                'municipality' => (string) ($row->municipality_name ?: 'Not Available'),
+                'neighborhood' => (string) ($row->neighborhood_name ?: 'Not Available'),
+                'completed' => (int) $row->completed,
+                'not_completed' => (int) $row->not_completed,
+            ]);
 
         return [
             'completion_donut' => [
@@ -300,21 +364,80 @@ class BuildingProductivityReportController extends Controller
                 'not_completed' => $allNeighborhoods->pluck('not_completed')->map(fn ($value): int => (int) $value)->all(),
                 'height' => max(360, min(1200, $allNeighborhoods->count() * 42)),
             ],
-            'neighborhood_pies' => $allNeighborhoods
-                ->map(fn (array $row): array => [
-                    'id' => 'neighborhood_pie_'.md5($row['gov'].'|'.$row['name']),
-                    'title' => $row['name'],
-                    'subtitle' => $row['gov'],
-                    'labels' => ['Completed', 'Not Completed'],
-                    'series' => [
-                        (int) $row['completed'],
-                        (int) $row['not_completed'],
-                    ],
-                    'buildings_count' => (int) $row['buildings_count'],
-                    'completed_percent' => round(((float) $row['completed_percent']) * 100),
-                    'not_completed_percent' => round(((float) $row['not_completed_percent']) * 100),
-                ])
-                ->all(),
+            'location_pies' => $this->locationPieTree($locationRows),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, array{governorate: string, municipality: string, neighborhood: string, completed: int, not_completed: int}>  $locationRows
+     * @return array<int, array<string, mixed>>
+     */
+    private function locationPieTree(Collection $locationRows): array
+    {
+        return $locationRows
+            ->groupBy('governorate')
+            ->map(function (Collection $governorateRows, string $governorate): array {
+                return [
+                    'pie' => $this->locationPie(
+                        level: 'governorate',
+                        title: $governorate,
+                        subtitle: 'Governorate',
+                        completed: (int) $governorateRows->sum('completed'),
+                        notCompleted: (int) $governorateRows->sum('not_completed'),
+                        idParts: [$governorate],
+                    ),
+                    'municipalities' => $governorateRows
+                        ->groupBy('municipality')
+                        ->map(function (Collection $municipalityRows, string $municipality) use ($governorate): array {
+                            return [
+                                'pie' => $this->locationPie(
+                                    level: 'municipality',
+                                    title: $municipality,
+                                    subtitle: $governorate.' / Municipality',
+                                    completed: (int) $municipalityRows->sum('completed'),
+                                    notCompleted: (int) $municipalityRows->sum('not_completed'),
+                                    idParts: [$governorate, $municipality],
+                                ),
+                                'neighborhoods' => $municipalityRows
+                                    ->sortBy('neighborhood')
+                                    ->map(fn (array $row): array => $this->locationPie(
+                                        level: 'neighborhood',
+                                        title: $row['neighborhood'],
+                                        subtitle: $governorate.' / '.$municipality,
+                                        completed: (int) $row['completed'],
+                                        notCompleted: (int) $row['not_completed'],
+                                        idParts: [$governorate, $municipality, $row['neighborhood']],
+                                    ))
+                                    ->values()
+                                    ->all(),
+                            ];
+                        })
+                        ->values()
+                        ->all(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, string>  $idParts
+     * @return array<string, mixed>
+     */
+    private function locationPie(string $level, string $title, string $subtitle, int $completed, int $notCompleted, array $idParts): array
+    {
+        $buildingsCount = $completed + $notCompleted;
+
+        return [
+            'id' => 'location_pie_'.md5($level.'|'.implode('|', $idParts)),
+            'level' => $level,
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'labels' => ['Completed', 'Not Completed'],
+            'series' => [$completed, $notCompleted],
+            'buildings_count' => $buildingsCount,
+            'completed_percent' => $buildingsCount > 0 ? round(($completed / $buildingsCount) * 100) : 0,
+            'not_completed_percent' => $buildingsCount > 0 ? round(($notCompleted / $buildingsCount) * 100) : 0,
         ];
     }
 }
