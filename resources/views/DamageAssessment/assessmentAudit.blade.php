@@ -1772,6 +1772,14 @@
 
 
         function saveInlineValue(field, globalid, type, value, callback = null) {
+            globalid = resolveInlineGlobalId(globalid, type);
+
+            if (!globalid) {
+                toastr.warning(type === 'building_table' ? 'لا يوجد مبنى محدد' : 'يرجى اختيار الوحدة أولاً');
+                if (callback) callback(false);
+                return;
+            }
+
             let lockKey = [type, globalid, field].join('|');
 
             if (inlineSaveLocks.has(lockKey)) {
@@ -1827,6 +1835,22 @@
                     inlineSaveLocks.delete(lockKey);
                 }
             });
+        }
+
+        function resolveInlineGlobalId(globalid, type) {
+            if (globalid !== undefined && globalid !== null && String(globalid).trim() !== '') {
+                return globalid;
+            }
+
+            if (type === 'building_table') {
+                return @json($buildingGlobalid);
+            }
+
+            if (type === 'housing_table') {
+                return $("[name='globalid']").val() || null;
+            }
+
+            return null;
         }
 
         function setBuildingStatus(status) {
@@ -1937,8 +1961,8 @@
             let input = wrapper.find('.inline-edit-input');
 
             let field = btn.data('field');
-            let globalid = btn.data('globalid');
             let type = btn.data('type');
+            let globalid = resolveInlineGlobalId(btn.data('globalid'), type);
             let value = input.val();
 
             btn.prop('disabled', true).html('...');
@@ -1950,7 +1974,8 @@
 
         $(document).on('change', '.inline-edit-select', function () {
             let select = $(this);
-            saveInlineValue(select.data('field'), select.data('globalid'), select.data('type'), select.val());
+            let type = select.data('type');
+            saveInlineValue(select.data('field'), resolveInlineGlobalId(select.data('globalid'), type), type, select.val());
         });
 
         /*         function reloadBuildingAssessmentTable() {

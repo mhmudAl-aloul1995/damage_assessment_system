@@ -4218,6 +4218,10 @@ COALESCE(
 
     public function updateInlineAssessment(Request $request, AssessmentEditService $assessmentEditService)
     {
+        $request->merge([
+            'globalid' => $request->input('globalid', $request->input('global_id')),
+        ]);
+
         $request->validate([
             'type' => 'required|in:building_table,housing_table',
             'globalid' => 'required|string',
@@ -4295,6 +4299,10 @@ COALESCE(
 
     public function inlineAssessmentHistory(Request $request)
     {
+        $request->merge([
+            'globalid' => $request->input('globalid', $request->input('global_id')),
+        ]);
+
         $request->validate([
             'type' => 'required|in:building_table,housing_table',
             'globalid' => 'required|string',
