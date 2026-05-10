@@ -14,6 +14,12 @@ return [
     ],
     'reports' => [
         'title' => 'Reports',
+        'groups' => [
+            'productivity' => 'Productivity',
+            'operations' => 'Operations',
+            'surveys' => 'Survey Reports',
+            'exports' => 'Exports',
+        ],
         'area_productivity' => 'Area Productivity',
         'buildings_area_productivity' => 'Buildings Area Productivity',
         'public_buildings_area_productivity' => 'Public Buildings Area Productivity',

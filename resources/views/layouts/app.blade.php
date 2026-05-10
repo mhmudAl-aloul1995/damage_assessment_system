@@ -259,8 +259,38 @@
 		padding-top: .15rem;
 	}
 
+	#kt_app_sidebar_menu .phc-sidebar-group-label {
+		display: flex;
+		align-items: center;
+		gap: .5rem;
+		margin: .75rem .85rem .35rem;
+		color: #94a3b8;
+		font-size: .72rem;
+		font-weight: 700;
+		line-height: 1.2;
+		text-transform: uppercase;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-group-label::before {
+		width: 6px;
+		height: 6px;
+		border-radius: 999px;
+		background: rgba(62, 151, 255, .85);
+		content: "";
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-group .phc-sidebar-link {
+		margin-inline-start: .75rem;
+	}
+
 	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-item-count {
 		display: none;
+	}
+
+	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-group-label {
+		justify-content: center;
+		margin-inline: 0;
+		font-size: 0;
 	}
 </style>
 
@@ -1126,8 +1156,26 @@
 									@if($user->hasAnyRole($menu['roles'] ?? []))
 
 										@php
-											$visibleItems = collect($menu['items'] ?? [])->filter(function ($item) use ($user) {
-												return $user->hasAnyRole($item['roles'] ?? []);
+											$visibleItems = collect($menu['items'] ?? [])->map(function ($item) use ($user) {
+												if (isset($item['children'])) {
+													$children = collect($item['children'])->filter(function ($child) use ($user) {
+														return $user->hasAnyRole($child['roles'] ?? []);
+													})->values();
+
+													if ($children->isEmpty()) {
+														return null;
+													}
+
+													$item['children'] = $children;
+
+													return $item;
+												}
+
+												return $user->hasAnyRole($item['roles'] ?? []) ? $item : null;
+											})->filter();
+
+											$visibleItemCount = $visibleItems->sum(function ($item) {
+												return isset($item['children']) ? $item['children']->count() : 1;
 											});
 										@endphp
 
@@ -1151,22 +1199,41 @@
 													</span>
 
 													<span class="menu-title">{{ __($menu['title']) }}</span>
-													<span class="phc-sidebar-item-count">{{ $visibleItems->count() }}</span>
+													<span class="phc-sidebar-item-count">{{ $visibleItemCount }}</span>
 													<span class="menu-arrow"></span>
 												</span>
 
 												<div class="menu-sub menu-sub-accordion">
 													@foreach($visibleItems as $item)
-														<div class="menu-item">
-															<a class="menu-link phc-sidebar-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
-																href="{{ url($item['url']) }}" title="{{ __($item['title']) }}"
-																data-bs-toggle="tooltip" data-bs-placement="{{ $isRtl ? 'left' : 'right' }}">
-																<span class="menu-bullet">
-																	<span class="bullet bullet-dot"></span>
-																</span>
-																<span class="menu-title">{{ __($item['title']) }}</span>
-															</a>
-														</div>
+														@if(isset($item['children']))
+															<div class="menu-item phc-sidebar-group">
+																<div class="phc-sidebar-group-label">{{ __($item['title']) }}</div>
+
+																@foreach($item['children'] as $child)
+																	<div class="menu-item">
+																		<a class="menu-link phc-sidebar-link {{ request()->is($child['pattern']) ? 'active' : '' }}"
+																			href="{{ url($child['url']) }}" title="{{ __($child['title']) }}"
+																			data-bs-toggle="tooltip" data-bs-placement="{{ $isRtl ? 'left' : 'right' }}">
+																			<span class="menu-bullet">
+																				<span class="bullet bullet-dot"></span>
+																			</span>
+																			<span class="menu-title">{{ __($child['title']) }}</span>
+																		</a>
+																	</div>
+																@endforeach
+															</div>
+														@else
+															<div class="menu-item">
+																<a class="menu-link phc-sidebar-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
+																	href="{{ url($item['url']) }}" title="{{ __($item['title']) }}"
+																	data-bs-toggle="tooltip" data-bs-placement="{{ $isRtl ? 'left' : 'right' }}">
+																	<span class="menu-bullet">
+																		<span class="bullet bullet-dot"></span>
+																	</span>
+																	<span class="menu-title">{{ __($item['title']) }}</span>
+																</a>
+															</div>
+														@endif
 													@endforeach
 												</div>
 											</div>

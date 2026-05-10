@@ -15,6 +15,12 @@ return [
     'reports' => [
         'building_productivity' => 'تقرير إنتاجية حصر المباني',
         'title' => 'التقارير',
+        'groups' => [
+            'productivity' => 'الإنتاجية',
+            'operations' => 'التشغيل اليومي',
+            'surveys' => 'تقارير المسوحات',
+            'exports' => 'التصدير',
+        ],
         'area_productivity' => 'إنتاجية المناطق',
         'buildings_area_productivity' => 'إنتاجية مناطق المباني',
         'public_buildings_area_productivity' => 'إنتاجية مناطق المباني العامة',

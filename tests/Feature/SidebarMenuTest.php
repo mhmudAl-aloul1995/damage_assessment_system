@@ -77,3 +77,21 @@ it('shows team leader field engineer assignment in the user management sidebar',
         ->assertSee(__('menu.user_management.team_leader_field_engineers'), false)
         ->assertSee('admin/team-leader-field-engineers', false);
 });
+
+it('groups report links into sidebar categories', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->followingRedirects()
+        ->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('phc-sidebar-group-label', false)
+        ->assertSee(__('menu.reports.groups.productivity'), false)
+        ->assertSee(__('menu.reports.groups.operations'), false)
+        ->assertSee(__('menu.reports.groups.surveys'), false)
+        ->assertSee(__('menu.reports.groups.exports'), false)
+        ->assertSee(__('menu.reports.field_engineer'), false)
+        ->assertSee(__('menu.reports.export_data'), false);
+});
