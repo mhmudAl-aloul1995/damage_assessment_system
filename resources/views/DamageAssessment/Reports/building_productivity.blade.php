@@ -36,8 +36,7 @@
             transition: background-color .2s ease, box-shadow .2s ease;
         }
 
-        .location-pie-section-toggle:hover,
-        .location-municipality-toggle:hover {
+        .location-pie-section-toggle:hover {
             background: #f1f7ff;
         }
 
@@ -54,13 +53,11 @@
             display: none;
         }
 
-        .location-pie-section-toggle[aria-expanded="true"] .when-open,
-        .location-municipality-toggle[aria-expanded="true"] .when-open {
+        .location-pie-section-toggle[aria-expanded="true"] .when-open {
             display: inline;
         }
 
-        .location-pie-section-toggle[aria-expanded="true"] .when-closed,
-        .location-municipality-toggle[aria-expanded="true"] .when-closed {
+        .location-pie-section-toggle[aria-expanded="true"] .when-closed {
             display: none;
         }
 
@@ -88,8 +85,7 @@
             content: "";
         }
 
-        .location-pie-section-toggle[aria-expanded="true"] .location-collapse-icon,
-        .location-municipality-toggle[aria-expanded="true"] .location-collapse-icon {
+        .location-pie-section-toggle[aria-expanded="true"] .location-collapse-icon {
             background: #3699ff;
             color: #fff;
             transform: rotate(180deg);
@@ -108,7 +104,7 @@
             font-weight: 700;
         }
 
-        .location-governorate-body {
+        .location-primary-body {
             display: grid;
             grid-template-columns: minmax(280px, 400px) 1fr;
             gap: 1rem;
@@ -116,7 +112,7 @@
             align-items: start;
         }
 
-        .location-governorate-summary {
+        .location-primary-summary {
             display: grid;
             gap: .75rem;
         }
@@ -145,52 +141,10 @@
             font-weight: 900;
         }
 
-        .location-municipality-list {
-            display: flex;
-            flex-direction: column;
-            gap: .85rem;
-            padding: 0 1rem 1rem;
-        }
-
-        .location-municipality-item {
-            border: 1px solid #edf0f5;
-            border-radius: .65rem;
-            background: #fff;
-            overflow: hidden;
-        }
-
-        .location-municipality-toggle {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: .85rem 1rem;
-            border: 0;
-            background: #fcfcfd;
-            text-align: start;
-            cursor: pointer;
-            transition: background-color .2s ease;
-        }
-
         .location-municipality-title {
             color: #3f4254;
             font-size: .95rem;
             font-weight: 800;
-        }
-
-        .location-municipality-meta {
-            color: #7e8299;
-            font-size: .78rem;
-            font-weight: 700;
-        }
-
-        .location-municipality-body {
-            display: grid;
-            grid-template-columns: minmax(260px, 340px) 1fr;
-            gap: 1rem;
-            padding: 1rem;
-            align-items: start;
         }
 
         .location-neighborhood-grid {
@@ -253,20 +207,11 @@
             background: #fff;
         }
 
-        .neighborhood-pie-card.governorate {
+        .neighborhood-pie-card.primary {
             max-width: 380px;
             margin-inline: auto;
             border-color: #cfe2ff;
             box-shadow: 0 .45rem 1.2rem rgba(15, 23, 42, .06);
-        }
-
-        .neighborhood-pie-card.municipality {
-            min-height: 300px;
-        }
-
-        .neighborhood-pie-card.municipality .neighborhood-pie-chart,
-        .neighborhood-pie-card.municipality .neighborhood-pie-chart-wrap {
-            height: 190px;
         }
 
         .neighborhood-pie-title {
@@ -396,8 +341,7 @@
                 min-height: 310px;
             }
 
-            .location-governorate-body,
-            .location-municipality-body {
+            .location-primary-body {
                 grid-template-columns: 1fr;
             }
         }
@@ -410,12 +354,8 @@
             : '';
         $locationPieCharts = [];
 
-        foreach ($charts['location_pies'] as $governorateNode) {
-            $locationPieCharts[] = $governorateNode['pie'];
-
-            foreach ($governorateNode['municipalities'] as $municipalityNode) {
-                $locationPieCharts[] = $municipalityNode['pie'];
-            }
+        foreach ($charts['location_pies'] as $municipalityNode) {
+            $locationPieCharts[] = $municipalityNode['pie'];
         }
     @endphp
 
@@ -571,24 +511,25 @@
             <div class="card-title">
                 <div>
                     <h3 class="fw-bold mb-0">Location Pie Charts</h3>
-                    <div class="text-muted fs-7">Governorate, municipality, and neighborhood charts.</div>
+                    <div class="text-muted fs-7">Municipality and neighborhood charts.</div>
                 </div>
             </div>
         </div>
         <div class="card-body p-0">
             @if (count($charts['location_pies']))
                 <div class="location-pie-tree">
-                    @foreach ($charts['location_pies'] as $governorateNode)
-                        @php($governoratePie = $governorateNode['pie'])
+                    @foreach ($charts['location_pies'] as $municipalityNode)
+                        @php($municipalityPie = $municipalityNode['pie'])
                         <div class="location-pie-section">
                             <button class="location-pie-section-toggle" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#collapse_{{ $governoratePie['id'] }}"
+                                data-bs-target="#collapse_{{ $municipalityPie['id'] }}"
                                 aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
-                                aria-controls="collapse_{{ $governoratePie['id'] }}">
+                                aria-controls="collapse_{{ $municipalityPie['id'] }}">
                                 <span>
-                                    <span class="location-pie-section-title d-block">{{ $governoratePie['title'] }}</span>
+                                    <span class="location-pie-section-title d-block">{{ $municipalityPie['title'] }}</span>
                                     <span class="location-pie-section-meta">
-                                        Governorate | {{ number_format($governoratePie['buildings_count']) }} buildings
+                                        Municipality | {{ number_format($municipalityPie['buildings_count']) }} buildings |
+                                        {{ count($municipalityNode['neighborhoods']) }} neighborhoods
                                     </span>
                                     <span class="location-collapse-cue d-block mt-1">
                                         <span class="when-closed">Click to expand</span>
@@ -598,84 +539,47 @@
                                 <span class="location-collapse-icon" aria-hidden="true"></span>
                             </button>
 
-                            <div id="collapse_{{ $governoratePie['id'] }}"
+                            <div id="collapse_{{ $municipalityPie['id'] }}"
                                 class="collapse location-pie-collapse {{ $loop->first ? 'show' : '' }}">
-                                <div class="location-governorate-body">
+                                <div class="location-primary-body">
                                     @include('DamageAssessment.Reports.partials.location_productivity_pie', [
-                                        'pie' => $governoratePie,
-                                        'variant' => 'governorate',
+                                        'pie' => $municipalityPie,
+                                        'variant' => 'primary',
                                     ])
 
-                                    <div class="location-governorate-summary">
+                                    <div class="location-primary-summary">
                                         <div class="location-summary-tile">
                                             <span class="location-summary-label">Completed</span>
                                             <span class="location-summary-value text-success">
-                                                {{ number_format($governoratePie['series'][0]) }}
-                                                ({{ $governoratePie['completed_percent'] }}%)
+                                                {{ number_format($municipalityPie['series'][0]) }}
+                                                ({{ $municipalityPie['completed_percent'] }}%)
                                             </span>
                                         </div>
                                         <div class="location-summary-tile">
                                             <span class="location-summary-label">Not Completed</span>
                                             <span class="location-summary-value text-danger">
-                                                {{ number_format($governoratePie['series'][1]) }}
-                                                ({{ $governoratePie['not_completed_percent'] }}%)
+                                                {{ number_format($municipalityPie['series'][1]) }}
+                                                ({{ $municipalityPie['not_completed_percent'] }}%)
                                             </span>
                                         </div>
                                         <div class="location-summary-tile">
-                                            <span class="location-summary-label">Municipalities</span>
+                                            <span class="location-summary-label">Neighborhoods</span>
                                             <span class="location-summary-value">
-                                                {{ number_format(count($governorateNode['municipalities'])) }}
+                                                {{ number_format(count($municipalityNode['neighborhoods'])) }}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="location-municipality-list">
-                                    @foreach ($governorateNode['municipalities'] as $municipalityNode)
-                                        @php($municipalityPie = $municipalityNode['pie'])
-                                        <div class="location-municipality-item">
-                                            <button class="location-municipality-toggle" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#collapse_{{ $municipalityPie['id'] }}"
-                                                aria-expanded="{{ $loop->parent->first && $loop->first ? 'true' : 'false' }}"
-                                                aria-controls="collapse_{{ $municipalityPie['id'] }}">
-                                                <span>
-                                                    <span class="location-municipality-title d-block">
-                                                        Municipality: {{ $municipalityPie['title'] }}
-                                                    </span>
-                                                    <span class="location-municipality-meta">
-                                                        {{ number_format($municipalityPie['buildings_count']) }} buildings |
-                                                        {{ count($municipalityNode['neighborhoods']) }} neighborhoods
-                                                    </span>
-                                                    <span class="location-collapse-cue d-block mt-1">
-                                                        <span class="when-closed">Click to expand</span>
-                                                        <span class="when-open">Click to collapse</span>
-                                                    </span>
-                                                </span>
-                                                <span class="location-collapse-icon" aria-hidden="true"></span>
-                                            </button>
-
-                                            <div id="collapse_{{ $municipalityPie['id'] }}"
-                                                class="collapse location-pie-collapse {{ $loop->parent->first && $loop->first ? 'show' : '' }}">
-                                                <div class="location-municipality-body">
-                                                    @include('DamageAssessment.Reports.partials.location_productivity_pie', [
-                                                        'pie' => $municipalityPie,
-                                                        'variant' => 'municipality',
-                                                    ])
-
-                                                    <div>
-                                                        <div class="location-municipality-title mb-3">
-                                                            Neighborhoods under {{ $municipalityPie['title'] }}
-                                                        </div>
-                                                        <div class="location-neighborhood-grid">
-                                                            @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
-                                                                @include('DamageAssessment.Reports.partials.location_productivity_neighborhood', ['pie' => $neighborhoodPie])
-                                                            @endforeach
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
+                                <div class="p-4 pt-0">
+                                    <div class="location-municipality-title mb-3">
+                                        Neighborhoods under {{ $municipalityPie['title'] }}
+                                    </div>
+                                    <div class="location-neighborhood-grid">
+                                        @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
+                                            @include('DamageAssessment.Reports.partials.location_productivity_neighborhood', ['pie' => $neighborhoodPie])
+                                        @endforeach
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -929,7 +833,7 @@
                     series: pie.series,
                     chart: {
                         type: 'donut',
-                        height: pie.level === 'governorate' ? 235 : 190,
+                        height: 235,
                         toolbar: { show: false },
                         animations: { enabled: true }
                     },
