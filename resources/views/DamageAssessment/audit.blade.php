@@ -292,7 +292,7 @@
 								{{ __('ui.audit.assign_to_engineer') }} <i class="ki-duotone ki-plus"></i>
 							</button>
 							<button id="btn_import_final_approve" class="btn btn-dark btn-sm">
-								استيراد ObjectIDs Final Approve
+								ObjectIDs Final Approve
 								<i class="ki-duotone ki-file-up"></i>
 							</button>
 						@endunless
