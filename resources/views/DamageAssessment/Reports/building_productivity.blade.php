@@ -104,42 +104,12 @@
             font-weight: 700;
         }
 
-        .location-primary-summary {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: .75rem;
-        }
-
         .location-primary-body {
             display: grid;
-            grid-template-columns: minmax(260px, 340px) 1fr;
+            grid-template-columns: minmax(300px, 400px) 1fr;
             gap: 1rem;
             padding: 1rem;
             align-items: start;
-        }
-
-        .location-summary-tile {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: .85rem 1rem;
-            border: 1px solid #edf0f5;
-            border-radius: .65rem;
-            background: #fcfcfd;
-        }
-
-        .location-summary-label {
-            color: #7e8299;
-            font-size: .78rem;
-            font-weight: 800;
-            text-transform: uppercase;
-        }
-
-        .location-summary-value {
-            color: #181c32;
-            font-size: 1.15rem;
-            font-weight: 900;
         }
 
         .location-municipality-title {
@@ -232,34 +202,60 @@
             transform: translate(-50%, -50%);
         }
 
-        .location-pie-percent-row {
-            display: flex;
-            justify-content: center;
+        .location-pie-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: .5rem;
-            flex-wrap: wrap;
-            margin-top: -.1rem;
+            margin-top: .35rem;
         }
 
-        .location-pie-percent {
-            min-width: 64px;
-            padding: .3rem .55rem;
+        .location-pie-summary-grid.two-items {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .location-pie-summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: .15rem;
+            min-width: 0;
+            padding: .45rem .5rem;
+            border: 1px solid #edf0f5;
             border-radius: .45rem;
-            color: #fff;
-            font-size: .78rem;
+            background: #fcfcfd;
+            text-align: start;
+        }
+
+        .location-pie-summary-label {
+            color: #7e8299;
+            font-size: .68rem;
             font-weight: 800;
+            line-height: 1.2;
         }
 
-        .location-pie-percent.completed {
-            background: #50cd89;
+        .location-pie-summary-value {
+            color: #181c32;
+            font-size: .82rem;
+            font-weight: 900;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
         }
 
-        .location-pie-percent.not-completed {
-            background: #f1416c;
+        .location-pie-summary-item.completed .location-pie-summary-value {
+            color: #50cd89;
+        }
+
+        .location-pie-summary-item.not-completed .location-pie-summary-value {
+            color: #f1416c;
+        }
+
+        .location-pie-summary-item.neighborhoods .location-pie-summary-value {
+            color: #3699ff;
         }
 
         @media (max-width: 575px) {
             .location-primary-body,
-            .location-primary-summary {
+            .location-pie-summary-grid,
+            .location-pie-summary-grid.two-items {
                 grid-template-columns: 1fr;
             }
         }
@@ -467,30 +463,8 @@
                                     @include('DamageAssessment.Reports.partials.location_productivity_neighborhood', [
                                         'pie' => $municipalityPie,
                                         'variant' => 'primary',
+                                        'neighborhoodsCount' => count($municipalityNode['neighborhoods']),
                                     ])
-
-                                    <div class="location-primary-summary">
-                                        <div class="location-summary-tile">
-                                            <span class="location-summary-label">Completed</span>
-                                            <span class="location-summary-value text-success">
-                                                {{ number_format($municipalityPie['series'][0]) }}
-                                                ({{ $municipalityPie['completed_percent'] }}%)
-                                            </span>
-                                        </div>
-                                        <div class="location-summary-tile">
-                                            <span class="location-summary-label">Not Completed</span>
-                                            <span class="location-summary-value text-danger">
-                                                {{ number_format($municipalityPie['series'][1]) }}
-                                                ({{ $municipalityPie['not_completed_percent'] }}%)
-                                            </span>
-                                        </div>
-                                        <div class="location-summary-tile">
-                                            <span class="location-summary-label">Neighborhoods</span>
-                                            <span class="location-summary-value">
-                                                {{ number_format(count($municipalityNode['neighborhoods'])) }}
-                                            </span>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <div class="p-4 pt-0">

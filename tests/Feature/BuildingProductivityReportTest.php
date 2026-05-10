@@ -84,6 +84,8 @@ it('renders and exports the building productivity report with totals and charts'
         ->assertSee('location-pie-section-toggle', false)
         ->assertSee('location-pie-card', false)
         ->assertSee('location-pie-chart', false)
+        ->assertSee('location-pie-summary-grid', false)
+        ->assertSee('location-pie-summary-item neighborhoods', false)
         ->assertDontSee('location-neighborhood-progress', false)
         ->assertDontSee('neighborhood-pie-card', false)
         ->assertSee('<td>Gaza</td>', false)
