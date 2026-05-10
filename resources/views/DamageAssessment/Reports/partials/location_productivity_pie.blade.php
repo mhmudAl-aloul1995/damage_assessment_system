@@ -1,4 +1,4 @@
-<div class="neighborhood-pie-card">
+<div class="neighborhood-pie-card {{ $variant ?? '' }}">
     <div class="neighborhood-pie-title">{{ $pie['title'] }}</div>
     <div class="neighborhood-pie-subtitle">
         {{ $pie['subtitle'] }} | {{ number_format($pie['buildings_count']) }} buildings

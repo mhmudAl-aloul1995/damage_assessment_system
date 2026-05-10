@@ -81,6 +81,10 @@ it('renders and exports the building productivity report with totals and charts'
         ->assertSee('Governorate | 2 buildings')
         ->assertSee('Municipality: Gaza')
         ->assertSee('Neighborhoods under Gaza')
+        ->assertSee('location-pie-section-toggle', false)
+        ->assertSee('location-municipality-toggle', false)
+        ->assertSee('location-neighborhood-card', false)
+        ->assertSee('location-neighborhood-progress', false)
         ->assertSee('<td>Gaza</td>', false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('Grand Total');
