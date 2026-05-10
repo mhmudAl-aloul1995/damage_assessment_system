@@ -18,7 +18,7 @@ return [
         'groups' => [
             'productivity' => 'الإنتاجية',
             'operations' => 'التشغيل اليومي',
-            'surveys' => 'تقارير المسوحات',
+            'surveys' => 'تقارير المباني العامة و الطرق',
             'exports' => 'التصدير',
         ],
         'area_productivity' => 'إنتاجية المناطق',
