@@ -180,6 +180,74 @@ it('returns inline edit metadata and field history when saving an audit edit', f
     ]);
 });
 
+it('shows only total damage housing fields in the sidebar summary', function () {
+    $user = User::factory()->create();
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 3201,
+        'globalid' => 'housing-total-summary',
+        'unit_damage_status' => 'totally',
+        'unit_owner' => 'Total Owner',
+        'damaged_area_m2' => '140',
+        'external_finishing_of_the_unit' => 'External Finish',
+        'internal_finishing_of_the_unit' => 'Internal Finish',
+        'floor_number' => '8',
+        'housing_unit_number' => '9',
+        'reh_kitchen' => 'yes',
+        'reh_bathroom' => 'yes',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->getJson(route('housing.summary', ['globalid' => $housing->globalid]))
+        ->assertOk()
+        ->assertJsonPath('summary_mode', 'totally')
+        ->assertJsonCount(6, 'summary_items');
+
+    expect(collect($response->json('summary_items'))->pluck('field')->all())->toBe([
+        'unit_owner',
+        'damaged_area_m2',
+        'external_finishing_of_the_unit',
+        'internal_finishing_of_the_unit',
+        'floor_number',
+        'housing_unit_number',
+    ]);
+});
+
+it('keeps the existing partial damage housing fields in the sidebar summary', function () {
+    $user = User::factory()->create();
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 3202,
+        'globalid' => 'housing-partial-summary',
+        'unit_damage_status' => 'partially',
+        'unit_owner' => 'Partial Owner',
+        'damaged_area_m2' => '70',
+        'reh_kitchen' => 'yes',
+        'reh_bathroom' => 'no',
+        'is_the_housing_unit_or_living_habitable' => 'yes',
+        'external_finishing_of_the_unit' => 'External Partial',
+        'internal_finishing_of_the_unit' => 'Internal Partial',
+        'floor_number' => '4',
+        'housing_unit_number' => '12',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->getJson(route('housing.summary', ['globalid' => $housing->globalid]))
+        ->assertOk()
+        ->assertJsonPath('summary_mode', 'partial')
+        ->assertJsonCount(7, 'summary_items');
+
+    expect(collect($response->json('summary_items'))->pluck('field')->all())->toBe([
+        'unit_owner',
+        'damaged_area_m2',
+        'reh_kitchen',
+        'reh_bathroom',
+        'is_the_housing_unit_or_living_habitable',
+        'external_finishing_of_the_unit',
+        'internal_finishing_of_the_unit',
+    ]);
+});
+
 it('allows auditing supervisors to final approve from the assessment audit page', function () {
     $role = Role::query()->create([
         'name' => 'Auditing Supervisor',

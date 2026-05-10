@@ -2267,27 +2267,13 @@
 
             if (!globalid) {
                 renderHousingSummaryItems([]);
-                $('#sidebar_unit_area,#sidebar_kitchen,#sidebar_bathroom,#sidebar_living,#sidebar_rooms').text('--');
                 return;
             }
 
             $.get("{{ route('housing.summary') }}", { globalid: globalid }, function (res) {
-                if (Array.isArray(res.summary_items)) {
-                    renderHousingSummaryItems(res.summary_items);
-                }
-
-                $('#sidebar_unit_area').text(res.unit_area || '--');
-                $('#sidebar_unit_owner').text(res.unit_owner || '--');
-                $('#sidebar_kitchen').text(res.kitchen || '--');
-                $('#sidebar_bathroom').text(res.bathroom || '--');
-                $('#sidebar_living').text(res.living || '--');
-                $('#sidebar_rooms').text(res.rooms || '--');
-                $('#sidebar_occupied').text(res.occupied || '--');
-                $('#sidebar_external_finishing').text(res.external_finishing || '--');
-                $('#sidebar_internal_finishing').text(res.internal_finishing || '--');
+                renderHousingSummaryItems(res.summary_items || []);
             }).fail(function () {
                 renderHousingSummaryItems([]);
-                $('#sidebar_unit_area,#sidebar_unit_owner,#sidebar_kitchen,#sidebar_bathroom,#sidebar_living,#sidebar_rooms').text('--');
             });
         }
 

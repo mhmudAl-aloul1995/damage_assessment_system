@@ -5279,6 +5279,7 @@ COALESCE(
         if (! $unit) {
             return response()->json([
                 'summary_items' => [],
+                'summary_mode' => null,
                 'unit_area' => '--',
                 'unit_owner' => '--',
                 'kitchen' => '--',
@@ -5340,7 +5341,10 @@ COALESCE(
         };
 
         $damageStatus = strtolower(trim((string) ($edited['unit_damage_status'] ?? $unit->unit_damage_status ?? '')));
-        $fields = str_contains($damageStatus, 'total') ? $totalFields : $partialFields;
+        $normalizedDamageStatus = str($damageStatus)->replace(['-', ' '], '_')->squish()->toString();
+        $isTotallyDamaged = in_array($normalizedDamageStatus, ['totally', 'total', 'totally_damaged', 'total_damage'], true)
+            || str_contains($normalizedDamageStatus, 'totally');
+        $fields = $isTotallyDamaged ? $totalFields : $partialFields;
 
         $labels = Assessment::whereIn('name', $fields)
             ->pluck('label', 'name');
@@ -5396,6 +5400,7 @@ COALESCE(
 
         return response()->json([
             'summary_items' => $summaryItems,
+            'summary_mode' => $isTotallyDamaged ? 'totally' : 'partial',
 
             'unit_area' => $summaryByField->get('damaged_area_m2')['value'] ?? '--',
 
