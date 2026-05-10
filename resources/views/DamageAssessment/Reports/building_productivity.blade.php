@@ -761,9 +761,33 @@
             const fromDate = $('#from_date');
             const toDate = $('#to_date');
 
-            flatpickr('#date_range', {
+            function syncBuildingProductivityDateRange(selectedDates, instance) {
+                if (selectedDates.length >= 2) {
+                    fromDate.val(instance.formatDate(selectedDates[0], 'Y-m-d'));
+                    toDate.val(instance.formatDate(selectedDates[1], 'Y-m-d'));
+
+                    return;
+                }
+
+                if (selectedDates.length === 1) {
+                    const selectedDate = instance.formatDate(selectedDates[0], 'Y-m-d');
+
+                    fromDate.val(selectedDate);
+                    toDate.val(selectedDate);
+
+                    return;
+                }
+
+                fromDate.val('');
+                toDate.val('');
+            }
+
+            const dateRangePicker = flatpickr('#date_range', {
                 mode: 'range',
                 dateFormat: 'Y-m-d',
+                locale: {
+                    rangeSeparator: ' - '
+                },
                 defaultDate: [
                     @if ($filters['from_date'])
                         @json($filters['from_date'])
@@ -777,17 +801,15 @@
                     @endif
                 ].filter(Boolean),
                 onChange: function (selectedDates, dateStr, instance) {
-                    if (selectedDates.length === 2) {
-                        fromDate.val(instance.formatDate(selectedDates[0], 'Y-m-d'));
-                        toDate.val(instance.formatDate(selectedDates[1], 'Y-m-d'));
-                    }
+                    syncBuildingProductivityDateRange(selectedDates, instance);
                 },
                 onClose: function (selectedDates, dateStr, instance) {
-                    if (selectedDates.length === 0) {
-                        fromDate.val('');
-                        toDate.val('');
-                    }
+                    syncBuildingProductivityDateRange(selectedDates, instance);
                 }
+            });
+
+            $('#buildingProductivityFilterForm').on('submit', function () {
+                syncBuildingProductivityDateRange(dateRangePicker.selectedDates, dateRangePicker);
             });
 
             $('#building_productivity_table').DataTable({

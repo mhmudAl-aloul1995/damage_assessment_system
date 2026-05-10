@@ -78,6 +78,7 @@ it('renders and exports the building productivity report with totals and charts'
         ->assertSee('Top Neighborhoods Completed %')
         ->assertSee('Every Neighborhood Productivity')
         ->assertSee('Location Pie Charts')
+        ->assertSee('syncBuildingProductivityDateRange', false)
         ->assertSee('Governorate | 2 buildings')
         ->assertSee('Municipality: Gaza')
         ->assertSee('Neighborhoods under Gaza')
