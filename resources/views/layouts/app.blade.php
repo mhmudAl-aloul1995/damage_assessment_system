@@ -1478,7 +1478,9 @@
 
 		function shouldIgnoreLoader(settings) {
 			let url = (settings?.url || '').toLowerCase();
-
+			if ($(settings.context).hasClass('select2-hidden-accessible')) {
+				return;
+			}
 			const ignoredPatterns = [
 				'arcgis.com',
 				'featureserver',
