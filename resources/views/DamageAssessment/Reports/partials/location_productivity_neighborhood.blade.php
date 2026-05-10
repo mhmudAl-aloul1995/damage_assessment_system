@@ -1,24 +1,25 @@
-@php
-    $completed = (int) $pie['completed_percent'];
-    $notCompleted = (int) $pie['not_completed_percent'];
-@endphp
-
-<div class="location-neighborhood-card">
-    <div class="d-flex justify-content-between gap-3 mb-2">
-        <div>
-            <div class="location-neighborhood-title">{{ $pie['title'] }}</div>
-            <div class="location-neighborhood-meta">{{ number_format($pie['buildings_count']) }} buildings</div>
-        </div>
-        <div class="location-neighborhood-percent">{{ $completed }}%</div>
+<div class="location-pie-card {{ $variant ?? 'neighborhood' }}">
+    <div class="location-pie-title">{{ $pie['title'] }}</div>
+    <div class="location-pie-meta">
+        {{ $pie['subtitle'] }} | {{ number_format($pie['buildings_count']) }} buildings
     </div>
 
-    <div class="location-neighborhood-progress" aria-label="Completed {{ $completed }}%, not completed {{ $notCompleted }}%">
-        <span class="completed" style="width: {{ $completed }}%"></span>
-        <span class="not-completed" style="width: {{ $notCompleted }}%"></span>
+    <div class="location-pie-chart-wrap">
+        <div id="{{ $pie['id'] }}" class="location-pie-chart"></div>
+        <span class="location-pie-inner-percent completed">
+            {{ $pie['completed_percent'] }}%
+        </span>
+        <span class="location-pie-inner-percent not-completed">
+            {{ $pie['not_completed_percent'] }}%
+        </span>
     </div>
 
-    <div class="d-flex justify-content-between mt-2 location-neighborhood-breakdown">
-        <span>Completed: {{ $pie['series'][0] }}</span>
-        <span>Not completed: {{ $pie['series'][1] }}</span>
+    <div class="location-pie-percent-row">
+        <span class="location-pie-percent completed">
+            {{ $pie['completed_percent'] }}%
+        </span>
+        <span class="location-pie-percent not-completed">
+            {{ $pie['not_completed_percent'] }}%
+        </span>
     </div>
 </div>
