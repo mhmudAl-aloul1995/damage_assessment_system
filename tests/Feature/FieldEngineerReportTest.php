@@ -56,6 +56,14 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'order_step' => 3,
     ]);
 
+    $latestBuildingStatus = AssessmentStatus::query()->create([
+        'name' => 'field_reviewed',
+        'label_en' => 'Field Reviewed',
+        'label_ar' => 'Field Reviewed',
+        'stage' => 'engineer',
+        'order_step' => 4,
+    ]);
+
     $building = Building::query()->create([
         'objectid' => 5001,
         'globalid' => 'building-field-engineer-1',
@@ -159,6 +167,14 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'notes' => 'Needs review',
     ]);
 
+    BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $latestBuildingStatus->id,
+        'user_id' => $user->id,
+        'type' => 'Field Review',
+        'notes' => 'Latest building status',
+    ]);
+
     BuildingStatusHistory::query()->create([
         'building_id' => $building->objectid,
         'status_id' => $engineerAccepted->id,
@@ -240,6 +256,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
             'neighborhood' => 'New Neighborhood',
             'upload_date' => '2026-04-20 08:45 AM',
         ])
+        ->assertSee('Field Reviewed', false)
         ->assertJsonMissing([
             'objectid' => 5002,
         ]);
