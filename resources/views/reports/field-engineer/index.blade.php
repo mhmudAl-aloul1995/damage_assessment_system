@@ -353,15 +353,14 @@
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
                                         <th>{{ __('multilingual.field_engineer_report.columns.object_id') }}</th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.globalid') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.building_name') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.assignedto') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.municipality') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.neighborhood') }}</th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.parcel_number') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.building_use') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.building_damage_status') }}
                                         </th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.creationdate') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.upload_date') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.last_update') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.final_status') }}</th>
                                     </tr>
@@ -383,7 +382,7 @@
                                         <th>{{ __('multilingual.field_engineer_report.columns.unit_use') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.damage_status') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.occupant_status') }}</th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.creationdate') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.upload_date') }}</th>
                                     </tr>
                                 </thead>
                             </table>
@@ -670,19 +669,32 @@
 
             const tabTables = {
                 buildings: function () {
-                    return initializeDataTable('buildings', '#fieldEngineerBuildingsTable', "{{ url('reports/field-engineer/buildings') }}", [
+                    const buildingsTable = initializeDataTable('buildings', '#fieldEngineerBuildingsTable', "{{ url('reports/field-engineer/buildings') }}", [
                         { data: 'objectid', name: 'buildings.objectid' },
-                        { data: 'globalid', name: 'buildings.globalid' },
+                        { data: 'building_name', name: 'building_name' },
                         { data: 'assignedto', name: 'buildings.assignedto' },
                         { data: 'municipalitie', name: 'municipalitie' },
                         { data: 'neighborhood', name: 'neighborhood' },
-                        { data: 'parcel_no1', name: 'buildings.parcel_no1' },
                         { data: 'building_use', name: 'building_use' },
                         { data: 'building_damage_status', name: 'building_damage_status' },
-                        { data: 'creationdate', name: 'buildings.creationdate' },
+                        { data: 'upload_date', name: 'buildings.end' },
                         { data: 'editdate', name: 'buildings.editdate' },
                         { data: 'final_status_label', name: 'final_status_label', orderable: false, searchable: false },
                     ]);
+
+                    $('#fieldEngineerBuildingsTable tbody')
+                        .off('dblclick.fieldEngineerAssessment')
+                        .on('dblclick.fieldEngineerAssessment', 'tr', function () {
+                            const row = buildingsTable.row(this).data();
+
+                            if (!row || !row.assessment_url) {
+                                return;
+                            }
+
+                            window.open(row.assessment_url, '_blank');
+                        });
+
+                    return buildingsTable;
                 },
                 housing_units: function () {
                     return initializeDataTable('housing_units', '#fieldEngineerHousingTable', "{{ url('reports/field-engineer/housing-units') }}", [
@@ -692,7 +704,7 @@
                         { data: 'housing_unit_type', name: 'housing_unit_type' },
                         { data: 'unit_damage_status', name: 'unit_damage_status' },
                         { data: 'occupied', name: 'occupied' },
-                        { data: 'creationdate', name: 'housing_units.creationdate' },
+                        { data: 'upload_date', name: 'housing_units.building_submit_date' },
                     ]);
                 },
                 edits: function () {

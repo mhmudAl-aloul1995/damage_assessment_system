@@ -249,8 +249,8 @@ class FieldEngineerReportService
                 'buildings.objectid',
                 'buildings.globalid',
                 'buildings.assignedto',
-                'buildings.parcel_no1',
                 'buildings.creationdate',
+                'buildings.end',
                 'buildings.editdate',
                 'buildings.field_status',
                 DB::raw('COALESCE(edit_building_name.field_value, buildings.building_name) as building_name'),
@@ -302,6 +302,7 @@ class FieldEngineerReportService
                 'housing_units.globalid',
                 'housing_units.parentglobalid',
                 'housing_units.creationdate',
+                'housing_units.building_submit_date',
                 DB::raw('buildings.objectid as building_objectid'),
                 DB::raw('COALESCE(housing_edit_type.field_value, housing_units.housing_unit_type) as housing_unit_type'),
                 DB::raw('COALESCE(housing_edit_damage.field_value, housing_units.unit_damage_status) as unit_damage_status'),
@@ -552,7 +553,7 @@ class FieldEngineerReportService
         $baseQuery = $this->filteredBuildingIdentifiersQuery($filters);
         $total = (clone $baseQuery)->count();
         $pageIds = (clone $baseQuery)
-            ->orderByDesc('buildings.creationdate')
+            ->orderByDesc('buildings.end')
             ->orderByDesc('buildings.id')
             ->offset($start)
             ->limit($length)
@@ -579,7 +580,7 @@ class FieldEngineerReportService
         $baseQuery = $this->filteredHousingIdentifiersQuery($filters);
         $total = (clone $baseQuery)->count();
         $pageIds = (clone $baseQuery)
-            ->orderByDesc('housing_units.creationdate')
+            ->orderByDesc('housing_units.building_submit_date')
             ->orderByDesc('housing_units.id')
             ->offset($start)
             ->limit($length)
@@ -743,33 +744,31 @@ class FieldEngineerReportService
 
     private function exportBuildingsRows(array $filters): array
     {
-        $rows = $this->filteredBuildingsQuery($filters)->orderBy('creationdate', 'desc')->get();
+        $rows = $this->filteredBuildingsQuery($filters)->orderBy('end', 'desc')->get();
 
         return [[
             $this->trans('tabs.buildings'),
             $this->trans('columns.object_id'),
-            $this->trans('columns.globalid'),
+            $this->trans('columns.building_name'),
             $this->trans('columns.assignedto'),
             $this->trans('columns.municipality'),
             $this->trans('columns.neighborhood'),
-            $this->trans('columns.parcel_number'),
             $this->trans('columns.building_use'),
             $this->trans('columns.building_damage_status'),
-            $this->trans('columns.creationdate'),
+            $this->trans('columns.upload_date'),
             $this->trans('columns.last_update'),
             $this->trans('columns.final_status'),
         ], $rows->map(function ($row) {
             return [
                 $this->trans('tabs.buildings'),
                 $row->objectid,
-                $row->globalid,
+                $row->building_name,
                 $row->assignedto,
                 $row->municipalitie,
                 $row->neighborhood,
-                $row->parcel_no1,
                 $row->building_use,
                 $row->building_damage_status,
-                $row->creationdate,
+                $row->end,
                 $row->editdate,
                 $row->final_status_label,
             ];
@@ -778,7 +777,7 @@ class FieldEngineerReportService
 
     private function exportHousingRows(array $filters): array
     {
-        $rows = $this->filteredHousingUnitsQuery($filters)->orderBy('housing_units.creationdate', 'desc')->get();
+        $rows = $this->filteredHousingUnitsQuery($filters)->orderBy('housing_units.building_submit_date', 'desc')->get();
 
         return [[
             $this->trans('tabs.housing_units'),
@@ -788,7 +787,7 @@ class FieldEngineerReportService
             $this->trans('columns.unit_use'),
             $this->trans('columns.damage_status'),
             $this->trans('columns.occupant_status'),
-            $this->trans('columns.creationdate'),
+            $this->trans('columns.upload_date'),
         ], $rows->map(fn ($row) => [
             $this->trans('tabs.housing_units'),
             $row->objectid,
@@ -797,7 +796,7 @@ class FieldEngineerReportService
             $row->housing_unit_type,
             $row->unit_damage_status,
             $row->occupied,
-            $row->creationdate,
+            $row->building_submit_date,
         ])];
     }
 

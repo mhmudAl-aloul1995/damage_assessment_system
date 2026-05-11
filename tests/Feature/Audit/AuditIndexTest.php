@@ -44,6 +44,7 @@ it('includes the housing units status progress in the audit table response', fun
         'objectid' => 7001,
         'globalid' => 'audit-building-units-count',
         'building_name' => 'Audit Units Count Building',
+        'municipalitie' => 'Gaza Municipality',
         'assignedto' => 'Engineer A',
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-25 10:00:00',
@@ -189,6 +190,7 @@ it('includes the housing units status progress in the audit table response', fun
             'building_columns' => [
                 'objectid',
                 'building_name',
+                'municipality',
                 'housing_status_progress',
                 'building_status_notes',
             ],

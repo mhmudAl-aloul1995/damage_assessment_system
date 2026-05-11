@@ -55,13 +55,14 @@ class FieldEngineerReportController extends Controller
         $data = $result['rows']->map(fn ($row) => [
             'objectid' => $row->objectid,
             'globalid' => $row->globalid,
+            'assessment_url' => url('showAssessmentAudit/'.rawurlencode((string) $row->globalid)),
+            'building_name' => $row->building_name,
             'assignedto' => $row->assignedto,
             'municipalitie' => $row->municipalitie,
             'neighborhood' => $row->neighborhood,
-            'parcel_no1' => $row->parcel_no1,
             'building_use' => $row->building_use,
             'building_damage_status' => $row->building_damage_status,
-            'creationdate' => $row->creationdate ? date('Y-m-d h:i A', strtotime((string) $row->creationdate)) : '-',
+            'upload_date' => $row->end ? date('Y-m-d h:i A', strtotime((string) $row->end)) : '-',
             'editdate' => $row->editdate ? date('Y-m-d h:i A', strtotime((string) $row->editdate)) : '-',
             'final_status_label' => $this->statusBadge($row->final_status_name, $row->final_status_label),
         ]);
@@ -91,7 +92,7 @@ class FieldEngineerReportController extends Controller
             'housing_unit_type' => $row->housing_unit_type,
             'unit_damage_status' => $row->unit_damage_status,
             'occupied' => $row->occupied,
-            'creationdate' => $row->creationdate ? date('Y-m-d h:i A', strtotime((string) $row->creationdate)) : '-',
+            'upload_date' => $row->building_submit_date ? date('Y-m-d h:i A', strtotime((string) $row->building_submit_date)) : '-',
         ]);
 
         $response = response()->json($this->dataTablePayload($parameters['draw'], $result['total'], $data->all()));

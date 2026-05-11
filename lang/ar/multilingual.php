@@ -212,6 +212,7 @@ return [
         'columns' => [
             'object_id' => 'رقم المبنى',
             'globalid' => 'المعرف العام',
+            'building_name' => 'اسم المبنى',
             'assignedto' => 'المهندس الميداني',
             'municipality' => 'البلدية',
             'neighborhood' => 'الحي',
@@ -219,6 +220,7 @@ return [
             'building_use' => 'استخدام المبنى',
             'building_damage_status' => 'حالة ضرر المبنى',
             'creationdate' => 'تاريخ الإنشاء',
+            'upload_date' => 'تاريخ الرفع',
             'last_update' => 'آخر تحديث',
             'final_status' => 'الحالة النهائية',
             'parentglobalid' => 'المعرف العام للأصل',

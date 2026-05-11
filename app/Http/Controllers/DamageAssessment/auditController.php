@@ -3260,7 +3260,7 @@ class auditController extends Controller
             'globalid' => $building->globalid,
             'building_name' => $building->building_name,
             'governorate' => $building->governorate,
-            'municipality' => $building->municipality,
+            'municipality' => $building->municipalitie,
             'neighborhood' => $building->neighborhood,
             'assignedto' => $building->assignedto,
             'building_damage_status' => $building->building_damage_status,

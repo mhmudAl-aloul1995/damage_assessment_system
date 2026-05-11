@@ -212,6 +212,7 @@ return [
         'columns' => [
             'object_id' => 'Building Number',
             'globalid' => 'Global ID',
+            'building_name' => 'Building Name',
             'assignedto' => 'Field Engineer',
             'municipality' => 'Municipality',
             'neighborhood' => 'Neighborhood',
@@ -219,6 +220,7 @@ return [
             'building_use' => 'Building Use',
             'building_damage_status' => 'Building Damage Status',
             'creationdate' => 'Created At',
+            'upload_date' => 'Upload Date',
             'last_update' => 'Last Update',
             'final_status' => 'Final Status',
             'parentglobalid' => 'Parent Global ID',

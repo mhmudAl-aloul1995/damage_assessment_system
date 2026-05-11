@@ -67,6 +67,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'building_use' => 'residential',
         'building_damage_status' => 'partially_damaged',
         'field_status' => 'COMPLETED',
+        'end' => '2026-04-20 08:45:00',
         'creationdate' => '2026-04-20 08:00:00',
         'editdate' => '2026-04-22 09:30:00',
     ]);
@@ -90,6 +91,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'housing_unit_type' => 'residential',
         'unit_damage_status' => 'minor_damage',
         'occupied' => 'occupied',
+        'building_submit_date' => '2026-04-21 12:15:00',
         'creationdate' => '2026-04-21 11:00:00',
     ]);
 
@@ -234,7 +236,9 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ->assertJsonFragment([
             'objectid' => 5001,
             'assignedto' => 'Engineer One',
+            'building_name' => 'Original Building',
             'neighborhood' => 'New Neighborhood',
+            'upload_date' => '2026-04-20 08:45 AM',
         ])
         ->assertJsonMissing([
             'objectid' => 5002,
@@ -250,6 +254,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ->assertJsonFragment([
             'objectid' => 9001,
             'housing_unit_type' => 'temporary_shelter',
+            'upload_date' => '2026-04-21 12:15 PM',
         ])
         ->assertJsonMissing([
             'objectid' => 9002,
