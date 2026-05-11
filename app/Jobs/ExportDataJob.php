@@ -11,16 +11,20 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Writer\XLSX\Writer;
 
 class ExportDataJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    private const INTERNAL_EXPORT_COLUMNS = [
+        'export_row_id',
+        'export_building_globalid',
+        'export_housing_globalid',
+    ];
 
     public int $tries = 3;
 
@@ -30,8 +34,6 @@ class ExportDataJob implements ShouldQueue
 
     public function handle(): void
     {
-        $cache = new \PhpOffice\PhpSpreadsheet\Collection\Memory\SimpleCache3;
-        \PhpOffice\PhpSpreadsheet\Settings::setCache($cache);
         $export = Export::find($this->exportId);
 
         if (! $export || $export->status === 'cancelled') {
@@ -206,21 +208,6 @@ class ExportDataJob implements ShouldQueue
                 'bindings' => $query->getBindings(),
             ]);
 
-            $hasData = (clone $query)->exists();
-
-            if (! $hasData) {
-                $export->update([
-                    'status' => 'done',
-                    'progress' => 100,
-                    'processed' => 0,
-                    'file_name' => null,
-                ]);
-
-                \Log::warning('No data for export', ['id' => $export->id]);
-
-                return;
-            }
-
             $fileName = 'exports/export_'.now()->timestamp.'.xlsx';
             $fullPath = storage_path('app/public/'.$fileName);
 
@@ -312,121 +299,29 @@ class ExportDataJob implements ShouldQueue
                 }
             };
 
-            $spreadsheet = new Spreadsheet;
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setRightToLeft(true);
-            $sheet->setTitle('Export');
+            $processed = $this->writeExportFile(
+                $fullPath,
+                $generator(),
+                $assessmentLabels,
+                $export,
+            );
 
-            $rowNumber = 1;
-            $processed = 0;
-            $headersWritten = false;
-            $lastColLetter = 'A';
-
-            foreach ($generator() as $row) {
-                $processed++;
-
-                if (! $headersWritten) {
-                    $colIndex = 1;
-
-                    foreach (array_keys($row) as $header) {
-                        if (in_array($header, ['export_row_id', 'export_building_globalid', 'export_housing_globalid'], true)) {
-                            continue;
-                        }
-
-                        $label = $header;
-
-                        if (str_starts_with($header, 'building_')) {
-                            $field = str_replace('building_', '', $header);
-                        } elseif (str_starts_with($header, 'housing_')) {
-                            $field = str_replace('housing_', '', $header);
-                        } else {
-                            $field = $header;
-                        }
-
-                        if ($field === 'housing_units_count') {
-                            $label = 'عدد الوحدات للمبنى';
-                        } elseif ($field === 'family_members_total') {
-                            $label = 'عدد أفراد الأسرة';
-                        } else {
-                            $label = $assessmentLabels[$field] ?? ucwords(str_replace('_', ' ', $field));
-                        }
-
-                        $colLetter = Coordinate::stringFromColumnIndex($colIndex);
-                        $sheet->setCellValue($colLetter.'1', $label);
-                        $colIndex++;
-                    }
-
-                    $lastCol = $colIndex - 1;
-                    $lastColLetter = Coordinate::stringFromColumnIndex($lastCol);
-
-                    $sheet->getStyle("A1:{$lastColLetter}1")->applyFromArray([
-                        'font' => [
-                            'bold' => true,
-                            'size' => 12,
-                            'color' => ['rgb' => 'FFFFFF'],
-                        ],
-                        'fill' => [
-                            'fillType' => Fill::FILL_SOLID,
-                            'startColor' => ['rgb' => '1F4E78'],
-                        ],
-                        'alignment' => [
-                            'horizontal' => Alignment::HORIZONTAL_CENTER,
-                            'vertical' => Alignment::VERTICAL_CENTER,
-                            'wrapText' => true,
-                        ],
-                        'borders' => [
-                            'allBorders' => [
-                                'borderStyle' => Border::BORDER_THIN,
-                                'color' => ['rgb' => 'D9D9D9'],
-                            ],
-                        ],
-                    ]);
-
-                    $sheet->getRowDimension(1)->setRowHeight(28);
-                    $sheet->freezePane('A2');
-                    $sheet->setAutoFilter("A1:{$lastColLetter}1");
-
-                    $headersWritten = true;
-                    $rowNumber++;
+            if ($processed === 0) {
+                if (is_file($fullPath)) {
+                    unlink($fullPath);
                 }
 
-                $colIndex = 1;
+                $export->update([
+                    'status' => 'done',
+                    'progress' => 100,
+                    'processed' => 0,
+                    'file_name' => null,
+                ]);
 
-                foreach ($row as $key => $value) {
-                    if (in_array($key, ['export_row_id', 'export_building_globalid', 'export_housing_globalid'], true)) {
-                        continue;
-                    }
+                \Log::warning('No data for export', ['id' => $export->id]);
 
-                    $colLetter = Coordinate::stringFromColumnIndex($colIndex);
-                    $sheet->setCellValue($colLetter.$rowNumber, $value);
-                    $colIndex++;
-                }
-
-                if ($rowNumber % 2 === 0) {
-                    $sheet->getStyle("A{$rowNumber}:{$lastColLetter}{$rowNumber}")
-                        ->getFill()
-                        ->setFillType(Fill::FILL_SOLID)
-                        ->getStartColor()
-                        ->setRGB('F8F9FA');
-                }
-
-                if ($processed % 200 === 0) {
-                    $export->update([
-                        'progress' => min(95, max(1, (int) floor($processed / 100))),
-                        'processed' => $processed,
-                    ]);
-                }
-
-                $rowNumber++;
+                return;
             }
-
-            for ($i = 1; $i <= Coordinate::columnIndexFromString($lastColLetter); $i++) {
-                $colLetter = Coordinate::stringFromColumnIndex($i);
-                $sheet->getColumnDimension($colLetter)->setWidth(25);
-            }
-
-            $writer = new Xlsx($spreadsheet);
-            $writer->save($fullPath);
 
             $export->update([
                 'status' => 'done',
@@ -451,6 +346,108 @@ class ExportDataJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    protected function writeExportFile(string $fullPath, iterable $rows, array $assessmentLabels, Export $export): int
+    {
+        $writer = new Writer;
+        $writer->openToFile($fullPath);
+
+        $headerStyle = (new Style)
+            ->setFontBold()
+            ->setFontSize(12)
+            ->setFontColor('FFFFFF')
+            ->setBackgroundColor('1F4E78')
+            ->setCellAlignment(CellAlignment::CENTER)
+            ->setShouldWrapText();
+
+        $headers = [];
+        $processed = 0;
+
+        try {
+            foreach ($rows as $row) {
+                $row = (array) $row;
+
+                if ($headers === []) {
+                    $headers = $this->exportHeaders($row, $assessmentLabels);
+                    $writer->addRow(Row::fromValues(array_values($headers), $headerStyle));
+                }
+
+                $writer->addRow(Row::fromValues($this->exportValues($row, array_keys($headers))));
+                $processed++;
+
+                if ($processed % 200 === 0) {
+                    $export->update([
+                        'progress' => min(95, max(1, (int) floor($processed / 100))),
+                        'processed' => $processed,
+                    ]);
+                }
+            }
+        } finally {
+            $writer->close();
+        }
+
+        return $processed;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @param  array<string, string>  $assessmentLabels
+     * @return array<string, string>
+     */
+    protected function exportHeaders(array $row, array $assessmentLabels): array
+    {
+        $headers = [];
+
+        foreach (array_keys($row) as $header) {
+            if (in_array($header, self::INTERNAL_EXPORT_COLUMNS, true)) {
+                continue;
+            }
+
+            if (str_starts_with($header, 'building_')) {
+                $field = str_replace('building_', '', $header);
+            } elseif (str_starts_with($header, 'housing_')) {
+                $field = str_replace('housing_', '', $header);
+            } else {
+                $field = $header;
+            }
+
+            if ($field === 'housing_units_count') {
+                $headers[$header] = 'عدد الوحدات للمبنى';
+            } elseif ($field === 'family_members_total') {
+                $headers[$header] = 'عدد أفراد الأسرة';
+            } else {
+                $headers[$header] = $assessmentLabels[$field] ?? ucwords(str_replace('_', ' ', $field));
+            }
+        }
+
+        return $headers;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @param  array<int, string>  $headers
+     * @return array<int, bool|float|int|string|null>
+     */
+    protected function exportValues(array $row, array $headers): array
+    {
+        return collect($headers)
+            ->map(fn (string $header): bool|float|int|string|null => $this->exportValue($row[$header] ?? null))
+            ->values()
+            ->all();
+    }
+
+    protected function exportValue(mixed $value): bool|float|int|string|null
+    {
+        if ($value === null || is_bool($value) || is_int($value) || is_float($value) || is_string($value)) {
+            return $value;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s');
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE) ?: null;
     }
 
     protected function loadLatestEdits(array $globalIds, string $type): array
