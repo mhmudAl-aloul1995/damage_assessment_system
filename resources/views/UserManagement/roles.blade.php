@@ -101,32 +101,45 @@
                             <div class="fv-row">
                                 <label class="fs-5 fw-bold form-label mb-2">{{ __('ui.roles.permissions') }}</label>
 
-                                <div class="table-responsive">
-                                    <table class="table align-middle table-row-dashed fs-6 gy-5">
-                                        <tbody class="text-gray-600 fw-semibold">
-                                            <tr>
-                                                <td class="text-gray-800">{{ __('ui.roles.all_permissions') }}</td>
-                                                <td>
-                                                    <label class="form-check form-check-custom form-check-solid me-9">
-                                                        <input class="form-check-input select-all-permissions" type="checkbox" />
-                                                        <span class="form-check-label">{{ __('ui.buttons.select_all') }}</span>
-                                                    </label>
-                                                </td>
-                                            </tr>
+                                <label class="form-check form-check-custom form-check-solid mb-5">
+                                    <input class="form-check-input select-all-permissions" type="checkbox" />
+                                    <span class="form-check-label fw-semibold text-gray-800">{{ __('ui.roles.all_permissions') }}</span>
+                                </label>
 
-                                            @foreach($permissions as $permission)
-                                                <tr>
-                                                    <td class="text-gray-800">{{ $permission->name }}</td>
-                                                    <td>
-                                                        <label class="form-check form-check-sm form-check-custom form-check-solid">
-                                                            <input class="form-check-input permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permission->name }}" />
-                                                            <span class="form-check-label">{{ __('ui.buttons.allow') }}</span>
-                                                        </label>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                                <div class="accordion" id="add_role_permissions_accordion">
+                                    @foreach($permissionGroups as $group)
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="add-role-permission-heading-{{ $group['key'] }}">
+                                                <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#add-role-permission-collapse-{{ $group['key'] }}" aria-expanded="false"
+                                                    aria-controls="add-role-permission-collapse-{{ $group['key'] }}">
+                                                    {{ $group['label'] }}
+                                                    <span class="badge badge-light-primary ms-3">{{ $group['permissions']->count() }}</span>
+                                                </button>
+                                            </h2>
+
+                                            <div id="add-role-permission-collapse-{{ $group['key'] }}" class="accordion-collapse collapse"
+                                                aria-labelledby="add-role-permission-heading-{{ $group['key'] }}" data-bs-parent="#add_role_permissions_accordion">
+                                                <div class="accordion-body">
+                                                    <label class="form-check form-check-custom form-check-solid mb-4">
+                                                        <input class="form-check-input select-permission-group" type="checkbox" />
+                                                        <span class="form-check-label">{{ __('ui.roles.select_group') }}</span>
+                                                    </label>
+
+                                                    <div class="row g-3">
+                                                        @foreach($group['permissions'] as $permission)
+                                                            <div class="col-md-6">
+                                                                <label class="form-check form-check-sm form-check-custom form-check-solid">
+                                                                    <input class="form-check-input permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permission->name }}" />
+                                                                    <span class="form-check-label text-gray-800">{{ $permission->name }}</span>
+                                                                </label>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
                                 </div>
                             </div>
                         </div>
@@ -169,32 +182,45 @@
                             <div class="fv-row">
                                 <label class="fs-5 fw-bold form-label mb-2">{{ __('ui.roles.permissions') }}</label>
 
-                                <div class="table-responsive">
-                                    <table class="table align-middle table-row-dashed fs-6 gy-5">
-                                        <tbody class="text-gray-600 fw-semibold">
-                                            <tr>
-                                                <td class="text-gray-800">{{ __('ui.roles.all_permissions') }}</td>
-                                                <td>
-                                                    <label class="form-check form-check-custom form-check-solid me-9">
-                                                        <input class="form-check-input select-all-permissions-edit" type="checkbox" />
-                                                        <span class="form-check-label">{{ __('ui.buttons.select_all') }}</span>
-                                                    </label>
-                                                </td>
-                                            </tr>
+                                <label class="form-check form-check-custom form-check-solid mb-5">
+                                    <input class="form-check-input select-all-permissions-edit" type="checkbox" />
+                                    <span class="form-check-label fw-semibold text-gray-800">{{ __('ui.roles.all_permissions') }}</span>
+                                </label>
 
-                                            @foreach($permissions as $permission)
-                                                <tr>
-                                                    <td class="text-gray-800">{{ $permission->name }}</td>
-                                                    <td>
-                                                        <label class="form-check form-check-sm form-check-custom form-check-solid">
-                                                            <input class="form-check-input edit-permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permission->name }}" />
-                                                            <span class="form-check-label">{{ __('ui.buttons.allow') }}</span>
-                                                        </label>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                                <div class="accordion" id="edit_role_permissions_accordion">
+                                    @foreach($permissionGroups as $group)
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="edit-role-permission-heading-{{ $group['key'] }}">
+                                                <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#edit-role-permission-collapse-{{ $group['key'] }}" aria-expanded="false"
+                                                    aria-controls="edit-role-permission-collapse-{{ $group['key'] }}">
+                                                    {{ $group['label'] }}
+                                                    <span class="badge badge-light-primary ms-3">{{ $group['permissions']->count() }}</span>
+                                                </button>
+                                            </h2>
+
+                                            <div id="edit-role-permission-collapse-{{ $group['key'] }}" class="accordion-collapse collapse"
+                                                aria-labelledby="edit-role-permission-heading-{{ $group['key'] }}" data-bs-parent="#edit_role_permissions_accordion">
+                                                <div class="accordion-body">
+                                                    <label class="form-check form-check-custom form-check-solid mb-4">
+                                                        <input class="form-check-input select-permission-group-edit" type="checkbox" />
+                                                        <span class="form-check-label">{{ __('ui.roles.select_group') }}</span>
+                                                    </label>
+
+                                                    <div class="row g-3">
+                                                        @foreach($group['permissions'] as $permission)
+                                                            <div class="col-md-6">
+                                                                <label class="form-check form-check-sm form-check-custom form-check-solid">
+                                                                    <input class="form-check-input edit-permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permission->name }}" />
+                                                                    <span class="form-check-label text-gray-800">{{ $permission->name }}</span>
+                                                                </label>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
                                 </div>
                             </div>
                         </div>
@@ -245,6 +271,24 @@ $(document).ready(function () {
         return $('<div>').text(text ?? '').html();
     }
 
+    function syncPermissionGroupState(modalSelector, permissionSelector, groupSelector, allSelector) {
+        $(modalSelector + ' .accordion-body').each(function() {
+            let permissions = $(this).find(permissionSelector);
+            let checkedPermissions = permissions.filter(':checked');
+
+            $(this).find(groupSelector).prop(
+                'checked',
+                permissions.length > 0 && permissions.length === checkedPermissions.length
+            );
+        });
+
+        let allPermissions = $(modalSelector + ' ' + permissionSelector);
+        $(modalSelector + ' ' + allSelector).prop(
+            'checked',
+            allPermissions.length > 0 && allPermissions.length === allPermissions.filter(':checked').length
+        );
+    }
+
     function buildRoleCard(role) {
         let permissionsHtml = '';
 
@@ -292,6 +336,7 @@ $(document).ready(function () {
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_add_role')).hide();
                 form[0].reset();
                 $('.select-all-permissions').prop('checked', false);
+                $('.select-permission-group').prop('checked', false);
                 $('#add-role-card').before(buildRoleCard(response.role));
             },
             error: function(xhr) {
@@ -308,6 +353,7 @@ $(document).ready(function () {
         $('#kt_modal_update_role_form')[0].reset();
         $('.edit-permission-checkbox').prop('checked', false);
         $('.select-all-permissions-edit').prop('checked', false);
+        $('.select-permission-group-edit').prop('checked', false);
 
         $.ajax({
             url: "{{ url('/user-management/roles') }}/" + roleId + "/edit",
@@ -318,6 +364,13 @@ $(document).ready(function () {
                 $('.edit-permission-checkbox').each(function() {
                     $(this).prop('checked', (response.role.permissions ?? []).includes($(this).val()));
                 });
+
+                syncPermissionGroupState(
+                    '#kt_modal_update_role',
+                    '.edit-permission-checkbox',
+                    '.select-permission-group-edit',
+                    '.select-all-permissions-edit'
+                );
             },
             error: function(xhr) {
                 showErrors(xhr);
@@ -371,10 +424,50 @@ $(document).ready(function () {
 
     $(document).on('change', '.select-all-permissions', function() {
         $('#kt_modal_add_role .permission-checkbox').prop('checked', $(this).is(':checked'));
+        $('#kt_modal_add_role .select-permission-group').prop('checked', $(this).is(':checked'));
     });
 
     $(document).on('change', '.select-all-permissions-edit', function() {
         $('#kt_modal_update_role .edit-permission-checkbox').prop('checked', $(this).is(':checked'));
+        $('#kt_modal_update_role .select-permission-group-edit').prop('checked', $(this).is(':checked'));
+    });
+
+    $(document).on('change', '.select-permission-group', function() {
+        $(this).closest('.accordion-body').find('.permission-checkbox').prop('checked', $(this).is(':checked'));
+        syncPermissionGroupState(
+            '#kt_modal_add_role',
+            '.permission-checkbox',
+            '.select-permission-group',
+            '.select-all-permissions'
+        );
+    });
+
+    $(document).on('change', '.select-permission-group-edit', function() {
+        $(this).closest('.accordion-body').find('.edit-permission-checkbox').prop('checked', $(this).is(':checked'));
+        syncPermissionGroupState(
+            '#kt_modal_update_role',
+            '.edit-permission-checkbox',
+            '.select-permission-group-edit',
+            '.select-all-permissions-edit'
+        );
+    });
+
+    $(document).on('change', '.permission-checkbox', function() {
+        syncPermissionGroupState(
+            '#kt_modal_add_role',
+            '.permission-checkbox',
+            '.select-permission-group',
+            '.select-all-permissions'
+        );
+    });
+
+    $(document).on('change', '.edit-permission-checkbox', function() {
+        syncPermissionGroupState(
+            '#kt_modal_update_role',
+            '.edit-permission-checkbox',
+            '.select-permission-group-edit',
+            '.select-all-permissions-edit'
+        );
     });
 });
 </script>
