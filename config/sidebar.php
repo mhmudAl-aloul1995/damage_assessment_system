@@ -166,6 +166,17 @@ return [
                 ],
             ],
             [
+                'title' => 'menu.reports.groups.auditing',
+                'children' => [
+                    [
+                        'title' => 'menu.reports.hlp',
+                        'url' => 'reports/hlp-audit',
+                        'pattern' => 'reports/hlp-audit*',
+                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Auditing Supervisor'],
+                    ],
+                ],
+            ],
+            [
                 'title' => 'menu.reports.groups.surveys',
                 'children' => [
                     [

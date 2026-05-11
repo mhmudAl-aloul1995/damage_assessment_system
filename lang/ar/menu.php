@@ -18,6 +18,7 @@ return [
         'groups' => [
             'productivity' => 'الإنتاجية',
             'operations' => 'التشغيل اليومي',
+            'auditing' => 'التدقيق',
             'surveys' => 'تقارير المباني العامة و الطرق',
             'exports' => 'التصدير',
         ],
@@ -36,6 +37,8 @@ return [
         'field_engineer' => 'تقرير المهندس الميداني',
         'engineer_productivity' => 'إنتاجية المهندسين',
         'daily_audit' => 'إنجاز التدقيق اليومي',
+        'hlp' => 'HLP',
+        'hlp_audit' => 'تقرير تدقيق HLP',
         'public_buildings' => 'تقرير المباني العامة',
         'road_facilities' => 'تقرير مرافق الطرق',
         'export_data' => 'تصدير البيانات',

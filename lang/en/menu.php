@@ -17,6 +17,7 @@ return [
         'groups' => [
             'productivity' => 'Productivity',
             'operations' => 'Operations',
+            'auditing' => 'Auditing',
             'surveys' => 'Survey Reports',
             'exports' => 'Exports',
         ],
@@ -36,6 +37,8 @@ return [
         'field_engineer' => 'Field Engineer Report',
         'engineer_productivity' => 'Engineer Productivity',
         'daily_audit' => 'Daily Audit Achievement',
+        'hlp' => 'HLP',
+        'hlp_audit' => 'HLP Audit Report',
         'public_buildings' => 'Public Buildings Report',
         'road_facilities' => 'Road Facilities Report',
         'export_data' => 'Export Data',
