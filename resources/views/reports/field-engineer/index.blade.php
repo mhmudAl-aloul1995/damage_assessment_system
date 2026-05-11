@@ -69,6 +69,12 @@
             vertical-align: middle !important;
         }
 
+        .field-engineer-report .field-engineer-final-status-column {
+            width: 120px;
+            max-width: 120px;
+            white-space: normal;
+        }
+
         @media print {
             body * {
                 visibility: hidden;
@@ -368,7 +374,9 @@
                                         </th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.upload_date') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.last_update') }}</th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.final_status') }}</th>
+                                        <th class="field-engineer-final-status-column">
+                                            {{ __('multilingual.field_engineer_report.columns.final_status') }}
+                                        </th>
                                     </tr>
                                 </thead>
                             </table>
@@ -685,7 +693,7 @@
                         { data: 'building_damage_status', name: 'building_damage_status' },
                         { data: 'upload_date', name: 'buildings.end' },
                         { data: 'editdate', name: 'buildings.editdate' },
-                        { data: 'final_status_label', name: 'final_status_label', orderable: false, searchable: false },
+                        { data: 'final_status_label', name: 'final_status_label', orderable: false, searchable: false, className: 'field-engineer-final-status-column' },
                     ]);
 
                     $('#fieldEngineerBuildingsTable tbody')
