@@ -161,8 +161,7 @@ class ExportDataController extends Controller
                 'file_name' => null,
             ]);
 
-            ExportDataJob::dispatch($export->id)->onQueue('exports');
-            $this->startExportQueueWorker();
+            $this->runExportAfterResponse($export->id);
 
             return response()->json([
                 'status' => true,
@@ -281,56 +280,27 @@ class ExportDataController extends Controller
             ->all();
     }
 
-    private function startExportQueueWorker(): void
+    private function runExportAfterResponse(int $exportId): void
     {
-        if (app()->runningUnitTests() || config('queue.default') !== 'database') {
+        if (app()->runningUnitTests()) {
             return;
         }
 
-        $command = [
-            PHP_BINARY,
-            base_path('artisan'),
-            'queue:work',
-            'database',
-            '--once',
-            '--queue=exports',
-            '--tries=1',
-            '--timeout=0',
-            '--sleep=1',
-        ];
+        app()->terminating(function () use ($exportId): void {
+            $export = Export::query()->find($exportId);
 
-        try {
-            if (PHP_OS_FAMILY === 'Windows') {
-                pclose(popen('start /B "" '.$this->escapeWindowsCommand($command).' > NUL 2>&1', 'r'));
-
+            if (! $export || $export->status !== 'pending') {
                 return;
             }
 
-            exec($this->escapeUnixCommand($command).' > /dev/null 2>&1 &');
-        } catch (\Throwable $e) {
-            \Log::warning('Unable to start export queue worker', [
-                'message' => $e->getMessage(),
+            ignore_user_abort(true);
+            set_time_limit(0);
+
+            \Log::info('Export running after response', [
+                'id' => $exportId,
             ]);
-        }
-    }
 
-    /**
-     * @param  array<int, string>  $command
-     */
-    private function escapeWindowsCommand(array $command): string
-    {
-        return collect($command)
-            ->map(fn (string $part): string => '"'.str_replace('"', '\"', $part).'"')
-            ->implode(' ');
-    }
-
-    /**
-     * @param  array<int, string>  $command
-     */
-    private function escapeUnixCommand(array $command): string
-    {
-        return collect($command)
-            ->map(fn (string $part): string => escapeshellarg($part))
-            ->implode(' ');
+            (new ExportDataJob($exportId))->handle();
+        });
     }
 }
