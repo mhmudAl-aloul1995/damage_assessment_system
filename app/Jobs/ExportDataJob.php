@@ -5,11 +5,13 @@ namespace App\Jobs;
 use App\Models\Export;
 use App\Support\Exports\ExportDataColumns;
 use Illuminate\Bus\Queueable;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\CellAlignment;
@@ -44,7 +46,7 @@ class ExportDataJob implements ShouldQueue
             ini_set('memory_limit', '-1');
             set_time_limit(0);
 
-            \Log::info('Export started', ['id' => $export->id]);
+            Log::info('Export started', ['id' => $export->id]);
 
             $export->update([
                 'status' => 'processing',
@@ -203,7 +205,7 @@ class ExportDataJob implements ShouldQueue
                 });
             }
 
-            \Log::info('Export query prepared', [
+            Log::info('Export query prepared', [
                 'export_id' => $export->id,
                 'bindings_count' => count($query->getBindings()),
                 'paginate_by_housing' => $paginateByHousing,
@@ -231,7 +233,7 @@ class ExportDataJob implements ShouldQueue
                     $export->refresh();
 
                     if ($export->status === 'cancelled') {
-                        \Log::warning('Export cancelled mid-process');
+                        Log::warning('Export cancelled mid-process');
 
                         return;
                     }
@@ -249,7 +251,7 @@ class ExportDataJob implements ShouldQueue
                     $batchNumber++;
                     $batchStartedAt = microtime(true);
 
-                    \Log::info('Export batch query started', [
+                    Log::info('Export batch query started', [
                         'export_id' => $export->id,
                         'batch' => $batchNumber,
                         'last_id' => $lastId,
@@ -258,7 +260,7 @@ class ExportDataJob implements ShouldQueue
 
                     $rows = $batchQuery->limit($limit)->get();
 
-                    \Log::info('Export batch query finished', [
+                    Log::info('Export batch query finished', [
                         'export_id' => $export->id,
                         'batch' => $batchNumber,
                         'rows' => $rows->count(),
@@ -296,7 +298,7 @@ class ExportDataJob implements ShouldQueue
                         )
                         : [];
 
-                    \Log::info('Export batch edits loaded', [
+                    Log::info('Export batch edits loaded', [
                         'export_id' => $export->id,
                         'batch' => $batchNumber,
                         'building_global_ids' => count(array_unique($buildingGlobalIds)),
@@ -334,7 +336,7 @@ class ExportDataJob implements ShouldQueue
                 }
             };
 
-            \Log::info('Export file write starting', [
+            Log::info('Export file write starting', [
                 'export_id' => $export->id,
                 'path' => $fullPath,
             ]);
@@ -358,7 +360,7 @@ class ExportDataJob implements ShouldQueue
                     'file_name' => null,
                 ]);
 
-                \Log::warning('No data for export', ['id' => $export->id]);
+                Log::warning('No data for export', ['id' => $export->id]);
 
                 return;
             }
@@ -370,13 +372,13 @@ class ExportDataJob implements ShouldQueue
                 'file_name' => $fileName,
             ]);
 
-            \Log::info('Export finished', ['id' => $export->id]);
+            Log::info('Export finished', ['id' => $export->id]);
         } catch (\Throwable $e) {
             $export->update([
                 'status' => 'failed',
             ]);
 
-            \Log::error('Export failed', [
+            Log::error('Export failed', [
                 'export_id' => $this->exportId,
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
@@ -392,13 +394,13 @@ class ExportDataJob implements ShouldQueue
     {
         $writer = new Writer;
 
-        \Log::info('Export writer opening', [
+        $this->logInfo('Export writer opening', [
             'export_id' => $export->id,
         ]);
 
         $writer->openToFile($fullPath);
 
-        \Log::info('Export writer opened', [
+        $this->logInfo('Export writer opened', [
             'export_id' => $export->id,
         ]);
 
@@ -497,6 +499,18 @@ class ExportDataJob implements ShouldQueue
         }
 
         return json_encode($value, JSON_UNESCAPED_UNICODE) ?: null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function logInfo(string $message, array $context = []): void
+    {
+        if (! Container::getInstance()->bound('log')) {
+            return;
+        }
+
+        Log::info($message, $context);
     }
 
     protected function loadLatestEdits(array $globalIds, string $type): array
