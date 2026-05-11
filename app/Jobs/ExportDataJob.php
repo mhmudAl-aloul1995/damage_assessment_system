@@ -208,6 +208,10 @@ class ExportDataJob implements ShouldQueue
                 'bindings' => $query->getBindings(),
             ]);
 
+            $export->update([
+                'progress' => 1,
+            ]);
+
             $fileName = 'exports/export_'.now()->timestamp.'.xlsx';
             $fullPath = storage_path('app/public/'.$fileName);
 
@@ -217,7 +221,8 @@ class ExportDataJob implements ShouldQueue
 
             $generator = function () use ($query, $paginateByHousing, $export) {
                 $lastId = 0;
-                $limit = 2000;
+                $limit = 500;
+                $batchNumber = 0;
 
                 while (true) {
                     $export->refresh();
@@ -238,7 +243,24 @@ class ExportDataJob implements ShouldQueue
                             ->orderBy('b.objectid');
                     }
 
+                    $batchNumber++;
+                    $batchStartedAt = microtime(true);
+
+                    \Log::info('Export batch query started', [
+                        'export_id' => $export->id,
+                        'batch' => $batchNumber,
+                        'last_id' => $lastId,
+                        'paginate_by_housing' => $paginateByHousing,
+                    ]);
+
                     $rows = $batchQuery->limit($limit)->get();
+
+                    \Log::info('Export batch query finished', [
+                        'export_id' => $export->id,
+                        'batch' => $batchNumber,
+                        'rows' => $rows->count(),
+                        'execution_ms' => round((microtime(true) - $batchStartedAt) * 1000, 2),
+                    ]);
 
                     if ($rows->isEmpty()) {
                         break;
@@ -257,6 +279,8 @@ class ExportDataJob implements ShouldQueue
                         }
                     }
 
+                    $editsStartedAt = microtime(true);
+
                     $buildingEdits = $this->loadLatestEdits(
                         array_values(array_unique($buildingGlobalIds)),
                         'building_table'
@@ -268,6 +292,14 @@ class ExportDataJob implements ShouldQueue
                             'housing_table'
                         )
                         : [];
+
+                    \Log::info('Export batch edits loaded', [
+                        'export_id' => $export->id,
+                        'batch' => $batchNumber,
+                        'building_global_ids' => count(array_unique($buildingGlobalIds)),
+                        'housing_global_ids' => count(array_unique($housingGlobalIds)),
+                        'execution_ms' => round((microtime(true) - $editsStartedAt) * 1000, 2),
+                    ]);
 
                     foreach ($rows as $row) {
                         $rowArray = (array) $row;

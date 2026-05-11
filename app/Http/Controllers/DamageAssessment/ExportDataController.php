@@ -79,9 +79,16 @@ class ExportDataController extends Controller
     {
         Export::query()
             ->where('user_id', auth()->id())
-            ->whereIn('status', ['pending', 'processing'])
             ->whereNull('file_name')
-            ->where('updated_at', '<', now()->subMinutes(10))
+            ->where(function ($query) {
+                $query->where(function ($pending) {
+                    $pending->where('status', 'pending')
+                        ->where('updated_at', '<', now()->subMinutes(10));
+                })->orWhere(function ($processing) {
+                    $processing->where('status', 'processing')
+                        ->where('updated_at', '<', now()->subHours(2));
+                });
+            })
             ->update([
                 'status' => 'failed',
             ]);
@@ -103,9 +110,16 @@ class ExportDataController extends Controller
         try {
             Export::query()
                 ->where('user_id', auth()->id())
-                ->whereIn('status', ['pending', 'processing'])
                 ->whereNull('file_name')
-                ->where('updated_at', '<', now()->subMinutes(10))
+                ->where(function ($query) {
+                    $query->where(function ($pending) {
+                        $pending->where('status', 'pending')
+                            ->where('updated_at', '<', now()->subMinutes(10));
+                    })->orWhere(function ($processing) {
+                        $processing->where('status', 'processing')
+                            ->where('updated_at', '<', now()->subHours(2));
+                    });
+                })
                 ->update([
                     'status' => 'failed',
                 ]);
@@ -113,7 +127,7 @@ class ExportDataController extends Controller
             $runningExport = Export::query()
                 ->where('user_id', auth()->id())
                 ->whereIn('status', ['pending', 'processing'])
-                ->where('updated_at', '>=', now()->subMinutes(10))
+                ->where('updated_at', '>=', now()->subHours(2))
                 ->latest('id')
                 ->first();
 
