@@ -147,7 +147,8 @@ class ExportDataController extends Controller
                 'file_name' => null,
             ]);
 
-            ExportDataJob::dispatch($export->id);
+            ExportDataJob::dispatch($export->id)->onQueue('exports');
+            $this->startExportQueueWorker();
 
             return response()->json([
                 'status' => true,
@@ -264,5 +265,58 @@ class ExportDataController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function startExportQueueWorker(): void
+    {
+        if (app()->runningUnitTests() || config('queue.default') !== 'database') {
+            return;
+        }
+
+        $command = [
+            PHP_BINARY,
+            base_path('artisan'),
+            'queue:work',
+            'database',
+            '--once',
+            '--queue=exports',
+            '--tries=1',
+            '--timeout=0',
+            '--sleep=1',
+        ];
+
+        try {
+            if (PHP_OS_FAMILY === 'Windows') {
+                pclose(popen('start /B "" '.$this->escapeWindowsCommand($command).' > NUL 2>&1', 'r'));
+
+                return;
+            }
+
+            exec($this->escapeUnixCommand($command).' > /dev/null 2>&1 &');
+        } catch (\Throwable $e) {
+            \Log::warning('Unable to start export queue worker', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     */
+    private function escapeWindowsCommand(array $command): string
+    {
+        return collect($command)
+            ->map(fn (string $part): string => '"'.str_replace('"', '\"', $part).'"')
+            ->implode(' ');
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     */
+    private function escapeUnixCommand(array $command): string
+    {
+        return collect($command)
+            ->map(fn (string $part): string => escapeshellarg($part))
+            ->implode(' ');
     }
 }

@@ -36,7 +36,7 @@ class ExportDataJob implements ShouldQueue
     {
         $export = Export::find($this->exportId);
 
-        if (! $export || $export->status === 'cancelled') {
+        if (! $export || in_array($export->status, ['cancelled', 'done', 'failed'], true)) {
             return;
         }
         /**f */
