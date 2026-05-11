@@ -376,8 +376,8 @@
                                 id="fieldEngineerHousingTable">
                                 <thead>
                                     <tr class="fw-bold text-uppercase gs-0">
-                                        <th>{{ __('multilingual.field_engineer_report.columns.object_id') }}</th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.parentglobalid') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.housing_objectid') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.building_name') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.building_number') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.unit_use') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.damage_status') }}</th>
@@ -699,7 +699,7 @@
                 housing_units: function () {
                     return initializeDataTable('housing_units', '#fieldEngineerHousingTable', "{{ url('reports/field-engineer/housing-units') }}", [
                         { data: 'objectid', name: 'housing_units.objectid' },
-                        { data: 'parentglobalid', name: 'housing_units.parentglobalid' },
+                        { data: 'building_name', name: 'building_name' },
                         { data: 'building_objectid', name: 'building_objectid' },
                         { data: 'housing_unit_type', name: 'housing_unit_type' },
                         { data: 'unit_damage_status', name: 'unit_damage_status' },

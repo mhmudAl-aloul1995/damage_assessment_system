@@ -223,6 +223,7 @@ return [
             'upload_date' => 'تاريخ الرفع',
             'last_update' => 'آخر تحديث',
             'final_status' => 'الحالة النهائية',
+            'housing_objectid' => 'housing Objectid',
             'parentglobalid' => 'المعرف العام للأصل',
             'building_number' => 'رقم المبنى',
             'unit_use' => 'استخدام الوحدة',

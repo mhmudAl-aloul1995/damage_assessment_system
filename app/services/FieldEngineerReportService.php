@@ -175,7 +175,7 @@ class FieldEngineerReportService
         $buildingEdits = DB::table('edit_assessments')
             ->where('edit_assessments.type', 'building_table')
             ->whereExists(function ($existsQuery) use ($filters) {
-                $existsQuery->fromSub($this->filteredBuildingIdentifiersQuery($filters), 'filtered_buildings')
+                $existsQuery->fromSub($this->filteredBuildingIdentifiersQuery($filters, 'buildings.editdate'), 'filtered_buildings')
                     ->selectRaw('1')
                     ->whereRaw($this->collatedEquals('filtered_buildings.globalid', 'edit_assessments.global_id'));
             })
@@ -184,7 +184,7 @@ class FieldEngineerReportService
         $housingEdits = DB::table('edit_assessments')
             ->where('edit_assessments.type', 'housing_table')
             ->whereExists(function ($existsQuery) use ($filters) {
-                $existsQuery->fromSub($this->filteredHousingIdentifiersQuery($filters), 'filtered_housing')
+                $existsQuery->fromSub($this->filteredHousingIdentifiersQuery($filters, 'housing_units.editdate'), 'filtered_housing')
                     ->selectRaw('1')
                     ->whereRaw($this->collatedEquals('filtered_housing.globalid', 'edit_assessments.global_id'));
             })
@@ -306,6 +306,7 @@ class FieldEngineerReportService
                 'housing_units.creationdate',
                 'housing_units.building_submit_date',
                 DB::raw('buildings.objectid as building_objectid'),
+                DB::raw('buildings.building_name as building_name'),
                 DB::raw('COALESCE(housing_edit_type.field_value, housing_units.housing_unit_type) as housing_unit_type'),
                 DB::raw('COALESCE(housing_edit_damage.field_value, housing_units.unit_damage_status) as unit_damage_status'),
                 DB::raw('COALESCE(housing_edit_occupied.field_value, housing_units.occupied) as occupied'),
@@ -783,8 +784,8 @@ class FieldEngineerReportService
 
         return [[
             $this->trans('tabs.housing_units'),
-            $this->trans('columns.object_id'),
-            $this->trans('columns.parentglobalid'),
+            $this->trans('columns.housing_objectid'),
+            $this->trans('columns.building_name'),
             $this->trans('columns.building_number'),
             $this->trans('columns.unit_use'),
             $this->trans('columns.damage_status'),
@@ -793,7 +794,7 @@ class FieldEngineerReportService
         ], $rows->map(fn ($row) => [
             $this->trans('tabs.housing_units'),
             $row->objectid,
-            $row->parentglobalid,
+            $row->building_name,
             $row->building_objectid,
             $row->housing_unit_type,
             $row->unit_damage_status,
@@ -914,7 +915,7 @@ class FieldEngineerReportService
         return DB::query()->fromSub($buildingHistoryQuery->unionAll($housingHistoryQuery), 'status_history_ids');
     }
 
-    private function filteredBuildingIdentifiersQuery(array $filters): Builder
+    private function filteredBuildingIdentifiersQuery(array $filters, string $dateColumn = 'buildings.end'): Builder
     {
         $query = DB::table('buildings')->select([
             'buildings.id',
@@ -973,11 +974,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('buildings.end', '>=', $filters['from_date']);
+            $query->whereDate($dateColumn, '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('buildings.end', '<=', $filters['to_date']);
+            $query->whereDate($dateColumn, '<=', $filters['to_date']);
         }
 
         return $query;
@@ -1001,7 +1002,7 @@ class FieldEngineerReportService
             ->values();
     }
 
-    private function filteredHousingIdentifiersQuery(array $filters): Builder
+    private function filteredHousingIdentifiersQuery(array $filters, string $dateColumn = 'housing_units.building_submit_date'): Builder
     {
         $query = DB::table('housing_units')
             ->join('buildings', fn ($join) => $join->whereRaw($this->collatedEquals('housing_units.parentglobalid', 'buildings.globalid')))
@@ -1063,11 +1064,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('housing_units.building_submit_date', '>=', $filters['from_date']);
+            $query->whereDate($dateColumn, '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('housing_units.building_submit_date', '<=', $filters['to_date']);
+            $query->whereDate($dateColumn, '<=', $filters['to_date']);
         }
 
         return $query;

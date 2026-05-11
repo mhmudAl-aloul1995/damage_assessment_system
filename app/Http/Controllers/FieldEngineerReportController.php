@@ -88,6 +88,7 @@ class FieldEngineerReportController extends Controller
         $data = $result['rows']->map(fn ($row) => [
             'objectid' => $row->objectid,
             'parentglobalid' => $row->parentglobalid,
+            'building_name' => $row->building_name,
             'building_objectid' => $row->building_objectid,
             'housing_unit_type' => $row->housing_unit_type,
             'unit_damage_status' => $row->unit_damage_status,

@@ -101,6 +101,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'occupied' => 'occupied',
         'building_submit_date' => '2026-04-21 12:15:00',
         'creationdate' => '2026-04-21 11:00:00',
+        'editdate' => '2026-04-23 13:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -272,12 +273,31 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ->assertOk()
         ->assertJsonFragment([
             'objectid' => 9001,
+            'building_name' => 'Original Building',
             'housing_unit_type' => 'temporary_shelter',
             'upload_date' => '2026-04-21 12:15 PM',
         ])
         ->assertJsonMissing([
             'objectid' => 9002,
         ]);
+
+    $this->actingAs($user)
+        ->getJson(route('reports.field-engineer.stats', array_merge($query, [
+            'from_date' => '2026-04-22',
+            'to_date' => '2026-04-22',
+        ])))
+        ->assertOk()
+        ->assertJsonPath('summary.building_edits', 2)
+        ->assertJsonPath('summary.housing_edits', 0);
+
+    $this->actingAs($user)
+        ->getJson(route('reports.field-engineer.stats', array_merge($query, [
+            'from_date' => '2026-04-23',
+            'to_date' => '2026-04-23',
+        ])))
+        ->assertOk()
+        ->assertJsonPath('summary.building_edits', 0)
+        ->assertJsonPath('summary.housing_edits', 1);
 
     $this->actingAs($user)
         ->getJson(route('reports.field-engineer.edits', array_merge($query, [
