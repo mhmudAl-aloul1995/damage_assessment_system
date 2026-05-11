@@ -345,6 +345,8 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/daily-achievement/export', [reportController::class, 'exportDailyAchievement'])->name('reports.daily-achievement.export');
     Route::get('reports/auditors-daily', [reportController::class, 'auditorsDailyAchievement'])->name('reports.auditors-daily');
     Route::get('reports/lawyers-daily', [reportController::class, 'lawyersDailyAchievement'])->name('reports.lawyers-daily');
+    Route::get('reports/hlp-audit', [reportController::class, 'hlpAudit'])->name('reports.hlp-audit');
+    Route::get('reports/hlp-audit/export', [reportController::class, 'exportHlpAudit'])->name('reports.hlp-audit.export');
     Route::get('reports/public-buildings', [SurveyReportController::class, 'publicBuildings'])->name('reports.public-buildings');
     Route::get('reports/road-facilities', [SurveyReportController::class, 'roadFacilities'])->name('reports.road-facilities');
 

@@ -4,14 +4,17 @@ namespace App\Http\Controllers\Report;
 
 use App\Exports\AreaProductivityExport;
 use App\Exports\DailyAchievementExport;
+use App\Exports\HlpAuditReportExport;
 use App\Exports\ProductivityExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Report\AreaProductivityReportFilterRequest;
 use App\Models\Building;
 use App\Models\Buildings;
 use App\Models\BuildingStatus;
 use App\Models\HousingStatus;
 use App\Models\HousingUnit;
 use App\Models\User;
+use App\Services\HlpAuditReportService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -238,6 +241,26 @@ class reportController extends Controller
     public function lawyersDailyAchievement(Request $request)
     {
         return $this->renderDailyAchievementReport($request, 'lawyers');
+    }
+
+    public function hlpAudit(AreaProductivityReportFilterRequest $request, HlpAuditReportService $reportService): \Illuminate\Contracts\View\View
+    {
+        return View::make('DamageAssessment.Reports.hlp_audit', $reportService->build($request->validated()));
+    }
+
+    public function exportHlpAudit(AreaProductivityReportFilterRequest $request, HlpAuditReportService $reportService): BinaryFileResponse
+    {
+        $filters = $request->validated();
+        $report = $reportService->build($filters);
+
+        return Excel::download(
+            new HlpAuditReportExport(
+                $reportService->exportRows($filters),
+                $report['start_date'],
+                $report['end_date'],
+            ),
+            'hlp-audit-report-'.$report['start_date'].'-to-'.$report['end_date'].'.xlsx',
+        );
     }
 
     private function renderDailyAchievementReport(Request $request, string $tab)
