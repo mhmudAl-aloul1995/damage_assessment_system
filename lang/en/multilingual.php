@@ -146,6 +146,7 @@ return [
             'pda' => 'PDA',
             'cra' => 'CRA',
             'total_count' => 'Total Count',
+            'housing_units_count' => 'Housing Units',
         ],
         'labels' => [
             'not_available' => 'N/A',

@@ -72,6 +72,19 @@ it('renders separated area productivity reports for all supported datasets with 
         'creationdate' => '2026-04-12 10:00:00',
     ]);
 
+    Building::query()->create([
+        'objectid' => 1005,
+        'globalid' => 'building-unclassified',
+        'building_name' => 'Building Unclassified',
+        'assignedto' => 'eng-4',
+        'building_damage_status' => 'no_damage',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'zone_code' => 'Z-8',
+        'creationdate' => '2026-04-13 10:00:00',
+    ]);
+
     HousingUnit::query()->create([
         'objectid' => 2001,
         'globalid' => 'housing-1',
@@ -102,6 +115,14 @@ it('renders separated area productivity reports for all supported datasets with 
         'parentglobalid' => 'building-2',
         'unit_damage_status' => 'no_damage2',
         'creationdate' => '2026-04-11 14:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 2005,
+        'globalid' => 'housing-for-unclassified-building',
+        'parentglobalid' => 'building-unclassified',
+        'unit_damage_status' => 'partially_damaged2',
+        'creationdate' => '2026-04-13 14:00:00',
     ]);
 
     PublicBuildingSurvey::query()->create([
@@ -177,20 +198,42 @@ it('renders separated area productivity reports for all supported datasets with 
                 && $summary['cra'] === 1;
         });
 
-    $this->actingAs($user)
+    $buildingResponse = $this->actingAs($user)
         ->get(route('reports.area-productivity.buildings', [
             'start_date' => '2026-04-01',
             'end_date' => '2026-04-30',
             'municipalitie' => 'Gaza',
-        ]))
+        ]));
+
+    $buildingResponse
         ->assertOk()
         ->assertSee(__('multilingual.area_productivity_reports.titles.buildings'), false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('3', false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.housing_units_count'), false)
         ->assertDontSee('<td>Camp</td>', false)
         ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.buildings'), false)
         ->assertSeeInOrder(['<td>Gaza</td>', '<td>Buildings</td>'], false);
+
+    $buildingResponse->assertViewHas('summary', function (array $summary): bool {
+        return $summary['total_records'] === 3
+            && $summary['tda'] === 1
+            && $summary['pda'] === 2
+            && $summary['cra'] === 0
+            && $summary['housing_units_count'] === 4;
+    });
+
+    $buildingResponse->assertViewHas('rows', function ($rows): bool {
+        $rimal = $rows->firstWhere('neighborhood', 'Rimal');
+
+        return $rimal !== null
+            && (int) $rimal->total_count === 3
+            && (int) $rimal->tda_range === 1
+            && (int) $rimal->pda_range === 2
+            && (int) $rimal->cra_range === 0
+            && (int) $rimal->housing_units_count === 4;
+    });
 
     $this->actingAs($user)
         ->get(route('reports.area-productivity.public-buildings', [

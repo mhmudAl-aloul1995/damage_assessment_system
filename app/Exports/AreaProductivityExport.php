@@ -27,6 +27,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         private readonly string $endDate,
         private readonly string $reportTitle,
         private readonly string $sectorLabel,
+        private readonly bool $includeHousingUnitsCount = false,
     ) {}
 
     public function startCell(): string
@@ -46,6 +47,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             'pda_range' => $this->data->sum('pda_range'),
             'cra_range' => $this->data->sum('cra_range'),
             'total_count' => $this->data->sum('total_count'),
+            'housing_units_count' => $this->data->sum('housing_units_count'),
         ];
 
         return collect($this->data)->push($totals);
@@ -53,8 +55,16 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
 
     public function headings(): array
     {
-        return [
+        $headings = [
             __('multilingual.area_productivity_reports.columns.total_count'),
+        ];
+
+        if ($this->includeHousingUnitsCount) {
+            $headings[] = __('multilingual.area_productivity_reports.columns.housing_units_count');
+        }
+
+        return [
+            ...$headings,
             __('multilingual.area_productivity_reports.columns.cra'),
             __('multilingual.area_productivity_reports.columns.pda'),
             __('multilingual.area_productivity_reports.columns.tda'),
@@ -70,8 +80,16 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
     {
         $isTotal = ($row->Sector ?? '') === __('multilingual.area_productivity_reports.labels.grand_totals');
 
-        return [
+        $mapped = [
             $row->total_count ?? 0,
+        ];
+
+        if ($this->includeHousingUnitsCount) {
+            $mapped[] = $row->housing_units_count ?? 0;
+        }
+
+        return [
+            ...$mapped,
             $row->cra_range ?? 0,
             $row->pda_range ?? 0,
             $row->tda_range ?? 0,
@@ -87,13 +105,14 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
     {
         $headerRow = 3;
         $lastRow = $this->data->count() + 4;
+        $lastColumn = $this->includeHousingUnitsCount ? 'J' : 'I';
 
-        $sheet->getStyle("A{$headerRow}:I{$lastRow}")
+        $sheet->getStyle("A{$headerRow}:{$lastColumn}{$lastRow}")
             ->getBorders()
             ->getAllBorders()
             ->setBorderStyle(Border::BORDER_THIN);
 
-        $sheet->getStyle("A{$headerRow}:I{$lastRow}")
+        $sheet->getStyle("A{$headerRow}:{$lastColumn}{$lastRow}")
             ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
@@ -103,7 +122,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                 'font' => ['bold' => true, 'size' => 14, 'color' => ['argb' => 'FFFFFFFF']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF28A745']],
             ],
-            "A4:I{$lastRow}" => [
+            "A4:{$lastColumn}{$lastRow}" => [
                 'font' => ['size' => 12],
             ],
             $lastRow => [
@@ -119,8 +138,9 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             AfterSheet::class => function (AfterSheet $event): void {
                 $sheet = $event->sheet->getDelegate();
                 $lastRow = $this->data->count() + 4;
+                $lastColumn = $this->includeHousingUnitsCount ? 'J' : 'I';
 
-                $sheet->mergeCells('A1:I1');
+                $sheet->mergeCells("A1:{$lastColumn}1");
                 $sheet->setCellValue('A1', "{$this->reportTitle}: {$this->startDate} to {$this->endDate}");
                 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
@@ -135,12 +155,18 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
 
     public function columnFormats(): array
     {
-        return [
+        $formats = [
             'A' => '#,##0',
             'B' => '#,##0',
             'C' => '#,##0',
             'D' => '#,##0',
             'E' => '#,##0',
         ];
+
+        if ($this->includeHousingUnitsCount) {
+            $formats['F'] = '#,##0';
+        }
+
+        return $formats;
     }
 }

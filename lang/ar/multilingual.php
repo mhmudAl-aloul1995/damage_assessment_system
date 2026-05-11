@@ -146,6 +146,7 @@ return [
             'pda' => 'PDA',
             'cra' => 'CRA',
             'total_count' => 'إجمالي العدد',
+            'housing_units_count' => 'عدد الوحدات',
         ],
         'labels' => [
             'not_available' => 'غير متوفر',

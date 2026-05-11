@@ -76,6 +76,7 @@ class AreaProductivityReportController extends Controller
                 $report['end_date'],
                 __($report['title_key']),
                 __($report['sector_key']),
+                $type === AreaProductivityReportService::TYPE_BUILDINGS,
             ),
             "{$type}_area_productivity.xlsx",
         );

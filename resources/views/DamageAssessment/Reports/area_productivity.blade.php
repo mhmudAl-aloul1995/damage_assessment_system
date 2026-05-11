@@ -4,6 +4,8 @@
 @section('pageName', __($title_key))
 
 @section('content')
+    @php($showHousingUnitsCount = $type === 'buildings')
+
     <style>
         #area_productivity_table th,
         #area_productivity_table td {
@@ -123,6 +125,9 @@
                         <thead>
                             <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
                                 <th>{{ __('multilingual.area_productivity_reports.columns.total_count') }}</th>
+                                @if ($showHousingUnitsCount)
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.housing_units_count') }}</th>
+                                @endif
                                 <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
                                 <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
                                 <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
@@ -137,6 +142,9 @@
                             @forelse ($rows as $row)
                                 <tr>
                                     <td class="fw-bold">{{ $row->total_count }}</td>
+                                    @if ($showHousingUnitsCount)
+                                        <td>{{ $row->housing_units_count ?? 0 }}</td>
+                                    @endif
                                     <td>{{ $row->cra_range }}</td>
                                     <td>{{ $row->pda_range }}</td>
                                     <td>{{ $row->tda_range }}</td>
@@ -148,7 +156,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted">
+                                    <td colspan="{{ $showHousingUnitsCount ? 10 : 9 }}" class="text-center text-muted">
                                         {{ __('multilingual.area_productivity_reports.labels.empty') }}
                                     </td>
                                 </tr>
@@ -157,6 +165,9 @@
                         <tfoot class="border-top-2">
                             <tr class="fw-bold bg-light">
                                 <td class="text-success fs-5">{{ $summary['total_records'] }}</td>
+                                @if ($showHousingUnitsCount)
+                                    <td>{{ $summary['housing_units_count'] }}</td>
+                                @endif
                                 <td class="text-primary">{{ $summary['cra'] }}</td>
                                 <td class="text-warning">{{ $summary['pda'] }}</td>
                                 <td class="text-danger">{{ $summary['tda'] }}</td>
