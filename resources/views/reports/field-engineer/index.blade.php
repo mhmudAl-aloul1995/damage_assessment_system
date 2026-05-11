@@ -63,6 +63,12 @@
             display: block;
         }
 
+        .field-engineer-report table.dataTable thead th,
+        .field-engineer-report table.dataTable tbody td {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
         @media print {
             body * {
                 visibility: hidden;
