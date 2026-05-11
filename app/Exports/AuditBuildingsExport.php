@@ -244,6 +244,9 @@ class AuditHousingUnitsSheet extends AuditSheet
         $values = [
             'building_objectid' => $building?->objectid,
             'building_name' => $building?->building_name,
+            'governorate' => $unit->governorate,
+            'municipality' => $unit->municipalitie,
+            'neighborhood' => $unit->neighborhood,
             'objectid' => $unit->objectid,
             'globalid' => $unit->globalid,
             'parentglobalid' => $unit->parentglobalid,

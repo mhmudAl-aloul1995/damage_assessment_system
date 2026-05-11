@@ -53,6 +53,9 @@ it('includes the housing units status progress in the audit table response', fun
         'objectid' => 8001,
         'globalid' => 'audit-housing-unit-1',
         'parentglobalid' => $building->globalid,
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza Municipality',
+        'neighborhood' => 'Rimal',
     ]);
 
     HousingUnit::query()->create([
@@ -191,6 +194,9 @@ it('includes the housing units status progress in the audit table response', fun
             ],
             'housing_columns' => [
                 'building_objectid',
+                'governorate',
+                'municipality',
+                'neighborhood',
                 'objectid',
                 'parentglobalid',
                 'housing_status_notes',

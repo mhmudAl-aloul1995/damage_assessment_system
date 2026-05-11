@@ -28,6 +28,9 @@ test('audit table keeps all columns with responsive text cells', function () {
     expect($controller)
         ->toContain('building_status_notes')
         ->toContain('housing_status_notes')
+        ->toContain("'governorate' => 'المحافظة'")
+        ->toContain("'municipality' => 'البلدية'")
+        ->toContain("'neighborhood' => 'الحي'")
         ->toContain('ملاحظة حالة المبنى')
         ->toContain('ملاحظة حالة الوحدة');
 });

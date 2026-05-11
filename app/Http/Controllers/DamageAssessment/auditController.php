@@ -3097,6 +3097,9 @@ class auditController extends Controller
         return [
             'building_objectid' => 'ObjectID المبنى',
             'building_name' => 'اسم المبنى',
+            'governorate' => 'المحافظة',
+            'municipality' => 'البلدية',
+            'neighborhood' => 'الحي',
             'objectid' => 'ObjectID الوحدة',
             'globalid' => 'GlobalID الوحدة',
             'parentglobalid' => 'GlobalID المبنى',
@@ -3290,6 +3293,9 @@ class auditController extends Controller
         $values = [
             'building_objectid' => $building?->objectid,
             'building_name' => $building?->building_name,
+            'governorate' => $unit->governorate,
+            'municipality' => $unit->municipalitie,
+            'neighborhood' => $unit->neighborhood,
             'objectid' => $unit->objectid,
             'globalid' => $unit->globalid,
             'parentglobalid' => $unit->parentglobalid,
