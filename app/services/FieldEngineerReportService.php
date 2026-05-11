@@ -101,7 +101,7 @@ class FieldEngineerReportService
             return $this->emptySummary();
         }
 
-        $cacheKey = 'field-engineer-report:summary:editdate-v2:'.md5(json_encode($filters));
+        $cacheKey = 'field-engineer-report:summary:end-date-v1:'.md5(json_encode($filters));
 
         return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($filters) {
             return $this->calculateSummary($filters);
@@ -973,11 +973,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('buildings.editdate', '>=', $filters['from_date']);
+            $query->whereDate('buildings.end', '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('buildings.editdate', '<=', $filters['to_date']);
+            $query->whereDate('buildings.end', '<=', $filters['to_date']);
         }
 
         return $query;
@@ -1063,11 +1063,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('buildings.editdate', '>=', $filters['from_date']);
+            $query->whereDate('housing_units.building_submit_date', '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('buildings.editdate', '<=', $filters['to_date']);
+            $query->whereDate('housing_units.building_submit_date', '<=', $filters['to_date']);
         }
 
         return $query;
@@ -1153,11 +1153,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate("{$buildingTable}.editdate", '>=', $filters['from_date']);
+            $query->whereDate("{$buildingTable}.end", '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate("{$buildingTable}.editdate", '<=', $filters['to_date']);
+            $query->whereDate("{$buildingTable}.end", '<=', $filters['to_date']);
         }
 
         if ($search = $filters['search']) {
@@ -1222,11 +1222,11 @@ class FieldEngineerReportService
         }
 
         if ($filters['from_date']) {
-            $query->whereDate('buildings.editdate', '>=', $filters['from_date']);
+            $query->whereDate('housing_units.building_submit_date', '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('buildings.editdate', '<=', $filters['to_date']);
+            $query->whereDate('housing_units.building_submit_date', '<=', $filters['to_date']);
         }
 
         if ($search = $filters['search']) {

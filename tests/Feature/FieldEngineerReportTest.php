@@ -224,7 +224,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
 
     $independentFilterQuery = [
         'municipalitie' => 'Gaza',
-        'from_date' => '2026-04-21',
+        'from_date' => '2026-04-20',
         'to_date' => '2026-04-30',
     ];
 
@@ -263,6 +263,8 @@ it('renders the field engineer report and serves all tab endpoints', function ()
 
     $this->actingAs($user)
         ->getJson(route('reports.field-engineer.housing-units', array_merge($query, [
+            'from_date' => '2026-04-21',
+            'to_date' => '2026-04-21',
             'draw' => 1,
             'start' => 0,
             'length' => 10,
