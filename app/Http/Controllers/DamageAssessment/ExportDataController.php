@@ -6,7 +6,6 @@ namespace App\Http\Controllers\DamageAssessment;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DamageAssessment\ObjectIdImportRequest;
-use App\Jobs\ExportDataJob;
 use App\Models\Assessment;
 use App\Models\Export;
 use App\Support\Exports\ExportDataColumns;
@@ -161,7 +160,7 @@ class ExportDataController extends Controller
                 'file_name' => null,
             ]);
 
-            $this->runExportAfterResponse($export->id);
+            $this->startExportProcess($export->id);
 
             return response()->json([
                 'status' => true,
@@ -280,27 +279,67 @@ class ExportDataController extends Controller
             ->all();
     }
 
-    private function runExportAfterResponse(int $exportId): void
+    private function startExportProcess(int $exportId): void
     {
         if (app()->runningUnitTests()) {
             return;
         }
 
-        app()->terminating(function () use ($exportId): void {
-            $export = Export::query()->find($exportId);
+        $command = [
+            $this->phpCliBinary(),
+            base_path('artisan'),
+            'exports:run',
+            (string) $exportId,
+        ];
 
-            if (! $export || $export->status !== 'pending') {
+        $logPath = storage_path('logs/export-process.log');
+
+        try {
+            if (PHP_OS_FAMILY === 'Windows') {
+                pclose(popen('start /B "" '.$this->escapeWindowsCommand($command).' >> "'.$logPath.'" 2>&1', 'r'));
+
                 return;
             }
 
-            ignore_user_abort(true);
-            set_time_limit(0);
-
-            \Log::info('Export running after response', [
-                'id' => $exportId,
+            exec($this->escapeUnixCommand($command).' >> '.escapeshellarg($logPath).' 2>&1 &');
+        } catch (\Throwable $e) {
+            \Log::warning('Unable to start export process', [
+                'export_id' => $exportId,
+                'message' => $e->getMessage(),
             ]);
+        }
+    }
 
-            (new ExportDataJob($exportId))->handle();
-        });
+    private function phpCliBinary(): string
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            $phpExe = PHP_BINDIR.DIRECTORY_SEPARATOR.'php.exe';
+
+            if (is_file($phpExe)) {
+                return $phpExe;
+            }
+        }
+
+        return PHP_BINARY;
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     */
+    private function escapeWindowsCommand(array $command): string
+    {
+        return collect($command)
+            ->map(fn (string $part): string => '"'.str_replace('"', '\"', $part).'"')
+            ->implode(' ');
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     */
+    private function escapeUnixCommand(array $command): string
+    {
+        return collect($command)
+            ->map(fn (string $part): string => escapeshellarg($part))
+            ->implode(' ');
     }
 }
