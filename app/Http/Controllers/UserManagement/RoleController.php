@@ -12,7 +12,10 @@ class RoleController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:Database Officer');
+        $this->middleware('role_or_permission:Database Officer|roles.view')->only(['index', 'edit']);
+        $this->middleware('role_or_permission:Database Officer|roles.create')->only('store');
+        $this->middleware('role_or_permission:Database Officer|roles.update')->only('update');
+        $this->middleware('role_or_permission:Database Officer|roles.delete')->only('destroy');
     }
 
     public function index()

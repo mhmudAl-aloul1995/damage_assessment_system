@@ -127,6 +127,8 @@ return [
         'send_password' => 'إرسال كلمة مرور',
         'roles' => 'الأدوار',
         'select_roles' => 'اختر الأدوار',
+        'direct_permissions' => 'الصلاحيات المباشرة',
+        'select_permissions' => 'اختر الصلاحيات المباشرة',
         'create_title' => 'إضافة مستخدم',
         'edit_title' => 'تعديل مستخدم',
         'saved' => 'تم حفظ المستخدم بنجاح.',

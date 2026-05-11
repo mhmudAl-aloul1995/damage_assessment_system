@@ -56,10 +56,15 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
 
-    Route::get('/system-logs', [SystemLogController::class, 'index'])->name('system.logs');
-    Route::get('/system-logs/data', [SystemLogController::class, 'data'])->name('system.logs.data');
+    Route::get('/system-logs', [SystemLogController::class, 'index'])
+        ->middleware('role_or_permission:Database Officer|system-logs.view')
+        ->name('system.logs');
+    Route::get('/system-logs/data', [SystemLogController::class, 'data'])
+        ->middleware('role_or_permission:Database Officer|system-logs.view')
+        ->name('system.logs.data');
 
-    Route::get('/gitPush', [engineerController::class, 'gitPush']);
+    Route::get('/gitPush', [engineerController::class, 'gitPush'])
+        ->middleware('role_or_permission:Database Officer|system.maintenance');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -70,7 +75,7 @@ Route::middleware('auth')->group(function () {
         ]);
 
         return $exitCode === 0 ? 'Migration successful!' : 'Migration failed.';
-    });
+    })->middleware('role_or_permission:Database Officer|system.maintenance');
 
     Route::resource('sync', controller: ArcGISController::class);
 
@@ -84,7 +89,7 @@ Route::middleware('auth')->group(function () {
         }
 
         return response()->json(['error' => $result->errorOutput()], 500);
-    });
+    })->middleware('role_or_permission:Database Officer|system.maintenance');
 
     Route::get('/push', function () {
         $repo = base_path();
@@ -130,7 +135,7 @@ Route::middleware('auth')->group(function () {
             'status' => 'success',
             'output' => $outputs,
         ]);
-    });
+    })->middleware('role_or_permission:Database Officer|system.maintenance');
     /*     Route::get('/deleteUsers', function () {
             user::where('id', '>', '3')->delete();
             AttendanceImportLog::where('id','>','0')->delete();
@@ -439,7 +444,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/team-leader-field-engineers/data', [TeamLeaderFieldEngineerController::class, 'data'])
             ->name('team-leader-field-engineers.data');
     });
-    Route::middleware(['auth', 'role:Database Officer'])->group(function () {
+    Route::middleware(['auth', 'role_or_permission:Database Officer|login-logs.view'])->group(function () {
         Route::get('/login-logs', [LoginLogController::class, 'index'])
             ->name('login-logs.index');
 
@@ -461,7 +466,7 @@ Route::middleware('auth')->group(function () {
         ]);
 
         return $response->json();
-    });
+    })->middleware('role_or_permission:Database Officer|system.maintenance');
 });
 
 Route::get('/housing-summary', [auditController::class, 'housingSummary'])

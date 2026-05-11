@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Yajra\DataTables\DataTables;
 
@@ -23,13 +24,17 @@ class userController extends Controller
     public function __construct(ImageService $imageService)
     {
         $this->imageService = $imageService;
-        $this->middleware('role:Database Officer');
+        $this->middleware('role_or_permission:Database Officer|users.view')->only(['index', 'show']);
+        $this->middleware('role_or_permission:Database Officer|users.create')->only('store');
+        $this->middleware('role_or_permission:Database Officer|users.update')->only(['edit', 'update']);
+        $this->middleware('role_or_permission:Database Officer|users.delete')->only('destroy');
     }
 
     public function index()
     {
         $data['user'] = User::all();
         $data['roles'] = Role::all();
+        $data['permissions'] = Permission::orderBy('name')->get();
 
         return View::make('UserManagement.users', $data);
     }
@@ -81,7 +86,7 @@ class userController extends Controller
 
     public function edit($id)
     {
-        $user = User::with('roles')->find($id);
+        $user = User::with(['permissions', 'roles'])->find($id);
 
         if (! $user) {
             return response()->json([
@@ -104,6 +109,7 @@ class userController extends Controller
                 'region' => $user->region,
             ],
             'roles' => $user->roles->pluck('name')->toArray(),
+            'permissions' => $user->permissions->pluck('name')->toArray(),
         ]);
     }
 
@@ -119,6 +125,8 @@ class userController extends Controller
             'phone' => 'required|string|max:255',
             'roles' => 'required|array|min:1',
             'roles.*' => 'required|string|exists:roles,name',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'required|string|exists:permissions,name',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
@@ -154,6 +162,7 @@ class userController extends Controller
             }
 
             $user->syncRoles($request->roles);
+            $user->syncPermissions($request->permissions ?? []);
         });
 
         Mail::to($user->email)->send(
@@ -177,6 +186,8 @@ class userController extends Controller
             'phone' => 'required|string|max:255',
             'roles' => 'required|array|min:1',
             'roles.*' => 'required|string|exists:roles,name',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'required|string|exists:permissions,name',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
@@ -207,6 +218,7 @@ class userController extends Controller
 
             $user->update($data);
             $user->syncRoles($request->roles);
+            $user->syncPermissions($request->permissions ?? []);
 
             if ($request->filled('send_password') && $request->send_password === 'yes') {
                 $newPassword = (string) random_int(100000, 999999);

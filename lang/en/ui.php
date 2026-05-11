@@ -127,6 +127,8 @@ return [
         'send_password' => 'Send Password',
         'roles' => 'Roles',
         'select_roles' => 'Select roles',
+        'direct_permissions' => 'Direct permissions',
+        'select_permissions' => 'Select direct permissions',
         'create_title' => 'Add User',
         'edit_title' => 'Edit User',
         'saved' => 'User saved successfully.',

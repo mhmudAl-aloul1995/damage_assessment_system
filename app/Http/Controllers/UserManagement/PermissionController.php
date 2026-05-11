@@ -12,7 +12,10 @@ class PermissionController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:Database Officer');
+        $this->middleware('role_or_permission:Database Officer|permissions.view')->only(['index', 'data', 'edit']);
+        $this->middleware('role_or_permission:Database Officer|permissions.create')->only('store');
+        $this->middleware('role_or_permission:Database Officer|permissions.update')->only('update');
+        $this->middleware('role_or_permission:Database Officer|permissions.delete')->only('destroy');
     }
 
     public function index()

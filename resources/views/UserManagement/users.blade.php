@@ -213,6 +213,19 @@
                                     @endforeach
                                 </select>
                             </div>
+
+                            <div class="mb-5">
+                                <label class="fw-semibold fs-6 mb-2">{{ __('ui.users.direct_permissions') }}</label>
+
+                                <select name="permissions[]" id="permissions_select" class="form-select form-select-solid"
+                                    data-control="select2" data-placeholder="{{ __('ui.users.select_permissions') }}" multiple>
+                                    @foreach($permissions as $permission)
+                                        <option value="{{ $permission->name }}">
+                                            {{ $permission->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
                         <div class="text-center pt-10">
@@ -256,6 +269,12 @@
             width: '100%'
         });
 
+        $('#permissions_select').select2({
+            placeholder: @json(__('ui.users.select_permissions')),
+            allowClear: true,
+            width: '100%'
+        });
+
         let usersTable;
 
         function showSwalError(message) {
@@ -277,12 +296,14 @@
             $('#user_id').val('');
             $('#user_modal_title').text(userTranslations.createTitle);
             $('#user_avatar_preview').css('background-image', 'none');
+            $('#permissions_select').val(null).trigger('change');
         }
 
         function openUserModalForCreate() {
             resetUserForm();
             bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_user')).show();
             $('#roles_select').val(null).trigger('change');
+            $('#permissions_select').val(null).trigger('change');
         }
 
         function showUser(id) {
@@ -294,6 +315,7 @@
 
                     const user = response.user;
                     $('#roles_select').val(null).trigger('change');
+                    $('#permissions_select').val(null).trigger('change');
                     $('#user_modal_title').text(userTranslations.editTitle);
                     $('#user_id').val(user.id);
                     $('#kt_modal_user_form input[name="name"]').val(user.name ?? '');
@@ -308,6 +330,10 @@
 
                     if (response.roles && response.roles.length > 0) {
                         $('#roles_select').val(response.roles).trigger('change');
+                    }
+
+                    if (response.permissions && response.permissions.length > 0) {
+                        $('#permissions_select').val(response.permissions).trigger('change');
                     }
 
                     if (user.avatar_url) {
