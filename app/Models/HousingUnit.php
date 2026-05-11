@@ -74,6 +74,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $shelter_type
  * @property string|null $shelter_type_other
  * @property string|null $governorate
+ * @property string|null $municipalitie
  * @property string|null $locality
  * @property string|null $neighborhood
  * @property string|null $street
@@ -326,6 +327,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $quant5
  * @property string|null $final_comments
  * @property string|null $parentglobalid
+ * @property string|null $building_submit_date
  * @property string|null $creationdate
  * @property string|null $creator
  * @property string|null $editdate
@@ -429,6 +431,7 @@ class HousingUnit extends Model
         'shelter_type',
         'shelter_type_other',
         'governorate',
+        'municipalitie',
         'locality',
         'neighborhood',
         'street',
@@ -681,6 +684,7 @@ class HousingUnit extends Model
         'quant5',
         'final_comments',
         'parentglobalid',
+        'building_submit_date',
         'creationdate',
         'creator',
         'editdate',

@@ -210,7 +210,7 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee(__('multilingual.area_productivity_reports.titles.buildings'), false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('3', false)
-        ->assertSee(__('multilingual.area_productivity_reports.columns.housing_units_count'), false)
+        ->assertDontSee('<th>'.__('multilingual.area_productivity_reports.columns.housing_units_count').'</th>', false)
         ->assertDontSee('<td>Camp</td>', false)
         ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.buildings'), false)

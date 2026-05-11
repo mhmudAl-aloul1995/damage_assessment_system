@@ -4,7 +4,7 @@
 @section('pageName', __($title_key))
 
 @section('content')
-    @php($showHousingUnitsCount = $type === 'buildings')
+    @php($showHousingUnitsCount = false)
 
     <style>
         #area_productivity_table th,
