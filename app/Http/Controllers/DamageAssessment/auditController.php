@@ -2884,23 +2884,6 @@ class auditController extends Controller
                     }
                 });
             }
-            /**k */
-            $query->whereNotExists(function ($q) {
-                $q->selectRaw('1')
-                    ->from('building_statuses as bs')
-                    ->join('assessment_statuses as s', 'bs.status_id', '=', 's.id')
-                    ->whereColumn('bs.building_id', 'buildings.objectid')
-                    ->whereIn('s.name', [
-                        'assigned_to_engineer',
-                        'assigned_to_lawyer',
-                    ])
-                    ->whereRaw('bs.updated_at = (
-            SELECT MAX(bs2.updated_at)
-            FROM building_statuses bs2
-            WHERE bs2.building_id = bs.building_id
-        )');
-            });
-
             $housingStatusCounts = function ($row): array {
                 static $countsByBuilding = [];
 

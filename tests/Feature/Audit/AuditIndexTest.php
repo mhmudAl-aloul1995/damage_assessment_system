@@ -134,6 +134,9 @@ it('includes the housing units status progress in the audit table response', fun
             'housing_status_progress' => '1 / 2',
             'housing_units_count' => 2,
             'housing_units_with_status_count' => 1,
+        ])
+        ->assertJsonFragment([
+            'globalid' => $assignedOnlyBuilding->globalid,
         ]);
 
     $this->actingAs($user)
