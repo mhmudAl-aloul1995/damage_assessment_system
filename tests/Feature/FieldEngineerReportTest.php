@@ -257,7 +257,8 @@ it('renders the field engineer report and serves all tab endpoints', function ()
             'neighborhood' => 'New Neighborhood',
             'upload_date' => '2026-04-20 08:45 AM',
         ])
-        ->assertSee('Field Reviewed', false)
+        ->assertSee('Accepted', false)
+        ->assertDontSee('Field Reviewed', false)
         ->assertJsonMissing([
             'objectid' => 5002,
         ]);

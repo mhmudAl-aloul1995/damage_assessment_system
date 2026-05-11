@@ -223,7 +223,7 @@ return [
             'upload_date' => 'Upload Date',
             'last_update' => 'Last Update',
             'final_status' => 'Final Status',
-            'housing_objectid' => 'housing Objectid',
+            'housing_objectid' => 'Housing Objectid',
             'parentglobalid' => 'Parent Global ID',
             'building_number' => 'Building Number',
             'unit_use' => 'Unit Use',

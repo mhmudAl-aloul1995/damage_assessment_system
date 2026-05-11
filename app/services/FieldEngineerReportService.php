@@ -234,7 +234,7 @@ class FieldEngineerReportService
         $buildingUseEdit = $this->latestEditValueSubquery('building_table', 'building_use');
         $buildingNameEdit = $this->latestEditValueSubquery('building_table', 'building_name');
         $finalStatus = $this->buildingStatusSubquery(null, 'team_leader', 'final');
-        $displayStatus = $this->buildingStatusSubquery(null, null, 'display');
+        $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
         $includeEngineerStatus = (bool) $filters['engineer_status'];
         $includeLegalStatus = (bool) $filters['legal_status'];
 
@@ -245,7 +245,7 @@ class FieldEngineerReportService
             ->leftJoinSub($buildingUseEdit, 'edit_building_use', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_use.global_id', 'buildings.globalid')))
             ->leftJoinSub($buildingNameEdit, 'edit_building_name', fn ($join) => $join->whereRaw($this->collatedEquals('edit_building_name.global_id', 'buildings.globalid')))
             ->leftJoinSub($finalStatus, 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'buildings.objectid'))
-            ->leftJoinSub($displayStatus, 'display_statuses', fn ($join) => $join->on('display_statuses.building_id', '=', 'buildings.objectid'))
+            ->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'))
             ->select([
                 'buildings.id',
                 'buildings.objectid',
@@ -264,14 +264,9 @@ class FieldEngineerReportService
                 DB::raw(($includeEngineerStatus ? 'engineer_statuses.status_label' : 'null').' as engineer_status_label'),
                 DB::raw(($includeLegalStatus ? 'legal_statuses.status_name' : 'null').' as legal_status_name'),
                 DB::raw(($includeLegalStatus ? 'legal_statuses.status_label' : 'null').' as legal_status_label'),
-                DB::raw('display_statuses.status_name as final_status_name'),
-                DB::raw('display_statuses.status_label as final_status_label'),
+                DB::raw('engineer_statuses.status_name as final_status_name'),
+                DB::raw('engineer_statuses.status_label as final_status_label'),
             ]);
-
-        if ($includeEngineerStatus) {
-            $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
-            $query->leftJoinSub($engineerStatus, 'engineer_statuses', fn ($join) => $join->on('engineer_statuses.building_id', '=', 'buildings.objectid'));
-        }
 
         if ($includeLegalStatus) {
             $legalStatus = $this->buildingStatusSubquery('Legal Auditor', null, 'legal');
