@@ -203,9 +203,12 @@ class ExportDataJob implements ShouldQueue
                 });
             }
 
-            \Log::info('Export Query', [
-                'sql' => $query->toSql(),
-                'bindings' => $query->getBindings(),
+            \Log::info('Export query prepared', [
+                'export_id' => $export->id,
+                'bindings_count' => count($query->getBindings()),
+                'paginate_by_housing' => $paginateByHousing,
+                'building_columns' => count($buildingColumns),
+                'housing_columns' => count($housingColumns),
             ]);
 
             $export->update([
@@ -331,6 +334,11 @@ class ExportDataJob implements ShouldQueue
                 }
             };
 
+            \Log::info('Export file write starting', [
+                'export_id' => $export->id,
+                'path' => $fullPath,
+            ]);
+
             $processed = $this->writeExportFile(
                 $fullPath,
                 $generator(),
@@ -383,7 +391,16 @@ class ExportDataJob implements ShouldQueue
     protected function writeExportFile(string $fullPath, iterable $rows, array $assessmentLabels, Export $export): int
     {
         $writer = new Writer;
+
+        \Log::info('Export writer opening', [
+            'export_id' => $export->id,
+        ]);
+
         $writer->openToFile($fullPath);
+
+        \Log::info('Export writer opened', [
+            'export_id' => $export->id,
+        ]);
 
         $headerStyle = (new Style)
             ->setFontBold()
