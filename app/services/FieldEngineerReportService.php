@@ -234,7 +234,7 @@ class FieldEngineerReportService
         $buildingUseEdit = $this->latestEditValueSubquery('building_table', 'building_use');
         $buildingNameEdit = $this->latestEditValueSubquery('building_table', 'building_name');
         $finalStatus = $this->buildingStatusSubquery(null, 'team_leader', 'final');
-        $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer');
+        $engineerStatus = $this->buildingStatusSubquery('QC/QA Engineer', null, 'engineer', true);
         $includeEngineerStatus = (bool) $filters['engineer_status'];
         $includeLegalStatus = (bool) $filters['legal_status'];
 
@@ -1069,7 +1069,7 @@ class FieldEngineerReportService
         return $query;
     }
 
-    private function buildingStatusSubquery(?string $type, ?string $stage, string $alias): Builder
+    private function buildingStatusSubquery(?string $type, ?string $stage, string $alias, bool $forceEnglishLabel = false): Builder
     {
         $latestStatusIds = DB::table('building_statuses as status_lookup')
             ->join('assessment_statuses as assessment_status_lookup', 'assessment_status_lookup.id', '=', 'status_lookup.status_id')
@@ -1090,7 +1090,7 @@ class FieldEngineerReportService
             ->select([
                 'building_statuses.building_id',
                 DB::raw('assessment_statuses.name as status_name'),
-                DB::raw($this->statusLabelExpression().' as status_label'),
+                DB::raw(($forceEnglishLabel ? $this->englishStatusLabelExpression() : $this->statusLabelExpression()).' as status_label'),
             ]);
 
         if ($type !== null) {
@@ -1293,6 +1293,11 @@ class FieldEngineerReportService
             return "COALESCE(NULLIF(assessment_statuses.label_ar, ''), NULLIF(assessment_statuses.label_en, ''), assessment_statuses.name)";
         }
 
+        return "COALESCE(NULLIF(assessment_statuses.label_en, ''), NULLIF(assessment_statuses.label_ar, ''), assessment_statuses.name)";
+    }
+
+    private function englishStatusLabelExpression(): string
+    {
         return "COALESCE(NULLIF(assessment_statuses.label_en, ''), NULLIF(assessment_statuses.label_ar, ''), assessment_statuses.name)";
     }
 

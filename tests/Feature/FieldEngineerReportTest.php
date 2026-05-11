@@ -258,6 +258,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
             'upload_date' => '2026-04-20 08:45 AM',
         ])
         ->assertSee('Accepted', false)
+        ->assertDontSee('Ù…Ù‚Ø¨ÙˆÙ„', false)
         ->assertDontSee('Field Reviewed', false)
         ->assertJsonMissing([
             'objectid' => 5002,
