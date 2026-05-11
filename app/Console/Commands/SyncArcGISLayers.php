@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
 class SyncArcGISLayers extends Command
 {
     protected $signature = 'sync:arcgis-layers {table?} {--chunk=1000}';
-
+/**s */
     protected $description = 'Sync ArcGIS layers';
 
     public function handle(): int
