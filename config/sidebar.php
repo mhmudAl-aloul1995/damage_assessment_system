@@ -4,7 +4,7 @@ return [
     [
         'title' => 'menu.damage_assessment.title',
         'icon' => 'ki-abstract-28',
-        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
         'active_patterns' => [
             'damageAssessment*',
             'building*',
@@ -19,7 +19,7 @@ return [
                 'title' => 'menu.damage_assessment.dashboard',
                 'url' => 'damageAssessment',
                 'pattern' => 'damageAssessment*',
-                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor'],
+                'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor'],
             ],
             [
                 'title' => 'menu.damage_assessment.assessments',
