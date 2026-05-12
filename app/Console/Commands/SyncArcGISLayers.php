@@ -328,7 +328,7 @@ class SyncArcGISLayers extends Command
                             }
                         }
                     }
-
+//ss
                     // Handle _v1 fallback columns: if main column is null, use _v1 value
                     foreach ($row as $column => $value) {
                         if (($value === null || $value === '') && ! str_ends_with($column, '_v1')) {
