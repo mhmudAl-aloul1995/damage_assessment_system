@@ -386,16 +386,39 @@
 		.arcgis-map-filter-panel {
 			position: absolute;
 			inset-block-start: 1rem;
-			inset-inline-start: 1rem;
-			width: 320px;
+			left: 1rem;
+			right: auto;
+			width: 300px;
 			max-width: calc(100% - 2rem);
+			max-height: calc(100% - 2rem);
+			overflow: hidden;
 			z-index: 1047;
 			box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
 		}
 
 		[dir="ltr"] .arcgis-map-filter-panel {
-			inset-inline-start: auto;
-			inset-inline-end: 1rem;
+			left: auto;
+			right: 1rem;
+		}
+
+		.arcgis-map-filter-panel .card-header {
+			border-bottom: 0;
+		}
+
+		.arcgis-map-filter-panel .form-label {
+			font-size: 0.78rem;
+			margin-bottom: 0.35rem;
+		}
+
+		.arcgis-map-filter-panel .form-control,
+		.arcgis-map-filter-panel .form-select,
+		.arcgis-map-filter-panel .select2-selection {
+			min-height: 36px !important;
+		}
+
+		.arcgis-map-filter-body {
+			max-height: 520px;
+			overflow-y: auto;
 		}
 
 		.arcgis-map-filter-toggle {
@@ -412,12 +435,14 @@
 
 		@media (max-width: 767.98px) {
 			.arcgis-map-filter-panel {
-				inset-inline: 2.5%;
+				left: 2.5%;
+				right: 2.5%;
 				width: 95%;
 			}
 
 			[dir="ltr"] .arcgis-map-filter-panel {
-				inset-inline: 2.5%;
+				left: 2.5%;
+				right: 2.5%;
 			}
 
 			.arcgis-map-fullscreen-button {
@@ -1839,10 +1864,10 @@
 								<span class="damage-map-exit-label d-none">خروج</span>
 							</button>
 
-							<div id="arcgisMapFilterPanel" class="card arcgis-map-filter-panel">
-								<div class="card-header min-h-50px px-4 py-3">
+							<div id="arcgisMapFilterPanel" class="card arcgis-map-filter-panel is-collapsed">
+								<div class="card-header min-h-45px px-3 py-2">
 									<div class="card-title m-0">
-										<span class="fw-bold fs-6">فلترة الخريطة</span>
+										<span class="fw-bold fs-7">فلترة الخريطة</span>
 									</div>
 									<div class="card-toolbar gap-2">
 										<span class="badge badge-light-primary">
@@ -1856,33 +1881,33 @@
 										</button>
 									</div>
 								</div>
-								<div class="card-body p-4 arcgis-map-filter-body">
-									<div class="mb-3">
+								<div class="card-body p-3 arcgis-map-filter-body">
+									<div class="mb-2">
 										<label class="form-label fw-semibold">المهندس الميداني</label>
 										<select id="arcgis_filter_assignedto" class="form-select form-select-sm arcgis-map-filter-select"
 											data-field="assignedto" data-placeholder="المهندس الميداني"></select>
 									</div>
-									<div class="mb-3">
+									<div class="mb-2">
 										<label class="form-label fw-semibold">حالة الضرر</label>
 										<select id="arcgis_filter_building_damage_status" class="form-select form-select-sm arcgis-map-filter-select"
 											data-field="building_damage_status" data-placeholder="حالة الضرر"></select>
 									</div>
-									<div class="mb-3">
+									<div class="mb-2">
 										<label class="form-label fw-semibold">البلدية</label>
 										<select id="arcgis_filter_municipalitie" class="form-select form-select-sm arcgis-map-filter-select"
 											data-field="municipalitie" data-placeholder="البلدية"></select>
 									</div>
-									<div class="mb-3">
+									<div class="mb-2">
 										<label class="form-label fw-semibold">الحي</label>
 										<select id="arcgis_filter_neighborhood" class="form-select form-select-sm arcgis-map-filter-select"
 											data-field="neighborhood" data-placeholder="الحي"></select>
 									</div>
-									<div class="mb-3">
+									<div class="mb-2">
 										<label class="form-label fw-semibold" for="arcgis_filter_search">بحث ObjectID / GlobalID</label>
 										<input type="text" id="arcgis_filter_search" class="form-control form-control-sm"
 											placeholder="بحث ObjectID / GlobalID">
 									</div>
-									<div class="row g-2 mb-4">
+									<div class="row g-2 mb-3">
 										<div class="col-6">
 											<label class="form-label fw-semibold" for="arcgis_filter_from_date">من تاريخ</label>
 											<input type="date" id="arcgis_filter_from_date" class="form-control form-control-sm">
@@ -2107,7 +2132,7 @@
 			const assessmentBaseUrl = "{{ url('assessment') }}";
 			const canViewAssessmentLink = @json(! auth()->user()->hasRole('MOPWH'));
 			const buildingLayerUrl = @json(config('services.arcgis.buildings_url'));
-			const arcgisOptionsUrl = @json(route('phc.damageAssessment.arcgis.options'));
+			const arcgisOptionsUrl = window.location.pathname.replace(/\/$/, '') + '/arcgis/options';
 
 			const damageRenderer = {
 				type: "unique-value",

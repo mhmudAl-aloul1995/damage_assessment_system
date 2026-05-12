@@ -304,6 +304,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/engineers/filter', [EngineerController::class, 'filter'])->name('engineers.filter');
     Route::get('/assessmentAll', [EngineerController::class, 'assessmentAll'])->name('engineers.assessmentAll');
     // Assessment
+    Route::get('/damageAssessment/arcgis/options', [damageAssessmentController::class, 'arcgisOptions'])
+        ->name('damageAssessment.arcgis.options');
     Route::resource('damageAssessment', controller: damageAssessmentController::class);
     Route::get('/phc/damageAssessment/arcgis/options', [damageAssessmentController::class, 'arcgisOptions'])
         ->name('phc.damageAssessment.arcgis.options');

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Building;
 use App\Models\User;
 use App\Services\ArcgisService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,4 +49,30 @@ it('rejects arcgis option fields outside the allow list', function () {
     $this->actingAs($user)
         ->getJson(route('phc.damageAssessment.arcgis.options', ['field' => 'globalid']))
         ->assertUnprocessable();
+});
+
+it('falls back to local building options when arcgis returns no values', function () {
+    $this->mock(ArcgisService::class, function ($mock) {
+        $mock->shouldReceive('getToken')->once()->andReturn('fake-token');
+    });
+
+    Http::fake([
+        '*' => Http::response(['features' => []]),
+    ]);
+
+    Building::query()->create([
+        'objectid' => 101,
+        'globalid' => 'building-101',
+        'building_name' => 'Building 101',
+        'municipalitie' => 'Gaza',
+    ]);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.arcgis.options', ['field' => 'municipalitie']))
+        ->assertOk()
+        ->assertExactJson([
+            ['id' => 'Gaza', 'text' => 'Gaza'],
+        ]);
 });

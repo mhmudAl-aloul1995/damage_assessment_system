@@ -331,19 +331,13 @@ class damageAssessmentController extends Controller
             $response = $http->get($layerUrl.'/query', $params);
 
             if (! $response->successful()) {
-                return response()->json([
-                    'message' => __('ArcGIS options could not be loaded.'),
-                    'results' => [],
-                ], 502);
+                return response()->json($this->databaseArcgisOptions($field));
             }
 
             $payload = $response->json();
 
             if (isset($payload['error'])) {
-                return response()->json([
-                    'message' => $payload['error']['message'] ?? __('ArcGIS options could not be loaded.'),
-                    'results' => [],
-                ], 502);
+                return response()->json($this->databaseArcgisOptions($field));
             }
 
             $results = collect($payload['features'] ?? [])
@@ -362,15 +356,32 @@ class damageAssessmentController extends Controller
                     'text' => (string) $value,
                 ]);
 
+            if ($results->isEmpty()) {
+                return response()->json($this->databaseArcgisOptions($field));
+            }
+
             return response()->json($results);
         } catch (\Throwable $throwable) {
             report($throwable);
 
-            return response()->json([
-                'message' => __('ArcGIS options could not be loaded.'),
-                'results' => [],
-            ], 500);
+            return response()->json($this->databaseArcgisOptions($field));
         }
+    }
+
+    private function databaseArcgisOptions(string $field): Collection
+    {
+        return Building::query()
+            ->whereNotNull($field)
+            ->where($field, '!=', '')
+            ->distinct()
+            ->orderBy($field)
+            ->pluck($field)
+            ->filter()
+            ->values()
+            ->map(fn ($value) => [
+                'id' => (string) $value,
+                'text' => (string) $value,
+            ]);
     }
 
     private function normalizeFeatureLayerUrl(string $url): string
