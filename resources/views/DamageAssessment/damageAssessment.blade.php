@@ -1858,7 +1858,7 @@
 						<link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css">
 						<!--begin::Map-->
 						<div id="damageMapShell" class="damage-map-shell">
-							<div id="viewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 486px"></div>
+							<div id="viewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 650px"></div>
 
 							<button type="button" id="damageMapFullscreenButton"
 								class="btn btn-sm btn-primary arcgis-map-fullscreen-button">
@@ -1978,7 +1978,7 @@
 						</table>
 					</div>
 					<div class="col-md-7 ps-lg-10">
-						<div id="publicBuildingViewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 486px"></div>
+						<div id="publicBuildingViewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 650px"></div>
 						<div id="publicBuildingLegendDiv"></div>
 					</div>
 				</div>
@@ -2022,7 +2022,7 @@
 						</table>
 					</div>
 					<div class="col-md-7 ps-lg-10">
-						<div id="roadFacilityViewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 486px"></div>
+						<div id="roadFacilityViewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 650px"></div>
 						<div id="roadFacilityLegendDiv"></div>
 					</div>
 				</div>
