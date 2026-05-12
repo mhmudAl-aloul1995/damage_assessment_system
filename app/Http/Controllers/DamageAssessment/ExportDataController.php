@@ -300,9 +300,24 @@ class ExportDataController extends Controller
         try {
             if (PHP_OS_FAMILY === 'Windows') {
                 $batchPath = storage_path("app/export-process-{$exportId}.bat");
-                file_put_contents($batchPath, "@echo off\r\n".$this->escapeWindowsCommand($command).' >> "'.$logPath.'" 2>&1'."\r\n");
+                file_put_contents($batchPath, implode("\r\n", [
+                    '@echo off',
+                    'echo [%date% %time%] starting export '.$exportId.' >> "'.$logPath.'"',
+                    'cd /d "'.base_path().'"',
+                    $this->escapeWindowsCommand($command).' >> "'.$logPath.'" 2>&1',
+                    'echo [%date% %time%] finished export '.$exportId.' with exit code %ERRORLEVEL% >> "'.$logPath.'"',
+                    '',
+                ]));
 
-                pclose(popen('cmd /c start "" /B "'.$batchPath.'"', 'r'));
+                $startCommand = 'cmd /c start "" /min "'.$batchPath.'"';
+
+                \Log::info('Starting export process', [
+                    'export_id' => $exportId,
+                    'batch_path' => $batchPath,
+                    'command' => $startCommand,
+                ]);
+
+                pclose(popen($startCommand, 'r'));
 
                 return;
             }
