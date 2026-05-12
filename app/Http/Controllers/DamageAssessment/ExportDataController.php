@@ -96,9 +96,6 @@ class ExportDataController extends Controller
             ->where('user_id', auth()->id())
             ->findOrFail($id);
 
-        $this->retryPendingExportProcess($export);
-        $export->refresh();
-
         return response()->json([
             'status' => $export->status,
             'progress' => $export->progress ?? 0,
@@ -295,7 +292,7 @@ class ExportDataController extends Controller
             (string) $exportId,
         ];
 
-        $logPath = storage_path('logs/export-process.log');
+        $logPath = storage_path("logs/export-process-{$exportId}.log");
 
         try {
             if (PHP_OS_FAMILY === 'Windows') {
@@ -329,15 +326,6 @@ class ExportDataController extends Controller
                 'message' => $e->getMessage(),
             ]);
         }
-    }
-
-    private function retryPendingExportProcess(Export $export): void
-    {
-        if ($export->status !== 'pending' || $export->updated_at->gt(now()->subSeconds(5))) {
-            return;
-        }
-
-        $this->startExportProcess($export->id);
     }
 
     private function phpCliBinary(): string
