@@ -92,14 +92,14 @@ class ExportDataJob implements ShouldQueue
                 })
                 ->toArray();
 
-            $query = DB::table('v_buildings_audited as b');
+            $query = DB::table('buildings as b');
 
             if ($needsHousingJoin) {
-                $query->leftJoin('v_housing_units_audited as h', 'b.globalid', '=', 'h.parentglobalid');
+                $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
             }
 
             if ($needsHousingUnitsCount) {
-                $housingUnitsCountSub = DB::table('v_housing_units_audited as hu_count')
+                $housingUnitsCountSub = DB::table('housing_units as hu_count')
                     ->selectRaw('hu_count.parentglobalid, COUNT(*) as housing_units_count')
                     ->groupBy('hu_count.parentglobalid');
 
@@ -109,7 +109,7 @@ class ExportDataJob implements ShouldQueue
             }
 
             if ($needsFamily) {
-                $familySub = DB::table('v_housing_units_audited as hf')
+                $familySub = DB::table('housing_units as hf')
                     ->selectRaw("
                         hf.parentglobalid,
                         (
@@ -153,13 +153,13 @@ class ExportDataJob implements ShouldQueue
                     continue;
                 }
 
-                if (Schema::hasColumn('v_buildings_audited', $column)) {
+                if (Schema::hasColumn('buildings', $column)) {
                     $selects[] = "b.`{$column}` as `building_{$column}`";
                 }
             }
 
             foreach ($housingColumns as $column) {
-                if (Schema::hasColumn('v_housing_units_audited', $column)) {
+                if (Schema::hasColumn('housing_units', $column)) {
                     $selects[] = "h.`{$column}` as `housing_{$column}`";
                 }
             }
@@ -188,9 +188,9 @@ class ExportDataJob implements ShouldQueue
                     continue;
                 }
 
-                if (Schema::hasColumn('v_buildings_audited', $field)) {
+                if (Schema::hasColumn('buildings', $field)) {
                     $query->whereIn("b.$field", $values);
-                } elseif (Schema::hasColumn('v_housing_units_audited', $field)) {
+                } elseif (Schema::hasColumn('housing_units', $field)) {
                     $query->whereIn("h.$field", $values);
                 }
             }
@@ -211,6 +211,7 @@ class ExportDataJob implements ShouldQueue
                 'paginate_by_housing' => $paginateByHousing,
                 'building_columns' => count($buildingColumns),
                 'housing_columns' => count($housingColumns),
+                'source' => 'base_tables',
             ]);
 
             $export->update([
@@ -271,64 +272,8 @@ class ExportDataJob implements ShouldQueue
                         break;
                     }
 
-                    $buildingGlobalIds = [];
-                    $housingGlobalIds = [];
-
-                    foreach ($rows as $row) {
-                        if (! empty($row->export_building_globalid)) {
-                            $buildingGlobalIds[] = $row->export_building_globalid;
-                        }
-
-                        if ($paginateByHousing && ! empty($row->export_housing_globalid)) {
-                            $housingGlobalIds[] = $row->export_housing_globalid;
-                        }
-                    }
-
-                    $editsStartedAt = microtime(true);
-
-                    $buildingEdits = $this->loadLatestEdits(
-                        array_values(array_unique($buildingGlobalIds)),
-                        'building_table'
-                    );
-
-                    $housingEdits = $paginateByHousing
-                        ? $this->loadLatestEdits(
-                            array_values(array_unique($housingGlobalIds)),
-                            'housing_table'
-                        )
-                        : [];
-
-                    Log::info('Export batch edits loaded', [
-                        'export_id' => $export->id,
-                        'batch' => $batchNumber,
-                        'building_global_ids' => count(array_unique($buildingGlobalIds)),
-                        'housing_global_ids' => count(array_unique($housingGlobalIds)),
-                        'execution_ms' => round((microtime(true) - $editsStartedAt) * 1000, 2),
-                    ]);
-
                     foreach ($rows as $row) {
                         $rowArray = (array) $row;
-
-                        $buildingGlobalId = $rowArray['export_building_globalid'] ?? null;
-                        $housingGlobalId = $rowArray['export_housing_globalid'] ?? null;
-
-                        if ($buildingGlobalId && isset($buildingEdits[$buildingGlobalId])) {
-                            foreach ($buildingEdits[$buildingGlobalId] as $fieldName => $fieldValue) {
-                                $key = 'building_'.$fieldName;
-                                if (array_key_exists($key, $rowArray)) {
-                                    $rowArray[$key] = $fieldValue;
-                                }
-                            }
-                        }
-
-                        if ($paginateByHousing && $housingGlobalId && isset($housingEdits[$housingGlobalId])) {
-                            foreach ($housingEdits[$housingGlobalId] as $fieldName => $fieldValue) {
-                                $key = 'housing_'.$fieldName;
-                                if (array_key_exists($key, $rowArray)) {
-                                    $rowArray[$key] = $fieldValue;
-                                }
-                            }
-                        }
 
                         yield $rowArray;
                         $lastId = max($lastId, (int) $row->export_row_id);
@@ -511,33 +456,5 @@ class ExportDataJob implements ShouldQueue
         }
 
         Log::info($message, $context);
-    }
-
-    protected function loadLatestEdits(array $globalIds, string $type): array
-    {
-        if (empty($globalIds)) {
-            return [];
-        }
-
-        $latestIds = DB::table('edit_assessments')
-            ->selectRaw('global_id, field_name, MAX(id) as max_id')
-            ->where('type', $type)
-            ->whereIn('global_id', $globalIds)
-            ->groupBy('global_id', 'field_name');
-
-        $rows = DB::table('edit_assessments as ea1')
-            ->joinSub($latestIds, 'ea2', function ($join) {
-                $join->on('ea1.id', '=', 'ea2.max_id');
-            })
-            ->select('ea1.global_id', 'ea1.field_name', 'ea1.field_value')
-            ->get();
-
-        $result = [];
-
-        foreach ($rows as $row) {
-            $result[$row->global_id][$row->field_name] = $row->field_value;
-        }
-
-        return $result;
     }
 }
