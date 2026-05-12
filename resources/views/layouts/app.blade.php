@@ -1187,8 +1187,7 @@
 											<div data-kt-menu-trigger="click"
 												class="menu-item menu-accordion phc-sidebar-section {{ $isSectionActive ? 'show phc-sidebar-section-active' : '' }}">
 
-												<span class="menu-link" title="{{ __($menu['title']) }}"
-													data-bs-toggle="tooltip" data-bs-placement="{{ $isRtl ? 'left' : 'right' }}">
+												<span class="menu-link">
 													<span class="menu-icon">
 														<span class="phc-sidebar-icon">
 															<i class="ki-duotone {{ $menu['icon'] }} fs-2">
@@ -1212,8 +1211,7 @@
 																@foreach($item['children'] as $child)
 																	<div class="menu-item">
 																		<a class="menu-link phc-sidebar-link {{ request()->is($child['pattern']) ? 'active' : '' }}"
-																			href="{{ url($child['url']) }}" title="{{ __($child['title']) }}"
-																			data-bs-toggle="tooltip" data-bs-placement="{{ $isRtl ? 'left' : 'right' }}">
+																			href="{{ url($child['url']) }}">
 																			<span class="menu-bullet">
 																				<span class="bullet bullet-dot"></span>
 																			</span>
@@ -1225,8 +1223,7 @@
 														@else
 															<div class="menu-item">
 																<a class="menu-link phc-sidebar-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
-																	href="{{ url($item['url']) }}" title="{{ __($item['title']) }}"
-																	data-bs-toggle="tooltip" data-bs-placement="{{ $isRtl ? 'left' : 'right' }}">
+																	href="{{ url($item['url']) }}">
 																	<span class="menu-bullet">
 																		<span class="bullet bullet-dot"></span>
 																	</span>
