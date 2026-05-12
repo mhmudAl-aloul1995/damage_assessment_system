@@ -92,21 +92,9 @@ class ExportDataJob implements ShouldQueue
                 })
                 ->toArray();
 
-            $query = DB::table('buildings as b');
-
-            if ($needsHousingJoin) {
-                $query->leftJoin('housing_units as h', 'b.globalid', '=', 'h.parentglobalid');
-            }
-
-            if ($needsHousingUnitsCount) {
-                $housingUnitsCountSub = DB::table('housing_units as hu_count')
-                    ->selectRaw('hu_count.parentglobalid, COUNT(*) as housing_units_count')
-                    ->groupBy('hu_count.parentglobalid');
-
-                $query->leftJoinSub($housingUnitsCountSub, 'housing_counts', function ($join) {
-                    $join->on('b.globalid', '=', 'housing_counts.parentglobalid');
-                });
-            }
+            $query = $needsHousingJoin
+                ? DB::table('housing_units as h')->join('buildings as b', 'b.globalid', '=', 'h.parentglobalid')
+                : DB::table('buildings as b');
 
             if ($needsFamily) {
                 $familySub = DB::table('housing_units as hf')
@@ -148,7 +136,7 @@ class ExportDataJob implements ShouldQueue
 
             foreach ($buildingColumns as $column) {
                 if ($column === $buildingUnitsCountColumn) {
-                    $selects[] = 'COALESCE(housing_counts.housing_units_count, 0) as `building_housing_units_count`';
+                    $selects[] = '(SELECT COUNT(*) FROM housing_units hu_count WHERE hu_count.parentglobalid = b.globalid) as `building_housing_units_count`';
 
                     continue;
                 }
@@ -227,7 +215,7 @@ class ExportDataJob implements ShouldQueue
 
             $generator = function () use ($query, $paginateByHousing, $export) {
                 $lastId = 0;
-                $limit = 500;
+                $limit = 1000;
                 $batchNumber = 0;
 
                 while (true) {

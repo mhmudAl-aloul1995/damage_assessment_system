@@ -1,8 +1,10 @@
 <?php
 
+use App\Jobs\ExportDataJob;
 use App\Models\Export;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 
 it('imports objectids from uploaded file and stores unique cleaned values in session', function () {
     $user = User::factory()->create();
@@ -27,6 +29,8 @@ it('imports objectids from uploaded file and stores unique cleaned values in ses
 });
 
 it('passes imported objectids into the export payload', function () {
+    Queue::fake();
+
     $user = User::factory()->create();
 
     $this->actingAs($user)->withSession([
@@ -49,4 +53,6 @@ it('passes imported objectids into the export payload', function () {
     $payload = json_decode($export->filters, true);
 
     expect($payload['imported_object_ids'])->toBe(['1001', '1002', '1003']);
+
+    Queue::assertPushed(ExportDataJob::class);
 });

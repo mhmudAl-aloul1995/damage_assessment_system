@@ -6,6 +6,7 @@ namespace App\Http\Controllers\DamageAssessment;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DamageAssessment\ObjectIdImportRequest;
+use App\Jobs\ExportDataJob;
 use App\Models\Assessment;
 use App\Models\Export;
 use App\Support\Exports\ExportDataColumns;
@@ -160,7 +161,7 @@ class ExportDataController extends Controller
                 'file_name' => null,
             ]);
 
-            $this->startExportProcess($export->id);
+            ExportDataJob::dispatch($export->id)->onQueue('exports');
 
             return response()->json([
                 'status' => true,
@@ -277,87 +278,5 @@ class ExportDataController extends Controller
             ->unique()
             ->values()
             ->all();
-    }
-
-    private function startExportProcess(int $exportId): void
-    {
-        if (app()->runningUnitTests()) {
-            return;
-        }
-
-        $command = [
-            $this->phpCliBinary(),
-            base_path('artisan'),
-            'exports:run',
-            (string) $exportId,
-        ];
-
-        $logPath = storage_path("logs/export-process-{$exportId}.log");
-
-        try {
-            if (PHP_OS_FAMILY === 'Windows') {
-                $batchPath = storage_path("app/export-process-{$exportId}.bat");
-                file_put_contents($batchPath, implode("\r\n", [
-                    '@echo off',
-                    'echo [%date% %time%] starting export '.$exportId.' >> "'.$logPath.'"',
-                    'cd /d "'.base_path().'"',
-                    $this->escapeWindowsCommand($command).' >> "'.$logPath.'" 2>&1',
-                    'echo [%date% %time%] finished export '.$exportId.' with exit code %ERRORLEVEL% >> "'.$logPath.'"',
-                    '',
-                ]));
-
-                $startCommand = 'cmd /c start "" /min "'.$batchPath.'"';
-
-                \Log::info('Starting export process', [
-                    'export_id' => $exportId,
-                    'batch_path' => $batchPath,
-                    'command' => $startCommand,
-                ]);
-
-                pclose(popen($startCommand, 'r'));
-
-                return;
-            }
-
-            exec($this->escapeUnixCommand($command).' >> '.escapeshellarg($logPath).' 2>&1 &');
-        } catch (\Throwable $e) {
-            \Log::warning('Unable to start export process', [
-                'export_id' => $exportId,
-                'message' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    private function phpCliBinary(): string
-    {
-        if (PHP_OS_FAMILY === 'Windows') {
-            $phpExe = PHP_BINDIR.DIRECTORY_SEPARATOR.'php.exe';
-
-            if (is_file($phpExe)) {
-                return $phpExe;
-            }
-        }
-
-        return PHP_BINARY;
-    }
-
-    /**
-     * @param  array<int, string>  $command
-     */
-    private function escapeWindowsCommand(array $command): string
-    {
-        return collect($command)
-            ->map(fn (string $part): string => '"'.str_replace('"', '\"', $part).'"')
-            ->implode(' ');
-    }
-
-    /**
-     * @param  array<int, string>  $command
-     */
-    private function escapeUnixCommand(array $command): string
-    {
-        return collect($command)
-            ->map(fn (string $part): string => escapeshellarg($part))
-            ->implode(' ');
     }
 }
