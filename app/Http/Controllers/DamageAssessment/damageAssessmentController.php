@@ -347,7 +347,13 @@ class damageAssessmentController extends Controller
             }
 
             $results = collect($payload['features'] ?? [])
-                ->map(fn (array $feature) => data_get($feature, 'attributes.'.$field))
+                ->map(function (array $feature) use ($field) {
+                    $attributes = collect($feature['attributes'] ?? []);
+
+                    return $attributes->first(
+                        fn ($value, string $key): bool => strcasecmp($key, $field) === 0
+                    );
+                })
                 ->filter(fn ($value) => filled($value))
                 ->unique()
                 ->values()
