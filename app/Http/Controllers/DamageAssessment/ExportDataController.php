@@ -96,6 +96,9 @@ class ExportDataController extends Controller
             ->where('user_id', auth()->id())
             ->findOrFail($id);
 
+        $this->retryPendingExportProcess($export);
+        $export->refresh();
+
         return response()->json([
             'status' => $export->status,
             'progress' => $export->progress ?? 0,
@@ -296,7 +299,10 @@ class ExportDataController extends Controller
 
         try {
             if (PHP_OS_FAMILY === 'Windows') {
-                pclose(popen('start /B "" '.$this->escapeWindowsCommand($command).' >> "'.$logPath.'" 2>&1', 'r'));
+                $batchPath = storage_path("app/export-process-{$exportId}.bat");
+                file_put_contents($batchPath, "@echo off\r\n".$this->escapeWindowsCommand($command).' >> "'.$logPath.'" 2>&1'."\r\n");
+
+                pclose(popen('cmd /c start "" /B "'.$batchPath.'"', 'r'));
 
                 return;
             }
@@ -308,6 +314,15 @@ class ExportDataController extends Controller
                 'message' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function retryPendingExportProcess(Export $export): void
+    {
+        if ($export->status !== 'pending' || $export->updated_at->gt(now()->subSeconds(5))) {
+            return;
+        }
+
+        $this->startExportProcess($export->id);
     }
 
     private function phpCliBinary(): string
