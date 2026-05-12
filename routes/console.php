@@ -15,12 +15,36 @@ Schedule::command('queue:work database --queue=exports --stop-when-empty --tries
     ->appendOutputTo(storage_path('logs/queue-schedule.log'))
     ->runInBackground();
 
-Schedule::command('sync:arcgis-layers')
-    ->dailyAt(config('database_backup.schedule_time', '01:00'))
-    ->withoutOverlapping()
-    ->emailOutputOnFailure('mhmudaloul@gmail.com')
-    ->appendOutputTo(storage_path('logs/schedule.log'))
-    ->runInBackground();
+/*
+|--------------------------------------------------------------------------
+| ArcGIS Sync Schedule
+|--------------------------------------------------------------------------
+*/
+
+$syncTimes = [
+    '02:00',
+    '07:30',
+    '10:00',
+    '09:00',
+    '12:00',
+    '13:00',
+    '14:00',
+];
+
+foreach ($syncTimes as $time) {
+    Schedule::command('sync:arcgis-layers')
+        ->dailyAt($time)
+        ->withoutOverlapping()
+        ->emailOutputOnFailure('mhmudaloul@gmail.com')
+        ->appendOutputTo(storage_path('logs/schedule.log'))
+        ->runInBackground();
+}
+
+/*
+|--------------------------------------------------------------------------
+| Database Backup
+|--------------------------------------------------------------------------
+*/
 
 Schedule::command('app:backup-database')
     ->dailyAt(config('database_backup.schedule_time', '00:00'))
