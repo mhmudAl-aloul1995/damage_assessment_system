@@ -379,7 +379,8 @@
 		.arcgis-map-fullscreen-button {
 			position: absolute;
 			inset-block-start: 1rem;
-			inset-inline-end: 1rem;
+			left: auto;
+			right: 1rem;
 			z-index: 1048;
 		}
 
@@ -403,6 +404,7 @@
 
 		.arcgis-map-filter-panel .card-header {
 			border-bottom: 0;
+			cursor: pointer;
 		}
 
 		.arcgis-map-filter-panel .form-label {
@@ -2310,10 +2312,15 @@
 			const selectionLayer = new GraphicsLayer({
 				listMode: "hide"
 			});
+			const buildingLayer = featureLayer;
+			let currentArcgisMapWhere = "1=1";
+			let arcgisDateField = null;
+			let originalArcgisExtent = null;
 
 			window.addEventListener('damage-dashboard-toolbar:changed', function (event) {
-				featureLayer.definitionExpression = dashboardLayerDefinition(event.detail, 'editdate');
+				featureLayer.definitionExpression = combinedArcgisWhere(event.detail);
 				selectionLayer.removeAll();
+				updateArcgisFilteredCount(featureLayer.definitionExpression);
 			});
 
 			const map = new Map({
@@ -2327,6 +2334,301 @@
 				center: [34.460987, 31.514266],
 				zoom: 18
 			});
+
+			function notifyArcgisMap(message, type) {
+				if (window.toastr && typeof window.toastr[type] === 'function') {
+					window.toastr[type](message);
+				}
+			}
+
+			function escapeArcgisValue(value) {
+				return String(value).replace(/'/g, "''");
+			}
+
+			function hasArcgisField(fieldName) {
+				return buildingLayer.fields.some(function (field) {
+					return String(field.name).toLowerCase() === fieldName.toLowerCase();
+				});
+			}
+
+			function resolveArcgisDateField() {
+				if (arcgisDateField) {
+					return arcgisDateField;
+				}
+
+				if (hasArcgisField('creationdate')) {
+					arcgisDateField = 'creationdate';
+				} else if (hasArcgisField('editdate')) {
+					arcgisDateField = 'editdate';
+				}
+
+				return arcgisDateField;
+			}
+
+			function arcgisDateExpression(field, operator, value) {
+				return field + " " + operator + " DATE '" + value + " 00:00:00'";
+			}
+
+			function buildArcgisWhere() {
+				const allowedFields = [
+					'assignedto',
+					'building_damage_status',
+					'municipalitie',
+					'neighborhood'
+				];
+				const clauses = [];
+
+				allowedFields.forEach(function (field) {
+					const element = document.querySelector('[data-field="' + field + '"]');
+					const value = element ? $(element).val() : '';
+
+					if (value) {
+						clauses.push(field + " = '" + escapeArcgisValue(value) + "'");
+					}
+				});
+
+				const searchValue = (document.getElementById('arcgis_filter_search')?.value || '').trim();
+
+				if (searchValue !== '') {
+					if (/^\d+$/.test(searchValue)) {
+						clauses.push('objectid = ' + parseInt(searchValue, 10));
+					} else {
+						clauses.push("globalid LIKE '%" + escapeArcgisValue(searchValue) + "%'");
+					}
+				}
+
+				const dateField = resolveArcgisDateField();
+				const fromDate = document.getElementById('arcgis_filter_from_date')?.value || '';
+				const toDate = document.getElementById('arcgis_filter_to_date')?.value || '';
+
+				if (dateField && fromDate) {
+					clauses.push(arcgisDateExpression(dateField, '>=', fromDate));
+				}
+
+				if (dateField && toDate) {
+					clauses.push(arcgisDateExpression(dateField, '<=', toDate));
+				}
+
+				return clauses.length ? clauses.join(' AND ') : '1=1';
+			}
+
+			function combinedArcgisWhere(toolbarFilters) {
+				const dashboardWhere = dashboardLayerDefinition(toolbarFilters || getDashboardToolbarFilters(), 'editdate');
+				const clauses = [];
+
+				if (dashboardWhere && dashboardWhere !== '1=1') {
+					clauses.push('(' + dashboardWhere + ')');
+				}
+
+				if (currentArcgisMapWhere && currentArcgisMapWhere !== '1=1') {
+					clauses.push('(' + currentArcgisMapWhere + ')');
+				}
+
+				return clauses.length ? clauses.join(' AND ') : '1=1';
+			}
+
+			function reloadArcgisDatatable() {
+				if ($.fn.DataTable && $.fn.DataTable.isDataTable('#kt_table_building')) {
+					$('#kt_table_building').DataTable().ajax.reload(null, false);
+				}
+			}
+
+			function updateArcgisFilteredCount(whereExpression) {
+				const query = buildingLayer.createQuery();
+				query.where = whereExpression || '1=1';
+				query.returnGeometry = false;
+
+				return buildingLayer.queryFeatureCount(query)
+					.then(function (count) {
+						document.getElementById('arcgisFilterCount').textContent = count;
+
+						return count;
+					})
+					.catch(function (error) {
+						console.error('ArcGIS count query failed:', error);
+						document.getElementById('arcgisFilterCount').textContent = '0';
+
+						return 0;
+					});
+			}
+
+			function applyArcgisFilters() {
+				currentArcgisMapWhere = buildArcgisWhere();
+				const whereExpression = combinedArcgisWhere();
+				const query = buildingLayer.createQuery();
+				query.where = whereExpression;
+				query.returnGeometry = true;
+				buildingLayer.definitionExpression = whereExpression;
+
+				if (typeof clearSelectionGraphic === 'function') {
+					clearSelectionGraphic();
+				}
+
+				Promise.all([
+					buildingLayer.queryFeatureCount(query),
+					buildingLayer.queryExtent(query)
+				]).then(function (results) {
+					const count = results[0];
+					const extentResult = results[1];
+					document.getElementById('arcgisFilterCount').textContent = count;
+
+					if (count > 0 && extentResult.extent) {
+						view.goTo(extentResult.extent.expand(1.2)).catch(function (error) {
+							if (error.name !== 'AbortError') {
+								console.error('GoTo filtered extent failed:', error);
+							}
+						});
+					}
+
+					reloadArcgisDatatable();
+					notifyArcgisMap('تم تطبيق الفلترة', 'success');
+				}).catch(function (error) {
+					console.error('ArcGIS filter failed:', error);
+					notifyArcgisMap('تعذر تطبيق فلترة الخريطة', 'error');
+				});
+			}
+
+			function resetArcgisFilters() {
+				$('.arcgis-map-filter-select').val(null).trigger('change');
+				document.getElementById('arcgis_filter_search').value = '';
+				document.getElementById('arcgis_filter_from_date').value = '';
+				document.getElementById('arcgis_filter_to_date').value = '';
+				currentArcgisMapWhere = '1=1';
+				buildingLayer.definitionExpression = '1=1';
+				updateArcgisFilteredCount('1=1');
+				reloadArcgisDatatable();
+
+				if (typeof clearSelectionGraphic === 'function') {
+					clearSelectionGraphic();
+				}
+
+				if (originalArcgisExtent) {
+					view.goTo(originalArcgisExtent.expand(1.2)).catch(function (error) {
+						if (error.name !== 'AbortError') {
+							console.error('GoTo original extent failed:', error);
+						}
+					});
+				}
+			}
+
+			function toggleMapFullscreen(forceState) {
+				const shell = document.getElementById('damageMapShell');
+				const button = document.getElementById('damageMapFullscreenButton');
+				const fullLabel = button.querySelector('.damage-map-fullscreen-label');
+				const exitLabel = button.querySelector('.damage-map-exit-label');
+				const isFullscreen = typeof forceState === 'boolean'
+					? forceState
+					: !shell.classList.contains('damage-map-fullscreen');
+
+				shell.classList.toggle('damage-map-fullscreen', isFullscreen);
+				document.body.classList.toggle('damage-map-fullscreen-active', isFullscreen);
+				fullLabel.classList.toggle('d-none', isFullscreen);
+				exitLabel.classList.toggle('d-none', !isFullscreen);
+				localStorage.setItem('damageAssessment.mapFullscreen', isFullscreen ? '1' : '0');
+
+				setTimeout(function () {
+					view.resize();
+				}, 150);
+			}
+
+			function loadArcgisSelectOptions(select) {
+				const field = select.data('field');
+				const url = new URL(arcgisOptionsUrl, window.location.origin);
+
+				url.searchParams.set('field', field);
+				select.prop('disabled', true);
+
+				fetch(url.toString(), {
+					headers: {
+						'Accept': 'application/json'
+					},
+					credentials: 'same-origin'
+				})
+					.then(function (response) {
+						if (!response.ok) {
+							throw new Error('Options request failed with status ' + response.status);
+						}
+
+						return response.json();
+					})
+					.then(function (data) {
+						const options = Array.isArray(data) ? data : (data.results || []);
+
+						select.empty().append(new Option('', '', false, false));
+						options.forEach(function (option) {
+							select.append(new Option(option.text, option.id, false, false));
+						});
+						select.prop('disabled', false).trigger('change');
+					})
+					.catch(function (error) {
+						console.error('ArcGIS options failed for ' + field + ':', error);
+						select.prop('disabled', false);
+					});
+			}
+
+			function initializeArcgisFilterSelects() {
+				$('.arcgis-map-filter-select').each(function () {
+					const select = $(this);
+
+					if ($.fn.select2) {
+						select.select2({
+							allowClear: true,
+							dropdownParent: $('#arcgisMapFilterPanel'),
+							placeholder: select.data('placeholder') || '',
+							width: '100%'
+						});
+					}
+
+					loadArcgisSelectOptions(select);
+				});
+			}
+
+			function initializeArcgisMapControls() {
+				document.getElementById('arcgisFilterApply').addEventListener('click', applyArcgisFilters);
+				document.getElementById('arcgisFilterReset').addEventListener('click', resetArcgisFilters);
+				document.getElementById('damageMapFullscreenButton').addEventListener('click', function (event) {
+					event.preventDefault();
+					toggleMapFullscreen();
+				});
+				document.getElementById('arcgisMapFilterPanel').querySelector('.card-header').addEventListener('click', function (event) {
+					if (event.target.closest('#arcgisMapFilterToggle') || !event.target.closest('button')) {
+						document.getElementById('arcgisMapFilterPanel').classList.toggle('is-collapsed');
+					}
+				});
+				document.getElementById('arcgisMapFilterToggle').addEventListener('click', function (event) {
+					event.preventDefault();
+					event.stopPropagation();
+					document.getElementById('arcgisMapFilterPanel').classList.toggle('is-collapsed');
+				});
+
+				initializeArcgisFilterSelects();
+
+				if (localStorage.getItem('damageAssessment.mapFullscreen') === '1') {
+					toggleMapFullscreen(true);
+				}
+
+				view.whenLayerView(buildingLayer)
+					.then(function () {
+						return buildingLayer.load();
+					})
+					.then(function () {
+						const query = buildingLayer.createQuery();
+						query.where = '1=1';
+						query.returnGeometry = true;
+
+						return buildingLayer.queryExtent(query);
+					})
+					.then(function (extentResult) {
+						originalArcgisExtent = extentResult.extent || null;
+						updateArcgisFilteredCount(buildingLayer.definitionExpression || '1=1');
+					})
+					.catch(function (error) {
+						console.error('ArcGIS map controls initialization failed:', error);
+					});
+			}
+
+			initializeArcgisMapControls();
+
 			view.popup.dockEnabled = true;
 			view.popup.dockOptions = {
 				position: "top-left",
