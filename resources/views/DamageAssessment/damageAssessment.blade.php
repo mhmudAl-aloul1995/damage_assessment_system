@@ -341,6 +341,90 @@
 				--summary-row-gap: 0.62rem;
 			}
 		}
+
+		.damage-map-shell {
+			position: relative;
+		}
+
+		.damage-map-fullscreen {
+			background: var(--bs-body-bg);
+			height: 100vh !important;
+			inset: 0;
+			position: fixed !important;
+			width: 100vw !important;
+			z-index: 1050;
+		}
+
+		.damage-map-fullscreen #viewDiv {
+			border-radius: 0 !important;
+			height: 100vh !important;
+			margin: 0 !important;
+		}
+
+		body.damage-map-fullscreen-active {
+			overflow: hidden;
+		}
+
+		body.damage-map-fullscreen-active .app-header,
+		body.damage-map-fullscreen-active .app-sidebar,
+		body.damage-map-fullscreen-active .app-footer,
+		body.damage-map-fullscreen-active .toolbar,
+		body.damage-map-fullscreen-active #kt_app_header,
+		body.damage-map-fullscreen-active #kt_app_sidebar,
+		body.damage-map-fullscreen-active #kt_app_footer,
+		body.damage-map-fullscreen-active #kt_app_toolbar {
+			display: none !important;
+		}
+
+		.arcgis-map-fullscreen-button {
+			position: absolute;
+			inset-block-start: 4rem;
+			inset-inline-end: 1rem;
+			z-index: 1048;
+		}
+
+		.arcgis-map-filter-panel {
+			position: absolute;
+			inset-block-start: 1rem;
+			inset-inline-start: 1rem;
+			width: 320px;
+			max-width: calc(100% - 2rem);
+			z-index: 1047;
+			box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+		}
+
+		[dir="ltr"] .arcgis-map-filter-panel {
+			inset-inline-start: auto;
+			inset-inline-end: 1rem;
+		}
+
+		.arcgis-map-filter-toggle {
+			align-items: center;
+			display: inline-flex;
+			height: 32px;
+			justify-content: center;
+			width: 32px;
+		}
+
+		.arcgis-map-filter-panel.is-collapsed .arcgis-map-filter-body {
+			display: none;
+		}
+
+		@media (max-width: 767.98px) {
+			.arcgis-map-filter-panel {
+				inset-inline: 2.5%;
+				width: 95%;
+			}
+
+			[dir="ltr"] .arcgis-map-filter-panel {
+				inset-inline: 2.5%;
+			}
+
+			.arcgis-map-fullscreen-button {
+				inset-block-start: auto;
+				inset-block-end: 1rem;
+			}
+		}
 	</style>
 
 	<div class="damage-dashboard-toolbar">
@@ -1778,7 +1862,79 @@
 					<div class="col-md-7 ps-lg-10">
 						<link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css">
 						<!--begin::Map-->
-						<div id="viewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 486px"></div>
+						<div id="damageMapShell" class="damage-map-shell">
+							<div id="viewDiv" class="w-100 rounded mb-2 mb-lg-0 mt-2" style="height: 486px"></div>
+
+							<button type="button" id="damageMapFullscreenButton"
+								class="btn btn-sm btn-primary arcgis-map-fullscreen-button">
+								<span class="damage-map-fullscreen-label">ملء الشاشة</span>
+								<span class="damage-map-exit-label d-none">خروج</span>
+							</button>
+
+							<div id="arcgisMapFilterPanel" class="card arcgis-map-filter-panel">
+								<div class="card-header min-h-50px px-4 py-3">
+									<div class="card-title m-0">
+										<span class="fw-bold fs-6">فلترة الخريطة</span>
+									</div>
+									<div class="card-toolbar gap-2">
+										<span class="badge badge-light-primary">
+											عدد النتائج:
+											<span id="arcgisFilterCount">0</span>
+										</span>
+										<button type="button" id="arcgisMapFilterToggle"
+											class="btn btn-sm btn-icon btn-light arcgis-map-filter-toggle"
+											aria-label="Toggle map filters">
+											<i class="ki-duotone ki-up fs-3"></i>
+										</button>
+									</div>
+								</div>
+								<div class="card-body p-4 arcgis-map-filter-body">
+									<div class="mb-3">
+										<label class="form-label fw-semibold">المهندس الميداني</label>
+										<select id="arcgis_filter_assignedto" class="form-select form-select-sm arcgis-map-filter-select"
+											data-field="assignedto" data-placeholder="المهندس الميداني"></select>
+									</div>
+									<div class="mb-3">
+										<label class="form-label fw-semibold">حالة الضرر</label>
+										<select id="arcgis_filter_building_damage_status" class="form-select form-select-sm arcgis-map-filter-select"
+											data-field="building_damage_status" data-placeholder="حالة الضرر"></select>
+									</div>
+									<div class="mb-3">
+										<label class="form-label fw-semibold">البلدية</label>
+										<select id="arcgis_filter_municipalitie" class="form-select form-select-sm arcgis-map-filter-select"
+											data-field="municipalitie" data-placeholder="البلدية"></select>
+									</div>
+									<div class="mb-3">
+										<label class="form-label fw-semibold">الحي</label>
+										<select id="arcgis_filter_neighborhood" class="form-select form-select-sm arcgis-map-filter-select"
+											data-field="neighborhood" data-placeholder="الحي"></select>
+									</div>
+									<div class="mb-3">
+										<label class="form-label fw-semibold" for="arcgis_filter_search">بحث ObjectID / GlobalID</label>
+										<input type="text" id="arcgis_filter_search" class="form-control form-control-sm"
+											placeholder="بحث ObjectID / GlobalID">
+									</div>
+									<div class="row g-2 mb-4">
+										<div class="col-6">
+											<label class="form-label fw-semibold" for="arcgis_filter_from_date">من تاريخ</label>
+											<input type="date" id="arcgis_filter_from_date" class="form-control form-control-sm">
+										</div>
+										<div class="col-6">
+											<label class="form-label fw-semibold" for="arcgis_filter_to_date">إلى تاريخ</label>
+											<input type="date" id="arcgis_filter_to_date" class="form-control form-control-sm">
+										</div>
+									</div>
+									<div class="d-flex gap-2">
+										<button type="button" id="arcgisFilterApply" class="btn btn-sm btn-primary flex-grow-1">
+											تطبيق الفلترة
+										</button>
+										<button type="button" id="arcgisFilterReset" class="btn btn-sm btn-light flex-grow-1">
+											إعادة تعيين
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
 						<!--end::Map-->
 						<div id="externalLegendDiv"></div>
 					</div>
@@ -1982,6 +2138,8 @@
 
 			const assessmentBaseUrl = "{{ url('assessment') }}";
 			const canViewAssessmentLink = @json(! auth()->user()->hasRole('MOPWH'));
+			const buildingLayerUrl = @json(config('services.arcgis.buildings_url'));
+			const arcgisOptionsUrl = @json(route('phc.damageAssessment.arcgis.options'));
 
 			const damageRenderer = {
 				type: "unique-value",
@@ -2035,7 +2193,7 @@
 			};
 
 			esriId.registerToken({
-				server: "https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0",
+				server: buildingLayerUrl,
 				token: "{{ $token }}",
 				expires: Date.now() + (60 * 60 * 1000)
 			});
@@ -2054,7 +2212,7 @@
 			};
 
 			const featureLayer = new FeatureLayer({
-				url: "https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0",
+				url: buildingLayerUrl,
 				renderer: damageRenderer,
 				outFields: ["*"],
 				// ADD THESE TWO LINES:
@@ -2159,10 +2317,15 @@
 			const selectionLayer = new GraphicsLayer({
 				listMode: "hide"
 			});
+			const buildingLayer = featureLayer;
+			let currentArcgisMapWhere = "1=1";
+			let arcgisDateField = null;
+			let originalArcgisExtent = null;
 
 			window.addEventListener('damage-dashboard-toolbar:changed', function (event) {
-				featureLayer.definitionExpression = dashboardLayerDefinition(event.detail, 'editdate');
+				featureLayer.definitionExpression = combinedArcgisWhere(event.detail);
 				selectionLayer.removeAll();
+				updateArcgisFilteredCount(featureLayer.definitionExpression);
 			});
 
 			const map = new Map({
@@ -2176,6 +2339,268 @@
 				center: [34.460987, 31.514266],
 				zoom: 18
 			});
+
+			function notifyArcgisMap(message, type) {
+				if (window.toastr && typeof window.toastr[type] === 'function') {
+					window.toastr[type](message);
+				}
+			}
+
+			function escapeArcgisValue(value) {
+				return String(value).replace(/'/g, "''");
+			}
+
+			function hasArcgisField(fieldName) {
+				return buildingLayer.fields.some(function (field) {
+					return String(field.name).toLowerCase() === fieldName.toLowerCase();
+				});
+			}
+
+			function resolveArcgisDateField() {
+				if (arcgisDateField) {
+					return arcgisDateField;
+				}
+
+				if (hasArcgisField('creationdate')) {
+					arcgisDateField = 'creationdate';
+				} else if (hasArcgisField('editdate')) {
+					arcgisDateField = 'editdate';
+				}
+
+				return arcgisDateField;
+			}
+
+			function arcgisDateExpression(field, operator, value) {
+				return field + " " + operator + " DATE '" + value + " 00:00:00'";
+			}
+
+			function buildArcgisWhere() {
+				const allowedFields = [
+					'assignedto',
+					'building_damage_status',
+					'municipalitie',
+					'neighborhood'
+				];
+				const clauses = [];
+
+				allowedFields.forEach(function (field) {
+					const element = document.querySelector('[data-field="' + field + '"]');
+					const value = element && $(element).val();
+
+					if (value) {
+						clauses.push(field + " = '" + escapeArcgisValue(value) + "'");
+					}
+				});
+
+				const searchValue = (document.getElementById('arcgis_filter_search')?.value || '').trim();
+
+				if (searchValue !== '') {
+					if (/^\d+$/.test(searchValue)) {
+						clauses.push('objectid = ' + parseInt(searchValue, 10));
+					} else {
+						clauses.push("globalid LIKE '%" + escapeArcgisValue(searchValue) + "%'");
+					}
+				}
+
+				const dateField = resolveArcgisDateField();
+				const fromDate = document.getElementById('arcgis_filter_from_date')?.value || '';
+				const toDate = document.getElementById('arcgis_filter_to_date')?.value || '';
+
+				if (dateField && fromDate) {
+					clauses.push(arcgisDateExpression(dateField, '>=', fromDate));
+				}
+
+				if (dateField && toDate) {
+					clauses.push(arcgisDateExpression(dateField, '<=', toDate));
+				}
+
+				return clauses.length ? clauses.join(' AND ') : '1=1';
+			}
+
+			function combinedArcgisWhere(toolbarFilters) {
+				const dashboardWhere = dashboardLayerDefinition(toolbarFilters || getDashboardToolbarFilters(), 'editdate');
+				const clauses = [];
+
+				if (dashboardWhere && dashboardWhere !== '1=1') {
+					clauses.push('(' + dashboardWhere + ')');
+				}
+
+				if (currentArcgisMapWhere && currentArcgisMapWhere !== '1=1') {
+					clauses.push('(' + currentArcgisMapWhere + ')');
+				}
+
+				return clauses.length ? clauses.join(' AND ') : '1=1';
+			}
+
+			function reloadArcgisDatatable() {
+				if ($.fn.DataTable && $.fn.DataTable.isDataTable('#kt_table_building')) {
+					$('#kt_table_building').DataTable().ajax.reload(null, false);
+				}
+			}
+
+			function updateArcgisFilteredCount(whereExpression) {
+				const query = buildingLayer.createQuery();
+				query.where = whereExpression || '1=1';
+				query.returnGeometry = false;
+
+				return buildingLayer.queryFeatureCount(query)
+					.then(function (count) {
+						document.getElementById('arcgisFilterCount').textContent = count;
+
+						return count;
+					})
+					.catch(function (error) {
+						console.error('ArcGIS count query failed:', error);
+						document.getElementById('arcgisFilterCount').textContent = '0';
+						notifyArcgisMap('تعذر تحميل عدد النتائج', 'error');
+
+						return 0;
+					});
+			}
+
+			function queryArcgisExtent(whereExpression) {
+				const query = buildingLayer.createQuery();
+				query.where = whereExpression || '1=1';
+				query.returnGeometry = true;
+
+				return buildingLayer.queryExtent(query);
+			}
+
+			function applyArcgisFilters() {
+				currentArcgisMapWhere = buildArcgisWhere();
+				const whereExpression = combinedArcgisWhere();
+				buildingLayer.definitionExpression = whereExpression;
+				clearSelectionGraphic();
+
+				const query = buildingLayer.createQuery();
+				query.where = whereExpression;
+				query.returnGeometry = true;
+
+				Promise.all([
+					buildingLayer.queryFeatureCount(query),
+					buildingLayer.queryExtent(query)
+				]).then(function (results) {
+					const count = results[0];
+					const extentResult = results[1];
+					document.getElementById('arcgisFilterCount').textContent = count;
+
+					if (count > 0 && extentResult.extent) {
+						view.goTo(extentResult.extent.expand(1.2)).catch(function (error) {
+							if (error.name !== 'AbortError') {
+								console.error('GoTo filtered extent failed:', error);
+							}
+						});
+					}
+
+					reloadArcgisDatatable();
+					notifyArcgisMap('تم تطبيق الفلترة', 'success');
+				}).catch(function (error) {
+					console.error('ArcGIS filter failed:', error);
+					notifyArcgisMap('تعذر تطبيق فلترة الخريطة', 'error');
+				});
+			}
+
+			function resetArcgisFilters() {
+				$('.arcgis-map-filter-select').val(null).trigger('change');
+				document.getElementById('arcgis_filter_search').value = '';
+				document.getElementById('arcgis_filter_from_date').value = '';
+				document.getElementById('arcgis_filter_to_date').value = '';
+				currentArcgisMapWhere = '1=1';
+				buildingLayer.definitionExpression = '1=1';
+				clearSelectionGraphic();
+				updateArcgisFilteredCount('1=1');
+				reloadArcgisDatatable();
+
+				const targetExtent = originalArcgisExtent;
+
+				if (targetExtent) {
+					view.goTo(targetExtent.expand(1.2)).catch(function (error) {
+						if (error.name !== 'AbortError') {
+							console.error('GoTo original extent failed:', error);
+						}
+					});
+				}
+			}
+
+			function toggleMapFullscreen(forceState) {
+				const shell = document.getElementById('damageMapShell');
+				const button = document.getElementById('damageMapFullscreenButton');
+				const fullLabel = button.querySelector('.damage-map-fullscreen-label');
+				const exitLabel = button.querySelector('.damage-map-exit-label');
+				const isFullscreen = typeof forceState === 'boolean'
+					? forceState
+					: !shell.classList.contains('damage-map-fullscreen');
+
+				shell.classList.toggle('damage-map-fullscreen', isFullscreen);
+				document.body.classList.toggle('damage-map-fullscreen-active', isFullscreen);
+				fullLabel.classList.toggle('d-none', isFullscreen);
+				exitLabel.classList.toggle('d-none', !isFullscreen);
+				localStorage.setItem('damageAssessment.mapFullscreen', isFullscreen ? '1' : '0');
+
+				setTimeout(function () {
+					if (typeof view.resize === 'function') {
+						view.resize();
+					}
+				}, 150);
+			}
+
+			function initializeArcgisFilterSelects() {
+				$('.arcgis-map-filter-select').each(function () {
+					const select = $(this);
+
+					select.select2({
+						allowClear: true,
+						dropdownParent: $('#arcgisMapFilterPanel'),
+						placeholder: select.data('placeholder') || '',
+						ajax: {
+							url: arcgisOptionsUrl,
+							dataType: 'json',
+							delay: 250,
+							data: function () {
+								return {
+									field: select.data('field')
+								};
+							},
+							processResults: function (data) {
+								return {
+									results: Array.isArray(data) ? data : (data.results || [])
+								};
+							}
+						}
+					});
+				});
+			}
+
+			function initializeArcgisMapControls() {
+				initializeArcgisFilterSelects();
+
+				document.getElementById('arcgisFilterApply').addEventListener('click', applyArcgisFilters);
+				document.getElementById('arcgisFilterReset').addEventListener('click', resetArcgisFilters);
+				document.getElementById('damageMapFullscreenButton').addEventListener('click', function () {
+					toggleMapFullscreen();
+				});
+				document.getElementById('arcgisMapFilterToggle').addEventListener('click', function () {
+					document.getElementById('arcgisMapFilterPanel').classList.toggle('is-collapsed');
+				});
+
+				if (localStorage.getItem('damageAssessment.mapFullscreen') === '1') {
+					toggleMapFullscreen(true);
+				}
+
+				view.whenLayerView(buildingLayer).then(function () {
+					return buildingLayer.load();
+				}).then(function () {
+					return queryArcgisExtent('1=1');
+				}).then(function (extentResult) {
+					originalArcgisExtent = extentResult.extent || null;
+					updateArcgisFilteredCount(buildingLayer.definitionExpression || '1=1');
+				}).catch(function (error) {
+					console.error('ArcGIS map controls initialization failed:', error);
+				});
+			}
+
+			initializeArcgisMapControls();
+
 			view.popup.dockEnabled = true;
 			view.popup.dockOptions = {
 				position: "top-left",

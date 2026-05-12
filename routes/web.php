@@ -305,6 +305,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/assessmentAll', [EngineerController::class, 'assessmentAll'])->name('engineers.assessmentAll');
     // Assessment
     Route::resource('damageAssessment', controller: damageAssessmentController::class);
+    Route::get('/phc/damageAssessment/arcgis/options', [damageAssessmentController::class, 'arcgisOptions'])
+        ->name('phc.damageAssessment.arcgis.options');
     Route::get('/showBuildings', action: [damageAssessmentController::class, 'showBuildings']);
     Route::get('/showHousings', action: [damageAssessmentController::class, 'showHousings']);
     Route::get('/housing-units-map', [damageAssessmentController::class, 'housingUnitsMap'])

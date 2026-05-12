@@ -16,7 +16,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\View;
+use Illuminate\Validation\Rule;
 use Yajra\Datatables\Datatables;
 
 class damageAssessmentController extends Controller
@@ -288,6 +290,81 @@ class damageAssessmentController extends Controller
             })
             ->rawColumns(['road_damage_level'])
             ->make(true);
+    }
+
+    public function arcgisOptions(Request $request)
+    {
+        $validated = $request->validate([
+            'field' => ['required', 'string', Rule::in([
+                'assignedto',
+                'building_damage_status',
+                'municipalitie',
+                'neighborhood',
+            ])],
+        ]);
+
+        $field = $validated['field'];
+        $layerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.buildings_url'));
+
+        try {
+            $http = Http::timeout(60);
+
+            if (app()->environment('local')) {
+                $http = $http->withoutVerifying();
+            }
+
+            $params = [
+                'f' => 'json',
+                'where' => '1=1',
+                'outFields' => $field,
+                'returnDistinctValues' => 'true',
+                'returnGeometry' => 'false',
+                'orderByFields' => $field,
+            ];
+
+            $token = app(ArcgisService::class)->getToken();
+
+            if ($token !== '') {
+                $params['token'] = $token;
+            }
+
+            $response = $http->get($layerUrl.'/query', $params);
+
+            if (! $response->successful()) {
+                return response()->json([
+                    'message' => __('ArcGIS options could not be loaded.'),
+                    'results' => [],
+                ], 502);
+            }
+
+            $payload = $response->json();
+
+            if (isset($payload['error'])) {
+                return response()->json([
+                    'message' => $payload['error']['message'] ?? __('ArcGIS options could not be loaded.'),
+                    'results' => [],
+                ], 502);
+            }
+
+            $results = collect($payload['features'] ?? [])
+                ->map(fn (array $feature) => data_get($feature, 'attributes.'.$field))
+                ->filter(fn ($value) => filled($value))
+                ->unique()
+                ->values()
+                ->map(fn ($value) => [
+                    'id' => (string) $value,
+                    'text' => (string) $value,
+                ]);
+
+            return response()->json($results);
+        } catch (\Throwable $throwable) {
+            report($throwable);
+
+            return response()->json([
+                'message' => __('ArcGIS options could not be loaded.'),
+                'results' => [],
+            ], 500);
+        }
     }
 
     private function normalizeFeatureLayerUrl(string $url): string
