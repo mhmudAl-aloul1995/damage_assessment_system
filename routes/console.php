@@ -8,9 +8,10 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('queue:work database --stop-when-empty --tries=1 --timeout=3600 --memory=2048')
+Schedule::command('queue:work database --queue=exports --stop-when-empty --tries=1 --timeout=3600 --memory=2048')
     ->everyMinute()
-    ->withoutOverlapping()
+    ->withoutOverlapping(10)
+    ->name('exports-queue-worker')
     ->appendOutputTo(storage_path('logs/queue-schedule.log'))
     ->runInBackground();
 
