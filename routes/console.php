@@ -24,11 +24,16 @@ Schedule::command('queue:work database --queue=exports --stop-when-empty --tries
 $syncTimes = [
     '02:00',
     '07:30',
+    '08:30',
+    '09:30',
     '10:00',
-    '09:00',
+    '11:00',
     '12:00',
     '13:00',
     '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
 ];
 
 foreach ($syncTimes as $time) {
