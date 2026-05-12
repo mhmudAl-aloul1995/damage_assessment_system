@@ -293,7 +293,16 @@ class ExportDataJob implements ShouldQueue
                     'file_name' => null,
                 ]);
 
-                Log::warning('No data for export', ['id' => $export->id]);
+                Log::warning('No data for export', [
+                    'id' => $export->id,
+                    'user_id' => $export->user_id,
+                    'filters' => $filters,
+                    'imported_object_ids_count' => count($importedObjectIds),
+                    'building_columns_count' => count($buildingColumns),
+                    'housing_columns_count' => count($housingColumns),
+                    'family_members_from' => $familyMembersFrom,
+                    'family_members_to' => $familyMembersTo,
+                ]);
 
                 return;
             }
@@ -342,8 +351,7 @@ class ExportDataJob implements ShouldQueue
             ->setFontSize(12)
             ->setFontColor('FFFFFF')
             ->setBackgroundColor('1F4E78')
-            ->setCellAlignment(CellAlignment::CENTER)
-            ->setShouldWrapText();
+            ->setCellAlignment(CellAlignment::CENTER);
 
         $headers = [];
         $processed = 0;

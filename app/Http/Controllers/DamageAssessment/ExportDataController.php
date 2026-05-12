@@ -102,6 +102,9 @@ class ExportDataController extends Controller
             'progress' => $export->progress ?? 0,
             'processed' => $export->processed ?? 0,
             'file' => $export->file_name ? asset('storage/'.$export->file_name) : null,
+            'message' => $export->status === 'done' && (int) $export->processed === 0
+                ? 'لا توجد بيانات مطابقة لخيارات التصدير.'
+                : null,
         ]);
     }
 
