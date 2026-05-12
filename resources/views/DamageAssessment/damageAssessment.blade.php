@@ -1981,6 +1981,7 @@
 		) {
 
 			const assessmentBaseUrl = "{{ url('assessment') }}";
+			const canViewAssessmentLink = @json(! auth()->user()->hasRole('MOPWH'));
 
 			const damageRenderer = {
 				type: "unique-value",
@@ -2082,11 +2083,14 @@
 						const attrs = event.graphic.attributes;
 						const g = attrs.globalid || attrs.GLOBALID || "";
 						const name = attrs.building_name || "";
+						const assessmentLink = canViewAssessmentLink && g
+							? `<a target="_blank" style="color:red;" href="${assessmentBaseUrl}/${g}">
+					${@json(__('ui.damage_dashboard.assessment'))}
+				</a>`
+							: "";
 
 						return `${@json(__('ui.damage_dashboard.building_name'))}: ${name}
-				<a target="_blank" style="color:red;" href="${assessmentBaseUrl}/${g}">
-					${@json(__('ui.damage_dashboard.assessment'))}
-				</a>`;
+				${assessmentLink}`;
 					},
 
 					content: function (event) {

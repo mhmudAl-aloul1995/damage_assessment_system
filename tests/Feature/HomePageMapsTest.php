@@ -9,6 +9,7 @@ use App\Services\ArcgisService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -114,4 +115,32 @@ it('shows buildings on the homepage map table even without housing units', funct
         ->assertOk()
         ->assertSee($building->building_name)
         ->assertSee('No Units');
+});
+
+it('hides the homepage map assessment link for mopwh users', function () {
+    $this->mock(ArcgisService::class, function ($mock) {
+        $mock->shouldReceive('getToken')->andReturn('fake-token');
+    });
+
+    $role = Role::query()->create(['name' => 'MOPWH']);
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee('const canViewAssessmentLink = false;', false);
+});
+
+it('shows the homepage map assessment link flag for non mopwh users', function () {
+    $this->mock(ArcgisService::class, function ($mock) {
+        $mock->shouldReceive('getToken')->andReturn('fake-token');
+    });
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee('const canViewAssessmentLink = true;', false);
 });
