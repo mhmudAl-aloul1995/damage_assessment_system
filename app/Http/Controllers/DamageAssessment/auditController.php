@@ -2896,18 +2896,18 @@ class auditController extends Controller
 
                 return $countsByBuilding[$buildingGlobalId];
             };
-            $query->whereRaw('
-    (
-        SELECT COUNT(*)
-        FROM housing_units hu
-        WHERE hu.parentglobalid = buildings.globalid
-    )
-    -
+$query->whereRaw('
     (
         SELECT COUNT(DISTINCT hs.housing_id)
         FROM housing_statuses hs
         INNER JOIN housing_units hu2 ON hu2.id = hs.housing_id
         WHERE hu2.parentglobalid = buildings.globalid
+    )
+    -
+    (
+        SELECT COUNT(*)
+        FROM housing_units hu
+        WHERE hu.parentglobalid = buildings.globalid
     ) > 0
 ');
             return DataTables::of($query)
