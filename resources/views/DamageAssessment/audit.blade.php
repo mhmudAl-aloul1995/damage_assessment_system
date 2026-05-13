@@ -882,7 +882,7 @@
 					},
 					{
 						targets: 1,
-						width: '14%',
+						width: '10%',
 						className: 'text-start'
 					},
 					{
