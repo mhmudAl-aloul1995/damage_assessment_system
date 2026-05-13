@@ -2822,7 +2822,7 @@ class auditController extends Controller
         WHERE hu2.parentglobalid = buildings.globalid
     ) as housing_units_with_status_count
 ")
-                ->havingRaw('housing_units_count <> housing_units_with_status_count');
+                ->havingRaw('housing_units_with_status_count < housing_units_count');
             $engineerIds = $this->filterValues($request, 'engineer_id');
             if ($engineerIds !== []) {
                 $query->whereHas('engineerAssignment', function ($q) use ($engineerIds) {
