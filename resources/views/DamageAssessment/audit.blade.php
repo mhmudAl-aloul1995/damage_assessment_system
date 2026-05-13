@@ -1594,7 +1594,7 @@
 		}
 		$('#kt_datatable_audits').on('draw.dt', function () {
 
-			$('.dtr-title').remove();
+			
 
 			$('[data-kt-menu-trigger]').each(function () {
 
@@ -1609,6 +1609,7 @@
 		});
 		$('#kt_datatable_audits').on('responsive-display.dt draw.dt', function () {
 
+		$('.dtr-title').remove();
 			$('[data-kt-menu-trigger]').each(function () {
 
 				if ($(this).data('ktMenuInitialized')) {
