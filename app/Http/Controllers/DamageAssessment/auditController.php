@@ -40,7 +40,7 @@ class auditController extends Controller
 
         // dd(Building::where('objectid', 7168)->first());
         if ($request->ajax()) {
-
+/* 
             $globalIds = [
                 '51ea2320-1c6b-4115-af83-e8103cb335c0',
                 '6480b68c-c0c7-4411-9f5d-3060cf30725c',
@@ -2806,25 +2806,81 @@ class auditController extends Controller
                 'lawyerStatus.status',
             ])
                 // ->whereIn('globalid', $globalIds)
-                ->where('field_status', 'COMPLETED');
-            $query->whereExists(function ($q) {
+                ->where('field_status', 'COMPLETED'); */
+  
+        $query = Building::query()
+            ->select('buildings.*')
+
+            // =========================
+            // BUILDING STATUS = ACCEPTED
+            // =========================
+            ->whereExists(function ($q) {
+
                 $q->select(DB::raw(1))
                     ->from('building_statuses as bs')
-                    ->join('assessment_statuses as ast', 'ast.id', '=', 'bs.status_id')
-                    ->whereColumn('bs.building_id', 'buildings.objectid')
-                    ->whereRaw("LOWER(TRIM(ast.name)) = 'accepted'");
-            });
+                    ->join(
+                        'assessment_statuses as ast',
+                        'ast.id',
+                        '=',
+                        'bs.status_id'
+                    )
+                    ->whereColumn(
+                        'bs.building_id',
+                        'buildings.objectid'
+                    )
+                    ->whereRaw("
+                        LOWER(TRIM(ast.name)) = 'accepted'
+                    ");
 
-            $query->whereExists(function ($q) {
+            })
+
+            // =========================
+            // HAS HOUSING UNIT WITHOUT STATUS
+            // =========================
+            ->whereExists(function ($q) {
+
                 $q->select(DB::raw(1))
                     ->from('housing_units as hu')
-                    ->whereColumn('hu.parentglobalid', 'buildings.globalid')
+
+                    ->whereColumn(
+                        'hu.parentglobalid',
+                        'buildings.globalid'
+                    )
+
                     ->whereNotExists(function ($sub) {
+
                         $sub->select(DB::raw(1))
                             ->from('housing_statuses as hs')
-                            ->whereColumn('hs.housing_id', 'hu.id');
+
+                            ->whereColumn(
+                                'hs.housing_id',
+                                'hu.id'
+                            );
+
                     });
-            });
+
+            })
+
+            // =========================
+            // COUNTS
+            // =========================
+            ->selectRaw("
+                (
+                    SELECT COUNT(*)
+                    FROM housing_units hu
+                    WHERE hu.parentglobalid = buildings.globalid
+                ) as housing_units_count
+            ")
+
+            ->selectRaw("
+                (
+                    SELECT COUNT(DISTINCT hs.housing_id)
+                    FROM housing_statuses hs
+                    INNER JOIN housing_units hu2
+                        ON hu2.id = hs.housing_id
+                    WHERE hu2.parentglobalid = buildings.globalid
+                ) as housing_units_with_status_count
+            ");
             $engineerIds = $this->filterValues($request, 'engineer_id');
             if ($engineerIds !== []) {
                 $query->whereHas('engineerAssignment', function ($q) use ($engineerIds) {
