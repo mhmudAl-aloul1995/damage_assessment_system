@@ -2805,7 +2805,7 @@ class auditController extends Controller
                 'engineerStatus.status',
                 'lawyerStatus.status',
             ])
-                ->whereIn('globalid', $globalIds)
+                // ->whereIn('globalid', $globalIds)
                 ->where('field_status', 'COMPLETED');
 
             $engineerIds = $this->filterValues($request, 'engineer_id');
@@ -2848,7 +2848,7 @@ class auditController extends Controller
                 });
             }
             if ($request->filled('building_name')) {
-                $query->where('building_name', 'like', '%'.$request->building_name.'%');
+                $query->where('building_name', 'like', '%' . $request->building_name . '%');
             }
 
             if ($request->filled('objectid')) {
@@ -2856,7 +2856,7 @@ class auditController extends Controller
             }
 
             if ($request->filled('area')) {
-                $query->where('neighborhood', 'like', '%'.$request->area.'%');
+                $query->where('neighborhood', 'like', '%' . $request->area . '%');
             }
             // From Date
             if ($request->filled('filter_from_date')) {
@@ -2889,7 +2889,7 @@ class auditController extends Controller
 
                 $buildingGlobalId = (string) $row->globalid;
 
-                if (! array_key_exists($buildingGlobalId, $countsByBuilding)) {
+                if (!array_key_exists($buildingGlobalId, $countsByBuilding)) {
                     $countsByBuilding[$buildingGlobalId] = $this->getHousingStatusCountsForBuilding($buildingGlobalId);
                 }
 
@@ -2899,14 +2899,20 @@ class auditController extends Controller
             return DataTables::of($query)
 
                 // Building Name
-                ->editColumn(
-                    'building_name',
-                    fn ($row) => '<span class="text-gray-800 fw-bold">'.$row->building_name.'</span>'
-                )
+                ->addColumn('building_name', function ($row) use ($globalIds) {
+
+                    $name = $row->building_name ?? '-';
+
+                    if (in_array($row->globalid, $globalIds)) {
+                        return $name . ' _*';
+                    }
+
+                    return $name;
+                })
                 ->addColumn('housing_status_progress', function ($row) use ($housingStatusCounts) {
                     $counts = $housingStatusCounts($row);
 
-                    return $counts['housing_units_with_status_count'].' / '.$counts['housing_units_count'];
+                    return $counts['housing_units_with_status_count'] . ' / ' . $counts['housing_units_count'];
                 })
                 ->addColumn('housing_units_count', function ($row) use ($housingStatusCounts) {
                     return $housingStatusCounts($row)['housing_units_count'];
@@ -2964,14 +2970,14 @@ class auditController extends Controller
          data-kt-menu="true">
 
         <div class="menu-item px-3">
-            <a target="_blank" href="'.$assessmentUrl.'" class="menu-link px-3">الإستبيان</a>
+            <a target="_blank" href="' . $assessmentUrl . '" class="menu-link px-3">الإستبيان</a>
         </div>
 
         <div class="menu-item px-3">
             <a href="javascript:void(0)" 
                class="menu-link btn-show-history"
-               data-globalid="'.$row->globalid.'"
-               data-building-name="'.e($row->building_name).'">
+               data-globalid="' . $row->globalid . '"
+               data-building-name="' . e($row->building_name) . '">
                ملاحظات
             </a>
         </div>
@@ -3054,7 +3060,7 @@ class auditController extends Controller
                 ->orderBy('objectid');
         }
 
-        $fileName = 'audit-export-'.now()->format('Y-m-d-His').'.xlsx';
+        $fileName = 'audit-export-' . now()->format('Y-m-d-His') . '.xlsx';
 
         return Excel::download(
             new AuditBuildingsExport($buildingColumns, $buildingQuery, $includeHousingUnits, $housingColumns, $housingQuery),
@@ -3123,8 +3129,8 @@ class auditController extends Controller
     private function selectedAuditExportColumns(array $requestedColumns, array $allowedColumns): array
     {
         $selected = collect($requestedColumns)
-            ->map(fn ($column): string => (string) $column)
-            ->filter(fn (string $column): bool => array_key_exists($column, $allowedColumns))
+            ->map(fn($column): string => (string) $column)
+            ->filter(fn(string $column): bool => array_key_exists($column, $allowedColumns))
             ->unique()
             ->values()
             ->all();
@@ -3134,7 +3140,7 @@ class auditController extends Controller
         }
 
         return collect($selected)
-            ->mapWithKeys(fn (string $column): array => [$column => $allowedColumns[$column]])
+            ->mapWithKeys(fn(string $column): array => [$column => $allowedColumns[$column]])
             ->all();
     }
 
@@ -3190,7 +3196,7 @@ class auditController extends Controller
         }
 
         if ($request->filled('building_name')) {
-            $query->where('building_name', 'like', '%'.$request->string('building_name').'%');
+            $query->where('building_name', 'like', '%' . $request->string('building_name') . '%');
         }
 
         if ($request->filled('objectid')) {
@@ -3198,7 +3204,7 @@ class auditController extends Controller
         }
 
         if ($request->filled('area')) {
-            $query->where('neighborhood', 'like', '%'.$request->string('area').'%');
+            $query->where('neighborhood', 'like', '%' . $request->string('area') . '%');
         }
 
         if ($request->filled('filter_from_date')) {
@@ -3270,14 +3276,14 @@ class auditController extends Controller
             'engineer_status' => $this->auditStatusLabel($building->engineerStatus?->status),
             'lawyer_status' => $this->auditStatusLabel($building->lawyerStatus?->status),
             'final_status' => $this->auditStatusLabel($building->finalApproval?->status),
-            'housing_status_progress' => $housingStatusCounts['housing_units_with_status_count'].' / '.$housingStatusCounts['housing_units_count'],
+            'housing_status_progress' => $housingStatusCounts['housing_units_with_status_count'] . ' / ' . $housingStatusCounts['housing_units_count'],
             'housing_units_count' => $housingStatusCounts['housing_units_count'],
             'housing_units_with_status_count' => $housingStatusCounts['housing_units_with_status_count'],
             'building_status_notes' => $latestBuildingStatus?->notes,
         ];
 
         return collect(array_keys($columns))
-            ->map(fn (string $column): mixed => $values[$column] ?? '')
+            ->map(fn(string $column): mixed => $values[$column] ?? '')
             ->all();
     }
 
@@ -3311,21 +3317,21 @@ class auditController extends Controller
         ];
 
         return collect(array_keys($columns))
-            ->map(fn (string $column): mixed => $values[$column] ?? '')
+            ->map(fn(string $column): mixed => $values[$column] ?? '')
             ->all();
     }
 
     private function latestBuildingStatusRecord(Building $building): ?BuildingStatus
     {
         return $building->buildingStatuses
-            ->sortByDesc(fn (BuildingStatus $status): string => $this->statusSortKey($status->updated_at, $status->id))
+            ->sortByDesc(fn(BuildingStatus $status): string => $this->statusSortKey($status->updated_at, $status->id))
             ->first();
     }
 
     private function latestHousingStatusRecord(HousingUnit $unit): ?HousingStatus
     {
         return $unit->housingStatuses
-            ->sortByDesc(fn (HousingStatus $status): string => $this->statusSortKey($status->updated_at, $status->id))
+            ->sortByDesc(fn(HousingStatus $status): string => $this->statusSortKey($status->updated_at, $status->id))
             ->first();
     }
 
@@ -3333,7 +3339,7 @@ class auditController extends Controller
     {
         $timestamp = blank($date) ? '00000000000000' : Carbon::parse($date)->format('YmdHis');
 
-        return $timestamp.str_pad((string) $id, 12, '0', STR_PAD_LEFT);
+        return $timestamp . str_pad((string) $id, 12, '0', STR_PAD_LEFT);
     }
 
     private function auditStatusLabel(?AssessmentStatus $status): string
@@ -3362,14 +3368,14 @@ class auditController extends Controller
     {
         $values = $request->input($key, []);
 
-        if (! is_array($values)) {
+        if (!is_array($values)) {
             $values = [$values];
         }
 
         return collect($values)
-            ->map(fn ($value) => strtolower(trim((string) $value)))
-            ->filter(fn ($value) => $value !== '')
-            ->map(fn ($value) => $map[$value] ?? $value)
+            ->map(fn($value) => strtolower(trim((string) $value)))
+            ->filter(fn($value) => $value !== '')
+            ->map(fn($value) => $map[$value] ?? $value)
             ->unique()
             ->values()
             ->all();
@@ -3382,7 +3388,7 @@ class auditController extends Controller
         }
 
         $query->where(function ($statusQuery) use ($relation, $values) {
-            $statusValues = array_values(array_filter($values, fn ($value) => $value !== 'pending'));
+            $statusValues = array_values(array_filter($values, fn($value) => $value !== 'pending'));
             $hasPending = in_array('pending', $values, true);
 
             if ($hasPending) {
@@ -3392,7 +3398,7 @@ class auditController extends Controller
             if ($statusValues !== []) {
                 $method = $hasPending ? 'orWhereHas' : 'whereHas';
 
-                $statusQuery->{$method}($relation.'.status', function ($q) use ($statusValues) {
+                $statusQuery->{$method}($relation . '.status', function ($q) use ($statusValues) {
                     $q->whereIn(DB::raw('LOWER(TRIM(name))'), $statusValues);
                 });
             }
@@ -3467,7 +3473,7 @@ class auditController extends Controller
                 });
             }
             if ($request->filled('building_name')) {
-                $query->where('building_name', 'like', '%'.$request->building_name.'%');
+                $query->where('building_name', 'like', '%' . $request->building_name . '%');
             }
 
             if ($request->filled('objectid')) {
@@ -3475,7 +3481,7 @@ class auditController extends Controller
             }
 
             if ($request->filled('area')) {
-                $query->where('neighborhood', 'like', '%'.$request->area.'%');
+                $query->where('neighborhood', 'like', '%' . $request->area . '%');
             }
             // From Date
             if ($request->filled('filter_from_date')) {
@@ -3491,7 +3497,7 @@ class auditController extends Controller
                 ->addIndexColumn()
 
                 ->editColumn('building_name', function ($row) {
-                    return '<span class="text-gray-800 fw-bold">'.($row->building_name ?? '-').'</span>';
+                    return '<span class="text-gray-800 fw-bold">' . ($row->building_name ?? '-') . '</span>';
                 })
 
                 ->addColumn('assigned_user', function ($row) use ($type) {
@@ -3518,7 +3524,7 @@ class auditController extends Controller
                 <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
                     
                     <div class="menu-item px-3">
-                        <a class="menu-link px-3" target="_blank" href="'.$assessmentUrl.'">الإستبيان</a>
+                        <a class="menu-link px-3" target="_blank" href="' . $assessmentUrl . '">الإستبيان</a>
                     </div>
                 </div>';
                 })
@@ -3725,14 +3731,14 @@ COALESCE(
                 ->whereRaw("LOWER(TRIM(name)) = 'final_approval'")
                 ->first();
 
-            if (! $finalStatus) {
+            if (!$finalStatus) {
                 return response()->json([
                     'status' => false,
                     'message' => 'حالة final_approval غير موجودة.',
                 ], 422);
             }
 
-            $requestedIds = collect($request->building_ids)->map(fn ($id) => (int) $id)->values();
+            $requestedIds = collect($request->building_ids)->map(fn($id) => (int) $id)->values();
 
             $buildings = DB::table('buildings as b')
                 ->whereIn('b.objectid', $requestedIds)
@@ -3797,7 +3803,7 @@ COALESCE(
             foreach ($requestedIds as $buildingId) {
                 $building = $buildings->get($buildingId);
 
-                if (! $building) {
+                if (!$building) {
                     continue;
                 }
 
@@ -3820,7 +3826,7 @@ COALESCE(
                     })
                     ->values();
 
-                if (! $buildingEngineerAccepted || $failedUnits->isNotEmpty()) {
+                if (!$buildingEngineerAccepted || $failedUnits->isNotEmpty()) {
                     $reason = match ($statusName) {
                         'rejected_by_engineer' => 'المبنى مرفوض هندسياً',
                         'need_review' => 'المبنى بحاجة مراجعة',
@@ -3844,20 +3850,20 @@ COALESCE(
                 $eligibleBuildings[] = $building->objectid;
             }
 
-            if (! empty($eligibleBuildings)) {
+            if (!empty($eligibleBuildings)) {
                 $timestamp = now()->toDateTimeString();
                 $rows = DB::table('buildings')
                     ->select([
                         DB::raw('objectid as building_id'),
-                        DB::raw($finalStatus->id.' as status_id'),
-                        DB::raw($userId.' as user_id'),
+                        DB::raw($finalStatus->id . ' as status_id'),
+                        DB::raw($userId . ' as user_id'),
                         DB::raw("'final' as type"),
-                        DB::raw("'".$timestamp."' as created_at"),
-                        DB::raw("'".$timestamp."' as updated_at"),
+                        DB::raw("'" . $timestamp . "' as created_at"),
+                        DB::raw("'" . $timestamp . "' as updated_at"),
                     ])
                     ->whereIn('objectid', $eligibleBuildings)
                     ->get()
-                    ->map(fn ($row) => (array) $row)
+                    ->map(fn($row) => (array) $row)
                     ->toArray();
 
                 DB::table('building_statuses')->upsert(
@@ -3886,7 +3892,7 @@ COALESCE(
             return response()->json([
                 'status' => true,
                 'message' => count($eligibleBuildings) > 0
-                    ? 'تم اعتماد '.count($eligibleBuildings).' مبنى نهائياً'
+                    ? 'تم اعتماد ' . count($eligibleBuildings) . ' مبنى نهائياً'
                     : 'لم يتم اعتماد أي مبنى',
 
                 'approved_count' => count($eligibleBuildings),
@@ -3924,7 +3930,7 @@ COALESCE(
 
             $undpStatus = AssessmentStatus::where('name', 'undp_final_approve')->first();
 
-            if (! $undpStatus) {
+            if (!$undpStatus) {
                 return response()->json([
                     'status' => false,
                     'message' => 'حالة undp_final_approve غير موجودة.',
@@ -3932,7 +3938,7 @@ COALESCE(
             }
 
             $requestedIds = collect($request->building_ids)
-                ->map(fn ($id) => (int) $id)
+                ->map(fn($id) => (int) $id)
                 ->unique()
                 ->values();
 
@@ -3947,11 +3953,11 @@ COALESCE(
             foreach ($requestedIds as $buildingId) {
                 $building = $buildings->get($buildingId);
 
-                if (! $building) {
+                if (!$building) {
                     continue;
                 }
 
-                if (! $this->buildingHasFinalApproval((int) $building->objectid)) {
+                if (!$this->buildingHasFinalApproval((int) $building->objectid)) {
                     $blockedBuildings[] = [
                         'building_id' => $building->objectid,
                         'building_globalid' => $building->globalid,
@@ -4001,7 +4007,7 @@ COALESCE(
             return response()->json([
                 'status' => true,
                 'message' => count($approvedIds) > 0
-                    ? 'تم اعتماد '.count($approvedIds).' مبنى UNDP Final Approve'
+                    ? 'تم اعتماد ' . count($approvedIds) . ' مبنى UNDP Final Approve'
                     : 'لم يتم اعتماد أي مبنى',
                 'approved_count' => count($approvedIds),
                 'approved_ids' => $approvedIds,
@@ -4032,7 +4038,7 @@ COALESCE(
 
             $building = Building::where('globalid', $request->globalid)->first();
 
-            if (! $building) {
+            if (!$building) {
                 return response()->json([
                     'status' => false,
                     'message' => 'المبنى غير موجود',
@@ -4062,8 +4068,8 @@ COALESCE(
             $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
-                'rejected' => 'rejected_by_'.$roleType,
-                'accepted' => 'accepted_by_'.$roleType,
+                'rejected' => 'rejected_by_' . $roleType,
+                'accepted' => 'accepted_by_' . $roleType,
                 'need_review' => 'need_review',
                 'legal_notes' => 'legal_notes',
                 'undp_final_approve' => 'undp_final_approve',
@@ -4073,7 +4079,7 @@ COALESCE(
 
             $assessmentStatus = AssessmentStatus::where('name', $statusName)->first();
 
-            if (! $assessmentStatus) {
+            if (!$assessmentStatus) {
                 return response()->json([
                     'status' => false,
                     'message' => 'الحالة غير موجودة في جدول AssessmentStatus',
@@ -4089,7 +4095,7 @@ COALESCE(
                 ], 422);
             }
 
-            if ($assessmentStatus->name === 'undp_final_approve' && ! $this->buildingHasFinalApproval((int) $building->objectid)) {
+            if ($assessmentStatus->name === 'undp_final_approve' && !$this->buildingHasFinalApproval((int) $building->objectid)) {
                 DB::rollBack();
 
                 return response()->json([
@@ -4158,7 +4164,7 @@ COALESCE(
 
             $housing = HousingUnit::where('globalid', $request->globalid)->first();
 
-            if (! $housing) {
+            if (!$housing) {
                 return response()->json([
                     'status' => false,
                     'message' => 'الوحدة السكنية غير موجودة',
@@ -4188,8 +4194,8 @@ COALESCE(
             $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
-                'rejected' => 'rejected_by_'.$roleType,
-                'accepted' => 'accepted_by_'.$roleType,
+                'rejected' => 'rejected_by_' . $roleType,
+                'accepted' => 'accepted_by_' . $roleType,
                 'need_review' => 'need_review',
                 'legal_notes' => 'legal_notes',
                 'undp_final_approve' => 'undp_final_approve',
@@ -4198,7 +4204,7 @@ COALESCE(
 
             $assessmentStatus = AssessmentStatus::where('name', $statusName)->first();
 
-            if (! $assessmentStatus) {
+            if (!$assessmentStatus) {
                 return response()->json([
                     'status' => false,
                     'message' => 'الحالة غير موجودة في جدول AssessmentStatus',
@@ -4217,7 +4223,7 @@ COALESCE(
             if ($assessmentStatus->name === 'undp_final_approve') {
                 $building = Building::where('globalid', $housing->parentglobalid)->first();
 
-                if (! $building || ! $this->buildingHasFinalApproval((int) $building->objectid)) {
+                if (!$building || !$this->buildingHasFinalApproval((int) $building->objectid)) {
                     DB::rollBack();
 
                     return response()->json([
@@ -4284,14 +4290,14 @@ COALESCE(
         ]);
         $user = User::findOrFail($request->user_id);
 
-        if ($request->type === 'QC/QA Engineer' && ! $user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
+        if ($request->type === 'QC/QA Engineer' && !$user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
             return response()->json([
                 'status' => false,
                 'message' => 'المستخدم المختار ليس مهندساً.',
             ], 422);
         }
 
-        if ($request->type === 'Legal Auditor' && ! $user->hasRole('Legal Auditor')) {
+        if ($request->type === 'Legal Auditor' && !$user->hasRole('Legal Auditor')) {
             return response()->json([
                 'status' => false,
                 'message' => 'المستخدم المختار ليس محامياً.',
@@ -4321,7 +4327,7 @@ COALESCE(
 
                     $building = Building::where('objectid', $buildingId)->first();
 
-                    if (! $building) {
+                    if (!$building) {
                         continue;
                     }
 
@@ -4347,7 +4353,7 @@ COALESCE(
                     if (
                         in_array($newStatusName, $assignedStatuses) &&
                         in_array($lastStatusName, $assignedStatuses) &&
-                        ! $isReassigningToDifferentUser
+                        !$isReassigningToDifferentUser
                     ) {
                         $rejectedBuildings[] = $buildingId;
 
@@ -4368,7 +4374,7 @@ COALESCE(
                     );
 
                     // skip if no status
-                    if (! $request->filled('status_id')) {
+                    if (!$request->filled('status_id')) {
                         continue;
                     }
 
@@ -4379,7 +4385,7 @@ COALESCE(
                     ]);
 
                     $statusChanged =
-                        ! $buildingStatus->exists ||
+                        !$buildingStatus->exists ||
                         (int) $buildingStatus->status_id !== (int) $request->status_id ||
                         (int) $buildingStatus->user_id !== (int) $request->user_id;
 
@@ -4411,7 +4417,7 @@ COALESCE(
                         ]);
 
                         $housingStatusChanged =
-                            ! $housingStatus->exists ||
+                            !$housingStatus->exists ||
                             (int) $housingStatus->status_id !== (int) $request->status_id;
 
                         $housingStatus->status_id = $request->status_id;
@@ -4457,10 +4463,10 @@ COALESCE(
             $user = Auth::user();
             $type = $user->hasRole('QC/QA Engineer') ? 'QC/QA Engineer' : ($user->hasRole('Legal Auditor') ? 'Legal Auditor' : null);
 
-            if (! $type) {
+            if (!$type) {
                 abort(403, 'Unauthorized');
             }
-            if (! in_array($type, ['eng', 'lawyer'])) {
+            if (!in_array($type, ['eng', 'lawyer'])) {
                 abort(403, 'Unauthorized');
             }
 
@@ -4478,7 +4484,7 @@ COALESCE(
                 ->addIndexColumn()
 
                 ->editColumn('building_name', function ($row) {
-                    return '<span class="text-gray-800 fw-bold">'.($row->building_name ?? '-').'</span>';
+                    return '<span class="text-gray-800 fw-bold">' . ($row->building_name ?? '-') . '</span>';
                 })
 
                 ->addColumn('status', function ($row) use ($type) {
@@ -4505,7 +4511,7 @@ COALESCE(
              data-kt-menu="true">
 
             <div class="menu-item px-3">
-                <a target="_blank" href="'.$assessmentUrl.'" class="menu-link px-3">الإستبيان</a>
+                <a target="_blank" href="' . $assessmentUrl . '" class="menu-link px-3">الإستبيان</a>
             </div>
          
         </div>
@@ -4585,7 +4591,7 @@ COALESCE(
             $request
         );
 
-        if (! $result['changed']) {
+        if (!$result['changed']) {
             return response()->json([
                 'status' => false,
                 'success' => false,
@@ -4613,7 +4619,7 @@ COALESCE(
 
         $fillable = (new $modelClass)->getFillable();
 
-        if (! in_array($request->field, $fillable)) {
+        if (!in_array($request->field, $fillable)) {
             return response()->json([
                 'status' => false,
                 'message' => 'هذا الحقل غير قابل للتعديل',
@@ -4678,7 +4684,7 @@ COALESCE(
             ->latest('id')
             ->limit(20)
             ->get()
-            ->map(fn (\App\Models\AssessmentEditHistory $history): array => [
+            ->map(fn(\App\Models\AssessmentEditHistory $history): array => [
                 'id' => $history->id,
                 'value' => $history->new_value,
                 'old_value' => $history->old_value,
@@ -4706,10 +4712,10 @@ COALESCE(
                 $status = $row->legal_audit_status ?? '-';
 
                 if ($status === 'Rejected By Lawyer') {
-                    return '<span class="badge badge-light-danger w-100 d-inline-block py-3">'.$status.'</span>';
+                    return '<span class="badge badge-light-danger w-100 d-inline-block py-3">' . $status . '</span>';
                 }
 
-                return '<span class="badge badge-light-warning">'.$status.'</span>';
+                return '<span class="badge badge-light-warning">' . $status . '</span>';
             })
 
             ->addColumn('engineering_audit_status', function ($row) {
@@ -4744,164 +4750,164 @@ COALESCE(
             ->make(true);
     }
 
- public function buildingHistory(Request $request)
-{
-    $building = Building::where('globalid', $request->globalid)->first();
+    public function buildingHistory(Request $request)
+    {
+        $building = Building::where('globalid', $request->globalid)->first();
 
-    if (! $building) {
+        if (!$building) {
+            return response()->json([
+                'status' => false,
+                'history' => [],
+            ]);
+        }
+
+        $canDelete = auth()->user()->hasAnyRole([
+            'Database Officer',
+            'Auditing Supervisor'
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Building Statuses
+        |--------------------------------------------------------------------------
+        */
+        $statuses = BuildingStatus::with(['user.roles', 'status'])
+            ->where('building_id', $building->objectid)
+            ->get()
+            ->map(function ($item) {
+
+                $statusName = $item->status->name ?? '-';
+                $statusLabel = $item->status->label_en ?? $statusName;
+                $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+                return [
+                    'id' => 'status_' . $item->id,
+                    'source' => 'building_status',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                    'user_name' => $item->user->name ?? '-',
+                    'role_name' => $roleName,
+                    'notes' => $item->notes ?? '-',
+                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                    'created_at_sort' => $item->created_at,
+                    'can_delete' => false,
+                ];
+            });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Building Status Histories
+        |--------------------------------------------------------------------------
+        */
+        $histories = BuildingStatusHistory::with(['user.roles', 'status'])
+            ->where('building_id', $building->objectid)
+            ->get()
+            ->map(function ($item) use ($canDelete) {
+
+                $statusName = $item->status->name ?? '-';
+                $statusLabel = $item->status->label_en ?? $statusName;
+                $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+                return [
+                    'id' => 'history_' . $item->id,
+                    'source' => 'building_history',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                    'user_name' => $item->user->name ?? '-',
+                    'role_name' => $roleName,
+                    'notes' => $item->notes ?? '-',
+                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                    'created_at_sort' => $item->created_at,
+                    'can_delete' => $canDelete,
+                ];
+            });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Merge + Sort
+        |--------------------------------------------------------------------------
+        */
+        $history = $statuses
+            ->merge($histories)
+            ->sortByDesc('created_at_sort')
+            ->values()
+            ->map(function ($item) {
+                unset($item['created_at_sort']);
+                return $item;
+            });
+
         return response()->json([
-            'status' => false,
-            'history' => [],
+            'status' => true,
+            'history' => $history,
         ]);
     }
+    public function housingHistory(Request $request)
+    {
+        $housing = HousingUnit::where('globalid', $request->globalid)->first();
 
-    $canDelete = auth()->user()->hasAnyRole([
-        'Database Officer',
-        'Auditing Supervisor'
-    ]);
+        if (!$housing) {
+            return [];
+        }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Building Statuses
-    |--------------------------------------------------------------------------
-    */
-    $statuses = BuildingStatus::with(['user.roles', 'status'])
-        ->where('building_id', $building->objectid)
-        ->get()
-        ->map(function ($item) {
+        /*
+        |--------------------------------------------------------------------------
+        | Housing Statuses
+        |--------------------------------------------------------------------------
+        */
+        $statuses = HousingStatus::with(['user.roles', 'assessment_status'])
+            ->where('housing_id', $housing->objectid)
+            ->get()
+            ->map(function ($item) {
 
-            $statusName = $item->status->name ?? '-';
-            $statusLabel = $item->status->label_en ?? $statusName;
-            $roleName = $item->user?->roles?->first()?->name ?? '-';
+                $statusName = $item->assessment_status->name ?? '-';
+                $statusLabel = $item->assessment_status->label_en ?? $statusName;
+                $roleName = $item->user?->roles?->first()?->name ?? '-';
 
-            return [
-                'id' => 'status_'.$item->id,
-                'source' => 'building_status',
-                'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
-                'user_name' => $item->user->name ?? '-',
-                'role_name' => $roleName,
-                'notes' => $item->notes ?? '-',
-                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                'created_at_sort' => $item->created_at,
-                'can_delete' => false,
-            ];
-        });
+                return [
+                    'id' => 'status_' . $item->id,
+                    'source' => 'housing_status',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                    'user_name' => $item->user->name ?? '-',
+                    'role_name' => $roleName,
+                    'notes' => $item->notes ?? '-',
+                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                    'created_at_sort' => $item->created_at,
+                ];
+            });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Building Status Histories
-    |--------------------------------------------------------------------------
-    */
-    $histories = BuildingStatusHistory::with(['user.roles', 'status'])
-        ->where('building_id', $building->objectid)
-        ->get()
-        ->map(function ($item) use ($canDelete) {
+        /*
+        |--------------------------------------------------------------------------
+        | Housing Status Histories
+        |--------------------------------------------------------------------------
+        */
+        $histories = HousingStatusHistory::with(['user.roles', 'assessment_status'])
+            ->where('housing_id', $housing->objectid)
+            ->get()
+            ->map(function ($item) {
 
-            $statusName = $item->status->name ?? '-';
-            $statusLabel = $item->status->label_en ?? $statusName;
-            $roleName = $item->user?->roles?->first()?->name ?? '-';
+                $statusName = $item->assessment_status->name ?? '-';
+                $statusLabel = $item->assessment_status->label_en ?? $statusName;
+                $roleName = $item->user?->roles?->first()?->name ?? '-';
 
-            return [
-                'id' => 'history_'.$item->id,
-                'source' => 'building_history',
-                'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
-                'user_name' => $item->user->name ?? '-',
-                'role_name' => $roleName,
-                'notes' => $item->notes ?? '-',
-                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                'created_at_sort' => $item->created_at,
-                'can_delete' => $canDelete,
-            ];
-        });
+                return [
+                    'id' => 'history_' . $item->id,
+                    'source' => 'housing_history',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                    'user_name' => $item->user->name ?? '-',
+                    'role_name' => $roleName,
+                    'notes' => $item->notes ?? '-',
+                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                    'created_at_sort' => $item->created_at,
+                ];
+            });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Merge + Sort
-    |--------------------------------------------------------------------------
-    */
-    $history = $statuses
-        ->merge($histories)
-        ->sortByDesc('created_at_sort')
-        ->values()
-        ->map(function ($item) {
-            unset($item['created_at_sort']);
-            return $item;
-        });
-
-    return response()->json([
-        'status' => true,
-        'history' => $history,
-    ]);
-}
-public function housingHistory(Request $request)
-{
-    $housing = HousingUnit::where('globalid', $request->globalid)->first();
-
-    if (! $housing) {
-        return [];
+        return $statuses
+            ->merge($histories)
+            ->sortByDesc('created_at_sort')
+            ->values()
+            ->map(function ($item) {
+                unset($item['created_at_sort']);
+                return $item;
+            });
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Housing Statuses
-    |--------------------------------------------------------------------------
-    */
-    $statuses = HousingStatus::with(['user.roles', 'assessment_status'])
-        ->where('housing_id', $housing->objectid)
-        ->get()
-        ->map(function ($item) {
-
-            $statusName = $item->assessment_status->name ?? '-';
-            $statusLabel = $item->assessment_status->label_en ?? $statusName;
-            $roleName = $item->user?->roles?->first()?->name ?? '-';
-
-            return [
-                'id' => 'status_'.$item->id,
-                'source' => 'housing_status',
-                'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
-                'user_name' => $item->user->name ?? '-',
-                'role_name' => $roleName,
-                'notes' => $item->notes ?? '-',
-                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                'created_at_sort' => $item->created_at,
-            ];
-        });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Housing Status Histories
-    |--------------------------------------------------------------------------
-    */
-    $histories = HousingStatusHistory::with(['user.roles', 'assessment_status'])
-        ->where('housing_id', $housing->objectid)
-        ->get()
-        ->map(function ($item) {
-
-            $statusName = $item->assessment_status->name ?? '-';
-            $statusLabel = $item->assessment_status->label_en ?? $statusName;
-            $roleName = $item->user?->roles?->first()?->name ?? '-';
-
-            return [
-                'id' => 'history_'.$item->id,
-                'source' => 'housing_history',
-                'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
-                'user_name' => $item->user->name ?? '-',
-                'role_name' => $roleName,
-                'notes' => $item->notes ?? '-',
-                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                'created_at_sort' => $item->created_at,
-            ];
-        });
-
-    return $statuses
-        ->merge($histories)
-        ->sortByDesc('created_at_sort')
-        ->values()
-        ->map(function ($item) {
-            unset($item['created_at_sort']);
-            return $item;
-        });
-}
     private function getStatusBadge($statusName, $role = null)
     {
         return match ($statusName) {
@@ -4932,7 +4938,7 @@ public function housingHistory(Request $request)
         if ($type === 'building') {
             $building = Building::where('globalid', $globalid)->first();
 
-            if (! $building) {
+            if (!$building) {
                 return response()->json([
                     'message' => 'المبنى غير موجود',
                 ], 404);
@@ -4976,7 +4982,7 @@ public function housingHistory(Request $request)
         if ($type === 'housing') {
             $housing = HousingUnit::where('globalid', $globalid)->first();
 
-            if (! $housing) {
+            if (!$housing) {
                 return response()->json([
                     'message' => 'الوحدة السكنية غير موجودة',
                 ], 404);
@@ -5001,7 +5007,7 @@ public function housingHistory(Request $request)
 
             $note = $query->first();
 
-            if (! $note) {
+            if (!$note) {
                 return response()->json([
                     'message' => 'لا توجد ملاحظة متاحة',
                 ], 404);
@@ -5033,7 +5039,7 @@ public function housingHistory(Request $request)
         if ($type === 'building') {
             $note = BuildingStatusHistory::find($id);
 
-            if (! $note) {
+            if (!$note) {
                 return response()->json([
                     'message' => 'الملاحظة غير موجودة',
                 ], 404);
@@ -5062,7 +5068,7 @@ public function housingHistory(Request $request)
         if ($type === 'housing') {
             $note = HousingStatusHistory::find($id);
 
-            if (! $note) {
+            if (!$note) {
                 return response()->json([
                     'message' => 'الملاحظة غير موجودة',
                 ], 404);
@@ -5093,7 +5099,7 @@ public function housingHistory(Request $request)
     {
         $history = BuildingStatusHistory::with('status')->find($request->id);
 
-        if (! $history) {
+        if (!$history) {
             return response()->json([
                 'status' => false,
                 'message' => 'السجل غير موجود',
@@ -5101,7 +5107,7 @@ public function housingHistory(Request $request)
         }
 
         // السماح فقط لهذين الدورين
-        if (! auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+        if (!auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
             return response()->json([
                 'status' => false,
                 'message' => 'غير مصرح لك بحذف هذا السجل',
@@ -5287,12 +5293,12 @@ public function housingHistory(Request $request)
             'charts' => [
                 'building_status_labels' => array_values($buildingStatuses),
                 'building_status_series' => collect(array_keys($buildingStatuses))
-                    ->map(fn ($statusName) => (int) ($buildingStatusRaw[$statusName] ?? 0))
+                    ->map(fn($statusName) => (int) ($buildingStatusRaw[$statusName] ?? 0))
                     ->values()
                     ->all(),
                 'housing_status_labels' => array_values($housingStatuses),
                 'housing_status_series' => collect(array_keys($housingStatuses))
-                    ->map(fn ($statusName) => (int) ($housingStatusRaw[$statusName] ?? 0))
+                    ->map(fn($statusName) => (int) ($housingStatusRaw[$statusName] ?? 0))
                     ->values()
                     ->all(),
                 'comparison_categories' => ['Buildings', 'Housing Units'],
@@ -5312,7 +5318,7 @@ public function housingHistory(Request $request)
             ->latest('id')
             ->first()
             ?->status
-            ?->name;
+                ?->name;
 
         if ($historyStatusName) {
             return $historyStatusName;
@@ -5324,7 +5330,7 @@ public function housingHistory(Request $request)
             ->latest('id')
             ->first()
             ?->status
-            ?->name;
+                ?->name;
     }
 
     private function latestHousingStatusName(int $housingObjectId): ?string
@@ -5334,7 +5340,7 @@ public function housingHistory(Request $request)
             ->latest('id')
             ->first()
             ?->assessment_status
-            ?->name;
+                ?->name;
 
         if ($historyStatusName) {
             return $historyStatusName;
@@ -5346,7 +5352,7 @@ public function housingHistory(Request $request)
             ->latest('id')
             ->first()
             ?->assessment_status
-            ?->name;
+                ?->name;
     }
 
     private function buildingHasFinalApproval(int $buildingObjectId): bool
@@ -5367,7 +5373,7 @@ public function housingHistory(Request $request)
     {
         $unit = HousingUnit::where('globalid', $request->globalid)->first();
 
-        if (! $unit) {
+        if (!$unit) {
             return response()->json([
                 'summary_items' => [],
                 'summary_mode' => null,
@@ -5528,7 +5534,7 @@ public function housingHistory(Request $request)
             ], 422);
         }
 
-        $headers = array_map(fn ($header) => strtolower(trim((string) $header)), $rows[0]);
+        $headers = array_map(fn($header) => strtolower(trim((string) $header)), $rows[0]);
 
         $objectIdIndex = array_search('objectid', $headers);
 
