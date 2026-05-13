@@ -2818,10 +2818,9 @@ class auditController extends Controller
             ON hu2.id = hs.housing_id
         WHERE hu2.parentglobalid = buildings.globalid
     ) as housing_units_with_status_count
-")->havingRaw('
-    housing_units_with_status_count
-    - housing_units_count < 0
-')
+")->havingRaw("
+    housing_units_with_status_count < housing_units_count
+")
                 // ->whereIn('globalid', $globalIds)
                 ->where('field_status', 'COMPLETED');
 
