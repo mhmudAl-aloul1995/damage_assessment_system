@@ -192,3 +192,39 @@ it('accepts a flatpickr date range string in dashboard filters', function () {
         ->assertJsonPath('recordsFiltered', 1)
         ->assertJsonPath('data.0.neighborhood', 'Rimal');
 });
+
+it('returns latest dashboard stats as json', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 701,
+        'globalid' => 'latest-building',
+        'building_name' => 'Latest Building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'security_situation' => 'Safe',
+        'uxo_present' => 'no3',
+        'bodies_present' => 'no3',
+        'building_debris_exist' => 'no',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 801,
+        'globalid' => 'latest-unit',
+        'parentglobalid' => 'latest-building',
+        'unit_damage_status' => 'committee_review2',
+        'has_fire' => 'no',
+        'unit_stripping' => 'no',
+        'is_the_housing_unit_or_living_habitable' => 'yes',
+        'security_situation_unit' => 'Safe',
+        'unit_support_needed' => 'no',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.latest-stats'))
+        ->assertOk()
+        ->assertJsonPath('buildingStats.completed', 1)
+        ->assertJsonPath('buildingStats.fully_damaged', 1)
+        ->assertJsonPath('unitStats.total_units', 1)
+        ->assertJsonPath('unitStats.committee_review', 1);
+});

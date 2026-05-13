@@ -4336,9 +4336,18 @@ COALESCE(
                     $lastStatusName = str_replace(['_', '-'], ' ', $lastStatusName);
 
                     // 🚫 prevent duplicate assigned
+                    $currentAssignment = AssignedAssessmentUser::query()
+                        ->where('building_id', $buildingId)
+                        ->where('type', $request->type)
+                        ->first();
+
+                    $isReassigningToDifferentUser = $currentAssignment
+                        && (int) $currentAssignment->user_id !== (int) $request->user_id;
+
                     if (
                         in_array($newStatusName, $assignedStatuses) &&
-                        in_array($lastStatusName, $assignedStatuses)
+                        in_array($lastStatusName, $assignedStatuses) &&
+                        ! $isReassigningToDifferentUser
                     ) {
                         $rejectedBuildings[] = $buildingId;
 
@@ -4371,7 +4380,8 @@ COALESCE(
 
                     $statusChanged =
                         ! $buildingStatus->exists ||
-                        (int) $buildingStatus->status_id !== (int) $request->status_id;
+                        (int) $buildingStatus->status_id !== (int) $request->status_id ||
+                        (int) $buildingStatus->user_id !== (int) $request->user_id;
 
                     $buildingStatus->status_id = $request->status_id;
                     $buildingStatus->user_id = $request->user_id;

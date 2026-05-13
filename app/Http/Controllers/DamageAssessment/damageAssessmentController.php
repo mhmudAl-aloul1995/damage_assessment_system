@@ -292,6 +292,69 @@ class damageAssessmentController extends Controller
             ->make(true);
     }
 
+    public function latestStats(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $buildingQuery = Building::query();
+        $this->applyDashboardMapFilters($buildingQuery, $request, '', 'end');
+
+        $housingUnitQuery = HousingUnit::query();
+        $this->applyDashboardHousingFilters($housingUnitQuery, $request);
+
+        $buildings = $buildingQuery
+            ->selectRaw("COALESCE(SUM(field_status = 'Not_Completed'), 0) as not_completed,
+                COALESCE(SUM(field_status = 'COMPLETED'), 0) as completed,
+                COALESCE(SUM(field_status NOT IN ('COMPLETED', 'Not_Completed')), 0) as pending,
+                COALESCE(SUM(building_damage_status = 'fully_damaged'), 0) as fully_damaged,
+                COALESCE(SUM(building_damage_status = 'partially_damaged'), 0) as partially_damaged,
+                COALESCE(SUM(building_damage_status = 'committee_review'), 0) as committee_review,
+                COALESCE(SUM(security_situation = 'Unsafe'), 0) as security_unsafe,
+                COALESCE(SUM(uxo_present = 'yes3'), 0) as uxo,
+                COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
+                COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris")
+            ->first();
+
+        $units = $housingUnitQuery
+            ->selectRaw("
+                COUNT(*) as total_units,
+                COALESCE(SUM(unit_damage_status = 'fully_damaged2'), 0) as fully_damaged,
+                COALESCE(SUM(unit_damage_status = 'partially_damaged2'), 0) as partially_damaged,
+                COALESCE(SUM(unit_damage_status = 'committee_review2'), 0) as committee_review,
+                COALESCE(SUM(has_fire = 'yes'), 0) as has_fire,
+                COALESCE(SUM(unit_stripping = 'yes'), 0) as has_strip,
+                COALESCE(SUM(is_the_housing_unit_or_living_habitable = 'yes'), 0) as habitable,
+                COALESCE(SUM(security_situation_unit = 'Unsafe'), 0) as security_unsafe,
+                COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,
+                COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed")
+            ->first();
+
+        return response()->json([
+            'buildingStats' => [
+                'not_completed' => (int) $buildings->not_completed,
+                'completed' => (int) $buildings->completed,
+                'pending' => (int) $buildings->pending,
+                'fully_damaged' => (int) $buildings->fully_damaged,
+                'partially_damaged' => (int) $buildings->partially_damaged,
+                'committee_review' => (int) $buildings->committee_review,
+                'security_unsafe' => (int) $buildings->security_unsafe,
+                'uxo' => (int) $buildings->uxo,
+                'bodies' => (int) $buildings->bodies,
+                'debris' => (int) $buildings->debris,
+            ],
+            'unitStats' => [
+                'total_units' => (int) $units->total_units,
+                'fully_damaged' => (int) $units->fully_damaged,
+                'partially_damaged' => (int) $units->partially_damaged,
+                'committee_review' => (int) $units->committee_review,
+                'has_fire' => (int) $units->has_fire,
+                'has_strip' => (int) $units->has_strip,
+                'habitable' => (int) $units->habitable,
+                'security_unsafe' => (int) $units->security_unsafe,
+                'unit_stripping' => (int) $units->unit_stripping,
+                'unit_support_needed' => (int) $units->unit_support_needed,
+            ],
+        ]);
+    }
+
     public function arcgisOptions(Request $request)
     {
         $validated = $request->validate([

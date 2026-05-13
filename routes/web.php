@@ -317,6 +317,8 @@ Route::middleware('auth')->group(function () {
         ->name('public-buildings-map');
     Route::get('/road-facilities-map', [damageAssessmentController::class, 'roadFacilitiesMap'])
         ->name('road-facilities-map');
+    Route::get('/api/get-latest-stats', [damageAssessmentController::class, 'latestStats'])
+        ->name('damageAssessment.latest-stats');
     // Reports
 
     Route::get('reports/productivity', action: [reportController::class, 'productivity']);

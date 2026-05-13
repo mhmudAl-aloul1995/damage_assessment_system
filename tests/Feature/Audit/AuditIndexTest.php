@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\AssessmentStatus;
+use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\BuildingStatus;
+use App\Models\BuildingStatusHistory;
 use App\Models\HousingStatus;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -206,4 +208,119 @@ it('includes the housing units status progress in the audit table response', fun
         ]))
         ->assertOk()
         ->assertHeader('content-disposition');
+
+    config()->set('database.default', 'sqlite');
+    DB::purge('mysql');
+});
+
+it('allows reassigning an already assigned audit building to a different engineer or lawyer', function () {
+    $managerRole = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $manager = User::factory()->create();
+    $manager->assignRole($managerRole);
+
+    $cases = [
+        [
+            'type' => 'QC/QA Engineer',
+            'role' => 'QC/QA Engineer',
+            'status' => 'assigned_to_engineer',
+            'stage' => 'engineer',
+            'building_id' => 7101,
+            'globalid' => 'audit-building-reassign-engineer',
+        ],
+        [
+            'type' => 'Legal Auditor',
+            'role' => 'Legal Auditor',
+            'status' => 'assigned_to_lawyer',
+            'stage' => 'lawyer',
+            'building_id' => 7102,
+            'globalid' => 'audit-building-reassign-lawyer',
+        ],
+    ];
+
+    foreach ($cases as $case) {
+        $auditorRole = Role::query()->create([
+            'name' => $case['role'],
+            'guard_name' => 'web',
+        ]);
+
+        $previousAuditor = User::factory()->create();
+        $previousAuditor->assignRole($auditorRole);
+
+        $newAuditor = User::factory()->create();
+        $newAuditor->assignRole($auditorRole);
+
+        $assignedStatus = AssessmentStatus::query()->create([
+            'name' => $case['status'],
+            'label_en' => 'Assigned',
+            'label_ar' => 'assigned ar',
+            'stage' => $case['stage'],
+            'order_step' => 1,
+        ]);
+
+        $building = Building::query()->create([
+            'objectid' => $case['building_id'],
+            'globalid' => $case['globalid'],
+            'building_name' => 'Audit Reassign Building',
+            'field_status' => 'COMPLETED',
+            'creationdate' => '2026-04-25 10:00:00',
+        ]);
+
+        AssignedAssessmentUser::query()->create([
+            'manager_id' => $manager->id,
+            'user_id' => $previousAuditor->id,
+            'type' => $case['type'],
+            'building_id' => $building->objectid,
+        ]);
+
+        BuildingStatus::query()->create([
+            'building_id' => $building->objectid,
+            'status_id' => $assignedStatus->id,
+            'user_id' => $previousAuditor->id,
+            'type' => $case['type'],
+        ]);
+
+        BuildingStatusHistory::query()->create([
+            'building_id' => $building->objectid,
+            'status_id' => $assignedStatus->id,
+            'user_id' => $manager->id,
+            'type' => $case['type'],
+        ]);
+
+        $this->actingAs($manager)
+            ->postJson(route('audit.assign'), [
+                'building_ids' => [$building->objectid],
+                'user_id' => $newAuditor->id,
+                'type' => $case['type'],
+                'status_id' => $assignedStatus->id,
+            ])
+            ->assertOk()
+            ->assertJson([
+                'status' => true,
+                'rejected_buildings' => [],
+            ]);
+
+        $this->assertDatabaseHas('assigned_assessment_users', [
+            'building_id' => $building->objectid,
+            'type' => $case['type'],
+            'user_id' => $newAuditor->id,
+        ]);
+
+        $this->assertDatabaseHas('building_statuses', [
+            'building_id' => $building->objectid,
+            'type' => $case['type'],
+            'status_id' => $assignedStatus->id,
+            'user_id' => $newAuditor->id,
+        ]);
+
+        $this->assertDatabaseHas('building_status_histories', [
+            'building_id' => $building->objectid,
+            'type' => $case['type'],
+            'status_id' => $assignedStatus->id,
+            'user_id' => $manager->id,
+        ]);
+    }
 });

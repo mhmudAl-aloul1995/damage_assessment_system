@@ -3129,9 +3129,22 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 			}
 		}
 
+		const latestStatsUrl = @json(route('damageAssessment.latest-stats', [], false));
+
 		setInterval(function () {
-			fetch('/api/get-latest-stats')
-				.then(response => response.json())
+			fetch(latestStatsUrl, {
+				headers: {
+					'Accept': 'application/json'
+				},
+				credentials: 'same-origin'
+			})
+				.then(response => {
+					if (!response.ok) {
+						throw new Error('Stats request failed with status ' + response.status);
+					}
+
+					return response.json();
+				})
 				.then(data => {
 					updateCharts(data.buildingStats, data.unitStats);
 				})
