@@ -68,7 +68,7 @@ class AssessmentStatus extends Model
 
     public static function badgeHtmlFor(?string $name, ?string $label = null): string
     {
-        return '<span class="'.e(self::badgeClassForName($name)).' fw-bold px-4 py-3">'
+        return '<span class="'.e(self::badgeClassForName($name)).' fw-bold px-2 py-2">'
             .e($label ?: '-')
             .'</span>';
     }
