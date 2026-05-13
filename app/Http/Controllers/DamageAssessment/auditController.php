@@ -2884,6 +2884,12 @@ class auditController extends Controller
                     }
                 });
             }
+            $query->havingRaw('
+    (
+        
+        housing_units_count-housing_units_with_status_count
+    ) > 0
+');
             $housingStatusCounts = function ($row): array {
                 static $countsByBuilding = [];
 
