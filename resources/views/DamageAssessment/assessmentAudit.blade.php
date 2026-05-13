@@ -2208,7 +2208,7 @@
                 });
             };
 
-            /*      var handleSearchDatatable = function () {
+                var handleSearchDatatable = function () {
                      const filterSearch = document.querySelector('[data-kt-HousingAssessment-table-filter="search"]');
                      if (!filterSearch) return;
 
@@ -2229,8 +2229,8 @@
                      });
                  };
 
-             */
-            var handleSearchDatatable = function () {
+             
+         /*    var handleSearchDatatable = function () {
                 const filterSearch = document.querySelector('[data-kt-HousingAssessment-table-filter="search"]');
                 if (!filterSearch) return;
 
@@ -2242,7 +2242,7 @@
                     }
                 });
             };
-            var handleChangeHousingUnit = function () {
+          */   var handleChangeHousingUnit = function () {
                 const filterSelect = $('[name="globalid"]');
                 loadHousingSidebarSummary();
 
