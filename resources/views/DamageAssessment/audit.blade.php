@@ -911,7 +911,7 @@
 						className: 'text-center'
 					}, */
 					{
-						targets: 10,
+						targets: 9,
 						orderable: false,
 						searchable: false,
 						width: '4%',
