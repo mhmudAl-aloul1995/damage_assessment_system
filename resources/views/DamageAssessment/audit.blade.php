@@ -875,8 +875,8 @@
 				lengthMenu: [[10, 20, 25, 50, 100], [10, 20, 25, 50, 100]],
 				pageLength: 20,
 				autoWidth: false,
-				scrollX: true,
-				responsive: false,
+				scrollX: false,
+				responsive: true,
 				columnDefs: [
 					{
 						targets: 0,
