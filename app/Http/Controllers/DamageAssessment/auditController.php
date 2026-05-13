@@ -2804,26 +2804,36 @@ class auditController extends Controller
                 'assignedUsers.user',
                 'engineerStatus.status',
                 'lawyerStatus.status',
-            ])->selectRaw("
+            ])
+                // ->whereIn('globalid', $globalIds)
+                ->where('field_status', 'COMPLETED');
+            $query->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('building_statuses as bs')
+                    ->join('assessment_statuses as ast', 'ast.id', '=', 'bs.status_id')
+                    ->whereColumn('bs.building_id', 'buildings.objectid')
+                    ->whereRaw('LOWER(TRIM(ast.name)) = "accepted"');
+            })
+                ->whereExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('housing_units as hu')
+                        ->whereColumn('hu.parentglobalid', 'buildings.globalid');
+                })
+                ->whereRaw("
     (
         SELECT COUNT(*)
         FROM housing_units hu
         WHERE hu.parentglobalid = buildings.globalid
-    ) as housing_units_count,
-
+    )
+    >
     (
         SELECT COUNT(DISTINCT hs.housing_id)
         FROM housing_statuses hs
         INNER JOIN housing_units hu2
             ON hu2.id = hs.housing_id
         WHERE hu2.parentglobalid = buildings.globalid
-    ) as housing_units_with_status_count
-")->havingRaw("
-    housing_units_with_status_count < housing_units_count
-")
-                // ->whereIn('globalid', $globalIds)
-                ->where('field_status', 'COMPLETED');
-
+    )
+");
             $engineerIds = $this->filterValues($request, 'engineer_id');
             if ($engineerIds !== []) {
                 $query->whereHas('engineerAssignment', function ($q) use ($engineerIds) {
@@ -2900,7 +2910,6 @@ class auditController extends Controller
                     }
                 });
             }
-
             $housingStatusCounts = function ($row): array {
                 static $countsByBuilding = [];
 
@@ -2912,7 +2921,6 @@ class auditController extends Controller
 
                 return $countsByBuilding[$buildingGlobalId];
             };
-
 
             return DataTables::of($query)
 
