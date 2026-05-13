@@ -2820,7 +2820,7 @@ class auditController extends Controller
     ) as housing_units_with_status_count
 ")->havingRaw('
     housing_units_with_status_count
-    - housing_units_count > 0
+    - housing_units_count < 0
 ')
                 // ->whereIn('globalid', $globalIds)
                 ->where('field_status', 'COMPLETED');
