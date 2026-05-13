@@ -2899,10 +2899,10 @@ class auditController extends Controller
             return DataTables::of($query)
 
                 // Building Name
-                ->editColumn(
+               /*  ->editColumn(
                     'building_name',
                     fn ($row) => '<span class="text-gray-800 fw-bold">'.$row->building_name.'</span>'
-                )
+                ) */
                   ->addColumn('building_name', function ($row) use ($globalIds) {
 
                     $name = $row->building_name ?? '-';
