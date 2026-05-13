@@ -25,22 +25,15 @@ class HousingUnitImportController extends Controller
 
             DB::table('warda_units')
                 ->orderBy('id')
-                ->chunkById(200, function ($units) use (
-                    $now,
-                    &$housingInserted,
-                    &$editInserted,
-                    &$housingStatusesInserted,
-                    &$invalidJsonSkipped,
-                    &$skippedRows
-                ) {
+                ->chunkById(200, function ($units) use ($now, &$housingInserted, &$editInserted, &$housingStatusesInserted, &$invalidJsonSkipped, &$skippedRows) {
 
                     foreach ($units as $unit) {
 
-                        $engineeringAuditStatus = trim((string)($unit->engineering_audit_status ?? ''));
-                        $legalAuditStatus = trim((string)($unit->legal_audit_status ?? ''));
+                        $engineeringAuditStatus = trim((string) ($unit->engineering_audit_status ?? ''));
+                        $legalAuditStatus = trim((string) ($unit->legal_audit_status ?? ''));
 
                         $engineerUserId = $this->mapOldUserIdToNewUserId($unit->engineer_id ?? null);
-                        $lawyerUserId  = $this->mapOldUserIdToNewUserId($unit->lawyer_id ?? null);
+                        $lawyerUserId = $this->mapOldUserIdToNewUserId($unit->lawyer_id ?? null);
 
                         /*
                         |--------------------------------------------------------------------------
@@ -105,7 +98,7 @@ class HousingUnitImportController extends Controller
                                     }
 
                                     $originalValue = $this->normalizeValue($existingHousing->{$fieldName});
-                                    $jsonValue     = $this->normalizeValue($jsonValue);
+                                    $jsonValue = $this->normalizeValue($jsonValue);
 
                                     if ($originalValue === $jsonValue) {
                                         continue;
@@ -129,13 +122,13 @@ class HousingUnitImportController extends Controller
                                     }
 
                                     DB::table('edit_assessments')->insert([
-                                        'global_id'   => $unit->globalid,
-                                        'type'        => 'housing_table',
-                                        'field_name'  => $fieldName,
+                                        'global_id' => $unit->globalid,
+                                        'type' => 'housing_table',
+                                        'field_name' => $fieldName,
                                         'field_value' => $jsonValue,
-                                        'user_id'     => $userId,
-                                        'created_at'  => $editAssessmentDate,
-                                        'updated_at'  => $editAssessmentDate,
+                                        'user_id' => $userId,
+                                        'created_at' => $editAssessmentDate,
+                                        'updated_at' => $editAssessmentDate,
                                     ]);
 
                                     $editInserted++;
@@ -156,6 +149,11 @@ class HousingUnitImportController extends Controller
                                 $engineerStatusId = 2;
                             } else {
                                 switch ($engineeringAuditStatus) {
+                                    case 'Assigned To Engineer':
+                                    case 'Assigned To Enginner':
+                                        $engineerStatusId = 2;
+                                        break;
+
                                     case 'Accepted by Engineer':
                                         $engineerStatusId = 4;
                                         break;
@@ -177,13 +175,13 @@ class HousingUnitImportController extends Controller
                                     : $now;
 
                                 DB::table('housing_statuses')->insert([
-                                    'housing_id'  => $existingHousing->objectid,
-                                    'status_id'   => $engineerStatusId,
-                                    'user_id'     => $engineerUserId,
-                                    'type'        => 'QC/QA Engineer',
-                                    'notes'       => $unit->engineer_notes,
-                                    'created_at'  => $statusDate,
-                                    'updated_at'  => $statusDate,
+                                    'housing_id' => $existingHousing->objectid,
+                                    'status_id' => $engineerStatusId,
+                                    'user_id' => $engineerUserId,
+                                    'type' => 'QC/QA Engineer',
+                                    'notes' => $unit->engineer_notes,
+                                    'created_at' => $statusDate,
+                                    'updated_at' => $statusDate,
                                 ]);
 
                                 $housingStatusesInserted++;
@@ -197,7 +195,7 @@ class HousingUnitImportController extends Controller
                         | 4) housing_statuses - Lawyer
                         |--------------------------------------------------------------------------
                         */
-                        if (!in_array($legalAuditStatus, ['Assigned To Lawyer', 'Pending'], true)) {
+                        if (!in_array($legalAuditStatus, ['Pending'], true)) {
 
                             $lawyerStatusId = null;
 
@@ -205,6 +203,11 @@ class HousingUnitImportController extends Controller
                                 $lawyerStatusId = 6;
                             } else {
                                 switch ($legalAuditStatus) {
+                                    case 'Assigned To Lawyer':
+                                        $lawyerStatusId = 6;
+                                        break;
+
+                                    case 'Accepted By Lawyer':
                                     case 'Accepted by Lawyer':
                                         $lawyerStatusId = 8;
                                         break;
@@ -213,11 +216,6 @@ class HousingUnitImportController extends Controller
                                     case 'Rejected By Lawyer':
                                         $lawyerStatusId = 7;
                                         break;
-
-                                    default:
-                                        if (!empty($unit->lawyer_notes)) {
-                                            $lawyerStatusId = 7;
-                                        }
                                 }
                             }
 
@@ -228,13 +226,13 @@ class HousingUnitImportController extends Controller
                                     : $now;
 
                                 DB::table('housing_statuses')->insert([
-                                    'housing_id'  => $existingHousing->objectid,
-                                    'status_id'   => $lawyerStatusId,
-                                    'user_id'     => $lawyerUserId,
-                                    'type'        => 'Legal Auditor',
-                                    'notes'       => $unit->lawyer_notes,
-                                    'created_at'  => $statusDate,
-                                    'updated_at'  => $statusDate,
+                                    'housing_id' => $existingHousing->objectid,
+                                    'status_id' => $lawyerStatusId,
+                                    'user_id' => $lawyerUserId,
+                                    'type' => 'Legal Auditor',
+                                    'notes' => $unit->lawyer_notes,
+                                    'created_at' => $statusDate,
+                                    'updated_at' => $statusDate,
                                 ]);
 
                                 $housingStatusesInserted++;
