@@ -2800,29 +2800,24 @@ class auditController extends Controller
                 '300ad1ff-3a35-4bcc-a1f7-b58e35c86136',
             ];
 
-            $query = Building::with([
-                'assignedUsers.user',
-                'engineerStatus.status',
-                'lawyerStatus.status',
-            ])
-                ->whereIn('globalid', $globalIds)
-                ->where('field_status', 'COMPLETED')
-                ->selectRaw("
-    (
-        SELECT COUNT(*)
-        FROM housing_units hu
-        WHERE hu.parentglobalid = buildings.globalid
-    ) as housing_units_count
-")
-                ->selectRaw("
-    (
-        SELECT COUNT(DISTINCT hs.housing_id)
-        FROM housing_statuses hs
-        INNER JOIN housing_units hu2 ON hu2.id = hs.housing_id
-        WHERE hu2.parentglobalid = buildings.globalid
-    ) as housing_units_with_status_count
-")
-                ->havingRaw('housing_units_with_status_count < housing_units_count');
+           $query = Building::query()
+    ->select('buildings.*')
+    ->selectRaw("
+        (
+            SELECT COUNT(*)
+            FROM housing_units hu
+            WHERE hu.parentglobalid = buildings.globalid
+        ) as housing_units_count
+    ")
+    ->selectRaw("
+        (
+            SELECT COUNT(DISTINCT hs.housing_id)
+            FROM housing_statuses hs
+            INNER JOIN housing_units hu2 ON hu2.id = hs.housing_id
+            WHERE hu2.parentglobalid = buildings.globalid
+        ) as housing_units_with_status_count
+    ")
+    ->havingRaw('housing_units_count <> housing_units_with_status_count');
             $engineerIds = $this->filterValues($request, 'engineer_id');
             if ($engineerIds !== []) {
                 $query->whereHas('engineerAssignment', function ($q) use ($engineerIds) {
