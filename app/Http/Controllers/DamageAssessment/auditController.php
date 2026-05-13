@@ -2807,20 +2807,24 @@ class auditController extends Controller
             ])
                 // ->whereIn('globalid', $globalIds)
                 ->where('field_status', 'COMPLETED');
-     $query->whereExists(function ($q) {
-    $q->select(DB::raw(1))
-        ->from('building_statuses as bs')
-        ->join('assessment_statuses as ast', 'ast.id', '=', 'bs.status_id')
-        ->whereColumn('bs.building_id', 'buildings.objectid')
-        ->whereRaw("LOWER(TRIM(ast.name)) = 'accepted'");
-})
-->whereExists(function ($q) {
-    $q->select(DB::raw(1))
-        ->from('housing_units as hu')
-        ->leftJoin('housing_statuses as hs', 'hs.housing_id', '=', 'hu.id')
-        ->whereColumn('hu.parentglobalid', 'buildings.globalid')
-        ->whereNull('hs.id');
-});
+            $query->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('building_statuses as bs')
+                    ->join('assessment_statuses as ast', 'ast.id', '=', 'bs.status_id')
+                    ->whereColumn('bs.building_id', 'buildings.objectid')
+                    ->whereRaw("LOWER(TRIM(ast.name)) = 'accepted'");
+            });
+
+            $query->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('housing_units as hu')
+                    ->whereColumn('hu.parentglobalid', 'buildings.globalid')
+                    ->whereNotExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('housing_statuses as hs')
+                            ->whereColumn('hs.housing_id', 'hu.id');
+                    });
+            });
             $engineerIds = $this->filterValues($request, 'engineer_id');
             if ($engineerIds !== []) {
                 $query->whereHas('engineerAssignment', function ($q) use ($engineerIds) {
