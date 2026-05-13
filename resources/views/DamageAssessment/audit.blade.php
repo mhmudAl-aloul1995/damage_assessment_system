@@ -872,7 +872,7 @@
 						Object.assign(d, auditFilterPayload());
 					}
 				},
-				lengthMenu: [[10, 20, 25, 50, 100], [10, 20, 25, 50, 100]],
+				lengthMenu: [[10, 20, 25, 50, 100, -1], [10, 20, 25, 50, 100, 'All']],
 				pageLength: 20,
 				autoWidth: false,
 				scrollX: false,
