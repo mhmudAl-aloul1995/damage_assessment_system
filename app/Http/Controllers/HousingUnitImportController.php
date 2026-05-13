@@ -39,15 +39,6 @@ class HousingUnitImportController extends Controller
                         $engineeringAuditStatus = trim((string)($unit->engineering_audit_status ?? ''));
                         $legalAuditStatus = trim((string)($unit->legal_audit_status ?? ''));
 
-                        $skipWholeRow =
-                            in_array($engineeringAuditStatus, ['Assigned To Enginner', 'Pending'], true) ||
-                            in_array($legalAuditStatus, ['Assigned To Lawyer', 'Pending'], true);
-
-                        if ($skipWholeRow) {
-                            $skippedRows++;
-                            continue;
-                        }
-
                         $engineerUserId = $this->mapOldUserIdToNewUserId($unit->engineer_id ?? null);
                         $lawyerUserId  = $this->mapOldUserIdToNewUserId($unit->lawyer_id ?? null);
 
@@ -103,10 +94,11 @@ class HousingUnitImportController extends Controller
                                     $editAssessmentDate = $this->parseDateValue($unit->legal_audit_date);
                                 }
 
-                                // التعديل المطلوب
                                 $userId = $engineerUserId ?: $lawyerUserId;
 
                                 foreach ($decoded as $fieldName => $jsonValue) {
+
+                                    $fieldName = $this->normalizeFieldName($fieldName);
 
                                     if (!property_exists($existingHousing, $fieldName)) {
                                         continue;
@@ -156,41 +148,48 @@ class HousingUnitImportController extends Controller
                         | 3) housing_statuses - Engineer
                         |--------------------------------------------------------------------------
                         */
-                        $engineerStatusId = null;
+                        if (!in_array($engineeringAuditStatus, ['Assigned To Enginner', 'Pending'], true)) {
 
-                        if (empty($engineerUserId)) {
-                            $engineerStatusId = 2;
-                        } else {
-                            switch ($engineeringAuditStatus) {
-                                case 'Accepted by Engineer':
-                                    $engineerStatusId = 4;
-                                    break;
-                                case 'Engineer Review need':
-                                    $engineerStatusId = 5;
-                                    break;
-                                case 'Rejected By Engineer':
-                                    $engineerStatusId = 3;
-                                    break;
+                            $engineerStatusId = null;
+
+                            if (empty($engineerUserId)) {
+                                $engineerStatusId = 2;
+                            } else {
+                                switch ($engineeringAuditStatus) {
+                                    case 'Accepted by Engineer':
+                                        $engineerStatusId = 4;
+                                        break;
+
+                                    case 'Engineer Review need':
+                                        $engineerStatusId = 5;
+                                        break;
+
+                                    case 'Rejected By Engineer':
+                                        $engineerStatusId = 3;
+                                        break;
+                                }
                             }
-                        }
 
-                        if ($engineerStatusId !== null && $existingHousing?->objectid) {
+                            if ($engineerStatusId !== null && $existingHousing?->objectid) {
 
-                            $statusDate = !empty($unit->engineering_audit_date)
-                                ? $this->parseDateValue($unit->engineering_audit_date)
-                                : $now;
+                                $statusDate = !empty($unit->engineering_audit_date)
+                                    ? $this->parseDateValue($unit->engineering_audit_date)
+                                    : $now;
 
-                            DB::table('housing_statuses')->insert([
-                                'housing_id'  => $existingHousing->objectid,
-                                'status_id'   => $engineerStatusId,
-                                'user_id'     => $engineerUserId,
-                                'type'        => 'QC/QA Engineer',
-                                'notes'       => $unit->engineer_notes,
-                                'created_at'  => $statusDate,
-                                'updated_at'  => $statusDate,
-                            ]);
+                                DB::table('housing_statuses')->insert([
+                                    'housing_id'  => $existingHousing->objectid,
+                                    'status_id'   => $engineerStatusId,
+                                    'user_id'     => $engineerUserId,
+                                    'type'        => 'QC/QA Engineer',
+                                    'notes'       => $unit->engineer_notes,
+                                    'created_at'  => $statusDate,
+                                    'updated_at'  => $statusDate,
+                                ]);
 
-                            $housingStatusesInserted++;
+                                $housingStatusesInserted++;
+                            }
+                        } else {
+                            $skippedRows++;
                         }
 
                         /*
@@ -198,43 +197,50 @@ class HousingUnitImportController extends Controller
                         | 4) housing_statuses - Lawyer
                         |--------------------------------------------------------------------------
                         */
-                        $lawyerStatusId = null;
+                        if (!in_array($legalAuditStatus, ['Assigned To Lawyer', 'Pending'], true)) {
 
-                        if (empty($lawyerUserId)) {
-                            $lawyerStatusId = 6;
-                        } else {
-                            switch ($legalAuditStatus) {
-                                case 'Accepted by Lawyer':
-                                    $lawyerStatusId = 8;
-                                    break;
-                                case 'Lawyer Review need':
-                                case 'Rejected By Lawyer':
-                                    $lawyerStatusId = 7;
-                                    break;
-                                default:
-                                    if (!empty($unit->lawyer_notes)) {
+                            $lawyerStatusId = null;
+
+                            if (empty($lawyerUserId)) {
+                                $lawyerStatusId = 6;
+                            } else {
+                                switch ($legalAuditStatus) {
+                                    case 'Accepted by Lawyer':
+                                        $lawyerStatusId = 8;
+                                        break;
+
+                                    case 'Lawyer Review need':
+                                    case 'Rejected By Lawyer':
                                         $lawyerStatusId = 7;
-                                    }
+                                        break;
+
+                                    default:
+                                        if (!empty($unit->lawyer_notes)) {
+                                            $lawyerStatusId = 7;
+                                        }
+                                }
                             }
-                        }
 
-                        if ($lawyerStatusId !== null && $existingHousing?->objectid) {
+                            if ($lawyerStatusId !== null && $existingHousing?->objectid) {
 
-                            $statusDate = !empty($unit->legal_audit_date)
-                                ? $this->parseDateValue($unit->legal_audit_date)
-                                : $now;
+                                $statusDate = !empty($unit->legal_audit_date)
+                                    ? $this->parseDateValue($unit->legal_audit_date)
+                                    : $now;
 
-                            DB::table('housing_statuses')->insert([
-                                'housing_id'  => $existingHousing->objectid,
-                                'status_id'   => $lawyerStatusId,
-                                'user_id'     => $lawyerUserId,
-                                'type'        => 'Legal Auditor',
-                                'notes'       => $unit->lawyer_notes,
-                                'created_at'  => $statusDate,
-                                'updated_at'  => $statusDate,
-                            ]);
+                                DB::table('housing_statuses')->insert([
+                                    'housing_id'  => $existingHousing->objectid,
+                                    'status_id'   => $lawyerStatusId,
+                                    'user_id'     => $lawyerUserId,
+                                    'type'        => 'Legal Auditor',
+                                    'notes'       => $unit->lawyer_notes,
+                                    'created_at'  => $statusDate,
+                                    'updated_at'  => $statusDate,
+                                ]);
 
-                            $housingStatusesInserted++;
+                                $housingStatusesInserted++;
+                            }
+                        } else {
+                            $skippedRows++;
                         }
                     }
                 });
@@ -248,7 +254,7 @@ class HousingUnitImportController extends Controller
                 'edit_assessments_inserted' => $editInserted,
                 'housing_statuses_inserted' => $housingStatusesInserted,
                 'invalid_json_skipped' => $invalidJsonSkipped,
-                'rows_skipped_by_pending_or_assigned_status' => $skippedRows,
+                'statuses_skipped_by_pending_or_assigned_status' => $skippedRows,
             ]);
 
         } catch (\Throwable $e) {
@@ -266,7 +272,9 @@ class HousingUnitImportController extends Controller
 
     private function mapOldUserIdToNewUserId(mixed $oldId): ?int
     {
-        if (empty($oldId)) return null;
+        if (empty($oldId)) {
+            return null;
+        }
 
         $map = [
             236 => 1342,
@@ -283,43 +291,67 @@ class HousingUnitImportController extends Controller
             248 => 1276,
         ];
 
-        return $map[(int)$oldId] ?? null;
+        return $map[(int) $oldId] ?? null;
     }
 
-/*     private function normalizeValue(mixed $value): ?string
-    {
-        if ($value === null) return null;
-        if (is_bool($value)) return $value ? '1' : '0';
-        if (is_array($value) || is_object($value)) return json_encode($value);
-        return trim((string)$value);
-    } */
     private function normalizeValue(mixed $value): ?string
-{
-    if ($value === null) {
-        return null;
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_array($value) || is_object($value)) {
+            $json = json_encode($value, JSON_UNESCAPED_UNICODE);
+            return in_array($json, ['[]', '{}'], true) ? null : $json;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
-    if (is_bool($value)) {
-        return $value ? '1' : '0';
+    private function normalizeFieldName(string $fieldName): string
+    {
+        $map = [
+            'Damaged_Area_m2' => 'damaged_area_m2',
+            'House_Unit_Ownership' => 'house_unit_ownership',
+            'Occupied' => 'occupied',
+            'Sex' => 'sex',
+            'Number_of_people_with_disability' => 'number_of_people_with_disability',
+            'Rubble_removal_is_needed' => 'rubble_removal_is_needed',
+            'Activation_of_UXO_Ha_d_material_clearance' => 'activation_of_uxo_ha_d_material_clearance',
+            'Is_the_Housing_Unit_or_Living_habitable' => 'is_the_housing_unit_or_living_habitable',
+            'MHPSS_Experinced' => 'mhpss_experinced',
+            'MHPSS_support' => 'mhpss_support',
+            'CE1' => 'ce1',
+            'CE2' => 'ce2',
+            'CE3' => 'ce3',
+            'CreationDate' => 'creationdate',
+            'Creator' => 'creator',
+            'EditDate' => 'editdate',
+            'Editor' => 'editor',
+            'Security_Situation_unit' => 'security_situation_unit',
+            'Land_location_details' => 'land_location_details',
+        ];
+
+        if (isset($map[$fieldName])) {
+            return $map[$fieldName];
+        }
+
+        return strtolower($fieldName);
     }
-
-    if (is_array($value) || is_object($value)) {
-        $json = json_encode($value, JSON_UNESCAPED_UNICODE);
-        return in_array($json, ['[]', '{}'], true) ? null : $json;
-    }
-
-    $value = trim((string) $value);
-
-    return $value === '' ? null : $value;
-}
 
     private function parseDateValue(mixed $value): Carbon
     {
         try {
             if (is_numeric($value)) {
-                return strlen((string)$value) >= 13
-                    ? Carbon::createFromTimestampMs((int)$value)
-                    : Carbon::createFromTimestamp((int)$value);
+                return strlen((string) $value) >= 13
+                    ? Carbon::createFromTimestampMs((int) $value)
+                    : Carbon::createFromTimestamp((int) $value);
             }
 
             return Carbon::parse($value);
