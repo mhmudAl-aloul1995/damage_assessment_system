@@ -23,7 +23,7 @@
 
 		#kt_datatable_audits {
 			width: 100% !important;
-			min-width: 1180px;
+			/* min-width: 1180px; */
 			table-layout: auto;
 		}
 
