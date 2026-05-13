@@ -318,7 +318,6 @@
 									<th>{{ __('ui.audit.eng_status_col') }}</th>
 									<th>{{ __('ui.audit.legal_status_col') }}</th>
 									<th>{{ __('ui.audit.final_approval_col') }}</th>
-									<th>{{ __('ui.audit.creation_date_col') }}</th>
 									<th>{{ __('ui.audit.actions') }}</th>
 								</tr>
 							</thead>
@@ -949,10 +948,10 @@
 					{ data: 'eng_status', name: 'eng_status' },
 					{ data: 'law_status', name: 'law_status' },
 					{ data: 'finalApproval' },
-					{
+					/* {
 						data: 'creationdate',
 						render: (data) => `<span class="audit-cell-date">${escapeAuditCell(data)}</span>`
-					},
+					}, */
 					{ data: 'actions' }
 				],
 				language: {
