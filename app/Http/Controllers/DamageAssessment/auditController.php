@@ -2884,6 +2884,18 @@ class auditController extends Controller
                     }
                 });
             }
+
+            $housingStatusCounts = function ($row): array {
+                static $countsByBuilding = [];
+
+                $buildingGlobalId = (string) $row->globalid;
+
+                if (!array_key_exists($buildingGlobalId, $countsByBuilding)) {
+                    $countsByBuilding[$buildingGlobalId] = $this->getHousingStatusCountsForBuilding($buildingGlobalId);
+                }
+
+                return $countsByBuilding[$buildingGlobalId];
+            };
             $query->whereRaw('
     (
         SELECT COUNT(*)
@@ -2898,18 +2910,6 @@ class auditController extends Controller
         WHERE hu2.parentglobalid = buildings.globalid
     ) > 0
 ');
-            $housingStatusCounts = function ($row): array {
-                static $countsByBuilding = [];
-
-                $buildingGlobalId = (string) $row->globalid;
-
-                if (!array_key_exists($buildingGlobalId, $countsByBuilding)) {
-                    $countsByBuilding[$buildingGlobalId] = $this->getHousingStatusCountsForBuilding($buildingGlobalId);
-                }
-
-                return $countsByBuilding[$buildingGlobalId];
-            };
-
             return DataTables::of($query)
 
                 // Building Name
