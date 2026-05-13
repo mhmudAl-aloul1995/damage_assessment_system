@@ -318,7 +318,8 @@
 									<th>{{ __('ui.audit.eng_status_col') }}</th>
 									<th>{{ __('ui.audit.legal_status_col') }}</th>
 									<th>{{ __('ui.audit.final_approval_col') }}</th>
-									<th>{{ __('ui.audit.actions') }}</th>
+<!-- 									<th>{{ __('ui.audit.creation_date_col') }}</th>
+ -->									<th>{{ __('ui.audit.actions') }}</th>
 								</tr>
 							</thead>
 							<tbody class="text-gray-600 fw-semibold">
@@ -904,11 +905,11 @@
 						width: '10%',
 						className: 'text-center'
 					},
-					{
+					/* {
 						targets: 9,
 						width: '8%',
 						className: 'text-center'
-					},
+					}, */
 					{
 						targets: 10,
 						orderable: false,
@@ -917,7 +918,7 @@
 						className: 'text-center'
 					}
 				],
-				order: [[9, 'desc']],
+				//order: [[9, 'desc']],
 				columns: [
 					{
 						data: 'objectid',
