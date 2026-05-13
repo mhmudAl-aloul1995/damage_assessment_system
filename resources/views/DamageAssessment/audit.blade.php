@@ -274,6 +274,12 @@
 						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
 							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
 						</button>
+						<button type="button" id="toggle_danger_rows" class="btn btn-light-danger btn-sm"
+							data-show-only-danger="false">
+
+							إظهار الصفوف الخطرة
+							<i class="ki-duotone ki-information-5"></i>
+						</button>
 						<button type="button" id="toggle_select_column" class="btn btn-light-primary btn-sm"
 							data-select-visible="false">
 							إظهار التحديد <i class="ki-duotone ki-check-square"></i>
@@ -324,7 +330,7 @@
 									<th>{{ __('ui.audit.legal_status_col') }}</th>
 									<th>{{ __('ui.audit.final_approval_col') }}</th>
 									<!-- 									<th>{{ __('ui.audit.creation_date_col') }}</th>
-				 -->
+							 -->
 									<th>{{ __('ui.audit.actions') }}</th>
 								</tr>
 							</thead>
@@ -590,6 +596,8 @@
 	<script>
 		$(document).ready(function () {
 
+
+			let showOnlyDangerRows = false;
 			$('#btn_import_final_approve').on('click', function () {
 				$('#importFinalApproveForm')[0].reset();
 				$('#importFinalApproveModal').modal('show');
@@ -617,59 +625,59 @@
 
 						if (response.blocked_buildings && response.blocked_buildings.length > 0) {
 							let html = `
-								<div class="alert alert-danger mb-5 fw-bold">
-									عدد المباني غير المعتمدة: ${response.blocked_buildings.length}
-								</div>
-							`;
+											<div class="alert alert-danger mb-5 fw-bold">
+												عدد المباني غير المعتمدة: ${response.blocked_buildings.length}
+											</div>
+										`;
 
 							response.blocked_buildings.forEach(function (b) {
 								html += `
-									<div class="mb-7 border border-danger border-dashed p-4 rounded bg-light-danger">
-										<div class="d-flex justify-content-between align-items-start mb-3">
-											<div>
-												<h5 class="text-danger mb-1">Building ID: ${b.building_id}</h5>
-												<div class="text-dark fw-bold">اسم المبنى: ${b.building_name ?? '-'}</div>
-												<div class="text-muted fs-7">GlobalID: ${b.building_globalid ?? '-'}</div>
-											</div>
-											<span class="badge badge-light-danger">${b.engineer_status ?? '-'}</span>
-										</div>
-								`;
+												<div class="mb-7 border border-danger border-dashed p-4 rounded bg-light-danger">
+													<div class="d-flex justify-content-between align-items-start mb-3">
+														<div>
+															<h5 class="text-danger mb-1">Building ID: ${b.building_id}</h5>
+															<div class="text-dark fw-bold">اسم المبنى: ${b.building_name ?? '-'}</div>
+															<div class="text-muted fs-7">GlobalID: ${b.building_globalid ?? '-'}</div>
+														</div>
+														<span class="badge badge-light-danger">${b.engineer_status ?? '-'}</span>
+													</div>
+											`;
 
 								if (b.failed_units && b.failed_units.length > 0) {
 									html += `
-										<div class="table-responsive">
-											<table class="table table-row-bordered table-striped align-middle">
-												<thead>
-													<tr>
-														<th>ObjectID</th>
-														<th>GlobalID</th>
-														<th>اسم المالك</th>
-														<th>Status</th>
-														<th>Reason</th>
-													</tr>
-												</thead>
-												<tbody>
-									`;
+													<div class="table-responsive">
+														<table class="table table-row-bordered table-striped align-middle">
+															<thead>
+																<tr>
+																	<th>ObjectID</th>
+																	<th>GlobalID</th>
+																	<th>اسم المالك</th>
+																	<th>Status</th>
+																	<th>Reason</th>
+																</tr>
+															</thead>
+															<tbody>
+												`;
 
 									b.failed_units.forEach(function (u) {
 										html += `
-											<tr>
-												<td>${u.objectid ?? '-'}</td>
-												<td>${u.globalid ?? '-'}</td>
-												<td>${u.owner_name ?? '-'}</td>
-												<td><span class="badge badge-light-danger">${u.engineer_status ?? '-'}</span></td>
-												<td class="text-danger fw-bold">${u.reason ?? '-'}</td>
-											</tr>
-										`;
+														<tr>
+															<td>${u.objectid ?? '-'}</td>
+															<td>${u.globalid ?? '-'}</td>
+															<td>${u.owner_name ?? '-'}</td>
+															<td><span class="badge badge-light-danger">${u.engineer_status ?? '-'}</span></td>
+															<td class="text-danger fw-bold">${u.reason ?? '-'}</td>
+														</tr>
+													`;
 									});
 
 									html += `</tbody></table></div>`;
 								} else {
 									html += `
-										<div class="alert alert-warning fw-bold mb-0">
-											${b.reason ?? 'لا يوجد سبب واضح'}
-										</div>
-									`;
+													<div class="alert alert-warning fw-bold mb-0">
+														${b.reason ?? 'لا يوجد سبب واضح'}
+													</div>
+												`;
 								}
 
 								html += `</div>`;
@@ -920,10 +928,10 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																																																		<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
-																																																			<input class="form-check-input" type="checkbox"
-																																																				data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
-																																																		</div>`
+																																																					<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																																																						<input class="form-check-input" type="checkbox"
+																																																							data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
+																																																					</div>`
 					},
 					{
 						data: 'building_name',
@@ -976,6 +984,62 @@
 
 			});
 
+			$('#toggle_danger_rows').on('click', function () {
+
+				const button = $(this);
+
+				showOnlyDangerRows = !showOnlyDangerRows;
+
+				$('#kt_datatable_audits tbody tr').each(function () {
+
+					const isDanger = $(this).hasClass('table-danger');
+
+					if (showOnlyDangerRows) {
+
+						if (isDanger) {
+							$(this).show();
+						} else {
+							$(this).hide();
+						}
+
+					} else {
+
+						$(this).show();
+
+					}
+				});
+
+				button.attr(
+					'data-show-only-danger',
+					showOnlyDangerRows ? 'true' : 'false'
+				);
+
+				button
+					.toggleClass('btn-light-danger btn-danger');
+
+				button.html(
+					showOnlyDangerRows
+						? 'إظهار الكل <i class="ki-duotone ki-eye"></i>'
+						: 'إظهار الصفوف الخطرة <i class="ki-duotone ki-information-5"></i>'
+				);
+			});
+			table.on('draw', function () {
+
+				if (!showOnlyDangerRows) {
+					return;
+				}
+
+				$('#kt_datatable_audits tbody tr').each(function () {
+
+					const isDanger = $(this).hasClass('table-danger');
+
+					if (isDanger) {
+						$(this).show();
+					} else {
+						$(this).hide();
+					}
+				});
+			});
 			$('#toggle_select_column').on('click', function () {
 				const button = $(this);
 				const selectColumn = table.column(0);
@@ -1176,10 +1240,10 @@
 
 				$('#notesHistoryModalTitle').text(@json(__('ui.audit.status_history')) + ' - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
-																																			<tr>
-																																				<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
-																																			</tr>
-																																		`);
+																																						<tr>
+																																							<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
+																																						</tr>
+																																					`);
 
 				$('#notesHistoryModal').modal('show');
 
@@ -1193,40 +1257,40 @@
 						if (response.status && response.history.length > 0) {
 							response.history.forEach(function (item) {
 								rows += `
-																																							<tr>
-																																								<td>${item.status_name}</td>
-																																								<td>${item.user_name}</td>
-																																								<td>${item.role_name}</td>
-																																								<td>${item.notes}</td>
-																																								<td>${item.created_at}</td>
-																																								<td>
-																																									${item.can_delete ? `
-																																										<button type="button"
-																																											class="btn btn-sm btn-light-danger btn-delete-history"
-																																											data-id="${item.id}">
-																																											${@json(__('ui.audit.delete_record'))}
-																																										</button>
-																																									` : '-'}
-																																								</td>
-																																							</tr>
-																																						`;
+																																										<tr>
+																																											<td>${item.status_name}</td>
+																																											<td>${item.user_name}</td>
+																																											<td>${item.role_name}</td>
+																																											<td>${item.notes}</td>
+																																											<td>${item.created_at}</td>
+																																											<td>
+																																												${item.can_delete ? `
+																																													<button type="button"
+																																														class="btn btn-sm btn-light-danger btn-delete-history"
+																																														data-id="${item.id}">
+																																														${@json(__('ui.audit.delete_record'))}
+																																													</button>
+																																												` : '-'}
+																																											</td>
+																																										</tr>
+																																									`;
 							});
 						} else {
 							rows = `
-																																						<tr>
-																																							<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																																						</tr>
-																																					`;
+																																									<tr>
+																																										<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																																									</tr>
+																																								`;
 						}
 
 						$('#buildingHistoryTableBody').html(rows);
 					},
 					error: function () {
 						$('#buildingHistoryTableBody').html(`
-																																					<tr>
-																																						<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
-																																					</tr>
-																																				`);
+																																								<tr>
+																																									<td colspan="6" class="text-center text-danger">${@json(__('ui.audit.failed_load_history'))}</td>
+																																								</tr>
+																																							`);
 					}
 				});
 			});
@@ -1254,10 +1318,10 @@
 
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
-																																					<tr>
-																																						<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
-																																					</tr>
-																																				`);
+																																								<tr>
+																																									<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																																								</tr>
+																																							`);
 							}
 						} else {
 							toastr.error(response.message || @json(__('ui.audit.delete_failed')));
@@ -1326,52 +1390,52 @@
 							if (response.blocked_buildings && response.blocked_buildings.length > 0) {
 
 								let html = `
-										<div class="alert alert-danger mb-5">
-											عدد المباني غير المعتمدة: ${response.blocked_buildings.length}
-										</div>
-									`;
+													<div class="alert alert-danger mb-5">
+														عدد المباني غير المعتمدة: ${response.blocked_buildings.length}
+													</div>
+												`;
 
 								response.blocked_buildings.forEach(function (b) {
 
 									html += `
-											<div class="mb-7 border border-danger border-dashed p-4 rounded bg-light-danger">
-												<div class="d-flex justify-content-between align-items-start mb-3">
-													<div>
-														<h5 class="text-danger mb-1">
-															Building ID: ${b.building_id}
-														</h5>
+														<div class="mb-7 border border-danger border-dashed p-4 rounded bg-light-danger">
+															<div class="d-flex justify-content-between align-items-start mb-3">
+																<div>
+																	<h5 class="text-danger mb-1">
+																		Building ID: ${b.building_id}
+																	</h5>
 
-														<div class="text-dark fw-bold">
-															اسم المبنى: ${b.building_name ?? '-'}
-														</div>
+																	<div class="text-dark fw-bold">
+																		اسم المبنى: ${b.building_name ?? '-'}
+																	</div>
 
-														<div class="text-muted fs-7">
-															GlobalID: ${b.building_globalid ?? '-'}
-														</div>
-													</div>
+																	<div class="text-muted fs-7">
+																		GlobalID: ${b.building_globalid ?? '-'}
+																	</div>
+																</div>
 
-													<span class="badge badge-light-danger">
-														${b.engineer_status ?? '-'}
-													</span>
-												</div>
-										`;
+																<span class="badge badge-light-danger">
+																	${b.engineer_status ?? '-'}
+																</span>
+															</div>
+													`;
 
 									if (b.failed_units && b.failed_units.length > 0) {
 
 										html += `
-												<div class="table-responsive">
-													<table class="table table-row-bordered table-striped align-middle">
-														<thead>
-															<tr class="fw-bold text-gray-800">
-																<th>ObjectID</th>
-																<th>GlobalID</th>
-																<th>اسم المالك</th>
-																<th>Status</th>
-																<th>Reason</th>
-															</tr>
-														</thead>
-														<tbody>
-											`;
+															<div class="table-responsive">
+																<table class="table table-row-bordered table-striped align-middle">
+																	<thead>
+																		<tr class="fw-bold text-gray-800">
+																			<th>ObjectID</th>
+																			<th>GlobalID</th>
+																			<th>اسم المالك</th>
+																			<th>Status</th>
+																			<th>Reason</th>
+																		</tr>
+																	</thead>
+																	<tbody>
+														`;
 
 										b.failed_units.forEach(function (u) {
 
@@ -1386,32 +1450,32 @@
 											}
 
 											html += `
-													<tr>
-														<td>${u.objectid ?? '-'}</td>
-														<td>${u.globalid ?? '-'}</td>
-														<td class="fw-bold text-dark">${u.owner_name ?? '-'}</td>
-														<td>
-															<span class="badge ${statusColor}">
-																${u.engineer_status ?? '-'}
-															</span>
-														</td>
-														<td class="text-danger fw-bold">${u.reason ?? '-'}</td>
-													</tr>
-												`;
+																<tr>
+																	<td>${u.objectid ?? '-'}</td>
+																	<td>${u.globalid ?? '-'}</td>
+																	<td class="fw-bold text-dark">${u.owner_name ?? '-'}</td>
+																	<td>
+																		<span class="badge ${statusColor}">
+																			${u.engineer_status ?? '-'}
+																		</span>
+																	</td>
+																	<td class="text-danger fw-bold">${u.reason ?? '-'}</td>
+																</tr>
+															`;
 										});
 
 										html += `
-														</tbody>
-													</table>
-												</div>
-											`;
+																	</tbody>
+																</table>
+															</div>
+														`;
 
 									} else {
 										html += `
-												<div class="alert alert-warning mb-0 fw-bold">
-													${b.reason ?? 'لا يوجد سبب واضح'}
-												</div>
-											`;
+															<div class="alert alert-warning mb-0 fw-bold">
+																${b.reason ?? 'لا يوجد سبب واضح'}
+															</div>
+														`;
 									}
 
 									html += `</div>`;
@@ -1508,20 +1572,20 @@
 						success: function (response) {
 							if (response.blocked_buildings && response.blocked_buildings.length > 0) {
 								let html = `
-													<div class="alert alert-danger mb-5">
-														عدد المباني غير المعتمدة UNDP: ${response.blocked_buildings.length}
-													</div>
-												`;
+																<div class="alert alert-danger mb-5">
+																	عدد المباني غير المعتمدة UNDP: ${response.blocked_buildings.length}
+																</div>
+															`;
 
 								response.blocked_buildings.forEach(function (b) {
 									html += `
-														<div class="mb-7 border border-danger border-dashed p-4 rounded bg-light-danger">
-															<h5 class="text-danger mb-1">Building ID: ${b.building_id}</h5>
-															<div class="text-dark fw-bold">اسم المبنى: ${b.building_name ?? '-'}</div>
-															<div class="text-muted fs-7 mb-3">GlobalID: ${b.building_globalid ?? '-'}</div>
-															<div class="alert alert-warning mb-0 fw-bold">${b.reason ?? '-'}</div>
-														</div>
-													`;
+																	<div class="mb-7 border border-danger border-dashed p-4 rounded bg-light-danger">
+																		<h5 class="text-danger mb-1">Building ID: ${b.building_id}</h5>
+																		<div class="text-dark fw-bold">اسم المبنى: ${b.building_name ?? '-'}</div>
+																		<div class="text-muted fs-7 mb-3">GlobalID: ${b.building_globalid ?? '-'}</div>
+																		<div class="alert alert-warning mb-0 fw-bold">${b.reason ?? '-'}</div>
+																	</div>
+																`;
 								});
 
 								$('#failedUnitsContainer').html(html);
