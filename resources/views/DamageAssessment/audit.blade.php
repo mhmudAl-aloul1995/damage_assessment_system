@@ -397,7 +397,6 @@
 						<table class="table table-row-bordered table-striped gy-5 gs-7">
 							<thead>
 								<tr class="fw-bold fs-4 text-gray-800">
-									<th></th>
 									<th class="w-10px pe-2"></th>
 									<th>{{ __('ui.audit.status') }}</th>
 									<th>{{ __('ui.audit.user') }}</th>
