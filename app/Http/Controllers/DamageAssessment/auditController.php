@@ -4578,7 +4578,6 @@ COALESCE(
             ->where('type', 'final')
             ->latest()
             ->first()?->status?->name;
-            dd($buildingCurrentStatus);
 
         return View::make('DamageAssessment.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit'));
     }
