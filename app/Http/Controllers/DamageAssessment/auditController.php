@@ -2813,7 +2813,7 @@ class auditController extends Controller
                         ->from('building_statuses as bs')
                         ->join('assessment_statuses as ast', 'ast.id', '=', 'bs.status_id')
                         ->whereColumn('bs.building_id', 'buildings.objectid')
-                        ->whereRaw("LOWER(TRIM(ast.name)) = 'accepted'");
+                        ->whereRaw("LOWER(TRIM(ast.name)) = 'accepted_by_engineer'");
 
                 })
 
