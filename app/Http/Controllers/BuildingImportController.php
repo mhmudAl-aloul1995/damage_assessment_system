@@ -320,7 +320,7 @@ class BuildingImportController extends Controller
     {
         try {
             if (is_numeric($value)) {
-                return strlen((string)$value >= 13)
+                return strlen((string) $value) >= 13
                     ? Carbon::createFromTimestampMs((int)$value)
                     : Carbon::createFromTimestamp((int)$value);
             }
