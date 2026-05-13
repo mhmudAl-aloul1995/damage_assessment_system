@@ -908,7 +908,7 @@
 					},
 					{
 						targets: [6, 7, 8],
-						width: '10%',
+						width: '5%',
 						className: 'text-center'
 					},
 					/* {
