@@ -90,17 +90,16 @@
 <style>
 	@font-face {
 		font-family: 'Droid Arabic Kufi';
-		src: url('{{ asset("DroidArabicKufi.eot") }}');
+		src: url('/damage_assessment_system/assets/DroidArabicKufi.eot');
 		src:
-			url('{{ asset("DroidArabicKufi.eot?#iefix") }}') format('embedded-opentype'),
-			url('{{ asset("DroidArabicKufi.woff") }}') format('woff'),
-			url('{{ asset("DroidArabicKufi.ttf") }}') format('truetype');
-
+			url('/damage_assessment_system/assets/DroidArabicKufi.eot?#iefix') format('embedded-opentype'),
+			url('/damage_assessment_system/assets/DroidArabicKufi.woff') format('woff'),
+			url('/damage_assessment_system/assets/DroidArabicKufi.ttf') format('truetype');
 		font-weight: normal;
 		font-style: normal;
 	}
 
-	
+
 
 	[type="tel"],
 	[type="url"],
