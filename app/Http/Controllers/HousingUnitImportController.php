@@ -286,13 +286,32 @@ class HousingUnitImportController extends Controller
         return $map[(int)$oldId] ?? null;
     }
 
-    private function normalizeValue(mixed $value): ?string
+/*     private function normalizeValue(mixed $value): ?string
     {
         if ($value === null) return null;
         if (is_bool($value)) return $value ? '1' : '0';
         if (is_array($value) || is_object($value)) return json_encode($value);
         return trim((string)$value);
+    } */
+    private function normalizeValue(mixed $value): ?string
+{
+    if ($value === null) {
+        return null;
     }
+
+    if (is_bool($value)) {
+        return $value ? '1' : '0';
+    }
+
+    if (is_array($value) || is_object($value)) {
+        $json = json_encode($value, JSON_UNESCAPED_UNICODE);
+        return in_array($json, ['[]', '{}'], true) ? null : $json;
+    }
+
+    $value = trim((string) $value);
+
+    return $value === '' ? null : $value;
+}
 
     private function parseDateValue(mixed $value): Carbon
     {
