@@ -88,7 +88,7 @@
 <!--begin::Body-->
 
 <style>
-/* 	@font-face {
+	@font-face {
 		font-family: 'Droid Arabic Kufi';
 		src: url('{{ asset("DroidArabicKufi.eot") }}');
 		src:
@@ -98,21 +98,9 @@
 
 		font-weight: normal;
 		font-style: normal;
-	} */
+	}
 
-	@font-face {
-    font-family: 'Droid Arabic Kufi';
-
-    src:
-        url('/damage_assessment_system/DroidArabicKufi.eot');
-    src:
-        url('/damage_assessment_system/DroidArabicKufi.eot?#iefix') format('embedded-opentype'),
-        url('/damage_assessment_system/DroidArabicKufi.woff') format('woff'),
-        url('/damage_assessment_system/DroidArabicKufi.ttf') format('truetype');
-
-    font-weight: normal;
-    font-style: normal;
-}
+	
 
 	[type="tel"],
 	[type="url"],
