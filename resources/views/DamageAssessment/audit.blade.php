@@ -967,7 +967,7 @@
 				createdRow: (row, data, index) => {
 					$(row).css('cursor', 'pointer');
 
-					$(row).on('dbclick', function (e) {
+					$(row).on('dblclick', function (e) {
 						if ($(e.target).closest('input, button, a').length) {
 							return;
 						}
