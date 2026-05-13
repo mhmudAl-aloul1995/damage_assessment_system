@@ -148,7 +148,7 @@ class HousingUnitImportController extends Controller
                         | 3) housing_statuses - Engineer
                         |--------------------------------------------------------------------------
                         */
-                        if (!in_array($engineeringAuditStatus, ['Assigned To Enginner', 'Pending'], true)) {
+                        if (!in_array($engineeringAuditStatus, ['Pending'], true)) {
 
                             $engineerStatusId = null;
 
