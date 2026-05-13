@@ -2884,10 +2884,18 @@ class auditController extends Controller
                     }
                 });
             }
-            $query->havingRaw('
+            $query->whereRaw('
     (
-        
-        housing_units_count-housing_units_with_status_count
+        SELECT COUNT(*)
+        FROM housing_units hu
+        WHERE hu.parentglobalid = buildings.globalid
+    )
+    -
+    (
+        SELECT COUNT(DISTINCT hs.housing_id)
+        FROM housing_statuses hs
+        INNER JOIN housing_units hu2 ON hu2.id = hs.housing_id
+        WHERE hu2.parentglobalid = buildings.globalid
     ) > 0
 ');
             $housingStatusCounts = function ($row): array {
@@ -4562,7 +4570,7 @@ COALESCE(
 
     public function showAssessmentAudit(Request $request)
     {
-        
+
 
         $buildingGlobalid = $request->buildingGlobalid;
         $housingGlobalid = $request->housingGlobalid;
@@ -4575,7 +4583,7 @@ COALESCE(
 
         $buildingCurrentStatus = BuildingStatus::with('status')
             ->where('building_id', $buildingId)
-           // ->where('user_id', auth()->id())
+            // ->where('user_id', auth()->id())
             ->latest()
             ->first()?->status?->name;
 
