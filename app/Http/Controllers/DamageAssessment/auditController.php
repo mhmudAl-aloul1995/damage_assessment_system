@@ -4833,33 +4833,75 @@ COALESCE(
         'history' => $history,
     ]);
 }
-    public function housingHistory(Request $request)
-    {
-        $housing = HousingUnit::where('globalid', $request->globalid)->first();
+public function housingHistory(Request $request)
+{
+    $housing = HousingUnit::where('globalid', $request->globalid)->first();
 
-        if (! $housing) {
-            return [];
-        }
-
-        return HousingStatusHistory::with(['user.roles', 'assessment_status'])
-            ->where('housing_id', $housing->objectid)
-            ->latest()
-            ->get()
-            ->map(function ($item) {
-                $statusName = $item->assessment_status->name ?? '-';
-                $statusLabel = $item->assessment_status->label_en ?? $statusName;
-                $roleName = $item->user?->roles?->first()?->name ?? '-';
-
-                return [
-                    'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
-                    'user_name' => $item->user->name ?? '-',
-                    'role_name' => $roleName,
-                    'notes' => $item->notes ?? '-',
-                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                ];
-            });
+    if (! $housing) {
+        return [];
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Housing Statuses
+    |--------------------------------------------------------------------------
+    */
+    $statuses = HousingStatus::with(['user.roles', 'assessment_status'])
+        ->where('housing_id', $housing->objectid)
+        ->get()
+        ->map(function ($item) {
+
+            $statusName = $item->assessment_status->name ?? '-';
+            $statusLabel = $item->assessment_status->label_en ?? $statusName;
+            $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+            return [
+                'id' => 'status_'.$item->id,
+                'source' => 'housing_status',
+                'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
+                'user_name' => $item->user->name ?? '-',
+                'role_name' => $roleName,
+                'notes' => $item->notes ?? '-',
+                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                'created_at_sort' => $item->created_at,
+            ];
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Housing Status Histories
+    |--------------------------------------------------------------------------
+    */
+    $histories = HousingStatusHistory::with(['user.roles', 'assessment_status'])
+        ->where('housing_id', $housing->objectid)
+        ->get()
+        ->map(function ($item) {
+
+            $statusName = $item->assessment_status->name ?? '-';
+            $statusLabel = $item->assessment_status->label_en ?? $statusName;
+            $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+            return [
+                'id' => 'history_'.$item->id,
+                'source' => 'housing_history',
+                'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
+                'user_name' => $item->user->name ?? '-',
+                'role_name' => $roleName,
+                'notes' => $item->notes ?? '-',
+                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                'created_at_sort' => $item->created_at,
+            ];
+        });
+
+    return $statuses
+        ->merge($histories)
+        ->sortByDesc('created_at_sort')
+        ->values()
+        ->map(function ($item) {
+            unset($item['created_at_sort']);
+            return $item;
+        });
+}
     private function getStatusBadge($statusName, $role = null)
     {
         return match ($statusName) {
