@@ -4569,7 +4569,7 @@ COALESCE(
 
         $buildingCurrentStatus = BuildingStatus::with('status')
             ->where('building_id', $buildingId)
-            ->where('user_id', auth()->id())
+           // ->where('user_id', auth()->id())
             ->latest()
             ->first()?->status?->name;
 
