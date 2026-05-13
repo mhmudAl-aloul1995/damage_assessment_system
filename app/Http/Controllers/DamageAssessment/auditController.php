@@ -2831,7 +2831,7 @@ class auditController extends Controller
 
                         });
 
-                })
+                });
             $engineerIds = $this->filterValues($request, 'engineer_id');
             if ($engineerIds !== []) {
                 $query->whereHas('engineerAssignment', function ($q) use ($engineerIds) {
