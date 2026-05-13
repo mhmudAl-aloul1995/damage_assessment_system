@@ -915,7 +915,7 @@
 						orderable: false,
 						searchable: false,
 						width: '4%',
-						className: 'text-center'
+						className: 'text-right'
 					}
 				],
 				//order: [[9, 'desc']],
