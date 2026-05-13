@@ -22,7 +22,7 @@ class AssessmentStatus extends Model
 
     public function getBadgeClassAttribute(): string
     {
-        return 'badge badge-light-' . $this->color;
+        return 'badge badge-light-'.$this->color;
     }
 
     public function getLabelAttribute(): string
@@ -63,14 +63,14 @@ class AssessmentStatus extends Model
             return 'badge badge-secondary';
         }
 
-        return 'badge badge-light-' . self::colorForName($name);
+        return 'badge badge-light-'.self::colorForName($name);
     }
 
     public static function badgeHtmlFor(?string $name, ?string $label = null): string
     {
-        return '<span class="' . e(self::badgeClassForName($name)) . ' fw-semibold px-1 py-1 fs-9">'
-            . e($label ?: '-')
-            . '</span>';
+        return '<span class="'.e(self::badgeClassForName($name)).' fw-bold px-4 py-3">'
+            .e($label ?: '-')
+            .'</span>';
     }
 
     /**
