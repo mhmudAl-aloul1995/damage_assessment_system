@@ -883,12 +883,12 @@
 						visible: false,
 						orderable: false,
 						searchable: false,
-						width: '3%',
+						width: '1%',
 						className: 'text-center'
 					},
 					{
 						targets: 1,
-						width: '10%',
+						width: '7%',
 						className: 'text-start'
 					},
 					{
@@ -898,12 +898,12 @@
 					},
 					{
 						targets: 3,
-						width: '10%',
+						width: '7%',
 						className: 'audit-cell-ltr'
 					},
 					{
 						targets: [4, 5],
-						width: '9%',
+						width: '7%',
 						className: 'text-center'
 					},
 					{
