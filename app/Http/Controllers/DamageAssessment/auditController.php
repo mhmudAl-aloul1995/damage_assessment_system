@@ -2805,7 +2805,7 @@ class auditController extends Controller
                 'engineerStatus.status',
                 'lawyerStatus.status',
             ])
-                // ->whereIn('globalid', $globalIds)
+                 ->whereIn('globalid', $globalIds)
                 ->where('field_status', 'COMPLETED');
 
             $engineerIds = $this->filterValues($request, 'engineer_id');
