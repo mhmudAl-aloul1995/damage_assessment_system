@@ -967,14 +967,14 @@
 				createdRow: (row, data, index) => {
 					$(row).css('cursor', 'pointer');
 
-					/* $(row).on('click', function (e) {
+					$(row).on('dbclick', function (e) {
 						if ($(e.target).closest('input, button, a').length) {
 							return;
 						}
 						e.preventDefault();
 						var url_eng = "{{ url('showAssessmentAudit/') }}/" + data.globalid;
 						window.open(url_eng, '_blank');
-					}); */
+					});
 				},
 
 			});
