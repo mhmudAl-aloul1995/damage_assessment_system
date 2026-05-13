@@ -2970,7 +2970,7 @@ class auditController extends Controller
         إجراءات
     </button>
 
-    <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4"
+    <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold fs-9 w-90px py-4"
          data-kt-menu="true">
 
         <div class="menu-item px-3">
