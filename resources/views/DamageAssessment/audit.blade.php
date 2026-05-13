@@ -907,23 +907,11 @@
 						className: 'text-center'
 					},
 					{
-						targets: [6, 7, 8],
-						width: '5%',
+						targets: [6, 7, 8, 9],
+						width: '1%',
 						className: 'text-center'
 					},
-					/* {
-						targets: 9,
-						width: '8%',
-						className: 'text-center'
-					}, */
-					{
-						targets: 9,
-						orderable: false,
-						searchable: false,
-						width: '4%',
-						className: 'text-end'
-					}
-				],
+									],
 				//order: [[9, 'desc']],
 				columns: [
 					{
