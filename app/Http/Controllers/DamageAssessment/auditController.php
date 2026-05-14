@@ -2805,7 +2805,7 @@ class auditController extends Controller
                 'engineerStatus.status',
                 'lawyerStatus.status',
             ])
-                 ->whereIn('globalid', $globalIds)
+                ->whereIn('globalid', $globalIds)
                 ->where('field_status', 'COMPLETED');
 
             $engineerIds = $this->filterValues($request, 'engineer_id');
@@ -3426,7 +3426,10 @@ class auditController extends Controller
         }
 
         $counts = HousingUnit::query()
-            ->leftJoin('housing_statuses', 'housing_statuses.housing_id', '=', 'housing_units.objectid')
+            ->leftJoin('housing_statuses', function ($join) {
+                $join->on('housing_statuses.housing_id', '=', 'housing_units.objectid')
+                    ->where('housing_statuses.status_id', 4);
+            })
             ->where('housing_units.parentglobalid', $buildingGlobalId)
             ->selectRaw('COUNT(DISTINCT housing_units.objectid) as housing_units_count')
             ->selectRaw('COUNT(DISTINCT housing_statuses.housing_id) as housing_units_with_status_count')
@@ -4556,7 +4559,7 @@ COALESCE(
 
     public function showAssessmentAudit(Request $request)
     {
-        
+
 
         $buildingGlobalid = $request->buildingGlobalid;
         $housingGlobalid = $request->housingGlobalid;
@@ -4569,7 +4572,7 @@ COALESCE(
 
         $buildingCurrentStatus = BuildingStatus::with('status')
             ->where('building_id', $buildingId)
-           // ->where('user_id', auth()->id())
+            // ->where('user_id', auth()->id())
             ->latest()
             ->first()?->status?->name;
 
