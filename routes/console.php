@@ -21,29 +21,26 @@ Schedule::command('queue:work database --queue=exports --stop-when-empty --tries
 |--------------------------------------------------------------------------
 */
 
-$syncTimes = [
-    '02:00',
-    '07:30',
-    '08:30',
-    '09:30',
-    '10:00',
-    '11:00',
-    '12:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00',
-];
 
-foreach ($syncTimes as $time) {
-    Schedule::command('sync:arcgis-layers')
-        ->dailyAt($time)
-        ->withoutOverlapping()
-        ->emailOutputOnFailure('mhmudaloul@gmail.com')
-        ->appendOutputTo(storage_path('logs/schedule.log'))
-        ->runInBackground();
-}
+
+Schedule::command('sync:arcgis-layers')
+    ->dailyAt('17:00')
+    ->withoutOverlapping()
+    ->emailOutputOnFailure('mhmudaloul@gmail.com')
+    ->appendOutputTo(storage_path('logs/schedule.log'))
+    ->runInBackground();
+Schedule::command('sync:arcgis-layers')
+    ->dailyAt('17:00')
+    ->withoutOverlapping()
+    ->emailOutputOnFailure('mhmudaloul@gmail.com')
+    ->appendOutputTo(storage_path('logs/schedule.log'))
+    ->runInBackground();
+$schedule->command('sync:arcgis-layers')
+    ->cron('0 1-23 * * *')
+    ->withoutOverlapping()
+    ->emailOutputOnFailure('mhmudaloul@gmail.com')
+    ->appendOutputTo(storage_path('logs/schedule.log'))
+    ->runInBackground();
 
 /*
 |--------------------------------------------------------------------------
