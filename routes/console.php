@@ -52,6 +52,6 @@ foreach ($syncTimes as $time) {
 */
 
 Schedule::command('app:backup-database')
-    ->dailyAt(config('database_backup.schedule_time', '00:00'))
+    ->dailyAt('00:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/schedule.log'));
