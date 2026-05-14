@@ -457,18 +457,17 @@
 	<div class="damage-dashboard-toolbar">
 		<div class="damage-dashboard-toolbar-main">
 			<div class="damage-dashboard-toolbar-actions">
-				
+
 
 				<div class="d-flex align-items-center gap-2">
 					<div class="toolbar-neighborhood-wrap">
 						<select id="dashboard_toolbar_neighborhood"
-							class="form-select form-select-sm toolbar-neighborhood-select"
-							data-control="select2"
-							data-placeholder="{{ __('ui.damage_dashboard.select_neighborhood') }}"
-							data-allow-clear="true">
+							class="form-select form-select-sm toolbar-neighborhood-select" data-control="select2"
+							data-placeholder="{{ __('ui.damage_dashboard.select_neighborhood') }}" data-allow-clear="true">
 							<option value="">{{ __('ui.damage_dashboard.all_neighborhoods') }}</option>
 							@foreach ($neighborhoods as $neighborhood)
-								<option value="{{ $neighborhood }}" @selected($dashboardFilters['selectedNeighborhood'] === $neighborhood)>
+								<option value="{{ $neighborhood }}"
+									@selected($dashboardFilters['selectedNeighborhood'] === $neighborhood)>
 									{{ $neighborhood }}
 								</option>
 							@endforeach
@@ -481,8 +480,7 @@
 
 				<div class="d-flex align-items-center gap-2">
 					<div class="toolbar-date-range-wrap">
-						<input type="text"
-							id="dashboard_toolbar_date_range"
+						<input type="text" id="dashboard_toolbar_date_range"
 							class="form-control form-control-sm toolbar-date-range-input"
 							placeholder="{{ __('ui.damage_dashboard.date_range') }}"
 							value="{{ $dashboardFilters['startDate'] && $dashboardFilters['endDate'] ? $dashboardFilters['startDate'] . ' - ' . $dashboardFilters['endDate'] : '' }}"
@@ -510,7 +508,7 @@
 				</div>
 			</div>
 
-		
+
 		</div>
 	</div>
 
@@ -538,8 +536,7 @@
 							<!-- Added text-wrap here -->
 							<span
 								class="fw-semibold fs-7 text-wrap">{{ __('ui.damage_dashboard.assessed_buildings') }}</span>
-							<span
-								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $buildingStats['completed'] }}</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $buildingStats['completed'] }}</span>
 						</div>
 					</div>
 
@@ -902,8 +899,7 @@
 						<!--begin::Balance-->
 						<div class="d-flex text-center flex-column text-white pt-8">
 							<span class="fw-semibold fs-7">{{ __('ui.damage_dashboard.total_housing_units') }}</span>
-							<span
-								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['total_units']}}</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['total_units']}}</span>
 						</div>
 						<!--end::Balance-->
 					</div>
@@ -1835,7 +1831,7 @@
 				<!--begin::Card title-->
 				<div class="cart-title">
 
-					
+
 				</div>
 				<div class="card-title">
 					<!--begin::Search-->
@@ -1853,7 +1849,7 @@
 					<!--begin::Col-->
 
 					<!--end::Col-->
-					
+
 					<div class="col-md-12 ps-lg-12">
 						<link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css">
 						<!--begin::Map-->
@@ -1886,44 +1882,77 @@
 								<div class="card-body p-3 arcgis-map-filter-body">
 									<div class="mb-2">
 										<label class="form-label fw-semibold">المهندس الميداني</label>
-										<select id="arcgis_filter_assignedto" class="form-select form-select-sm arcgis-map-filter-select"
+										<select id="arcgis_filter_assignedto"
+											class="form-select form-select-sm arcgis-map-filter-select"
 											data-field="assignedto" data-placeholder="المهندس الميداني"></select>
+									</div>
+									<div class="mb-5">
+										<label class="form-label fw-semibold">
+											حالة إلإستبيان
+										</label>
+
+										<select id="mapFieldStatusFilter" class="form-select form-select-sm"
+											data-control="select2" data-hide-search="true"
+											data-placeholder="حالة إلإستبيان">
+
+											<option value="">
+												الكل
+											</option>
+
+											<option value="COMPLETED">
+											مكتمل
+											</option>
+
+											<option value="NOT_COMPLETED">
+												فير مكتمل
+											</option>
+										</select>
 									</div>
 									<div class="mb-2">
 										<label class="form-label fw-semibold">حالة الضرر</label>
-										<select id="arcgis_filter_building_damage_status" class="form-select form-select-sm arcgis-map-filter-select"
+										<select id="arcgis_filter_building_damage_status"
+											class="form-select form-select-sm arcgis-map-filter-select"
 											data-field="building_damage_status" data-placeholder="حالة الضرر"></select>
 									</div>
 									<div class="mb-2">
 										<label class="form-label fw-semibold">البلدية</label>
-										<select id="arcgis_filter_municipalitie" class="form-select form-select-sm arcgis-map-filter-select"
+										<select id="arcgis_filter_municipalitie"
+											class="form-select form-select-sm arcgis-map-filter-select"
 											data-field="municipalitie" data-placeholder="البلدية"></select>
 									</div>
 									<div class="mb-2">
 										<label class="form-label fw-semibold">الحي</label>
-										<select id="arcgis_filter_neighborhood" class="form-select form-select-sm arcgis-map-filter-select"
+										<select id="arcgis_filter_neighborhood"
+											class="form-select form-select-sm arcgis-map-filter-select"
 											data-field="neighborhood" data-placeholder="الحي"></select>
 									</div>
 									<div class="mb-2">
-										<label class="form-label fw-semibold" for="arcgis_filter_search">بحث ObjectID / GlobalID</label>
+										<label class="form-label fw-semibold" for="arcgis_filter_search">بحث ObjectID /
+											GlobalID</label>
 										<input type="text" id="arcgis_filter_search" class="form-control form-control-sm"
 											placeholder="بحث ObjectID / GlobalID">
 									</div>
 									<div class="row g-2 mb-3">
 										<div class="col-6">
-											<label class="form-label fw-semibold" for="arcgis_filter_from_date">من تاريخ</label>
-											<input type="date" id="arcgis_filter_from_date" class="form-control form-control-sm">
+											<label class="form-label fw-semibold" for="arcgis_filter_from_date">من
+												تاريخ</label>
+											<input type="date" id="arcgis_filter_from_date"
+												class="form-control form-control-sm">
 										</div>
 										<div class="col-6">
-											<label class="form-label fw-semibold" for="arcgis_filter_to_date">إلى تاريخ</label>
-											<input type="date" id="arcgis_filter_to_date" class="form-control form-control-sm">
+											<label class="form-label fw-semibold" for="arcgis_filter_to_date">إلى
+												تاريخ</label>
+											<input type="date" id="arcgis_filter_to_date"
+												class="form-control form-control-sm">
 										</div>
 									</div>
 									<div class="d-flex gap-2">
-										<button type="button" id="arcgisFilterApply" class="btn btn-sm btn-primary flex-grow-1">
+										<button type="button" id="arcgisFilterApply"
+											class="btn btn-sm btn-primary flex-grow-1">
 											تطبيق الفلترة
 										</button>
-										<button type="button" id="arcgisFilterReset" class="btn btn-sm btn-light flex-grow-1">
+										<button type="button" id="arcgisFilterReset"
+											class="btn btn-sm btn-light flex-grow-1">
 											إعادة تعيين
 										</button>
 									</div>
@@ -2044,9 +2073,9 @@
 
 		var buildingsOptions = {
 			series: [
-								{{ $buildingStats['fully_damaged'] ?? 0 }},
-								{{ $buildingStats['partially_damaged'] ?? 0 }},
-								{{ $buildingStats['committee_review'] ?? 0 }},
+									{{ $buildingStats['fully_damaged'] ?? 0 }},
+									{{ $buildingStats['partially_damaged'] ?? 0 }},
+									{{ $buildingStats['committee_review'] ?? 0 }},
 				{{ $buildingStats['security_unsafe'] ?? 0 }}
 			],
 			chart: {
@@ -2073,8 +2102,8 @@
 
 		var housingOptions = {
 			series: [
-								{{ $unitStats['fully_damaged'] ?? 0 }},
-								{{ $unitStats['partially_damaged'] ?? 0 }},
+									{{ $unitStats['fully_damaged'] ?? 0 }},
+									{{ $unitStats['partially_damaged'] ?? 0 }},
 				{{ $unitStats['committee_review'] ?? 0 }}
 			],
 			chart: {
@@ -2115,7 +2144,7 @@
 			"esri/widgets/Search",
 			"esri/widgets/ScaleBar",
 			"esri/geometry/support/webMercatorUtils",
-			 "esri/widgets/Expand"
+			"esri/widgets/Expand"
 		], function (
 			Map,
 			MapView,
@@ -2132,7 +2161,7 @@
 		) {
 
 			const assessmentBaseUrl = "{{ url('assessment') }}";
-			const canViewAssessmentLink = @json(! auth()->user()->hasRole('MOPWH'));
+			const canViewAssessmentLink = @json(!auth()->user()->hasRole('MOPWH'));
 			const buildingLayerUrl = @json(config('services.arcgis.buildings_url'));
 			const arcgisOptionsUrl = window.location.pathname.replace(/\/$/, '') + '/arcgis/options';
 
@@ -2238,12 +2267,12 @@
 						const name = attrs.building_name || "";
 						const assessmentLink = canViewAssessmentLink && g
 							? `<a target="_blank" style="color:red;" href="${assessmentBaseUrl}/${g}">
-					${@json(__('ui.damage_dashboard.assessment'))}
-				</a>`
+						${@json(__('ui.damage_dashboard.assessment'))}
+					</a>`
 							: "";
 
 						return `${@json(__('ui.damage_dashboard.building_name'))}: ${name}
-				${assessmentLink}`;
+					${assessmentLink}`;
 					},
 
 					content: function (event) {
@@ -2258,49 +2287,49 @@
 							: "#";
 
 						return `
-				<table class="esri-widget__table">
-					<tbody>
-						<tr>
-							<th>objectid</th>
-							<td>${attrs.objectid || attrs.OBJECTID || "-"}</td>
-						</tr>
-						<tr>
-							<th>building_name</th>
-							<td>${attrs.building_name || "-"}</td>
-						</tr>
-						<tr>
-							<th>AssignedTo</th>
-							<td>${attrs.assignedto || attrs.AssignedTo || "-"}</td>
-						</tr>
-						<tr>
-							<th>building_damage_status</th>
-							<td>${attrs.building_damage_status || "-"}</td>
-						</tr>
-						<tr>
-							<th>Latitude</th>
-							<td>${lat}</td>
-						</tr>
-						<tr>
-							<th>Longitude</th>
-							<td>${lng}</td>
-						</tr>
-					</tbody>
-				</table>
+					<table class="esri-widget__table">
+						<tbody>
+							<tr>
+								<th>objectid</th>
+								<td>${attrs.objectid || attrs.OBJECTID || "-"}</td>
+							</tr>
+							<tr>
+								<th>building_name</th>
+								<td>${attrs.building_name || "-"}</td>
+							</tr>
+							<tr>
+								<th>AssignedTo</th>
+								<td>${attrs.assignedto || attrs.AssignedTo || "-"}</td>
+							</tr>
+							<tr>
+								<th>building_damage_status</th>
+								<td>${attrs.building_damage_status || "-"}</td>
+							</tr>
+							<tr>
+								<th>Latitude</th>
+								<td>${lat}</td>
+							</tr>
+							<tr>
+								<th>Longitude</th>
+								<td>${lng}</td>
+							</tr>
+						</tbody>
+					</table>
 
-				<div class="mt-3 d-flex gap-2">
-					<button type="button"
-						class="btn btn-sm btn-light-primary"
-						onclick="navigator.clipboard.writeText('${lat},${lng}')">
-						نسخ الإحداثيات
-					</button>
+					<div class="mt-3 d-flex gap-2">
+						<button type="button"
+							class="btn btn-sm btn-light-primary"
+							onclick="navigator.clipboard.writeText('${lat},${lng}')">
+							نسخ الإحداثيات
+						</button>
 
-					<a target="_blank"
-					   class="btn btn-sm btn-light-success"
-					   href="${googleUrl}">
-						فتح في Google Maps
-					</a>
-				</div>
-			`;
+						<a target="_blank"
+						   class="btn btn-sm btn-light-success"
+						   href="${googleUrl}">
+							فتح في Google Maps
+						</a>
+					</div>
+				`;
 					},
 
 					actions: [measureThisAction]
@@ -2648,59 +2677,59 @@
 			view.ui.add(basemapToggle, "top-left");
 
 			// Toggle لإخفاء / إظهار Symbology على الخريطة نفسها
-const symbologyToggleBtn = document.createElement("button");
-symbologyToggleBtn.type = "button";
-symbologyToggleBtn.className = "esri-widget esri-widget--button esri-interactive";
-symbologyToggleBtn.title = "إخفاء الرموز";
-symbologyToggleBtn.innerHTML = `<span style="font-size:16px; font-weight:bold;">S</span>`;
+			const symbologyToggleBtn = document.createElement("button");
+			symbologyToggleBtn.type = "button";
+			symbologyToggleBtn.className = "esri-widget esri-widget--button esri-interactive";
+			symbologyToggleBtn.title = "إخفاء الرموز";
+			symbologyToggleBtn.innerHTML = `<span style="font-size:16px; font-weight:bold;">S</span>`;
 
-let symbologyVisible = true; // ظاهر افتراضيًا
+			let symbologyVisible = true; // ظاهر افتراضيًا
 
-const noSymbologyRenderer = {
-	type: "simple",
-	symbol: {
-		type: "simple-fill",
-		color: [0, 0, 0, 0],
-		outline: {
-			color: [255, 255, 255, 1],
-			width: 1
-		}
-	}
-};
+			const noSymbologyRenderer = {
+				type: "simple",
+				symbol: {
+					type: "simple-fill",
+					color: [0, 0, 0, 0],
+					outline: {
+						color: [255, 255, 255, 1],
+						width: 1
+					}
+				}
+			};
 
-symbologyToggleBtn.addEventListener("click", function () {
-	symbologyVisible = !symbologyVisible;
+			symbologyToggleBtn.addEventListener("click", function () {
+				symbologyVisible = !symbologyVisible;
 
-	featureLayer.renderer = symbologyVisible
-		? damageRenderer
-		: noSymbologyRenderer;
+				featureLayer.renderer = symbologyVisible
+					? damageRenderer
+					: noSymbologyRenderer;
 
-	symbologyToggleBtn.title = symbologyVisible ? "إخفاء الرموز" : "إظهار الرموز";
-	symbologyToggleBtn.style.backgroundColor = symbologyVisible ? "" : "#f8d7da";
-});
+				symbologyToggleBtn.title = symbologyVisible ? "إخفاء الرموز" : "إظهار الرموز";
+				symbologyToggleBtn.style.backgroundColor = symbologyVisible ? "" : "#f8d7da";
+			});
 
-// فوق زر الـ Basemap
-view.ui.add(symbologyToggleBtn, {
-	position: "top-left",
-	index: 0
-});
+			// فوق زر الـ Basemap
+			view.ui.add(symbologyToggleBtn, {
+				position: "top-left",
+				index: 0
+			});
 
 
 
-// وضع زر Symbology فوق زر Basemap بدون حذف الكود القديم
-view.ui.add(symbologyToggleBtn, {
-	position: "top-left",
-	index: 0
-});
+			// وضع زر Symbology فوق زر Basemap بدون حذف الكود القديم
+			view.ui.add(symbologyToggleBtn, {
+				position: "top-left",
+				index: 0
+			});
 
-const symbologyDiv = document.createElement("div");
-symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
-    const symbologyExpand = new Expand({
-        view: view,
-        content: symbologyDiv,
-        expanded: false
-    });
-	
+			const symbologyDiv = document.createElement("div");
+			symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
+			const symbologyExpand = new Expand({
+				view: view,
+				content: symbologyDiv,
+				expanded: false
+			});
+
 			const legend = new Legend({
 				view: view,
 				container: "externalLegendDiv",
@@ -2738,7 +2767,7 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 				position: "bottom-left"
 			});
 
-			
+
 			let selectedObjectId = null;
 			let selectedFeature = null;
 			let selectedGraphic = null;
@@ -2844,7 +2873,7 @@ symbologyDiv.innerHTML = ""; // فارغ لأنك لا تحتاجه فعليًا
 					});
 				}
 			}
-			
+
 			function zoomToFeatureByGlobalId(globalId) {
 				const query = featureLayer.createQuery();
 				query.where = "GLOBALID = '" + globalId + "'";
