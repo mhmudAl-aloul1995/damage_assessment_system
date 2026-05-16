@@ -1,10 +1,12 @@
 <?php
 
+use App\Exports\AreaProductivityExport;
 use App\Models\Building;
 use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
 use App\Models\User;
+use App\Services\DamageAssessment\Reports\AreaProductivityReportService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -221,6 +223,20 @@ it('renders separated area productivity reports for all supported datasets with 
         'updated_at' => '2026-04-14 09:00:00',
     ]);
 
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 4006,
+        'str_name' => 'Street F',
+        'assignedto' => 'eng-1',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'road_damage_level' => 'not_classified',
+        'zone_code' => 'RZ-6',
+        'creationdate' => '2026-04-15 09:00:00',
+        'created_at' => '2026-04-15 09:00:00',
+        'updated_at' => '2026-04-15 09:00:00',
+    ]);
+
     $this->actingAs($user)
         ->get(route('reports.area-productivity.housing-units', [
             'start_date' => '2026-04-01',
@@ -352,6 +368,22 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.road_facilities'), false);
 
+    $roadFacilitiesResponse->assertViewHas('summary', function (array $summary): bool {
+        return $summary['total_records'] === 5;
+    });
+
+    $roadFacilitiesResponse->assertViewHas('rows', function ($rows): bool {
+        $rimal = $rows->firstWhere('neighborhood', 'Rimal');
+
+        return $rimal !== null
+            && (int) $rimal->total_count === 5
+            && (int) $rimal->destroyed_count === 1
+            && (int) $rimal->severe_count === 1
+            && (int) $rimal->moderate_count === 1
+            && (int) $rimal->minor_count === 1
+            && (int) $rimal->no_damage_count === 1;
+    });
+
     $roadFacilitiesResponse->assertViewHas('charts', function (array $charts): bool {
         $municipalityNode = $charts['location_pies'][0] ?? null;
 
@@ -385,4 +417,46 @@ it('renders separated area productivity reports for all supported datasets with 
             'end_date' => '2026-04-30',
         ]))
         ->assertOk();
+
+    $reportService = app(AreaProductivityReportService::class);
+    $exportRows = $reportService->exportRows(AreaProductivityReportService::TYPE_ROAD_FACILITIES, [
+        'start_date' => '2026-04-01',
+        'end_date' => '2026-04-30',
+    ]);
+    $export = new AreaProductivityExport(
+        $exportRows,
+        '2026-04-01',
+        '2026-04-30',
+        __('multilingual.area_productivity_reports.titles.road_facilities'),
+        __('multilingual.area_productivity_reports.sectors.road_facilities'),
+        AreaProductivityReportService::TYPE_ROAD_FACILITIES,
+    );
+    $exportCollection = $export->collection();
+
+    expect($export->map($exportCollection->firstWhere('neighborhood', 'Rimal')))->toBe([
+        5,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        'Rimal',
+        'Gaza',
+        'Gaza',
+        __('multilingual.area_productivity_reports.sectors.road_facilities'),
+    ]);
+    expect($export->map($exportCollection->last()))->toBe([
+        5,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        '',
+        '',
+        '',
+        __('multilingual.area_productivity_reports.labels.grand_totals'),
+    ]);
 });

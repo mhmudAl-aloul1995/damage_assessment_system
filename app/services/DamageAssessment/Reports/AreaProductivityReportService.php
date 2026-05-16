@@ -253,7 +253,10 @@ class AreaProductivityReportService
                 SUM(CASE WHEN road_facility_surveys.road_damage_level = 'moderate' THEN 1 ELSE 0 END) as moderate_count,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level = 'minor' THEN 1 ELSE 0 END) as minor_count,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('No_Damage', 'no_damage') THEN 1 ELSE 0 END) as no_damage_count,
-                COUNT(road_facility_surveys.id) as total_count
+                SUM(CASE
+                    WHEN road_facility_surveys.road_damage_level IN ('destroyed', 'severe', 'moderate', 'minor', 'No_Damage', 'no_damage')
+                    THEN 1 ELSE 0
+                END) as total_count
             ")
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
