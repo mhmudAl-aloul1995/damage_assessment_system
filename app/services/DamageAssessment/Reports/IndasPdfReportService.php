@@ -97,10 +97,8 @@ class IndasPdfReportService
             ->count();
 
         $assessedHousingUnits = (clone $housingQuery)
-            ->where(function ($q) {
-                $q->whereNotNull('unit_damage_status')
-                    ->orWhereNotNull('unit_damage_status');
-            })
+            ->whereNotNull('unit_damage_status')
+            ->where('unit_damage_status', '!=', '')
             ->count();
 
         $affectedPopulation = round($assessedHousingUnits * 5.3);
