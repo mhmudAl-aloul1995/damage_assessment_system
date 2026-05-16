@@ -139,6 +139,8 @@ class DamageAssessmentController extends Controller
 
         $roadFacilityStats = [
             'total_surveys' => $this->dashboardRoadFacilityQuery($request)
+                ->whereNotNull('road_damage_level')
+                ->where('road_damage_level', '!=', '')
                 ->count(),
 
             'damaged_roads' => $this->dashboardRoadFacilityQuery($request)
@@ -254,9 +256,9 @@ class DamageAssessmentController extends Controller
         return DataTables::of($query)
             ->editColumn('building_damage_status', function ($row) {
                 return match ($row->building_damage_status) {
-                    'fully_damaged' => '<span class="badge badge-light-danger fw-bold">'.e(__('ui.damage_dashboard.fully_damaged')).'</span>',
-                    'partially_damaged' => '<span class="badge badge-light-success fw-bold">'.e(__('ui.damage_dashboard.partially_damaged')).'</span>',
-                    'committee_review' => '<span class="badge badge-light-warning fw-bold">'.e(__('ui.damage_dashboard.committee_review')).'</span>',
+                    'fully_damaged' => '<span class="badge badge-light-danger fw-bold">' . e(__('ui.damage_dashboard.fully_damaged')) . '</span>',
+                    'partially_damaged' => '<span class="badge badge-light-success fw-bold">' . e(__('ui.damage_dashboard.partially_damaged')) . '</span>',
+                    'committee_review' => '<span class="badge badge-light-warning fw-bold">' . e(__('ui.damage_dashboard.committee_review')) . '</span>',
                     default => '<span class="badge badge-light">-</span>',
                 };
             })
@@ -280,11 +282,11 @@ class DamageAssessmentController extends Controller
         return DataTables::of($query)
             ->editColumn('road_damage_level', function ($row) {
                 return match ($row->road_damage_level) {
-                    'destroyed' => '<span class="badge badge-light-danger fw-bold">'.e(__('multilingual.damage_dashboard.destroyed')).'</span>',
-                    'severe' => '<span class="badge badge-light-danger fw-bold">'.e(__('multilingual.damage_dashboard.severe')).'</span>',
-                    'moderate' => '<span class="badge badge-light-warning fw-bold">'.e(__('multilingual.damage_dashboard.moderate')).'</span>',
-                    'minor' => '<span class="badge badge-light-success fw-bold">'.e(__('multilingual.damage_dashboard.minor')).'</span>',
-                    'No_Damage' => '<span class="badge badge-light-success fw-bold">'.e(__('multilingual.damage_dashboard.no_damage')).'</span>',
+                    'destroyed' => '<span class="badge badge-light-danger fw-bold">' . e(__('multilingual.damage_dashboard.destroyed')) . '</span>',
+                    'severe' => '<span class="badge badge-light-danger fw-bold">' . e(__('multilingual.damage_dashboard.severe')) . '</span>',
+                    'moderate' => '<span class="badge badge-light-warning fw-bold">' . e(__('multilingual.damage_dashboard.moderate')) . '</span>',
+                    'minor' => '<span class="badge badge-light-success fw-bold">' . e(__('multilingual.damage_dashboard.minor')) . '</span>',
+                    'No_Damage' => '<span class="badge badge-light-success fw-bold">' . e(__('multilingual.damage_dashboard.no_damage')) . '</span>',
                     default => '<span class="badge badge-light">-</span>',
                 };
             })
@@ -358,12 +360,16 @@ class DamageAssessmentController extends Controller
     public function arcgisOptions(Request $request)
     {
         $validated = $request->validate([
-            'field' => ['required', 'string', Rule::in([
-                'assignedto',
-                'building_damage_status',
-                'municipalitie',
-                'neighborhood',
-            ])],
+            'field' => [
+                'required',
+                'string',
+                Rule::in([
+                    'assignedto',
+                    'building_damage_status',
+                    'municipalitie',
+                    'neighborhood',
+                ])
+            ],
         ]);
 
         $field = $validated['field'];
@@ -391,9 +397,9 @@ class DamageAssessmentController extends Controller
                 $params['token'] = $token;
             }
 
-            $response = $http->get($layerUrl.'/query', $params);
+            $response = $http->get($layerUrl . '/query', $params);
 
-            if (! $response->successful()) {
+            if (!$response->successful()) {
                 return response()->json($this->databaseArcgisOptions($field));
             }
 
@@ -408,13 +414,13 @@ class DamageAssessmentController extends Controller
                     $attributes = collect($feature['attributes'] ?? []);
 
                     return $attributes->first(
-                        fn ($value, string $key): bool => strcasecmp($key, $field) === 0
+                        fn($value, string $key): bool => strcasecmp($key, $field) === 0
                     );
                 })
-                ->filter(fn ($value) => filled($value))
+                ->filter(fn($value) => filled($value))
                 ->unique()
                 ->values()
-                ->map(fn ($value) => [
+                ->map(fn($value) => [
                     'id' => (string) $value,
                     'text' => (string) $value,
                 ]);
@@ -441,7 +447,7 @@ class DamageAssessmentController extends Controller
             ->pluck($field)
             ->filter()
             ->values()
-            ->map(fn ($value) => [
+            ->map(fn($value) => [
                 'id' => (string) $value,
                 'text' => (string) $value,
             ]);
@@ -459,7 +465,7 @@ class DamageAssessmentController extends Controller
             return $normalized;
         }
 
-        return $normalized.'/0';
+        return $normalized . '/0';
     }
 
     private function renderAssessmentTable(string $modelClass, ?string $globalid, string $type)
@@ -478,7 +484,7 @@ class DamageAssessmentController extends Controller
 
         $search = request()->input('search.value');
 
-        if (! empty($search)) {
+        if (!empty($search)) {
 
             $assessments->where(function ($query) use ($search) {
                 $query->where('label', 'like', "%{$search}%")
@@ -497,7 +503,7 @@ class DamageAssessmentController extends Controller
                 ->orderByDesc('id')
                 ->get()
                 ->groupBy('field_name')
-                ->map(fn ($group) => $group->first());
+                ->map(fn($group) => $group->first());
 
             $allEdits = EditAssessment::with('user')
                 ->where('type', $type)
@@ -610,7 +616,7 @@ class DamageAssessmentController extends Controller
                 return '';
             })
             ->addColumn('question', function ($row) {
-                return $row->label.'<br>'.$row->hint;
+                return $row->label . '<br>' . $row->hint;
             })
             ->addColumn('summaryValue', function ($row) use ($record, $allEdits, $filtersMap) {
                 if ($row->name === 'attachments') {
@@ -632,8 +638,8 @@ class DamageAssessmentController extends Controller
             })
             ->addColumn('answer', function ($row) use ($record, $allEdits, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersMap) {
                 if ($row->name === 'attachments') {
-                    if (! $model || ! $model->objectid || ! $token || $attachments->isEmpty()) {
-                        return '<span class="text-muted">'.e(__('ui.damage_common.no_attachments')).'</span>';
+                    if (!$model || !$model->objectid || !$token || $attachments->isEmpty()) {
+                        return '<span class="text-muted">' . e(__('ui.damage_common.no_attachments')) . '</span>';
                     }
 
                     $html = '<div class="d-flex flex-wrap gap-2">';
@@ -641,7 +647,7 @@ class DamageAssessmentController extends Controller
                     foreach ($attachments as $a) {
                         $attachmentId = $a['id'] ?? null;
 
-                        if (! $attachmentId) {
+                        if (!$attachmentId) {
                             continue;
                         }
 
@@ -653,15 +659,15 @@ class DamageAssessmentController extends Controller
                         );
 
                         $html .= '
-                    <a href="'.e($url).'" target="_blank">
-                        <img src="'.e($url).'"
+                    <a href="' . e($url) . '" target="_blank">
+                        <img src="' . e($url) . '"
                              style="width:100px;height:100px;object-fit:cover"
                              class="rounded border">
                     </a>
                 ';
                     }
 
-                    return $html.'</div>';
+                    return $html . '</div>';
                 }
 
                 $fieldEdits = $allEdits->get($row->name, collect());
@@ -690,12 +696,12 @@ class DamageAssessmentController extends Controller
                     return '<span class="text-muted">-</span>';
                 }
 
-                if ($fieldEdits->isEmpty() || ! $canViewHistory) {
+                if ($fieldEdits->isEmpty() || !$canViewHistory) {
                     return e($originalValue ?? '-');
                 }
 
                 $historyHtml = '';
-                $collapseId = 'history_'.md5($type.'_'.$globalid.'_'.$row->name);
+                $collapseId = 'history_' . md5($type . '_' . $globalid . '_' . $row->name);
 
                 foreach ($fieldEdits as $edit) {
                     $historyValue = $filtersMap[$edit->field_value] ?? $edit->field_value;
@@ -703,16 +709,16 @@ class DamageAssessmentController extends Controller
                     $historyHtml .= '
                 <div class="border rounded p-2 mb-2 bg-light-info">
                     <div>
-                        <small class="text-muted">'.e(__('ui.damage_common.value')).':</small>
-                        <span class="fw-semibold">'.e($historyValue ?? '-').'</span>
+                        <small class="text-muted">' . e(__('ui.damage_common.value')) . ':</small>
+                        <span class="fw-semibold">' . e($historyValue ?? '-') . '</span>
                     </div>
                     <div>
-                        <small class="text-muted">'.e(__('ui.damage_common.by')).':</small>
-                        '.e($edit->user?->name ?? '-').'
+                        <small class="text-muted">' . e(__('ui.damage_common.by')) . ':</small>
+                        ' . e($edit->user?->name ?? '-') . '
                     </div>
                     <div>
-                        <small class="text-muted">'.e(__('ui.damage_common.time')).':</small>
-                        '.e(optional($edit->updated_at)->format('Y-m-d h:i A') ?? '-').'
+                        <small class="text-muted">' . e(__('ui.damage_common.time')) . ':</small>
+                        ' . e(optional($edit->updated_at)->format('Y-m-d h:i A') ?? '-') . '
                     </div>
                 </div>
             ';
@@ -722,13 +728,13 @@ class DamageAssessmentController extends Controller
             <div class="mt-3">
                 <button class="btn btn-sm btn-light-primary" type="button"
                         data-bs-toggle="collapse"
-                        data-bs-target="#'.$collapseId.'"
+                        data-bs-target="#' . $collapseId . '"
                         aria-expanded="false">
-                    '.e(__('ui.damage_common.view_edit_history', ['count' => $fieldEdits->count()])).'
+                    ' . e(__('ui.damage_common.view_edit_history', ['count' => $fieldEdits->count()])) . '
                 </button>
 
-                <div class="collapse mt-2" id="'.$collapseId.'">
-                    '.$historyHtml.'
+                <div class="collapse mt-2" id="' . $collapseId . '">
+                    ' . $historyHtml . '
                 </div>
             </div>
         ';
@@ -737,9 +743,9 @@ class DamageAssessmentController extends Controller
             <div class="mt-2">
                 <button class="btn btn-sm btn-light-info js-assessment-history"
                         type="button"
-                        data-global-id="'.e($globalid).'"
-                        data-type="'.e($type).'"
-                        data-field-name="'.e($row->name).'">
+                        data-global-id="' . e($globalid) . '"
+                        data-type="' . e($type) . '"
+                        data-field-name="' . e($row->name) . '">
                     عرض سجل التعديلات
                 </button>
             </div>
@@ -748,26 +754,26 @@ class DamageAssessmentController extends Controller
                 return '
             <div class="audit-edit-card audit-existing-edit-card">
                 <div class="mb-2">
-                    <small class="text-muted d-block">'.e(__('ui.damage_common.original')).'</small>
-                    <span class="text-gray-700 audit-original-value">'.e($originalValue ?? '-').'</span>
+                    <small class="text-muted d-block">' . e(__('ui.damage_common.original')) . '</small>
+                    <span class="text-gray-700 audit-original-value">' . e($originalValue ?? '-') . '</span>
                 </div>
 
                 <div class="mb-2">
-                    <small class="text-warning d-block fw-bold">'.e(__('ui.damage_common.latest_edit')).'</small>
-                    <span class="text-gray-900 fw-bold audit-new-value">'.e($editedValue ?? '-').'</span>
+                    <small class="text-warning d-block fw-bold">' . e(__('ui.damage_common.latest_edit')) . '</small>
+                    <span class="text-gray-900 fw-bold audit-new-value">' . e($editedValue ?? '-') . '</span>
                 </div>
 
                 <div class="mb-1">
-                    <small class="text-info d-block fw-bold">'.e(__('ui.damage_common.editor_name')).'</small>
-                    <span class="text-gray-800">'.e($editedBy ?? '-').'</span>
+                    <small class="text-info d-block fw-bold">' . e(__('ui.damage_common.editor_name')) . '</small>
+                    <span class="text-gray-800">' . e($editedBy ?? '-') . '</span>
                 </div>
 
                 <div>
-                    <small class="text-primary d-block fw-bold">'.e(__('ui.damage_common.edit_time')).'</small>
-                    <span class="text-gray-600">'.e($editedAt ?? '-').'</span>
+                    <small class="text-primary d-block fw-bold">' . e(__('ui.damage_common.edit_time')) . '</small>
+                    <span class="text-gray-600">' . e($editedAt ?? '-') . '</span>
                 </div>
 
-                '.$modalHistoryButton.$historyHtml.'
+                ' . $modalHistoryButton . $historyHtml . '
             </div>
         ';
             })
@@ -787,18 +793,18 @@ class DamageAssessmentController extends Controller
 
                     $html = '<select
                     class="form-select form-select-sm form-select-solid inline-edit-select"
-                    data-field="'.e($row->name).'"
-                    data-globalid="'.e($globalid).'"
-                    data-type="'.e($type).'"
+                    data-field="' . e($row->name) . '"
+                    data-globalid="' . e($globalid) . '"
+                    data-type="' . e($type) . '"
                     data-control="select2"
                     data-close-on-select="true"
-                    data-placeholder="'.e(__('ui.damage_common.select_option')).'">';
+                    data-placeholder="' . e(__('ui.damage_common.select_option')) . '">';
 
                     $html .= '<option value=""></option>';
 
                     foreach ($filters as $option) {
                         $selected = in_array($option->name, $selectedValues) ? 'selected' : '';
-                        $html .= '<option value="'.e($option->name).'" '.$selected.'>'.e($option->label).'</option>';
+                        $html .= '<option value="' . e($option->name) . '" ' . $selected . '>' . e($option->label) . '</option>';
                     }
 
                     $html .= '</select>';
@@ -811,17 +817,17 @@ class DamageAssessmentController extends Controller
                     <input
                         type="text"
                         class="form-control form-control-sm form-control-solid inline-edit-input"
-                        value="'.e($value).'"
-                        data-field="'.e($row->name).'"
-                        data-globalid="'.e($globalid).'"
-                        data-type="'.e($type).'"
+                        value="' . e($value) . '"
+                        data-field="' . e($row->name) . '"
+                        data-globalid="' . e($globalid) . '"
+                        data-type="' . e($type) . '"
                     >
                     <button type="button"
                         class="btn btn-sm btn-light-primary inline-save-btn"
-                        data-field="'.e($row->name).'"
-                        data-globalid="'.e($globalid).'"
-                        data-type="'.e($type).'">
-                        '.e(__('ui.buttons.save')).'
+                        data-field="' . e($row->name) . '"
+                        data-globalid="' . e($globalid) . '"
+                        data-type="' . e($type) . '">
+                        ' . e(__('ui.buttons.save')) . '
                     </button>
                 </div>
             ';
@@ -840,7 +846,7 @@ class DamageAssessmentController extends Controller
                 continue;
             }
 
-            if ($search && ! str_contains(strtolower($field.' '.$label), strtolower($search))) {
+            if ($search && !str_contains(strtolower($field . ' ' . $label), strtolower($search))) {
                 continue;
             }
 
@@ -937,7 +943,7 @@ class DamageAssessmentController extends Controller
             ->get()
             ->map(function (Building $building): array {
                 $subtitleParts = array_values(array_filter([
-                    __('ui.search.object_id').': '.$building->objectid,
+                    __('ui.search.object_id') . ': ' . $building->objectid,
                     $building->owner_name,
                     $building->neighborhood,
                 ]));
@@ -963,7 +969,7 @@ class DamageAssessmentController extends Controller
             ->get()
             ->map(function (PublicBuildingSurvey $survey): array {
                 $subtitleParts = array_values(array_filter([
-                    __('ui.search.object_id').': '.$survey->objectid,
+                    __('ui.search.object_id') . ': ' . $survey->objectid,
                     $survey->municipalitie,
                     $survey->neighborhood,
                 ]));
@@ -989,7 +995,7 @@ class DamageAssessmentController extends Controller
             ->get()
             ->map(function (RoadFacilitySurvey $survey): array {
                 $subtitleParts = array_values(array_filter([
-                    __('ui.search.object_id').': '.$survey->objectid,
+                    __('ui.search.object_id') . ': ' . $survey->objectid,
                     $survey->municipalitie,
                     $survey->neighborhood,
                 ]));
@@ -1024,24 +1030,24 @@ class DamageAssessmentController extends Controller
                 'buildings.building_name as building_name',
                 'buildings.neighborhood as neighborhood',
                 'housing_units.unit_damage_status',
-                DB::raw($fullNameExpression.' as full_name1'),
+                DB::raw($fullNameExpression . ' as full_name1'),
             ]);
 
         $this->applyDashboardBuildingUnitTableFilters($query, $request);
 
         return DataTables::of($query)
             ->filterColumn('full_name1', function ($query, $keyword) use ($fullNameExpression) {
-                $query->whereRaw($fullNameExpression.' LIKE ?', ["%{$keyword}%"]);
+                $query->whereRaw($fullNameExpression . ' LIKE ?', ["%{$keyword}%"]);
             })
             ->editColumn('full_name1', function ($row) {
                 return $row->full_name1 !== '' ? $row->full_name1 : '-';
             })
             ->editColumn('unit_damage_status', function ($row) {
                 return match ($row->unit_damage_status) {
-                    'fully_damaged2' => '<span class="badge badge-light-danger fw-bold">'.e(__('ui.damage_dashboard.fully_damaged')).'</span>',
-                    'partially_damaged2' => '<span class="badge badge-light-success fw-bold">'.e(__('ui.damage_dashboard.partially_damaged')).'</span>',
-                    'committee_review2' => '<span class="badge badge-light-warning fw-bold">'.e(__('ui.damage_dashboard.committee_review')).'</span>',
-                    null, '' => '<span class="badge badge-light">'.e(__('multilingual.damage_dashboard.no_units')).'</span>',
+                    'fully_damaged2' => '<span class="badge badge-light-danger fw-bold">' . e(__('ui.damage_dashboard.fully_damaged')) . '</span>',
+                    'partially_damaged2' => '<span class="badge badge-light-success fw-bold">' . e(__('ui.damage_dashboard.partially_damaged')) . '</span>',
+                    'committee_review2' => '<span class="badge badge-light-warning fw-bold">' . e(__('ui.damage_dashboard.committee_review')) . '</span>',
+                    null, '' => '<span class="badge badge-light">' . e(__('multilingual.damage_dashboard.no_units')) . '</span>',
                     default => '-',
                 };
             })
@@ -1065,7 +1071,7 @@ class DamageAssessmentController extends Controller
                 $query->orderBy('housing_units.unit_damage_status', $order);
             })
             ->orderColumn('full_name1', function ($query, $order) use ($fullNameExpression) {
-                $query->orderByRaw($fullNameExpression.' '.$order);
+                $query->orderByRaw($fullNameExpression . ' ' . $order);
             })
             ->make(true);
     }
@@ -1214,15 +1220,15 @@ class DamageAssessmentController extends Controller
         [$startDate, $endDate] = $this->dashboardDateRange($request);
 
         if ($request->filled('neighborhood')) {
-            $query->where($tablePrefix.'neighborhood', (string) $request->string('neighborhood'));
+            $query->where($tablePrefix . 'neighborhood', (string) $request->string('neighborhood'));
         }
 
         if ($startDate !== null) {
-            $query->whereDate($tablePrefix.$dateColumn, '>=', $startDate);
+            $query->whereDate($tablePrefix . $dateColumn, '>=', $startDate);
         }
 
         if ($endDate !== null) {
-            $query->whereDate($tablePrefix.$dateColumn, '<=', $endDate);
+            $query->whereDate($tablePrefix . $dateColumn, '<=', $endDate);
         }
     }
 }
