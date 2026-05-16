@@ -396,134 +396,168 @@
                 </div>
 
                 @if ($showHousingUnitLocationPies)
-                    <div class="card-body p-0 border-top">
-                        <div class="px-8 pt-6">
-                            <h3 class="fw-bold mb-1">Location Pie Charts</h3>
-                            <div class="text-muted fs-7">Municipality and neighborhood charts for totally and partially damaged housing units.</div>
-                        </div>
+                    <div class="card-body pb-0 border-top">
+                        <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-transparent fs-6 fw-bold" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="area-productivity-table-tab" type="button"
+                                    data-bs-toggle="tab" data-bs-target="#area-productivity-table-pane" role="tab"
+                                    aria-controls="area-productivity-table-pane" aria-selected="true">
+                                    Report Table
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="area-productivity-location-charts-tab" type="button"
+                                    data-bs-toggle="tab" data-bs-target="#area-productivity-location-charts-pane"
+                                    role="tab" aria-controls="area-productivity-location-charts-pane" aria-selected="false">
+                                    Location Pie Charts
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
 
-                        @if (count($charts['location_pies']))
-                            <div class="location-pie-tree mt-5">
-                                @foreach ($charts['location_pies'] as $municipalityNode)
-                                    @php($municipalityPie = $municipalityNode['pie'])
-                                    <div class="location-pie-section">
-                                        <button class="location-pie-section-toggle" type="button" data-bs-toggle="collapse"
-                                            data-bs-target="#collapse_{{ $municipalityPie['id'] }}"
-                                            aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
-                                            aria-controls="collapse_{{ $municipalityPie['id'] }}">
-                                            <span>
-                                                <span class="location-pie-section-title d-block">{{ $municipalityPie['title'] }}</span>
-                                                <span class="location-pie-section-meta">
-                                                    Municipality | {{ number_format($municipalityPie['units_count']) }} housing units |
-                                                    {{ count($municipalityNode['neighborhoods']) }} neighborhoods
+                    <div class="tab-content">
+                @endif
+
+                @if ($showHousingUnitLocationPies)
+                    <div class="tab-pane fade" id="area-productivity-location-charts-pane" role="tabpanel"
+                        aria-labelledby="area-productivity-location-charts-tab">
+                        <div class="card-body p-0">
+                            <div class="px-8 pt-6">
+                                <h3 class="fw-bold mb-1">Location Pie Charts</h3>
+                                <div class="text-muted fs-7">Municipality and neighborhood charts for totally and partially damaged housing units.</div>
+                            </div>
+
+                            @if (count($charts['location_pies']))
+                                <div class="location-pie-tree mt-5">
+                                    @foreach ($charts['location_pies'] as $municipalityNode)
+                                        @php($municipalityPie = $municipalityNode['pie'])
+                                        <div class="location-pie-section">
+                                            <button class="location-pie-section-toggle" type="button" data-bs-toggle="collapse"
+                                                data-bs-target="#collapse_{{ $municipalityPie['id'] }}"
+                                                aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
+                                                aria-controls="collapse_{{ $municipalityPie['id'] }}">
+                                                <span>
+                                                    <span class="location-pie-section-title d-block">{{ $municipalityPie['title'] }}</span>
+                                                    <span class="location-pie-section-meta">
+                                                        Municipality | {{ number_format($municipalityPie['units_count']) }} housing units |
+                                                        {{ count($municipalityNode['neighborhoods']) }} neighborhoods
+                                                    </span>
+                                                    <span class="location-collapse-cue d-block mt-1">
+                                                        <span class="when-closed">Click to expand</span>
+                                                        <span class="when-open">Click to collapse</span>
+                                                    </span>
                                                 </span>
-                                                <span class="location-collapse-cue d-block mt-1">
-                                                    <span class="when-closed">Click to expand</span>
-                                                    <span class="when-open">Click to collapse</span>
-                                                </span>
-                                            </span>
-                                            <span class="location-collapse-icon" aria-hidden="true"></span>
-                                        </button>
+                                                <span class="location-collapse-icon" aria-hidden="true"></span>
+                                            </button>
 
-                                        <div id="collapse_{{ $municipalityPie['id'] }}"
-                                            class="collapse location-pie-collapse {{ $loop->first ? 'show' : '' }}">
-                                            <div class="location-primary-body">
-                                                @include('modules.damage-assessment.reports.partials.location_productivity_neighborhood', [
-                                                    'pie' => $municipalityPie,
-                                                    'variant' => 'primary',
-                                                    'neighborhoodsCount' => count($municipalityNode['neighborhoods']),
-                                                    'countLabel' => 'housing units',
-                                                    'firstMetricLabel' => 'Totally Damaged',
-                                                    'secondMetricLabel' => 'Partially Damaged',
-                                                    'firstMetricClass' => 'totally-damaged',
-                                                    'secondMetricClass' => 'partially-damaged',
-                                                ])
-                                            </div>
-
-                                            <div class="p-4 pt-0">
-                                                <div class="location-municipality-title mb-3">
-                                                    Neighborhoods under {{ $municipalityPie['title'] }}
+                                            <div id="collapse_{{ $municipalityPie['id'] }}"
+                                                class="collapse location-pie-collapse {{ $loop->first ? 'show' : '' }}">
+                                                <div class="location-primary-body">
+                                                    @include('modules.damage-assessment.reports.partials.location_productivity_neighborhood', [
+                                                        'pie' => $municipalityPie,
+                                                        'variant' => 'primary',
+                                                        'neighborhoodsCount' => count($municipalityNode['neighborhoods']),
+                                                        'countLabel' => 'housing units',
+                                                        'firstMetricLabel' => 'Totally Damaged',
+                                                        'secondMetricLabel' => 'Partially Damaged',
+                                                        'firstMetricClass' => 'totally-damaged',
+                                                        'secondMetricClass' => 'partially-damaged',
+                                                    ])
                                                 </div>
-                                                <div class="location-neighborhood-grid">
-                                                    @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
-                                                        @include('modules.damage-assessment.reports.partials.location_productivity_neighborhood', [
-                                                            'pie' => $neighborhoodPie,
-                                                            'countLabel' => 'housing units',
-                                                            'firstMetricLabel' => 'Totally Damaged',
-                                                            'secondMetricLabel' => 'Partially Damaged',
-                                                            'firstMetricClass' => 'totally-damaged',
-                                                            'secondMetricClass' => 'partially-damaged',
-                                                        ])
-                                                    @endforeach
+
+                                                <div class="p-4 pt-0">
+                                                    <div class="location-municipality-title mb-3">
+                                                        Neighborhoods under {{ $municipalityPie['title'] }}
+                                                    </div>
+                                                    <div class="location-neighborhood-grid">
+                                                        @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
+                                                            @include('modules.damage-assessment.reports.partials.location_productivity_neighborhood', [
+                                                                'pie' => $neighborhoodPie,
+                                                                'countLabel' => 'housing units',
+                                                                'firstMetricLabel' => 'Totally Damaged',
+                                                                'secondMetricLabel' => 'Partially Damaged',
+                                                                'firstMetricClass' => 'totally-damaged',
+                                                                'secondMetricClass' => 'partially-damaged',
+                                                            ])
+                                                        @endforeach
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="p-10 text-center text-muted">No matching damaged housing units.</div>
-                        @endif
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="p-10 text-center text-muted">No matching damaged housing units.</div>
+                            @endif
+                        </div>
                     </div>
                 @endif
 
-                <div class="card-body py-4">
-                    <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle" id="area_productivity_table">
-                        <thead>
-                            <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
-                                <th>{{ __('multilingual.area_productivity_reports.columns.total_count') }}</th>
-                                @if ($showHousingUnitsCount)
-                                    <th>{{ __('multilingual.area_productivity_reports.columns.housing_units_count') }}</th>
-                                @endif
-                                <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
-                                <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
-                                <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
-                                <th>{{ __('multilingual.area_productivity_reports.columns.engineers') }}</th>
-                                <th>{{ __('multilingual.area_productivity_reports.columns.neighborhood') }}</th>
-                                <th>{{ __('multilingual.area_productivity_reports.columns.municipality') }}</th>
-                                <th>{{ __('multilingual.area_productivity_reports.columns.governorate') }}</th>
-                                <th>{{ __('multilingual.area_productivity_reports.columns.sector') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($rows as $row)
-                                <tr>
-                                    <td class="fw-bold">{{ $row->total_count }}</td>
+                @if ($showHousingUnitLocationPies)
+                    <div class="tab-pane fade show active" id="area-productivity-table-pane" role="tabpanel"
+                        aria-labelledby="area-productivity-table-tab">
+                @endif
+                    <div class="card-body py-4">
+                        <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle" id="area_productivity_table">
+                            <thead>
+                                <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.total_count') }}</th>
                                     @if ($showHousingUnitsCount)
-                                        <td>{{ $row->housing_units_count ?? 0 }}</td>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.housing_units_count') }}</th>
                                     @endif
-                                    <td>{{ $row->cra_range }}</td>
-                                    <td>{{ $row->pda_range }}</td>
-                                    <td>{{ $row->tda_range }}</td>
-                                    <td>{{ $row->no_eng }}</td>
-                                    <td>{{ $row->neighborhood ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                    <td>{{ $row->municipalitie ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                    <td>{{ $row->governorate ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                    <td>{{ __($sector_key) }}</td>
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.engineers') }}</th>
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.neighborhood') }}</th>
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.municipality') }}</th>
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.governorate') }}</th>
+                                    <th>{{ __('multilingual.area_productivity_reports.columns.sector') }}</th>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="{{ $showHousingUnitsCount ? 10 : 9 }}" class="text-center text-muted">
-                                        {{ __('multilingual.area_productivity_reports.labels.empty') }}
-                                    </td>
+                            </thead>
+                            <tbody>
+                                @forelse ($rows as $row)
+                                    <tr>
+                                        <td class="fw-bold">{{ $row->total_count }}</td>
+                                        @if ($showHousingUnitsCount)
+                                            <td>{{ $row->housing_units_count ?? 0 }}</td>
+                                        @endif
+                                        <td>{{ $row->cra_range }}</td>
+                                        <td>{{ $row->pda_range }}</td>
+                                        <td>{{ $row->tda_range }}</td>
+                                        <td>{{ $row->no_eng }}</td>
+                                        <td>{{ $row->neighborhood ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                        <td>{{ $row->municipalitie ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                        <td>{{ $row->governorate ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                        <td>{{ __($sector_key) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="{{ $showHousingUnitsCount ? 10 : 9 }}" class="text-center text-muted">
+                                            {{ __('multilingual.area_productivity_reports.labels.empty') }}
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                            <tfoot class="border-top-2">
+                                <tr class="fw-bold bg-light">
+                                    <td class="text-success fs-5">{{ $summary['total_records'] }}</td>
+                                    @if ($showHousingUnitsCount)
+                                        <td>{{ $summary['housing_units_count'] }}</td>
+                                    @endif
+                                    <td class="text-primary">{{ $summary['cra'] }}</td>
+                                    <td class="text-warning">{{ $summary['pda'] }}</td>
+                                    <td class="text-danger">{{ $summary['tda'] }}</td>
+                                    <td>{{ $summary['engineers'] }}</td>
+                                    <td colspan="4" class="text-center">{{ __('multilingual.area_productivity_reports.labels.grand_totals') }}</td>
                                 </tr>
-                            @endforelse
-                        </tbody>
-                        <tfoot class="border-top-2">
-                            <tr class="fw-bold bg-light">
-                                <td class="text-success fs-5">{{ $summary['total_records'] }}</td>
-                                @if ($showHousingUnitsCount)
-                                    <td>{{ $summary['housing_units_count'] }}</td>
-                                @endif
-                                <td class="text-primary">{{ $summary['cra'] }}</td>
-                                <td class="text-warning">{{ $summary['pda'] }}</td>
-                                <td class="text-danger">{{ $summary['tda'] }}</td>
-                                <td>{{ $summary['engineers'] }}</td>
-                                <td colspan="4" class="text-center">{{ __('multilingual.area_productivity_reports.labels.grand_totals') }}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                            </tfoot>
+                        </table>
+                    </div>
+                @if ($showHousingUnitLocationPies)
+                    </div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
@@ -625,11 +659,12 @@
                     locationPieCharts.forEach(renderLocationPieChart);
                 }
 
-                renderVisibleLocationPieCharts();
-
                 document.querySelectorAll('.location-pie-collapse').forEach(function (collapseElement) {
                     collapseElement.addEventListener('shown.bs.collapse', renderVisibleLocationPieCharts);
                 });
+
+                document.getElementById('area-productivity-location-charts-tab')
+                    ?.addEventListener('shown.bs.tab', renderVisibleLocationPieCharts);
             @endif
         });
     </script>
