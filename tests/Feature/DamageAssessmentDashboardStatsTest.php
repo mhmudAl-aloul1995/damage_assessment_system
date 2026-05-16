@@ -16,6 +16,10 @@ beforeEach(function () {
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
 });
 
+afterEach(function () {
+    Carbon::setTestNow();
+});
+
 it('shows eight summary statistics for public buildings and road facilities on the main dashboard', function () {
     $user = User::factory()->create();
 
@@ -70,8 +74,60 @@ it('shows eight summary statistics for public buildings and road facilities on t
         ->assertSee('Select neighborhood')
         ->assertSee('All neighborhoods')
         ->assertSee('Date range')
+        ->assertSee('data-period="day"', false)
         ->assertSee('data-period="all"', false)
         ->assertSee('Rimal');
+});
+
+it('treats the dashboard yesterday shortcut as the previous day', function () {
+    $user = User::factory()->create();
+    Carbon::setTestNow('2026-05-16 10:00:00');
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    Building::query()->create([
+        'objectid' => 901,
+        'globalid' => 'yesterday-building',
+        'building_name' => 'Yesterday Building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'neighborhood' => 'Rimal',
+        'end' => '2026-05-15 09:00:00',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 902,
+        'globalid' => 'today-building',
+        'building_name' => 'Today Building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'partially_damaged',
+        'neighborhood' => 'Rimal',
+        'end' => '2026-05-16 09:00:00',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index', ['period' => 'day']))
+        ->assertOk()
+        ->assertViewHas('buildingStats', function (array $buildingStats): bool {
+            return (int) $buildingStats['completed'] === 1
+                && (int) $buildingStats['fully_damaged'] === 1
+                && (int) $buildingStats['partially_damaged'] === 0;
+        });
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index', ['period' => 'yesterday']))
+        ->assertOk()
+        ->assertViewHas('dashboardFilters', function (array $dashboardFilters): bool {
+            return $dashboardFilters['period'] === 'day'
+                && $dashboardFilters['startDate'] === '2026-05-15'
+                && $dashboardFilters['endDate'] === '2026-05-15';
+        });
 });
 
 it('filters dashboard map tables by period and neighborhood', function () {

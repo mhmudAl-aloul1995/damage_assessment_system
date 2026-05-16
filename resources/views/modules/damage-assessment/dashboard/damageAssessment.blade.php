@@ -494,7 +494,7 @@
 				<div class="d-flex align-items-center flex-wrap gap-2" data-kt-buttons="true">
 					<button type="button"
 						class="btn btn-sm toolbar-period-button dashboard-toolbar-period @if ($dashboardFilters['period'] === 'day') active @endif"
-						data-period="yesterday">{{ __('ui.damage_dashboard.yesterday') }}</button>
+						data-period="day">{{ __('ui.damage_dashboard.yesterday') }}</button>
 					<button type="button"
 						class="btn btn-sm toolbar-period-button dashboard-toolbar-period @if ($dashboardFilters['period'] === 'week') active @endif"
 						data-period="week">{{ __('ui.damage_dashboard.week') }}</button>
@@ -2927,7 +2927,7 @@
 				date.setDate(date.getDate() - 6);
 			}
 
-			if (period === 'day') {
+			if (period === 'day' || period === 'yesterday') {
 				date.setDate(date.getDate() - 1);
 			}
 
