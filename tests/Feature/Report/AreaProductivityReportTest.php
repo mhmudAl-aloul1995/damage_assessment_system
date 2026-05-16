@@ -249,10 +249,11 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('area-productivity-table-tab', false)
         ->assertSee('area-productivity-location-charts-tab', false)
         ->assertSee('area-productivity-location-charts-pane', false)
-        ->assertSee('Municipality | 2 housing units')
+        ->assertSee('Municipality | 3 housing units')
         ->assertSee('Neighborhoods under Gaza')
         ->assertSee('Totally Damaged')
         ->assertSee('Partially Damaged')
+        ->assertSee('Committee Review')
         ->assertSee('location-pie-section-toggle', false)
         ->assertSee('location-pie-card', false)
         ->assertSee('housing_units_municipality', false)
@@ -271,8 +272,11 @@ it('renders separated area productivity reports for all supported datasets with 
 
             return $municipalityNode !== null
                 && $municipalityNode['pie']['title'] === 'Gaza'
-                && $municipalityNode['pie']['series'] === [1, 1]
-                && $municipalityNode['pie']['units_count'] === 2
+                && $municipalityNode['pie']['series'] === [1, 1, 1]
+                && $municipalityNode['pie']['labels'] === ['Totally Damaged', 'Partially Damaged', 'Committee Review']
+                && $municipalityNode['pie']['colors'] === ['#F1416C', '#FFC700', '#E879F9']
+                && array_column($municipalityNode['pie']['summary_items'], 'color') === ['#F1416C', '#FFC700', '#E879F9']
+                && $municipalityNode['pie']['units_count'] === 3
                 && count($municipalityNode['neighborhoods']) === 1
                 && $municipalityNode['neighborhoods'][0]['title'] === 'Rimal';
         });

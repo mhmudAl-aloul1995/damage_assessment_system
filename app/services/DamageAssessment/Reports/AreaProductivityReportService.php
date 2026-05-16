@@ -455,6 +455,7 @@ class AreaProductivityReportService
                     subtitle: 'Municipality',
                     series: $this->metricSeries($municipalityRows, $metrics),
                     labels: array_column($metrics, 'label'),
+                    colors: array_column($metrics, 'color'),
                     level: 'municipality',
                 );
 
@@ -468,6 +469,7 @@ class AreaProductivityReportService
                         subtitle: 'Neighborhood',
                         series: $this->metricSeries(collect([$row]), $metrics),
                         labels: array_column($metrics, 'label'),
+                        colors: array_column($metrics, 'color'),
                         level: 'neighborhood',
                     ))
                     ->all();
@@ -491,12 +493,10 @@ class AreaProductivityReportService
         string $subtitle,
         array $series,
         array $labels,
+        array $colors,
         string $level,
     ): array {
         $itemsCount = array_sum($series);
-        $colors = count($series) > 2
-            ? ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89']
-            : ['#F1416C', '#FFC700'];
 
         return [
             'id' => $idPrefix.'_'.substr(md5($level.'|'.$title), 0, 12),
@@ -523,28 +523,36 @@ class AreaProductivityReportService
     }
 
     /**
-     * @return array<int, array{key: string, label: string}>
+     * @return array<int, array{key: string, label: string, color: string}>
      */
     private function locationPieMetrics(string $type): array
     {
+        if ($type === self::TYPE_HOUSING_UNITS) {
+            return [
+                ['key' => 'tda_range', 'label' => 'Totally Damaged', 'color' => '#F1416C'],
+                ['key' => 'pda_range', 'label' => 'Partially Damaged', 'color' => '#FFC700'],
+                ['key' => 'cra_range', 'label' => 'Committee Review', 'color' => '#E879F9'],
+            ];
+        }
+
         if ($type === self::TYPE_ROAD_FACILITIES) {
             return [
-                ['key' => 'destroyed_count', 'label' => 'Destroyed'],
-                ['key' => 'severe_count', 'label' => 'Severe'],
-                ['key' => 'moderate_count', 'label' => 'Moderate'],
-                ['key' => 'minor_count', 'label' => 'Minor'],
-                ['key' => 'no_damage_count', 'label' => 'No Damage'],
+                ['key' => 'destroyed_count', 'label' => 'Destroyed', 'color' => '#F1416C'],
+                ['key' => 'severe_count', 'label' => 'Severe', 'color' => '#E879F9'],
+                ['key' => 'moderate_count', 'label' => 'Moderate', 'color' => '#FFC700'],
+                ['key' => 'minor_count', 'label' => 'Minor', 'color' => '#009EF7'],
+                ['key' => 'no_damage_count', 'label' => 'No Damage', 'color' => '#50CD89'],
             ];
         }
 
         return [
-            ['key' => 'tda_range', 'label' => 'Totally Damaged'],
-            ['key' => 'pda_range', 'label' => 'Partially Damaged'],
+            ['key' => 'tda_range', 'label' => 'Totally Damaged', 'color' => '#F1416C'],
+            ['key' => 'pda_range', 'label' => 'Partially Damaged', 'color' => '#FFC700'],
         ];
     }
 
     /**
-     * @param  array<int, array{key: string, label: string}>  $metrics
+     * @param  array<int, array{key: string, label: string, color: string}>  $metrics
      * @return array<int, int>
      */
     private function metricSeries(Collection $rows, array $metrics): array
@@ -555,7 +563,7 @@ class AreaProductivityReportService
     }
 
     /**
-     * @param  array<int, array{key: string, label: string}>  $metrics
+     * @param  array<int, array{key: string, label: string, color: string}>  $metrics
      */
     private function metricTotal(object $row, array $metrics): int
     {

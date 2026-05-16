@@ -17,6 +17,9 @@
             \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES => 'road facilities',
             default => 'housing units',
         };
+        $locationPieDescription = $type === \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS
+            ? 'Municipality and neighborhood charts for totally damaged, partially damaged, and committee review housing units.'
+            : 'Municipality and neighborhood charts for totally and partially damaged '.$locationPieCountLabel.'.';
         $locationPieCharts = [];
 
         if ($showLocationPies) {
@@ -439,7 +442,7 @@
                         <div class="card-body p-0">
                             <div class="px-8 pt-6">
                                 <h3 class="fw-bold mb-1">Location Pie Charts</h3>
-                                <div class="text-muted fs-7">Municipality and neighborhood charts for totally and partially damaged {{ $locationPieCountLabel }}.</div>
+                                <div class="text-muted fs-7">{{ $locationPieDescription }}</div>
                             </div>
 
                             @if (count($charts['location_pies']))
