@@ -99,7 +99,7 @@ class IndasPdfReportService
         $assessedHousingUnits = (clone $housingQuery)
             ->where(function ($q) {
                 $q->whereNotNull('unit_damage_status')
-                    ->orWhereNotNull('damage_status');
+                    ->orWhereNotNull('unit_damage_status');
             })
             ->count();
 
@@ -115,28 +115,28 @@ class IndasPdfReportService
             'minor' => (clone $housingQuery)
                 ->where(function ($q) {
                     $q->where('unit_damage_status', 'Minor')
-                        ->orWhere('damage_status', 'Minor');
+                        ->orWhere('unit_damage_status', 'Minor');
                 })
                 ->count(),
 
             'moderate' => (clone $housingQuery)
                 ->where(function ($q) {
                     $q->where('unit_damage_status', 'Moderate')
-                        ->orWhere('damage_status', 'Moderate');
+                        ->orWhere('unit_damage_status', 'Moderate');
                 })
                 ->count(),
 
             'severe' => (clone $housingQuery)
                 ->where(function ($q) {
                     $q->where('unit_damage_status', 'Severe')
-                        ->orWhere('damage_status', 'Severe');
+                        ->orWhere('unit_damage_status', 'Severe');
                 })
                 ->count(),
 
             'destroyed' => (clone $housingQuery)
                 ->where(function ($q) {
                     $q->where('unit_damage_status', 'Destroyed')
-                        ->orWhere('damage_status', 'Destroyed');
+                        ->orWhere('unit_damage_status', 'Destroyed');
                 })
                 ->count(),
         ];
@@ -220,28 +220,28 @@ class IndasPdfReportService
                 'minor' => (clone $govQuery)
                     ->where(function ($q) {
                         $q->where('unit_damage_status', 'Minor')
-                            ->orWhere('damage_status', 'Minor');
+                            ->orWhere('unit_damage_status', 'Minor');
                     })
                     ->count(),
 
                 'moderate' => (clone $govQuery)
                     ->where(function ($q) {
                         $q->where('unit_damage_status', 'Moderate')
-                            ->orWhere('damage_status', 'Moderate');
+                            ->orWhere('unit_damage_status', 'Moderate');
                     })
                     ->count(),
 
                 'severe' => (clone $govQuery)
                     ->where(function ($q) {
                         $q->where('unit_damage_status', 'Severe')
-                            ->orWhere('damage_status', 'Severe');
+                            ->orWhere('unit_damage_status', 'Severe');
                     })
                     ->count(),
 
                 'destroyed' => (clone $govQuery)
                     ->where(function ($q) {
                         $q->where('unit_damage_status', 'Destroyed')
-                            ->orWhere('damage_status', 'Destroyed');
+                            ->orWhere('unit_damage_status', 'Destroyed');
                     })
                     ->count(),
             ];
