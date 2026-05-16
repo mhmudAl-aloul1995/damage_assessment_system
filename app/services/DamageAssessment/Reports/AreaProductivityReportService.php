@@ -50,8 +50,8 @@ class AreaProductivityReportService
             ],
             'filter_options' => $this->filterOptions($type),
             'charts' => [
-                'location_pies' => $type === self::TYPE_HOUSING_UNITS
-                    ? $this->buildHousingUnitLocationPieCharts($rows)
+                'location_pies' => $this->supportsLocationPieCharts($type)
+                    ? $this->buildLocationPieCharts($rows, $type)
                     : [],
             ],
             'summary' => [
@@ -420,14 +420,21 @@ class AreaProductivityReportService
      * @param  Collection<int, object>  $rows
      * @return array<int, array{pie: array<string, mixed>, neighborhoods: array<int, array<string, mixed>>}>
      */
-    private function buildHousingUnitLocationPieCharts(Collection $rows): array
+    private function buildLocationPieCharts(Collection $rows, string $type): array
     {
+        $idPrefix = match ($type) {
+            self::TYPE_HOUSING_UNITS => 'housing_units',
+            self::TYPE_PUBLIC_BUILDINGS => 'public_buildings',
+            self::TYPE_ROAD_FACILITIES => 'road_facilities',
+            default => 'area_productivity',
+        };
+
         return $rows
             ->filter(fn (object $row): bool => (int) $row->tda_range + (int) $row->pda_range > 0)
             ->groupBy(fn (object $row): string => $this->locationValue($row->municipalitie ?? null))
-            ->map(function (Collection $municipalityRows, string $municipality): array {
-                $municipalityPie = $this->makeHousingUnitLocationPie(
-                    idPrefix: 'housing_units_municipality',
+            ->map(function (Collection $municipalityRows, string $municipality) use ($idPrefix): array {
+                $municipalityPie = $this->makeLocationPie(
+                    idPrefix: "{$idPrefix}_municipality",
                     title: $municipality,
                     subtitle: 'Municipality',
                     tda: (int) $municipalityRows->sum('tda_range'),
@@ -438,8 +445,8 @@ class AreaProductivityReportService
                 $neighborhoods = $municipalityRows
                     ->sortByDesc(fn (object $row): int => (int) $row->tda_range + (int) $row->pda_range)
                     ->values()
-                    ->map(fn (object $row): array => $this->makeHousingUnitLocationPie(
-                        idPrefix: 'housing_units_neighborhood',
+                    ->map(fn (object $row): array => $this->makeLocationPie(
+                        idPrefix: "{$idPrefix}_neighborhood",
                         title: $this->locationValue($row->neighborhood ?? null),
                         subtitle: 'Neighborhood',
                         tda: (int) $row->tda_range,
@@ -453,7 +460,7 @@ class AreaProductivityReportService
                     'neighborhoods' => $neighborhoods,
                 ];
             })
-            ->sortByDesc(fn (array $municipalityNode): int => (int) $municipalityNode['pie']['units_count'])
+            ->sortByDesc(fn (array $municipalityNode): int => (int) $municipalityNode['pie']['items_count'])
             ->values()
             ->all();
     }
@@ -461,7 +468,7 @@ class AreaProductivityReportService
     /**
      * @return array<string, mixed>
      */
-    private function makeHousingUnitLocationPie(
+    private function makeLocationPie(
         string $idPrefix,
         string $title,
         string $subtitle,
@@ -469,7 +476,7 @@ class AreaProductivityReportService
         int $pda,
         string $level,
     ): array {
-        $unitsCount = $tda + $pda;
+        $itemsCount = $tda + $pda;
 
         return [
             'id' => $idPrefix.'_'.substr(md5($level.'|'.$title), 0, 12),
@@ -478,11 +485,21 @@ class AreaProductivityReportService
             'level' => $level,
             'series' => [$tda, $pda],
             'labels' => ['Totally Damaged', 'Partially Damaged'],
-            'units_count' => $unitsCount,
-            'buildings_count' => $unitsCount,
-            'completed_percent' => $this->percentage($tda, $unitsCount),
-            'not_completed_percent' => $this->percentage($pda, $unitsCount),
+            'items_count' => $itemsCount,
+            'units_count' => $itemsCount,
+            'buildings_count' => $itemsCount,
+            'completed_percent' => $this->percentage($tda, $itemsCount),
+            'not_completed_percent' => $this->percentage($pda, $itemsCount),
         ];
+    }
+
+    private function supportsLocationPieCharts(string $type): bool
+    {
+        return in_array($type, [
+            self::TYPE_HOUSING_UNITS,
+            self::TYPE_PUBLIC_BUILDINGS,
+            self::TYPE_ROAD_FACILITIES,
+        ], true);
     }
 
     private function percentage(int $value, int $total): float

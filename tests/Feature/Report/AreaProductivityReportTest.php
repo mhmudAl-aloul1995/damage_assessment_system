@@ -256,31 +256,61 @@ it('renders separated area productivity reports for all supported datasets with 
             && (int) $rimal->housing_units_count === 4;
     });
 
-    $this->actingAs($user)
+    $publicBuildingsResponse = $this->actingAs($user)
         ->get(route('reports.area-productivity.public-buildings', [
             'start_date' => '2026-04-01',
             'end_date' => '2026-04-30',
             'assignedto' => 'eng-1',
-        ]))
+        ]));
+
+    $publicBuildingsResponse
         ->assertOk()
         ->assertSee(__('multilingual.area_productivity_reports.titles.public_buildings'), false)
+        ->assertSee('Location Pie Charts')
+        ->assertSee('Municipality | 1 public buildings')
+        ->assertSee('public_buildings_municipality', false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('1', false)
         ->assertDontSee('<td>Camp</td>', false)
         ->assertSee('Grand Totals', false);
 
-    $this->actingAs($user)
+    $publicBuildingsResponse->assertViewHas('charts', function (array $charts): bool {
+        $municipalityNode = $charts['location_pies'][0] ?? null;
+
+        return $municipalityNode !== null
+            && $municipalityNode['pie']['title'] === 'Gaza'
+            && $municipalityNode['pie']['series'] === [1, 0]
+            && $municipalityNode['pie']['items_count'] === 1
+            && count($municipalityNode['neighborhoods']) === 1;
+    });
+
+    $roadFacilitiesResponse = $this->actingAs($user)
         ->get(route('reports.area-productivity.road-facilities', [
             'start_date' => '2026-04-01',
             'end_date' => '2026-04-30',
             'assignedto' => 'eng-1',
-        ]))
+        ]));
+
+    $roadFacilitiesResponse
         ->assertOk()
         ->assertSee(__('multilingual.area_productivity_reports.titles.road_facilities'), false)
+        ->assertSee('Location Pie Charts')
+        ->assertSee('Municipality | 2 road facilities')
+        ->assertSee('road_facilities_municipality', false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('2', false)
         ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.road_facilities'), false);
+
+    $roadFacilitiesResponse->assertViewHas('charts', function (array $charts): bool {
+        $municipalityNode = $charts['location_pies'][0] ?? null;
+
+        return $municipalityNode !== null
+            && $municipalityNode['pie']['title'] === 'Gaza'
+            && $municipalityNode['pie']['series'] === [1, 1]
+            && $municipalityNode['pie']['items_count'] === 2
+            && count($municipalityNode['neighborhoods']) === 1;
+    });
 
     $this->actingAs($user)
         ->get(route('reports.area-productivity.export.buildings', [

@@ -6,10 +6,19 @@
 @section('content')
     @php
         $showHousingUnitsCount = false;
-        $showHousingUnitLocationPies = $type === \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS;
+        $showLocationPies = in_array($type, [
+            \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS,
+            \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS,
+            \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES,
+        ], true);
+        $locationPieCountLabel = match ($type) {
+            \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS => 'public buildings',
+            \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES => 'road facilities',
+            default => 'housing units',
+        };
         $locationPieCharts = [];
 
-        if ($showHousingUnitLocationPies) {
+        if ($showLocationPies) {
             foreach ($charts['location_pies'] as $municipalityNode) {
                 $locationPieCharts[] = $municipalityNode['pie'];
 
@@ -395,7 +404,7 @@
                     </div>
                 </div>
 
-                @if ($showHousingUnitLocationPies)
+                @if ($showLocationPies)
                     <div class="card-body pb-0 border-top">
                         <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-transparent fs-6 fw-bold" role="tablist">
                             <li class="nav-item" role="presentation">
@@ -418,13 +427,13 @@
                     <div class="tab-content">
                 @endif
 
-                @if ($showHousingUnitLocationPies)
+                @if ($showLocationPies)
                     <div class="tab-pane fade" id="area-productivity-location-charts-pane" role="tabpanel"
                         aria-labelledby="area-productivity-location-charts-tab">
                         <div class="card-body p-0">
                             <div class="px-8 pt-6">
                                 <h3 class="fw-bold mb-1">Location Pie Charts</h3>
-                                <div class="text-muted fs-7">Municipality and neighborhood charts for totally and partially damaged housing units.</div>
+                                <div class="text-muted fs-7">Municipality and neighborhood charts for totally and partially damaged {{ $locationPieCountLabel }}.</div>
                             </div>
 
                             @if (count($charts['location_pies']))
@@ -439,7 +448,7 @@
                                                 <span>
                                                     <span class="location-pie-section-title d-block">{{ $municipalityPie['title'] }}</span>
                                                     <span class="location-pie-section-meta">
-                                                        Municipality | {{ number_format($municipalityPie['units_count']) }} housing units |
+                                                        Municipality | {{ number_format($municipalityPie['items_count']) }} {{ $locationPieCountLabel }} |
                                                         {{ count($municipalityNode['neighborhoods']) }} neighborhoods
                                                     </span>
                                                     <span class="location-collapse-cue d-block mt-1">
@@ -457,7 +466,7 @@
                                                         'pie' => $municipalityPie,
                                                         'variant' => 'primary',
                                                         'neighborhoodsCount' => count($municipalityNode['neighborhoods']),
-                                                        'countLabel' => 'housing units',
+                                                        'countLabel' => $locationPieCountLabel,
                                                         'firstMetricLabel' => 'Totally Damaged',
                                                         'secondMetricLabel' => 'Partially Damaged',
                                                         'firstMetricClass' => 'totally-damaged',
@@ -473,7 +482,7 @@
                                                         @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
                                                             @include('modules.damage-assessment.reports.partials.location_productivity_neighborhood', [
                                                                 'pie' => $neighborhoodPie,
-                                                                'countLabel' => 'housing units',
+                                                                'countLabel' => $locationPieCountLabel,
                                                                 'firstMetricLabel' => 'Totally Damaged',
                                                                 'secondMetricLabel' => 'Partially Damaged',
                                                                 'firstMetricClass' => 'totally-damaged',
@@ -487,13 +496,13 @@
                                     @endforeach
                                 </div>
                             @else
-                                <div class="p-10 text-center text-muted">No matching damaged housing units.</div>
+                                <div class="p-10 text-center text-muted">No matching damaged {{ $locationPieCountLabel }}.</div>
                             @endif
                         </div>
                     </div>
                 @endif
 
-                @if ($showHousingUnitLocationPies)
+                @if ($showLocationPies)
                     <div class="tab-pane fade show active" id="area-productivity-table-pane" role="tabpanel"
                         aria-labelledby="area-productivity-table-tab">
                 @endif
@@ -554,7 +563,7 @@
                             </tfoot>
                         </table>
                     </div>
-                @if ($showHousingUnitLocationPies)
+                @if ($showLocationPies)
                     </div>
                     </div>
                 @endif
@@ -606,8 +615,9 @@
                 }
             });
 
-            @if ($showHousingUnitLocationPies)
+                @if ($showLocationPies)
                 const locationPieCharts = @json($locationPieCharts);
+                const locationPieCountLabel = @json($locationPieCountLabel);
                 const renderedLocationPieCharts = new Set();
 
                 function renderLocationPieChart(pie) {
@@ -642,7 +652,7 @@
                         tooltip: {
                             y: {
                                 formatter: function (value) {
-                                    return value + ' housing units';
+                                    return value + ' ' + locationPieCountLabel;
                                 }
                             }
                         },
