@@ -33,8 +33,8 @@
     <div class="location-pie-summary-grid {{ $neighborhoodsCount === null && count($summaryItems) === 2 ? 'two-items' : '' }}">
         @foreach ($summaryItems as $summaryItem)
             <div class="location-pie-summary-item {{ $loop->first ? $firstMetricClass : ($loop->iteration === 2 ? $secondMetricClass : '') }}">
-                <span class="location-pie-summary-label">{{ $summaryItem['label'] }}</span>
-                <span class="location-pie-summary-value">
+                <span class="location-pie-summary-label" style="color: {{ $summaryItem['color'] ?? '#7e8299' }}">{{ $summaryItem['label'] }}</span>
+                <span class="location-pie-summary-value" style="color: {{ $summaryItem['color'] ?? '#181c32' }}">
                     {{ number_format($summaryItem['value']) }} ({{ $summaryItem['percent'] }}%)
                 </span>
             </div>

@@ -656,8 +656,6 @@
                 const locationPieCharts = @json($locationPieCharts);
                 const locationPieCountLabel = @json($locationPieCountLabel);
                 const renderedLocationPieCharts = new Set();
-                const locationPieColors = ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89'];
-
                 function renderLocationPieChart(pie) {
                     if (renderedLocationPieCharts.has(pie.id)) {
                         return;
@@ -680,7 +678,7 @@
                             animations: { enabled: true }
                         },
                         labels: pie.labels,
-                        colors: pie.series.length > 2 ? locationPieColors : ['#F1416C', '#FFC700'],
+                        colors: pie.colors,
                         legend: { show: false },
                         stroke: {
                             width: 3,

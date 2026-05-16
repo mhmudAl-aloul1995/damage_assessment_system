@@ -494,6 +494,9 @@ class AreaProductivityReportService
         string $level,
     ): array {
         $itemsCount = array_sum($series);
+        $colors = count($series) > 2
+            ? ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89']
+            : ['#F1416C', '#FFC700'];
 
         return [
             'id' => $idPrefix.'_'.substr(md5($level.'|'.$title), 0, 12),
@@ -502,6 +505,7 @@ class AreaProductivityReportService
             'level' => $level,
             'series' => $series,
             'labels' => $labels,
+            'colors' => $colors,
             'items_count' => $itemsCount,
             'units_count' => $itemsCount,
             'buildings_count' => $itemsCount,
@@ -512,6 +516,7 @@ class AreaProductivityReportService
                     'label' => $label,
                     'value' => (int) ($series[$index] ?? 0),
                     'percent' => $this->percentage((int) ($series[$index] ?? 0), $itemsCount),
+                    'color' => $colors[$index] ?? '#181c32',
                 ])
                 ->all(),
         ];

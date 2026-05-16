@@ -391,6 +391,8 @@ it('renders separated area productivity reports for all supported datasets with 
             && $municipalityNode['pie']['title'] === 'Gaza'
             && $municipalityNode['pie']['series'] === [1, 1, 1, 1, 1]
             && $municipalityNode['pie']['labels'] === ['Destroyed', 'Severe', 'Moderate', 'Minor', 'No Damage']
+            && $municipalityNode['pie']['colors'] === ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89']
+            && array_column($municipalityNode['pie']['summary_items'], 'color') === ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89']
             && $municipalityNode['pie']['items_count'] === 5
             && count($municipalityNode['neighborhoods']) === 1;
     });
