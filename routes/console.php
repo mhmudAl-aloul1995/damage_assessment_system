@@ -18,9 +18,7 @@ Schedule::command('queue:work database --queue=exports --stop-when-empty --tries
     ->everyMinute()
     ->withoutOverlapping(10)
     ->name('exports-queue-worker')
-    ->appendOutputTo(storage_path('logs/queue-schedule.log'))
-    ->runInBackground();
-
+    ->appendOutputTo(storage_path('logs/queue-schedule.log'));
 /*
 |--------------------------------------------------------------------------
 | ArcGIS Sync Schedule
