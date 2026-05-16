@@ -71,13 +71,11 @@ class IndasPdfReportService
         if ($request->filled('municipalitie')) {
 
             $buildingsQuery->where(function ($q) use ($request) {
-                $q->where('municipalitie', $request->municipalitie)
-                    ->orWhere('municipality', $request->municipalitie);
+                $q->where('municipalitie', $request->municipalitie);
             });
 
             $housingQuery->where(function ($q) use ($request) {
-                $q->where('municipalitie', $request->municipalitie)
-                    ->orWhere('municipality', $request->municipalitie);
+                $q->where('municipalitie', $request->municipalitie);
             });
         }
 
@@ -161,15 +159,13 @@ class IndasPdfReportService
         | Municipalities
         |--------------------------------------------------------------------------
         */
-
         $municipalities = (clone $housingQuery)
             ->select([
-                DB::raw("
-                    COALESCE(municipalitie, municipality) as municipality_name
-                "),
+                'municipalitie as municipality_name',
                 DB::raw("COUNT(*) as total_units"),
             ])
-            ->groupBy('municipality_name')
+            ->whereNotNull('municipalitie')
+            ->groupBy('municipalitie')
             ->orderBy('total_units', 'DESC')
             ->limit(20)
             ->get();
