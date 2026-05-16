@@ -25,6 +25,7 @@ use App\Http\Controllers\Modules\DamageAssessment\Reports\DailyAchievementReport
 use App\Http\Controllers\Modules\DamageAssessment\Reports\DamageStatisticsReportController;
 use App\Http\Controllers\Modules\DamageAssessment\Reports\FieldEngineerReportController;
 use App\Http\Controllers\Modules\DamageAssessment\Reports\HlpAuditReportController;
+use App\Http\Controllers\Modules\DamageAssessment\Reports\IndasPdfReportController;
 use App\Http\Controllers\Modules\DamageAssessment\Reports\ReportController;
 use App\Http\Controllers\Modules\DamageAssessment\Reports\SurveyReportController;
 use App\Http\Controllers\Modules\DamageAssessment\Surveys\Buildings\BuildingController;
@@ -33,26 +34,12 @@ use App\Http\Controllers\Modules\DamageAssessment\Surveys\PublicBuildings\Public
 use App\Http\Controllers\Modules\DamageAssessment\Surveys\RoadFacilities\RoadFacilityController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Modules\DamageAssessment\Reports\IndasPdfReportController;
 
 Route::middleware('auth')->group(function () {
     Route::get('/gitPush', [EngineerController::class, 'gitPush'])
         ->middleware('role_or_permission:Database Officer|system.maintenance');
 
     Route::resource('sync', controller: ArcGISController::class);
-
-    Route::prefix('damage-assessment')
-        ->name('damage-assessment.')
-        ->middleware(['web', 'auth'])
-        ->group(function () {
-
-            Route::get('/reports/indas', [IndasPdfReportController::class, 'index'])
-                ->name('reports.indas');
-
-            Route::get('/reports/indas/export', [IndasPdfReportController::class, 'export'])
-                ->name('reports.indas.export');
-
-        });
 
     Route::get('/damage-assessment/reports/indas', [IndasPdfReportController::class, 'index'])
         ->name('damage-assessment.reports.indas');

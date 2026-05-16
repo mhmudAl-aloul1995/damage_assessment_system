@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Modules\DamageAssessment\Reports;
 
 use App\Http\Controllers\Controller;
 use App\Services\DamageAssessment\Reports\IndasPdfReportService;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Spatie\Browsershot\Browsershot;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class IndasPdfReportController extends Controller
 {
@@ -15,18 +17,18 @@ class IndasPdfReportController extends Controller
         protected IndasPdfReportService $reportService
     ) {}
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $data = $this->reportService->build($request);
 
-        return view('modules.damage-assessment.pdf.indas-report', $data);
+        return view('modules.damage-assessment.reports.indas', $data);
     }
 
-    public function export(Request $request)
+    public function export(Request $request): BinaryFileResponse
     {
         $data = $this->reportService->build($request);
 
-        $html = view('modules.damage-assessment.pdf.indas-report', $data)->render();
+        $html = view('modules.damage-assessment.reports.indas-pdf', $data)->render();
 
         $directory = storage_path('app/public/reports');
 
@@ -34,27 +36,34 @@ class IndasPdfReportController extends Controller
             File::makeDirectory($directory, 0755, true);
         }
 
-        $fileName = 'indas-report-' . now()->format('Y-m-d-H-i-s') . '-' . Str::random(5) . '.pdf';
-        $filePath = $directory . DIRECTORY_SEPARATOR . $fileName;
+        $fileName = 'indas-report-'.now()->format('Y-m-d-H-i-s').'-'.Str::random(5).'.pdf';
+        $filePath = $directory.DIRECTORY_SEPARATOR.$fileName;
 
         $browser = Browsershot::html($html)
             ->format('A4')
             ->landscape()
             ->showBackground()
             ->margins(0, 0, 0, 0)
+            ->noSandbox()
+            ->setNodeModulePath(base_path('node_modules'))
+            ->addChromiumArguments([
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--font-render-hinting=medium',
+            ])
             ->waitUntilNetworkIdle()
             ->timeout(180);
 
-        if (env('BROWSERSHOT_NODE_BINARY')) {
-            $browser->setNodeBinary(env('BROWSERSHOT_NODE_BINARY'));
+        if (config('services.browsershot.node_binary')) {
+            $browser->setNodeBinary(config('services.browsershot.node_binary'));
         }
 
-        if (env('BROWSERSHOT_NPM_BINARY')) {
-            $browser->setNpmBinary(env('BROWSERSHOT_NPM_BINARY'));
+        if (config('services.browsershot.npm_binary')) {
+            $browser->setNpmBinary(config('services.browsershot.npm_binary'));
         }
 
-        if (env('BROWSERSHOT_CHROME_PATH')) {
-            $browser->setChromePath(env('BROWSERSHOT_CHROME_PATH'));
+        if (config('services.browsershot.chrome_path')) {
+            $browser->setChromePath(config('services.browsershot.chrome_path'));
         }
 
         $browser->savePdf($filePath);

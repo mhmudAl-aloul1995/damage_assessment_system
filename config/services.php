@@ -34,6 +34,11 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'browsershot' => [
+        'node_binary' => env('BROWSERSHOT_NODE_BINARY'),
+        'npm_binary' => env('BROWSERSHOT_NPM_BINARY'),
+        'chrome_path' => env('BROWSERSHOT_CHROME_PATH'),
+    ],
     'arcgis' => [
         'username' => env('ARCGIS_USERNAME'),
         'password' => env('ARCGIS_PASSWORD'),
