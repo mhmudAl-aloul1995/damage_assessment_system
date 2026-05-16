@@ -179,6 +179,48 @@ it('renders separated area productivity reports for all supported datasets with 
         'updated_at' => '2026-04-11 09:00:00',
     ]);
 
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 4003,
+        'str_name' => 'Street C',
+        'assignedto' => 'eng-1',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'road_damage_level' => 'severe',
+        'zone_code' => 'RZ-3',
+        'creationdate' => '2026-04-12 09:00:00',
+        'created_at' => '2026-04-12 09:00:00',
+        'updated_at' => '2026-04-12 09:00:00',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 4004,
+        'str_name' => 'Street D',
+        'assignedto' => 'eng-1',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'road_damage_level' => 'minor',
+        'zone_code' => 'RZ-4',
+        'creationdate' => '2026-04-13 09:00:00',
+        'created_at' => '2026-04-13 09:00:00',
+        'updated_at' => '2026-04-13 09:00:00',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 4005,
+        'str_name' => 'Street E',
+        'assignedto' => 'eng-1',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'road_damage_level' => 'No_Damage',
+        'zone_code' => 'RZ-5',
+        'creationdate' => '2026-04-14 09:00:00',
+        'created_at' => '2026-04-14 09:00:00',
+        'updated_at' => '2026-04-14 09:00:00',
+    ]);
+
     $this->actingAs($user)
         ->get(route('reports.area-productivity.housing-units', [
             'start_date' => '2026-04-01',
@@ -297,10 +339,16 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertOk()
         ->assertSee(__('multilingual.area_productivity_reports.titles.road_facilities'), false)
         ->assertSee('Location Pie Charts')
-        ->assertSee('Municipality | 2 road facilities')
+        ->assertSee('Municipality | 5 road facilities')
         ->assertSee('road_facilities_municipality', false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.destroyed'), false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.severe'), false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.moderate'), false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.minor'), false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.no_damage'), false)
+        ->assertDontSee(__('multilingual.area_productivity_reports.columns.cra'), false)
         ->assertSee('<td>Rimal</td>', false)
-        ->assertSee('2', false)
+        ->assertSee('5', false)
         ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.road_facilities'), false);
 
@@ -309,13 +357,30 @@ it('renders separated area productivity reports for all supported datasets with 
 
         return $municipalityNode !== null
             && $municipalityNode['pie']['title'] === 'Gaza'
-            && $municipalityNode['pie']['series'] === [1, 1]
-            && $municipalityNode['pie']['items_count'] === 2
+            && $municipalityNode['pie']['series'] === [1, 1, 1, 1, 1]
+            && $municipalityNode['pie']['labels'] === ['Destroyed', 'Severe', 'Moderate', 'Minor', 'No Damage']
+            && $municipalityNode['pie']['items_count'] === 5
             && count($municipalityNode['neighborhoods']) === 1;
     });
 
     $this->actingAs($user)
+        ->get(route('reports.area-productivity.road-facilities', [
+            'assignedto' => 'eng-1',
+        ]))
+        ->assertOk()
+        ->assertSee(__('multilingual.area_productivity_reports.titles.road_facilities').':', false)
+        ->assertSee('All')
+        ->assertViewHas('date_range_label', 'All');
+
+    $this->actingAs($user)
         ->get(route('reports.area-productivity.export.buildings', [
+            'start_date' => '2026-04-01',
+            'end_date' => '2026-04-30',
+        ]))
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('reports.area-productivity.export.road-facilities', [
             'start_date' => '2026-04-01',
             'end_date' => '2026-04-30',
         ]))

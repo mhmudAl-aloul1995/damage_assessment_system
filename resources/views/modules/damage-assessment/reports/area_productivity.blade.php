@@ -6,6 +6,7 @@
 @section('content')
     @php
         $showHousingUnitsCount = false;
+        $showRoadDamageColumns = $type === \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES;
         $showLocationPies = in_array($type, [
             \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS,
             \App\Services\DamageAssessment\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS,
@@ -240,7 +241,7 @@
 
         .location-pie-summary-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
             gap: .5rem;
             margin-top: .35rem;
         }
@@ -308,9 +309,14 @@
                 <div class="card-header border-0 pt-6" style="direction: {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }};">
                     <div class="card-title">
                         <h2 style="color: green;">
-                            {{ __($title_key) }}: {{ $start_date }}
-                            <span class="text-gray-400">{{ __('multilingual.area_productivity_reports.labels.to') }}</span>
-                            {{ $end_date }}
+                            {{ __($title_key) }}:
+                            @if ($start_date && $end_date)
+                                {{ $start_date }}
+                                <span class="text-gray-400">{{ __('multilingual.area_productivity_reports.labels.to') }}</span>
+                                {{ $end_date }}
+                            @else
+                                All
+                            @endif
                         </h2>
                     </div>
 
@@ -521,9 +527,17 @@
                                     @if ($showHousingUnitsCount)
                                         <th>{{ __('multilingual.area_productivity_reports.columns.housing_units_count') }}</th>
                                     @endif
-                                    <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
-                                    <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
-                                    <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
+                                    @if ($showRoadDamageColumns)
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.destroyed') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.severe') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.moderate') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.minor') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
+                                    @else
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
+                                    @endif
                                     <th>{{ __('multilingual.area_productivity_reports.columns.engineers') }}</th>
                                     <th>{{ __('multilingual.area_productivity_reports.columns.neighborhood') }}</th>
                                     <th>{{ __('multilingual.area_productivity_reports.columns.municipality') }}</th>
@@ -538,9 +552,17 @@
                                         @if ($showHousingUnitsCount)
                                             <td>{{ $row->housing_units_count ?? 0 }}</td>
                                         @endif
-                                        <td>{{ $row->cra_range }}</td>
-                                        <td>{{ $row->pda_range }}</td>
-                                        <td>{{ $row->tda_range }}</td>
+                                        @if ($showRoadDamageColumns)
+                                            <td>{{ $row->destroyed_count }}</td>
+                                            <td>{{ $row->severe_count }}</td>
+                                            <td>{{ $row->moderate_count }}</td>
+                                            <td>{{ $row->minor_count }}</td>
+                                            <td>{{ $row->no_damage_count }}</td>
+                                        @else
+                                            <td>{{ $row->cra_range }}</td>
+                                            <td>{{ $row->pda_range }}</td>
+                                            <td>{{ $row->tda_range }}</td>
+                                        @endif
                                         <td>{{ $row->no_eng }}</td>
                                         <td>{{ $row->neighborhood ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
                                         <td>{{ $row->municipalitie ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
@@ -549,7 +571,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ $showHousingUnitsCount ? 10 : 9 }}" class="text-center text-muted">
+                                        <td colspan="{{ $showRoadDamageColumns ? 11 : ($showHousingUnitsCount ? 10 : 9) }}" class="text-center text-muted">
                                             {{ __('multilingual.area_productivity_reports.labels.empty') }}
                                         </td>
                                     </tr>
@@ -561,9 +583,17 @@
                                     @if ($showHousingUnitsCount)
                                         <td>{{ $summary['housing_units_count'] }}</td>
                                     @endif
-                                    <td class="text-primary">{{ $summary['cra'] }}</td>
-                                    <td class="text-warning">{{ $summary['pda'] }}</td>
-                                    <td class="text-danger">{{ $summary['tda'] }}</td>
+                                    @if ($showRoadDamageColumns)
+                                        <td class="text-danger">{{ $summary['destroyed'] }}</td>
+                                        <td class="text-danger">{{ $summary['severe'] }}</td>
+                                        <td class="text-warning">{{ $summary['moderate'] }}</td>
+                                        <td class="text-primary">{{ $summary['minor'] }}</td>
+                                        <td class="text-success">{{ $summary['no_damage'] }}</td>
+                                    @else
+                                        <td class="text-primary">{{ $summary['cra'] }}</td>
+                                        <td class="text-warning">{{ $summary['pda'] }}</td>
+                                        <td class="text-danger">{{ $summary['tda'] }}</td>
+                                    @endif
                                     <td>{{ $summary['engineers'] }}</td>
                                     <td colspan="4" class="text-center">{{ __('multilingual.area_productivity_reports.labels.grand_totals') }}</td>
                                 </tr>
@@ -588,8 +618,8 @@
             });
 
             $('#kt_daterangepicker').daterangepicker({
-                startDate: moment(@json($start_date)),
-                endDate: moment(@json($end_date)),
+                startDate: @json($start_date) ? moment(@json($start_date)) : moment().subtract(29, 'days'),
+                endDate: @json($end_date) ? moment(@json($end_date)) : moment(),
                 locale: {
                     format: 'MM/DD/YYYY'
                 },
@@ -626,6 +656,7 @@
                 const locationPieCharts = @json($locationPieCharts);
                 const locationPieCountLabel = @json($locationPieCountLabel);
                 const renderedLocationPieCharts = new Set();
+                const locationPieColors = ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89'];
 
                 function renderLocationPieChart(pie) {
                     if (renderedLocationPieCharts.has(pie.id)) {
@@ -649,7 +680,7 @@
                             animations: { enabled: true }
                         },
                         labels: pie.labels,
-                        colors: ['#F1416C', '#FFC700'],
+                        colors: pie.series.length > 2 ? locationPieColors : ['#F1416C', '#FFC700'],
                         legend: { show: false },
                         stroke: {
                             width: 3,

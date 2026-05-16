@@ -27,6 +27,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         private readonly string $endDate,
         private readonly string $reportTitle,
         private readonly string $sectorLabel,
+        private readonly string $type,
         private readonly bool $includeHousingUnitsCount = false,
     ) {}
 
@@ -46,6 +47,11 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             'tda_range' => $this->data->sum('tda_range'),
             'pda_range' => $this->data->sum('pda_range'),
             'cra_range' => $this->data->sum('cra_range'),
+            'destroyed_count' => $this->data->sum('destroyed_count'),
+            'severe_count' => $this->data->sum('severe_count'),
+            'moderate_count' => $this->data->sum('moderate_count'),
+            'minor_count' => $this->data->sum('minor_count'),
+            'no_damage_count' => $this->data->sum('no_damage_count'),
             'total_count' => $this->data->sum('total_count'),
             'housing_units_count' => $this->data->sum('housing_units_count'),
         ];
@@ -63,11 +69,23 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             $headings[] = __('multilingual.area_productivity_reports.columns.housing_units_count');
         }
 
+        $damageHeadings = $this->isRoadFacilitiesReport()
+            ? [
+                __('multilingual.area_productivity_reports.columns.destroyed'),
+                __('multilingual.area_productivity_reports.columns.severe'),
+                __('multilingual.area_productivity_reports.columns.moderate'),
+                __('multilingual.area_productivity_reports.columns.minor'),
+                __('multilingual.area_productivity_reports.columns.no_damage'),
+            ]
+            : [
+                __('multilingual.area_productivity_reports.columns.cra'),
+                __('multilingual.area_productivity_reports.columns.pda'),
+                __('multilingual.area_productivity_reports.columns.tda'),
+            ];
+
         return [
             ...$headings,
-            __('multilingual.area_productivity_reports.columns.cra'),
-            __('multilingual.area_productivity_reports.columns.pda'),
-            __('multilingual.area_productivity_reports.columns.tda'),
+            ...$damageHeadings,
             __('multilingual.area_productivity_reports.columns.engineers'),
             __('multilingual.area_productivity_reports.columns.neighborhood'),
             __('multilingual.area_productivity_reports.columns.municipality'),
@@ -88,11 +106,23 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             $mapped[] = $row->housing_units_count ?? 0;
         }
 
+        $damageValues = $this->isRoadFacilitiesReport()
+            ? [
+                $row->destroyed_count ?? 0,
+                $row->severe_count ?? 0,
+                $row->moderate_count ?? 0,
+                $row->minor_count ?? 0,
+                $row->no_damage_count ?? 0,
+            ]
+            : [
+                $row->cra_range ?? 0,
+                $row->pda_range ?? 0,
+                $row->tda_range ?? 0,
+            ];
+
         return [
             ...$mapped,
-            $row->cra_range ?? 0,
-            $row->pda_range ?? 0,
-            $row->tda_range ?? 0,
+            ...$damageValues,
             $row->no_eng ?? 0,
             $isTotal ? '' : ($row->neighborhood ?? ''),
             $isTotal ? '' : ($row->municipalitie ?? ''),
@@ -105,7 +135,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
     {
         $headerRow = 3;
         $lastRow = $this->data->count() + 4;
-        $lastColumn = $this->includeHousingUnitsCount ? 'J' : 'I';
+        $lastColumn = $this->lastColumn();
 
         $sheet->getStyle("A{$headerRow}:{$lastColumn}{$lastRow}")
             ->getBorders()
@@ -138,10 +168,14 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             AfterSheet::class => function (AfterSheet $event): void {
                 $sheet = $event->sheet->getDelegate();
                 $lastRow = $this->data->count() + 4;
-                $lastColumn = $this->includeHousingUnitsCount ? 'J' : 'I';
+                $lastColumn = $this->lastColumn();
 
                 $sheet->mergeCells("A1:{$lastColumn}1");
-                $sheet->setCellValue('A1', "{$this->reportTitle}: {$this->startDate} to {$this->endDate}");
+                $dateLabel = $this->startDate && $this->endDate
+                    ? "{$this->startDate} to {$this->endDate}"
+                    : 'All';
+
+                $sheet->setCellValue('A1', "{$this->reportTitle}: {$dateLabel}");
                 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->getRowDimension(1)->setRowHeight(35);
@@ -168,5 +202,19 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         }
 
         return $formats;
+    }
+
+    private function isRoadFacilitiesReport(): bool
+    {
+        return $this->type === 'road_facilities';
+    }
+
+    private function lastColumn(): string
+    {
+        if ($this->isRoadFacilitiesReport()) {
+            return 'K';
+        }
+
+        return $this->includeHousingUnitsCount ? 'J' : 'I';
     }
 }

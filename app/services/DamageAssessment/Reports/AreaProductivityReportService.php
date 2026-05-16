@@ -37,9 +37,11 @@ class AreaProductivityReportService
             'route_name' => $definition['route_name'],
             'export_route_name' => $definition['export_route_name'],
             'sector_key' => $definition['sector_key'],
-            'start_date' => $dateRange['from']->toDateString(),
-            'end_date' => $dateRange['to']->toDateString(),
-            'date_range_label' => $dateRange['from']->format('m/d/Y') . ' - ' . $dateRange['to']->format('m/d/Y'),
+            'start_date' => $dateRange['from']?->toDateString() ?? '',
+            'end_date' => $dateRange['to']?->toDateString() ?? '',
+            'date_range_label' => $dateRange['from'] && $dateRange['to']
+                ? $dateRange['from']->format('m/d/Y').' - '.$dateRange['to']->format('m/d/Y')
+                : 'All',
             'rows' => $rows,
             'filters' => [
                 'governorate' => (string) ($filters['governorate'] ?? ''),
@@ -60,6 +62,11 @@ class AreaProductivityReportService
                 'tda' => (int) $rows->sum('tda_range'),
                 'pda' => (int) $rows->sum('pda_range'),
                 'cra' => (int) $rows->sum('cra_range'),
+                'destroyed' => (int) $rows->sum('destroyed_count'),
+                'severe' => (int) $rows->sum('severe_count'),
+                'moderate' => (int) $rows->sum('moderate_count'),
+                'minor' => (int) $rows->sum('minor_count'),
+                'no_damage' => (int) $rows->sum('no_damage_count'),
                 'total_records' => (int) $rows->sum('total_count'),
                 'housing_units_count' => (int) $rows->sum('housing_units_count'),
             ],
@@ -93,7 +100,7 @@ class AreaProductivityReportService
             });
     }
 
-    private function groupedQuery(string $type, array $filters, Carbon $fromDate, Carbon $toDate): Builder
+    private function groupedQuery(string $type, array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
     {
         return match ($type) {
             self::TYPE_HOUSING_UNITS => $this->housingUnitsQuery($filters, $fromDate, $toDate),
@@ -104,7 +111,7 @@ class AreaProductivityReportService
         };
     }
 
-    private function housingUnitsQuery(array $filters, Carbon $fromDate, Carbon $toDate): Builder
+    private function housingUnitsQuery(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
     {
         $groupKey = $this->normalizedGroupExpression('buildings.neighborhood');
 
@@ -145,7 +152,7 @@ class AreaProductivityReportService
         return $query;
     }
 
-    private function buildingsQuery(array $filters, Carbon $fromDate, Carbon $toDate): Builder
+    private function buildingsQuery(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
     {
         $groupKey = $this->normalizedGroupExpression('buildings.neighborhood');
 
@@ -201,7 +208,7 @@ class AreaProductivityReportService
         return $query;
     }
 
-    private function publicBuildingsQuery(array $filters, Carbon $fromDate, Carbon $toDate): Builder
+    private function publicBuildingsQuery(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
     {
         $groupKey = $this->normalizedGroupExpression('public_building_surveys.neighborhood');
         $assignedExpression = $this->assignedValueExpression('public_building_surveys');
@@ -230,34 +237,24 @@ class AreaProductivityReportService
         return $query;
     }
 
-    private function roadFacilitiesQuery(array $filters, Carbon $fromDate, Carbon $toDate): Builder
+    private function roadFacilitiesQuery(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
     {
         $groupKey = $this->normalizedGroupExpression('road_facility_surveys.neighborhood');
         $assignedExpression = $this->assignedValueExpression('road_facility_surveys');
 
         $query = RoadFacilitySurvey::query()
             ->selectRaw("
-    {$this->preferredValueExpression('road_facility_surveys.governorate')} as governorate,
-    {$this->preferredValueExpression('road_facility_surveys.municipalitie')} as municipalitie,
-    {$this->preferredValueExpression('road_facility_surveys.neighborhood')} as neighborhood,
-
-    COUNT(DISTINCT NULLIF({$assignedExpression}, '')) as no_eng,
-
-    SUM(CASE WHEN road_facility_surveys.road_damage_level = 'destroyed' THEN 1 ELSE 0 END) as destroyed_count,
-
-    SUM(CASE WHEN road_facility_surveys.road_damage_level = 'minor' THEN 1 ELSE 0 END) as minor_count,
-
-    SUM(CASE WHEN road_facility_surveys.road_damage_level = 'moderate' THEN 1 ELSE 0 END) as moderate_count,
-
-    SUM(CASE 
-        WHEN road_facility_surveys.road_damage_level IN ('No_Damage', 'no_damage')
-        THEN 1 ELSE 0 
-    END) as no_damage_count,
-
-    SUM(CASE WHEN road_facility_surveys.road_damage_level = 'severe' THEN 1 ELSE 0 END) as severe_count,
-
-    COUNT(road_facility_surveys.id) as total_count
-")
+                {$this->preferredValueExpression('road_facility_surveys.governorate')} as governorate,
+                {$this->preferredValueExpression('road_facility_surveys.municipalitie')} as municipalitie,
+                {$this->preferredValueExpression('road_facility_surveys.neighborhood')} as neighborhood,
+                COUNT(DISTINCT NULLIF({$assignedExpression}, '')) as no_eng,
+                SUM(CASE WHEN road_facility_surveys.road_damage_level = 'destroyed' THEN 1 ELSE 0 END) as destroyed_count,
+                SUM(CASE WHEN road_facility_surveys.road_damage_level = 'severe' THEN 1 ELSE 0 END) as severe_count,
+                SUM(CASE WHEN road_facility_surveys.road_damage_level = 'moderate' THEN 1 ELSE 0 END) as moderate_count,
+                SUM(CASE WHEN road_facility_surveys.road_damage_level = 'minor' THEN 1 ELSE 0 END) as minor_count,
+                SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('No_Damage', 'no_damage') THEN 1 ELSE 0 END) as no_damage_count,
+                COUNT(road_facility_surveys.id) as total_count
+            ")
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
 
@@ -277,8 +274,8 @@ class AreaProductivityReportService
         array $filters,
         array $columnMap,
         string $dateColumn,
-        Carbon $fromDate,
-        Carbon $toDate,
+        ?Carbon $fromDate,
+        ?Carbon $toDate,
     ): void {
         foreach ($columnMap as $filterKey => $column) {
             if (filled($filters[$filterKey] ?? null)) {
@@ -290,7 +287,9 @@ class AreaProductivityReportService
             }
         }
 
-        $query->whereBetween($dateColumn, [$fromDate->copy()->startOfDay(), $toDate->copy()->endOfDay()]);
+        if ($fromDate && $toDate) {
+            $query->whereBetween($dateColumn, [$fromDate->copy()->startOfDay(), $toDate->copy()->endOfDay()]);
+        }
     }
 
     private function resolveDateRange(array $filters): array
@@ -300,13 +299,13 @@ class AreaProductivityReportService
 
         $fromDate = filled($rawStartDate)
             ? Carbon::parse((string) $rawStartDate)->startOfDay()
-            : now()->subDays(30)->startOfDay();
+            : null;
 
         $toDate = filled($rawEndDate)
             ? Carbon::parse((string) $rawEndDate)->endOfDay()
-            : now()->endOfDay();
+            : null;
 
-        if ($toDate->lt($fromDate)) {
+        if ($fromDate && $toDate && $toDate->lt($fromDate)) {
             $toDate = $fromDate->copy()->endOfDay();
         }
 
@@ -416,7 +415,7 @@ class AreaProductivityReportService
             return "''";
         }
 
-        return 'COALESCE(' . implode(', ', $columns) . ", '')";
+        return 'COALESCE('.implode(', ', $columns).", '')";
     }
 
     private function dateColumn(string $table): string
@@ -434,6 +433,7 @@ class AreaProductivityReportService
      */
     private function buildLocationPieCharts(Collection $rows, string $type): array
     {
+        $metrics = $this->locationPieMetrics($type);
         $idPrefix = match ($type) {
             self::TYPE_HOUSING_UNITS => 'housing_units',
             self::TYPE_PUBLIC_BUILDINGS => 'public_buildings',
@@ -442,28 +442,29 @@ class AreaProductivityReportService
         };
 
         return $rows
-            ->filter(fn(object $row): bool => (int) $row->tda_range + (int) $row->pda_range > 0)
-            ->groupBy(fn(object $row): string => $this->locationValue($row->municipalitie ?? null))
+            ->filter(fn (object $row): bool => $this->metricTotal($row, $metrics) > 0)
+            ->groupBy(fn (object $row): string => $this->locationValue($row->municipalitie ?? null))
             ->map(function (Collection $municipalityRows, string $municipality) use ($idPrefix, $type): array {
+                $metrics = $this->locationPieMetrics($type);
                 $municipalityPie = $this->makeLocationPie(
                     idPrefix: "{$idPrefix}_municipality",
                     title: $municipality,
                     subtitle: 'Municipality',
-                    tda: (int) $municipalityRows->sum('tda_range'),
-                    pda: (int) $municipalityRows->sum('pda_range'),
+                    series: $this->metricSeries($municipalityRows, $metrics),
+                    labels: array_column($metrics, 'label'),
                     level: 'municipality',
                 );
 
                 $neighborhoods = $municipalityRows
-                    ->when($type === self::TYPE_PUBLIC_BUILDINGS, fn(Collection $rows): Collection => $rows->take(0))
-                    ->sortByDesc(fn(object $row): int => (int) $row->tda_range + (int) $row->pda_range)
+                    ->when($type === self::TYPE_PUBLIC_BUILDINGS, fn (Collection $rows): Collection => $rows->take(0))
+                    ->sortByDesc(fn (object $row): int => $this->metricTotal($row, $metrics))
                     ->values()
-                    ->map(fn(object $row): array => $this->makeLocationPie(
+                    ->map(fn (object $row): array => $this->makeLocationPie(
                         idPrefix: "{$idPrefix}_neighborhood",
                         title: $this->locationValue($row->neighborhood ?? null),
                         subtitle: 'Neighborhood',
-                        tda: (int) $row->tda_range,
-                        pda: (int) $row->pda_range,
+                        series: $this->metricSeries(collect([$row]), $metrics),
+                        labels: array_column($metrics, 'label'),
                         level: 'neighborhood',
                     ))
                     ->all();
@@ -473,7 +474,7 @@ class AreaProductivityReportService
                     'neighborhoods' => $neighborhoods,
                 ];
             })
-            ->sortByDesc(fn(array $municipalityNode): int => (int) $municipalityNode['pie']['items_count'])
+            ->sortByDesc(fn (array $municipalityNode): int => (int) $municipalityNode['pie']['items_count'])
             ->values()
             ->all();
     }
@@ -485,25 +486,73 @@ class AreaProductivityReportService
         string $idPrefix,
         string $title,
         string $subtitle,
-        int $tda,
-        int $pda,
+        array $series,
+        array $labels,
         string $level,
     ): array {
-        $itemsCount = $tda + $pda;
+        $itemsCount = array_sum($series);
 
         return [
-            'id' => $idPrefix . '_' . substr(md5($level . '|' . $title), 0, 12),
+            'id' => $idPrefix.'_'.substr(md5($level.'|'.$title), 0, 12),
             'title' => $title,
             'subtitle' => $subtitle,
             'level' => $level,
-            'series' => [$tda, $pda],
-            'labels' => ['Totally Damaged', 'Partially Damaged'],
+            'series' => $series,
+            'labels' => $labels,
             'items_count' => $itemsCount,
             'units_count' => $itemsCount,
             'buildings_count' => $itemsCount,
-            'completed_percent' => $this->percentage($tda, $itemsCount),
-            'not_completed_percent' => $this->percentage($pda, $itemsCount),
+            'completed_percent' => $this->percentage((int) ($series[0] ?? 0), $itemsCount),
+            'not_completed_percent' => $this->percentage((int) ($series[1] ?? 0), $itemsCount),
+            'summary_items' => collect($labels)
+                ->map(fn (string $label, int $index): array => [
+                    'label' => $label,
+                    'value' => (int) ($series[$index] ?? 0),
+                    'percent' => $this->percentage((int) ($series[$index] ?? 0), $itemsCount),
+                ])
+                ->all(),
         ];
+    }
+
+    /**
+     * @return array<int, array{key: string, label: string}>
+     */
+    private function locationPieMetrics(string $type): array
+    {
+        if ($type === self::TYPE_ROAD_FACILITIES) {
+            return [
+                ['key' => 'destroyed_count', 'label' => 'Destroyed'],
+                ['key' => 'severe_count', 'label' => 'Severe'],
+                ['key' => 'moderate_count', 'label' => 'Moderate'],
+                ['key' => 'minor_count', 'label' => 'Minor'],
+                ['key' => 'no_damage_count', 'label' => 'No Damage'],
+            ];
+        }
+
+        return [
+            ['key' => 'tda_range', 'label' => 'Totally Damaged'],
+            ['key' => 'pda_range', 'label' => 'Partially Damaged'],
+        ];
+    }
+
+    /**
+     * @param  array<int, array{key: string, label: string}>  $metrics
+     * @return array<int, int>
+     */
+    private function metricSeries(Collection $rows, array $metrics): array
+    {
+        return collect($metrics)
+            ->map(fn (array $metric): int => (int) $rows->sum($metric['key']))
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array{key: string, label: string}>  $metrics
+     */
+    private function metricTotal(object $row, array $metrics): int
+    {
+        return collect($metrics)
+            ->sum(fn (array $metric): int => (int) ($row->{$metric['key']} ?? 0));
     }
 
     private function supportsLocationPieCharts(string $type): bool
