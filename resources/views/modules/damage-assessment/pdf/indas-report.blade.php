@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
 
-    <title>INDAS Report</title>
+    <title>PHC Report</title>
 
     <style>
         @page {
@@ -268,7 +268,7 @@
         </div>
 
         <div class="cover-subtitle">
-            Damage Assessment System - INDAS
+            Damage Assessment System - PHC
         </div>
 
         <div class="cover-date">
@@ -429,7 +429,7 @@
         </table>
 
         <div class="footer">
-            <div>INDAS - GAZA</div>
+            <div>PHC - GAZA</div>
             <div>Damage Assessment System</div>
         </div>
 
@@ -518,7 +518,7 @@
             </div>
 
             <div class="footer">
-                <div>INDAS - GAZA</div>
+                <div>PHC - GAZA</div>
                 <div>{{ $gov['name'] }}</div>
             </div>
 

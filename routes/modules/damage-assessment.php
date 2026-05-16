@@ -41,11 +41,11 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('sync', controller: ArcGISController::class);
 
-    Route::get('/damage-assessment/reports/indas', [IndasPdfReportController::class, 'index'])
-        ->name('damage-assessment.reports.indas');
+    Route::get('/damage-assessment/reports/phc', [IndasPdfReportController::class, 'index'])
+        ->name('damage-assessment.reports.phc');
 
-    Route::get('/damage-assessment/reports/indas/export', [IndasPdfReportController::class, 'export'])
-        ->name('damage-assessment.reports.indas.export');
+    Route::get('/damage-assessment/reports/phc/export', [IndasPdfReportController::class, 'export'])
+        ->name('damage-assessment.reports.phc.export');
     Route::prefix('attendance')->name('attendance.')->group(function () {
         Route::get('/', [AttendanceController::class, 'index'])->name('index');
         Route::post('/data', [AttendanceController::class, 'data'])->name('data');

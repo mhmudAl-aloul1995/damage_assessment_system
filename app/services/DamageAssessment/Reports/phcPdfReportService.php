@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class IndasPdfReportService
+class phcPdfReportService
 {
     private const GOVERNORATES = [
         'North Gaza' => 'شمال غزة',

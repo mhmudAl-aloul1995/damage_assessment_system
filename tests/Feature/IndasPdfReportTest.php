@@ -1,11 +1,11 @@
 <?php
 
 use App\Models\User;
-use App\Services\DamageAssessment\Reports\IndasPdfReportService;
+use App\Services\DamageAssessment\Reports\phcPdfReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-it('builds the indas pdf report data from current assessment tables', function () {
+it('builds the phc pdf report data from current assessment tables', function () {
     DB::table('buildings')->insert([
         'objectid' => 1001,
         'globalid' => 'building-gaza-1',
@@ -30,7 +30,7 @@ it('builds the indas pdf report data from current assessment tables', function (
         'occupied' => 'yes',
     ]);
 
-    $data = app(IndasPdfReportService::class)->build(Request::create('/damage-assessment/reports/indas'));
+    $data = app(phcPdfReportService::class)->build(Request::create('/damage-assessment/reports/phc'));
 
     expect($data['totalPages'])->toBe(14)
         ->and($data['totals']['buildings'])->toBe(1)
@@ -41,12 +41,12 @@ it('builds the indas pdf report data from current assessment tables', function (
         ->and($data['gazaMapSvg'])->toContain('<svg');
 });
 
-it('renders the indas report page with an export pdf action', function () {
+it('renders the phc report page with an export pdf action', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->get(route('damage-assessment.reports.indas'))
+        ->get(route('damage-assessment.reports.phc'))
         ->assertOk()
         ->assertSee('Export PDF', false)
-        ->assertSee(route('damage-assessment.reports.indas.export'), false);
+        ->assertSee(route('damage-assessment.reports.phc.export'), false);
 });

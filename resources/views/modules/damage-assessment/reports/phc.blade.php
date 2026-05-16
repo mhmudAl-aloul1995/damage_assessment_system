@@ -1,27 +1,27 @@
 @extends('layouts.app')
 
-@section('title', 'INDAS PDF Report')
-@section('pageName', 'INDAS PDF Report')
+@section('title', 'PHC PDF Report')
+@section('pageName', 'PHC PDF Report')
 
 @section('content')
     <div class="card">
         <div class="card-header border-0 pt-6">
             <div class="card-title">
                 <div>
-                    <h2 class="mb-1">تقرير حصر الأضرار - INDAS</h2>
+                    <h2 class="mb-1">تقرير حصر الأضرار - PHC</h2>
                     <div class="text-muted fs-7">تقرير PDF عربي من 14 صفحة يعتمد على بيانات المباني والوحدات الحالية.</div>
                 </div>
             </div>
 
             <div class="card-toolbar">
-                <a href="{{ route('damage-assessment.reports.indas.export', request()->query()) }}" class="btn btn-primary" target="_blank">
+                <a href="{{ route('damage-assessment.reports.phc.export', request()->query()) }}" class="btn btn-primary" target="_blank">
                     Export PDF
                 </a>
             </div>
         </div>
 
         <div class="card-body">
-            <form method="GET" action="{{ route('damage-assessment.reports.indas') }}" class="row g-4 mb-8">
+            <form method="GET" action="{{ route('damage-assessment.reports.phc') }}" class="row g-4 mb-8">
                 <div class="col-md-3">
                     <label class="form-label">Start date</label>
                     <input type="date" class="form-control" name="start_date" value="{{ request('start_date') }}">
@@ -51,7 +51,7 @@
 
                 <div class="col-12">
                     <button type="submit" class="btn btn-light-primary">Filter</button>
-                    <a href="{{ route('damage-assessment.reports.indas') }}" class="btn btn-light">Reset</a>
+                    <a href="{{ route('damage-assessment.reports.phc') }}" class="btn btn-light">Reset</a>
                 </div>
             </form>
 

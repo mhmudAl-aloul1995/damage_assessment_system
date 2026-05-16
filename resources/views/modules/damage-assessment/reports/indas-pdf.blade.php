@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Damage Assessment - INDAS</title>
+    <title>Damage Assessment - PHC</title>
     @php
         $arabicFont = base64_encode(file_get_contents(public_path('DroidArabicKufi.ttf')));
     @endphp
@@ -514,13 +514,13 @@
 
         return '<svg class="chart-svg" viewBox="0 0 220 78" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="26" width="190" height="22" fill="#edf5fa"/>'.$segments.$legendItems.'</svg>';
     };
-    $logos = '<div class="logos"><div class="logo-mark">GOV</div><div class="logo-mark">INDAS</div><div class="logo-mark">AIOCP</div></div>';
+    $logos = '<div class="logos"><div class="logo-mark">GOV</div><div class="logo-mark">PHC</div><div class="logo-mark">AIOCP</div></div>';
 @endphp
 
 <section class="page cover">
     <div class="cover-inner">
         <div>
-            <div class="section-band">INDAS - Damage Assessment</div>
+            <div class="section-band">PHC - Damage Assessment</div>
             <div class="cover-title">تقرير حصر أضرار المباني والوحدات السكنية في قطاع غزة</div>
             <div class="cover-subtitle">المنظومة الوطنية المتكاملة لحصر الأضرار</div>
         </div>
@@ -594,7 +594,7 @@
         <div class="chart-block">{!! $stackSvg($occupancyDistribution) !!}<div class="chart-caption">استخدام وإشغال الوحدات السكنية</div></div>
         <div class="chart-block">{!! $donutSvg($damageDistribution) !!}<div class="chart-caption">توزيع أضرار الوحدات السكنية</div></div>
     </div>
-    <div class="footer"><span>INDAS - Gaza Damage Assessment</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
+    <div class="footer"><span>PHC - Gaza Damage Assessment</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
 </section>
 
 @foreach ($governorates as $governorate)
@@ -671,7 +671,7 @@
             <div class="chart-block">{!! $stackSvg($governorate['occupancy']) !!}<div class="chart-caption">استخدام وإشغال الوحدات السكنية</div></div>
             <div class="chart-block">{!! $donutSvg($governorate['damage']) !!}<div class="chart-caption">توزيع أضرار الوحدات السكنية</div></div>
         </div>
-        <div class="footer"><span>INDAS - {{ $governorate['english_name'] }}</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
+        <div class="footer"><span>PHC - {{ $governorate['english_name'] }}</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
     </section>
 @endforeach
 
@@ -721,7 +721,7 @@
             <div class="panel fill"><div class="mini-title">السماوي والبرتقالي</div>يمثلان حالات الضرر الجزئي والكلي في الخرائط والشارتس.</div>
             <div class="panel fill"><div class="mini-title">الأخضر</div>يستخدم لحالات المراجعة أو المؤشرات الداعمة.</div>
         </div>
-        <div class="footer"><span>INDAS - Neighborhoods</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
+        <div class="footer"><span>PHC - Neighborhoods</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
     </section>
 @endforeach
 
@@ -751,7 +751,7 @@
         <div class="metric"><strong>{{ $formatNumber($totals['assessment_statuses']) }}</strong><span>حالات التقييم المرجعية</span></div>
         <div class="metric"><strong>{{ $formatNumber($totals['building_statuses'] + $totals['housing_statuses']) }}</strong><span>سجلات حالات المباني والوحدات</span></div>
     </div>
-    <div class="footer"><span>INDAS - Methodology</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
+    <div class="footer"><span>PHC - Methodology</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
 </section>
 
 <section class="page">
@@ -793,7 +793,7 @@
             <div class="donut-list">{!! $legend($occupancyDistribution) !!}</div>
         </div>
     </div>
-    <div class="footer"><span>INDAS - Recommendations</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
+    <div class="footer"><span>PHC - Recommendations</span><span>صفحة {{ $pageNumber++ }} من {{ $totalPages }}</span></div>
 </section>
 </body>
 </html>
