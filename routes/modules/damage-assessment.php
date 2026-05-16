@@ -33,6 +33,7 @@ use App\Http\Controllers\Modules\DamageAssessment\Surveys\PublicBuildings\Public
 use App\Http\Controllers\Modules\DamageAssessment\Surveys\RoadFacilities\RoadFacilityController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Modules\DamageAssessment\Reports\IndasPdfReportController;
 
 Route::middleware('auth')->group(function () {
     Route::get('/gitPush', [EngineerController::class, 'gitPush'])
@@ -40,6 +41,24 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('sync', controller: ArcGISController::class);
 
+    Route::prefix('damage-assessment')
+        ->name('damage-assessment.')
+        ->middleware(['web', 'auth'])
+        ->group(function () {
+
+            Route::get('/reports/indas', [IndasPdfReportController::class, 'index'])
+                ->name('reports.indas');
+
+            Route::get('/reports/indas/export', [IndasPdfReportController::class, 'export'])
+                ->name('reports.indas.export');
+
+        });
+
+    Route::get('/damage-assessment/reports/indas', [IndasPdfReportController::class, 'index'])
+        ->name('damage-assessment.reports.indas');
+
+    Route::get('/damage-assessment/reports/indas/export', [IndasPdfReportController::class, 'export'])
+        ->name('damage-assessment.reports.indas.export');
     Route::prefix('attendance')->name('attendance.')->group(function () {
         Route::get('/', [AttendanceController::class, 'index'])->name('index');
         Route::post('/data', [AttendanceController::class, 'data'])->name('data');

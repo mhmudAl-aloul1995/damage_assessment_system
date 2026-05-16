@@ -10,11 +10,12 @@ use Spatie\Browsershot\Exceptions\FileUrlNotAllowed;
 use Spatie\Browsershot\Exceptions\HtmlIsNotAllowedToContainFile;
 use Spatie\Browsershot\Exceptions\RemoteConnectionException;
 use Spatie\Browsershot\Exceptions\UnsuccessfulResponse;
+use Spatie\Image\Image;
 use Spatie\TemporaryDirectory\TemporaryDirectory;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
-/** @mixin \Spatie\Image\Image */
+/** @mixin Image */
 class Browsershot
 {
     protected ?string $nodeBinary = null;
