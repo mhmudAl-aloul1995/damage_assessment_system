@@ -432,7 +432,7 @@ class AreaProductivityReportService
         return $rows
             ->filter(fn (object $row): bool => (int) $row->tda_range + (int) $row->pda_range > 0)
             ->groupBy(fn (object $row): string => $this->locationValue($row->municipalitie ?? null))
-            ->map(function (Collection $municipalityRows, string $municipality) use ($idPrefix): array {
+            ->map(function (Collection $municipalityRows, string $municipality) use ($idPrefix, $type): array {
                 $municipalityPie = $this->makeLocationPie(
                     idPrefix: "{$idPrefix}_municipality",
                     title: $municipality,
@@ -443,6 +443,7 @@ class AreaProductivityReportService
                 );
 
                 $neighborhoods = $municipalityRows
+                    ->when($type === self::TYPE_PUBLIC_BUILDINGS, fn (Collection $rows): Collection => $rows->take(0))
                     ->sortByDesc(fn (object $row): int => (int) $row->tda_range + (int) $row->pda_range)
                     ->values()
                     ->map(fn (object $row): array => $this->makeLocationPie(

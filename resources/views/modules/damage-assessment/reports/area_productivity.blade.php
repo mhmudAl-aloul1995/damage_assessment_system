@@ -439,7 +439,10 @@
                             @if (count($charts['location_pies']))
                                 <div class="location-pie-tree mt-5">
                                     @foreach ($charts['location_pies'] as $municipalityNode)
-                                        @php($municipalityPie = $municipalityNode['pie'])
+                                        @php
+                                            $municipalityPie = $municipalityNode['pie'];
+                                            $showNeighborhoodPies = count($municipalityNode['neighborhoods']) > 0;
+                                        @endphp
                                         <div class="location-pie-section">
                                             <button class="location-pie-section-toggle" type="button" data-bs-toggle="collapse"
                                                 data-bs-target="#collapse_{{ $municipalityPie['id'] }}"
@@ -448,8 +451,10 @@
                                                 <span>
                                                     <span class="location-pie-section-title d-block">{{ $municipalityPie['title'] }}</span>
                                                     <span class="location-pie-section-meta">
-                                                        Municipality | {{ number_format($municipalityPie['items_count']) }} {{ $locationPieCountLabel }} |
-                                                        {{ count($municipalityNode['neighborhoods']) }} neighborhoods
+                                                        Municipality | {{ number_format($municipalityPie['items_count']) }} {{ $locationPieCountLabel }}
+                                                        @if ($showNeighborhoodPies)
+                                                            | {{ count($municipalityNode['neighborhoods']) }} neighborhoods
+                                                        @endif
                                                     </span>
                                                     <span class="location-collapse-cue d-block mt-1">
                                                         <span class="when-closed">Click to expand</span>
@@ -465,7 +470,7 @@
                                                     @include('modules.damage-assessment.reports.partials.location_productivity_neighborhood', [
                                                         'pie' => $municipalityPie,
                                                         'variant' => 'primary',
-                                                        'neighborhoodsCount' => count($municipalityNode['neighborhoods']),
+                                                        'neighborhoodsCount' => $showNeighborhoodPies ? count($municipalityNode['neighborhoods']) : null,
                                                         'countLabel' => $locationPieCountLabel,
                                                         'firstMetricLabel' => 'Totally Damaged',
                                                         'secondMetricLabel' => 'Partially Damaged',
@@ -474,23 +479,25 @@
                                                     ])
                                                 </div>
 
-                                                <div class="p-4 pt-0">
-                                                    <div class="location-municipality-title mb-3">
-                                                        Neighborhoods under {{ $municipalityPie['title'] }}
+                                                @if ($showNeighborhoodPies)
+                                                    <div class="p-4 pt-0">
+                                                        <div class="location-municipality-title mb-3">
+                                                            Neighborhoods under {{ $municipalityPie['title'] }}
+                                                        </div>
+                                                        <div class="location-neighborhood-grid">
+                                                            @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
+                                                                @include('modules.damage-assessment.reports.partials.location_productivity_neighborhood', [
+                                                                    'pie' => $neighborhoodPie,
+                                                                    'countLabel' => $locationPieCountLabel,
+                                                                    'firstMetricLabel' => 'Totally Damaged',
+                                                                    'secondMetricLabel' => 'Partially Damaged',
+                                                                    'firstMetricClass' => 'totally-damaged',
+                                                                    'secondMetricClass' => 'partially-damaged',
+                                                                ])
+                                                            @endforeach
+                                                        </div>
                                                     </div>
-                                                    <div class="location-neighborhood-grid">
-                                                        @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
-                                                            @include('modules.damage-assessment.reports.partials.location_productivity_neighborhood', [
-                                                                'pie' => $neighborhoodPie,
-                                                                'countLabel' => $locationPieCountLabel,
-                                                                'firstMetricLabel' => 'Totally Damaged',
-                                                                'secondMetricLabel' => 'Partially Damaged',
-                                                                'firstMetricClass' => 'totally-damaged',
-                                                                'secondMetricClass' => 'partially-damaged',
-                                                            ])
-                                                        @endforeach
-                                                    </div>
-                                                </div>
+                                                @endif
                                             </div>
                                         </div>
                                     @endforeach

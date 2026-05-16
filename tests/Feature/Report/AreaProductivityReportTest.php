@@ -269,6 +269,8 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('Location Pie Charts')
         ->assertSee('Municipality | 1 public buildings')
         ->assertSee('public_buildings_municipality', false)
+        ->assertDontSee('public_buildings_neighborhood', false)
+        ->assertDontSee('Neighborhoods under Gaza')
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('1', false)
         ->assertDontSee('<td>Camp</td>', false)
@@ -281,7 +283,7 @@ it('renders separated area productivity reports for all supported datasets with 
             && $municipalityNode['pie']['title'] === 'Gaza'
             && $municipalityNode['pie']['series'] === [1, 0]
             && $municipalityNode['pie']['items_count'] === 1
-            && count($municipalityNode['neighborhoods']) === 1;
+            && count($municipalityNode['neighborhoods']) === 0;
     });
 
     $roadFacilitiesResponse = $this->actingAs($user)
