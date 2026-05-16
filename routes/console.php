@@ -36,6 +36,11 @@ Schedule::command('sync:arcgis-layers')
     ->appendOutputTo(storage_path('logs/schedule.log'))
     ->runInBackground();
 
+    Schedule::command('sync:arcgis-layers')
+    ->everyMinute()
+    ->withoutOverlapping(120)
+    ->name('sync-arcgis-layers-test')
+    ->appendOutputTo(storage_path('logs/sync-arcgis.log'));
 /*
 |-------f-------------------------------------------------------------------
 | Database Backup
