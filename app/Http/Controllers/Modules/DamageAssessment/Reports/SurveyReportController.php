@@ -34,17 +34,17 @@ class SurveyReportController extends Controller
             ->get();
 
         $statusCounts = $surveys
-            ->groupBy(fn (PublicBuildingSurvey $survey) => $survey->building_damage_status ?: 'not_specified')
+            ->groupBy(fn(PublicBuildingSurvey $survey) => $survey->building_damage_status ?: 'not_specified')
             ->map->count()
             ->sortDesc();
 
         $municipalityRows = $surveys
-            ->groupBy(fn (PublicBuildingSurvey $survey) => $survey->municipalitie ?: 'Unknown')
+            ->groupBy(fn(PublicBuildingSurvey $survey) => $survey->municipalitie ?: 'Unknown')
             ->map(function (Collection $items, string $municipality): array {
                 return [
                     'name' => $municipality,
                     'total_surveys' => $items->count(),
-                    'damaged_surveys' => $items->filter(fn (PublicBuildingSurvey $survey) => filled($survey->building_damage_status))->count(),
+                    'damaged_surveys' => $items->filter(fn(PublicBuildingSurvey $survey) => filled($survey->building_damage_status))->count(),
                     'total_units' => (int) $items->sum('units_count'),
                 ];
             })
@@ -66,7 +66,7 @@ class SurveyReportController extends Controller
             'primaryChart' => [
                 'selector' => 'public_buildings_status_chart',
                 'title' => 'Damage Status Distribution',
-                'labels' => $statusCounts->keys()->map(fn (string $label) => str($label)->replace('_', ' ')->headline()->toString())->values()->all(),
+                'labels' => $statusCounts->keys()->map(fn(string $label) => str($label)->replace('_', ' ')->headline()->toString())->values()->all(),
                 'series' => $statusCounts->values()->all(),
                 'colors' => ['#f1416c', '#ffc700', '#50cd89', '#7239ea', '#009ef7', '#e4e6ef'],
             ],
@@ -116,71 +116,176 @@ class SurveyReportController extends Controller
             })
             ->values();
 
-        $damageCounts = $surveys
-            ->groupBy(fn (RoadFacilitySurvey $survey) => $survey->road_damage_level ?: 'not_specified')
-            ->map->count()
-            ->sortDesc();
+        $damageCounts = collect([
+            'destroyed' => $surveys->where('road_damage_level', 'destroyed')->count(),
+
+            'severe' => $surveys->where('road_damage_level', 'severe')->count(),
+
+            'moderate' => $surveys->where('road_damage_level', 'moderate')->count(),
+
+            'minor' => $surveys->where('road_damage_level', 'minor')->count(),
+
+            'No_Damage' => $surveys
+                ->filter(
+                    fn($survey) =>
+                    in_array($survey->road_damage_level, ['No_Damage', 'no_damage'])
+                )
+                ->count(),
+        ]);
 
         $accessCounts = $surveys
-            ->groupBy(fn (RoadFacilitySurvey $survey) => $survey->road_access ?: 'not_specified')
+            ->groupBy(fn(RoadFacilitySurvey $survey) => $survey->road_access ?: 'not_specified')
             ->map->count()
             ->sortDesc();
 
         $municipalityRows = $surveys
-            ->groupBy(fn (RoadFacilitySurvey $survey) => $survey->municipalitie ?: 'Unknown')
+            ->groupBy(fn(RoadFacilitySurvey $survey) => $survey->municipalitie ?: 'Unknown')
             ->map(function (Collection $items, string $municipality): array {
                 return [
                     'name' => $municipality,
                     'total_surveys' => $items->count(),
-                    'damaged_roads' => $items->filter(fn (RoadFacilitySurvey $survey) => filled($survey->road_damage_level))->count(),
+                    'damaged_roads' => $items->filter(fn(RoadFacilitySurvey $survey) => filled($survey->road_damage_level))->count(),
                     'total_items' => (int) $items->sum('items_count'),
                 ];
             })
             ->sortByDesc('total_surveys')
             ->values();
 
+
         return view('modules.damage-assessment.reports.survey_overview', [
             'reportTitle' => 'Road Facilities Report',
             'reportSubtitle' => 'Overview of road facility survey records, damage levels, access conditions, and daily trend.',
             'reportRoute' => route('reports.road-facilities'),
+
             'startDateValue' => $startDate->toDateString(),
             'endDateValue' => $endDate->toDateString(),
+
             'summaryCards' => [
-                ['label' => 'Total Surveys', 'value' => $surveys->count(), 'class' => 'primary'],
-                ['label' => 'Damaged Roads', 'value' => $surveys->whereNotNull('road_damage_level')->where('road_damage_level', '!=', '')->count(), 'class' => 'danger'],
-                ['label' => 'Total Items', 'value' => (int) $surveys->sum('items_count'), 'class' => 'success'],
-                ['label' => 'Municipalities', 'value' => $municipalityRows->count(), 'class' => 'info'],
+                [
+                    'label' => 'Total Surveys',
+                    'value' => $surveys->count(),
+                    'class' => 'primary',
+                ],
+
+                [
+                    'label' => 'Damaged Roads',
+                    'value' => $surveys
+                        ->whereNotNull('road_damage_level')
+                        ->where('road_damage_level', '!=', '')
+                        ->count(),
+                    'class' => 'danger',
+                ],
+
+                [
+                    'label' => 'Total Items',
+                    'value' => (int) $surveys->sum('items_count'),
+                    'class' => 'success',
+                ],
+
+                [
+                    'label' => 'Municipalities',
+                    'value' => $municipalityRows->count(),
+                    'class' => 'info',
+                ],
             ],
+
             'primaryChart' => [
                 'selector' => 'road_facilities_damage_chart',
+
                 'title' => 'Road Damage Level Distribution',
-                'labels' => $damageCounts->keys()->map(fn (string $label) => str($label)->replace('_', ' ')->headline()->toString())->values()->all(),
-                'series' => $damageCounts->values()->all(),
-                'colors' => ['#f1416c', '#ffc700', '#50cd89', '#7239ea', '#009ef7', '#e4e6ef'],
+
+                'labels' => [
+                    'Destroyed',
+                    'Severe',
+                    'Moderate',
+                    'Minor',
+                    'No Damage',
+                ],
+
+                'series' => [
+                    $damageCounts['destroyed'] ?? 0,
+                    $damageCounts['severe'] ?? 0,
+                    $damageCounts['moderate'] ?? 0,
+                    $damageCounts['minor'] ?? 0,
+                    $damageCounts['No_Damage'] ?? 0,
+                ],
+
+                'colors' => [
+                    '#f1416c', // Destroyed
+                    '#d9214e', // Severe
+                    '#ffc700', // Moderate
+                    '#009ef7', // Minor
+                    '#50cd89', // No Damage
+                ],
             ],
+
             'secondaryChart' => [
                 'selector' => 'road_facilities_access_chart',
+
                 'title' => 'Road Access Distribution',
-                'labels' => $accessCounts->keys()->map(fn (string $label) => str($label)->replace('_', ' ')->headline()->toString())->values()->all(),
+
+                'labels' => $accessCounts->keys()
+                    ->map(
+                        fn(string $label) => str($label)
+                            ->replace('_', ' ')
+                            ->headline()
+                            ->toString()
+                    )
+                    ->values()
+                    ->all(),
+
                 'series' => $accessCounts->values()->all(),
+
                 'colors' => ['#50cd89'],
             ],
+
             'curveChart' => [
                 'selector' => 'road_facilities_curve_chart',
+
                 'title' => 'Daily Road Facilities Curve',
-                'labels' => $this->buildRoadFacilitiesCurveChartData($surveys, $startDate, $endDate)['labels'],
-                'series' => $this->buildRoadFacilitiesCurveChartData($surveys, $startDate, $endDate)['series'],
+
+                'labels' => $this->buildRoadFacilitiesCurveChartData(
+                    $surveys,
+                    $startDate,
+                    $endDate
+                )['labels'],
+
+                'series' => $this->buildRoadFacilitiesCurveChartData(
+                    $surveys,
+                    $startDate,
+                    $endDate
+                )['series'],
+
                 'color' => '#009ef7',
             ],
+
             'tableTitle' => 'Municipality',
+
             'tableColumns' => [
-                ['label' => 'Total Surveys', 'key' => 'total_surveys', 'class' => 'primary'],
-                ['label' => 'Damaged Roads', 'key' => 'damaged_roads', 'class' => 'danger'],
-                ['label' => 'Total Items', 'key' => 'total_items', 'class' => 'success'],
+                [
+                    'label' => 'Total Surveys',
+                    'key' => 'total_surveys',
+                    'class' => 'primary',
+                ],
+
+                [
+                    'label' => 'Damaged Roads',
+                    'key' => 'damaged_roads',
+                    'class' => 'danger',
+                ],
+
+                [
+                    'label' => 'Total Items',
+                    'key' => 'total_items',
+                    'class' => 'success',
+                ],
             ],
+
             'rows' => $municipalityRows,
+
             'emptyMessage' => 'No road facility survey data found for the selected range.',
         ]);
+
     }
 
     private function resolveDates(Request $request, mixed $minimumDate, mixed $maximumDate): array
@@ -205,8 +310,8 @@ class SurveyReportController extends Controller
         $series = [];
         $labels = [];
         $counts = $surveys
-            ->filter(fn ($survey) => filled($survey->{$dateKey}))
-            ->groupBy(fn ($survey) => Carbon::parse($survey->{$dateKey})->toDateString())
+            ->filter(fn($survey) => filled($survey->{$dateKey}))
+            ->groupBy(fn($survey) => Carbon::parse($survey->{$dateKey})->toDateString())
             ->map->count();
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
@@ -225,7 +330,7 @@ class SurveyReportController extends Controller
     {
         return RoadFacilitySurvey::query()
             ->get()
-            ->map(fn (RoadFacilitySurvey $survey) => $this->resolveRoadFacilityEffectiveDate($survey))
+            ->map(fn(RoadFacilitySurvey $survey) => $this->resolveRoadFacilityEffectiveDate($survey))
             ->filter()
             ->sort()
             ->first();
@@ -235,7 +340,7 @@ class SurveyReportController extends Controller
     {
         return RoadFacilitySurvey::query()
             ->get()
-            ->map(fn (RoadFacilitySurvey $survey) => $this->resolveRoadFacilityEffectiveDate($survey))
+            ->map(fn(RoadFacilitySurvey $survey) => $this->resolveRoadFacilityEffectiveDate($survey))
             ->filter()
             ->sort()
             ->last();
@@ -259,9 +364,9 @@ class SurveyReportController extends Controller
         $series = [];
         $labels = [];
         $counts = $surveys
-            ->map(fn (RoadFacilitySurvey $survey) => $this->resolveRoadFacilityEffectiveDate($survey))
+            ->map(fn(RoadFacilitySurvey $survey) => $this->resolveRoadFacilityEffectiveDate($survey))
             ->filter()
-            ->groupBy(fn (Carbon $date) => $date->toDateString())
+            ->groupBy(fn(Carbon $date) => $date->toDateString())
             ->map->count();
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
