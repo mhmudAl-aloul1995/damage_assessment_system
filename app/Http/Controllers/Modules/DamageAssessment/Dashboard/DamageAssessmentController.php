@@ -493,7 +493,8 @@ class DamageAssessmentController extends Controller
             $edits = EditAssessment::with('user')
                 ->where('type', $type)
                 ->where('global_id', $globalid)
-                ->orderBy('updated_at', 'desc')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->get()
                 ->groupBy('field_name')
                 ->map(fn ($group) => $group->first());
@@ -501,7 +502,8 @@ class DamageAssessmentController extends Controller
             $allEdits = EditAssessment::with('user')
                 ->where('type', $type)
                 ->where('global_id', $globalid)
-                ->orderBy('updated_at', 'desc')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
                 ->get()
                 ->groupBy('field_name');
         }

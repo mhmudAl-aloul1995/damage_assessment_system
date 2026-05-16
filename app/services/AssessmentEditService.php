@@ -61,20 +61,13 @@ class AssessmentEditService
                 ];
             }
 
-            if ($edit) {
-                $edit->forceFill([
-                    'field_value' => $newValue,
-                    'user_id' => auth()->id(),
-                ])->save();
-            } else {
-                $edit = EditAssessment::query()->create([
-                    'global_id' => $globalId,
-                    'type' => $type,
-                    'field_name' => $fieldName,
-                    'field_value' => $newValue,
-                    'user_id' => auth()->id(),
-                ]);
-            }
+            $edit = EditAssessment::query()->create([
+                'global_id' => $globalId,
+                'type' => $type,
+                'field_name' => $fieldName,
+                'field_value' => $newValue,
+                'user_id' => auth()->id(),
+            ]);
 
             $history = AssessmentEditHistory::query()->create([
                 'global_id' => $globalId,

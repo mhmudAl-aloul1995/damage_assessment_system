@@ -180,6 +180,49 @@ it('returns inline edit metadata and field history when saving an audit edit', f
     ]);
 });
 
+it('keeps previous housing unit inline edits in edit assessments when saving a new edit', function () {
+    $user = User::factory()->create();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 601,
+        'globalid' => 'housing-inline-history',
+        'unit_owner' => 'Original Owner',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.update'), [
+            'type' => 'housing_table',
+            'globalid' => $housingUnit->globalid,
+            'field' => 'unit_owner',
+            'value' => 'First Edited Owner',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.update'), [
+            'type' => 'housing_table',
+            'globalid' => $housingUnit->globalid,
+            'field' => 'unit_owner',
+            'value' => 'Second Edited Owner',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    expect(EditAssessment::query()
+        ->where('global_id', $housingUnit->globalid)
+        ->where('type', 'housing_table')
+        ->where('field_name', 'unit_owner')
+        ->count())->toBe(2);
+
+    expect(EditAssessment::query()
+        ->where('global_id', $housingUnit->globalid)
+        ->where('type', 'housing_table')
+        ->where('field_name', 'unit_owner')
+        ->latest('id')
+        ->value('field_value'))->toBe('Second Edited Owner');
+});
+
 it('shows only total damage housing fields in the sidebar summary', function () {
     $user = User::factory()->create();
 
