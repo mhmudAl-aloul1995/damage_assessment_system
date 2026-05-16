@@ -284,11 +284,21 @@
 		margin-inline-start: .75rem;
 	}
 
+	#kt_app_sidebar_menu .phc-sidebar-module-label {
+		margin: .85rem .65rem .45rem;
+		color: #64748b;
+		font-size: .68rem;
+		font-weight: 800;
+		letter-spacing: 0;
+		text-transform: uppercase;
+	}
+
 	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-item-count {
 		display: none;
 	}
 
-	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-group-label {
+	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-group-label,
+	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-module-label {
 		justify-content: center;
 		margin-inline: 0;
 		font-size: 0;
@@ -1149,44 +1159,17 @@
 
 								@php
 									$user = auth()->user();
+									$sidebarModules = \App\Support\Navigation\Sidebar::forUser($user);
 								@endphp
 
-								@foreach(config('sidebar') as $menu)
+								@foreach($sidebarModules as $sidebarModule)
+									<div class="phc-sidebar-module-label" data-module="{{ $sidebarModule['key'] }}">
+										{{ __($sidebarModule['title']) }}
+									</div>
 
-									{{-- إظهار القسم فقط إذا كان للمستخدم أحد الأدوار المسموح بها --}}
-									@if($user->hasAnyRole($menu['roles'] ?? []))
-
-										@php
-											$visibleItems = collect($menu['items'] ?? [])->map(function ($item) use ($user) {
-												if (isset($item['children'])) {
-													$children = collect($item['children'])->filter(function ($child) use ($user) {
-														return $user->hasAnyRole($child['roles'] ?? []);
-													})->values();
-
-													if ($children->isEmpty()) {
-														return null;
-													}
-
-													$item['children'] = $children;
-
-													return $item;
-												}
-
-												return $user->hasAnyRole($item['roles'] ?? []) ? $item : null;
-											})->filter();
-
-											$visibleItemCount = $visibleItems->sum(function ($item) {
-												return isset($item['children']) ? $item['children']->count() : 1;
-											});
-										@endphp
-
-										{{-- لا تعرض القسم إذا لم يكن فيه عناصر ظاهرة --}}
-										@if($visibleItems->isNotEmpty())
-											@php
-												$isSectionActive = request()->is(...($menu['active_patterns'] ?? []));
-											@endphp
-											<div data-kt-menu-trigger="click"
-												class="menu-item menu-accordion phc-sidebar-section {{ $isSectionActive ? 'show phc-sidebar-section-active' : '' }}">
+									@foreach($sidebarModule['sections'] as $menu)
+										<div data-kt-menu-trigger="click"
+											class="menu-item menu-accordion phc-sidebar-section {{ $menu['is_active'] ? 'show phc-sidebar-section-active' : '' }}">
 
 												<span class="menu-link">
 													<span class="menu-icon">
@@ -1199,12 +1182,12 @@
 													</span>
 
 													<span class="menu-title">{{ __($menu['title']) }}</span>
-													<span class="phc-sidebar-item-count">{{ $visibleItemCount }}</span>
+													<span class="phc-sidebar-item-count">{{ $menu['visible_item_count'] }}</span>
 													<span class="menu-arrow"></span>
 												</span>
 
 												<div class="menu-sub menu-sub-accordion">
-													@foreach($visibleItems as $item)
+													@foreach($menu['items'] as $item)
 														@if(isset($item['children']))
 															<div class="menu-item phc-sidebar-group">
 																<div class="phc-sidebar-group-label">{{ __($item['title']) }}</div>
@@ -1234,10 +1217,8 @@
 														@endif
 													@endforeach
 												</div>
-											</div>
-										@endif
-
-									@endif
+										</div>
+									@endforeach
 								@endforeach
 							</div>
 						</div>

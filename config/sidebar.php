@@ -2,6 +2,7 @@
 
 return [
     [
+        'module' => 'damage_assessment',
         'title' => 'menu.damage_assessment.title',
         'icon' => 'ki-abstract-28',
         'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
@@ -77,6 +78,7 @@ return [
         ],
     ],
     [
+        'module' => 'damage_assessment',
         'title' => 'menu.inf_audit.title',
         'icon' => 'ki-shield-tick',
         'roles' => ['Inf - QC/QA Engineer', 'Team Leader -INF', 'Database Officer'],
@@ -99,6 +101,7 @@ return [
         ],
     ],
     [
+        'module' => 'damage_assessment',
         'title' => 'menu.reports.title',
         'icon' => 'ki-chart-line',
         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Team Leader', 'Area Manager', 'QC/QA Engineer'],
@@ -207,6 +210,7 @@ return [
         ],
     ],
     [
+        'module' => 'damage_assessment',
         'title' => 'menu.audit.title',
         'icon' => 'ki-medal-star',
         'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager', 'Area Manager'],
@@ -242,6 +246,7 @@ return [
         ],
     ],
     [
+        'module' => 'damage_assessment',
         'title' => 'menu.attendance.title',
         'icon' => 'ki-calendar-8',
         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager'],
@@ -264,6 +269,7 @@ return [
         ],
     ],
     [
+        'module' => 'damage_assessment',
         'title' => 'menu.committee.title',
         'icon' => 'ki-shield-search',
         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor'],
@@ -287,6 +293,7 @@ return [
         ],
     ],
     [
+        'module' => 'administration',
         'title' => 'menu.user_management.title',
         'icon' => 'ki-user',
         'roles' => ['Database Officer'],

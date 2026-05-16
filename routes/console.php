@@ -21,8 +21,6 @@ Schedule::command('queue:work database --queue=exports --stop-when-empty --tries
 |--------------------------------------------------------------------------
 */
 
-
-
 Schedule::command('sync:arcgis-layers')
     ->dailyAt('17:00')
     ->withoutOverlapping()
@@ -35,7 +33,7 @@ Schedule::command('sync:arcgis-layers')
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->appendOutputTo(storage_path('logs/schedule.log'))
     ->runInBackground();
-$schedule->command('sync:arcgis-layers')
+Schedule::command('sync:arcgis-layers')
     ->cron('0 1-23 * * *')
     ->withoutOverlapping()
     ->emailOutputOnFailure('mhmudaloul@gmail.com')

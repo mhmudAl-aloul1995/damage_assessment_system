@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\Navigation\Sidebar;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
@@ -96,4 +97,23 @@ it('groups report links into sidebar categories', function () {
         ->assertSee(__('menu.reports.groups.exports'), false)
         ->assertSee(__('menu.reports.field_engineer'), false)
         ->assertSee(__('menu.reports.export_data'), false);
+});
+
+it('groups visible sidebar sections by module', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $modules = Sidebar::forUser($user);
+
+    expect($modules->pluck('key')->all())->toContain('damage_assessment', 'administration');
+
+    $damageAssessmentModule = $modules->firstWhere('key', 'damage_assessment');
+    $administrationModule = $modules->firstWhere('key', 'administration');
+
+    expect($damageAssessmentModule['sections']->pluck('title')->all())
+        ->toContain('menu.damage_assessment.title', 'menu.reports.title', 'menu.audit.title');
+
+    expect($administrationModule['sections']->pluck('title')->all())
+        ->toContain('menu.user_management.title');
 });

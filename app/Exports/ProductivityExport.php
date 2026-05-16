@@ -4,23 +4,21 @@
 
 namespace App\Exports;
 
-use App\Models\Assessment;
-use App\Models\Invoice; // Use App\Models\Invoice in Laravel 9+
+// Use App\Models\Invoice in Laravel 9+
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
+
 class ProductivityExport implements FromView, ShouldAutoSize, WithEvents
 {
     protected $assignedto;
+
     protected $period;
+
     protected $stats;
+
     public function __construct($assignedto, $period, $stats)
     {
 
@@ -31,15 +29,12 @@ class ProductivityExport implements FromView, ShouldAutoSize, WithEvents
 
     public function view(): View
     {
-        return view('exports.productivity', [
+        return view('modules.damage-assessment.exports.productivity', [
             'period' => $this->period,
             'assignedto' => $this->assignedto,
-            'stats' => $this->stats
+            'stats' => $this->stats,
         ]);
     }
-
-
-
 
     public function registerEvents(): array
     {
@@ -84,8 +79,8 @@ class ProductivityExport implements FromView, ShouldAutoSize, WithEvents
                     $column = $columnIterator->getColumnIndex();
                     $sheet->getColumnDimension($column)->setAutoSize(true);
 
-                    $mainHeader = (string) $sheet->getCell($column . '1')->getValue();
-                    $subHeader = (string) $sheet->getCell($column . '2')->getValue();
+                    $mainHeader = (string) $sheet->getCell($column.'1')->getValue();
+                    $subHeader = (string) $sheet->getCell($column.'2')->getValue();
 
                     $color = null;
                     switch ($subHeader) {
@@ -110,6 +105,4 @@ class ProductivityExport implements FromView, ShouldAutoSize, WithEvents
             },
         ];
     }
-
-
 }

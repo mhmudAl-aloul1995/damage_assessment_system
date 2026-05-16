@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'modules' => [
+        'damage_assessment' => 'Damage Assessment Module',
+        'administration' => 'Central Administration',
+    ],
     'damage_assessment' => [
         'title' => 'Damage Assessment',
         'dashboard' => 'Dashboard',

@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'modules' => [
+        'damage_assessment' => 'موديول حصر الأضرار',
+        'administration' => 'الإدارة المركزية',
+    ],
     'damage_assessment' => [
         'title' => 'حصر الأضرار',
         'dashboard' => 'الرئيسية',

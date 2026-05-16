@@ -187,6 +187,14 @@ it('renders separated area productivity reports for all supported datasets with 
         ]))
         ->assertOk()
         ->assertSee(__('multilingual.area_productivity_reports.titles.housing_units'), false)
+        ->assertSee('Location Pie Charts')
+        ->assertSee('Municipality | 2 housing units')
+        ->assertSee('Neighborhoods under Gaza')
+        ->assertSee('Totally Damaged')
+        ->assertSee('Partially Damaged')
+        ->assertSee('location-pie-section-toggle', false)
+        ->assertSee('location-pie-card', false)
+        ->assertSee('housing_units_municipality', false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('Grand Totals', false)
         ->assertSee('3', false)
@@ -196,6 +204,16 @@ it('renders separated area productivity reports for all supported datasets with 
                 && $summary['tda'] === 1
                 && $summary['pda'] === 1
                 && $summary['cra'] === 1;
+        })
+        ->assertViewHas('charts', function (array $charts): bool {
+            $municipalityNode = $charts['location_pies'][0] ?? null;
+
+            return $municipalityNode !== null
+                && $municipalityNode['pie']['title'] === 'Gaza'
+                && $municipalityNode['pie']['series'] === [1, 1]
+                && $municipalityNode['pie']['units_count'] === 2
+                && count($municipalityNode['neighborhoods']) === 1
+                && $municipalityNode['neighborhoods'][0]['title'] === 'Rimal';
         });
 
     $buildingResponse = $this->actingAs($user)

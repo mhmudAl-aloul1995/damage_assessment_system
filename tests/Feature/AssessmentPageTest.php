@@ -125,7 +125,7 @@ it('exports the assessment page as a pdf with attachments', function () {
     $response->assertOk();
 
     Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf) {
-        return $pdf->viewName === 'pdf.assessment'
+        return $pdf->viewName === 'modules.damage-assessment.pdf.assessment'
             && $pdf->contains('Tower A')
             && $pdf->contains('Edited Owner')
             && $pdf->contains('building-photo.jpg')

@@ -26,6 +26,16 @@ it('includes the housing units status progress in the audit table response', fun
     $user = User::factory()->create();
     $user->assignRole($role);
 
+    foreach (range(1, 3) as $statusIndex) {
+        AssessmentStatus::query()->create([
+            'name' => 'placeholder_status_'.$statusIndex,
+            'label_en' => 'Placeholder '.$statusIndex,
+            'label_ar' => 'placeholder ar '.$statusIndex,
+            'stage' => 'system',
+            'order_step' => $statusIndex,
+        ]);
+    }
+
     $status = AssessmentStatus::query()->create([
         'name' => 'accepted_by_engineer',
         'label_en' => 'Accepted By Engineer',
@@ -44,7 +54,7 @@ it('includes the housing units status progress in the audit table response', fun
 
     $building = Building::query()->create([
         'objectid' => 7001,
-        'globalid' => 'audit-building-units-count',
+        'globalid' => '084c000a-c0bd-4eed-9a01-3dd491bc1eff',
         'building_name' => 'Audit Units Count Building',
         'municipalitie' => 'Gaza Municipality',
         'assignedto' => 'Engineer A',
@@ -69,7 +79,7 @@ it('includes the housing units status progress in the audit table response', fun
 
     HousingStatus::query()->create([
         'housing_id' => $housingWithStatus->objectid,
-        'status_id' => $status->id,
+        'status_id' => 4,
         'user_id' => $user->id,
         'type' => 'QC/QA Engineer',
         'notes' => 'Building status note',
@@ -89,7 +99,7 @@ it('includes the housing units status progress in the audit table response', fun
 
     $olderStatusBuilding = Building::query()->create([
         'objectid' => 7002,
-        'globalid' => 'audit-building-old-status',
+        'globalid' => '018e2bc7-efab-4b0a-a359-6f1378bb8bd9',
         'building_name' => 'Audit Old Status Building',
         'assignedto' => 'Engineer A',
         'field_status' => 'COMPLETED',
@@ -109,7 +119,7 @@ it('includes the housing units status progress in the audit table response', fun
 
     $assignedOnlyBuilding = Building::query()->create([
         'objectid' => 7003,
-        'globalid' => 'audit-building-assigned-status',
+        'globalid' => '027c4ebf-6a38-4a8c-9948-043fcf315e5d',
         'building_name' => 'Audit Assigned Status Building',
         'assignedto' => 'Engineer A',
         'field_status' => 'COMPLETED',
@@ -130,12 +140,43 @@ it('includes the housing units status progress in the audit table response', fun
     $this->actingAs($user)
         ->getJson(route('audit.index', [
             'draw' => 1,
+            'columns' => [
+                [
+                    'data' => 'objectid',
+                    'name' => 'objectid',
+                    'searchable' => 'false',
+                    'orderable' => 'false',
+                ],
+                [
+                    'data' => 'building_name',
+                    'name' => 'building_name',
+                    'searchable' => 'true',
+                    'orderable' => 'true',
+                ],
+                [
+                    'data' => 'housing_status_progress',
+                    'name' => 'housing_status_progress',
+                    'searchable' => 'false',
+                    'orderable' => 'false',
+                ],
+            ],
+            'order' => [
+                [
+                    'column' => 0,
+                    'dir' => 'asc',
+                ],
+            ],
             'start' => 0,
             'length' => 10,
+            'search' => [
+                'value' => '',
+                'regex' => 'false',
+            ],
         ]), [
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
+        ->assertJsonMissingPath('error')
         ->assertJsonFragment([
             'housing_status_progress' => '1 / 2',
             'housing_units_count' => 2,
@@ -158,6 +199,7 @@ it('includes the housing units status progress in the audit table response', fun
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
+        ->assertJsonMissingPath('error')
         ->assertJsonFragment([
             'globalid' => $building->globalid,
         ])
@@ -178,6 +220,7 @@ it('includes the housing units status progress in the audit table response', fun
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
+        ->assertJsonMissingPath('error')
         ->assertJsonFragment([
             'globalid' => $building->globalid,
         ])

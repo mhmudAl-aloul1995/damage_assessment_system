@@ -1,8 +1,8 @@
 <?php
 
 test('audit table keeps all columns with responsive text cells', function () {
-    $view = file_get_contents(dirname(__DIR__, 2).'/resources/views/DamageAssessment/audit.blade.php');
-    $controller = file_get_contents(dirname(__DIR__, 2).'/app/Http/Controllers/DamageAssessment/auditController.php');
+    $view = file_get_contents(dirname(__DIR__, 2).'/resources/views/modules/damage-assessment/audit/audit.blade.php');
+    $exportService = file_get_contents(dirname(__DIR__, 2).'/app/Services/DamageAssessment/Audit/AuditExportService.php');
 
     expect($view)
         ->toContain('audit-table-wrapper')
@@ -25,20 +25,37 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('const selectColumn = table.column(0)')
         ->toContain('visible: false');
 
-    expect($controller)
+    expect($exportService)
+        ->toContain('public function buildingColumns(): array')
+        ->toContain('public function housingColumns(): array')
+        ->toContain("'governorate' =>")
+        ->toContain("'municipality' =>")
+        ->toContain("'neighborhood' =>")
         ->toContain('building_status_notes')
-        ->toContain('housing_status_notes')
-        ->toContain("'governorate' => 'المحافظة'")
-        ->toContain("'municipality' => 'البلدية'")
-        ->toContain("'neighborhood' => 'الحي'")
-        ->toContain('ملاحظة حالة المبنى')
-        ->toContain('ملاحظة حالة الوحدة');
+        ->toContain('housing_status_notes');
 });
 
 test('assessment audit inline edits resolve missing global ids before saving', function () {
-    $view = file_get_contents(dirname(__DIR__, 2).'/resources/views/DamageAssessment/assessmentAudit.blade.php');
+    $view = file_get_contents(dirname(__DIR__, 2).'/resources/views/modules/damage-assessment/audit/assessmentAudit.blade.php');
 
     expect($view)
+        ->toContain('assessment-audit-page')
+        ->toContain('overflow: visible')
+        ->toContain('audit-summary-column .audit-sticky-menu')
+        ->toContain('audit-actions-sticky')
+        ->toContain('position: fixed !important')
+        ->toContain('top: 165px !important')
+        ->toContain('right: var(--audit-summary-right, 95px)')
+        ->toContain('width: var(--audit-summary-width, 280px)')
+        ->toContain('function syncFixedAuditSummary')
+        ->toContain('--audit-summary-right')
+        ->toContain('--audit-summary-width')
+        ->toContain('#kt_app_main, #kt_app_content, #kt_app_content_container')
+        ->not->toContain('audit-sticky-menu .audit-sticky-menu')
+        ->toContain('top: 78px !important')
+        ->toContain('table-layout: fixed !important')
+        ->toContain('autoWidth: false')
+        ->not->toContain('min-w-280px')
         ->toContain('function resolveInlineGlobalId')
         ->toContain("type === 'building_table'")
         ->toContain("type === 'housing_table'")
