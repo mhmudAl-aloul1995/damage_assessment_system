@@ -39,6 +39,9 @@ return [
         'npm_binary' => env('BROWSERSHOT_NPM_BINARY'),
         'chrome_path' => env('BROWSERSHOT_CHROME_PATH'),
     ],
+    'damage_assessment_pdf' => [
+        'engine' => env('DAMAGE_ASSESSMENT_PDF_ENGINE', 'mpdf'),
+    ],
     'arcgis' => [
         'username' => env('ARCGIS_USERNAME'),
         'password' => env('ARCGIS_PASSWORD'),

@@ -539,7 +539,7 @@
         <div></div>
         <div>
             <div class="report-kicker">قطاع غزة</div>
-            <div class="report-subhead">المنظومة الوطنية المتكاملة في قطاع غزة<br>قطاع الإسكان<br>{{ $reportDate }}</div>
+            <div class="report-subhead">المجلس الفلسطيني للإسكان<br>قطاع الإسكان<br>{{ $reportDate }}</div>
         </div>
     </div>
     <h1 style="text-align: center;">نتائج وإحصائيات مشروع المنظومة الوطنية المتكاملة لحصر الأضرار - قطاع غزة</h1>
@@ -605,7 +605,7 @@
             <div></div>
             <div>
                 <div class="report-kicker">محافظة {{ $governorate['name'] }}</div>
-                <div class="report-subhead">المنظومة الوطنية المتكاملة في قطاع غزة<br>قطاع الإسكان<br>{{ $reportDate }}</div>
+                <div class="report-subhead">المجلس الفلسطيني للإسكان<br>قطاع الإسكان<br>{{ $reportDate }}</div>
             </div>
         </div>
         <div class="subtitle" style="color: #f58220; text-align: left;">إحصائيات المحافظات</div>
