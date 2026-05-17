@@ -7,11 +7,9 @@ use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     DB::table('filters')->insert([
-        ['list_name' => 'governorate', 'name' => 'North', 'label' => 'North from database'],
         ['list_name' => 'governorate', 'name' => 'Gaza', 'label' => 'Gaza from database'],
         ['list_name' => 'governorate', 'name' => 'Middle_Area', 'label' => 'Middle Area from database'],
         ['list_name' => 'governorate', 'name' => 'Khan_Younis', 'label' => 'Khan Younis from database'],
-        ['list_name' => 'governorate', 'name' => 'Rafah', 'label' => 'Rafah from database'],
     ]);
 });
 
@@ -46,13 +44,21 @@ it('builds the phc pdf report data from current assessment tables', function () 
         ->and($data['totals']['buildings'])->toBe(1)
         ->and($data['totals']['housing_units'])->toBe(1)
         ->and($data['totals']['assessed_housing_units'])->toBe(1)
-        ->and($data['governorates'])->toHaveCount(5)
-        ->and($data['governorates'][1]['name'])->toBe('Gaza from database')
-        ->and($data['neighborhoodPages'])->toHaveCount(5)
-        ->and($data['gazaMapSvg'])->toContain('<svg');
+        ->and($data['governorates'])->toHaveCount(3)
+        ->and($data['governorates'][0]['name'])->toBe('Gaza from database')
+        ->and($data['neighborhoodPages'])->toHaveCount(3)
+        ->and($data['gazaMapSvg'])->toContain('<svg')
+        ->and($data['gazaMapSvg'])->not->toContain('North from database')
+        ->and($data['gazaMapSvg'])->not->toContain('Rafah from database');
 });
 
 it('uses the database governorate options when grouping phc report pages', function () {
+    DB::table('filters')->insert([
+        'list_name' => 'governorate',
+        'name' => 'North',
+        'label' => 'North from database',
+    ]);
+
     DB::table('buildings')->insert([
         'objectid' => 1002,
         'globalid' => 'building-north-gaza-1',
@@ -63,10 +69,10 @@ it('uses the database governorate options when grouping phc report pages', funct
     ]);
 
     $data = app(phcPdfReportService::class)->build(Request::create('/damage-assessment/reports/phc'));
+    $northGovernorate = collect($data['governorates'])->firstWhere('english_name', 'North');
 
-    expect($data['governorates'][0]['english_name'])->toBe('North')
-        ->and($data['governorates'][0]['name'])->toBe('North from database')
-        ->and($data['governorates'][0]['totals']['buildings'])->toBe(1);
+    expect($northGovernorate['name'])->toBe('North from database')
+        ->and($northGovernorate['totals']['buildings'])->toBe(1);
 });
 
 it('renders the phc report page with an export pdf action', function () {

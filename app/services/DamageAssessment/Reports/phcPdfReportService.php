@@ -345,6 +345,13 @@ class phcPdfReportService
             ['Rafah', 'رفح', 316, 52, '#e8edf3'],
         ];
 
+        if ($governorateLabels !== []) {
+            $bands = array_values(array_filter(
+                $bands,
+                fn (array $band): bool => array_key_exists($band[0], $governorateLabels)
+            ));
+        }
+
         $points = $coordinates->map(function ($point) {
             $x = 98 + (((float) $point->longitude - 34.1) / 0.6) * 180;
             $y = 370 - (((float) $point->latitude - 31.1) / 0.6) * 330;
