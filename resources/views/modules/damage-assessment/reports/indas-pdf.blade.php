@@ -236,6 +236,7 @@
 
         .chart-block {
             min-height: 92px;
+            overflow: hidden;
         }
 
         .chart-caption {
@@ -248,8 +249,62 @@
 
         .chart-svg {
             width: 100%;
-            height: 78px;
+            height: 54px;
             display: block;
+        }
+
+        .chart-combo {
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            gap: 6px;
+            align-items: center;
+            direction: rtl;
+            height: 76px;
+        }
+
+        .chart-combo.wide {
+            grid-template-columns: 1fr;
+            gap: 2px;
+        }
+
+        .chart-combo.wide .chart-svg {
+            height: 48px;
+        }
+
+        .chart-legend {
+            display: grid;
+            gap: 2px;
+            direction: rtl;
+            text-align: right;
+            min-width: 0;
+        }
+
+        .chart-legend-row {
+            display: grid;
+            grid-template-columns: 9px minmax(0, 1fr) auto;
+            gap: 5px;
+            align-items: center;
+            color: #31526c;
+            font-size: 7px;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .chart-legend-row span:nth-child(2) {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chart-legend-swatch {
+            width: 7px;
+            height: 7px;
+            display: inline-block;
+        }
+
+        .chart-legend-value {
+            color: #138bd0;
+            font-weight: 700;
+            direction: ltr;
         }
 
         .footer {
@@ -470,7 +525,8 @@
         })->implode('');
     };
     $legend = fn (array $items): string => collect($items)->map(fn (array $item): string => '<div class="legend-item"><i class="swatch" style="background: '.$item['color'].'"></i><span>'.e($item['label']).'</span><strong>'.number_format((int) $item['value']).' - '.$item['percent'].'%</strong></div>')->implode('');
-    $donutSvg = function (array $items): string {
+    $compactLegend = fn (array $items, int $limit = 5): string => '<div class="chart-legend">'.collect($items)->take($limit)->map(fn (array $item): string => '<div class="chart-legend-row"><i class="chart-legend-swatch" style="background: '.$item['color'].'"></i><span>'.e($item['label']).'</span><strong class="chart-legend-value">'.number_format((int) $item['value']).'</strong></div>')->implode('').'</div>';
+    $donutSvg = function (array $items) use ($compactLegend): string {
         $total = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $items)));
         $radius = 24;
         $circumference = 2 * pi() * $radius;
@@ -482,11 +538,10 @@
 
             return $segment;
         })->implode('');
-        $legendItems = collect($items)->take(4)->values()->map(fn (array $item, int $index): string => '<g transform="translate(92 '.(15 + ($index * 15)).')"><rect width="8" height="8" fill="'.$item['color'].'"/><text x="13" y="8" font-size="8" fill="#31526c">'.e($item['label']).'</text><text x="114" y="8" font-size="8" fill="#138bd0" text-anchor="end">'.number_format((int) $item['value']).'</text></g>')->implode('');
 
-        return '<svg class="chart-svg" viewBox="0 0 220 78" xmlns="http://www.w3.org/2000/svg">'.$segments.'<circle cx="44" cy="38" r="14" fill="#fff"/><text x="44" y="41" font-size="9" text-anchor="middle" fill="#138bd0">'.$total.'</text>'.$legendItems.'</svg>';
+        return '<div class="chart-combo"><svg class="chart-svg" viewBox="0 0 88 78" xmlns="http://www.w3.org/2000/svg">'.$segments.'<circle cx="44" cy="38" r="14" fill="#fff"/><text x="44" y="41" font-size="9" text-anchor="middle" fill="#138bd0">'.$total.'</text></svg>'.$compactLegend($items, 4).'</div>';
     };
-    $miniBarsSvg = function (array $items): string {
+    $miniBarsSvg = function (array $items) use ($compactLegend): string {
         $items = array_slice($items, 0, 5);
         $values = array_map(fn ($item) => (int) $item['value'], $items);
         $max = max(array_merge([1], $values));
@@ -495,12 +550,12 @@
             $x = 18 + ($index * 38);
             $y = 58 - $height;
 
-            return '<rect x="'.$x.'" y="'.$y.'" width="18" height="'.$height.'" fill="'.$item['color'].'"/><text x="'.($x + 9).'" y="70" font-size="7" fill="#31526c" text-anchor="middle">'.e(mb_substr($item['label'], 0, 8)).'</text>';
+            return '<rect x="'.$x.'" y="'.$y.'" width="18" height="'.$height.'" fill="'.$item['color'].'"/>';
         })->implode('');
 
-        return '<svg class="chart-svg" viewBox="0 0 220 78" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="58" x2="210" y2="58" stroke="#b8c9d6" stroke-width="1"/>'.$bars.'</svg>';
+        return '<div class="chart-combo wide"><svg class="chart-svg" viewBox="0 0 220 64" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="58" x2="210" y2="58" stroke="#b8c9d6" stroke-width="1"/>'.$bars.'</svg>'.$compactLegend($items, 5).'</div>';
     };
-    $stackSvg = function (array $items): string {
+    $stackSvg = function (array $items) use ($compactLegend): string {
         $total = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $items)));
         $x = 12;
         $segments = collect($items)->take(4)->map(function (array $item) use (&$x, $total): string {
@@ -510,9 +565,8 @@
 
             return $segment;
         })->implode('');
-        $legendItems = collect($items)->take(3)->values()->map(fn (array $item, int $index): string => '<g transform="translate('.(16 + ($index * 68)).' 62)"><rect width="7" height="7" fill="'.$item['color'].'"/><text x="10" y="7" font-size="7" fill="#31526c">'.e($item['label']).'</text></g>')->implode('');
 
-        return '<svg class="chart-svg" viewBox="0 0 220 78" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="26" width="190" height="22" fill="#edf5fa"/>'.$segments.$legendItems.'</svg>';
+        return '<div class="chart-combo wide"><svg class="chart-svg" viewBox="0 0 220 56" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="18" width="190" height="22" fill="#edf5fa"/>'.$segments.'</svg>'.$compactLegend($items, 4).'</div>';
     };
     $logos = '<div class="logos"><div class="logo-mark">GOV</div><div class="logo-mark">PHC</div><div class="logo-mark">AIOCP</div></div>';
 @endphp
