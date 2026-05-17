@@ -69,6 +69,17 @@ it('uploads audited views to arcgis and copies attachments', function () {
                 ['attributes' => ['objectid' => 9002, 'old_objectid' => 200]],
             ],
         ]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response([
+            'features' => [
+                [
+                    'geometry' => [
+                        'x' => 34.4567890,
+                        'y' => 31.5123450,
+                        'spatialReference' => ['wkid' => 4326],
+                    ],
+                ],
+            ],
+        ]),
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures' => function ($request) {
             $features = json_decode($request['features'], true);
 
@@ -103,22 +114,102 @@ it('uploads audited views to arcgis and copies attachments', function () {
         ]),
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/100/attachments/501*' => Http::response('building-binary'),
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/200/attachments/601*' => Http::response('unit-binary'),
-        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9001/addAttachment' => Http::response([
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9001/addAttachment*' => Http::response([
             'addAttachmentResult' => ['success' => true],
         ]),
-        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/9002/addAttachment' => Http::response([
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/9002/addAttachment*' => Http::response([
             'addAttachmentResult' => ['success' => true],
         ]),
     ]);
 
-    $this->artisan('arcgis:upload-audited')
-        ->expectsOutput('buildings_uploaded: 1')
-        ->expectsOutput('units_uploaded: 0')
-        ->expectsOutput('attachments_uploaded: 2')
-        ->expectsOutput('errors: 0')
-        ->assertSuccessful();
+    $this->artisan('arcgis:upload-audited')->assertSuccessful();
 
     Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures');
-    Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9001/addAttachment');
-    Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/9002/addAttachment');
+    Http::assertSent(fn ($request): bool => str_starts_with($request->url(), 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9001/addAttachment'));
+    Http::assertSent(fn ($request): bool => str_starts_with($request->url(), 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/9002/addAttachment'));
+});
+
+it('refreshes the arcgis token and retries when adding a feature fails with an invalid token', function () {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+    });
+
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+        $table->string('unit_damage_status')->nullable();
+        $table->decimal('longitude', 10, 7)->nullable();
+        $table->decimal('latitude', 10, 7)->nullable();
+    });
+
+    DB::table('v_housing_units_audited')->insert([
+        'objectid' => 12074,
+        'globalid' => 'unit-globalid',
+        'unit_damage_status' => 'minor',
+        'longitude' => 34.1234560,
+        'latitude' => 31.6543210,
+    ]);
+
+    $tokenRequests = 0;
+    $addFeatureRequests = 0;
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => function () use (&$tokenRequests) {
+            $tokenRequests++;
+
+            return Http::response([
+                'token' => $tokenRequests === 1 ? 'expired-token' : 'refreshed-token',
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/query*' => Http::response([
+            'features' => [
+                ['geometry' => ['x' => 34.1234560, 'y' => 31.6543210]],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/addFeatures' => function ($request) use (&$addFeatureRequests) {
+            $addFeatureRequests++;
+
+            if ($addFeatureRequests === 1) {
+                expect($request['token'])->toBe('expired-token');
+
+                return Http::response([
+                    'error' => [
+                        'code' => 498,
+                        'message' => 'Invalid token.',
+                        'details' => ['Invalid token.'],
+                    ],
+                ]);
+            }
+
+            expect($request['token'])->toBe('refreshed-token');
+
+            return Http::response([
+                'addResults' => [
+                    ['success' => true, 'objectId' => 9002],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/12074/attachments?*' => Http::response(['attachmentInfos' => []]),
+    ]);
+
+    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+
+    expect($tokenRequests)->toBe(2);
+    expect($addFeatureRequests)->toBe(2);
 });

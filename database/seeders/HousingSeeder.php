@@ -7,10 +7,14 @@ use App\Models\MainAssessmentStatus;
 use App\Models\SubAssessmentStatus;
 use Illuminate\Support\Facades\Http;
 use App\Models\HousingUnit;
+use Illuminate\Support\Facades\Schema;
+
 class HousingSeeder extends Seeder
 {
     public function run(): void
     {
+        $housingUnitColumns = array_flip(Schema::getColumnListing('housing_units'));
+
           // 1. Remove the 120s time limit
         set_time_limit(0);
         $no_day = 1000;
@@ -65,6 +69,7 @@ class HousingSeeder extends Seeder
 
             foreach ($features as $feature) {
                 $attributes = array_change_key_case($feature['attributes'], CASE_LOWER);
+                $attributes = array_intersect_key($attributes, $housingUnitColumns);
 
                 // Convert ArcGIS Timestamps (Milliseconds to SQL Format)
                 foreach (['creationdate', 'editdate'] as $dateField) {

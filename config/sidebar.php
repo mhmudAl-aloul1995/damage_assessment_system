@@ -300,6 +300,7 @@ return [
         'active_patterns' => [
             'user*',
             'admin/team-leader-field-engineers*',
+            'admin/local-database-import*',
         ],
         'items' => [
             [
@@ -336,6 +337,12 @@ return [
                 'title' => 'Login Logs',
                 'url' => 'login-logs',
                 'pattern' => 'login-logs*',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Local DB Import',
+                'url' => 'admin/local-database-import',
+                'pattern' => 'admin/local-database-import*',
                 'roles' => ['Database Officer'],
             ],
         ],

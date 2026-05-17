@@ -800,7 +800,7 @@
             </div>
 
             <footer class="phc-footer">
-                <span>التقرير الوطني الموحد لحصر أضرار قطاع الإسكان - قطاع غزة {{ now()->year }}</span>
+                <span>مشروع حصر الأضرار - قطاع غزة {{ now()->year }}</span>
                 <strong>وزارة الأشغال العامة والإسكان | المجلس الفلسطيني للإسكان | UNDP</strong>
             </footer>
         </section>

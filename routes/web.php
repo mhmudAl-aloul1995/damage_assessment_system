@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\TeamLeaderFieldEngineerController;
+use App\Http\Controllers\Admin\LocalDatabaseImportController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginLogController;
 use App\Http\Controllers\ProfileController;
@@ -158,6 +159,13 @@ Route::middleware('auth')->group(function () {
         });
 
     Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/local-database-import', [LocalDatabaseImportController::class, 'index'])
+            ->middleware('role_or_permission:Database Officer|system.maintenance')
+            ->name('local-database-import.index');
+
+        Route::post('/local-database-import', [LocalDatabaseImportController::class, 'store'])
+            ->middleware('role_or_permission:Database Officer|system.maintenance')
+            ->name('local-database-import.store');
 
         Route::get('/team-leader-field-engineers', [TeamLeaderFieldEngineerController::class, 'index'])
             ->name('team-leader-field-engineers.index');
