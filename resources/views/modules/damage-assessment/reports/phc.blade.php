@@ -806,6 +806,11 @@
         </section>
 
         @foreach ($governorates as $governorate)
+            @php
+                $governorateDamageTotal = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $governorate['damage'])));
+                $governorateOccupancyTotal = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $governorate['occupancy'])));
+                $governorateTypeMax = max(1, ...array_map(fn ($item) => (int) $item['value'], $governorate['building_types'] ?: [['value' => 1]]));
+            @endphp
             <section class="phc-page">
                 <div class="phc-title">
                     <h2>محافظة {{ $governorate['name'] }}</h2>
@@ -828,6 +833,57 @@
                                 <div class="phc-kpi"><strong style="color: {{ $item['color'] }}">{{ $formatNumber($item['value']) }}</strong><span>{{ $item['label'] }}</span></div>
                             @endforeach
                         </div>
+                    </div>
+                </div>
+
+                <div class="phc-grid-3" style="margin-bottom: 22px;">
+                    <div class="phc-chart-card">
+                        <h4>توزيع أضرار الوحدات السكنية المقيّمة</h4>
+                        <div class="phc-bars">
+                            @foreach (array_slice($governorate['damage'], 0, 5) as $item)
+                                <div class="phc-bar-item">
+                                    <div class="phc-bar" style="height: {{ max(6, ((int) $item['value'] / $governorateDamageTotal) * 140) }}px; background: {{ $item['color'] }}"></div>
+                                    <div class="phc-bar-label">{{ $item['label'] }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="phc-legend">
+                            @foreach (array_slice($governorate['damage'], 0, 5) as $item)
+                                <div class="phc-legend-row"><span class="phc-swatch" style="background: {{ $item['color'] }}"></span><span>{{ $item['label'] }}</span><strong>{{ $formatNumber($item['value']) }}</strong></div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="phc-chart-card">
+                        <h4>استخدام وإشغال الوحدات السكنية</h4>
+                        <svg class="phc-donut" viewBox="0 0 140 140">
+                            @php $governorateOffset = 0; $governorateCircumference = 314; @endphp
+                            @foreach (array_slice($governorate['occupancy'], 0, 5) as $item)
+                                @php
+                                    $governorateSegmentLength = ((int) $item['value'] / $governorateOccupancyTotal) * $governorateCircumference;
+                                @endphp
+                                <circle cx="70" cy="70" r="50" fill="none" stroke="{{ $item['color'] }}" stroke-width="24" stroke-dasharray="{{ $governorateSegmentLength }} {{ $governorateCircumference - $governorateSegmentLength }}" stroke-dashoffset="{{ -$governorateOffset }}" transform="rotate(-90 70 70)" />
+                                @php $governorateOffset += $governorateSegmentLength; @endphp
+                            @endforeach
+                            <circle cx="70" cy="70" r="31" fill="#fff" />
+                            <text x="70" y="75" text-anchor="middle" font-size="12" fill="#006eb6" font-weight="900">{{ $formatNumber($governorateOccupancyTotal) }}</text>
+                        </svg>
+                        <div class="phc-legend">
+                            @foreach (array_slice($governorate['occupancy'], 0, 5) as $item)
+                                <div class="phc-legend-row"><span class="phc-swatch" style="background: {{ $item['color'] }}"></span><span>{{ $item['label'] }}</span><strong>{{ $formatNumber($item['value']) }}</strong></div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="phc-chart-card">
+                        <h4>توزيع المباني المقيّمة حسب نوع المنشأة</h4>
+                        @foreach (array_slice($governorate['building_types'], 0, 6) as $item)
+                            <div class="phc-horizontal-row">
+                                <span>{{ $item['label'] }}</span>
+                                <div class="phc-horizontal-track"><div class="phc-horizontal-fill" style="width: {{ max(3, ((int) $item['value'] / $governorateTypeMax) * 100) }}%; background: {{ $item['color'] }}"></div></div>
+                                <strong>{{ $formatNumber($item['value']) }}</strong>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
 
