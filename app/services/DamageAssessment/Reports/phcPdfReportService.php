@@ -35,7 +35,7 @@ class phcPdfReportService
         $occupancyDistribution = $this->distribution($housingUnits, 'occupied', $this->occupancyLabels());
         $buildingTypeDistribution = $this->distribution($buildings, 'building_type', $this->buildingTypeLabels());
         $buildingUseDistribution = $this->distribution($buildings, 'building_use', $this->buildingUseLabels());
-        $governorateOptions = $this->governorates();
+        $governorateOptions = $this->governorates($buildings);
         $governorateMapLabels = $this->mapGovernorateLabels($governorateOptions);
         $governorates = $this->governoratePages($governorateOptions, $governorateMapLabels, $buildings, $housingUnits);
         $neighborhoodPages = $this->neighborhoodPages($governorates);
@@ -183,9 +183,11 @@ class phcPdfReportService
     /**
      * @return Collection<int, array{key: string, name: string, english_name: string}>
      */
-    private function governorates(): Collection
+    private function governorates(Collection $buildings): Collection
     {
-        return Filter::query()
+        $databaseGovernorates = $this->buildingGovernorates($buildings);
+
+        $filterGovernorates = Filter::query()
             ->where('list_name', 'governorate')
             ->whereNotNull('name')
             ->orderBy('id')
@@ -201,8 +203,51 @@ class phcPdfReportService
                 ];
             })
             ->filter(fn (array $governorate): bool => $governorate['english_name'] !== '')
+            ->filter(fn (array $governorate): bool => $this->matchesDatabaseGovernorate($governorate['english_name'], $databaseGovernorates))
             ->unique('english_name')
             ->values();
+
+        if ($filterGovernorates->isNotEmpty()) {
+            return $filterGovernorates;
+        }
+
+        return $databaseGovernorates
+            ->map(fn (string $governorate): array => [
+                'key' => $governorate,
+                'name' => $this->humanize($governorate),
+                'english_name' => $governorate,
+            ])
+            ->values();
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function buildingGovernorates(Collection $buildings): Collection
+    {
+        return $buildings
+            ->pluck('governorate')
+            ->filter(fn ($governorate): bool => filled($governorate))
+            ->map(fn ($governorate): string => trim((string) $governorate))
+            ->unique(fn (string $governorate): string => $this->normalizeGovernorate($governorate))
+            ->sort()
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, string>  $databaseGovernorates
+     */
+    private function matchesDatabaseGovernorate(string $governorate, Collection $databaseGovernorates): bool
+    {
+        $aliases = array_map(
+            fn (string $alias): string => $this->normalizeGovernorate($alias),
+            $this->governorateAliases($governorate)
+        );
+
+        return $databaseGovernorates
+            ->map(fn (string $databaseGovernorate): string => $this->normalizeGovernorate($databaseGovernorate))
+            ->intersect($aliases)
+            ->isNotEmpty();
     }
 
     /**
@@ -389,7 +434,7 @@ class phcPdfReportService
      */
     private function governorateAliases(string $governorate): array
     {
-        $normalizedGovernorate = strtolower(trim($governorate));
+        $normalizedGovernorate = $this->normalizeGovernorate($governorate);
         $aliases = [
             $governorate,
             str_replace(' ', '_', $governorate),
@@ -413,12 +458,17 @@ class phcPdfReportService
 
     private function mapGovernorateKey(string $governorate): string
     {
-        return match (strtolower(trim($governorate))) {
+        return match ($this->normalizeGovernorate($governorate)) {
             'north', 'north_gaza' => 'North Gaza',
             'middle_area' => 'Middle Area',
             'khan_younis' => 'Khan Younis',
             default => str_replace('_', ' ', $governorate),
         };
+    }
+
+    private function normalizeGovernorate(string $governorate): string
+    {
+        return strtolower(str_replace(' ', '_', trim($governorate)));
     }
 
     /**
