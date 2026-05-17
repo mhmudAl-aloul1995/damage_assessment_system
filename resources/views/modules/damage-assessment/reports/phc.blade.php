@@ -10,21 +10,6 @@
         $damageTotal = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $damageDistribution)));
         $occupancyTotal = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $occupancyDistribution)));
         $typeMax = max(1, ...array_map(fn ($item) => (int) $item['value'], $buildingTypeDistribution ?: [['value' => 1]]));
-        $firstNeighborhoodPage = $neighborhoodPages[0] ?? ['governorate' => 'غير محدد', 'rows' => [], 'mapSvg' => $gazaMapSvg, 'english_name' => ''];
-        $firstNeighborhoodRows = collect($firstNeighborhoodPage['rows']);
-        $activeNeighborhood = $firstNeighborhoodRows->sortByDesc('housing_units')->first() ?? [
-            'name' => 'غير محدد',
-            'buildings' => 0,
-            'housing_units' => 0,
-            'fully_damaged' => 0,
-            'partially_damaged' => 0,
-            'committee_review' => 0,
-            'occupied' => 0,
-            'vacant' => 0,
-        ];
-        $allNeighborhoodRows = collect($neighborhoodPages)->flatMap(fn ($page) => $page['rows']);
-        $topNeighborhoods = $allNeighborhoodRows->sortByDesc('housing_units')->take(8)->values();
-        $topNeighborhoodMax = max(1, (int) $topNeighborhoods->max('housing_units'));
     @endphp
 
     <style>
@@ -920,96 +905,104 @@
                     </table>
                 </div>
 
+                @php
+                    $governorateTopNeighborhoods = collect($governorate['neighborhoods'])->sortByDesc('housing_units')->take(8)->values();
+                    $governorateActiveNeighborhood = $governorateTopNeighborhoods->first() ?? [
+                        'name' => 'غير محدد',
+                        'buildings' => 0,
+                        'housing_units' => 0,
+                        'fully_damaged' => 0,
+                        'partially_damaged' => 0,
+                        'committee_review' => 0,
+                        'occupied' => 0,
+                        'vacant' => 0,
+                    ];
+                    $governorateTopNeighborhoodMax = max(1, (int) $governorateTopNeighborhoods->max('housing_units'));
+                @endphp
+
+                <div class="phc-title" style="margin-top: 26px;">
+                    <h2>استعراض أحياء محافظة {{ $governorate['name'] }}</h2>
+                    <p>تفصيل الأحياء حسب عدد الوحدات والأضرار والإشغال داخل المحافظة</p>
+                </div>
+
+                <div class="phc-neighborhood-stage">
+                    <div class="phc-neighborhood-focus">
+                        <h3>الحي الأعلى في الوحدات المسجلة: {{ $governorateActiveNeighborhood['name'] }}</h3>
+                        <div class="phc-summary" style="margin-bottom: 14px;">
+                            يتم ترتيب الأحياء بناءً على عدد الوحدات السكنية المسجلة داخل هذه المحافظة، مع إبراز مؤشرات الضرر والإشغال.
+                        </div>
+                        <div class="phc-grid-2">
+                            <div class="phc-kpi blue"><strong>{{ $formatNumber($governorateActiveNeighborhood['buildings']) }}</strong><span>مبانٍ مسجلة</span></div>
+                            <div class="phc-kpi blue"><strong>{{ $formatNumber($governorateActiveNeighborhood['housing_units']) }}</strong><span>وحدات سكنية</span></div>
+                            <div class="phc-kpi orange"><strong>{{ $formatNumber($governorateActiveNeighborhood['fully_damaged']) }}</strong><span>ضرر كلي</span></div>
+                            <div class="phc-kpi green"><strong>{{ $formatNumber($governorateActiveNeighborhood['occupied']) }}</strong><span>وحدات مشغولة</span></div>
+                        </div>
+                    </div>
+                    <div class="phc-map-frame" style="margin-bottom: 0;">{!! $governorate['mapSvg'] !!}</div>
+                </div>
+
+                <div class="phc-table-wrap">
+                    <table class="phc-table">
+                        <thead>
+                            <tr>
+                                <th>الحي</th>
+                                <th>المباني</th>
+                                <th>الوحدات</th>
+                                <th>ضرر جزئي</th>
+                                <th>ضرر كلي</th>
+                                <th>مراجعة لجنة</th>
+                                <th>مشغولة</th>
+                                <th>غير مشغولة</th>
+                                <th>السكان المتأثرون</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($governorateTopNeighborhoods as $row)
+                                <tr>
+                                    <td>{{ $row['name'] }}</td>
+                                    <td>{{ $formatNumber($row['buildings']) }}</td>
+                                    <td>{{ $formatNumber($row['housing_units']) }}</td>
+                                    <td>{{ $formatNumber($row['partially_damaged']) }}</td>
+                                    <td>{{ $formatNumber($row['fully_damaged']) }}</td>
+                                    <td>{{ $formatNumber($row['committee_review']) }}</td>
+                                    <td>{{ $formatNumber($row['occupied']) }}</td>
+                                    <td>{{ $formatNumber($row['vacant']) }}</td>
+                                    <td>{{ $formatNumber($row['housing_units'] * 5.3) }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="9">لا توجد بيانات أحياء ضمن هذه المحافظة</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="phc-grid-2">
+                    <div class="phc-chart-card">
+                        <h4>أعلى الأحياء حسب الوحدات السكنية</h4>
+                        @foreach ($governorateTopNeighborhoods as $row)
+                            <div class="phc-horizontal-row" style="grid-template-columns: 120px 1fr 52px;">
+                                <span>{{ $row['name'] }}</span>
+                                <div class="phc-horizontal-track"><div class="phc-horizontal-fill" style="width: {{ max(3, ((int) $row['housing_units'] / $governorateTopNeighborhoodMax) * 100) }}%; background: #e65100;"></div></div>
+                                <strong>{{ $formatNumber($row['housing_units']) }}</strong>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="phc-chart-card">
+                        <h4>ملخص الإشغال ضمن أعلى الأحياء</h4>
+                        <div class="phc-grid-2">
+                            <div class="phc-kpi green"><strong>{{ $formatNumber($governorateTopNeighborhoods->sum('occupied')) }}</strong><span>مشغولة</span></div>
+                            <div class="phc-kpi orange"><strong>{{ $formatNumber($governorateTopNeighborhoods->sum('vacant')) }}</strong><span>غير مشغولة</span></div>
+                            <div class="phc-kpi orange"><strong>{{ $formatNumber($governorateTopNeighborhoods->sum('fully_damaged')) }}</strong><span>ضرر كلي</span></div>
+                            <div class="phc-kpi blue"><strong>{{ $formatNumber($governorateTopNeighborhoods->sum('partially_damaged')) }}</strong><span>ضرر جزئي</span></div>
+                        </div>
+                    </div>
+                </div>
+
                 <footer class="phc-footer">
                     <span>PHC - {{ $governorate['english_name'] }}</span>
                     <strong>مشروع حصر الأضرار - قطاع غزة</strong>
                 </footer>
             </section>
         @endforeach
-
-        <section class="phc-page">
-            <div class="phc-title">
-                <h2>استعراض الأحياء</h2>
-                <p>تفصيل ديناميكي للأحياء حسب المحافظة وعدد الوحدات والأضرار والإشغال</p>
-            </div>
-
-            <div class="phc-neighborhood-stage">
-                <div class="phc-neighborhood-focus">
-                    <h3>الحي الأعلى في الوحدات المسجلة: {{ $activeNeighborhood['name'] }}</h3>
-                    <div class="phc-summary" style="margin-bottom: 14px;">
-                        يتم ترتيب الأحياء بناءً على عدد الوحدات السكنية المسجلة ضمن البيانات الحالية. تعرض الخريطة والجدول أدناه أعلى الأحياء من حيث حجم البيانات، مع إبراز مؤشرات الضرر والإشغال.
-                    </div>
-                    <div class="phc-grid-2">
-                        <div class="phc-kpi blue"><strong>{{ $formatNumber($activeNeighborhood['buildings']) }}</strong><span>مبانٍ مسجلة</span></div>
-                        <div class="phc-kpi blue"><strong>{{ $formatNumber($activeNeighborhood['housing_units']) }}</strong><span>وحدات سكنية</span></div>
-                        <div class="phc-kpi orange"><strong>{{ $formatNumber($activeNeighborhood['fully_damaged']) }}</strong><span>ضرر كلي</span></div>
-                        <div class="phc-kpi green"><strong>{{ $formatNumber($activeNeighborhood['occupied']) }}</strong><span>وحدات مشغولة</span></div>
-                    </div>
-                </div>
-                <div class="phc-map-frame" style="margin-bottom: 0;">{!! $firstNeighborhoodPage['mapSvg'] !!}</div>
-            </div>
-
-            <div class="phc-table-wrap">
-                <table class="phc-table">
-                    <thead>
-                        <tr>
-                            <th>الحي</th>
-                            <th>المباني</th>
-                            <th>الوحدات</th>
-                            <th>ضرر جزئي</th>
-                            <th>ضرر كلي</th>
-                            <th>مراجعة لجنة</th>
-                            <th>مشغولة</th>
-                            <th>غير مشغولة</th>
-                            <th>السكان المتأثرون</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($topNeighborhoods as $row)
-                            <tr>
-                                <td>{{ $row['name'] }}</td>
-                                <td>{{ $formatNumber($row['buildings']) }}</td>
-                                <td>{{ $formatNumber($row['housing_units']) }}</td>
-                                <td>{{ $formatNumber($row['partially_damaged']) }}</td>
-                                <td>{{ $formatNumber($row['fully_damaged']) }}</td>
-                                <td>{{ $formatNumber($row['committee_review']) }}</td>
-                                <td>{{ $formatNumber($row['occupied']) }}</td>
-                                <td>{{ $formatNumber($row['vacant']) }}</td>
-                                <td>{{ $formatNumber($row['housing_units'] * 5.3) }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="9">لا توجد بيانات أحياء ضمن الفلاتر الحالية</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="phc-grid-2">
-                <div class="phc-chart-card">
-                    <h4>أعلى الأحياء حسب الوحدات السكنية</h4>
-                    @foreach ($topNeighborhoods as $row)
-                        <div class="phc-horizontal-row" style="grid-template-columns: 120px 1fr 52px;">
-                            <span>{{ $row['name'] }}</span>
-                            <div class="phc-horizontal-track"><div class="phc-horizontal-fill" style="width: {{ max(3, ((int) $row['housing_units'] / $topNeighborhoodMax) * 100) }}%; background: #e65100;"></div></div>
-                            <strong>{{ $formatNumber($row['housing_units']) }}</strong>
-                        </div>
-                    @endforeach
-                </div>
-                <div class="phc-chart-card">
-                    <h4>ملخص الإشغال ضمن أعلى الأحياء</h4>
-                    <div class="phc-grid-2">
-                        <div class="phc-kpi green"><strong>{{ $formatNumber($topNeighborhoods->sum('occupied')) }}</strong><span>مشغولة</span></div>
-                        <div class="phc-kpi orange"><strong>{{ $formatNumber($topNeighborhoods->sum('vacant')) }}</strong><span>غير مشغولة</span></div>
-                        <div class="phc-kpi orange"><strong>{{ $formatNumber($topNeighborhoods->sum('fully_damaged')) }}</strong><span>ضرر كلي</span></div>
-                        <div class="phc-kpi blue"><strong>{{ $formatNumber($topNeighborhoods->sum('partially_damaged')) }}</strong><span>ضرر جزئي</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <footer class="phc-footer">
-                <span>PHC - Neighborhoods</span>
-                <strong>وزارة الأشغال العامة والإسكان | المجلس الفلسطيني للإسكان | UNDP</strong>
-            </footer>
-        </section>
     </div>
 @endsection
