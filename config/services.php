@@ -45,6 +45,15 @@ return [
     'arcgis' => [
         'username' => env('ARCGIS_USERNAME'),
         'password' => env('ARCGIS_PASSWORD'),
+        'referer' => env('ARCGIS_REFERER', env('APP_URL')),
+
+        'target_service' => env('ARCGIS_TARGET_SERVICE'),
+        'target_buildings_layer' => env('ARCGIS_TARGET_BUILDINGS_LAYER', 0),
+        'target_units_layer' => env('ARCGIS_TARGET_UNITS_LAYER', 1),
+
+        'source_service' => env('ARCGIS_SOURCE_SERVICE'),
+        'source_buildings_layer' => env('ARCGIS_SOURCE_BUILDINGS_LAYER', 0),
+        'source_units_layer' => env('ARCGIS_SOURCE_UNITS_LAYER', 1),
 
         'buildings_url' => env(
             'ARCGIS_BUILDINGS_URL',
