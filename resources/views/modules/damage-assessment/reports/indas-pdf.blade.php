@@ -505,6 +505,261 @@
             font-weight: 700;
             margin-bottom: 6px;
         }
+
+        .brand-page {
+            background: #ffffff;
+            padding: 13mm 15mm 12mm;
+        }
+
+        .brand-rule {
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 5mm;
+            background: #0f3147;
+            border-bottom: 1.8mm solid #c5a02b;
+        }
+
+        .brand-head {
+            display: grid;
+            grid-template-columns: 132px 1fr 132px;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1.5px solid #c5a02b;
+            padding-bottom: 6px;
+            margin-bottom: 9px;
+        }
+
+        .brand-logo {
+            border: 1px solid #d8e4eb;
+            min-height: 39px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f3147;
+            background: #f4f8fa;
+            font-size: 8px;
+            font-weight: 700;
+        }
+
+        .brand-logo.undp {
+            background: #006eb6;
+            color: #ffffff;
+            letter-spacing: 1px;
+        }
+
+        .brand-title {
+            text-align: center;
+        }
+
+        .brand-title h1 {
+            color: #0f3147;
+            font-size: 16px;
+            line-height: 1.45;
+            margin: 0;
+        }
+
+        .brand-title p {
+            color: #5a6e7f;
+            font-size: 8px;
+            line-height: 1.5;
+            margin: 2px 0 0;
+        }
+
+        .brand-page > h1,
+        .brand-page > .subtitle,
+        .brand-page > .grid-2,
+        .brand-page > .grid-3 {
+            display: none;
+        }
+
+        .neighborhood-hero {
+            display: grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap: 10px;
+            align-items: stretch;
+            margin-bottom: 9px;
+        }
+
+        .neighborhood-map {
+            border: 1px solid #d8e4eb;
+            background: #f4f8fa;
+            padding: 8px;
+            min-height: 158px;
+            overflow: hidden;
+        }
+
+        .neighborhood-map svg {
+            width: 100%;
+            height: 150px;
+            display: block;
+        }
+
+        .neighborhood-focus {
+            border: 2px solid #e65100;
+            background: #fffaf4;
+            padding: 10px;
+            min-height: 158px;
+            position: relative;
+        }
+
+        .focus-pill {
+            display: inline-block;
+            background: #ffffff;
+            border: 1.5px solid #e65100;
+            color: #e65100;
+            padding: 3px 10px;
+            font-size: 8px;
+            font-weight: 700;
+            margin-bottom: 7px;
+        }
+
+        .focus-name {
+            color: #0f3147;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.35;
+            margin-bottom: 6px;
+        }
+
+        .focus-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .focus-stat {
+            background: #ffffff;
+            border: 1px solid #eadcc0;
+            padding: 6px;
+        }
+
+        .focus-stat strong {
+            display: block;
+            color: #006eb6;
+            font-size: 13px;
+            line-height: 1.1;
+            direction: ltr;
+        }
+
+        .focus-stat span {
+            color: #5a6e7f;
+            font-size: 7px;
+        }
+
+        .neighborhood-kpis {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+
+        .neighborhood-kpi {
+            background: #f4f8fa;
+            border: 1px solid #d8e4eb;
+            border-right: 3px solid #006eb6;
+            padding: 7px 6px;
+            min-height: 48px;
+        }
+
+        .neighborhood-kpi.orange {
+            border-right-color: #e65100;
+        }
+
+        .neighborhood-kpi.green {
+            border-right-color: #2e7d32;
+        }
+
+        .neighborhood-kpi strong {
+            display: block;
+            color: #0f3147;
+            font-size: 13px;
+            line-height: 1.15;
+            direction: ltr;
+        }
+
+        .neighborhood-kpi span {
+            color: #5a6e7f;
+            font-size: 7px;
+            line-height: 1.35;
+        }
+
+        .neighborhood-bottom {
+            display: grid;
+            grid-template-columns: 1fr 192px;
+            gap: 10px;
+            align-items: start;
+        }
+
+        .neighborhood-table-wrap {
+            border: 1px solid #d8e4eb;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .neighborhood-table-wrap h2 {
+            background: #0f3147;
+            color: #ffffff;
+            padding: 5px 8px;
+            margin: 0;
+            font-size: 9px;
+        }
+
+        .neighborhood-table {
+            margin-top: 0;
+        }
+
+        .neighborhood-table th {
+            background: #006eb6;
+            font-size: 6.5px;
+            padding: 3px 2px;
+        }
+
+        .neighborhood-table td {
+            font-size: 6.4px;
+            padding: 2.5px 2px;
+        }
+
+        .neighborhood-insights {
+            display: grid;
+            gap: 7px;
+        }
+
+        .insight-card {
+            background: #ffffff;
+            border: 1px solid #d8e4eb;
+            padding: 8px;
+        }
+
+        .insight-card h3 {
+            color: #0f3147;
+            font-size: 8px;
+            margin: 0 0 6px;
+        }
+
+        .rank-row {
+            display: grid;
+            grid-template-columns: 1fr 42px;
+            gap: 5px;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 6.5px;
+            color: #31526c;
+        }
+
+        .rank-bar {
+            height: 6px;
+            background: #edf5fa;
+            overflow: hidden;
+            margin-top: 2px;
+        }
+
+        .rank-fill {
+            height: 100%;
+            background: #e65100;
+        }
     </style>
 </head>
 <body>
@@ -730,8 +985,138 @@
 @endforeach
 
 @foreach ($neighborhoodPages as $page)
-    <section class="page">
-        <div class="header"></div>
+    @php
+        $rows = collect($page['rows']);
+        $featuredNeighborhood = $rows->sortByDesc(fn (array $row): int => (int) $row['housing_units'])->first() ?? [
+            'name' => 'غير محدد',
+            'buildings' => 0,
+            'housing_units' => 0,
+            'partially_damaged' => 0,
+            'fully_damaged' => 0,
+            'committee_review' => 0,
+            'occupied' => 0,
+            'vacant' => 0,
+        ];
+        $neighborhoodTotals = [
+            'count' => $rows->count(),
+            'buildings' => $rows->sum('buildings'),
+            'housing_units' => $rows->sum('housing_units'),
+            'affected' => (int) round($rows->sum('housing_units') * 5.3),
+            'partial' => $rows->sum('partially_damaged'),
+            'total' => $rows->sum('fully_damaged'),
+            'committee' => $rows->sum('committee_review'),
+            'occupied' => $rows->sum('occupied'),
+            'vacant' => $rows->sum('vacant'),
+        ];
+        $rankMax = max(1, (int) $rows->max('housing_units'));
+    @endphp
+    <section class="page brand-page">
+        <div class="brand-rule"></div>
+        <div class="brand-head">
+            <div class="brand-logo">وزارة الأشغال العامة والإسكان</div>
+            <div class="brand-title">
+                <h1>استعراض أحياء محافظة {{ $page['governorate'] }}</h1>
+                <p>المجلس الفلسطيني للإسكان بالتعاون مع برنامج الأمم المتحدة الإنمائي - مشروع حصر الأضرار في قطاع غزة</p>
+            </div>
+            <div class="brand-logo undp">UNDP</div>
+        </div>
+
+        <div class="neighborhood-hero">
+            <div class="neighborhood-map">{!! $page['mapSvg'] !!}</div>
+            <div class="neighborhood-focus">
+                <span class="focus-pill">الحي الأعلى في الوحدات المسجلة</span>
+                <div class="focus-name">{{ $featuredNeighborhood['name'] }}</div>
+                <div class="subtitle" style="margin-bottom: 0;">تعرض هذه البطاقة الحي الأكثر ظهوراً في بيانات المحافظة الحالية، مع مؤشرات الأضرار والإشغال المستخرجة مباشرة من قاعدة البيانات.</div>
+                <div class="focus-grid">
+                    <div class="focus-stat"><strong>{{ $formatNumber($featuredNeighborhood['buildings']) }}</strong><span>مبانٍ مسجلة</span></div>
+                    <div class="focus-stat"><strong>{{ $formatNumber($featuredNeighborhood['housing_units']) }}</strong><span>وحدات سكنية</span></div>
+                    <div class="focus-stat"><strong>{{ $formatNumber($featuredNeighborhood['fully_damaged']) }}</strong><span>ضرر كلي</span></div>
+                    <div class="focus-stat"><strong>{{ $formatNumber($featuredNeighborhood['partially_damaged']) }}</strong><span>ضرر جزئي</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="neighborhood-kpis">
+            <div class="neighborhood-kpi"><strong>{{ $formatNumber($neighborhoodTotals['count']) }}</strong><span>عدد الأحياء المعروضة</span></div>
+            <div class="neighborhood-kpi"><strong>{{ $formatNumber($neighborhoodTotals['buildings']) }}</strong><span>إجمالي المباني</span></div>
+            <div class="neighborhood-kpi"><strong>{{ $formatNumber($neighborhoodTotals['housing_units']) }}</strong><span>إجمالي الوحدات</span></div>
+            <div class="neighborhood-kpi orange"><strong>{{ $formatNumber($neighborhoodTotals['affected']) }}</strong><span>السكان المتأثرون تقديرياً</span></div>
+            <div class="neighborhood-kpi orange"><strong>{{ $formatNumber($neighborhoodTotals['total']) }}</strong><span>وحدات مدمرة كلياً</span></div>
+            <div class="neighborhood-kpi green"><strong>{{ $formatNumber($neighborhoodTotals['occupied']) }}</strong><span>وحدات مشغولة</span></div>
+        </div>
+
+        <div class="neighborhood-bottom">
+            <div class="neighborhood-table-wrap">
+                <h2>جدول الأحياء التفصيلي حسب المحافظة</h2>
+                <table class="neighborhood-table">
+                    <thead>
+                        <tr>
+                            <th>الحي</th>
+                            <th>المباني</th>
+                            <th>الوحدات</th>
+                            <th>ضرر جزئي</th>
+                            <th>ضرر كلي</th>
+                            <th>مراجعة لجنة</th>
+                            <th>مشغولة</th>
+                            <th>غير مشغولة</th>
+                            <th>السكان المتأثرون</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($page['rows'] as $row)
+                            <tr>
+                                <td>{{ $row['name'] }}</td>
+                                <td>{{ $formatNumber($row['buildings']) }}</td>
+                                <td>{{ $formatNumber($row['housing_units']) }}</td>
+                                <td>{{ $formatNumber($row['partially_damaged']) }}</td>
+                                <td>{{ $formatNumber($row['fully_damaged']) }}</td>
+                                <td>{{ $formatNumber($row['committee_review']) }}</td>
+                                <td>{{ $formatNumber($row['occupied']) }}</td>
+                                <td>{{ $formatNumber($row['vacant']) }}</td>
+                                <td>{{ $formatNumber($row['housing_units'] * 5.3) }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="9">لا توجد بيانات أحياء لهذه المحافظة ضمن الفلاتر الحالية</td></tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>المجموع</th>
+                            <th>{{ $formatNumber($neighborhoodTotals['buildings']) }}</th>
+                            <th>{{ $formatNumber($neighborhoodTotals['housing_units']) }}</th>
+                            <th>{{ $formatNumber($neighborhoodTotals['partial']) }}</th>
+                            <th>{{ $formatNumber($neighborhoodTotals['total']) }}</th>
+                            <th>{{ $formatNumber($neighborhoodTotals['committee']) }}</th>
+                            <th>{{ $formatNumber($neighborhoodTotals['occupied']) }}</th>
+                            <th>{{ $formatNumber($neighborhoodTotals['vacant']) }}</th>
+                            <th>{{ $formatNumber($neighborhoodTotals['affected']) }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="neighborhood-insights">
+                <div class="insight-card">
+                    <h3>أعلى الأحياء حسب الوحدات السكنية</h3>
+                    @foreach ($rows->sortByDesc('housing_units')->take(5) as $row)
+                        <div class="rank-row">
+                            <div>
+                                <span>{{ $row['name'] }}</span>
+                                <div class="rank-bar"><div class="rank-fill" style="width: {{ max(3, ((int) $row['housing_units'] / $rankMax) * 100) }}%;"></div></div>
+                            </div>
+                            <strong>{{ $formatNumber($row['housing_units']) }}</strong>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="insight-card">
+                    <h3>مؤشرات الضرر والإشغال</h3>
+                    <div class="rank-row"><span>ضرر كلي</span><strong>{{ $formatNumber($neighborhoodTotals['total']) }}</strong></div>
+                    <div class="rank-row"><span>ضرر جزئي</span><strong>{{ $formatNumber($neighborhoodTotals['partial']) }}</strong></div>
+                    <div class="rank-row"><span>مراجعة لجنة</span><strong>{{ $formatNumber($neighborhoodTotals['committee']) }}</strong></div>
+                    <div class="rank-row"><span>غير مشغولة</span><strong>{{ $formatNumber($neighborhoodTotals['vacant']) }}</strong></div>
+                </div>
+            </div>
+        </div>
         <h1>أحياء محافظة {{ $page['governorate'] }}</h1>
         <div class="subtitle">الخرائط والجداول حسب الحي، مع أعمدة الضرر والإشغال من قاعدة البيانات.</div>
         <div class="grid-2">
