@@ -92,26 +92,23 @@ class ArcgisAuditedUploadService
         return $data['token'];
     }
 
-    public function buildingFeature(VBuildingAudited $building): array
+
+    public function buildingFeature(VBuildingAudited $building, string $token): array
     {
         $attributes = collect($building->getAttributes())
-            ->except([
-                'objectid',
-                'OBJECTID',
-                'shape',
-                'created_at',
-                'updated_at',
-            ])
+            ->except(['objectid', 'OBJECTID', 'shape', 'created_at', 'updated_at'])
             ->toArray();
 
         $attributes['old_objectid'] = $building->objectid;
         $attributes['is_audited'] = 1;
 
-        $feature = [
-            'attributes' => $attributes,
-        ];
+        $feature = ['attributes' => $attributes];
 
-        $geometry = $this->geometry($building);
+        $geometry = $this->sourceGeometry(
+            $this->layerId('source_buildings_layer'),
+            $building->objectid,
+            $token
+        );
 
         if ($geometry !== null) {
             $feature['geometry'] = $geometry;
@@ -119,7 +116,6 @@ class ArcgisAuditedUploadService
 
         return $feature;
     }
-
     public function unitFeature(VHousingUnitAudited $unit): array
     {
         return $this->feature($unit, [
@@ -130,7 +126,29 @@ class ArcgisAuditedUploadService
             'is_audited' => fn(): int => 1,
         ]);
     }
+    public function unitFeature(VHousingUnitAudited $unit, string $token): array
+    {
+        $attributes = collect($unit->getAttributes())
+            ->except(['objectid', 'OBJECTID', 'shape', 'created_at', 'updated_at'])
+            ->toArray();
 
+        $attributes['old_objectid'] = $unit->objectid;
+        $attributes['is_audited'] = 1;
+
+        $feature = ['attributes' => $attributes];
+
+        $geometry = $this->sourceGeometry(
+            $this->layerId('source_units_layer'),
+            $unit->objectid,
+            $token
+        );
+
+        if ($geometry !== null) {
+            $feature['geometry'] = $geometry;
+        }
+
+        return $feature;
+    }
     private function uploadBuilding(VBuildingAudited $building, string $token, array &$summary): void
     {
         $targetLayerId = $this->layerId('target_buildings_layer');
@@ -145,7 +163,7 @@ class ArcgisAuditedUploadService
         if ($targetObjectId === null) {
             echo "Adding building feature...\n";
 
-            $targetObjectId = $this->addFeature($targetLayerId, $this->buildingFeature($building), $token);
+            $targetObjectId = $this->addFeature($targetLayerId, $this->buildingFeature($building, $token), $token);
             $summary['buildings_uploaded']++;
         } else {
             echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
@@ -174,8 +192,8 @@ class ArcgisAuditedUploadService
 
         echo "Checking target unit exists...\n";
 
-        $targetObjectId = $this->targetFeatureExistsWithToken($targetLayerId, $oldObjectId, $token);
-
+        $targetObjectId = $this->addFeature($targetLayerId, $this->unitFeature($unit, $token), $token);
+        
         if ($targetObjectId === null) {
             echo "Adding unit feature...\n";
 
@@ -252,7 +270,26 @@ class ArcgisAuditedUploadService
 
         return is_numeric($objectId) ? (int) $objectId : null;
     }
+    private function sourceGeometry(int|string $layerId, int|string $objectId, string $token): ?array
+    {
+        $response = $this->http()->get($this->sourceLayerUrl($layerId) . '/query', [
+            'f' => 'json',
+            'token' => $token,
+            'where' => 'objectid = ' . $this->whereValue($objectId),
+            'outFields' => 'objectid',
+            'returnGeometry' => 'true',
+            'outSR' => 4326,
+            'resultRecordCount' => 1,
+        ]);
 
+        if (!$response->successful()) {
+            throw new RuntimeException('ArcGIS source geometry lookup failed: ' . $response->body());
+        }
+
+        $geometry = $response->json('features.0.geometry');
+
+        return is_array($geometry) ? $geometry : null;
+    }
     private function copyAttachments(
         int|string $sourceLayerId,
         int|string $targetLayerId,
