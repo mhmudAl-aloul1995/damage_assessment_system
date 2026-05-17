@@ -3,6 +3,7 @@
 namespace App\Services\DamageAssessment\Reports;
 
 use App\Models\Building;
+use App\Models\Filter;
 use App\Models\HousingUnit;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,14 +13,6 @@ use Illuminate\Support\Facades\DB;
 
 class phcPdfReportService
 {
-    private const GOVERNORATES = [
-        'North Gaza' => 'شمال غزة',
-        'Gaza' => 'غزة',
-        'Middle Area' => 'الوسطى',
-        'Khan Younis' => 'خانيونس',
-        'Rafah' => 'رفح',
-    ];
-
     private const COLORS = [
         'blue' => '#0f4c81',
         'cyan' => '#16a6d9',
@@ -42,7 +35,9 @@ class phcPdfReportService
         $occupancyDistribution = $this->distribution($housingUnits, 'occupied', $this->occupancyLabels());
         $buildingTypeDistribution = $this->distribution($buildings, 'building_type', $this->buildingTypeLabels());
         $buildingUseDistribution = $this->distribution($buildings, 'building_use', $this->buildingUseLabels());
-        $governorates = $this->governoratePages($buildings, $housingUnits);
+        $governorateOptions = $this->governorates();
+        $governorateMapLabels = $this->mapGovernorateLabels($governorateOptions);
+        $governorates = $this->governoratePages($governorateOptions, $governorateMapLabels, $buildings, $housingUnits);
         $neighborhoodPages = $this->neighborhoodPages($governorates);
 
         return [
@@ -58,7 +53,7 @@ class phcPdfReportService
             'governorates' => $governorates,
             'neighborhoodPages' => $neighborhoodPages,
             'summaryRows' => $this->summaryRows($governorates),
-            'gazaMapSvg' => $this->mapSvg($this->buildingCoordinates($buildings, 650), 'قطاع غزة', null),
+            'gazaMapSvg' => $this->mapSvg($this->buildingCoordinates($buildings, 650), 'قطاع غزة', null, $governorateMapLabels),
             'totalPages' => 14,
         ];
     }
@@ -186,20 +181,61 @@ class phcPdfReportService
     }
 
     /**
-     * @param  array<string, string|null>  $filters
+     * @return Collection<int, array{key: string, name: string, english_name: string}>
+     */
+    private function governorates(): Collection
+    {
+        return Filter::query()
+            ->where('list_name', 'governorate')
+            ->whereNotNull('name')
+            ->orderBy('id')
+            ->get(['name', 'label'])
+            ->map(function (Filter $filter): array {
+                $name = trim((string) $filter->name);
+                $label = trim((string) $filter->label);
+
+                return [
+                    'key' => $name,
+                    'name' => $label !== '' ? $label : $this->humanize($name),
+                    'english_name' => $name,
+                ];
+            })
+            ->filter(fn (array $governorate): bool => $governorate['english_name'] !== '')
+            ->unique('english_name')
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, array{key: string, name: string, english_name: string}>  $governorates
+     * @return array<string, string>
+     */
+    private function mapGovernorateLabels(Collection $governorates): array
+    {
+        return $governorates
+            ->mapWithKeys(fn (array $governorate): array => [
+                $this->mapGovernorateKey($governorate['english_name']) => $governorate['name'],
+            ])
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int, array{key: string, name: string, english_name: string}>  $governorates
+     * @param  array<string, string>  $governorateMapLabels
      * @return array<int, array<string, mixed>>
      */
-    private function governoratePages(Collection $buildings, Collection $housingUnits): array
+    private function governoratePages(Collection $governorates, array $governorateMapLabels, Collection $buildings, Collection $housingUnits): array
     {
-        return collect(self::GOVERNORATES)
-            ->map(function (string $arabicName, string $englishName) use ($buildings, $housingUnits) {
+        return $governorates
+            ->map(function (array $governorate) use ($governorateMapLabels, $buildings, $housingUnits) {
+                $englishName = $governorate['english_name'];
+                $displayName = $governorate['name'];
                 $aliases = $this->governorateAliases($englishName);
                 $governorateBuildings = $buildings->whereIn('governorate', $aliases)->values();
                 $governorateHousingUnits = $housingUnits->whereIn('governorate', $aliases)->values();
 
                 return [
                     'key' => $englishName,
-                    'name' => $arabicName,
+                    'name' => $displayName,
                     'english_name' => $englishName,
                     'totals' => $this->totals($governorateBuildings, $governorateHousingUnits, false),
                     'damage' => $this->distribution($governorateHousingUnits, 'unit_damage_status', $this->housingDamageLabels()),
@@ -207,7 +243,7 @@ class phcPdfReportService
                     'building_types' => $this->distribution($governorateBuildings, 'building_type', $this->buildingTypeLabels()),
                     'municipalities' => $this->areaRows($governorateBuildings, $governorateHousingUnits, 'municipalitie', 8),
                     'neighborhoods' => $this->areaRows($governorateBuildings, $governorateHousingUnits, 'neighborhood', 10),
-                    'mapSvg' => $this->mapSvg($this->buildingCoordinates($governorateBuildings, 350), $arabicName, $englishName),
+                    'mapSvg' => $this->mapSvg($this->buildingCoordinates($governorateBuildings, 350), $displayName, $this->mapGovernorateKey($englishName), $governorateMapLabels),
                 ];
             })
             ->values()
@@ -296,7 +332,10 @@ class phcPdfReportService
             ->values();
     }
 
-    private function mapSvg(Collection $coordinates, string $title, ?string $highlightGovernorate): string
+    /**
+     * @param  array<string, string>  $governorateLabels
+     */
+    private function mapSvg(Collection $coordinates, string $title, ?string $highlightGovernorate, array $governorateLabels = []): string
     {
         $bands = [
             ['North Gaza', 'شمال غزة', 24, 36, '#d8eef8'],
@@ -319,8 +358,9 @@ class phcPdfReportService
             return '<circle cx="'.round($x, 1).'" cy="'.round($y, 1).'" r="2.5" fill="'.$color.'" opacity=".72" />';
         })->implode('');
 
-        $bandSvg = collect($bands)->map(function (array $band) use ($highlightGovernorate) {
+        $bandSvg = collect($bands)->map(function (array $band) use ($highlightGovernorate, $governorateLabels) {
             [$key, $label, $y, $height, $fill] = $band;
+            $label = $governorateLabels[$key] ?? $label;
             $stroke = $highlightGovernorate === $key ? self::COLORS['orange'] : '#ffffff';
             $strokeWidth = $highlightGovernorate === $key ? 4 : 2;
 
@@ -342,11 +382,36 @@ class phcPdfReportService
      */
     private function governorateAliases(string $governorate): array
     {
-        return array_values(array_unique([
+        $normalizedGovernorate = strtolower(trim($governorate));
+        $aliases = [
             $governorate,
             str_replace(' ', '_', $governorate),
             str_replace('_', ' ', $governorate),
-        ]));
+        ];
+
+        if (in_array($normalizedGovernorate, ['north', 'north_gaza'], true)) {
+            $aliases = array_merge($aliases, ['North Gaza', 'North_Gaza']);
+        }
+
+        if (in_array($normalizedGovernorate, ['middle_area', 'middle area'], true)) {
+            $aliases = array_merge($aliases, ['Middle Area', 'Middle_Area']);
+        }
+
+        if (in_array($normalizedGovernorate, ['khan_younis', 'khan younis'], true)) {
+            $aliases = array_merge($aliases, ['Khan Younis', 'Khan_Younis']);
+        }
+
+        return array_values(array_unique($aliases));
+    }
+
+    private function mapGovernorateKey(string $governorate): string
+    {
+        return match (strtolower(trim($governorate))) {
+            'north', 'north_gaza' => 'North Gaza',
+            'middle_area' => 'Middle Area',
+            'khan_younis' => 'Khan Younis',
+            default => str_replace('_', ' ', $governorate),
+        };
     }
 
     /**

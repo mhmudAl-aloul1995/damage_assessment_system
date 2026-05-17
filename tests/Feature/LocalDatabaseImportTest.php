@@ -44,6 +44,7 @@ it('streams an uploaded sql file into the configured mysql database', function (
 
     $this->actingAs($user)
         ->post(route('admin.local-database-import.store'), [
+            'import_source' => 'upload',
             'sql_file' => $file,
             'confirm_database' => '1',
         ])
@@ -67,7 +68,49 @@ it('requires confirmation before importing a database dump', function (): void {
 
     $this->actingAs($user)
         ->post(route('admin.local-database-import.store'), [
+            'import_source' => 'upload',
             'sql_file' => $file,
         ])
         ->assertSessionHasErrors('confirm_database');
+});
+
+it('imports a sql file from a local project path without uploading it', function (): void {
+    Process::fake([
+        '*' => Process::result('Import complete.'),
+    ]);
+
+    $this->withoutMiddleware(RoleOrPermissionMiddleware::class);
+
+    $user = User::factory()->create();
+    $path = base_path('local-import-test.sql');
+
+    config()->set('database.local_import_connection', 'testing_mysql');
+    config()->set('database.connections.testing_mysql', [
+        'driver' => 'mysql',
+        'host' => '127.0.0.1',
+        'port' => '3306',
+        'database' => 'phc_testing',
+        'username' => 'root',
+        'password' => '',
+        'charset' => 'utf8mb4',
+    ]);
+
+    file_put_contents($path, 'SELECT 1;');
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.local-database-import.store'), [
+                'import_source' => 'local_path',
+                'local_path' => $path,
+                'confirm_database' => '1',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Database import completed successfully.');
+    } finally {
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+
+    Process::assertRan(fn ($process): bool => is_array($process->command));
 });
