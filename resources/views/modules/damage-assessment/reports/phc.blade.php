@@ -5,6 +5,7 @@
 
 @section('content')
     @php
+        $isPdfExport = (bool) ($isPdfExport ?? false);
         $formatNumber = fn ($value) => number_format((int) round((float) $value));
         $damageTotal = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $damageDistribution)));
         $occupancyTotal = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $occupancyDistribution)));
@@ -27,13 +28,45 @@
     @endphp
 
     <style>
+        @if ($isPdfExport)
+            #kt_app_header,
+            #kt_app_sidebar,
+            #kt_app_toolbar,
+            #kt_app_footer,
+            #appContainerLoading {
+                display: none !important;
+            }
+
+            #kt_app_body,
+            #kt_app_root,
+            #kt_app_page,
+            #kt_app_wrapper,
+            #kt_app_main,
+            #kt_app_content,
+            #kt_app_content_container {
+                background: #ffffff !important;
+                margin: 0 !important;
+                max-width: none !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+
+            #kt_app_main,
+            .app-main,
+            .app-wrapper,
+            .app-page {
+                margin-inline-start: 0 !important;
+                padding-inline-start: 0 !important;
+            }
+        @endif
+
         .phc-report-shell {
             direction: rtl;
             background: #f0f4f8;
             color: #24384a;
             font-family: "Droid Arabic Kufi", Tahoma, Arial, sans-serif;
-            margin: -20px;
-            padding: 20px 20px 48px;
+            margin: {{ $isPdfExport ? '0' : '-20px' }};
+            padding: {{ $isPdfExport ? '0' : '20px 20px 48px' }};
         }
 
         .phc-topbar {
@@ -563,6 +596,7 @@
                 margin: 0;
                 max-width: none;
                 min-height: 190mm;
+                padding: 12mm;
                 width: 100%;
             }
         }
