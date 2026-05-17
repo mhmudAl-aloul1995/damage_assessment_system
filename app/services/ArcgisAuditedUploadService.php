@@ -116,16 +116,7 @@ class ArcgisAuditedUploadService
 
         return $feature;
     }
-    public function unitFeature(VHousingUnitAudited $unit): array
-    {
-        return $this->feature($unit, [
-            'old_objectid' => 'objectid',
-            'globalid' => 'globalid',
-            'parentglobalid' => 'parentglobalid',
-            'unit_damage_status' => 'unit_damage_status',
-            'is_audited' => fn(): int => 1,
-        ]);
-    }
+
     public function unitFeature(VHousingUnitAudited $unit, string $token): array
     {
         $attributes = collect($unit->getAttributes())
@@ -183,6 +174,7 @@ class ArcgisAuditedUploadService
         $summary['errors'] += $attachmentsSummary['errors'];
     }
 
+
     private function uploadUnit(VHousingUnitAudited $unit, string $token, array &$summary): void
     {
         $targetLayerId = $this->layerId('target_units_layer');
@@ -192,14 +184,26 @@ class ArcgisAuditedUploadService
 
         echo "Checking target unit exists...\n";
 
-        $targetObjectId = $this->addFeature($targetLayerId, $this->unitFeature($unit, $token), $token);
-        
+        $targetObjectId = $this->targetFeatureExistsWithToken(
+            $targetLayerId,
+            $oldObjectId,
+            $token
+        );
+
         if ($targetObjectId === null) {
+
             echo "Adding unit feature...\n";
 
-            $targetObjectId = $this->addFeature($targetLayerId, $this->unitFeature($unit), $token);
+            $targetObjectId = $this->addFeature(
+                $targetLayerId,
+                $this->unitFeature($unit, $token),
+                $token
+            );
+
             $summary['units_uploaded']++;
+
         } else {
+
             echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
         }
 
@@ -216,7 +220,6 @@ class ArcgisAuditedUploadService
         $summary['attachments_uploaded'] += $attachmentsSummary['uploaded'];
         $summary['errors'] += $attachmentsSummary['errors'];
     }
-
     private function addFeature(int|string $layerId, array $feature, string $token): int
     {
         $response = $this->http()->post($this->targetLayerUrl($layerId) . '/addFeatures', [
