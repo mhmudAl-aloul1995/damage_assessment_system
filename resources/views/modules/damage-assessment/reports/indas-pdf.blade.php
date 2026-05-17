@@ -61,14 +61,14 @@
         }
 
         .cover-title {
-            font-size: 34px;
+            font-size: 28px;
             line-height: 1.9;
             font-weight: 700;
             max-width: 720px;
         }
 
         .cover-subtitle {
-            font-size: 18px;
+            font-size: 14px;
             color: #dff6ff;
             margin-top: 8px;
         }
@@ -94,7 +94,7 @@
 
         .cover-box strong {
             display: block;
-            font-size: 22px;
+            font-size: 18px;
             margin-bottom: 4px;
         }
 
@@ -132,14 +132,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: 8px;
             font-weight: 700;
             background: #f7fbfd;
         }
 
         .report-kicker {
             color: #f58220;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
             text-align: right;
             margin-bottom: 3px;
@@ -148,7 +148,7 @@
 
         .report-subhead {
             color: #1687c7;
-            font-size: 10px;
+            font-size: 9px;
             line-height: 1.55;
             text-align: right;
             direction: rtl;
@@ -175,7 +175,7 @@
         .big-stat strong {
             display: block;
             color: #138bd0;
-            font-size: 22px;
+            font-size: 21px;
             font-weight: 500;
             line-height: 1.15;
         }
@@ -183,7 +183,7 @@
         .big-stat span {
             display: block;
             color: #526b82;
-            font-size: 9px;
+            font-size: 8px;
             line-height: 1.45;
         }
 
@@ -210,7 +210,7 @@
 
         .side-stat strong {
             color: #138bd0;
-            font-size: 17px;
+            font-size: 18px;
             font-weight: 500;
             display: block;
             line-height: 1.1;
@@ -218,7 +218,7 @@
 
         .side-stat span {
             color: #526b82;
-            font-size: 8px;
+            font-size: 7px;
             line-height: 1.35;
         }
 
@@ -241,7 +241,7 @@
 
         .chart-caption {
             color: #1f4e79;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             text-align: center;
             margin-top: 2px;
@@ -285,7 +285,7 @@
             gap: 5px;
             align-items: center;
             color: #31526c;
-            font-size: 7px;
+            font-size: 6.5px;
             line-height: 1.25;
             white-space: nowrap;
         }
@@ -323,20 +323,20 @@
         h1 {
             margin: 0 0 8px;
             color: #0f4c81;
-            font-size: 24px;
+            font-size: 19px;
             line-height: 1.45;
         }
 
         h2 {
             margin: 0 0 8px;
             color: #0f4c81;
-            font-size: 18px;
+            font-size: 14px;
             line-height: 1.5;
         }
 
         .subtitle {
             color: #5a7288;
-            font-size: 12px;
+            font-size: 9px;
             margin-bottom: 12px;
         }
 
@@ -369,13 +369,13 @@
         .metric strong {
             display: block;
             color: #0f4c81;
-            font-size: 22px;
+            font-size: 18px;
             margin-bottom: 4px;
         }
 
         .metric span {
             color: #5a7288;
-            font-size: 10px;
+            font-size: 8px;
         }
 
         .panel {
@@ -413,13 +413,13 @@
         }
 
         .bar-label {
-            font-size: 9px;
+            font-size: 7px;
             color: #486277;
         }
 
         .bar-value {
             color: #0f4c81;
-            font-size: 10px;
+            font-size: 8px;
             font-weight: 700;
         }
 
@@ -434,7 +434,7 @@
             grid-template-columns: 12px 1fr auto;
             align-items: center;
             gap: 7px;
-            font-size: 10px;
+            font-size: 8px;
             color: #486277;
         }
 
@@ -456,8 +456,8 @@
             border: 1px solid #d8e4eb;
             padding: 2px 3px;
             text-align: center;
-            font-size: 7.5px;
-            line-height: 1.25;
+            font-size: 7px;
+            line-height: 1.2;
             word-break: break-word;
         }
 
@@ -485,7 +485,7 @@
             margin: 8px 0 0;
             padding: 0 18px 0 0;
             color: #34546d;
-            font-size: 12px;
+            font-size: 10px;
             line-height: 1.9;
         }
 
@@ -495,13 +495,13 @@
             background: #f58220;
             padding: 5px 12px;
             border-radius: 5px;
-            font-size: 11px;
+            font-size: 9px;
             margin-bottom: 8px;
         }
 
         .mini-title {
             color: #0f4c81;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 700;
             margin-bottom: 6px;
         }
