@@ -94,15 +94,30 @@ class ArcgisAuditedUploadService
 
     public function buildingFeature(VBuildingAudited $building): array
     {
-        return $this->feature($building, [
-            'old_objectid' => 'objectid',
-            'globalid' => 'globalid',
-            'building_damage_status' => 'building_damage_status',
-            'municipalitie' => 'municipalitie',
-            'neighborhood' => 'neighborhood',
-            'assignedto' => 'assignedto',
-            'is_audited' => fn(): int => 1,
-        ]);
+        $attributes = collect($building->getAttributes())
+            ->except([
+                'objectid',
+                'OBJECTID',
+                'shape',
+                'created_at',
+                'updated_at',
+            ])
+            ->toArray();
+
+        $attributes['old_objectid'] = $building->objectid;
+        $attributes['is_audited'] = 1;
+
+        $feature = [
+            'attributes' => $attributes,
+        ];
+
+        $geometry = $this->geometry($building);
+
+        if ($geometry !== null) {
+            $feature['geometry'] = $geometry;
+        }
+
+        return $feature;
     }
 
     public function unitFeature(VHousingUnitAudited $unit): array
