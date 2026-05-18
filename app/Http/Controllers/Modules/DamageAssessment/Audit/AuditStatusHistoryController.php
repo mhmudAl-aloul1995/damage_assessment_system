@@ -186,14 +186,13 @@ class AuditStatusHistoryController extends Controller
     /**
      * @return array<int, string>
      */
+
     public function getEditableNote(Request $request): JsonResponse
     {
         $request->validate([
             'type' => 'required|in:building,housing',
             'globalid' => 'required|string',
-            'note_id' => 'nullable|integer',
         ]);
-        dd($request->all());
 
         $user = auth()->user();
 
@@ -209,7 +208,6 @@ class AuditStatusHistoryController extends Controller
 
         $type = $request->type;
         $globalid = $request->globalid;
-        $noteId = $request->note_id;
 
         if ($type === 'building') {
             $building = Building::where('globalid', $globalid)->first();
@@ -226,22 +224,15 @@ class AuditStatusHistoryController extends Controller
                 })
                 ->exists();
 
-            $query = BuildingStatusHistory::with(['status', 'user'])
+            $note = BuildingStatusHistory::with(['status', 'user'])
                 ->where('building_id', $building->objectid)
                 ->whereNotNull('notes')
-                ->where('notes', '!=', '');
-
-            if ($noteType) {
-                $query->where('type', $noteType);
-            }
-
-            if ($noteId) {
-                $query->where('id', $noteId);
-            } else {
-                $query->latest('id');
-            }
-
-            $note = $query->first();
+                ->where('notes', '!=', '')
+                ->when($noteType, function ($query) use ($noteType) {
+                    $query->where('type', $noteType);
+                })
+                ->latest('id')
+                ->first();
 
             if (!$note) {
                 return response()->json([
@@ -251,12 +242,14 @@ class AuditStatusHistoryController extends Controller
 
             return response()->json([
                 'id' => $note->id,
+                'source' => 'building_history',
                 'notes' => $note->notes,
                 'has_final_approve' => $hasFinalApprove,
                 'status_name' => optional($note->status)->label_en
                     ?? optional($note->status)->name
                     ?? '-',
                 'user_name' => optional($note->user)->name ?? '-',
+                'role_name' => $note->type ?? '-',
                 'created_at' => optional($note->created_at)?->format('Y-m-d H:i'),
             ]);
         }
@@ -276,22 +269,15 @@ class AuditStatusHistoryController extends Controller
                 })
                 ->exists();
 
-            $query = HousingStatusHistory::with(['assessment_status', 'user'])
+            $note = HousingStatusHistory::with(['assessment_status', 'user'])
                 ->where('housing_id', $housing->objectid)
                 ->whereNotNull('notes')
-                ->where('notes', '!=', '');
-
-            if ($noteType) {
-                $query->where('type', $noteType);
-            }
-
-            if ($noteId) {
-                $query->where('id', $noteId);
-            } else {
-                $query->latest('id');
-            }
-
-            $note = $query->first();
+                ->where('notes', '!=', '')
+                ->when($noteType, function ($query) use ($noteType) {
+                    $query->where('type', $noteType);
+                })
+                ->latest('id')
+                ->first();
 
             if (!$note) {
                 return response()->json([
@@ -301,12 +287,14 @@ class AuditStatusHistoryController extends Controller
 
             return response()->json([
                 'id' => $note->id,
+                'source' => 'housing_history',
                 'notes' => $note->notes,
                 'has_final_approve' => $hasFinalApprove,
                 'status_name' => optional($note->assessment_status)->label_en
                     ?? optional($note->assessment_status)->name
                     ?? '-',
                 'user_name' => optional($note->user)->name ?? '-',
+                'role_name' => $note->type ?? '-',
                 'created_at' => optional($note->created_at)?->format('Y-m-d H:i'),
             ]);
         }
@@ -315,6 +303,7 @@ class AuditStatusHistoryController extends Controller
             'message' => 'نوع غير صحيح',
         ], 422);
     }
+
     public function updateNote(Request $request): JsonResponse
     {
         $request->validate([
@@ -323,7 +312,7 @@ class AuditStatusHistoryController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-    
+
         $id = $request->id;
         $type = $request->type;
         $notes = trim((string) $request->notes);
