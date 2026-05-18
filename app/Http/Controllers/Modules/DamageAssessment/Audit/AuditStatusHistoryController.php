@@ -193,6 +193,7 @@ class AuditStatusHistoryController extends Controller
             'globalid' => 'required|string',
             'note_id' => 'nullable|integer',
         ]);
+        dd($request->all());
 
         $user = auth()->user();
 
@@ -322,7 +323,7 @@ class AuditStatusHistoryController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-    dd($request->all());
+    
         $id = $request->id;
         $type = $request->type;
         $notes = trim((string) $request->notes);
