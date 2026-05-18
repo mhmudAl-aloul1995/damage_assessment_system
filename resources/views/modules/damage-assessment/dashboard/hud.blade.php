@@ -436,10 +436,15 @@
         }
 
         .hud-map-filter-actions {
+            background: linear-gradient(180deg, rgba(6, 18, 36, 0.72) 0%, rgba(6, 18, 36, 0.98) 34%);
+            bottom: 0;
             display: grid;
             gap: 8px;
             grid-template-columns: 1fr 1fr;
-            padding-top: 4px;
+            margin: 0 -12px -12px;
+            padding: 12px;
+            position: sticky;
+            z-index: 2;
         }
 
         .hud-map-filter-actions .btn {
@@ -632,7 +637,7 @@
                         </div>
 
                         <div class="hud-map-filter-actions">
-                            <button type="button" id="hudMapFilterApply" class="btn btn-primary">تطبيق الفلترة</button>
+                            <button type="button" id="hudMapFilterApply" class="btn btn-primary">بحث</button>
                             <button type="button" id="hudMapFilterReset" class="btn btn-light">إعادة تعيين</button>
                         </div>
                     </div>
