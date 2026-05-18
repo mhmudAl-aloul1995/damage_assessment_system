@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/dark/main.css">
 
     <style>
         :root {
@@ -234,11 +234,45 @@
             position: relative;
         }
 
-        .leaflet-popup-content-wrapper,
-        .leaflet-popup-tip {
-            background: rgba(6, 18, 36, 0.92);
+        .esri-view,
+        .esri-view-root,
+        .esri-view-surface {
+            background: #030811;
+        }
+
+        .esri-popup__main-container,
+        .esri-popup__header,
+        .esri-popup__content {
+            background: rgba(6, 18, 36, 0.94);
             color: #ffffff;
-            border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+
+        .esri-popup__main-container {
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            box-shadow: 0 0 18px rgba(0, 242, 254, 0.22);
+        }
+
+        .esri-ui .esri-widget {
+            background: rgba(6, 18, 36, 0.82);
+            color: #ffffff;
+        }
+
+        .hud-map-popup {
+            color: #ffffff;
+            min-width: 170px;
+        }
+
+        .hud-map-popup strong {
+            color: var(--neon-blue);
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .hud-map-popup span {
+            color: #8fa0b7;
+            display: block;
+            font-size: 0.75rem;
         }
 
         ::-webkit-scrollbar {
@@ -449,20 +483,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://js.arcgis.com/4.22/"></script>
 
     <script>
         const mapPoints = @json($mapPoints);
         const municipalityReports = @json($municipalityReports);
-        const map = L.map('live-gis-hud-map', {
-            zoomControl: false,
-            attributionControl: false
-        }).setView([31.42, 34.38], 11);
-
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19
-        }).addTo(map);
-
         const markerColors = {
             fully_damaged: '#ff0055',
             partially_damaged: '#fae813',
@@ -470,23 +495,98 @@
             unclassified: '#00ff87'
         };
 
-        mapPoints.forEach((point) => {
-            const color = markerColors[point.status] || markerColors.unclassified;
+        require([
+            'esri/Map',
+            'esri/views/MapView',
+            'esri/layers/GraphicsLayer',
+            'esri/Graphic',
+            'esri/geometry/Extent',
+            'esri/widgets/ScaleBar'
+        ], function (Map, MapView, GraphicsLayer, Graphic, Extent, ScaleBar) {
+            const graphicsLayer = new GraphicsLayer({ listMode: 'hide' });
+            const map = new Map({
+                basemap: 'satellite',
+                layers: [graphicsLayer]
+            });
 
-            L.circleMarker([point.lat, point.lng], {
-                radius: 6,
-                color,
-                fillColor: color,
-                fillOpacity: 0.8,
-                weight: 2
-            })
-                .bindPopup(point.title)
-                .addTo(map);
+            const view = new MapView({
+                container: 'live-gis-hud-map',
+                map,
+                center: [34.38, 31.42],
+                zoom: 11,
+                constraints: {
+                    minZoom: 9
+                },
+                popup: {
+                    dockEnabled: false
+                }
+            });
+
+            view.ui.components = [];
+            view.ui.add(new ScaleBar({ view, unit: 'metric' }), 'bottom-left');
+
+            mapPoints.forEach((point) => {
+                const color = markerColors[point.status] || markerColors.unclassified;
+
+                graphicsLayer.add(new Graphic({
+                    geometry: {
+                        type: 'point',
+                        longitude: point.lng,
+                        latitude: point.lat
+                    },
+                    attributes: point,
+                    symbol: {
+                        type: 'simple-marker',
+                        style: 'circle',
+                        size: 11,
+                        color,
+                        outline: {
+                            color: [255, 255, 255, 0.95],
+                            width: 1.5
+                        }
+                    },
+                    popupTemplate: {
+                        title: point.title,
+                        content: function (event) {
+                            const attributes = event.graphic.attributes || {};
+                            const wrapper = document.createElement('div');
+                            const title = document.createElement('strong');
+                            const status = document.createElement('span');
+
+                            wrapper.className = 'hud-map-popup';
+                            title.textContent = attributes.title || '-';
+                            status.textContent = attributes.status || 'unclassified';
+
+                            wrapper.append(title, status);
+
+                            return wrapper;
+                        }
+                    }
+                }));
+            });
+
+            view.when(function () {
+                if (graphicsLayer.graphics.length === 0) {
+                    return;
+                }
+
+                const longitudes = mapPoints.map((point) => Number(point.lng));
+                const latitudes = mapPoints.map((point) => Number(point.lat));
+                const longitudePadding = Math.max((Math.max(...longitudes) - Math.min(...longitudes)) * 0.4, 0.02);
+                const latitudePadding = Math.max((Math.max(...latitudes) - Math.min(...latitudes)) * 0.4, 0.02);
+                const extent = new Extent({
+                    xmin: Math.min(...longitudes) - longitudePadding,
+                    ymin: Math.min(...latitudes) - latitudePadding,
+                    xmax: Math.max(...longitudes) + longitudePadding,
+                    ymax: Math.max(...latitudes) + latitudePadding,
+                    spatialReference: {
+                        wkid: 4326
+                    }
+                });
+
+                view.goTo(extent, { duration: 1200 }).catch(function () {});
+            });
         });
-
-        if (mapPoints.length > 0) {
-            map.fitBounds(mapPoints.map((point) => [point.lat, point.lng]), { padding: [40, 40], maxZoom: 14 });
-        }
 
         const ctxDoughnut = document.getElementById('hudDoughnutChart').getContext('2d');
         new Chart(ctxDoughnut, {
