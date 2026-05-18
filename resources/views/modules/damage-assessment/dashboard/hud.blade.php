@@ -296,7 +296,7 @@
                 <div class="col-md-8 text-start">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="hud-badge-pulse"><i class="fa-solid fa-circle-dot me-1"></i>LIVE GIS HUD</span>
-                        <h1 class="hud-title-main">المنظومة الوطنية المتكاملة لحصر الأضرار (INDAS 2026)</h1>
+                        <h1 class="hud-title-main">برنامج حصر الأضرار - قطاع غزة</h1>
                     </div>
                 </div>
                 <div class="col-md-4 text-md-end text-start mt-2 mt-md-0">
