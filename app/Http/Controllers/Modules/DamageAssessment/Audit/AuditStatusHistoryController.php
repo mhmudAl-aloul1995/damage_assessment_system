@@ -224,7 +224,7 @@ class AuditStatusHistoryController extends Controller
                 })
                 ->exists();
 
-            $note = BuildingStatusHistory::with(['status', 'user'])
+       /*      $note = BuildingStatusHistory::with(['status', 'user'])
                 ->where('building_id', $building->objectid)
                 ->whereNotNull('notes')
                 ->where('notes', '!=', '')
@@ -238,7 +238,7 @@ class AuditStatusHistoryController extends Controller
                 return response()->json([
                     'message' => 'لا توجد ملاحظة متاحة',
                 ], 404);
-            }
+            } */
 
             return response()->json([
                 'id' => $note->id,
