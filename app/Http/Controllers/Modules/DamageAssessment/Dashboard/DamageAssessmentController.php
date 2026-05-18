@@ -202,6 +202,111 @@ class DamageAssessmentController extends Controller
         );
     }
 
+    public function hud(Request $request): \Illuminate\View\View
+    {
+        $buildingStats = Building::query()
+            ->selectRaw("
+                COUNT(*) as total_buildings,
+                COALESCE(SUM(CASE WHEN field_status = 'COMPLETED' THEN 1 ELSE 0 END), 0) as assessed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as fully_damaged_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
+                COALESCE(SUM(CAST(building_debris_qty AS DECIMAL(15, 2))), 0) as rubble_quantity
+            ")
+            ->first();
+
+        $unitStats = HousingUnit::query()
+            ->selectRaw("
+                COUNT(*) as total_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as fully_damaged,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END), 0) as partially_damaged,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'committee_review2' THEN 1 ELSE 0 END), 0) as committee_review,
+                COALESCE(SUM(CASE WHEN unit_damage_status IS NULL OR unit_damage_status = '' THEN 1 ELSE 0 END), 0) as unclassified,
+                COALESCE(SUM(CASE WHEN unit_support_needed = 'yes' THEN 1 ELSE 0 END), 0) as support_needed,
+                COALESCE(SUM(CASE WHEN is_the_housing_unit_or_living_habitable = 'yes' THEN 1 ELSE 0 END), 0) as habitable
+            ")
+            ->first();
+
+        $buildingGovernorates = Building::query()
+            ->selectRaw("
+                COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name,
+                COUNT(*) as assessed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings
+            ")
+            ->groupBy('governorate_name')
+            ->get()
+            ->keyBy('governorate_name');
+
+        $unitGovernorates = HousingUnit::query()
+            ->selectRaw("
+                COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name,
+                COUNT(*) as units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units
+            ")
+            ->groupBy('governorate_name')
+            ->get()
+            ->keyBy('governorate_name');
+
+        $governorateRows = $buildingGovernorates
+            ->keys()
+            ->merge($unitGovernorates->keys())
+            ->unique()
+            ->sort()
+            ->map(function (string $governorateName) use ($buildingGovernorates, $unitGovernorates): array {
+                $buildingRow = $buildingGovernorates->get($governorateName);
+                $unitRow = $unitGovernorates->get($governorateName);
+
+                return [
+                    'name' => $governorateName,
+                    'assessed' => (int) ($buildingRow->assessed_buildings ?? 0),
+                    'units' => (int) ($unitRow->units ?? 0),
+                    'destroyed' => (int) ($unitRow->destroyed_units ?? $buildingRow->destroyed_buildings ?? 0),
+                ];
+            })
+            ->values();
+
+        $mapPoints = Building::query()
+            ->select(['building_name', 'neighborhood', 'latitude', 'longitude', 'building_damage_status'])
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->limit(75)
+            ->get()
+            ->map(fn (Building $building): array => [
+                'lat' => (float) $building->latitude,
+                'lng' => (float) $building->longitude,
+                'title' => $building->building_name ?: ($building->neighborhood ?: 'مبنى بدون اسم'),
+                'status' => $building->building_damage_status ?: 'unclassified',
+            ]);
+
+        $totalUnits = max((int) ($unitStats->total_units ?? 0), 1);
+        $safetyStats = [
+            'destroyed' => $this->percentage((int) ($unitStats->fully_damaged ?? 0), $totalUnits),
+            'support_needed' => $this->percentage((int) ($unitStats->support_needed ?? 0), $totalUnits),
+            'habitable' => $this->percentage((int) ($unitStats->habitable ?? 0), $totalUnits),
+        ];
+
+        return View::make('modules.damage-assessment.dashboard.hud', [
+            'summaryStats' => [
+                'total_buildings' => (int) ($buildingStats->total_buildings ?? 0),
+                'assessed_buildings' => (int) ($buildingStats->assessed_buildings ?? 0),
+                'fully_damaged_units' => (int) ($unitStats->fully_damaged ?? 0),
+                'rubble_quantity' => (float) ($buildingStats->rubble_quantity ?? 0),
+            ],
+            'damageChart' => [
+                'labels' => ['مدمر كلياً', 'متضرر جزئياً', 'مراجعة لجنة', 'غير مصنف'],
+                'data' => [
+                    (int) ($unitStats->fully_damaged ?? 0),
+                    (int) ($unitStats->partially_damaged ?? 0),
+                    (int) ($unitStats->committee_review ?? 0),
+                    (int) ($unitStats->unclassified ?? 0),
+                ],
+            ],
+            'safetyStats' => $safetyStats,
+            'governorateRows' => $governorateRows,
+            'mapPoints' => $mapPoints,
+        ]);
+    }
+
     public function search(Request $request)
     {
         $term = $request->search;
@@ -451,6 +556,15 @@ class DamageAssessmentController extends Controller
                 'id' => (string) $value,
                 'text' => (string) $value,
             ]);
+    }
+
+    private function percentage(int $value, int $total): float
+    {
+        if ($total <= 0) {
+            return 0.0;
+        }
+
+        return round(($value / $total) * 100, 1);
     }
 
     private function normalizeFeatureLayerUrl(string $url): string

@@ -165,6 +165,8 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $governorate
  * @property string|null $municipalitie
  * @property string|null $neighborhood
+ * @property float|null $latitude
+ * @property float|null $longitude
  */
 class Building extends Model
 {
@@ -365,6 +367,8 @@ class Building extends Model
         'governorate',
         'municipalitie',
         'neighborhood',
+        'latitude',
+        'longitude',
 
     ];
 

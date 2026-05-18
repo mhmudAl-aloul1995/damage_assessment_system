@@ -284,3 +284,61 @@ it('returns latest dashboard stats as json', function () {
         ->assertJsonPath('unitStats.total_units', 1)
         ->assertJsonPath('unitStats.committee_review', 1);
 });
+
+it('renders the live hud dashboard from database statistics', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 1101,
+        'globalid' => 'hud-building-1',
+        'building_name' => 'HUD Building A',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'governorate' => 'Gaza',
+        'building_debris_qty' => '120.5',
+        'latitude' => 31.52,
+        'longitude' => 34.45,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 1102,
+        'globalid' => 'hud-building-2',
+        'building_name' => 'HUD Building B',
+        'field_status' => 'Not_Completed',
+        'building_damage_status' => 'partially_damaged',
+        'governorate' => 'North Gaza',
+        'building_debris_qty' => '30',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 1201,
+        'globalid' => 'hud-unit-1',
+        'parentglobalid' => 'hud-building-1',
+        'unit_damage_status' => 'fully_damaged2',
+        'unit_support_needed' => 'yes',
+        'is_the_housing_unit_or_living_habitable' => 'no',
+        'governorate' => 'Gaza',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 1202,
+        'globalid' => 'hud-unit-2',
+        'parentglobalid' => 'hud-building-2',
+        'unit_damage_status' => 'partially_damaged2',
+        'unit_support_needed' => 'no',
+        'is_the_housing_unit_or_living_habitable' => 'yes',
+        'governorate' => 'North Gaza',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.hud'))
+        ->assertOk()
+        ->assertSee('LIVE GIS HUD')
+        ->assertSee('إجمالي مباني القطاع')
+        ->assertSee('المباني المقيّمة ميدانياً')
+        ->assertSee('وحدات مدمرة كلياً')
+        ->assertSee('HUD Building A')
+        ->assertSee('Gaza')
+        ->assertSee('North Gaza')
+        ->assertSee('data: [1,1,0,0]', false);
+});
