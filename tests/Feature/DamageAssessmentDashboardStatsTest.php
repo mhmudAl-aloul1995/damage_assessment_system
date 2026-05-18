@@ -357,6 +357,8 @@ it('renders the live hud dashboard from database statistics', function () {
         ->assertSee('new FeatureLayer', false)
         ->assertSee("type: 'simple-fill'", false)
         ->assertSee('assessmentBaseUrl', false)
+        ->assertSee('const gazaStripExtent = new Extent({', false)
+        ->assertSee('view.goTo(gazaStripExtent', false)
         ->assertSee('fake-token')
         ->assertDontSee('L.map', false)
         ->assertDontSee('unpkg.com/leaflet', false)

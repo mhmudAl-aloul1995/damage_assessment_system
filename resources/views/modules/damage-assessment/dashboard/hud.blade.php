@@ -673,6 +673,15 @@
                     content: buildBuildingPopup
                 }
             });
+            const gazaStripExtent = new Extent({
+                xmin: 34.18,
+                ymin: 31.20,
+                xmax: 34.56,
+                ymax: 31.60,
+                spatialReference: {
+                    wkid: 4326
+                }
+            });
 
             const map = new Map({
                 basemap: 'satellite',
@@ -703,33 +712,7 @@
             view.ui.add(new ScaleBar({ view, unit: 'metric' }), 'bottom-left');
 
             view.when(function () {
-                buildingsLayer.queryExtent().then(function (response) {
-                    if (response.extent) {
-                        view.goTo(response.extent.expand(1.25), { duration: 1200 }).catch(function () {});
-
-                        return;
-                    }
-
-                    if (mapPoints.length === 0) {
-                        return;
-                    }
-
-                    const longitudes = mapPoints.map((point) => Number(point.lng));
-                    const latitudes = mapPoints.map((point) => Number(point.lat));
-                    const longitudePadding = Math.max((Math.max(...longitudes) - Math.min(...longitudes)) * 0.4, 0.02);
-                    const latitudePadding = Math.max((Math.max(...latitudes) - Math.min(...latitudes)) * 0.4, 0.02);
-                    const extent = new Extent({
-                        xmin: Math.min(...longitudes) - longitudePadding,
-                        ymin: Math.min(...latitudes) - latitudePadding,
-                        xmax: Math.max(...longitudes) + longitudePadding,
-                        ymax: Math.max(...latitudes) + latitudePadding,
-                        spatialReference: {
-                            wkid: 4326
-                        }
-                    });
-
-                    view.goTo(extent, { duration: 1200 }).catch(function () {});
-                }).catch(function () {});
+                view.goTo(gazaStripExtent, { duration: 1200 }).catch(function () {});
             });
         });
 
