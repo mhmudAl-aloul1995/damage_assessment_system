@@ -307,6 +307,7 @@ class Building extends Model
         'need_renew_docs',
         'doc_challenges',
         'doc_challenges_other',
+        'legal_challenge',
         'has_dispute',
         'dispute_types',
         'dispute_other',

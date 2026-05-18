@@ -378,6 +378,7 @@ class HousingUnit extends Model
         'damaged_area_m2',
         'infra_type2',
         'house_unit_ownership',
+        'legal_challenge',
         'other_ownership',
         'occupied',
         'empty_land_rhu',

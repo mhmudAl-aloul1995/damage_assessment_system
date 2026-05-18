@@ -26,12 +26,12 @@
         }
 
         /* أعمدة الحالات تكون أضيق */
-        #housing_table th:nth-child(7),
-        #housing_table td:nth-child(7),
         #housing_table th:nth-child(8),
         #housing_table td:nth-child(8),
         #housing_table th:nth-child(9),
-        #housing_table td:nth-child(9) {
+        #housing_table td:nth-child(9),
+        #housing_table th:nth-child(10),
+        #housing_table td:nth-child(10) {
             width: 140px !important;
             max-width: 140px !important;
         }
@@ -596,6 +596,8 @@
                                                 onclick="openNotesModal('building','history')">ملاحظات</button>
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
+                                            <button type="button" class="btn btn-sm btn-light-warning"
+                                                onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
                                             <button type="button" class="btn btn-sm btn-light-primary ms-3"
                                                 onclick="reloadBuildingAssessmentTable()">تحديث</button>
 
@@ -648,6 +650,7 @@
                                             <th class="px-2 py-3">رقم الوحدة</th>
                                             <th class="px-2 py-3">اسم المالك</th>
                                             <th class="px-2 py-3">اتجاه الوحدة</th>
+                                            <th class="px-2 py-3">التحديات القانونية</th>
                                             <th class="px-2 py-3">التدقيق القانوني</th>
                                             <th class="px-2 py-3">التدقيق الهندسي</th>
                                             <th class="px-2 py-3">الاعتماد النهائي</th>
@@ -812,6 +815,8 @@
                                                 onclick="openNotesModal('housing','history')">ملاحظات</button>
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
+                                            <button type="button" class="btn btn-sm btn-light-warning"
+                                                onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
                                             <button type="button" class="btn btn-sm btn-light-primary"
                                                 onclick="reloadHousingAssessmentTable();">
                                                 <i class="ki-duotone ki-arrows-circle fs-6">
@@ -912,6 +917,39 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="legalChallengeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="legalChallengeForm">
+                    @csrf
+                    <input type="hidden" id="legalChallengeType" name="type">
+                    <input type="hidden" id="legalChallengeHousingGlobalId" name="globalid">
+
+                    <div class="modal-header">
+                        <h3 class="fw-bold">التحديات القانونية</h3>
+                        <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">×</div>
+                    </div>
+
+                    <div class="modal-body">
+                        <label class="form-label fw-semibold">اختر التحدي القانوني</label>
+                        <select name="legal_challenge" id="legal_challenge" class="form-select form-select-solid"
+                            data-control="select2" data-placeholder="اختر">
+                            <option value=""></option>
+                            @foreach($legalChallenges as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary" id="legalChallengeSubmit">حفظ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script')
@@ -927,6 +965,8 @@
         let buildingCurrentStatus = @json($buildingCurrentStatus);
         let buildingFinalStatus = @json($buildingFinalStatus ?? null);
         let buildingObjectId = @json($building?->objectid);
+        let buildingLegalChallenge = @json($building?->legal_challenge);
+        let currentHousingLegalChallenge = null;
         let initialHousingSelectionDone = false;
         let pendingHousingGlobalId = null;
         let inlineSaveLocks = new Set();
@@ -937,6 +977,10 @@
         let lastBuildingRows = [];
 
         $(function () {
+            $('#legal_challenge').select2({
+                dropdownParent: $('#legalChallengeModal'),
+                width: '100%'
+            });
             KTBuildingAssessmentList.init();
             KTBuildingUnitsList.init();
             KTHousingAssessmentList.init();
@@ -1875,6 +1919,65 @@
             openNotesModal('housing', 'note', status);
         }
 
+        function openLegalChallengeModal(type) {
+            let isBuilding = type === 'building';
+            let globalid = isBuilding ? @json($buildingGlobalid) : $("[name='globalid']").val();
+
+            if (!globalid) {
+                toastr.warning(isBuilding ? 'لا يوجد مبنى محدد' : 'يرجى اختيار الوحدة أولاً');
+                return;
+            }
+
+            $('#legalChallengeType').val(type);
+            $('#legalChallengeHousingGlobalId').val(isBuilding ? '' : globalid);
+            $('#legal_challenge').val(isBuilding ? buildingLegalChallenge : currentHousingLegalChallenge).trigger('change');
+            $('#legalChallengeModal').modal('show');
+        }
+
+        $('#legalChallengeForm').on('submit', function (e) {
+            e.preventDefault();
+
+            let type = $('#legalChallengeType').val();
+            let isBuilding = type === 'building';
+            let submitButton = $('#legalChallengeSubmit');
+            let data = isBuilding
+                ? {
+                    _token: "{{ csrf_token() }}",
+                    building_ids: [buildingObjectId],
+                    legal_challenge: $('#legal_challenge').val()
+                }
+                : $(this).serialize();
+
+            submitButton.prop('disabled', true);
+
+            $.ajax({
+                url: isBuilding
+                    ? "{{ route('audit.building.legalChallenge') }}"
+                    : "{{ route('housing.assessment.legalChallenge') }}",
+                method: 'POST',
+                data: data,
+                success: function (response) {
+                    toastr.success(response.message || 'تم الحفظ بنجاح');
+                    $('#legalChallengeModal').modal('hide');
+
+                    if (isBuilding) {
+                        buildingLegalChallenge = response.legal_challenge;
+                        reloadBuildingAssessmentTable();
+                    } else {
+                        currentHousingLegalChallenge = response.legal_challenge;
+                        reloadHousingAssessmentTable();
+                        reloadBuildingUnitsTable();
+                    }
+                },
+                error: function (xhr) {
+                    toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء الحفظ');
+                },
+                complete: function () {
+                    submitButton.prop('disabled', false);
+                }
+            });
+        });
+
 
         function submitStatusWithNotes() {
             if (isSubmittingStatus) return;
@@ -2108,6 +2211,7 @@
                         { data: 'housing_unit_number', name: 'housing_unit_number', className: 'text-center px-2 py-3' },
                         { data: 'owner_name', name: 'owner_name', className: 'text-start px-2 py-3 min-w-280px' },
                         { data: 'unit_direction', name: 'unit_direction', className: 'text-center px-2 py-3' },
+                        { data: 'legal_challenge_label', name: 'legal_challenge_label', className: 'text-center px-2 py-3' },
                         { data: 'legal_audit_status', name: 'legal_audit_status', className: 'text-center px-2 py-3' },
                         { data: 'engineering_audit_status', name: 'engineering_audit_status', className: 'text-center px-2 py-3' },
                         { data: 'final_approval_status', name: 'final_approval_status', className: 'text-center px-2 py-3' }
@@ -2135,6 +2239,7 @@
                     $(this).addClass('selected');
 
                     $('[name="globalid"]').val(row.globalid).trigger('change');
+                    currentHousingLegalChallenge = row.legal_challenge || null;
                     setActiveStatusButton('.housing-status-btn', normalizeStatus(row.current_status));
                 });
             };

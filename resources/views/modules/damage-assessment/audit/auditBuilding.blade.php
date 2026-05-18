@@ -129,6 +129,9 @@
                                 </i>
                                 {{ __('ui.audit.refresh') }}
                             </button>
+                            <button type="button" class="btn btn-sm btn-light-warning" id="btn_legal_challenge">
+                                التحديات القانونية
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -143,6 +146,7 @@
                                     <th>Field Engineer</th>
                                     <th>Municipality</th>
                                     <th>Neighborhood</th>
+                                    <th>التحديات القانونية</th>
                                     <th>Status</th>
                                     <th>Creation Date</th>
                                     <th class="text-end min-w-100px">Actions</th>
@@ -152,6 +156,37 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="legalChallengeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="legalChallengeForm">
+                    @csrf
+                    <div class="modal-header">
+                        <h3 class="fw-bold">التحديات القانونية</h3>
+                        <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">×</div>
+                    </div>
+
+                    <div class="modal-body">
+                        <div id="selectedLegalChallengeBuildings"></div>
+                        <label class="form-label fw-semibold">اختر التحدي القانوني</label>
+                        <select name="legal_challenge" id="legal_challenge" class="form-select form-select-solid"
+                            data-control="select2" data-placeholder="اختر">
+                            <option value=""></option>
+                            @foreach($legalChallenges as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary" id="legalChallengeSubmit">حفظ</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -175,6 +210,11 @@
             }
         });
         $(function () {
+            $('#legal_challenge').select2({
+                dropdownParent: $('#legalChallengeModal'),
+                width: '100%'
+            });
+
             let table = $('#auditTable').DataTable({
                 processing: true,
                 serverSide: true,
@@ -196,11 +236,16 @@
                     }
                 },
                 columns: [{
-                    data: 'DT_RowIndex',
-                    name: 'DT_RowIndex',
+                    data: 'objectid',
+                    name: 'objectid',
                     orderable: false,
                     searchable: false,
-                    target: 0
+                    target: 0,
+                    render: function (data) {
+                        return `<div class="form-check form-check-sm form-check-custom form-check-solid">
+                            <input class="form-check-input legal-building-checkbox" type="checkbox" value="${data}">
+                        </div>`;
+                    }
                 },
                 {
                     data: 'building_name',
@@ -218,6 +263,12 @@
                 {
                     data: 'neighborhood',
                     name: 'neighborhood'
+                },
+                {
+                    data: 'legal_challenge_label',
+                    name: 'legal_challenge_label',
+                    orderable: false,
+                    searchable: false
                 },
                 {
                     data: 'status',
@@ -294,6 +345,58 @@
             // Link custom search input
             $('#tableSearch').keyup(function () {
                 table.search($(this).val()).draw();
+            });
+
+            $('#btn_legal_challenge').on('click', function () {
+                const selectedIds = [];
+
+                $('#auditTable tbody input.legal-building-checkbox:checked').each(function () {
+                    selectedIds.push($(this).val());
+                });
+
+                if (selectedIds.length === 0) {
+                    Swal.fire({
+                        text: 'يرجى اختيار مبنى واحد على الأقل',
+                        icon: 'warning',
+                        buttonsStyling: false,
+                        confirmButtonText: 'حسناً',
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                    return;
+                }
+
+                $('#selectedLegalChallengeBuildings').empty();
+                selectedIds.forEach(function (id) {
+                    $('#selectedLegalChallengeBuildings').append(`<input type="hidden" name="building_ids[]" value="${id}">`);
+                });
+                $('#legal_challenge').val(null).trigger('change');
+                $('#legalChallengeModal').modal('show');
+            });
+
+            $('#legalChallengeForm').on('submit', function (e) {
+                e.preventDefault();
+
+                const submitButton = $('#legalChallengeSubmit');
+                submitButton.prop('disabled', true);
+
+                $.ajax({
+                    url: "{{ route('audit.building.legalChallenge') }}",
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function (response) {
+                        $('#legalChallengeModal').modal('hide');
+                        toastr.success(response.message || 'تم الحفظ بنجاح');
+                        table.ajax.reload(null, false);
+                    },
+                    error: function (xhr) {
+                        toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء الحفظ');
+                    },
+                    complete: function () {
+                        submitButton.prop('disabled', false);
+                    }
+                });
             });
 
         });

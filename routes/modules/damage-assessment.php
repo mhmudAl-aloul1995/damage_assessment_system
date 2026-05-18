@@ -240,6 +240,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/lawyer-table', [AuditController::class, 'lawyerTable']);
     Route::post('/audit/buildings/final-approve/import', [auditController::class, 'importFinalApprove'])
         ->name('audit.building.finalApprove.import');
+    Route::post('/audit/buildings/legal-challenge', [auditController::class, 'updateBuildingLegalChallenge'])
+        ->name('audit.building.legalChallenge');
     // attendence
 
     // assessmentAudit
@@ -259,6 +261,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/housing-assessment/set-status', [auditController::class, 'setHousingStatus'])
         ->name('housing.assessment.set.status');
+    Route::post('/housing-assessment/legal-challenge', [auditController::class, 'updateHousingLegalChallenge'])
+        ->name('housing.assessment.legalChallenge');
     Route::post('/building/status', [auditController::class, 'setStatus'])
         ->name('building.assessment.set.status');
 

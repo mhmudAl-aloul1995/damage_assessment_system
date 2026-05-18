@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Modules\DamageAssessment\Audit;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateBuildingLegalChallengeRequest;
+use App\Http\Requests\UpdateHousingLegalChallengeRequest;
 use App\Models\Assessment;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
@@ -26,6 +28,19 @@ use Yajra\Datatables\Datatables;
 
 class auditController extends Controller
 {
+    private const LEGAL_CHALLENGES = [
+        'missing_legal_documents' => 'فقدان الوثائق القانونية',
+        'broken_ownership_chain' => 'انقطاع تسلسل الملكية',
+        'missing_inheritance_documents' => 'فقدان وثائق حصر الإرث',
+        'government_property_usufruct' => 'الأملاك الحكومية (حق الانتفاع)',
+        'unregistered_government_land' => 'أرض حكومية غير مسجلة',
+        'camp_land_usufruct' => 'أراضي المخيمات (حق انتفاع)',
+        'free_housing_with_father' => 'السكن بدون مقابل (مع الأب)',
+        'unregistered_real_estate' => 'العقارات الغير مسجلة',
+        'disputes_with_parties' => 'نزاعات مع أطراف',
+        'other' => 'أخرى، حدد',
+    ];
+
     public function __construct()
     {
         // dd('يوجد صيانة في هذا القسم، يرجى التواصل مع الدعم الفني');
@@ -2989,6 +3004,9 @@ class auditController extends Controller
                     return $statusModel?->badge_html
                         ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
                 })
+                ->addColumn('legal_challenge_label', function ($row) {
+                    return $this->legalChallengeLabel($row->legal_challenge);
+                })
                 ->editColumn('actions', function ($ctr) {
                     // Using route() helpers is cleaner than url()
                     $assessmentUrl = url("/showAssessmentAudit/{$ctr->globalid}");
@@ -3017,6 +3035,8 @@ class auditController extends Controller
         $filters = Filter::all();
         $assignedTo = Building::distinct('assignedto')->select('assignedto')->get();
 
+        $legalChallenges = self::LEGAL_CHALLENGES;
+
         return View::make('modules.damage-assessment.audit.auditBuilding', compact(
             'assignedTo',
             'users',
@@ -3026,7 +3046,8 @@ class auditController extends Controller
             'engineers',
             'owners',
             'municip',
-            'assessments'
+            'assessments',
+            'legalChallenges'
         ));
     }
 
@@ -3143,6 +3164,10 @@ COALESCE(
                 return $row->unit_direction ?? '-';
             })
 
+            ->addColumn('legal_challenge_label', function ($row) {
+                return $this->legalChallengeLabel($row->legal_challenge);
+            })
+
             ->addColumn('current_status', function ($row) use ($type) {
                 return optional(
                     $row->statusByType($type)?->first()?->assessment_status
@@ -3186,6 +3211,41 @@ COALESCE(
             ])
 
             ->make(true);
+    }
+
+    public function updateBuildingLegalChallenge(UpdateBuildingLegalChallengeRequest $request)
+    {
+        $updated = Building::query()
+            ->whereIn('objectid', $request->validated('building_ids'))
+            ->update([
+                'legal_challenge' => $request->validated('legal_challenge'),
+            ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم تحديث التحديات القانونية للمباني بنجاح',
+            'updated_count' => $updated,
+            'legal_challenge' => $request->validated('legal_challenge'),
+            'legal_challenge_label' => $this->legalChallengeLabel($request->validated('legal_challenge')),
+        ]);
+    }
+
+    public function updateHousingLegalChallenge(UpdateHousingLegalChallengeRequest $request)
+    {
+        $housingUnit = HousingUnit::query()
+            ->where('globalid', $request->validated('globalid'))
+            ->firstOrFail();
+
+        $housingUnit->forceFill([
+            'legal_challenge' => $request->validated('legal_challenge'),
+        ])->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم تحديث التحديات القانونية للوحدة السكنية بنجاح',
+            'legal_challenge' => $housingUnit->legal_challenge,
+            'legal_challenge_label' => $this->legalChallengeLabel($housingUnit->legal_challenge),
+        ]);
     }
 
     public function finalApproveSelected(Request $request)
@@ -4005,6 +4065,7 @@ COALESCE(
         $assessments = Assessment::all();
         $filterName = Filter::distinct('list_name')->pluck('list_name');
         $filters = Filter::all();
+        $legalChallenges = self::LEGAL_CHALLENGES;
 
         return View::make('modules.damage-assessment.audit.auditBuilding', compact(
             'users',
@@ -4014,7 +4075,8 @@ COALESCE(
             'engineers',
             'owners',
             'municip',
-            'assessments'
+            'assessments',
+            'legalChallenges'
         ));
     }
 
@@ -4042,7 +4104,9 @@ COALESCE(
             ->latest()
             ->first()?->status?->name;
 
-        return View::make('modules.damage-assessment.audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit'));
+        $legalChallenges = self::LEGAL_CHALLENGES;
+
+        return View::make('modules.damage-assessment.audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges'));
     }
 
     public function housingUnitAudit(Request $request)
@@ -4118,6 +4182,15 @@ COALESCE(
             ->first()
             ?->status
             ?->name;
+    }
+
+    private function legalChallengeLabel(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '-';
+        }
+
+        return self::LEGAL_CHALLENGES[$value] ?? $value;
     }
 
     private function latestHousingStatusName(int $housingObjectId): ?string
