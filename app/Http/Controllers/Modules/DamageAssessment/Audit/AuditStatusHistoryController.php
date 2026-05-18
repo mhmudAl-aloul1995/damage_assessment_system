@@ -15,81 +15,48 @@ use Illuminate\Support\Collection;
 
 class AuditStatusHistoryController extends Controller
 {
-    public function buildingHistory(Request $request): JsonResponse
-    {
-        $building = Building::where('globalid', $request->globalid)->first();
+   
+public function buildingHistory(Request $request): JsonResponse
+{
+    $building = Building::where('globalid', $request->globalid)->first();
 
-        if (! $building) {
-            return response()->json([
-                'status' => false,
-                'history' => [],
-            ]);
-        }
-
-        $canDelete = auth()->user()->hasAnyRole([
-            'Database Officer',
-            'Auditing Supervisor',
-        ]);
-
-        $statuses = BuildingStatus::with(['user.roles', 'status'])
-            ->where('building_id', $building->objectid)
-            ->get()
-            ->map(function ($item) {
-
-                $statusName = $item->status->name ?? '-';
-                $statusLabel = $item->status->label_en ?? $statusName;
-                $roleName = $item->user?->roles?->first()?->name ?? '-';
-
-                return [
-                    'id' => 'status_'.$item->id,
-                    'source' => 'building_status',
-                    'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
-                    'user_name' => $item->user->name ?? '-',
-                    'role_name' => $roleName,
-                    'notes' => $item->notes ?? '-',
-                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                    'created_at_sort' => $item->created_at,
-                    'can_delete' => false,
-                ];
-            });
-
-        $histories = BuildingStatusHistory::with(['user.roles', 'status'])
-            ->where('building_id', $building->objectid)
-            ->get()
-            ->map(function ($item) use ($canDelete) {
-
-                $statusName = $item->status->name ?? '-';
-                $statusLabel = $item->status->label_en ?? $statusName;
-                $roleName = $item->user?->roles?->first()?->name ?? '-';
-
-                return [
-                    'id' => 'history_'.$item->id,
-                    'source' => 'building_history',
-                    'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
-                    'user_name' => $item->user->name ?? '-',
-                    'role_name' => $roleName,
-                    'notes' => $item->notes ?? '-',
-                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                    'created_at_sort' => $item->created_at,
-                    'can_delete' => $canDelete,
-                ];
-            });
-
-        $history = $statuses
-            ->merge($histories)
-            ->sortByDesc('created_at_sort')
-            ->values()
-            ->map(function ($item) {
-                unset($item['created_at_sort']);
-
-                return $item;
-            });
-
+    if (! $building) {
         return response()->json([
-            'status' => true,
-            'history' => $history,
+            'status' => false,
+            'history' => [],
         ]);
     }
+
+    $history = BuildingStatus::with(['user.roles', 'status'])
+        ->where('building_id', $building->objectid)
+        ->whereNotNull('notes')
+        ->where('notes', '!=', '')
+        ->orderByDesc('created_at')
+        ->get()
+        ->map(function ($item) {
+
+            $statusName = $item->status->name ?? '-';
+            $statusLabel = $item->status->label_en ?? $statusName;
+            $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+            return [
+                'id' => 'status_'.$item->id,
+                'source' => 'building_status',
+                'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
+                'user_name' => $item->user->name ?? '-',
+                'role_name' => $roleName,
+                'notes' => $item->notes,
+                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                'can_delete' => false,
+            ];
+        })
+        ->values();
+
+    return response()->json([
+        'status' => true,
+        'history' => $history,
+    ]);
+}
 
     public function housingHistory(Request $request): Collection|array
     {
