@@ -40,8 +40,7 @@ class AuditStatusHistoryController extends Controller
 
         $history = BuildingStatusHistory::with(['user.roles', 'status'])
             ->where('building_id', $building->objectid)
-            ->whereNotNull('notes')
-            ->where('notes', '!=', '')
+       
             ->orderByDesc('created_at')
             ->get();
 
@@ -55,8 +54,7 @@ class AuditStatusHistoryController extends Controller
 
             $history = BuildingStatus::with(['user.roles', 'status'])
                 ->where('building_id', $building->objectid)
-                ->whereNotNull('notes')
-                ->where('notes', '!=', '')
+               
                 ->orderByDesc('created_at')
                 ->get()
                 ->map(function ($item) {
