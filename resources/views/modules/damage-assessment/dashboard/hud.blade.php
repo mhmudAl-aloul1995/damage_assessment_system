@@ -330,14 +330,13 @@
             border-radius: 8px;
             box-shadow: 0 0 22px rgba(0, 242, 254, 0.14), 0 18px 42px rgba(0, 0, 0, 0.4);
             color: #ffffff;
-            inset-block-start: 92px;
-            inset-inline-start: 18px;
-            max-height: calc(100vh - 118px);
+            flex-shrink: 0;
+            max-height: calc(100vh - 220px);
             overflow: hidden;
-            position: fixed;
+            position: relative;
             transition: max-height 0.22s ease, width 0.22s ease;
-            width: min(356px, calc(100vw - 36px));
-            z-index: 5;
+            width: 100%;
+            z-index: 1;
         }
 
         .hud-map-filter-panel.is-collapsed {
@@ -499,84 +498,6 @@
     <div id="live-gis-hud-map"></div>
     <div class="cyber-map-overlay"></div>
 
-    <aside id="hudMapFilterPanel" class="hud-map-filter-panel hud-interactive is-collapsed" aria-label="فلترة الخريطة">
-        <div id="hudMapFilterHeader" class="hud-map-filter-header">
-            <div>
-                <h2 class="hud-map-filter-title"><i class="fa-solid fa-filter"></i> فلترة الخريطة</h2>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <span class="hud-map-filter-count">عدد النتائج: <span id="hudMapFilterCount">0</span></span>
-                <button type="button" id="hudMapFilterToggle" class="hud-map-filter-toggle" aria-label="إظهار أو إخفاء فلتر الخريطة">
-                    <i class="fa-solid fa-chevron-up"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="hud-map-filter-body">
-            <div class="hud-map-filter-field">
-                <label for="hud_filter_assignedto">المهندس الميداني</label>
-                <select id="hud_filter_assignedto" class="form-select hud-map-filter-select" data-field="assignedto">
-                    <option value="">الكل</option>
-                </select>
-            </div>
-
-            <div class="hud-map-filter-field">
-                <label for="hud_filter_field_status">حالة الإستبيان</label>
-                <select id="hud_filter_field_status" class="form-select" data-field="field_status">
-                    <option value="">الكل</option>
-                    <option value="COMPLETED">مكتمل</option>
-                    <option value="Not_Completed">غير مكتمل</option>
-                </select>
-            </div>
-
-            <div class="hud-map-filter-field">
-                <label for="hud_filter_building_damage_status">حالة الضرر</label>
-                <select id="hud_filter_building_damage_status" class="form-select hud-map-filter-select" data-field="building_damage_status">
-                    <option value="">الكل</option>
-                </select>
-            </div>
-
-            <div class="hud-map-filter-field">
-                <label for="hud_filter_municipalitie">البلدية</label>
-                <select id="hud_filter_municipalitie" class="form-select hud-map-filter-select" data-field="municipalitie">
-                    <option value="">الكل</option>
-                </select>
-            </div>
-
-            <div class="hud-map-filter-field">
-                <label for="hud_filter_neighborhood">الحي</label>
-                <select id="hud_filter_neighborhood" class="form-select hud-map-filter-select" data-field="neighborhood">
-                    <option value="">الكل</option>
-                </select>
-            </div>
-
-            <div class="hud-map-filter-field">
-                <label for="hud_filter_search">بحث ObjectID / GlobalID</label>
-                <input type="text" id="hud_filter_search" class="form-control" placeholder="ObjectID / GlobalID">
-            </div>
-
-            <div class="row g-2">
-                <div class="col-6">
-                    <div class="hud-map-filter-field">
-                        <label for="hud_filter_from_date">من تاريخ</label>
-                        <input type="date" id="hud_filter_from_date" class="form-control">
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="hud-map-filter-field">
-                        <label for="hud_filter_to_date">إلى تاريخ</label>
-                        <input type="date" id="hud_filter_to_date" class="form-control">
-                    </div>
-                </div>
-            </div>
-
-            <div class="hud-map-filter-actions">
-                <button type="button" id="hudMapFilterApply" class="btn btn-primary">تطبيق الفلترة</button>
-                <button type="button" id="hudMapFilterReset" class="btn btn-light">إعادة تعيين</button>
-            </div>
-        </div>
-    </aside>
-
     <div class="hud-container">
         <header class="hud-header hud-interactive">
             <div class="row align-items-center">
@@ -634,6 +555,84 @@
 
         <div class="hud-workspace">
             <div class="hud-sidebar hud-interactive">
+                <aside id="hudMapFilterPanel" class="hud-map-filter-panel is-collapsed" aria-label="فلترة الخريطة">
+                    <div id="hudMapFilterHeader" class="hud-map-filter-header">
+                        <div>
+                            <h2 class="hud-map-filter-title"><i class="fa-solid fa-filter"></i> فلترة الخريطة</h2>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="hud-map-filter-count">عدد النتائج: <span id="hudMapFilterCount">0</span></span>
+                            <button type="button" id="hudMapFilterToggle" class="hud-map-filter-toggle" aria-label="إظهار أو إخفاء فلتر الخريطة">
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="hud-map-filter-body">
+                        <div class="hud-map-filter-field">
+                            <label for="hud_filter_assignedto">المهندس الميداني</label>
+                            <select id="hud_filter_assignedto" class="form-select hud-map-filter-select" data-field="assignedto">
+                                <option value="">الكل</option>
+                            </select>
+                        </div>
+
+                        <div class="hud-map-filter-field">
+                            <label for="hud_filter_field_status">حالة الإستبيان</label>
+                            <select id="hud_filter_field_status" class="form-select" data-field="field_status">
+                                <option value="">الكل</option>
+                                <option value="COMPLETED">مكتمل</option>
+                                <option value="Not_Completed">غير مكتمل</option>
+                            </select>
+                        </div>
+
+                        <div class="hud-map-filter-field">
+                            <label for="hud_filter_building_damage_status">حالة الضرر</label>
+                            <select id="hud_filter_building_damage_status" class="form-select hud-map-filter-select" data-field="building_damage_status">
+                                <option value="">الكل</option>
+                            </select>
+                        </div>
+
+                        <div class="hud-map-filter-field">
+                            <label for="hud_filter_municipalitie">البلدية</label>
+                            <select id="hud_filter_municipalitie" class="form-select hud-map-filter-select" data-field="municipalitie">
+                                <option value="">الكل</option>
+                            </select>
+                        </div>
+
+                        <div class="hud-map-filter-field">
+                            <label for="hud_filter_neighborhood">الحي</label>
+                            <select id="hud_filter_neighborhood" class="form-select hud-map-filter-select" data-field="neighborhood">
+                                <option value="">الكل</option>
+                            </select>
+                        </div>
+
+                        <div class="hud-map-filter-field">
+                            <label for="hud_filter_search">بحث ObjectID / GlobalID</label>
+                            <input type="text" id="hud_filter_search" class="form-control" placeholder="ObjectID / GlobalID">
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="hud-map-filter-field">
+                                    <label for="hud_filter_from_date">من تاريخ</label>
+                                    <input type="date" id="hud_filter_from_date" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="hud-map-filter-field">
+                                    <label for="hud_filter_to_date">إلى تاريخ</label>
+                                    <input type="date" id="hud_filter_to_date" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hud-map-filter-actions">
+                            <button type="button" id="hudMapFilterApply" class="btn btn-primary">تطبيق الفلترة</button>
+                            <button type="button" id="hudMapFilterReset" class="btn btn-light">إعادة تعيين</button>
+                        </div>
+                    </div>
+                </aside>
+
                 <div class="card-hud-glass">
                     <div class="hud-section-title"><i class="fa-solid fa-chart-pie"></i> الهيكل التحليلي لمستويات الضرر</div>
                     <div style="position: relative; height: 160px;">
