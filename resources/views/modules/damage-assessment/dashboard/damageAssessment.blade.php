@@ -1892,7 +1892,7 @@
 										</label>
 
 										<select id="mapFieldStatusFilter" class="form-select form-select-sm"
-											data-control="select2" data-hide-search="true"
+											data-control="select2" data-hide-search="true" data-field="field_status"
 											data-placeholder="حالة إلإستبيان">
 
 											<option value="">
@@ -1903,7 +1903,7 @@
 											مكتمل
 											</option>
 
-											<option value="NOT_COMPLETED">
+											<option value="Not_Completed">
 												فير مكتمل
 											</option>
 										</select>
@@ -2144,6 +2144,7 @@
 			"esri/widgets/Search",
 			"esri/widgets/ScaleBar",
 			"esri/geometry/support/webMercatorUtils",
+			"esri/geometry/Extent",
 			"esri/widgets/Expand"
 		], function (
 			Map,
@@ -2157,6 +2158,7 @@
 			Search,
 			ScaleBar,
 			webMercatorUtils,
+			Extent,
 			Expand
 		) {
 
@@ -2164,6 +2166,15 @@
 			const canViewAssessmentLink = @json(!auth()->user()->hasRole('MOPWH'));
 			const buildingLayerUrl = @json(config('services.arcgis.buildings_url'));
 			const arcgisOptionsUrl = window.location.pathname.replace(/\/$/, '') + '/arcgis/options';
+			const gazaStripExtent = new Extent({
+				xmin: 34.1900,
+				ymin: 31.2000,
+				xmax: 34.5800,
+				ymax: 31.6000,
+				spatialReference: {
+					wkid: 4326
+				}
+			});
 
 			const damageRenderer = {
 				type: "unique-value",
@@ -2401,6 +2412,7 @@
 			function buildArcgisWhere() {
 				const allowedFields = [
 					'assignedto',
+					'field_status',
 					'building_damage_status',
 					'municipalitie',
 					'neighborhood'
@@ -2519,25 +2531,25 @@
 
 			function resetArcgisFilters() {
 				$('.arcgis-map-filter-select').val(null).trigger('change');
+				$('#mapFieldStatusFilter').val('').trigger('change');
 				document.getElementById('arcgis_filter_search').value = '';
 				document.getElementById('arcgis_filter_from_date').value = '';
 				document.getElementById('arcgis_filter_to_date').value = '';
 				currentArcgisMapWhere = '1=1';
-				buildingLayer.definitionExpression = '1=1';
-				updateArcgisFilteredCount('1=1');
+				const whereExpression = combinedArcgisWhere();
+				buildingLayer.definitionExpression = whereExpression;
+				updateArcgisFilteredCount(whereExpression);
 				reloadArcgisDatatable();
 
 				if (typeof clearSelectionGraphic === 'function') {
 					clearSelectionGraphic();
 				}
 
-				if (originalArcgisExtent) {
-					view.goTo(originalArcgisExtent.expand(1.2)).catch(function (error) {
-						if (error.name !== 'AbortError') {
-							console.error('GoTo original extent failed:', error);
-						}
-					});
-				}
+				view.goTo(gazaStripExtent).catch(function (error) {
+					if (error.name !== 'AbortError') {
+						console.error('GoTo Gaza Strip extent failed:', error);
+					}
+				});
 			}
 
 			function toggleMapFullscreen(forceState) {

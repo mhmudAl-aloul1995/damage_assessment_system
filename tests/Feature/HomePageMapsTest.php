@@ -144,3 +144,20 @@ it('shows the homepage map assessment link flag for non mopwh users', function (
         ->assertOk()
         ->assertSee('const canViewAssessmentLink = true;', false);
 });
+
+it('wires the homepage map assessment status filter and reset extent', function () {
+    $this->mock(ArcgisService::class, function ($mock) {
+        $mock->shouldReceive('getToken')->andReturn('fake-token');
+    });
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee('data-field="field_status"', false)
+        ->assertSee('<option value="Not_Completed">', false)
+        ->assertSee("'field_status'", false)
+        ->assertSee('const gazaStripExtent = new Extent({', false)
+        ->assertSee('view.goTo(gazaStripExtent)', false);
+});
