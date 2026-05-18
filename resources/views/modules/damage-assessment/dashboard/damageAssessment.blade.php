@@ -2253,7 +2253,7 @@
 				// ADD THESE TWO LINES:
 				minScale: 0, // Keeps it visible when zooming out
 				maxScale: 0, // Keeps it visible when zooming in (Fixes the Legend)
-				definitionExpression: dashboardLayerDefinition(getDashboardToolbarFilters(), 'end'),
+				definitionExpression: '1=1',
 				labelingInfo: [{
 					symbol: {
 						type: "text",
@@ -2385,10 +2385,14 @@
 				return String(value).replace(/'/g, "''");
 			}
 
-			function hasArcgisField(fieldName) {
-				return buildingLayer.fields.some(function (field) {
+			function getArcgisField(fieldName) {
+				return buildingLayer.fields.find(function (field) {
 					return String(field.name).toLowerCase() === fieldName.toLowerCase();
-				});
+				}) || null;
+			}
+
+			function hasArcgisField(fieldName) {
+				return getArcgisField(fieldName) !== null;
 			}
 
 			function resolveArcgisDateField() {
@@ -2396,19 +2400,33 @@
 					return arcgisDateField;
 				}
 
-				if (hasArcgisField('end')) {
-					arcgisDateField = 'end';
-				} else if (hasArcgisField('creationdate')) {
-					arcgisDateField = 'creationdate';
-				} else if (hasArcgisField('editdate')) {
-					arcgisDateField = 'editdate';
+				arcgisDateField = getArcgisField('end')
+					|| getArcgisField('creationdate')
+					|| getArcgisField('editdate');
+
+				if (!arcgisDateField) {
+					arcgisDateField = null;
 				}
 
 				return arcgisDateField;
 			}
 
+			function arcgisFieldExpression(field) {
+				const fieldName = field.name;
+
+				return String(fieldName).toLowerCase() === 'end'
+					? '"' + fieldName + '"'
+					: fieldName;
+			}
+
 			function arcgisDateExpression(field, operator, value) {
-				return field + " " + operator + " DATE '" + value + " 00:00:00'";
+				const fieldExpression = arcgisFieldExpression(field);
+
+				if (String(field.type).toLowerCase().includes('date')) {
+					return fieldExpression + " " + operator + " TIMESTAMP '" + value + " 00:00:00'";
+				}
+
+				return fieldExpression + " " + operator + " '" + escapeArcgisValue(value) + "'";
 			}
 
 			function buildArcgisWhere() {
@@ -2455,8 +2473,28 @@
 				return clauses.length ? clauses.join(' AND ') : '1=1';
 			}
 
+			function dashboardArcgisLayerDefinition(filters) {
+				const clauses = [];
+				const toolbarFilters = filters || getDashboardToolbarFilters();
+				const dateField = resolveArcgisDateField();
+
+				if (toolbarFilters.neighborhood) {
+					clauses.push("neighborhood = '" + escapeArcgisValue(toolbarFilters.neighborhood) + "'");
+				}
+
+				if (dateField && toolbarFilters.from_date) {
+					clauses.push(arcgisDateExpression(dateField, '>=', toolbarFilters.from_date));
+				}
+
+				if (dateField && toolbarFilters.to_date) {
+					clauses.push(arcgisDateExpression(dateField, '<=', toolbarFilters.to_date));
+				}
+
+				return clauses.length ? clauses.join(' AND ') : '1=1';
+			}
+
 			function combinedArcgisWhere(toolbarFilters) {
-				const dashboardWhere = dashboardLayerDefinition(toolbarFilters || getDashboardToolbarFilters(), 'end');
+				const dashboardWhere = dashboardArcgisLayerDefinition(toolbarFilters || getDashboardToolbarFilters());
 				const clauses = [];
 
 				if (dashboardWhere && dashboardWhere !== '1=1') {
@@ -2655,8 +2693,9 @@
 						return buildingLayer.load();
 					})
 					.then(function () {
+						buildingLayer.definitionExpression = combinedArcgisWhere();
 						const query = buildingLayer.createQuery();
-						query.where = '1=1';
+						query.where = buildingLayer.definitionExpression || '1=1';
 						query.returnGeometry = true;
 
 						return buildingLayer.queryExtent(query);

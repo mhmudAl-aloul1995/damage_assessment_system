@@ -141,6 +141,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
         'neighborhood' => 'Rimal',
         'creationdate' => '2026-01-01',
         'editdate' => $today,
+        'end' => $today,
     ]);
 
     Building::query()->create([
@@ -150,6 +151,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
         'neighborhood' => 'Sabra',
         'creationdate' => '2026-01-01',
         'editdate' => $today,
+        'end' => $today,
     ]);
 
     HousingUnit::query()->create([
@@ -247,6 +249,53 @@ it('accepts a flatpickr date range string in dashboard filters', function () {
         ->assertOk()
         ->assertJsonPath('recordsFiltered', 1)
         ->assertJsonPath('data.0.neighborhood', 'Rimal');
+});
+
+it('filters the homepage building map table by the building end date', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 701,
+        'globalid' => 'building-with-current-end',
+        'building_name' => 'Current End Building',
+        'neighborhood' => 'Rimal',
+        'end' => '2026-05-18 10:00:00',
+        'editdate' => '2026-01-01',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 702,
+        'globalid' => 'building-with-old-end',
+        'building_name' => 'Old End Building',
+        'neighborhood' => 'Rimal',
+        'end' => '2026-05-10 10:00:00',
+        'editdate' => '2026-05-18',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 801,
+        'globalid' => 'unit-current-end',
+        'parentglobalid' => 'building-with-current-end',
+        'unit_damage_status' => 'fully_damaged2',
+        'editdate' => '2026-01-01',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 802,
+        'globalid' => 'unit-old-end',
+        'parentglobalid' => 'building-with-old-end',
+        'unit_damage_status' => 'partially_damaged2',
+        'editdate' => '2026-05-18',
+    ]);
+
+    $this->actingAs($user)->getJson(route('housing-units-map', [
+        'from_date' => '2026-05-18',
+        'to_date' => '2026-05-18',
+        'neighborhood' => 'Rimal',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('recordsFiltered', 1)
+        ->assertJsonPath('data.0.building_name', 'Current End Building');
 });
 
 it('returns latest dashboard stats as json', function () {

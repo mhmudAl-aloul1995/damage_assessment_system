@@ -172,8 +172,8 @@ it('wires the homepage building map date filters to the buildings end field', fu
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
-        ->assertSee("dashboardLayerDefinition(getDashboardToolbarFilters(), 'end')", false)
-        ->assertSee("dashboardLayerDefinition(toolbarFilters || getDashboardToolbarFilters(), 'end')", false)
-        ->assertSee("if (hasArcgisField('end'))", false)
-        ->assertSee("arcgisDateField = 'end';", false);
+        ->assertSee("definitionExpression: '1=1'", false)
+        ->assertSee("arcgisDateField = getArcgisField('end')", false)
+        ->assertSee('function dashboardArcgisLayerDefinition(filters)', false)
+        ->assertSee("String(fieldName).toLowerCase() === 'end'", false);
 });

@@ -1363,32 +1363,17 @@ class DamageAssessmentController extends Controller
         if ($startDate !== null && $endDate !== null) {
             $query->where(function (Builder $dateQuery) use ($startDate, $endDate) {
                 $dateQuery
-                    ->whereBetween(DB::raw('DATE(housing_units.editdate)'), [$startDate, $endDate])
-                    ->orWhere(function (Builder $buildingDateQuery) use ($startDate, $endDate) {
-                        $buildingDateQuery
-                            ->whereNull('housing_units.id')
-                            ->whereBetween(DB::raw('DATE(buildings.editdate)'), [$startDate, $endDate]);
-                    });
+                    ->whereBetween(DB::raw('DATE(buildings.end)'), [$startDate, $endDate]);
             });
         } elseif ($startDate !== null) {
             $query->where(function (Builder $dateQuery) use ($startDate) {
                 $dateQuery
-                    ->whereDate('housing_units.editdate', '>=', $startDate)
-                    ->orWhere(function (Builder $buildingDateQuery) use ($startDate) {
-                        $buildingDateQuery
-                            ->whereNull('housing_units.id')
-                            ->whereDate('buildings.editdate', '>=', $startDate);
-                    });
+                    ->whereDate('buildings.end', '>=', $startDate);
             });
         } elseif ($endDate !== null) {
             $query->where(function (Builder $dateQuery) use ($endDate) {
                 $dateQuery
-                    ->whereDate('housing_units.editdate', '<=', $endDate)
-                    ->orWhere(function (Builder $buildingDateQuery) use ($endDate) {
-                        $buildingDateQuery
-                            ->whereNull('housing_units.id')
-                            ->whereDate('buildings.editdate', '<=', $endDate);
-                    });
+                    ->whereDate('buildings.end', '<=', $endDate);
             });
         }
     }
