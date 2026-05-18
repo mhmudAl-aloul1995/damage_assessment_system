@@ -107,6 +107,7 @@ class AuditStatusHistoryController extends Controller
         ]);
     }
 
+
     public function housingHistory(Request $request): Collection|array
     {
         $housing = HousingUnit::where('globalid', $request->globalid)->first();
@@ -115,8 +116,39 @@ class AuditStatusHistoryController extends Controller
             return [];
         }
 
-        $statuses = HousingStatus::with(['user.roles', 'assessment_status'])
+        $histories = HousingStatusHistory::with(['user.roles', 'assessment_status'])
             ->where('housing_id', $housing->objectid)
+            ->whereNotNull('notes')
+            ->where('notes', '!=', '')
+            ->orderByDesc('created_at')
+            ->get();
+
+        if ($histories->isNotEmpty()) {
+            return $histories
+                ->map(function ($item) {
+
+                    $statusName = $item->assessment_status->name ?? '-';
+                    $statusLabel = $item->assessment_status->label_en ?? $statusName;
+                    $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+                    return [
+                        'id' => 'history_' . $item->id,
+                        'source' => 'housing_history',
+                        'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                        'user_name' => $item->user->name ?? '-',
+                        'role_name' => $roleName,
+                        'notes' => $item->notes,
+                        'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                    ];
+                })
+                ->values();
+        }
+
+        return HousingStatus::with(['user.roles', 'assessment_status'])
+            ->where('housing_id', $housing->objectid)
+            ->whereNotNull('notes')
+            ->where('notes', '!=', '')
+            ->orderByDesc('created_at')
             ->get()
             ->map(function ($item) {
 
@@ -130,42 +162,11 @@ class AuditStatusHistoryController extends Controller
                     'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
-                    'notes' => $item->notes ?? '-',
+                    'notes' => $item->notes,
                     'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                    'created_at_sort' => $item->created_at,
                 ];
-            });
-
-        $histories = HousingStatusHistory::with(['user.roles', 'assessment_status'])
-            ->where('housing_id', $housing->objectid)
-            ->get()
-            ->map(function ($item) {
-
-                $statusName = $item->assessment_status->name ?? '-';
-                $statusLabel = $item->assessment_status->label_en ?? $statusName;
-                $roleName = $item->user?->roles?->first()?->name ?? '-';
-
-                return [
-                    'id' => 'history_' . $item->id,
-                    'source' => 'housing_history',
-                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
-                    'user_name' => $item->user->name ?? '-',
-                    'role_name' => $roleName,
-                    'notes' => $item->notes ?? '-',
-                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                    'created_at_sort' => $item->created_at,
-                ];
-            });
-
-        return $statuses
-            ->merge($histories)
-            ->sortByDesc('created_at_sort')
-            ->values()
-            ->map(function ($item) {
-                unset($item['created_at_sort']);
-
-                return $item;
-            });
+            })
+            ->values();
     }
 
     private function getStatusBadge(string $statusName, ?string $role = null): string
