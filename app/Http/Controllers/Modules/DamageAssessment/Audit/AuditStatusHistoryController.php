@@ -209,7 +209,14 @@ class AuditStatusHistoryController extends Controller
         $type = $request->type;
         $globalid = $request->globalid;
 
+        /*
+        |--------------------------------------------------------------------------
+        | BUILDING
+        |--------------------------------------------------------------------------
+        */
+
         if ($type === 'building') {
+
             $building = Building::where('globalid', $globalid)->first();
 
             if (!$building) {
@@ -224,7 +231,13 @@ class AuditStatusHistoryController extends Controller
                 })
                 ->exists();
 
-       /*      $note = BuildingStatusHistory::with(['status', 'user'])
+            /*
+            |--------------------------------------------------------------------------
+            | First check BuildingStatusHistory
+            |--------------------------------------------------------------------------
+            */
+
+            $note = BuildingStatusHistory::with(['status', 'user'])
                 ->where('building_id', $building->objectid)
                 ->whereNotNull('notes')
                 ->where('notes', '!=', '')
@@ -234,15 +247,38 @@ class AuditStatusHistoryController extends Controller
                 ->latest('id')
                 ->first();
 
+            $source = 'building_history';
+
+            /*
+            |--------------------------------------------------------------------------
+            | If empty -> check BuildingStatus
+            |--------------------------------------------------------------------------
+            */
+
+            if (!$note) {
+
+                $note = BuildingStatus::with(['status', 'user'])
+                    ->where('building_id', $building->objectid)
+                    ->whereNotNull('notes')
+                    ->where('notes', '!=', '')
+                    ->when($noteType, function ($query) use ($noteType) {
+                        $query->where('type', $noteType);
+                    })
+                    ->latest('id')
+                    ->first();
+
+                $source = 'building_status';
+            }
+
             if (!$note) {
                 return response()->json([
                     'message' => 'لا توجد ملاحظة متاحة',
                 ], 404);
-            } */
+            }
 
             return response()->json([
                 'id' => $note->id,
-                'source' => 'building_history',
+                'source' => $source,
                 'notes' => $note->notes,
                 'has_final_approve' => $hasFinalApprove,
                 'status_name' => optional($note->status)->label_en
@@ -254,7 +290,14 @@ class AuditStatusHistoryController extends Controller
             ]);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | HOUSING
+        |--------------------------------------------------------------------------
+        */
+
         if ($type === 'housing') {
+
             $housing = HousingUnit::where('globalid', $globalid)->first();
 
             if (!$housing) {
@@ -269,6 +312,12 @@ class AuditStatusHistoryController extends Controller
                 })
                 ->exists();
 
+            /*
+            |--------------------------------------------------------------------------
+            | First check HousingStatusHistory
+            |--------------------------------------------------------------------------
+            */
+
             $note = HousingStatusHistory::with(['assessment_status', 'user'])
                 ->where('housing_id', $housing->objectid)
                 ->whereNotNull('notes')
@@ -279,6 +328,29 @@ class AuditStatusHistoryController extends Controller
                 ->latest('id')
                 ->first();
 
+            $source = 'housing_history';
+
+            /*
+            |--------------------------------------------------------------------------
+            | If empty -> check HousingStatus
+            |--------------------------------------------------------------------------
+            */
+
+            if (!$note) {
+
+                $note = HousingStatus::with(['assessment_status', 'user'])
+                    ->where('housing_id', $housing->objectid)
+                    ->whereNotNull('notes')
+                    ->where('notes', '!=', '')
+                    ->when($noteType, function ($query) use ($noteType) {
+                        $query->where('type', $noteType);
+                    })
+                    ->latest('id')
+                    ->first();
+
+                $source = 'housing_status';
+            }
+
             if (!$note) {
                 return response()->json([
                     'message' => 'لا توجد ملاحظة متاحة',
@@ -287,7 +359,7 @@ class AuditStatusHistoryController extends Controller
 
             return response()->json([
                 'id' => $note->id,
-                'source' => 'housing_history',
+                'source' => $source,
                 'notes' => $note->notes,
                 'has_final_approve' => $hasFinalApprove,
                 'status_name' => optional($note->assessment_status)->label_en
@@ -303,7 +375,6 @@ class AuditStatusHistoryController extends Controller
             'message' => 'نوع غير صحيح',
         ], 422);
     }
-
     public function updateNote(Request $request): JsonResponse
     {
         $request->validate([
