@@ -288,6 +288,14 @@ it('returns latest dashboard stats as json', function () {
 it('renders the live hud dashboard from database statistics', function () {
     $user = User::factory()->create();
 
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
     Building::query()->create([
         'objectid' => 1101,
         'globalid' => 'hud-building-1',
@@ -344,7 +352,12 @@ it('renders the live hud dashboard from database statistics', function () {
         ->assertSee('LIVE GIS HUD')
         ->assertSee('https://js.arcgis.com/4.22/', false)
         ->assertSee("'esri/views/MapView'", false)
+        ->assertSee("'esri/layers/FeatureLayer'", false)
         ->assertSee('new MapView', false)
+        ->assertSee('new FeatureLayer', false)
+        ->assertSee("type: 'simple-fill'", false)
+        ->assertSee('assessmentBaseUrl', false)
+        ->assertSee('fake-token')
         ->assertDontSee('L.map', false)
         ->assertDontSee('unpkg.com/leaflet', false)
         ->assertSee('إجمالي مباني القطاع')

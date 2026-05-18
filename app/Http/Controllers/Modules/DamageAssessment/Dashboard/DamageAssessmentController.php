@@ -204,6 +204,10 @@ class DamageAssessmentController extends Controller
 
     public function hud(Request $request): \Illuminate\View\View
     {
+        $arcgis = app(ArcgisService::class);
+        $token = $arcgis->getToken();
+        $buildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.buildings_url'));
+
         $buildingStats = Building::query()
             ->selectRaw("
                 COUNT(*) as total_buildings,
@@ -364,6 +368,8 @@ class DamageAssessmentController extends Controller
             'safetyStats' => $safetyStats,
             'municipalityReports' => $municipalityReports,
             'mapPoints' => $mapPoints,
+            'buildingLayerUrl' => $buildingLayerUrl,
+            'token' => $token,
         ]);
     }
 

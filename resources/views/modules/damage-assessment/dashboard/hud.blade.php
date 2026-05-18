@@ -170,6 +170,14 @@
             font-size: 0.78rem;
         }
 
+        .table-cyber,
+        .table-cyber tbody,
+        .table-cyber tr,
+        .table-cyber td,
+        .table-cyber td * {
+            color: #ffffff !important;
+        }
+
         .table-cyber th {
             background: rgba(0, 242, 254, 0.1) !important;
             color: var(--neon-blue);
@@ -259,7 +267,7 @@
 
         .hud-map-popup {
             color: #ffffff;
-            min-width: 170px;
+            min-width: 260px;
         }
 
         .hud-map-popup strong {
@@ -273,6 +281,45 @@
             color: #8fa0b7;
             display: block;
             font-size: 0.75rem;
+        }
+
+        .hud-map-popup table {
+            border-collapse: collapse;
+            color: #ffffff;
+            direction: ltr;
+            font-size: 0.74rem;
+            margin: 8px 0 10px;
+            width: 100%;
+        }
+
+        .hud-map-popup th,
+        .hud-map-popup td {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            padding: 5px 7px;
+            vertical-align: top;
+        }
+
+        .hud-map-popup th {
+            background: rgba(0, 242, 254, 0.12);
+            color: var(--neon-blue);
+            font-weight: 800;
+            width: 42%;
+        }
+
+        .hud-map-popup-action {
+            align-items: center;
+            background: rgba(0, 242, 254, 0.14);
+            border: 1px solid rgba(0, 242, 254, 0.45);
+            border-radius: 6px;
+            color: #ffffff !important;
+            display: inline-flex;
+            font-size: 0.75rem;
+            font-weight: 800;
+            gap: 6px;
+            justify-content: center;
+            padding: 7px 10px;
+            text-decoration: none;
         }
 
         ::-webkit-scrollbar {
@@ -488,25 +535,148 @@
     <script>
         const mapPoints = @json($mapPoints);
         const municipalityReports = @json($municipalityReports);
-        const markerColors = {
-            fully_damaged: '#ff0055',
-            partially_damaged: '#fae813',
-            committee_review: '#00f2fe',
-            unclassified: '#00ff87'
-        };
+        const buildingLayerUrl = @json($buildingLayerUrl);
+        const arcgisToken = @json($token);
+        const assessmentBaseUrl = @json(url('assessment'));
 
         require([
             'esri/Map',
             'esri/views/MapView',
-            'esri/layers/GraphicsLayer',
-            'esri/Graphic',
+            'esri/layers/FeatureLayer',
             'esri/geometry/Extent',
+            'esri/identity/IdentityManager',
+            'esri/widgets/Legend',
             'esri/widgets/ScaleBar'
-        ], function (Map, MapView, GraphicsLayer, Graphic, Extent, ScaleBar) {
-            const graphicsLayer = new GraphicsLayer({ listMode: 'hide' });
+        ], function (Map, MapView, FeatureLayer, Extent, esriId, Legend, ScaleBar) {
+            if (buildingLayerUrl && arcgisToken) {
+                esriId.registerToken({
+                    server: buildingLayerUrl,
+                    token: arcgisToken,
+                    expires: Date.now() + (60 * 60 * 1000)
+                });
+            }
+
+            const damageRenderer = {
+                type: 'unique-value',
+                field: 'building_damage_status',
+                defaultSymbol: {
+                    type: 'simple-fill',
+                    color: [0, 255, 135, 0.26],
+                    outline: {
+                        color: [255, 255, 255, 0.75],
+                        width: 0.7
+                    }
+                },
+                defaultLabel: 'Unclassified',
+                uniqueValueInfos: [
+                    {
+                        value: 'fully_damaged',
+                        label: 'Fully damaged',
+                        symbol: {
+                            type: 'simple-fill',
+                            color: [255, 0, 85, 0.62],
+                            outline: {
+                                color: [255, 255, 255, 0.95],
+                                width: 1
+                            }
+                        }
+                    },
+                    {
+                        value: 'partially_damaged',
+                        label: 'Partially damaged',
+                        symbol: {
+                            type: 'simple-fill',
+                            color: [250, 232, 19, 0.50],
+                            outline: {
+                                color: [255, 255, 255, 0.85],
+                                width: 0.8
+                            }
+                        }
+                    },
+                    {
+                        value: 'committee_review',
+                        label: 'Committee review',
+                        symbol: {
+                            type: 'simple-fill',
+                            color: [0, 242, 254, 0.48],
+                            outline: {
+                                color: [255, 255, 255, 0.9],
+                                width: 0.9
+                            }
+                        }
+                    }
+                ]
+            };
+
+            function value(attributes, ...keys) {
+                for (const key of keys) {
+                    if (attributes[key] !== undefined && attributes[key] !== null && String(attributes[key]).trim() !== '') {
+                        return attributes[key];
+                    }
+                }
+
+                return '-';
+            }
+
+            function popupTableRow(label, displayValue) {
+                const row = document.createElement('tr');
+                const header = document.createElement('th');
+                const cell = document.createElement('td');
+
+                header.textContent = label;
+                cell.textContent = displayValue;
+                row.append(header, cell);
+
+                return row;
+            }
+
+            function buildBuildingPopup(event) {
+                const attributes = event.graphic.attributes || {};
+                const wrapper = document.createElement('div');
+                const title = document.createElement('strong');
+                const table = document.createElement('table');
+                const action = document.createElement('a');
+                const globalId = value(attributes, 'globalid', 'GlobalID', 'GLOBALID');
+
+                wrapper.className = 'hud-map-popup';
+                title.textContent = value(attributes, 'building_name', 'Building_Name', 'name', 'NAME');
+
+                table.append(
+                    popupTableRow('Object ID', value(attributes, 'objectid', 'OBJECTID')),
+                    popupTableRow('Global ID', globalId),
+                    popupTableRow('Damage', value(attributes, 'building_damage_status')),
+                    popupTableRow('Field status', value(attributes, 'field_status')),
+                    popupTableRow('Assigned to', value(attributes, 'assignedto', 'AssignedTo')),
+                    popupTableRow('Municipality', value(attributes, 'municipalitie')),
+                    popupTableRow('Neighborhood', value(attributes, 'neighborhood'))
+                );
+
+                action.className = 'hud-map-popup-action';
+                action.target = '_blank';
+                action.rel = 'noopener';
+                action.href = globalId !== '-' ? `${assessmentBaseUrl}/${globalId}` : '#';
+                action.textContent = 'فتح تفاصيل التقييم';
+
+                wrapper.append(title, table, action);
+
+                return wrapper;
+            }
+
+            const buildingsLayer = new FeatureLayer({
+                url: buildingLayerUrl,
+                renderer: damageRenderer,
+                outFields: ['*'],
+                minScale: 0,
+                maxScale: 0,
+                popupTemplate: {
+                    title: 'تفاصيل المبنى',
+                    content: buildBuildingPopup
+                }
+            });
+
             const map = new Map({
                 basemap: 'satellite',
-                layers: [graphicsLayer]
+                layers: [buildingsLayer]
             });
 
             const view = new MapView({
@@ -523,68 +693,43 @@
             });
 
             view.ui.components = [];
+            view.ui.add(new Legend({
+                view,
+                layerInfos: [{
+                    layer: buildingsLayer,
+                    title: 'Damage Symbology'
+                }]
+            }), 'bottom-right');
             view.ui.add(new ScaleBar({ view, unit: 'metric' }), 'bottom-left');
 
-            mapPoints.forEach((point) => {
-                const color = markerColors[point.status] || markerColors.unclassified;
-
-                graphicsLayer.add(new Graphic({
-                    geometry: {
-                        type: 'point',
-                        longitude: point.lng,
-                        latitude: point.lat
-                    },
-                    attributes: point,
-                    symbol: {
-                        type: 'simple-marker',
-                        style: 'circle',
-                        size: 11,
-                        color,
-                        outline: {
-                            color: [255, 255, 255, 0.95],
-                            width: 1.5
-                        }
-                    },
-                    popupTemplate: {
-                        title: point.title,
-                        content: function (event) {
-                            const attributes = event.graphic.attributes || {};
-                            const wrapper = document.createElement('div');
-                            const title = document.createElement('strong');
-                            const status = document.createElement('span');
-
-                            wrapper.className = 'hud-map-popup';
-                            title.textContent = attributes.title || '-';
-                            status.textContent = attributes.status || 'unclassified';
-
-                            wrapper.append(title, status);
-
-                            return wrapper;
-                        }
-                    }
-                }));
-            });
-
             view.when(function () {
-                if (graphicsLayer.graphics.length === 0) {
-                    return;
-                }
+                buildingsLayer.queryExtent().then(function (response) {
+                    if (response.extent) {
+                        view.goTo(response.extent.expand(1.25), { duration: 1200 }).catch(function () {});
 
-                const longitudes = mapPoints.map((point) => Number(point.lng));
-                const latitudes = mapPoints.map((point) => Number(point.lat));
-                const longitudePadding = Math.max((Math.max(...longitudes) - Math.min(...longitudes)) * 0.4, 0.02);
-                const latitudePadding = Math.max((Math.max(...latitudes) - Math.min(...latitudes)) * 0.4, 0.02);
-                const extent = new Extent({
-                    xmin: Math.min(...longitudes) - longitudePadding,
-                    ymin: Math.min(...latitudes) - latitudePadding,
-                    xmax: Math.max(...longitudes) + longitudePadding,
-                    ymax: Math.max(...latitudes) + latitudePadding,
-                    spatialReference: {
-                        wkid: 4326
+                        return;
                     }
-                });
 
-                view.goTo(extent, { duration: 1200 }).catch(function () {});
+                    if (mapPoints.length === 0) {
+                        return;
+                    }
+
+                    const longitudes = mapPoints.map((point) => Number(point.lng));
+                    const latitudes = mapPoints.map((point) => Number(point.lat));
+                    const longitudePadding = Math.max((Math.max(...longitudes) - Math.min(...longitudes)) * 0.4, 0.02);
+                    const latitudePadding = Math.max((Math.max(...latitudes) - Math.min(...latitudes)) * 0.4, 0.02);
+                    const extent = new Extent({
+                        xmin: Math.min(...longitudes) - longitudePadding,
+                        ymin: Math.min(...latitudes) - latitudePadding,
+                        xmax: Math.max(...longitudes) + longitudePadding,
+                        ymax: Math.max(...latitudes) + latitudePadding,
+                        spatialReference: {
+                            wkid: 4326
+                        }
+                    });
+
+                    view.goTo(extent, { duration: 1200 }).catch(function () {});
+                }).catch(function () {});
             });
         });
 
