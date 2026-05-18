@@ -10,6 +10,16 @@
         $damageTotal = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $damageDistribution)));
         $occupancyTotal = max(1, array_sum(array_map(fn ($item) => (int) $item['value'], $occupancyDistribution)));
         $typeMax = max(1, ...array_map(fn ($item) => (int) $item['value'], $buildingTypeDistribution ?: [['value' => 1]]));
+        $renderArcgisMap = function (array $map): string {
+            $points = collect($map['points'] ?? [])->map(function (array $point): string {
+                return '<span class="phc-map-point" style="left: '.e((string) $point['x']).'%; top: '.e((string) $point['y']).'%; background: '.e($point['color']).';"></span>';
+            })->implode('');
+
+            return '<div class="phc-arcgis-map" role="img" aria-label="'.e($map['title'] ?? 'ArcGIS map').'">'
+                .'<img src="'.e($map['image_url'] ?? '').'" alt="'.e($map['title'] ?? 'ArcGIS map').'">'
+                .'<div class="phc-map-points">'.$points.'</div>'
+                .'</div>';
+        };
     @endphp
 
     <style>
@@ -231,9 +241,37 @@
             margin-bottom: 16px;
         }
 
-        .phc-map-frame svg {
+        .phc-arcgis-map {
+            position: relative;
             width: 100%;
-            max-height: 300px;
+            min-height: 300px;
+            direction: ltr;
+            overflow: hidden;
+            border-radius: 10px;
+            background: #e8f0f5;
+        }
+
+        .phc-arcgis-map img {
+            width: 100%;
+            height: 300px;
+            display: block;
+            object-fit: cover;
+        }
+
+        .phc-map-points {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .phc-map-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border: 1px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(15, 49, 71, .38);
+            transform: translate(-50%, -50%);
         }
 
         .phc-grid-6,
@@ -678,7 +716,7 @@
 
             <div class="phc-map-section">
                 <h3 class="phc-section-title">خارطة التدخل والتقييم الجغرافي - قطاع غزة</h3>
-                <div class="phc-map-frame">{!! $gazaMapSvg !!}</div>
+                <div class="phc-map-frame">{!! $renderArcgisMap($gazaMap) !!}</div>
                 <div class="phc-grid-6">
                     <div class="phc-kpi blue"><strong>{{ $formatNumber($totals['buildings']) }}</strong><span>إجمالي المباني</span></div>
                     <div class="phc-kpi blue"><strong>{{ $formatNumber($totals['housing_units']) }}</strong><span>الوحدات السكنية</span></div>
@@ -810,7 +848,7 @@
                 </div>
 
                 <div class="phc-neighborhood-stage">
-                    <div class="phc-map-frame" style="margin-bottom: 0;">{!! $governorate['mapSvg'] !!}</div>
+                    <div class="phc-map-frame" style="margin-bottom: 0;">{!! $renderArcgisMap($governorate['map']) !!}</div>
                     <div>
                         <h3 class="phc-section-title">مؤشرات الضرر في المحافظة</h3>
                         <div class="phc-grid-2">
@@ -938,7 +976,7 @@
                             <div class="phc-kpi green"><strong>{{ $formatNumber($governorateActiveNeighborhood['occupied']) }}</strong><span>وحدات مشغولة</span></div>
                         </div>
                     </div>
-                    <div class="phc-map-frame" style="margin-bottom: 0;">{!! $governorate['mapSvg'] !!}</div>
+                    <div class="phc-map-frame" style="margin-bottom: 0;">{!! $renderArcgisMap($governorate['map']) !!}</div>
                 </div>
 
                 <div class="phc-table-wrap">

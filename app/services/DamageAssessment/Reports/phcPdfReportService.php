@@ -24,6 +24,22 @@ class phcPdfReportService
         'light' => '#eef7fb',
     ];
 
+    /**
+     * @var array{0: float, 1: float, 2: float, 3: float}
+     */
+    private const GAZA_BBOX = [34.18, 31.20, 34.56, 31.60];
+
+    /**
+     * @var array<string, array{0: float, 1: float, 2: float, 3: float}>
+     */
+    private const GOVERNORATE_BBOXES = [
+        'North Gaza' => [34.43, 31.47, 34.56, 31.60],
+        'Gaza' => [34.35, 31.43, 34.51, 31.55],
+        'Middle Area' => [34.28, 31.33, 34.45, 31.46],
+        'Khan Younis' => [34.20, 31.25, 34.38, 31.39],
+        'Rafah' => [34.18, 31.20, 34.32, 31.32],
+    ];
+
     public function build(Request $request): array
     {
         $filters = $this->filters($request);
@@ -53,7 +69,7 @@ class phcPdfReportService
             'governorates' => $governorates,
             'neighborhoodPages' => $neighborhoodPages,
             'summaryRows' => $this->summaryRows($governorates),
-            'gazaMapSvg' => $this->mapSvg($this->buildingCoordinates($buildings, 650), 'قطاع غزة', null, $governorateMapLabels),
+            'gazaMap' => $this->arcgisMap($this->buildingCoordinates($buildings, 650), 'قطاع غزة'),
             'totalPages' => 14,
         ];
     }
@@ -288,7 +304,11 @@ class phcPdfReportService
                     'building_types' => $this->distribution($governorateBuildings, 'building_type', $this->buildingTypeLabels()),
                     'municipalities' => $this->areaRows($governorateBuildings, $governorateHousingUnits, 'municipalitie', 8),
                     'neighborhoods' => $this->areaRows($governorateBuildings, $governorateHousingUnits, 'neighborhood', 10),
-                    'mapSvg' => $this->mapSvg($this->buildingCoordinates($governorateBuildings, 350), $displayName, $this->mapGovernorateKey($englishName), $governorateMapLabels),
+                    'map' => $this->arcgisMap(
+                        $this->buildingCoordinates($governorateBuildings, 350),
+                        $displayName,
+                        $this->mapGovernorateKey($englishName)
+                    ),
                 ];
             })
             ->values()
@@ -307,7 +327,7 @@ class phcPdfReportService
                     'governorate' => $governorate['name'],
                     'english_name' => $governorate['english_name'],
                     'rows' => array_slice($governorate['neighborhoods'], 0, 12),
-                    'mapSvg' => $governorate['mapSvg'],
+                    'map' => $governorate['map'],
                 ];
             })
             ->all();
@@ -378,55 +398,81 @@ class phcPdfReportService
     }
 
     /**
-     * @param  array<string, string>  $governorateLabels
+     * @return array{title: string, image_url: string, points: array<int, array{x: float, y: float, color: string}>, has_points: bool}
      */
-    private function mapSvg(Collection $coordinates, string $title, ?string $highlightGovernorate, array $governorateLabels = []): string
+    private function arcgisMap(Collection $coordinates, string $title, ?string $governorateKey = null): array
     {
-        $bands = [
-            ['North Gaza', 'شمال غزة', 24, 36, '#d8eef8'],
-            ['Gaza', 'غزة', 72, 118, '#c6eaf6'],
-            ['Middle Area', 'الوسطى', 154, 74, '#fce5cc'],
-            ['Khan Younis', 'خانيونس', 220, 86, '#d8f0df'],
-            ['Rafah', 'رفح', 316, 52, '#e8edf3'],
-        ];
+        $bbox = $this->mapBbox($coordinates, $governorateKey);
 
-        if ($governorateLabels !== []) {
-            $bands = array_values(array_filter(
-                $bands,
-                fn (array $band): bool => array_key_exists($band[0], $governorateLabels)
-            ));
+        $points = $coordinates
+            ->map(function ($point) use ($bbox): array {
+                [$minLongitude, $minLatitude, $maxLongitude, $maxLatitude] = $bbox;
+                $longitudeSpan = max($maxLongitude - $minLongitude, 0.0001);
+                $latitudeSpan = max($maxLatitude - $minLatitude, 0.0001);
+                $color = match ($point->building_damage_status) {
+                    'fully_damaged' => self::COLORS['orange'],
+                    'partially_damaged' => self::COLORS['cyan'],
+                    'committee_review' => self::COLORS['green'],
+                    default => self::COLORS['blue'],
+                };
+
+                return [
+                    'x' => round((((float) $point->longitude - $minLongitude) / $longitudeSpan) * 100, 3),
+                    'y' => round((1 - (((float) $point->latitude - $minLatitude) / $latitudeSpan)) * 100, 3),
+                    'color' => $color,
+                ];
+            })
+            ->filter(fn (array $point): bool => $point['x'] >= 0 && $point['x'] <= 100 && $point['y'] >= 0 && $point['y'] <= 100)
+            ->values()
+            ->all();
+
+        return [
+            'title' => $title,
+            'image_url' => $this->arcgisImageUrl($bbox),
+            'points' => $points,
+            'has_points' => $coordinates->isNotEmpty(),
+        ];
+    }
+
+    /**
+     * @return array{0: float, 1: float, 2: float, 3: float}
+     */
+    private function mapBbox(Collection $coordinates, ?string $governorateKey): array
+    {
+        if ($coordinates->isEmpty()) {
+            return self::GOVERNORATE_BBOXES[$governorateKey ?? ''] ?? self::GAZA_BBOX;
         }
 
-        $points = $coordinates->map(function ($point) {
-            $x = 98 + (((float) $point->longitude - 34.1) / 0.6) * 180;
-            $y = 370 - (((float) $point->latitude - 31.1) / 0.6) * 330;
-            $color = match ($point->building_damage_status) {
-                'fully_damaged' => self::COLORS['orange'],
-                'partially_damaged' => self::COLORS['cyan'],
-                'committee_review' => self::COLORS['green'],
-                default => self::COLORS['blue'],
-            };
+        $minLatitude = (float) $coordinates->min('latitude');
+        $maxLatitude = (float) $coordinates->max('latitude');
+        $minLongitude = (float) $coordinates->min('longitude');
+        $maxLongitude = (float) $coordinates->max('longitude');
 
-            return '<circle cx="'.round($x, 1).'" cy="'.round($y, 1).'" r="2.5" fill="'.$color.'" opacity=".72" />';
-        })->implode('');
+        $latitudePadding = max(($maxLatitude - $minLatitude) * 0.18, 0.015);
+        $longitudePadding = max(($maxLongitude - $minLongitude) * 0.18, 0.015);
 
-        $bandSvg = collect($bands)->map(function (array $band) use ($highlightGovernorate, $governorateLabels) {
-            [$key, $label, $y, $height, $fill] = $band;
-            $label = $governorateLabels[$key] ?? $label;
-            $stroke = $highlightGovernorate === $key ? self::COLORS['orange'] : '#ffffff';
-            $strokeWidth = $highlightGovernorate === $key ? 4 : 2;
+        return [
+            max(self::GAZA_BBOX[0], $minLongitude - $longitudePadding),
+            max(self::GAZA_BBOX[1], $minLatitude - $latitudePadding),
+            min(self::GAZA_BBOX[2], $maxLongitude + $longitudePadding),
+            min(self::GAZA_BBOX[3], $maxLatitude + $latitudePadding),
+        ];
+    }
 
-            return '<rect x="92" y="'.$y.'" width="196" height="'.$height.'" rx="22" fill="'.$fill.'" stroke="'.$stroke.'" stroke-width="'.$strokeWidth.'" />'
-                .'<text x="190" y="'.($y + ($height / 2) + 5).'" text-anchor="middle" font-size="15" fill="#17324d">'.$this->escape($label).'</text>';
-        })->implode('');
-
-        return '<svg viewBox="0 0 380 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'.$this->escape($title).'">'
-            .'<rect width="380" height="430" rx="18" fill="#f7fbfd" />'
-            .'<path d="M102 28 C138 4 211 10 260 37 C303 61 305 115 276 151 C311 190 305 262 275 309 C249 350 234 399 180 410 C132 418 103 383 111 337 C76 304 79 244 102 205 C67 169 73 101 102 28Z" fill="#fdfefe" stroke="#b6d8e8" stroke-width="2" />'
-            .$bandSvg
-            .$points
-            .'<text x="190" y="410" text-anchor="middle" font-size="13" fill="#486277">'.$this->escape($title).'</text>'
-            .'</svg>';
+    /**
+     * @param  array{0: float, 1: float, 2: float, 3: float}  $bbox
+     */
+    private function arcgisImageUrl(array $bbox): string
+    {
+        return 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/export?'.http_build_query([
+            'bbox' => implode(',', $bbox),
+            'bboxSR' => 4326,
+            'imageSR' => 4326,
+            'size' => '960,420',
+            'format' => 'png32',
+            'transparent' => 'false',
+            'f' => 'image',
+        ], '', '&', PHP_QUERY_RFC3986);
     }
 
     /**
