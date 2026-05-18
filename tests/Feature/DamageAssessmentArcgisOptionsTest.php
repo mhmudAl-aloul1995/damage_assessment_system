@@ -76,3 +76,28 @@ it('falls back to local building options when arcgis returns no values', functio
             ['id' => 'Gaza', 'text' => 'Gaza'],
         ]);
 });
+
+it('returns building name options for the hud map filter', function () {
+    $this->mock(ArcgisService::class, function ($mock) {
+        $mock->shouldReceive('getToken')->once()->andReturn('fake-token');
+    });
+
+    Http::fake([
+        '*' => Http::response(['features' => []]),
+    ]);
+
+    Building::query()->create([
+        'objectid' => 102,
+        'globalid' => 'building-102',
+        'building_name' => 'Tower A',
+    ]);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.arcgis.options', ['field' => 'building_name']))
+        ->assertOk()
+        ->assertExactJson([
+            ['id' => 'Tower A', 'text' => 'Tower A'],
+        ]);
+});

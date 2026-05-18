@@ -44,11 +44,13 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('id="hudMapFilterPanel"', false)
         ->assertSee('id="hudMapFilterCount"', false)
         ->assertSee('data-field="assignedto"', false)
+        ->assertSee('id="hud_filter_building_name"', false)
         ->assertSee('data-field="field_status"', false)
         ->assertSee('data-field="building_damage_status"', false)
         ->assertSee('data-field="municipalitie"', false)
         ->assertSee('data-field="neighborhood"', false)
-        ->assertSee('const arcgisOptionsUrl', false)
+        ->assertSee("replace(/\\/hud\\/?$/, '/arcgis/options')", false)
         ->assertSee('buildHudArcgisWhere', false)
+        ->assertSee("building_name LIKE '%", false)
         ->assertSee('buildingsLayer.definitionExpression = whereExpression', false);
 });

@@ -577,6 +577,11 @@
                         </div>
 
                         <div class="hud-map-filter-field">
+                            <label for="hud_filter_building_name">اسم المبنى</label>
+                            <input type="text" id="hud_filter_building_name" class="form-control" placeholder="اسم المبنى">
+                        </div>
+
+                        <div class="hud-map-filter-field">
                             <label for="hud_filter_field_status">حالة الإستبيان</label>
                             <select id="hud_filter_field_status" class="form-select" data-field="field_status">
                                 <option value="">الكل</option>
@@ -743,7 +748,7 @@
         const buildingLayerUrl = @json($buildingLayerUrl);
         const arcgisToken = @json($token);
         const assessmentBaseUrl = @json(url('assessment'));
-        const arcgisOptionsUrl = @json(route('damageAssessment.arcgis.options', [], false));
+        const arcgisOptionsUrl = window.location.pathname.replace(/\/hud\/?$/, '/arcgis/options');
 
         require([
             'esri/Map',
@@ -929,6 +934,12 @@
                     }
                 });
 
+                const buildingNameValue = (document.getElementById('hud_filter_building_name')?.value || '').trim();
+
+                if (buildingNameValue !== '') {
+                    clauses.push("building_name LIKE '%" + escapeArcgisValue(buildingNameValue) + "%'");
+                }
+
                 const searchValue = (document.getElementById('hud_filter_search')?.value || '').trim();
 
                 if (searchValue !== '') {
@@ -1007,6 +1018,7 @@
                 document.querySelectorAll('#hudMapFilterPanel select').forEach(function (select) {
                     select.value = '';
                 });
+                document.getElementById('hud_filter_building_name').value = '';
                 document.getElementById('hud_filter_search').value = '';
                 document.getElementById('hud_filter_from_date').value = '';
                 document.getElementById('hud_filter_to_date').value = '';

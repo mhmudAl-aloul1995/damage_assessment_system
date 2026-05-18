@@ -536,6 +536,7 @@ class DamageAssessmentController extends Controller
                 'string',
                 Rule::in([
                     'assignedto',
+                    'building_name',
                     'building_damage_status',
                     'municipalitie',
                     'neighborhood',
