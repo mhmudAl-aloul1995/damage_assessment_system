@@ -322,6 +322,134 @@
             text-decoration: none;
         }
 
+        .hud-map-filter-panel {
+            background: rgba(6, 18, 36, 0.88);
+            backdrop-filter: blur(14px) saturate(160%);
+            -webkit-backdrop-filter: blur(14px) saturate(160%);
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            border-radius: 8px;
+            box-shadow: 0 0 22px rgba(0, 242, 254, 0.14), 0 18px 42px rgba(0, 0, 0, 0.4);
+            color: #ffffff;
+            inset-block-start: 92px;
+            inset-inline-start: 18px;
+            max-height: calc(100vh - 118px);
+            overflow: hidden;
+            position: fixed;
+            transition: max-height 0.22s ease, width 0.22s ease;
+            width: min(356px, calc(100vw - 36px));
+            z-index: 5;
+        }
+
+        .hud-map-filter-panel.is-collapsed {
+            max-height: 52px;
+        }
+
+        .hud-map-filter-header {
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 242, 254, 0.14);
+            cursor: pointer;
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            min-height: 52px;
+            padding: 10px 12px;
+        }
+
+        .hud-map-filter-title {
+            align-items: center;
+            color: #ffffff;
+            display: flex;
+            font-size: 0.9rem;
+            font-weight: 800;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .hud-map-filter-count {
+            background: rgba(0, 242, 254, 0.12);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            border-radius: 6px;
+            color: #8beeff;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 4px 8px;
+            white-space: nowrap;
+        }
+
+        .hud-map-filter-toggle {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            color: #ffffff;
+            display: inline-flex;
+            height: 30px;
+            justify-content: center;
+            width: 34px;
+        }
+
+        .hud-map-filter-panel.is-collapsed .hud-map-filter-toggle i {
+            transform: rotate(180deg);
+        }
+
+        .hud-map-filter-body {
+            max-height: calc(100vh - 172px);
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .hud-map-filter-field {
+            margin-bottom: 10px;
+        }
+
+        .hud-map-filter-field label {
+            color: #d8e8ff;
+            font-size: 0.76rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .hud-map-filter-panel .form-control,
+        .hud-map-filter-panel .form-select {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(174, 205, 255, 0.22);
+            border-radius: 7px;
+            color: #ffffff;
+            font-size: 0.8rem;
+            min-height: 38px;
+        }
+
+        .hud-map-filter-panel .form-control:focus,
+        .hud-map-filter-panel .form-select:focus {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(0, 242, 254, 0.7);
+            box-shadow: 0 0 0 0.16rem rgba(0, 242, 254, 0.12);
+            color: #ffffff;
+        }
+
+        .hud-map-filter-panel .form-control::placeholder {
+            color: rgba(216, 232, 255, 0.54);
+        }
+
+        .hud-map-filter-panel .form-select option {
+            background: #061224;
+            color: #ffffff;
+        }
+
+        .hud-map-filter-actions {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: 1fr 1fr;
+            padding-top: 4px;
+        }
+
+        .hud-map-filter-actions .btn {
+            border-radius: 7px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            min-height: 38px;
+        }
+
         ::-webkit-scrollbar {
             width: 4px;
         }
@@ -370,6 +498,84 @@
 
     <div id="live-gis-hud-map"></div>
     <div class="cyber-map-overlay"></div>
+
+    <aside id="hudMapFilterPanel" class="hud-map-filter-panel hud-interactive is-collapsed" aria-label="فلترة الخريطة">
+        <div id="hudMapFilterHeader" class="hud-map-filter-header">
+            <div>
+                <h2 class="hud-map-filter-title"><i class="fa-solid fa-filter"></i> فلترة الخريطة</h2>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="hud-map-filter-count">عدد النتائج: <span id="hudMapFilterCount">0</span></span>
+                <button type="button" id="hudMapFilterToggle" class="hud-map-filter-toggle" aria-label="إظهار أو إخفاء فلتر الخريطة">
+                    <i class="fa-solid fa-chevron-up"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="hud-map-filter-body">
+            <div class="hud-map-filter-field">
+                <label for="hud_filter_assignedto">المهندس الميداني</label>
+                <select id="hud_filter_assignedto" class="form-select hud-map-filter-select" data-field="assignedto">
+                    <option value="">الكل</option>
+                </select>
+            </div>
+
+            <div class="hud-map-filter-field">
+                <label for="hud_filter_field_status">حالة الإستبيان</label>
+                <select id="hud_filter_field_status" class="form-select" data-field="field_status">
+                    <option value="">الكل</option>
+                    <option value="COMPLETED">مكتمل</option>
+                    <option value="Not_Completed">غير مكتمل</option>
+                </select>
+            </div>
+
+            <div class="hud-map-filter-field">
+                <label for="hud_filter_building_damage_status">حالة الضرر</label>
+                <select id="hud_filter_building_damage_status" class="form-select hud-map-filter-select" data-field="building_damage_status">
+                    <option value="">الكل</option>
+                </select>
+            </div>
+
+            <div class="hud-map-filter-field">
+                <label for="hud_filter_municipalitie">البلدية</label>
+                <select id="hud_filter_municipalitie" class="form-select hud-map-filter-select" data-field="municipalitie">
+                    <option value="">الكل</option>
+                </select>
+            </div>
+
+            <div class="hud-map-filter-field">
+                <label for="hud_filter_neighborhood">الحي</label>
+                <select id="hud_filter_neighborhood" class="form-select hud-map-filter-select" data-field="neighborhood">
+                    <option value="">الكل</option>
+                </select>
+            </div>
+
+            <div class="hud-map-filter-field">
+                <label for="hud_filter_search">بحث ObjectID / GlobalID</label>
+                <input type="text" id="hud_filter_search" class="form-control" placeholder="ObjectID / GlobalID">
+            </div>
+
+            <div class="row g-2">
+                <div class="col-6">
+                    <div class="hud-map-filter-field">
+                        <label for="hud_filter_from_date">من تاريخ</label>
+                        <input type="date" id="hud_filter_from_date" class="form-control">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="hud-map-filter-field">
+                        <label for="hud_filter_to_date">إلى تاريخ</label>
+                        <input type="date" id="hud_filter_to_date" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <div class="hud-map-filter-actions">
+                <button type="button" id="hudMapFilterApply" class="btn btn-primary">تطبيق الفلترة</button>
+                <button type="button" id="hudMapFilterReset" class="btn btn-light">إعادة تعيين</button>
+            </div>
+        </div>
+    </aside>
 
     <div class="hud-container">
         <header class="hud-header hud-interactive">
@@ -538,6 +744,7 @@
         const buildingLayerUrl = @json($buildingLayerUrl);
         const arcgisToken = @json($token);
         const assessmentBaseUrl = @json(url('assessment'));
+        const arcgisOptionsUrl = @json(route('damageAssessment.arcgis.options', [], false));
 
         require([
             'esri/Map',
@@ -662,6 +869,226 @@
                 return wrapper;
             }
 
+            let hudArcgisDateField = null;
+
+            function escapeArcgisValue(value) {
+                return String(value).replace(/'/g, "''");
+            }
+
+            function getArcgisField(fieldName) {
+                const fields = buildingsLayer.fields || [];
+
+                return fields.find(function (field) {
+                    return String(field.name).toLowerCase() === String(fieldName).toLowerCase();
+                }) || null;
+            }
+
+            function resolveHudArcgisDateField() {
+                if (hudArcgisDateField) {
+                    return hudArcgisDateField;
+                }
+
+                hudArcgisDateField = getArcgisField('end')
+                    || getArcgisField('editdate')
+                    || getArcgisField('creationdate');
+
+                return hudArcgisDateField;
+            }
+
+            function hudArcgisFieldExpression(field) {
+                return String(field.name).toLowerCase() === 'end'
+                    ? '"' + field.name + '"'
+                    : field.name;
+            }
+
+            function hudArcgisDateExpression(field, operator, value) {
+                const fieldExpression = hudArcgisFieldExpression(field);
+
+                if (String(field.type).toLowerCase().includes('date')) {
+                    return fieldExpression + " " + operator + " TIMESTAMP '" + value + " 00:00:00'";
+                }
+
+                return fieldExpression + " " + operator + " '" + escapeArcgisValue(value) + "'";
+            }
+
+            function buildHudArcgisWhere() {
+                const clauses = [];
+                const allowedFields = [
+                    'assignedto',
+                    'field_status',
+                    'building_damage_status',
+                    'municipalitie',
+                    'neighborhood'
+                ];
+
+                allowedFields.forEach(function (field) {
+                    const element = document.querySelector('[data-field="' + field + '"]');
+                    const fieldValue = element ? element.value : '';
+
+                    if (fieldValue) {
+                        clauses.push(field + " = '" + escapeArcgisValue(fieldValue) + "'");
+                    }
+                });
+
+                const searchValue = (document.getElementById('hud_filter_search')?.value || '').trim();
+
+                if (searchValue !== '') {
+                    if (/^\d+$/.test(searchValue)) {
+                        clauses.push('objectid = ' + parseInt(searchValue, 10));
+                    } else {
+                        clauses.push("globalid LIKE '%" + escapeArcgisValue(searchValue) + "%'");
+                    }
+                }
+
+                const dateField = resolveHudArcgisDateField();
+                const fromDate = document.getElementById('hud_filter_from_date')?.value || '';
+                const toDate = document.getElementById('hud_filter_to_date')?.value || '';
+
+                if (dateField && fromDate) {
+                    clauses.push(hudArcgisDateExpression(dateField, '>=', fromDate));
+                }
+
+                if (dateField && toDate) {
+                    clauses.push(hudArcgisDateExpression(dateField, '<=', toDate));
+                }
+
+                return clauses.length ? clauses.join(' AND ') : '1=1';
+            }
+
+            function updateHudFilterCount(whereExpression) {
+                const countElement = document.getElementById('hudMapFilterCount');
+                const query = buildingsLayer.createQuery();
+                query.where = whereExpression || '1=1';
+                query.returnGeometry = false;
+
+                return buildingsLayer.queryFeatureCount(query)
+                    .then(function (count) {
+                        countElement.textContent = count.toLocaleString('en-US');
+
+                        return count;
+                    })
+                    .catch(function (error) {
+                        console.error('HUD ArcGIS count query failed:', error);
+                        countElement.textContent = '0';
+
+                        return 0;
+                    });
+            }
+
+            function applyHudMapFilters() {
+                const whereExpression = buildHudArcgisWhere();
+                const query = buildingsLayer.createQuery();
+                query.where = whereExpression;
+                query.returnGeometry = true;
+                buildingsLayer.definitionExpression = whereExpression;
+
+                Promise.all([
+                    buildingsLayer.queryFeatureCount(query),
+                    buildingsLayer.queryExtent(query)
+                ]).then(function (results) {
+                    const count = results[0];
+                    const extentResult = results[1];
+
+                    document.getElementById('hudMapFilterCount').textContent = count.toLocaleString('en-US');
+
+                    if (count > 0 && extentResult.extent) {
+                        view.goTo(extentResult.extent.expand(1.18)).catch(function (error) {
+                            if (error.name !== 'AbortError') {
+                                console.error('HUD filtered goTo failed:', error);
+                            }
+                        });
+                    }
+                }).catch(function (error) {
+                    console.error('HUD ArcGIS filter failed:', error);
+                    document.getElementById('hudMapFilterCount').textContent = '0';
+                });
+            }
+
+            function resetHudMapFilters() {
+                document.querySelectorAll('#hudMapFilterPanel select').forEach(function (select) {
+                    select.value = '';
+                });
+                document.getElementById('hud_filter_search').value = '';
+                document.getElementById('hud_filter_from_date').value = '';
+                document.getElementById('hud_filter_to_date').value = '';
+
+                buildingsLayer.definitionExpression = '1=1';
+                updateHudFilterCount('1=1');
+                view.goTo(gazaStripExtent, { duration: 900 }).catch(function (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error('HUD reset goTo failed:', error);
+                    }
+                });
+            }
+
+            function loadHudFilterSelectOptions(select) {
+                const field = select.dataset.field;
+                const url = new URL(arcgisOptionsUrl, window.location.origin);
+                url.searchParams.set('field', field);
+                select.disabled = true;
+
+                fetch(url.toString(), {
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('Options request failed with status ' + response.status);
+                        }
+
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        const options = Array.isArray(data) ? data : (data.results || []);
+                        select.innerHTML = '<option value="">الكل</option>';
+
+                        options.forEach(function (option) {
+                            const choice = document.createElement('option');
+                            choice.value = option.id;
+                            choice.textContent = option.text;
+                            select.appendChild(choice);
+                        });
+                    })
+                    .catch(function (error) {
+                        console.error('HUD ArcGIS options failed for ' + field + ':', error);
+                    })
+                    .finally(function () {
+                        select.disabled = false;
+                    });
+            }
+
+            function initializeHudMapFilters() {
+                const panel = document.getElementById('hudMapFilterPanel');
+                const header = document.getElementById('hudMapFilterHeader');
+                const toggle = document.getElementById('hudMapFilterToggle');
+
+                document.querySelectorAll('.hud-map-filter-select').forEach(loadHudFilterSelectOptions);
+                document.getElementById('hudMapFilterApply').addEventListener('click', applyHudMapFilters);
+                document.getElementById('hudMapFilterReset').addEventListener('click', resetHudMapFilters);
+
+                header.addEventListener('click', function (event) {
+                    if (!event.target.closest('select, input, button')) {
+                        panel.classList.toggle('is-collapsed');
+                    }
+                });
+
+                toggle.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    panel.classList.toggle('is-collapsed');
+                });
+
+                buildingsLayer.load()
+                    .then(function () {
+                        return updateHudFilterCount(buildingsLayer.definitionExpression || '1=1');
+                    })
+                    .catch(function (error) {
+                        console.error('HUD filter initialization failed:', error);
+                    });
+            }
+
             const buildingsLayer = new FeatureLayer({
                 url: buildingLayerUrl,
                 renderer: damageRenderer,
@@ -713,6 +1140,7 @@
 
             view.when(function () {
                 view.goTo(gazaStripExtent, { duration: 1200 }).catch(function () {});
+                initializeHudMapFilters();
             });
         });
 
