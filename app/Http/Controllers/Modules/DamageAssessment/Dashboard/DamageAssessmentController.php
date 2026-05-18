@@ -247,17 +247,39 @@ class DamageAssessmentController extends Controller
             ->get()
             ->keyBy('governorate_name');
 
+        $buildingNeighborhoodsByGovernorate = Building::query()
+            ->selectRaw("COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name, neighborhood")
+            ->whereNotNull('neighborhood')
+            ->where('neighborhood', '!=', '')
+            ->get()
+            ->groupBy('governorate_name')
+            ->map(fn (Collection $rows): array => $rows->pluck('neighborhood')->unique()->sort()->values()->all());
+
+        $unitNeighborhoodsByGovernorate = HousingUnit::query()
+            ->selectRaw("COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name, neighborhood")
+            ->whereNotNull('neighborhood')
+            ->where('neighborhood', '!=', '')
+            ->get()
+            ->groupBy('governorate_name')
+            ->map(fn (Collection $rows): array => $rows->pluck('neighborhood')->unique()->sort()->values()->all());
+
         $governorateRows = $buildingGovernorates
             ->keys()
             ->merge($unitGovernorates->keys())
             ->unique()
             ->sort()
-            ->map(function (string $governorateName) use ($buildingGovernorates, $unitGovernorates): array {
+            ->map(function (string $governorateName) use ($buildingGovernorates, $buildingNeighborhoodsByGovernorate, $unitGovernorates, $unitNeighborhoodsByGovernorate): array {
                 $buildingRow = $buildingGovernorates->get($governorateName);
                 $unitRow = $unitGovernorates->get($governorateName);
+                $neighborhoods = collect($buildingNeighborhoodsByGovernorate->get($governorateName, []))
+                    ->merge($unitNeighborhoodsByGovernorate->get($governorateName, []))
+                    ->unique()
+                    ->sort()
+                    ->values();
 
                 return [
                     'name' => $governorateName,
+                    'neighborhoods' => $neighborhoods->implode('، '),
                     'assessed' => (int) ($buildingRow->assessed_buildings ?? 0),
                     'units' => (int) ($unitRow->units ?? 0),
                     'destroyed' => (int) ($unitRow->destroyed_units ?? $buildingRow->destroyed_buildings ?? 0),

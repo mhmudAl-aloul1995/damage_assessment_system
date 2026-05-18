@@ -339,6 +339,7 @@
                             <thead>
                                 <tr>
                                     <th class="text-start">المحافظة</th>
+                                    <th class="text-start">الأحياء</th>
                                     <th>مقيّم</th>
                                     <th>وحدات</th>
                                     <th>مدمر</th>
@@ -348,13 +349,14 @@
                                 @forelse ($governorateRows as $row)
                                     <tr>
                                         <td class="text-start fw-bold text-info">{{ $row['name'] }}</td>
+                                        <td class="text-start text-white-50">{{ $row['neighborhoods'] !== '' ? $row['neighborhoods'] : '-' }}</td>
                                         <td>{{ $formatNumber($row['assessed']) }}</td>
                                         <td>{{ $formatNumber($row['units']) }}</td>
                                         <td class="text-danger fw-bold">{{ $formatNumber($row['destroyed']) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-white-50 py-4">لا توجد بيانات محافظات حالياً</td>
+                                        <td colspan="5" class="text-white-50 py-4">لا توجد بيانات محافظات حالياً</td>
                                     </tr>
                                 @endforelse
                             </tbody>
