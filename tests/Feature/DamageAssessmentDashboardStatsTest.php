@@ -295,6 +295,7 @@ it('renders the live hud dashboard from database statistics', function () {
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
         'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza Municipality',
         'neighborhood' => 'Rimal',
         'building_debris_qty' => '120.5',
         'latitude' => 31.52,
@@ -308,6 +309,7 @@ it('renders the live hud dashboard from database statistics', function () {
         'field_status' => 'Not_Completed',
         'building_damage_status' => 'partially_damaged',
         'governorate' => 'North Gaza',
+        'municipalitie' => 'North Municipality',
         'neighborhood' => 'Jabalia',
         'building_debris_qty' => '30',
     ]);
@@ -320,6 +322,7 @@ it('renders the live hud dashboard from database statistics', function () {
         'unit_support_needed' => 'yes',
         'is_the_housing_unit_or_living_habitable' => 'no',
         'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza Municipality',
         'neighborhood' => 'Rimal',
     ]);
 
@@ -331,6 +334,7 @@ it('renders the live hud dashboard from database statistics', function () {
         'unit_support_needed' => 'no',
         'is_the_housing_unit_or_living_habitable' => 'yes',
         'governorate' => 'North Gaza',
+        'municipalitie' => 'North Municipality',
         'neighborhood' => 'Jabalia',
     ]);
 
@@ -342,10 +346,11 @@ it('renders the live hud dashboard from database statistics', function () {
         ->assertSee('المباني المقيّمة ميدانياً')
         ->assertSee('وحدات مدمرة كلياً')
         ->assertSee('HUD Building A')
-        ->assertSee('الأحياء')
+        ->assertSee('تقارير البلديات والأحياء')
+        ->assertSee('Gaza Municipality')
+        ->assertSee('North Municipality')
         ->assertSee('Rimal')
         ->assertSee('Jabalia')
-        ->assertSee('Gaza')
-        ->assertSee('North Gaza')
+        ->assertSee('municipalityChart0')
         ->assertSee('data: [1,1,0,0]', false);
 });

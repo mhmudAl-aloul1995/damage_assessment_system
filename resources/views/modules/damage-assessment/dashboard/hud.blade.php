@@ -228,6 +228,12 @@
             padding: 0 10px 10px;
         }
 
+        .municipality-chart-wrap {
+            height: 130px;
+            margin: 10px 0;
+            position: relative;
+        }
+
         .leaflet-popup-content-wrapper,
         .leaflet-popup-tip {
             background: rgba(6, 18, 36, 0.92);
@@ -378,9 +384,9 @@
 
             <div class="hud-sidebar hud-interactive">
                 <div class="card-hud-glass" style="flex: 1; display: flex; flex-direction: column;">
-                    <div class="hud-section-title"><i class="fa-solid fa-globe"></i> تقارير المحافظات والأحياء</div>
+                    <div class="hud-section-title"><i class="fa-solid fa-globe"></i> تقارير البلديات والأحياء</div>
                     <div style="flex: 1; overflow-y: auto;">
-                        @forelse ($governorateReports as $report)
+                        @forelse ($municipalityReports as $report)
                             <section class="governorate-report">
                                 <div class="governorate-report-header">
                                     <div class="governorate-report-name">{{ $report['name'] }}</div>
@@ -399,6 +405,10 @@
                                 </div>
 
                                 <div class="governorate-report-body">
+                                    <div class="municipality-chart-wrap">
+                                        <canvas id="municipalityChart{{ $loop->index }}"></canvas>
+                                    </div>
+
                                     <table class="table table-sm table-cyber align-middle mb-0 text-center">
                                         <thead>
                                             <tr>
@@ -426,7 +436,7 @@
                                 </div>
                             </section>
                         @empty
-                            <div class="text-center text-white-50 py-4">لا توجد بيانات محافظات حالياً</div>
+                            <div class="text-center text-white-50 py-4">لا توجد بيانات بلديات حالياً</div>
                         @endforelse
                     </div>
                     <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
@@ -443,6 +453,7 @@
 
     <script>
         const mapPoints = @json($mapPoints);
+        const municipalityReports = @json($municipalityReports);
         const map = L.map('live-gis-hud-map', {
             zoomControl: false,
             attributionControl: false
@@ -504,6 +515,45 @@
                 },
                 cutout: '75%'
             }
+        });
+
+        municipalityReports.forEach((report, index) => {
+            const canvas = document.getElementById(`municipalityChart${index}`);
+
+            if (!canvas) {
+                return;
+            }
+
+            new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['مدمر', 'جزئي', 'لجنة', 'غير مصنف'],
+                    datasets: [{
+                        data: report.chart,
+                        backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#00ff87'],
+                        borderWidth: 0,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#8fa0b7', font: { family: 'Cairo', size: 10 } },
+                            grid: { color: 'rgba(255,255,255,0.04)' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#8fa0b7', precision: 0, font: { family: 'Orbitron', size: 9 } },
+                            grid: { color: 'rgba(255,255,255,0.06)' }
+                        }
+                    }
+                }
+            });
         });
     </script>
 </body>

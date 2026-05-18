@@ -227,62 +227,67 @@ class DamageAssessmentController extends Controller
             ")
             ->first();
 
-        $buildingGovernorates = Building::query()
+        $buildingMunicipalities = Building::query()
             ->selectRaw("
-                COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name,
+                COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
                 COUNT(*) as assessed_buildings,
-                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings
+                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings
             ")
-            ->groupBy('governorate_name')
+            ->groupBy('municipality_name')
             ->get()
-            ->keyBy('governorate_name');
+            ->keyBy('municipality_name');
 
-        $unitGovernorates = HousingUnit::query()
+        $unitMunicipalities = HousingUnit::query()
             ->selectRaw("
-                COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name,
+                COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
                 COUNT(*) as units,
-                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END), 0) as partially_damaged_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'committee_review2' THEN 1 ELSE 0 END), 0) as committee_review_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status IS NULL OR unit_damage_status = '' THEN 1 ELSE 0 END), 0) as unclassified_units
             ")
-            ->groupBy('governorate_name')
+            ->groupBy('municipality_name')
             ->get()
-            ->keyBy('governorate_name');
+            ->keyBy('municipality_name');
 
-        $buildingNeighborhoodStats = Building::query()
+        $buildingMunicipalityNeighborhoodStats = Building::query()
             ->selectRaw("
-                COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name,
+                COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
                 COALESCE(NULLIF(neighborhood, ''), 'غير محدد') as neighborhood_name,
                 COUNT(*) as assessed_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings
             ")
-            ->groupBy('governorate_name', 'neighborhood_name')
+            ->groupBy('municipality_name', 'neighborhood_name')
             ->get()
-            ->groupBy('governorate_name')
+            ->groupBy('municipality_name')
             ->map(fn (Collection $rows): Collection => $rows->keyBy('neighborhood_name'));
 
-        $unitNeighborhoodStats = HousingUnit::query()
+        $unitMunicipalityNeighborhoodStats = HousingUnit::query()
             ->selectRaw("
-                COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name,
+                COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
                 COALESCE(NULLIF(neighborhood, ''), 'غير محدد') as neighborhood_name,
                 COUNT(*) as units,
                 COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units
             ")
-            ->groupBy('governorate_name', 'neighborhood_name')
+            ->groupBy('municipality_name', 'neighborhood_name')
             ->get()
-            ->groupBy('governorate_name')
+            ->groupBy('municipality_name')
             ->map(fn (Collection $rows): Collection => $rows->keyBy('neighborhood_name'));
 
-        $governorateReports = $buildingGovernorates
+        $municipalityReports = $buildingMunicipalities
             ->keys()
-            ->merge($unitGovernorates->keys())
-            ->merge($buildingNeighborhoodStats->keys())
-            ->merge($unitNeighborhoodStats->keys())
+            ->merge($unitMunicipalities->keys())
+            ->merge($buildingMunicipalityNeighborhoodStats->keys())
+            ->merge($unitMunicipalityNeighborhoodStats->keys())
             ->unique()
             ->sort()
-            ->map(function (string $governorateName) use ($buildingGovernorates, $buildingNeighborhoodStats, $unitGovernorates, $unitNeighborhoodStats): array {
-                $buildingRow = $buildingGovernorates->get($governorateName);
-                $unitRow = $unitGovernorates->get($governorateName);
-                $buildingNeighborhoodRows = $buildingNeighborhoodStats->get($governorateName, collect());
-                $unitNeighborhoodRows = $unitNeighborhoodStats->get($governorateName, collect());
+            ->map(function (string $municipalityName) use ($buildingMunicipalities, $buildingMunicipalityNeighborhoodStats, $unitMunicipalities, $unitMunicipalityNeighborhoodStats): array {
+                $buildingRow = $buildingMunicipalities->get($municipalityName);
+                $unitRow = $unitMunicipalities->get($municipalityName);
+                $buildingNeighborhoodRows = $buildingMunicipalityNeighborhoodStats->get($municipalityName, collect());
+                $unitNeighborhoodRows = $unitMunicipalityNeighborhoodStats->get($municipalityName, collect());
 
                 $neighborhoodRows = $buildingNeighborhoodRows
                     ->keys()
@@ -303,11 +308,17 @@ class DamageAssessmentController extends Controller
                     ->values();
 
                 return [
-                    'name' => $governorateName,
+                    'name' => $municipalityName,
                     'summary' => [
                         'assessed' => (int) ($buildingRow->assessed_buildings ?? 0),
                         'units' => (int) ($unitRow->units ?? 0),
                         'destroyed' => (int) ($unitRow->destroyed_units ?? $buildingRow->destroyed_buildings ?? 0),
+                    ],
+                    'chart' => [
+                        (int) ($unitRow->destroyed_units ?? $buildingRow->destroyed_buildings ?? 0),
+                        (int) ($unitRow->partially_damaged_units ?? $buildingRow->partially_damaged_buildings ?? 0),
+                        (int) ($unitRow->committee_review_units ?? $buildingRow->committee_review_buildings ?? 0),
+                        (int) ($unitRow->unclassified_units ?? 0),
                     ],
                     'neighborhoods' => $neighborhoodRows,
                 ];
@@ -351,7 +362,7 @@ class DamageAssessmentController extends Controller
                 ],
             ],
             'safetyStats' => $safetyStats,
-            'governorateReports' => $governorateReports,
+            'municipalityReports' => $municipalityReports,
             'mapPoints' => $mapPoints,
         ]);
     }
