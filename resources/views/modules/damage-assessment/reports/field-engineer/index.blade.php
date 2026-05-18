@@ -198,6 +198,15 @@
 
                             <div class="col-md-4">
                                 <label
+                                    class="form-label">{{ __('multilingual.field_engineer_report.filters.building_objectid') }}</label>
+                                <input type="number" name="building_objectid" min="1"
+                                    value="{{ $filters['building_objectid'] }}"
+                                    placeholder="{{ __('multilingual.field_engineer_report.filters.building_objectid') }}"
+                                    class="form-control form-control-solid">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label
                                     class="form-label">{{ __('multilingual.field_engineer_report.filters.municipalitie') }}</label>
                                 <select name="municipalitie" class="form-select form-select-solid report-select2"
                                     data-placeholder="{{ __('multilingual.field_engineer_report.select_placeholder') }}">

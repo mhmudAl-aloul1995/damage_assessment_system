@@ -15,6 +15,7 @@ class FieldEngineerReportFilterRequest extends FormRequest
     {
         return [
             'assignedto' => ['nullable', 'string', 'max:255'],
+            'building_objectid' => ['nullable', 'integer', 'min:1'],
             'municipalitie' => ['nullable', 'string', 'max:255'],
             'neighborhood' => ['nullable', 'string', 'max:255'],
             'building_damage_status' => ['nullable', 'string', 'max:255'],

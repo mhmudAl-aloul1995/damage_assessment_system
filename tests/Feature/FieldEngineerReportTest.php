@@ -207,6 +207,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
 
     $query = [
         'assignedto' => 'Engineer One',
+        'building_objectid' => '5001',
         'municipalitie' => 'Gaza',
         'from_date' => '2026-04-01',
         'to_date' => '2026-04-30',
@@ -218,6 +219,8 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ->assertOk()
         ->assertSee(__('multilingual.field_engineer_report.title'), false)
         ->assertSee('Engineer One', false)
+        ->assertSee('name="building_objectid"', false)
+        ->assertSee('value="5001"', false)
         ->assertSee('name="from_date"', false)
         ->assertDontSee('name="from_date "', false)
         ->assertSee(__('multilingual.field_engineer_report.tabs.buildings'), false)

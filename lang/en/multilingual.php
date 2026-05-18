@@ -182,6 +182,7 @@ return [
         ],
         'filters' => [
             'assignedto' => 'Field Engineer',
+            'building_objectid' => 'Building ObjectID',
             'municipalitie' => 'Municipality',
             'neighborhood' => 'Neighborhood',
             'building_damage_status' => 'Building Damage Status',

@@ -72,6 +72,7 @@ class FieldEngineerReportService
     {
         return [
             'assignedto' => $this->normalizeString($validated['assignedto'] ?? null),
+            'building_objectid' => $this->normalizeString($validated['building_objectid'] ?? null),
             'municipalitie' => $this->normalizeString($validated['municipalitie'] ?? null),
             'neighborhood' => $this->normalizeString($validated['neighborhood'] ?? null),
             'building_damage_status' => $this->normalizeString($validated['building_damage_status'] ?? null),
@@ -968,6 +969,10 @@ class FieldEngineerReportService
             $query->where('buildings.assignedto', $filters['assignedto']);
         }
 
+        if ($filters['building_objectid']) {
+            $query->where('buildings.objectid', (int) $filters['building_objectid']);
+        }
+
         if ($filters['from_date']) {
             $query->whereDate($dateColumn, '>=', $filters['from_date']);
         }
@@ -1058,6 +1063,10 @@ class FieldEngineerReportService
             $query->where('buildings.assignedto', $filters['assignedto']);
         }
 
+        if ($filters['building_objectid']) {
+            $query->where('buildings.objectid', (int) $filters['building_objectid']);
+        }
+
         if ($filters['from_date']) {
             $query->whereDate($dateColumn, '>=', $filters['from_date']);
         }
@@ -1116,6 +1125,10 @@ class FieldEngineerReportService
 
         if ($filters['assignedto']) {
             $query->where("{$buildingTable}.assignedto", $filters['assignedto']);
+        }
+
+        if ($filters['building_objectid']) {
+            $query->where("{$buildingTable}.objectid", (int) $filters['building_objectid']);
         }
 
         if ($filters['municipalitie']) {
@@ -1182,6 +1195,10 @@ class FieldEngineerReportService
     {
         if ($filters['assignedto']) {
             $query->where('buildings.assignedto', $filters['assignedto']);
+        }
+
+        if ($filters['building_objectid']) {
+            $query->where('buildings.objectid', (int) $filters['building_objectid']);
         }
 
         if ($filters['municipalitie']) {

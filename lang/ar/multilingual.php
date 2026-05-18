@@ -182,6 +182,7 @@ return [
         ],
         'filters' => [
             'assignedto' => 'المهندس الميداني',
+            'building_objectid' => 'رقم المبنى ObjectID',
             'municipalitie' => 'البلدية',
             'neighborhood' => 'الحي',
             'building_damage_status' => 'حالة ضرر المبنى',
