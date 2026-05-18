@@ -7,6 +7,7 @@ use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
 use App\Models\EditAssessment;
+use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -56,12 +57,20 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'order_step' => 3,
     ]);
 
+    $engineerRejected = AssessmentStatus::query()->create([
+        'name' => 'rejected_by_engineer',
+        'label_en' => 'Rejected',
+        'label_ar' => 'Rejected',
+        'stage' => 'engineer',
+        'order_step' => 4,
+    ]);
+
     $latestBuildingStatus = AssessmentStatus::query()->create([
         'name' => 'field_reviewed',
         'label_en' => 'Field Reviewed',
         'label_ar' => 'Field Reviewed',
         'stage' => 'engineer',
-        'order_step' => 4,
+        'order_step' => 5,
     ]);
 
     $building = Building::query()->create([
@@ -112,6 +121,28 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'unit_damage_status' => 'major_damage',
         'occupied' => 'vacant',
         'creationdate' => '2026-04-21 11:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9003,
+        'globalid' => 'housing-field-engineer-3',
+        'parentglobalid' => $building->globalid,
+        'housing_unit_type' => 'residential',
+        'unit_damage_status' => 'major_damage',
+        'occupied' => 'occupied',
+        'building_submit_date' => '2026-04-24 12:15:00',
+        'creationdate' => '2026-04-24 11:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9004,
+        'globalid' => 'housing-field-engineer-4',
+        'parentglobalid' => $building->globalid,
+        'housing_unit_type' => 'residential',
+        'unit_damage_status' => 'major_damage',
+        'occupied' => 'occupied',
+        'building_submit_date' => '2026-04-25 12:15:00',
+        'creationdate' => '2026-04-25 11:00:00',
     ]);
 
     EditAssessment::query()->create([
@@ -184,6 +215,36 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'notes' => 'Building history',
         'created_at' => '2026-04-22 08:00:00',
         'updated_at' => '2026-04-22 08:00:00',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $housingUnit->objectid,
+        'status_id' => $engineerAccepted->id,
+        'type' => 'QC/QA Engineer',
+        'user_id' => $user->id,
+        'notes' => 'Accepted housing unit',
+        'created_at' => '2026-04-22 09:00:00',
+        'updated_at' => '2026-04-22 09:00:00',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => 9003,
+        'status_id' => $engineerRejected->id,
+        'type' => 'QC/QA Engineer',
+        'user_id' => $user->id,
+        'notes' => 'Rejected housing unit',
+        'created_at' => '2026-04-24 09:00:00',
+        'updated_at' => '2026-04-24 09:00:00',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => 9004,
+        'status_id' => $finalNeedReview->id,
+        'type' => 'QC/QA Engineer',
+        'user_id' => $user->id,
+        'notes' => 'Needs review housing unit',
+        'created_at' => '2026-04-25 09:00:00',
+        'updated_at' => '2026-04-25 09:00:00',
     ]);
 
     HousingStatusHistory::query()->create([
@@ -285,6 +346,14 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ->assertJsonMissing([
             'objectid' => 9002,
         ]);
+
+    $this->actingAs($user)
+        ->getJson(route('reports.field-engineer.stats', $query))
+        ->assertOk()
+        ->assertJsonPath('summary.audited_housing_units', 3)
+        ->assertJsonPath('summary.accepted_statuses', 1)
+        ->assertJsonPath('summary.rejected_statuses', 1)
+        ->assertJsonPath('summary.need_review_statuses', 1);
 
     $this->actingAs($user)
         ->getJson(route('reports.field-engineer.stats', array_merge($query, [

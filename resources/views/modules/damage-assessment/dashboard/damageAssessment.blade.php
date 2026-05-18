@@ -2253,7 +2253,7 @@
 				// ADD THESE TWO LINES:
 				minScale: 0, // Keeps it visible when zooming out
 				maxScale: 0, // Keeps it visible when zooming in (Fixes the Legend)
-				definitionExpression: dashboardLayerDefinition(getDashboardToolbarFilters(), 'editdate'),
+				definitionExpression: dashboardLayerDefinition(getDashboardToolbarFilters(), 'end'),
 				labelingInfo: [{
 					symbol: {
 						type: "text",
@@ -2396,7 +2396,9 @@
 					return arcgisDateField;
 				}
 
-				if (hasArcgisField('creationdate')) {
+				if (hasArcgisField('end')) {
+					arcgisDateField = 'end';
+				} else if (hasArcgisField('creationdate')) {
 					arcgisDateField = 'creationdate';
 				} else if (hasArcgisField('editdate')) {
 					arcgisDateField = 'editdate';
@@ -2454,7 +2456,7 @@
 			}
 
 			function combinedArcgisWhere(toolbarFilters) {
-				const dashboardWhere = dashboardLayerDefinition(toolbarFilters || getDashboardToolbarFilters(), 'editdate');
+				const dashboardWhere = dashboardLayerDefinition(toolbarFilters || getDashboardToolbarFilters(), 'end');
 				const clauses = [];
 
 				if (dashboardWhere && dashboardWhere !== '1=1') {

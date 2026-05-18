@@ -3,6 +3,7 @@
 use App\Models\Building;
 use App\Models\HousingUnit;
 use App\Models\User;
+use Spatie\Permission\Models\Role;
 
 it('updates legal challenges for selected audit buildings', function () {
     $user = User::factory()->create();
@@ -87,5 +88,77 @@ it('rejects unknown legal challenge values', function () {
     $this->assertDatabaseMissing('buildings', [
         'objectid' => $building->objectid,
         'legal_challenge' => 'قيمة عربية لا تحفظ',
+    ]);
+});
+
+it('hides legal challenge actions from auditing engineers and shows them to other users', function () {
+    $engineerRole = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $legalRole = Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $engineer = User::factory()->create();
+    $engineer->assignRole($engineerRole);
+
+    $legalAuditor = User::factory()->create();
+    $legalAuditor->assignRole($legalRole);
+
+    $building = Building::query()->create([
+        'objectid' => 9401,
+        'globalid' => 'legal-challenge-visible-building',
+    ]);
+
+    $this->actingAs($engineer)
+        ->get(route('audit.auditBuilding'))
+        ->assertOk()
+        ->assertDontSee('id="btn_legal_challenge"', false);
+
+    $this->actingAs($engineer)
+        ->get("showAssessmentAudit/{$building->globalid}")
+        ->assertOk()
+        ->assertDontSee("openLegalChallengeModal('building')", false)
+        ->assertDontSee("openLegalChallengeModal('housing')", false);
+
+    $this->actingAs($legalAuditor)
+        ->get(route('audit.auditBuilding'))
+        ->assertOk()
+        ->assertSee('id="btn_legal_challenge"', false);
+
+    $this->actingAs($legalAuditor)
+        ->get("showAssessmentAudit/{$building->globalid}")
+        ->assertOk()
+        ->assertSee("openLegalChallengeModal('building')", false)
+        ->assertSee("openLegalChallengeModal('housing')", false);
+});
+
+it('forbids auditing engineers from updating legal challenges directly', function () {
+    $role = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $engineer = User::factory()->create();
+    $engineer->assignRole($role);
+
+    $building = Building::query()->create([
+        'objectid' => 9501,
+        'globalid' => 'legal-challenge-forbidden-building',
+    ]);
+
+    $this->actingAs($engineer)
+        ->postJson(route('audit.building.legalChallenge'), [
+            'building_ids' => [$building->objectid],
+            'legal_challenge' => 'missing_legal_documents',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('buildings', [
+        'objectid' => $building->objectid,
+        'legal_challenge' => 'missing_legal_documents',
     ]);
 });

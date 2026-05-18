@@ -13,6 +13,7 @@
         ['key' => 'damaged_housing_units', 'class' => 'warning'],
         ['key' => 'building_edits', 'class' => 'success'],
         ['key' => 'housing_edits', 'class' => 'dark'],
+        ['key' => 'audited_housing_units', 'class' => 'primary'],
         ['key' => 'accepted_statuses', 'class' => 'success'],
         ['key' => 'rejected_statuses', 'class' => 'danger'],
         ['key' => 'need_review_statuses', 'class' => 'warning'],

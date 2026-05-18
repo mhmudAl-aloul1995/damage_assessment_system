@@ -9,7 +9,7 @@ class UpdateBuildingLegalChallengeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check();
+        return auth()->check() && ! auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']);
     }
 
     public function rules(): array

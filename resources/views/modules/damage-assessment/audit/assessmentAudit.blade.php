@@ -486,6 +486,12 @@
             <div class="card-title">
                 <h2>الإستبيان</h2>
             </div>
+            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
+                <div class="card-toolbar">
+                    <button type="button" class="btn btn-sm btn-light-warning"
+                        onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
+                </div>
+            @endunless
         </div>
 
         <div class="card-body">
@@ -596,8 +602,10 @@
                                                 onclick="openNotesModal('building','history')">ملاحظات</button>
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
+                                            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
                                             <button type="button" class="btn btn-sm btn-light-warning"
                                                 onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
+                                            @endunless
                                             <button type="button" class="btn btn-sm btn-light-primary ms-3"
                                                 onclick="reloadBuildingAssessmentTable()">تحديث</button>
 
@@ -629,6 +637,12 @@
                                 <h3 class="fw-bold mb-0">وحدات المبنى</h3>
                             </div>
                             <div class="card-toolbar">
+                                @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
+                                    <button type="button" class="btn btn-sm btn-light-warning me-2"
+                                        onclick="openLegalChallengeModal('housing')">
+                                        التحديات القانونية
+                                    </button>
+                                @endunless
                                 <button type="button" class="btn btn-sm btn-light-primary"
                                     onclick="reloadBuildingUnitsTable()">
                                     <i class="ki-duotone ki-arrows-circle fs-6"><span class="path1"></span><span
@@ -815,8 +829,10 @@
                                                 onclick="openNotesModal('housing','history')">ملاحظات</button>
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
+                                            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
                                             <button type="button" class="btn btn-sm btn-light-warning"
                                                 onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
+                                            @endunless
                                             <button type="button" class="btn btn-sm btn-light-primary"
                                                 onclick="reloadHousingAssessmentTable();">
                                                 <i class="ki-duotone ki-arrows-circle fs-6">

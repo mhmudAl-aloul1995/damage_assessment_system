@@ -161,3 +161,19 @@ it('wires the homepage map assessment status filter and reset extent', function 
         ->assertSee('const gazaStripExtent = new Extent({', false)
         ->assertSee('view.goTo(gazaStripExtent)', false);
 });
+
+it('wires the homepage building map date filters to the buildings end field', function () {
+    $this->mock(ArcgisService::class, function ($mock) {
+        $mock->shouldReceive('getToken')->andReturn('fake-token');
+    });
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee("dashboardLayerDefinition(getDashboardToolbarFilters(), 'end')", false)
+        ->assertSee("dashboardLayerDefinition(toolbarFilters || getDashboardToolbarFilters(), 'end')", false)
+        ->assertSee("if (hasArcgisField('end'))", false)
+        ->assertSee("arcgisDateField = 'end';", false);
+});

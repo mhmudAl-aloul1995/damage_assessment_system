@@ -129,9 +129,11 @@
                                 </i>
                                 {{ __('ui.audit.refresh') }}
                             </button>
-                            <button type="button" class="btn btn-sm btn-light-warning" id="btn_legal_challenge">
-                                التحديات القانونية
-                            </button>
+                            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
+                                <button type="button" class="btn btn-sm btn-light-warning" id="btn_legal_challenge">
+                                    التحديات القانونية
+                                </button>
+                            @endunless
                         </div>
                     </div>
                 </div>

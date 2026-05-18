@@ -102,7 +102,7 @@ class FieldEngineerReportService
             return $this->emptySummary();
         }
 
-        $cacheKey = 'field-engineer-report:summary:end-date-v1:'.md5(json_encode($filters));
+        $cacheKey = 'field-engineer-report:summary:housing-audit-v2:'.md5(json_encode($filters));
 
         return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($filters) {
             return $this->calculateSummary($filters);
@@ -145,25 +145,11 @@ class FieldEngineerReportService
             ->join('buildings', 'buildings.id', '=', 'filtered_buildings.id')
             ->max(DB::raw('COALESCE(buildings.editdate, buildings.creationdate)'));
 
-        $finalStatusesBase = DB::query()
-            ->fromSub($buildingIdentifiersQuery, 'filtered_buildings')
-            ->joinSub($this->buildingStatusSubquery(null, 'team_leader', 'final'), 'final_statuses', fn ($join) => $join->on('final_statuses.building_id', '=', 'filtered_buildings.objectid'));
-
-        $acceptedStatuses = (clone $finalStatusesBase)
-            ->where('final_statuses.status_name', 'like', '%accept%')
-            ->count();
-
-        $rejectedStatuses = (clone $finalStatusesBase)
-            ->where('final_statuses.status_name', 'like', '%reject%')
-            ->count();
-
-        $needReviewStatuses = (clone $finalStatusesBase)
-            ->where('final_statuses.status_name', 'need_review')
-            ->count();
-
         $totalHousingUnits = DB::query()
             ->fromSub($housingIdentifiersQuery, 'filtered_housing_units')
             ->count();
+
+        $housingAuditStats = $this->engineeringHousingAuditStats($housingIdentifiersQuery);
 
         $damagedHousingUnits = DB::query()
             ->fromSub($housingIdentifiersQuery, 'filtered_housing_units')
@@ -198,9 +184,10 @@ class FieldEngineerReportService
             'damaged_housing_units' => $damagedHousingUnits,
             'building_edits' => $buildingEdits,
             'housing_edits' => $housingEdits,
-            'accepted_statuses' => $acceptedStatuses,
-            'rejected_statuses' => $rejectedStatuses,
-            'need_review_statuses' => $needReviewStatuses,
+            'audited_housing_units' => $housingAuditStats['audited_housing_units'],
+            'accepted_statuses' => $housingAuditStats['accepted_statuses'],
+            'rejected_statuses' => $housingAuditStats['rejected_statuses'],
+            'need_review_statuses' => $housingAuditStats['need_review_statuses'],
             'last_updated_at' => $lastUpdatedAt,
             'completion_rate' => $totalBuildings > 0 ? round(($completedBuildings / $totalBuildings) * 100, 1) : 0.0,
             'completed_buildings' => $completedBuildings,
@@ -217,6 +204,7 @@ class FieldEngineerReportService
             'damaged_housing_units' => 0,
             'building_edits' => 0,
             'housing_edits' => 0,
+            'audited_housing_units' => 0,
             'accepted_statuses' => 0,
             'rejected_statuses' => 0,
             'need_review_statuses' => 0,
@@ -1000,6 +988,37 @@ class FieldEngineerReportService
         return $rows
             ->sortBy(fn ($row) => $positions[$resolver($row)] ?? PHP_INT_MAX)
             ->values();
+    }
+
+    /**
+     * @return array{audited_housing_units: int, accepted_statuses: int, rejected_statuses: int, need_review_statuses: int}
+     */
+    private function engineeringHousingAuditStats(Builder $housingIdentifiersQuery): array
+    {
+        $auditedStatusNames = [
+            'accepted_by_engineer',
+            'rejected_by_engineer',
+            'need_review',
+        ];
+
+        $baseQuery = fn (): Builder => DB::query()
+            ->fromSub(clone $housingIdentifiersQuery, 'filtered_housing_units')
+            ->join('housing_statuses', 'housing_statuses.housing_id', '=', 'filtered_housing_units.objectid')
+            ->join('assessment_statuses', 'assessment_statuses.id', '=', 'housing_statuses.status_id')
+            ->where('housing_statuses.type', 'QC/QA Engineer')
+            ->whereIn('assessment_statuses.name', $auditedStatusNames);
+
+        $statusCounts = $baseQuery()
+            ->selectRaw('assessment_statuses.name as status_name, COUNT(DISTINCT housing_statuses.housing_id) as total')
+            ->groupBy('assessment_statuses.name')
+            ->pluck('total', 'status_name');
+
+        return [
+            'audited_housing_units' => (int) $baseQuery()->distinct('housing_statuses.housing_id')->count('housing_statuses.housing_id'),
+            'accepted_statuses' => (int) ($statusCounts['accepted_by_engineer'] ?? 0),
+            'rejected_statuses' => (int) ($statusCounts['rejected_by_engineer'] ?? 0),
+            'need_review_statuses' => (int) ($statusCounts['need_review'] ?? 0),
+        ];
     }
 
     private function filteredHousingIdentifiersQuery(array $filters, string $dateColumn = 'housing_units.building_submit_date'): Builder
