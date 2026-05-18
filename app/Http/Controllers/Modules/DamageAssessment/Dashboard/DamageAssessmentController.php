@@ -247,42 +247,69 @@ class DamageAssessmentController extends Controller
             ->get()
             ->keyBy('governorate_name');
 
-        $buildingNeighborhoodsByGovernorate = Building::query()
-            ->selectRaw("COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name, neighborhood")
-            ->whereNotNull('neighborhood')
-            ->where('neighborhood', '!=', '')
+        $buildingNeighborhoodStats = Building::query()
+            ->selectRaw("
+                COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name,
+                COALESCE(NULLIF(neighborhood, ''), 'غير محدد') as neighborhood_name,
+                COUNT(*) as assessed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings
+            ")
+            ->groupBy('governorate_name', 'neighborhood_name')
             ->get()
             ->groupBy('governorate_name')
-            ->map(fn (Collection $rows): array => $rows->pluck('neighborhood')->unique()->sort()->values()->all());
+            ->map(fn (Collection $rows): Collection => $rows->keyBy('neighborhood_name'));
 
-        $unitNeighborhoodsByGovernorate = HousingUnit::query()
-            ->selectRaw("COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name, neighborhood")
-            ->whereNotNull('neighborhood')
-            ->where('neighborhood', '!=', '')
+        $unitNeighborhoodStats = HousingUnit::query()
+            ->selectRaw("
+                COALESCE(NULLIF(governorate, ''), 'غير محدد') as governorate_name,
+                COALESCE(NULLIF(neighborhood, ''), 'غير محدد') as neighborhood_name,
+                COUNT(*) as units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units
+            ")
+            ->groupBy('governorate_name', 'neighborhood_name')
             ->get()
             ->groupBy('governorate_name')
-            ->map(fn (Collection $rows): array => $rows->pluck('neighborhood')->unique()->sort()->values()->all());
+            ->map(fn (Collection $rows): Collection => $rows->keyBy('neighborhood_name'));
 
-        $governorateRows = $buildingGovernorates
+        $governorateReports = $buildingGovernorates
             ->keys()
             ->merge($unitGovernorates->keys())
+            ->merge($buildingNeighborhoodStats->keys())
+            ->merge($unitNeighborhoodStats->keys())
             ->unique()
             ->sort()
-            ->map(function (string $governorateName) use ($buildingGovernorates, $buildingNeighborhoodsByGovernorate, $unitGovernorates, $unitNeighborhoodsByGovernorate): array {
+            ->map(function (string $governorateName) use ($buildingGovernorates, $buildingNeighborhoodStats, $unitGovernorates, $unitNeighborhoodStats): array {
                 $buildingRow = $buildingGovernorates->get($governorateName);
                 $unitRow = $unitGovernorates->get($governorateName);
-                $neighborhoods = collect($buildingNeighborhoodsByGovernorate->get($governorateName, []))
-                    ->merge($unitNeighborhoodsByGovernorate->get($governorateName, []))
+                $buildingNeighborhoodRows = $buildingNeighborhoodStats->get($governorateName, collect());
+                $unitNeighborhoodRows = $unitNeighborhoodStats->get($governorateName, collect());
+
+                $neighborhoodRows = $buildingNeighborhoodRows
+                    ->keys()
+                    ->merge($unitNeighborhoodRows->keys())
                     ->unique()
                     ->sort()
+                    ->map(function (string $neighborhoodName) use ($buildingNeighborhoodRows, $unitNeighborhoodRows): array {
+                        $buildingNeighborhood = $buildingNeighborhoodRows->get($neighborhoodName);
+                        $unitNeighborhood = $unitNeighborhoodRows->get($neighborhoodName);
+
+                        return [
+                            'name' => $neighborhoodName,
+                            'assessed' => (int) ($buildingNeighborhood->assessed_buildings ?? 0),
+                            'units' => (int) ($unitNeighborhood->units ?? 0),
+                            'destroyed' => (int) ($unitNeighborhood->destroyed_units ?? $buildingNeighborhood->destroyed_buildings ?? 0),
+                        ];
+                    })
                     ->values();
 
                 return [
                     'name' => $governorateName,
-                    'neighborhoods' => $neighborhoods->implode('، '),
-                    'assessed' => (int) ($buildingRow->assessed_buildings ?? 0),
-                    'units' => (int) ($unitRow->units ?? 0),
-                    'destroyed' => (int) ($unitRow->destroyed_units ?? $buildingRow->destroyed_buildings ?? 0),
+                    'summary' => [
+                        'assessed' => (int) ($buildingRow->assessed_buildings ?? 0),
+                        'units' => (int) ($unitRow->units ?? 0),
+                        'destroyed' => (int) ($unitRow->destroyed_units ?? $buildingRow->destroyed_buildings ?? 0),
+                    ],
+                    'neighborhoods' => $neighborhoodRows,
                 ];
             })
             ->values();
@@ -324,7 +351,7 @@ class DamageAssessmentController extends Controller
                 ],
             ],
             'safetyStats' => $safetyStats,
-            'governorateRows' => $governorateRows,
+            'governorateReports' => $governorateReports,
             'mapPoints' => $mapPoints,
         ]);
     }

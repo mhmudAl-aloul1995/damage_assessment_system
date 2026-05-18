@@ -183,6 +183,51 @@
             padding: 8px 4px;
         }
 
+        .governorate-report {
+            border: 1px solid rgba(0, 242, 254, 0.12);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        .governorate-report-header {
+            display: grid;
+            grid-template-columns: 1fr repeat(3, minmax(58px, auto));
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            background: rgba(0, 242, 254, 0.08);
+        }
+
+        .governorate-report-name {
+            color: var(--neon-blue);
+            font-weight: 800;
+            min-width: 0;
+        }
+
+        .governorate-report-metric {
+            text-align: center;
+        }
+
+        .governorate-report-metric span {
+            display: block;
+            color: #8fa0b7;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+
+        .governorate-report-metric strong {
+            display: block;
+            color: #ffffff;
+            font-family: 'Orbitron', 'Cairo', sans-serif;
+            font-size: 0.8rem;
+        }
+
+        .governorate-report-body {
+            padding: 0 10px 10px;
+        }
+
         .leaflet-popup-content-wrapper,
         .leaflet-popup-tip {
             background: rgba(6, 18, 36, 0.92);
@@ -333,34 +378,56 @@
 
             <div class="hud-sidebar hud-interactive">
                 <div class="card-hud-glass" style="flex: 1; display: flex; flex-direction: column;">
-                    <div class="hud-section-title"><i class="fa-solid fa-globe"></i> التفكيك الجغرافي للمحافظات</div>
-                    <div class="table-responsive" style="flex: 1; overflow-y: auto;">
-                        <table class="table table-sm table-cyber align-middle mb-0 text-center">
-                            <thead>
-                                <tr>
-                                    <th class="text-start">المحافظة</th>
-                                    <th class="text-start">الأحياء</th>
-                                    <th>مقيّم</th>
-                                    <th>وحدات</th>
-                                    <th>مدمر</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($governorateRows as $row)
-                                    <tr>
-                                        <td class="text-start fw-bold text-info">{{ $row['name'] }}</td>
-                                        <td class="text-start text-white-50">{{ $row['neighborhoods'] !== '' ? $row['neighborhoods'] : '-' }}</td>
-                                        <td>{{ $formatNumber($row['assessed']) }}</td>
-                                        <td>{{ $formatNumber($row['units']) }}</td>
-                                        <td class="text-danger fw-bold">{{ $formatNumber($row['destroyed']) }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="text-white-50 py-4">لا توجد بيانات محافظات حالياً</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                    <div class="hud-section-title"><i class="fa-solid fa-globe"></i> تقارير المحافظات والأحياء</div>
+                    <div style="flex: 1; overflow-y: auto;">
+                        @forelse ($governorateReports as $report)
+                            <section class="governorate-report">
+                                <div class="governorate-report-header">
+                                    <div class="governorate-report-name">{{ $report['name'] }}</div>
+                                    <div class="governorate-report-metric">
+                                        <span>مقيّم</span>
+                                        <strong>{{ $formatNumber($report['summary']['assessed']) }}</strong>
+                                    </div>
+                                    <div class="governorate-report-metric">
+                                        <span>وحدات</span>
+                                        <strong>{{ $formatNumber($report['summary']['units']) }}</strong>
+                                    </div>
+                                    <div class="governorate-report-metric">
+                                        <span>مدمر</span>
+                                        <strong class="text-danger">{{ $formatNumber($report['summary']['destroyed']) }}</strong>
+                                    </div>
+                                </div>
+
+                                <div class="governorate-report-body">
+                                    <table class="table table-sm table-cyber align-middle mb-0 text-center">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-start">الحي</th>
+                                                <th>مقيّم</th>
+                                                <th>وحدات</th>
+                                                <th>مدمر</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse ($report['neighborhoods'] as $neighborhood)
+                                                <tr>
+                                                    <td class="text-start fw-bold text-info">{{ $neighborhood['name'] }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['assessed']) }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['units']) }}</td>
+                                                    <td class="text-danger fw-bold">{{ $formatNumber($neighborhood['destroyed']) }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="4" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        @empty
+                            <div class="text-center text-white-50 py-4">لا توجد بيانات محافظات حالياً</div>
+                        @endforelse
                     </div>
                     <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
                         <small class="text-white-50">إجمالي الوحدات التي فُحصت: <span class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
