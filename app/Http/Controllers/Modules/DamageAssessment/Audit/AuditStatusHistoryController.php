@@ -322,6 +322,7 @@ class AuditStatusHistoryController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+    dd($request->all());
         $id = $request->id;
         $type = $request->type;
         $notes = trim((string) $request->notes);
