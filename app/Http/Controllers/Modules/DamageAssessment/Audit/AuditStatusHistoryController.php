@@ -40,7 +40,7 @@ class AuditStatusHistoryController extends Controller
 
         $history = BuildingStatusHistory::with(['user.roles', 'status'])
             ->where('building_id', $building->objectid)
-       
+
             ->orderByDesc('created_at')
             ->get();
 
@@ -54,7 +54,7 @@ class AuditStatusHistoryController extends Controller
 
             $history = BuildingStatus::with(['user.roles', 'status'])
                 ->where('building_id', $building->objectid)
-               
+
                 ->orderByDesc('created_at')
                 ->get()
                 ->map(function ($item) {
@@ -194,6 +194,18 @@ class AuditStatusHistoryController extends Controller
             'note_id' => 'nullable|integer',
         ]);
 
+        $user = auth()->user();
+
+        $noteType = null;
+
+        if ($user->hasRole('Legal Auditor')) {
+            $noteType = 'Legal Auditor';
+        } elseif ($user->hasRole('QC/QA Engineer')) {
+            $noteType = 'QC/QA Engineer';
+        } elseif ($user->hasRole('Engineering Auditor')) {
+            $noteType = 'Engineering Auditor';
+        }
+
         $type = $request->type;
         $globalid = $request->globalid;
         $noteId = $request->note_id;
@@ -218,6 +230,10 @@ class AuditStatusHistoryController extends Controller
                 ->whereNotNull('notes')
                 ->where('notes', '!=', '');
 
+            if ($noteType) {
+                $query->where('type', $noteType);
+            }
+
             if ($noteId) {
                 $query->where('id', $noteId);
             } else {
@@ -226,11 +242,19 @@ class AuditStatusHistoryController extends Controller
 
             $note = $query->first();
 
+            if (!$note) {
+                return response()->json([
+                    'message' => 'لا توجد ملاحظة متاحة',
+                ], 404);
+            }
+
             return response()->json([
                 'id' => $note->id,
                 'notes' => $note->notes,
                 'has_final_approve' => $hasFinalApprove,
-                'status_name' => optional($note->status)->label ?? optional($note->status)->name ?? '-',
+                'status_name' => optional($note->status)->label_en
+                    ?? optional($note->status)->name
+                    ?? '-',
                 'user_name' => optional($note->user)->name ?? '-',
                 'created_at' => optional($note->created_at)?->format('Y-m-d H:i'),
             ]);
@@ -256,6 +280,10 @@ class AuditStatusHistoryController extends Controller
                 ->whereNotNull('notes')
                 ->where('notes', '!=', '');
 
+            if ($noteType) {
+                $query->where('type', $noteType);
+            }
+
             if ($noteId) {
                 $query->where('id', $noteId);
             } else {
@@ -274,13 +302,18 @@ class AuditStatusHistoryController extends Controller
                 'id' => $note->id,
                 'notes' => $note->notes,
                 'has_final_approve' => $hasFinalApprove,
-                'status_name' => optional($note->status)->label ?? optional($note->status)->name ?? '-',
+                'status_name' => optional($note->assessment_status)->label_en
+                    ?? optional($note->assessment_status)->name
+                    ?? '-',
                 'user_name' => optional($note->user)->name ?? '-',
                 'created_at' => optional($note->created_at)?->format('Y-m-d H:i'),
             ]);
         }
-    }
 
+        return response()->json([
+            'message' => 'نوع غير صحيح',
+        ], 422);
+    }
     public function updateNote(Request $request): JsonResponse
     {
         $request->validate([
