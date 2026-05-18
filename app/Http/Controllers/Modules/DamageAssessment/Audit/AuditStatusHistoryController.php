@@ -15,54 +15,105 @@ use Illuminate\Support\Collection;
 
 class AuditStatusHistoryController extends Controller
 {
-   
-public function buildingHistory(Request $request): JsonResponse
-{
-    $building = Building::where('globalid', $request->globalid)->first();
 
-    if (! $building) {
+    public function buildingHistory(Request $request): JsonResponse
+    {
+        $building = Building::where('globalid', $request->globalid)->first();
+
+        if (!$building) {
+            return response()->json([
+                'status' => false,
+                'history' => [],
+            ]);
+        }
+
+        $canDelete = auth()->user()->hasAnyRole([
+            'Database Officer',
+            'Auditing Supervisor',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | First try BuildingStatusHistory
+        |--------------------------------------------------------------------------
+        */
+
+        $history = BuildingStatusHistory::with(['user.roles', 'status'])
+            ->where('building_id', $building->objectid)
+            ->whereNotNull('notes')
+            ->where('notes', '!=', '')
+            ->orderByDesc('created_at')
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | If no history found -> fallback to BuildingStatus
+        |--------------------------------------------------------------------------
+        */
+
+        if ($history->isEmpty()) {
+
+            $history = BuildingStatus::with(['user.roles', 'status'])
+                ->where('building_id', $building->objectid)
+                ->whereNotNull('notes')
+                ->where('notes', '!=', '')
+                ->orderByDesc('created_at')
+                ->get()
+                ->map(function ($item) {
+
+                    $statusName = $item->status->name ?? '-';
+                    $statusLabel = $item->status->label_en ?? $statusName;
+                    $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+                    return [
+                        'id' => 'status_' . $item->id,
+                        'source' => 'building_status',
+                        'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">'
+                            . e($statusLabel) .
+                            '</span>',
+                        'user_name' => $item->user->name ?? '-',
+                        'role_name' => $roleName,
+                        'notes' => $item->notes,
+                        'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                        'can_delete' => false,
+                    ];
+                });
+
+        } else {
+
+            $history = $history->map(function ($item) use ($canDelete) {
+
+                $statusName = $item->status->name ?? '-';
+                $statusLabel = $item->status->label_en ?? $statusName;
+                $roleName = $item->user?->roles?->first()?->name ?? '-';
+
+                return [
+                    'id' => 'history_' . $item->id,
+                    'source' => 'building_history',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">'
+                        . e($statusLabel) .
+                        '</span>',
+                    'user_name' => $item->user->name ?? '-',
+                    'role_name' => $roleName,
+                    'notes' => $item->notes,
+                    'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                    'can_delete' => $canDelete,
+                ];
+            });
+
+        }
+
         return response()->json([
-            'status' => false,
-            'history' => [],
+            'status' => true,
+            'history' => $history->values(),
         ]);
     }
-
-    $history = BuildingStatus::with(['user.roles', 'status'])
-        ->where('building_id', $building->objectid)
-        ->whereNotNull('notes')
-        ->where('notes', '!=', '')
-        ->orderByDesc('created_at')
-        ->get()
-        ->map(function ($item) {
-
-            $statusName = $item->status->name ?? '-';
-            $statusLabel = $item->status->label_en ?? $statusName;
-            $roleName = $item->user?->roles?->first()?->name ?? '-';
-
-            return [
-                'id' => 'status_'.$item->id,
-                'source' => 'building_status',
-                'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
-                'user_name' => $item->user->name ?? '-',
-                'role_name' => $roleName,
-                'notes' => $item->notes,
-                'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
-                'can_delete' => false,
-            ];
-        })
-        ->values();
-
-    return response()->json([
-        'status' => true,
-        'history' => $history,
-    ]);
-}
 
     public function housingHistory(Request $request): Collection|array
     {
         $housing = HousingUnit::where('globalid', $request->globalid)->first();
 
-        if (! $housing) {
+        if (!$housing) {
             return [];
         }
 
@@ -76,9 +127,9 @@ public function buildingHistory(Request $request): JsonResponse
                 $roleName = $item->user?->roles?->first()?->name ?? '-';
 
                 return [
-                    'id' => 'status_'.$item->id,
+                    'id' => 'status_' . $item->id,
                     'source' => 'housing_status',
-                    'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
                     'notes' => $item->notes ?? '-',
@@ -97,9 +148,9 @@ public function buildingHistory(Request $request): JsonResponse
                 $roleName = $item->user?->roles?->first()?->name ?? '-';
 
                 return [
-                    'id' => 'history_'.$item->id,
+                    'id' => 'history_' . $item->id,
                     'source' => 'housing_history',
-                    'status_name' => '<span class="'.$this->getStatusBadge($statusName, $roleName).'">'.e($statusLabel).'</span>',
+                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
                     'notes' => $item->notes ?? '-',
@@ -152,7 +203,7 @@ public function buildingHistory(Request $request): JsonResponse
         if ($type === 'building') {
             $building = Building::where('globalid', $globalid)->first();
 
-            if (! $building) {
+            if (!$building) {
                 return response()->json([
                     'message' => 'المبنى غير موجود',
                 ], 404);
@@ -190,7 +241,7 @@ public function buildingHistory(Request $request): JsonResponse
         if ($type === 'housing') {
             $housing = HousingUnit::where('globalid', $globalid)->first();
 
-            if (! $housing) {
+            if (!$housing) {
                 return response()->json([
                     'message' => 'الوحدة السكنية غير موجودة',
                 ], 404);
@@ -215,7 +266,7 @@ public function buildingHistory(Request $request): JsonResponse
 
             $note = $query->first();
 
-            if (! $note) {
+            if (!$note) {
                 return response()->json([
                     'message' => 'لا توجد ملاحظة متاحة',
                 ], 404);
@@ -247,7 +298,7 @@ public function buildingHistory(Request $request): JsonResponse
         if ($type === 'building') {
             $note = BuildingStatusHistory::find($id);
 
-            if (! $note) {
+            if (!$note) {
                 return response()->json([
                     'message' => 'الملاحظة غير موجودة',
                 ], 404);
@@ -276,7 +327,7 @@ public function buildingHistory(Request $request): JsonResponse
         if ($type === 'housing') {
             $note = HousingStatusHistory::find($id);
 
-            if (! $note) {
+            if (!$note) {
                 return response()->json([
                     'message' => 'الملاحظة غير موجودة',
                 ], 404);
@@ -307,13 +358,13 @@ public function buildingHistory(Request $request): JsonResponse
     {
         $history = BuildingStatusHistory::with('status')->find($request->id);
 
-        if (! $history) {
+        if (!$history) {
             return response()->json([
                 'status' => false,
                 'message' => 'السجل غير موجود',
             ]);
         }
-        if (! auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+        if (!auth()->user()->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
             return response()->json([
                 'status' => false,
                 'message' => 'غير مصرح لك بحذف هذا السجل',
