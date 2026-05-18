@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INDAS Dashboard - Live Satellite HUD</title>
+    <title>PHC Dashboard - Live Satellite HUD</title>
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/logo_641.png') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
