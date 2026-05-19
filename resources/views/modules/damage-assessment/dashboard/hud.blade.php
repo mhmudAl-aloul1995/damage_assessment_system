@@ -957,9 +957,21 @@
             };
 
             function value(attributes, ...keys) {
+                const normalizedAttributes = Object.entries(attributes).reduce(function (carry, [key, attributeValue]) {
+                    carry[String(key).toLowerCase()] = attributeValue;
+
+                    return carry;
+                }, {});
+
                 for (const key of keys) {
                     if (attributes[key] !== undefined && attributes[key] !== null && String(attributes[key]).trim() !== '') {
                         return attributes[key];
+                    }
+
+                    const normalizedKey = String(key).toLowerCase();
+
+                    if (normalizedAttributes[normalizedKey] !== undefined && normalizedAttributes[normalizedKey] !== null && String(normalizedAttributes[normalizedKey]).trim() !== '') {
+                        return normalizedAttributes[normalizedKey];
                     }
                 }
 
@@ -992,13 +1004,13 @@
                 table.append(
                     popupTableRow('Object ID', value(attributes, 'objectid', 'OBJECTID')),
                     popupTableRow('Global ID', globalId),
-                    popupTableRow('Damage', value(attributes, 'building_damage_status')),
-                    popupTableRow('Assessment obstacle', value(attributes, 'assessment_obstacle')),
-                    popupTableRow('Security situation', value(attributes, 'security_situation')),
-                    popupTableRow('Field status', value(attributes, 'field_status')),
+                    popupTableRow('Damage', value(attributes, 'building_damage_status', 'Building_Damage_Status')),
+                    popupTableRow('Assessment obstacle', value(attributes, 'assessment_obstacle', 'Assessment_Obstacle')),
+                    popupTableRow('Security situation', value(attributes, 'security_situation', 'Security_Situation')),
+                    popupTableRow('Field status', value(attributes, 'field_status', 'Field_Status')),
                     popupTableRow('Assigned to', value(attributes, 'assignedto', 'AssignedTo')),
-                    popupTableRow('Municipality', value(attributes, 'municipalitie')),
-                    popupTableRow('Neighborhood', value(attributes, 'neighborhood'))
+                    popupTableRow('Municipality', value(attributes, 'municipalitie', 'Municipalitie')),
+                    popupTableRow('Neighborhood', value(attributes, 'neighborhood', 'Neighborhood'))
                 );
 
                 action.className = 'hud-map-popup-action';
@@ -1069,7 +1081,19 @@
             }
 
             function hudArcgisSecurityPriorityExpression() {
-                return "(LOWER(TRIM(" + hudArcgisFieldName('assessment_obstacle') + ")) = 'yes' OR LOWER(TRIM(" + hudArcgisFieldName('security_situation') + ")) = 'unsafe')";
+                const clauses = [];
+                const obstacleField = getArcgisField('assessment_obstacle');
+                const securityField = getArcgisField('security_situation');
+
+                if (obstacleField) {
+                    clauses.push("LOWER(TRIM(" + obstacleField.name + ")) = 'yes'");
+                }
+
+                if (securityField) {
+                    clauses.push("LOWER(TRIM(" + securityField.name + ")) = 'unsafe'");
+                }
+
+                return clauses.length ? '(' + clauses.join(' OR ') + ')' : '1=0';
             }
 
             function buildHudArcgisWhere() {
