@@ -571,7 +571,7 @@
                                                         data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
                                                 </div>
                                             </div>
-                                            <span class="separator">__</span>
+                                            
                                             @role('Legal Auditor')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted"
@@ -809,7 +809,7 @@
                                                         data-filter="attachments" data-filter-label="المرفقات">المرفقات</button>
                                                 </div>
                                             </div>
-                                            <span class="separator">__</span>
+                                           
                                             @role('Legal Auditor')
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                 data-status="accepted" onclick="setHousingStatus('accepted')">مقبول</button>
