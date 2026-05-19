@@ -52,5 +52,9 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee("replace(/\\/hud\\/?$/, '/arcgis/options')", false)
         ->assertSee('buildHudArcgisWhere', false)
         ->assertSee("building_name LIKE '%", false)
-        ->assertSee('buildingsLayer.definitionExpression = whereExpression', false);
+        ->assertSee('buildingsLayer.definitionExpression = whereExpression', false)
+        ->assertSee("'esri/widgets/BasemapGallery'", false)
+        ->assertSee("'esri/widgets/Expand'", false)
+        ->assertSee('new BasemapGallery', false)
+        ->assertSee("expandIconClass: 'esri-icon-basemap'", false);
 });

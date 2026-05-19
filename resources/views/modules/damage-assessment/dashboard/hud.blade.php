@@ -762,8 +762,10 @@
             'esri/geometry/Extent',
             'esri/identity/IdentityManager',
             'esri/widgets/Legend',
-            'esri/widgets/ScaleBar'
-        ], function (Map, MapView, FeatureLayer, Extent, esriId, Legend, ScaleBar) {
+            'esri/widgets/ScaleBar',
+            'esri/widgets/BasemapGallery',
+            'esri/widgets/Expand'
+        ], function (Map, MapView, FeatureLayer, Extent, esriId, Legend, ScaleBar, BasemapGallery, Expand) {
             if (buildingLayerUrl && arcgisToken) {
                 esriId.registerToken({
                     server: buildingLayerUrl,
@@ -1153,6 +1155,17 @@
                 }]
             }), 'bottom-right');
             view.ui.add(new ScaleBar({ view, unit: 'metric' }), 'bottom-left');
+
+            const basemapGallery = new BasemapGallery({
+                view
+            });
+
+            view.ui.add(new Expand({
+                view,
+                content: basemapGallery,
+                expandIconClass: 'esri-icon-basemap',
+                expandTooltip: 'ArcGIS basemaps'
+            }), 'top-left');
 
             view.when(function () {
                 view.goTo(gazaStripExtent, { duration: 1200 }).catch(function () {});
