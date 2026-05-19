@@ -545,18 +545,26 @@
                                 <div class="col-12 col-lg-9 col-xl-10">
                                     <div class="audit-toolbar-sticky mb-4">
                                         <div class="d-flex flex-wrap gap-2">
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-primary audit-filter-btn building-filter-btn is-active"
-                                                data-filter="all">الكل</button>
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-danger audit-filter-btn building-filter-btn"
-                                                data-filter="missing">الفارغ فقط</button>
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-info audit-filter-btn building-filter-btn"
-                                                data-filter="edited">المعدّل فقط</button>
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-success audit-filter-btn building-filter-btn"
-                                                data-filter="answered">المجاب فقط</button>
+                                            <div class="dropdown">
+                                                <button type="button" class="btn btn-sm btn-light-primary dropdown-toggle"
+                                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                                    فلتر: <span id="building_filter_label">الكل</span>
+                                                </button>
+                                                <div class="dropdown-menu">
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn building-filter-btn is-active"
+                                                        data-filter="all" data-filter-label="الكل">الكل</button>
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn building-filter-btn"
+                                                        data-filter="missing" data-filter-label="الفارغ فقط">الفارغ فقط</button>
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn building-filter-btn"
+                                                        data-filter="edited" data-filter-label="المعدّل فقط">المعدّل فقط</button>
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn building-filter-btn"
+                                                        data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
+                                                </div>
+                                            </div>
                                             <span class="separator">__</span>
                                             @role('Legal Auditor')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
@@ -769,21 +777,29 @@
                                 <div class="card-body pt-0 pb-4">
                                     <div class="audit-toolbar-sticky mb-4">
                                         <div class="d-flex flex-wrap gap-2">
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-primary audit-filter-btn housing-filter-btn is-active"
-                                                data-filter="all">الكل</button>
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-danger audit-filter-btn housing-filter-btn"
-                                                data-filter="missing">الفارغ فقط</button>
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-info audit-filter-btn housing-filter-btn"
-                                                data-filter="edited">المعدّل فقط</button>
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-success audit-filter-btn housing-filter-btn"
-                                                data-filter="answered">المجاب فقط</button>
-                                            <button type="button"
-                                                class="btn btn-sm btn-light-warning audit-filter-btn housing-filter-btn"
-                                                data-filter="attachments">المرفقات</button>
+                                            <div class="dropdown">
+                                                <button type="button" class="btn btn-sm btn-light-primary dropdown-toggle"
+                                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                                    فلتر: <span id="housing_filter_label">الكل</span>
+                                                </button>
+                                                <div class="dropdown-menu">
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn housing-filter-btn is-active"
+                                                        data-filter="all" data-filter-label="الكل">الكل</button>
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn housing-filter-btn"
+                                                        data-filter="missing" data-filter-label="الفارغ فقط">الفارغ فقط</button>
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn housing-filter-btn"
+                                                        data-filter="edited" data-filter-label="المعدّل فقط">المعدّل فقط</button>
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn housing-filter-btn"
+                                                        data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
+                                                    <button type="button"
+                                                        class="dropdown-item audit-filter-btn housing-filter-btn"
+                                                        data-filter="attachments" data-filter-label="المرفقات">المرفقات</button>
+                                                </div>
+                                            </div>
                                             <span class="separator">__</span>
                                             @role('Legal Auditor')
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
@@ -1128,6 +1144,7 @@
             $('.housing-filter-btn').removeClass('is-active');
             $(this).addClass('is-active');
             currentHousingFilter = $(this).data('filter');
+            $('#housing_filter_label').text($(this).data('filter-label') || $(this).text().trim());
             renderAccordion('#housing_assessment_accordion', lastHousingRows, currentHousingFilter, 'housing');
         });
 
@@ -1135,6 +1152,7 @@
             $('.building-filter-btn').removeClass('is-active');
             $(this).addClass('is-active');
             currentBuildingFilter = $(this).data('filter');
+            $('#building_filter_label').text($(this).data('filter-label') || $(this).text().trim());
             renderAccordion('#building_assessment_accordion', lastBuildingRows, currentBuildingFilter, 'building');
         });
 
