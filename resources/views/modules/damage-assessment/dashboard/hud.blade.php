@@ -454,6 +454,49 @@
             min-height: 36px;
         }
 
+        .hud-basemap-switcher {
+            align-items: center;
+            background: rgba(6, 18, 36, 0.9);
+            backdrop-filter: blur(14px) saturate(160%);
+            -webkit-backdrop-filter: blur(14px) saturate(160%);
+            border: 1px solid rgba(0, 242, 254, 0.32);
+            border-radius: 8px;
+            bottom: 18px;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.14), 0 14px 32px rgba(0, 0, 0, 0.36);
+            color: #ffffff;
+            display: flex;
+            gap: 8px;
+            left: 50%;
+            min-width: min(360px, calc(100vw - 32px));
+            padding: 8px 10px;
+            pointer-events: auto;
+            position: fixed;
+            transform: translateX(-50%);
+            z-index: 4;
+        }
+
+        .hud-basemap-switcher label {
+            color: var(--neon-blue);
+            font-size: 0.78rem;
+            font-weight: 800;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .hud-basemap-switcher .form-select {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(174, 205, 255, 0.22);
+            border-radius: 7px;
+            color: #ffffff;
+            font-size: 0.8rem;
+            min-height: 34px;
+        }
+
+        .hud-basemap-switcher .form-select option {
+            background: #061224;
+            color: #ffffff;
+        }
+
         ::-webkit-scrollbar {
             width: 4px;
         }
@@ -502,6 +545,18 @@
 
     <div id="live-gis-hud-map"></div>
     <div class="cyber-map-overlay"></div>
+    <div class="hud-basemap-switcher" aria-label="تغيير خريطة ArcGIS">
+        <label for="hudBasemapSelect">نوع الخريطة</label>
+        <select id="hudBasemapSelect" class="form-select">
+            <option value="satellite" selected>ArcGIS Satellite</option>
+            <option value="hybrid">ArcGIS Hybrid</option>
+            <option value="streets-vector">ArcGIS Streets</option>
+            <option value="topo-vector">ArcGIS Topographic</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="gray-vector">ArcGIS Light Gray</option>
+            <option value="dark-gray-vector">ArcGIS Dark Gray</option>
+        </select>
+    </div>
 
     <div class="hud-container">
         <header class="hud-header hud-interactive">
@@ -1166,6 +1221,10 @@
                 expandIconClass: 'esri-icon-basemap',
                 expandTooltip: 'ArcGIS basemaps'
             }), 'top-left');
+
+            document.getElementById('hudBasemapSelect')?.addEventListener('change', function (event) {
+                map.basemap = event.target.value;
+            });
 
             view.when(function () {
                 view.goTo(gazaStripExtent, { duration: 1200 }).catch(function () {});

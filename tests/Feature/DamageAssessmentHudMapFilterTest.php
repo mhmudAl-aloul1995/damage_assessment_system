@@ -56,5 +56,8 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee("'esri/widgets/BasemapGallery'", false)
         ->assertSee("'esri/widgets/Expand'", false)
         ->assertSee('new BasemapGallery', false)
-        ->assertSee("expandIconClass: 'esri-icon-basemap'", false);
+        ->assertSee("expandIconClass: 'esri-icon-basemap'", false)
+        ->assertSee('id="hudBasemapSelect"', false)
+        ->assertSee('ArcGIS Satellite', false)
+        ->assertSee("map.basemap = event.target.value", false);
 });
