@@ -714,6 +714,69 @@ it('allows auditors to edit only their own matching note type', function () {
     ]);
 });
 
+it('allows database officers to edit any status note without changing the note owner', function () {
+    $databaseOfficerRole = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $legalRole = Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $databaseOfficer = User::factory()->create();
+    $databaseOfficer->assignRole($databaseOfficerRole);
+
+    $legalAuditor = User::factory()->create();
+    $legalAuditor->assignRole($legalRole);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'legal_notes',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'Legal Notes',
+        'stage' => 'lawyer',
+        'order_step' => 6,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9823,
+        'globalid' => 'note-edit-database-officer-building',
+        'building_name' => 'Database Officer Note Edit Building',
+    ]);
+
+    $history = BuildingStatusHistory::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'user_id' => $legalAuditor->id,
+        'type' => 'Legal Auditor',
+        'notes' => 'Original legal note',
+    ]);
+
+    $this->actingAs($databaseOfficer)
+        ->getJson(route('building.status.history', [
+            'globalid' => $building->globalid,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('history.0.note_id', $history->id)
+        ->assertJsonPath('history.0.can_edit', true);
+
+    $this->actingAs($databaseOfficer)
+        ->postJson(route('assessment.notes.update'), [
+            'id' => $history->id,
+            'type' => 'building',
+            'notes' => 'Database officer updated note',
+        ])
+        ->assertOk();
+
+    $this->assertDatabaseHas('building_status_histories', [
+        'id' => $history->id,
+        'type' => 'Legal Auditor',
+        'user_id' => $legalAuditor->id,
+        'notes' => 'Database officer updated note',
+    ]);
+});
+
 it('allows auditing supervisors to edit notes and records them as the latest editor', function () {
     $legalRole = Role::query()->create([
         'name' => 'Legal Auditor',
