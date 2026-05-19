@@ -640,13 +640,6 @@
                                 <h3 class="fw-bold mb-0">وحدات المبنى</h3>
                             </div>
                             <div class="card-toolbar">
-                                @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
-                                    <button type="button" id="btn_housing_legal_challenge"
-                                        class="btn btn-sm btn-light-warning me-2"
-                                        onclick="openLegalChallengeModal('housing')">
-                                        التحديات القانونية
-                                    </button>
-                                @endunless
                                 <button type="button" class="btn btn-sm btn-light-primary"
                                     onclick="reloadBuildingUnitsTable()">
                                     <i class="ki-duotone ki-arrows-circle fs-6"><span class="path1"></span><span
@@ -1999,18 +1992,23 @@
             openNotesModal('housing', 'note', status, auditType);
         }
 
-        function openLegalChallengeModal(type) {
+        function openLegalChallengeModal(type, housingGlobalid = null, housingLegalChallenge = null) {
             let isBuilding = type === 'building';
-            let globalid = isBuilding ? @json($buildingGlobalid) : $("[name='globalid']").val();
+            let globalid = isBuilding ? @json($buildingGlobalid) : (housingGlobalid || $("[name='globalid']").val());
 
             if (!globalid) {
                 toastr.warning(isBuilding ? 'لا يوجد مبنى محدد' : 'يرجى اختيار الوحدة أولاً');
                 return;
             }
 
+            if (!isBuilding) {
+                $('[name="globalid"]').val(globalid).trigger('change');
+                currentHousingLegalChallenge = housingLegalChallenge ?? currentHousingLegalChallenge;
+            }
+
             $('#legalChallengeType').val(type);
             $('#legalChallengeHousingGlobalId').val(isBuilding ? '' : globalid);
-            $('#legal_challenge').val(isBuilding ? buildingLegalChallenge : currentHousingLegalChallenge).trigger('change');
+            $('#legal_challenge').val(isBuilding ? buildingLegalChallenge : (housingLegalChallenge ?? currentHousingLegalChallenge)).trigger('change');
             $('#legalChallengeModal').modal('show');
         }
 
@@ -2292,7 +2290,38 @@
                         { data: 'housing_unit_number', name: 'housing_unit_number', className: 'text-center px-2 py-3' },
                         { data: 'owner_name', name: 'owner_name', className: 'text-start px-2 py-3 min-w-280px' },
                         { data: 'unit_direction', name: 'unit_direction', className: 'text-center px-2 py-3' },
-                        { data: 'legal_challenge_label', name: 'legal_challenge_label', className: 'text-center px-2 py-3' },
+                        {
+                            data: 'legal_challenge_label',
+                            name: 'legal_challenge_label',
+                            className: 'text-center px-2 py-3',
+                            render: function (data, type, row) {
+                                if (type !== 'display') {
+                                    return data;
+                                }
+
+                                const label = $('<div>').text(data || '-').html();
+
+                                @if (auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
+                                    return label;
+                                @else
+
+                                const globalid = $('<div>').text(row.globalid || '').html();
+                                const legalChallenge = $('<div>').text(row.legal_challenge || '').html();
+
+                                return `
+                                    <div class="d-flex flex-column align-items-center gap-2">
+                                        <span>${label}</span>
+                                        <button type="button"
+                                            class="btn btn-sm btn-light-warning housing-legal-challenge-btn"
+                                            data-globalid="${globalid}"
+                                            data-legal-challenge="${legalChallenge}">
+                                            تعديل
+                                        </button>
+                                    </div>
+                                `;
+                                @endif
+                            }
+                        },
                         { data: 'legal_audit_status', name: 'legal_audit_status', className: 'text-center px-2 py-3' },
                         { data: 'engineering_audit_status', name: 'engineering_audit_status', className: 'text-center px-2 py-3' },
                         { data: 'final_approval_status', name: 'final_approval_status', className: 'text-center px-2 py-3' }
@@ -2311,6 +2340,15 @@
                         }, 150);
                     }
                 });
+
+                @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
+                    $('#housing_table tbody').on('click', '.housing-legal-challenge-btn', function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        openLegalChallengeModal('housing', this.dataset.globalid, this.dataset.legalChallenge || null);
+                    });
+                @endunless
 
                 $('#housing_table tbody').on('click', 'tr', function () {
                     let row = datatable.row(this).data();
