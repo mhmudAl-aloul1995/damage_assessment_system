@@ -594,8 +594,10 @@
                                             @endif
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('building','history')">ملاحظات</button>
+                                            @hasanyrole('Database Officer|Legal Auditor|QC/QA Engineer|Engineering Auditor')
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
+                                            @endhasanyrole
                                             <button type="button" class="btn btn-sm btn-light-primary ms-3"
                                                 onclick="reloadBuildingAssessmentTable()">تحديث</button>
 
@@ -810,8 +812,10 @@
 
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('housing','history')">ملاحظات</button>
+                                            @hasanyrole('Database Officer|Legal Auditor|QC/QA Engineer|Engineering Auditor')
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
+                                            @endhasanyrole
                                             <button type="button" class="btn btn-sm btn-light-primary"
                                                 onclick="reloadHousingAssessmentTable();">
                                                 <i class="ki-duotone ki-arrows-circle fs-6">

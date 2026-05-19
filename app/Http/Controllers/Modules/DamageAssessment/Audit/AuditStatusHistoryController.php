@@ -9,6 +9,7 @@ use App\Models\BuildingStatusHistory;
 use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -200,24 +201,16 @@ class AuditStatusHistoryController extends Controller
 
     public function getEditableNote(Request $request): JsonResponse
     {
-        abort_unless($request->user()?->hasRole('Database Officer'), 403);
+        abort_unless($this->canEditStatusNotes($request->user()), 403);
 
         $request->validate([
             'type' => 'required|in:building,housing',
             'globalid' => 'required|string',
         ]);
 
-        $user = auth()->user();
-
-        $noteType = null;
-
-        if ($user->hasRole('Legal Auditor')) {
-            $noteType = 'Legal Auditor';
-        } elseif ($user->hasRole('QC/QA Engineer')) {
-            $noteType = 'QC/QA Engineer';
-        } elseif ($user->hasRole('Engineering Auditor')) {
-            $noteType = 'Engineering Auditor';
-        }
+        $user = $request->user();
+        $noteType = $this->editableNoteTypeFor($user);
+        $mustOwnNote = ! $user->hasRole('Database Officer');
 
         $type = $request->type;
         $globalid = $request->globalid;
@@ -257,6 +250,9 @@ class AuditStatusHistoryController extends Controller
                 ->when($noteType, function ($query) use ($noteType) {
                     $query->where('type', $noteType);
                 })
+                ->when($mustOwnNote, function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
                 ->latest('id')
                 ->first();
 
@@ -276,6 +272,9 @@ class AuditStatusHistoryController extends Controller
                     ->where('notes', '!=', '')
                     ->when($noteType, function ($query) use ($noteType) {
                         $query->where('type', $noteType);
+                    })
+                    ->when($mustOwnNote, function ($query) use ($user) {
+                        $query->where('user_id', $user->id);
                     })
                     ->latest('id')
                     ->first();
@@ -338,6 +337,9 @@ class AuditStatusHistoryController extends Controller
                 ->when($noteType, function ($query) use ($noteType) {
                     $query->where('type', $noteType);
                 })
+                ->when($mustOwnNote, function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
                 ->latest('id')
                 ->first();
 
@@ -357,6 +359,9 @@ class AuditStatusHistoryController extends Controller
                     ->where('notes', '!=', '')
                     ->when($noteType, function ($query) use ($noteType) {
                         $query->where('type', $noteType);
+                    })
+                    ->when($mustOwnNote, function ($query) use ($user) {
+                        $query->where('user_id', $user->id);
                     })
                     ->latest('id')
                     ->first();
@@ -390,7 +395,7 @@ class AuditStatusHistoryController extends Controller
     }
     public function updateNote(Request $request): JsonResponse
     {
-        abort_unless($request->user()?->hasRole('Database Officer'), 403);
+        abort_unless($this->canEditStatusNotes($request->user()), 403);
 
         $request->validate([
             'id' => 'required|integer',
@@ -402,6 +407,7 @@ class AuditStatusHistoryController extends Controller
         $id = $request->id;
         $type = $request->type;
         $notes = trim((string) $request->notes);
+        $user = $request->user();
 
         if ($type === 'building') {
             $note = BuildingStatusHistory::find($id);
@@ -411,6 +417,8 @@ class AuditStatusHistoryController extends Controller
                     'message' => 'الملاحظة غير موجودة',
                 ], 404);
             }
+
+            abort_unless($this->canEditSpecificNote($user, $note), 403);
 
             $hasFinalApprove = BuildingStatusHistory::where('building_id', $note->building_id)
                 ->whereHas('status', function ($q) {
@@ -441,6 +449,10 @@ class AuditStatusHistoryController extends Controller
                 ], 404);
             }
 
+            $this->fillMissingHousingHistoryType($note);
+
+            abort_unless($this->canEditSpecificNote($user, $note), 403);
+
             $hasFinalApprove = HousingStatusHistory::where('housing_id', $note->housing_id)
                 ->whereHas('assessment_status', function ($q) {
                     $q->where('name', 'final_approval');
@@ -459,6 +471,65 @@ class AuditStatusHistoryController extends Controller
             return response()->json([
                 'message' => 'تم تحديث ملاحظة الوحدة بنجاح',
             ]);
+        }
+    }
+
+    private function canEditStatusNotes(?User $user): bool
+    {
+        return $user?->hasAnyRole([
+            'Database Officer',
+            'Legal Auditor',
+            'QC/QA Engineer',
+            'Engineering Auditor',
+        ]) ?? false;
+    }
+
+    private function editableNoteTypeFor(?User $user): ?string
+    {
+        if ($user?->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
+            return 'QC/QA Engineer';
+        }
+
+        if ($user?->hasRole('Legal Auditor')) {
+            return 'Legal Auditor';
+        }
+
+        return null;
+    }
+
+    private function canEditSpecificNote(?User $user, BuildingStatusHistory|HousingStatusHistory $note): bool
+    {
+        if ($user?->hasRole('Database Officer')) {
+            return true;
+        }
+
+        $editableNoteType = $this->editableNoteTypeFor($user);
+
+        return $editableNoteType !== null
+            && (int) $note->user_id === (int) $user->id
+            && $note->type === $editableNoteType;
+    }
+
+    private function fillMissingHousingHistoryType(HousingStatusHistory $note): void
+    {
+        if (is_string($note->type) && trim($note->type) !== '') {
+            return;
+        }
+
+        $type = HousingStatus::query()
+            ->where('housing_id', $note->housing_id)
+            ->where('status_id', $note->status_id)
+            ->whereNotNull('type')
+            ->where('type', '!=', '')
+            ->latest('id')
+            ->value('type');
+
+        if (! is_string($type) || trim($type) === '') {
+            $type = $this->editableNoteTypeFor($note->user);
+        }
+
+        if (is_string($type) && trim($type) !== '') {
+            $note->type = $type;
         }
     }
 

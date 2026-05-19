@@ -610,7 +610,7 @@ it('returns structured status history payload for rendering badges safely', func
         ->assertJsonPath('history.0.notes', '<strong>Needs review</strong>');
 });
 
-it('shows note edit actions only to database officers', function () {
+it('shows note edit actions to database officers and auditors', function () {
     $databaseOfficerRole = Role::query()->create([
         'name' => 'Database Officer',
         'guard_name' => 'web',
@@ -621,11 +621,19 @@ it('shows note edit actions only to database officers', function () {
         'guard_name' => 'web',
     ]);
 
+    $viewerRole = Role::query()->create([
+        'name' => 'Viewer',
+        'guard_name' => 'web',
+    ]);
+
     $databaseOfficer = User::factory()->create();
     $databaseOfficer->assignRole($databaseOfficerRole);
 
     $legalAuditor = User::factory()->create();
     $legalAuditor->assignRole($legalAuditorRole);
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole($viewerRole);
 
     $building = Building::query()->create([
         'objectid' => 9811,
@@ -642,18 +650,32 @@ it('shows note edit actions only to database officers', function () {
     $this->actingAs($legalAuditor)
         ->get("showAssessmentAudit/{$building->globalid}")
         ->assertOk()
+        ->assertSee("openNotesModal('building','edit_note')", false)
+        ->assertSee("openNotesModal('housing','edit_note')", false);
+
+    $this->actingAs($viewer)
+        ->get("showAssessmentAudit/{$building->globalid}")
+        ->assertOk()
         ->assertDontSee("openNotesModal('building','edit_note')", false)
         ->assertDontSee("openNotesModal('housing','edit_note')", false);
 });
 
-it('forbids non database officers from editing notes directly', function () {
-    $role = Role::query()->create([
+it('allows auditors to edit only their own matching note type', function () {
+    $legalRole = Role::query()->create([
         'name' => 'Legal Auditor',
         'guard_name' => 'web',
     ]);
 
-    $user = User::factory()->create();
-    $user->assignRole($role);
+    $engineerRole = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $legalAuditor = User::factory()->create();
+    $legalAuditor->assignRole($legalRole);
+
+    $engineer = User::factory()->create();
+    $engineer->assignRole($engineerRole);
 
     $status = AssessmentStatus::query()->create([
         'name' => 'legal_notes',
@@ -672,28 +694,50 @@ it('forbids non database officers from editing notes directly', function () {
     $history = BuildingStatusHistory::query()->create([
         'building_id' => $building->objectid,
         'status_id' => $status->id,
-        'user_id' => $user->id,
+        'user_id' => $legalAuditor->id,
         'type' => 'Legal Auditor',
         'notes' => 'Original note',
     ]);
 
-    $this->actingAs($user)
+    $this->actingAs($legalAuditor)
         ->getJson(route('assessment.notes.edit.data', [
             'type' => 'building',
             'globalid' => $building->globalid,
         ]))
-        ->assertForbidden();
+        ->assertOk()
+        ->assertJsonPath('id', $history->id)
+        ->assertJsonPath('notes', 'Original note');
 
-    $this->actingAs($user)
+    $this->actingAs($engineer)
+        ->getJson(route('assessment.notes.edit.data', [
+            'type' => 'building',
+            'globalid' => $building->globalid,
+        ]))
+        ->assertNotFound();
+
+    $this->actingAs($legalAuditor)
         ->postJson(route('assessment.notes.update'), [
             'id' => $history->id,
             'type' => 'building',
             'notes' => 'Changed note',
         ])
+        ->assertOk();
+
+    $this->assertDatabaseHas('building_status_histories', [
+        'id' => $history->id,
+        'notes' => 'Changed note',
+    ]);
+
+    $this->actingAs($engineer)
+        ->postJson(route('assessment.notes.update'), [
+            'id' => $history->id,
+            'type' => 'building',
+            'notes' => 'Engineer changed note',
+        ])
         ->assertForbidden();
 
     $this->assertDatabaseHas('building_status_histories', [
         'id' => $history->id,
-        'notes' => 'Original note',
+        'notes' => 'Changed note',
     ]);
 });
