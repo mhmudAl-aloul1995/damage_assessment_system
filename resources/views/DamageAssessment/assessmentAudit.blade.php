@@ -1605,6 +1605,36 @@
             return $('<div>').text(text).html();
         }
 
+        function escapeAttribute(text) {
+            if (text === null || text === undefined) return '';
+            return $('<div>').text(text).html();
+        }
+
+        function renderStatusBadge(item) {
+            let label = item.status_label ?? item.status_name ?? '-';
+            let badgeClass = item.status_badge_class ?? 'badge badge-light-secondary fw-bold';
+            badgeClass = String(badgeClass).replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+
+            return `<span class="${badgeClass}">${escapeHtml(label)}</span>`;
+        }
+
+        function renderHistoryNoteCell(item) {
+            let canEdit = !!item.can_edit && !!item.note_id;
+            let title = canEdit
+                ? 'انقر مرتين للتعديل'
+                : (item.has_final_approve ? 'لا يمكن التعديل بعد الاعتماد النهائي' : '');
+
+            return `
+                <td class="history-note-cell${canEdit ? ' editable-history-note' : ''}"
+                    data-note-id="${escapeAttribute(item.note_id ?? '')}"
+                    data-can-edit="${canEdit ? '1' : '0'}"
+                    data-locked="${item.has_final_approve ? '1' : '0'}"
+                    title="${escapeAttribute(title)}">
+                    <span class="history-note-text">${escapeHtml(item.notes ?? '-')}</span>
+                </td>
+            `;
+        }
+
         function loadStatusHistory(type, globalid) {
             let url = type === 'building' ? "{{ route('building.status.history') }}" : "{{ route('housing.status.history') }}";
 
@@ -1626,9 +1656,9 @@
                     history.forEach(function (item) {
                         rows += `
                                                                                                                                                                                             <tr>
-                                                                                                                                                                                                <td>${escapeHtml(item.status_name ?? '-')}</td>
+                                                                                                                                                                                                <td>${renderStatusBadge(item)}</td>
                                                                                                                                                                                                 <td>${escapeHtml(item.user_name ?? '-')}</td>
-                                                                                                                                                                                                <td>${escapeHtml(item.notes ?? '-')}</td>
+                                                                                                                                                                                                ${renderHistoryNoteCell(item)}
                                                                                                                                                                                                 <td>${escapeHtml(item.created_at ?? '-')}</td>
                                                                                                                                                                                             </tr>
                                                                                                                                                                                         `;
@@ -1638,6 +1668,95 @@
                 },
                 error: function () {
                     renderHistoryError();
+                }
+            });
+        }
+
+        $(document).on('dblclick', '#statusHistoryTable .history-note-cell', function () {
+            beginInlineHistoryNoteEdit($(this));
+        });
+
+        function beginInlineHistoryNoteEdit(cell) {
+            if (cell.data('editing')) return;
+
+            if (String(cell.data('can-edit')) !== '1') {
+                if (String(cell.data('locked')) === '1') {
+                    toastr.warning('لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود');
+                }
+                return;
+            }
+
+            let noteId = cell.data('note-id');
+            if (!noteId) return;
+
+            let originalNote = cell.find('.history-note-text').text();
+            if (originalNote === '-') originalNote = '';
+
+            cell.data('editing', true);
+            cell.data('original-note', originalNote);
+            cell.html(`
+                <textarea class="form-control form-control-sm history-note-editor" rows="3">${escapeHtml(originalNote)}</textarea>
+                <div class="d-flex gap-2 mt-2">
+                    <button type="button" class="btn btn-sm btn-primary btn-save-history-note">حفظ</button>
+                    <button type="button" class="btn btn-sm btn-light btn-cancel-history-note">إلغاء</button>
+                </div>
+            `);
+            cell.find('.history-note-editor').focus();
+        }
+
+        $(document).on('click', '.btn-cancel-history-note', function () {
+            let cell = $(this).closest('.history-note-cell');
+            cancelInlineHistoryNoteEdit(cell);
+        });
+
+        function cancelInlineHistoryNoteEdit(cell) {
+            let originalNote = cell.data('original-note') ?? '';
+            cell.data('editing', false);
+            cell.html(`<span class="history-note-text">${escapeHtml(originalNote || '-')}</span>`);
+        }
+
+        $(document).on('click', '.btn-save-history-note', function () {
+            let cell = $(this).closest('.history-note-cell');
+            saveInlineHistoryNoteEdit(cell);
+        });
+
+        function saveInlineHistoryNoteEdit(cell) {
+            let noteId = cell.data('note-id');
+            let notes = cell.find('.history-note-editor').val() ?? '';
+
+            $.ajax({
+                url: "{{ route('assessment.notes.update') }}",
+                method: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    id: noteId,
+                    notes: notes,
+                    type: notesContext
+                },
+                beforeSend: function () {
+                    cell.find('textarea, button').prop('disabled', true);
+                },
+                success: function (response) {
+                    cell.data('editing', false);
+                    cell.html(`<span class="history-note-text">${escapeHtml(notes || '-')}</span>`);
+
+                    if (response.user_name) {
+                        cell.closest('tr').find('td').eq(1).text(response.user_name);
+                    }
+
+                    toastr.success(response.message || 'تم تحديث الملاحظة بنجاح');
+
+                    if (notesContext === 'building') {
+                        reloadBuildingAssessmentTable();
+                        reloadBuildingUnitsTable();
+                    } else if (notesContext === 'housing') {
+                        reloadHousingAssessmentTable();
+                        reloadBuildingUnitsTable();
+                    }
+                },
+                error: function (xhr) {
+                    cell.find('textarea, button').prop('disabled', false);
+                    toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء تحديث الملاحظة');
                 }
             });
         }

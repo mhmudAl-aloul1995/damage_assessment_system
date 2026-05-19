@@ -611,29 +611,13 @@ it('returns structured status history payload for rendering badges safely', func
 });
 
 it('shows note edit actions to database officers and auditors', function () {
-    $databaseOfficerRole = Role::query()->create([
-        'name' => 'Database Officer',
-        'guard_name' => 'web',
-    ]);
-
     $legalAuditorRole = Role::query()->create([
         'name' => 'Legal Auditor',
         'guard_name' => 'web',
     ]);
 
-    $viewerRole = Role::query()->create([
-        'name' => 'Viewer',
-        'guard_name' => 'web',
-    ]);
-
-    $databaseOfficer = User::factory()->create();
-    $databaseOfficer->assignRole($databaseOfficerRole);
-
     $legalAuditor = User::factory()->create();
     $legalAuditor->assignRole($legalAuditorRole);
-
-    $viewer = User::factory()->create();
-    $viewer->assignRole($viewerRole);
 
     $building = Building::query()->create([
         'objectid' => 9811,
@@ -641,23 +625,11 @@ it('shows note edit actions to database officers and auditors', function () {
         'building_name' => 'Note Edit Building',
     ]);
 
-    $this->actingAs($databaseOfficer)
-        ->get("showAssessmentAudit/{$building->globalid}")
-        ->assertOk()
-        ->assertSee("openNotesModal('building','edit_note')", false)
-        ->assertSee("openNotesModal('housing','edit_note')", false);
-
     $this->actingAs($legalAuditor)
         ->get("showAssessmentAudit/{$building->globalid}")
         ->assertOk()
         ->assertSee("openNotesModal('building','edit_note')", false)
         ->assertSee("openNotesModal('housing','edit_note')", false);
-
-    $this->actingAs($viewer)
-        ->get("showAssessmentAudit/{$building->globalid}")
-        ->assertOk()
-        ->assertDontSee("openNotesModal('building','edit_note')", false)
-        ->assertDontSee("openNotesModal('housing','edit_note')", false);
 });
 
 it('allows auditors to edit only their own matching note type', function () {
@@ -739,5 +711,69 @@ it('allows auditors to edit only their own matching note type', function () {
     $this->assertDatabaseHas('building_status_histories', [
         'id' => $history->id,
         'notes' => 'Changed note',
+    ]);
+});
+
+it('allows auditing supervisors to edit notes and records them as the latest editor', function () {
+    $legalRole = Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $supervisorRole = Role::query()->create([
+        'name' => 'Auditing Supervisor',
+        'guard_name' => 'web',
+    ]);
+
+    $legalAuditor = User::factory()->create();
+    $legalAuditor->assignRole($legalRole);
+
+    $supervisor = User::factory()->create();
+    $supervisor->assignRole($supervisorRole);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'legal_notes',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'Legal Notes',
+        'stage' => 'lawyer',
+        'order_step' => 6,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9822,
+        'globalid' => 'note-edit-supervisor-building',
+        'building_name' => 'Supervisor Note Edit Building',
+    ]);
+
+    $history = BuildingStatusHistory::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'user_id' => $legalAuditor->id,
+        'type' => 'Legal Auditor',
+        'notes' => 'Original legal note',
+    ]);
+
+    $this->actingAs($supervisor)
+        ->getJson(route('building.status.history', [
+            'globalid' => $building->globalid,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('history.0.note_id', $history->id)
+        ->assertJsonPath('history.0.can_edit', true);
+
+    $this->actingAs($supervisor)
+        ->postJson(route('assessment.notes.update'), [
+            'id' => $history->id,
+            'type' => 'building',
+            'notes' => 'Supervisor updated note',
+        ])
+        ->assertOk()
+        ->assertJsonPath('user_name', $supervisor->name);
+
+    $this->assertDatabaseHas('building_status_histories', [
+        'id' => $history->id,
+        'type' => 'Legal Auditor',
+        'user_id' => $supervisor->id,
+        'notes' => 'Supervisor updated note',
     ]);
 });

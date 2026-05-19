@@ -32,6 +32,12 @@ class AuditStatusHistoryController extends Controller
             'Database Officer',
             'Auditing Supervisor',
         ]);
+        $hasFinalApprove = BuildingStatusHistory::where('building_id', $building->objectid)
+            ->whereHas('status', function ($query): void {
+                $query->where('name', 'final_approval');
+            })
+            ->exists();
+        $user = $request->user();
 
         /*
         |--------------------------------------------------------------------------
@@ -66,6 +72,7 @@ class AuditStatusHistoryController extends Controller
 
                     return [
                         'id' => 'status_' . $item->id,
+                        'note_id' => null,
                         'source' => 'building_status',
                         ...$this->statusPayload($statusName, $statusLabel, $roleName),
                         'user_name' => $item->user->name ?? '-',
@@ -73,12 +80,14 @@ class AuditStatusHistoryController extends Controller
                         'notes' => $item->notes,
                         'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
                         'can_delete' => false,
+                        'can_edit' => false,
+                        'has_final_approve' => false,
                     ];
                 });
 
         } else {
 
-            $history = $history->map(function ($item) use ($canDelete) {
+            $history = $history->map(function ($item) use ($canDelete, $hasFinalApprove, $user) {
 
                 $statusName = $item->status->name ?? '-';
                 $statusLabel = $item->status->label_en ?? $statusName;
@@ -86,6 +95,7 @@ class AuditStatusHistoryController extends Controller
 
                 return [
                     'id' => 'history_' . $item->id,
+                    'note_id' => $item->id,
                     'source' => 'building_history',
                     ...$this->statusPayload($statusName, $statusLabel, $roleName),
                     'user_name' => $item->user->name ?? '-',
@@ -93,6 +103,8 @@ class AuditStatusHistoryController extends Controller
                     'notes' => $item->notes,
                     'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
                     'can_delete' => $canDelete,
+                    'can_edit' => ! $hasFinalApprove && $this->canEditSpecificNote($user, $item),
+                    'has_final_approve' => $hasFinalApprove,
                 ];
             });
 
@@ -113,6 +125,13 @@ class AuditStatusHistoryController extends Controller
             return [];
         }
 
+        $hasFinalApprove = HousingStatusHistory::where('housing_id', $housing->objectid)
+            ->whereHas('assessment_status', function ($query): void {
+                $query->where('name', 'final_approval');
+            })
+            ->exists();
+        $user = $request->user();
+
         $histories = HousingStatusHistory::with(['user.roles', 'assessment_status'])
             ->where('housing_id', $housing->objectid)
             ->whereNotNull('notes')
@@ -122,7 +141,7 @@ class AuditStatusHistoryController extends Controller
 
         if ($histories->isNotEmpty()) {
             return $histories
-                ->map(function ($item) {
+                ->map(function ($item) use ($hasFinalApprove, $user) {
 
                     $statusName = $item->assessment_status->name ?? '-';
                     $statusLabel = $item->assessment_status->label_en ?? $statusName;
@@ -130,12 +149,15 @@ class AuditStatusHistoryController extends Controller
 
                     return [
                         'id' => 'history_' . $item->id,
+                        'note_id' => $item->id,
                         'source' => 'housing_history',
                         ...$this->statusPayload($statusName, $statusLabel, $roleName),
                         'user_name' => $item->user->name ?? '-',
                         'role_name' => $roleName,
                         'notes' => $item->notes,
                         'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                        'can_edit' => ! $hasFinalApprove && $this->canEditSpecificNote($user, $item),
+                        'has_final_approve' => $hasFinalApprove,
                     ];
                 })
                 ->values();
@@ -155,12 +177,15 @@ class AuditStatusHistoryController extends Controller
 
                 return [
                     'id' => 'status_' . $item->id,
+                    'note_id' => null,
                     'source' => 'housing_status',
                     ...$this->statusPayload($statusName, $statusLabel, $roleName),
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
                     'notes' => $item->notes,
                     'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
+                    'can_edit' => false,
+                    'has_final_approve' => false,
                 ];
             })
             ->values();
@@ -210,7 +235,7 @@ class AuditStatusHistoryController extends Controller
 
         $user = $request->user();
         $noteType = $this->editableNoteTypeFor($user);
-        $mustOwnNote = ! $user->hasRole('Database Officer');
+        $mustOwnNote = ! $user->hasAnyRole(['Database Officer', 'Auditing Supervisor']);
 
         $type = $request->type;
         $globalid = $request->globalid;
@@ -433,10 +458,14 @@ class AuditStatusHistoryController extends Controller
             }
 
             $note->notes = $notes;
+            if ($user->hasRole('Auditing Supervisor')) {
+                $note->user_id = $user->id;
+            }
             $note->save();
 
             return response()->json([
                 'message' => 'تم تحديث ملاحظة المبنى بنجاح',
+                'user_name' => $note->user?->name ?? '-',
             ]);
         }
 
@@ -466,10 +495,14 @@ class AuditStatusHistoryController extends Controller
             }
 
             $note->notes = $notes;
+            if ($user->hasRole('Auditing Supervisor')) {
+                $note->user_id = $user->id;
+            }
             $note->save();
 
             return response()->json([
                 'message' => 'تم تحديث ملاحظة الوحدة بنجاح',
+                'user_name' => $note->user?->name ?? '-',
             ]);
         }
     }
@@ -478,6 +511,7 @@ class AuditStatusHistoryController extends Controller
     {
         return $user?->hasAnyRole([
             'Database Officer',
+            'Auditing Supervisor',
             'Legal Auditor',
             'QC/QA Engineer',
             'Engineering Auditor',
@@ -499,7 +533,7 @@ class AuditStatusHistoryController extends Controller
 
     private function canEditSpecificNote(?User $user, BuildingStatusHistory|HousingStatusHistory $note): bool
     {
-        if ($user?->hasRole('Database Officer')) {
+        if ($user?->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
             return true;
         }
 
