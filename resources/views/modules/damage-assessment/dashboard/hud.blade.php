@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/dark/main.css">
 
     <style>
@@ -409,7 +410,8 @@
         }
 
         .hud-map-filter-panel .form-control,
-        .hud-map-filter-panel .form-select {
+        .hud-map-filter-panel .form-select,
+        .hud-map-filter-panel .select2-container--default .select2-selection--multiple {
             background-color: rgba(255, 255, 255, 0.08);
             border-color: rgba(174, 205, 255, 0.22);
             border-radius: 7px;
@@ -419,7 +421,8 @@
         }
 
         .hud-map-filter-panel .form-control:focus,
-        .hud-map-filter-panel .form-select:focus {
+        .hud-map-filter-panel .form-select:focus,
+        .hud-map-filter-panel .select2-container--default.select2-container--focus .select2-selection--multiple {
             background-color: rgba(255, 255, 255, 0.1);
             border-color: rgba(0, 242, 254, 0.7);
             box-shadow: 0 0 0 0.16rem rgba(0, 242, 254, 0.12);
@@ -433,6 +436,42 @@
         .hud-map-filter-panel .form-select option {
             background: #061224;
             color: #ffffff;
+        }
+
+        .hud-map-filter-panel .select2-container {
+            width: 100% !important;
+        }
+
+        .hud-map-filter-panel .select2-container--default .select2-selection--multiple {
+            padding: 2px 4px;
+        }
+
+        .hud-map-filter-panel .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background: rgba(0, 242, 254, 0.14);
+            border: 1px solid rgba(0, 242, 254, 0.32);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+
+        .hud-map-filter-panel .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: #ffffff;
+        }
+
+        .select2-dropdown.hud-select2-dropdown {
+            background: #061224;
+            border-color: rgba(0, 242, 254, 0.32);
+            color: #ffffff;
+        }
+
+        .select2-dropdown.hud-select2-dropdown .select2-results__option--highlighted.select2-results__option--selectable {
+            background: rgba(0, 242, 254, 0.24);
+            color: #ffffff;
+        }
+
+        .select2-dropdown.hud-select2-dropdown .select2-results__option--selected {
+            background: rgba(255, 255, 255, 0.12);
         }
 
         .hud-map-filter-actions {
@@ -631,8 +670,7 @@
                     <div class="hud-map-filter-body">
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_assignedto">المهندس الميداني</label>
-                            <select id="hud_filter_assignedto" class="form-select hud-map-filter-select" data-field="assignedto">
-                                <option value="">الكل</option>
+                            <select id="hud_filter_assignedto" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="assignedto" data-placeholder="الكل" multiple>
                             </select>
                         </div>
 
@@ -643,8 +681,7 @@
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_field_status">حالة الإستبيان</label>
-                            <select id="hud_filter_field_status" class="form-select" data-field="field_status">
-                                <option value="">الكل</option>
+                            <select id="hud_filter_field_status" class="form-select hud-map-filter-multiple" data-field="field_status" data-placeholder="الكل" multiple>
                                 <option value="COMPLETED">مكتمل</option>
                                 <option value="Not_Completed">غير مكتمل</option>
                             </select>
@@ -652,22 +689,19 @@
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_building_damage_status">حالة الضرر</label>
-                            <select id="hud_filter_building_damage_status" class="form-select hud-map-filter-select" data-field="building_damage_status">
-                                <option value="">الكل</option>
+                            <select id="hud_filter_building_damage_status" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="building_damage_status" data-placeholder="الكل" multiple>
                             </select>
                         </div>
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_municipalitie">البلدية</label>
-                            <select id="hud_filter_municipalitie" class="form-select hud-map-filter-select" data-field="municipalitie">
-                                <option value="">الكل</option>
+                            <select id="hud_filter_municipalitie" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="municipalitie" data-placeholder="الكل" multiple>
                             </select>
                         </div>
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_neighborhood">الحي</label>
-                            <select id="hud_filter_neighborhood" class="form-select hud-map-filter-select" data-field="neighborhood">
-                                <option value="">الكل</option>
+                            <select id="hud_filter_neighborhood" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="neighborhood" data-placeholder="الكل" multiple>
                             </select>
                         </div>
 
@@ -799,6 +833,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://js.arcgis.com/4.22/"></script>
 
@@ -978,6 +1014,26 @@
                 return fieldExpression + " " + operator + " '" + escapeArcgisValue(value) + "'";
             }
 
+            function hudSelectedValues(element) {
+                return Array.from(element?.selectedOptions || [])
+                    .map(function (option) {
+                        return option.value;
+                    })
+                    .filter(function (optionValue) {
+                        return optionValue !== '';
+                    });
+            }
+
+            function hudArcgisInExpression(field, values) {
+                const escapedValues = values
+                    .map(function (fieldValue) {
+                        return "'" + escapeArcgisValue(fieldValue) + "'";
+                    })
+                    .join(', ');
+
+                return field + ' IN (' + escapedValues + ')';
+            }
+
             function buildHudArcgisWhere() {
                 const clauses = [];
                 const allowedFields = [
@@ -990,10 +1046,12 @@
 
                 allowedFields.forEach(function (field) {
                     const element = document.querySelector('[data-field="' + field + '"]');
-                    const fieldValue = element ? element.value : '';
+                    const fieldValues = hudSelectedValues(element);
 
-                    if (fieldValue) {
-                        clauses.push(field + " = '" + escapeArcgisValue(fieldValue) + "'");
+                    if (fieldValues.length === 1) {
+                        clauses.push(field + " = '" + escapeArcgisValue(fieldValues[0]) + "'");
+                    } else if (fieldValues.length > 1) {
+                        clauses.push(hudArcgisInExpression(field, fieldValues));
                     }
                 });
 
@@ -1080,8 +1138,17 @@
 
             function resetHudMapFilters() {
                 document.querySelectorAll('#hudMapFilterPanel select').forEach(function (select) {
-                    select.value = '';
+                    if (select.multiple) {
+                        Array.from(select.options).forEach(function (option) {
+                            option.selected = false;
+                        });
+                    } else {
+                        select.value = '';
+                    }
                 });
+                if (window.jQuery) {
+                    $('#hudMapFilterPanel .hud-map-filter-multiple').val(null).trigger('change.select2');
+                }
                 document.getElementById('hud_filter_building_name').value = '';
                 document.getElementById('hud_filter_search').value = '';
                 document.getElementById('hud_filter_from_date').value = '';
@@ -1118,7 +1185,7 @@
                     })
                     .then(function (data) {
                         const options = Array.isArray(data) ? data : (data.results || []);
-                        select.innerHTML = '<option value="">الكل</option>';
+                        select.innerHTML = '';
 
                         options.forEach(function (option) {
                             const choice = document.createElement('option');
@@ -1126,6 +1193,10 @@
                             choice.textContent = option.text;
                             select.appendChild(choice);
                         });
+
+                        if (window.jQuery && $(select).hasClass('select2-hidden-accessible')) {
+                            $(select).trigger('change.select2');
+                        }
                     })
                     .catch(function (error) {
                         console.error('HUD ArcGIS options failed for ' + field + ':', error);
@@ -1139,6 +1210,19 @@
                 const panel = document.getElementById('hudMapFilterPanel');
                 const header = document.getElementById('hudMapFilterHeader');
                 const toggle = document.getElementById('hudMapFilterToggle');
+
+                if (window.jQuery && $.fn.select2) {
+                    $('#hudMapFilterPanel .hud-map-filter-multiple').select2({
+                        allowClear: true,
+                        closeOnSelect: false,
+                        dir: 'rtl',
+                        dropdownCssClass: 'hud-select2-dropdown',
+                        placeholder: function () {
+                            return $(this).data('placeholder') || 'الكل';
+                        },
+                        width: '100%'
+                    });
+                }
 
                 document.querySelectorAll('.hud-map-filter-select').forEach(loadHudFilterSelectOptions);
                 document.getElementById('hudMapFilterApply').addEventListener('click', applyHudMapFilters);
@@ -1297,7 +1381,11 @@
             const params = new URLSearchParams();
 
             document.querySelectorAll('#hudMapFilterPanel [data-field]').forEach(function (element) {
-                if (element.value) {
+                hudSelectedValues(element).forEach(function (fieldValue) {
+                    params.append(element.dataset.field + '[]', fieldValue);
+                });
+
+                if (!element.multiple && element.value) {
                     params.set(element.dataset.field, element.value);
                 }
             });

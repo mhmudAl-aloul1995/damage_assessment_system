@@ -83,7 +83,11 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee("map.basemap = event.target.value", false)
         ->assertSee('hudStatsUrl', false)
         ->assertSee('refreshHudDashboardData', false)
-        ->assertSee('id="hudTotalBuildings"', false);
+        ->assertSee('id="hudTotalBuildings"', false)
+        ->assertSee('multiple', false)
+        ->assertSee('select2', false)
+        ->assertSee('hudArcgisInExpression', false)
+        ->assertSee("params.append(element.dataset.field + '[]'", false);
 });
 
 it('returns hud stats for all data by default and filtered data when filters are present', function () {
@@ -153,4 +157,12 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertJsonPath('damageChart.data.0', 1)
         ->assertJsonPath('damageChart.data.1', 0)
         ->assertJsonPath('municipalityReports.0.name', 'Gaza');
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats', [
+            'municipalitie' => ['Gaza', 'North Gaza'],
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 2)
+        ->assertJsonPath('assessedUnitsTotal', 2);
 });

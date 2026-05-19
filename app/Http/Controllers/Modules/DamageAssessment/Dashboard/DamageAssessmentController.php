@@ -552,8 +552,12 @@ class DamageAssessmentController extends Controller
     private function applyHudBuildingFilters(Builder $query, Request $request): void
     {
         foreach (['assignedto', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood'] as $field) {
-            if ($request->filled($field)) {
-                $query->where($field, (string) $request->string($field));
+            $values = $this->hudFilterValues($request, $field);
+
+            if (count($values) === 1) {
+                $query->where($field, $values[0]);
+            } elseif (count($values) > 1) {
+                $query->whereIn($field, $values);
             }
         }
 
@@ -589,12 +593,28 @@ class DamageAssessmentController extends Controller
     private function hasHudBuildingFilters(Request $request): bool
     {
         foreach (['assignedto', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood', 'building_name', 'search', 'from_date', 'to_date'] as $field) {
-            if ($request->filled($field)) {
+            if ($request->filled($field) || count($this->hudFilterValues($request, $field)) > 0) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private function hudFilterValues(Request $request, string $field): array
+    {
+        $value = $request->input($field, []);
+
+        if ($value === []) {
+            $value = $request->input($field.'[]', []);
+        }
+
+        return collect(is_array($value) ? $value : [$value])
+            ->map(fn ($item): string => trim((string) $item))
+            ->filter(fn (string $item): bool => $item !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function search(Request $request)
