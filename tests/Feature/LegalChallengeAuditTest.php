@@ -121,6 +121,8 @@ it('hides legal challenge actions from auditing engineers and shows them to othe
     $this->actingAs($engineer)
         ->get("showAssessmentAudit/{$building->globalid}")
         ->assertOk()
+        ->assertDontSee('id="btn_building_legal_challenge"', false)
+        ->assertDontSee('id="btn_housing_legal_challenge"', false)
         ->assertDontSee("openLegalChallengeModal('building')", false)
         ->assertDontSee("openLegalChallengeModal('housing')", false);
 
@@ -132,6 +134,8 @@ it('hides legal challenge actions from auditing engineers and shows them to othe
     $this->actingAs($legalAuditor)
         ->get("showAssessmentAudit/{$building->globalid}")
         ->assertOk()
+        ->assertSee('id="btn_building_legal_challenge"', false)
+        ->assertSee('id="btn_housing_legal_challenge"', false)
         ->assertSee("openLegalChallengeModal('building')", false)
         ->assertSee("openLegalChallengeModal('housing')", false);
 });

@@ -486,12 +486,6 @@
             <div class="card-title">
                 <h2>الإستبيان</h2>
             </div>
-            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
-                <div class="card-toolbar">
-                    <button type="button" class="btn btn-sm btn-light-warning"
-                        onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
-                </div>
-            @endunless
         </div>
 
         <div class="card-body">
@@ -608,6 +602,11 @@
                                                     Final Approve
                                                 </button>
                                             @endif
+                                            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
+                                                <button type="button" id="btn_building_legal_challenge"
+                                                    class="btn btn-sm btn-light-warning"
+                                                    onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
+                                            @endunless
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('building','history')">ملاحظات</button>
                                             <button type="button" class="btn btn-sm btn-light-primary ms-3"
@@ -642,7 +641,8 @@
                             </div>
                             <div class="card-toolbar">
                                 @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
-                                    <button type="button" class="btn btn-sm btn-light-warning me-2"
+                                    <button type="button" id="btn_housing_legal_challenge"
+                                        class="btn btn-sm btn-light-warning me-2"
                                         onclick="openLegalChallengeModal('housing')">
                                         التحديات القانونية
                                     </button>
