@@ -565,7 +565,7 @@
                                                         data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
                                                 </div>
                                             </div>
-                                            <span class="separator">__</span>
+                                            
                                             @role('Legal Auditor')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted"
