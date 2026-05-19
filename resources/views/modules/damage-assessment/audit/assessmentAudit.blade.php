@@ -604,10 +604,6 @@
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
                                             @endhasanyrole
-                                            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
-                                            <button type="button" class="btn btn-sm btn-light-warning"
-                                                onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
-                                            @endunless
                                             <button type="button" class="btn btn-sm btn-light-primary ms-3"
                                                 onclick="reloadBuildingAssessmentTable()">تحديث</button>
 
@@ -833,10 +829,6 @@
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
                                             @endhasanyrole
-                                            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
-                                            <button type="button" class="btn btn-sm btn-light-warning"
-                                                onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
-                                            @endunless
                                             <button type="button" class="btn btn-sm btn-light-primary"
                                                 onclick="reloadHousingAssessmentTable();">
                                                 <i class="ki-duotone ki-arrows-circle fs-6">
