@@ -175,6 +175,8 @@ Route::middleware('auth')->group(function () {
         ->name('damageAssessment.arcgis.options');
     Route::get('/damageAssessment/hud', [DamageAssessmentController::class, 'hud'])
         ->name('damageAssessment.hud');
+    Route::get('/damageAssessment/hud/stats', [DamageAssessmentController::class, 'hudStats'])
+        ->name('damageAssessment.hud.stats');
     Route::resource('damageAssessment', controller: DamageAssessmentController::class);
     Route::get('/phc/damageAssessment/arcgis/options', [DamageAssessmentController::class, 'arcgisOptions'])
         ->name('phc.damageAssessment.arcgis.options');

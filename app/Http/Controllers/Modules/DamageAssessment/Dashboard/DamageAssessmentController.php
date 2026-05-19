@@ -373,6 +373,230 @@ class DamageAssessmentController extends Controller
         ]);
     }
 
+    public function hudStats(Request $request): \Illuminate\Http\JsonResponse
+    {
+        return response()->json($this->buildHudDashboardData($request));
+    }
+
+    private function buildHudDashboardData(Request $request): array
+    {
+        $buildingStats = $this->hudBuildingQuery($request)
+            ->selectRaw("
+                COUNT(*) as total_buildings,
+                COALESCE(SUM(CASE WHEN field_status = 'COMPLETED' THEN 1 ELSE 0 END), 0) as assessed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as fully_damaged_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
+                COALESCE(SUM(CAST(building_debris_qty AS DECIMAL(15, 2))), 0) as rubble_quantity
+            ")
+            ->first();
+
+        $unitStats = $this->hudHousingUnitQuery($request)
+            ->selectRaw("
+                COUNT(*) as total_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as fully_damaged,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END), 0) as partially_damaged,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'committee_review2' THEN 1 ELSE 0 END), 0) as committee_review,
+                COALESCE(SUM(CASE WHEN unit_damage_status IS NULL OR unit_damage_status = '' THEN 1 ELSE 0 END), 0) as unclassified,
+                COALESCE(SUM(CASE WHEN unit_support_needed = 'yes' THEN 1 ELSE 0 END), 0) as support_needed,
+                COALESCE(SUM(CASE WHEN is_the_housing_unit_or_living_habitable = 'yes' THEN 1 ELSE 0 END), 0) as habitable
+            ")
+            ->first();
+
+        $buildingMunicipalities = $this->hudBuildingQuery($request)
+            ->selectRaw("
+                COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
+                COUNT(*) as assessed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings
+            ")
+            ->groupBy('municipality_name')
+            ->get()
+            ->keyBy('municipality_name');
+
+        $unitMunicipalities = $this->hudHousingUnitQuery($request)
+            ->selectRaw("
+                COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
+                COUNT(*) as units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END), 0) as partially_damaged_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'committee_review2' THEN 1 ELSE 0 END), 0) as committee_review_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status IS NULL OR unit_damage_status = '' THEN 1 ELSE 0 END), 0) as unclassified_units
+            ")
+            ->groupBy('municipality_name')
+            ->get()
+            ->keyBy('municipality_name');
+
+        $buildingMunicipalityNeighborhoodStats = $this->hudBuildingQuery($request)
+            ->selectRaw("
+                COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
+                COALESCE(NULLIF(neighborhood, ''), 'غير محدد') as neighborhood_name,
+                COUNT(*) as assessed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings
+            ")
+            ->groupBy('municipality_name', 'neighborhood_name')
+            ->get()
+            ->groupBy('municipality_name')
+            ->map(fn (Collection $rows): Collection => $rows->keyBy('neighborhood_name'));
+
+        $unitMunicipalityNeighborhoodStats = $this->hudHousingUnitQuery($request)
+            ->selectRaw("
+                COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
+                COALESCE(NULLIF(neighborhood, ''), 'غير محدد') as neighborhood_name,
+                COUNT(*) as units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units
+            ")
+            ->groupBy('municipality_name', 'neighborhood_name')
+            ->get()
+            ->groupBy('municipality_name')
+            ->map(fn (Collection $rows): Collection => $rows->keyBy('neighborhood_name'));
+
+        $municipalityReports = $buildingMunicipalities
+            ->keys()
+            ->merge($unitMunicipalities->keys())
+            ->merge($buildingMunicipalityNeighborhoodStats->keys())
+            ->merge($unitMunicipalityNeighborhoodStats->keys())
+            ->unique()
+            ->sort()
+            ->map(function (string $municipalityName) use ($buildingMunicipalities, $buildingMunicipalityNeighborhoodStats, $unitMunicipalities, $unitMunicipalityNeighborhoodStats): array {
+                $buildingRow = $buildingMunicipalities->get($municipalityName);
+                $unitRow = $unitMunicipalities->get($municipalityName);
+                $buildingNeighborhoodRows = $buildingMunicipalityNeighborhoodStats->get($municipalityName, collect());
+                $unitNeighborhoodRows = $unitMunicipalityNeighborhoodStats->get($municipalityName, collect());
+
+                $neighborhoodRows = $buildingNeighborhoodRows
+                    ->keys()
+                    ->merge($unitNeighborhoodRows->keys())
+                    ->unique()
+                    ->sort()
+                    ->map(function (string $neighborhoodName) use ($buildingNeighborhoodRows, $unitNeighborhoodRows): array {
+                        $buildingNeighborhood = $buildingNeighborhoodRows->get($neighborhoodName);
+                        $unitNeighborhood = $unitNeighborhoodRows->get($neighborhoodName);
+
+                        return [
+                            'name' => $neighborhoodName,
+                            'assessed' => (int) ($buildingNeighborhood->assessed_buildings ?? 0),
+                            'units' => (int) ($unitNeighborhood->units ?? 0),
+                            'destroyed' => (int) ($unitNeighborhood->destroyed_units ?? $buildingNeighborhood->destroyed_buildings ?? 0),
+                        ];
+                    })
+                    ->values();
+
+                return [
+                    'name' => $municipalityName,
+                    'summary' => [
+                        'assessed' => (int) ($buildingRow->assessed_buildings ?? 0),
+                        'units' => (int) ($unitRow->units ?? 0),
+                        'destroyed' => (int) ($unitRow->destroyed_units ?? $buildingRow->destroyed_buildings ?? 0),
+                    ],
+                    'chart' => [
+                        (int) ($unitRow->destroyed_units ?? $buildingRow->destroyed_buildings ?? 0),
+                        (int) ($unitRow->partially_damaged_units ?? $buildingRow->partially_damaged_buildings ?? 0),
+                        (int) ($unitRow->committee_review_units ?? $buildingRow->committee_review_buildings ?? 0),
+                        (int) ($unitRow->unclassified_units ?? 0),
+                    ],
+                    'neighborhoods' => $neighborhoodRows,
+                ];
+            })
+            ->values();
+
+        $totalUnits = max((int) ($unitStats->total_units ?? 0), 1);
+        $damageChart = [
+            'labels' => ['مدمر كلياً', 'متضرر جزئياً', 'مراجعة لجنة', 'غير مصنف'],
+            'data' => [
+                (int) ($unitStats->fully_damaged ?? 0),
+                (int) ($unitStats->partially_damaged ?? 0),
+                (int) ($unitStats->committee_review ?? 0),
+                (int) ($unitStats->unclassified ?? 0),
+            ],
+        ];
+
+        return [
+            'summaryStats' => [
+                'total_buildings' => (int) ($buildingStats->total_buildings ?? 0),
+                'assessed_buildings' => (int) ($buildingStats->assessed_buildings ?? 0),
+                'fully_damaged_units' => (int) ($unitStats->fully_damaged ?? 0),
+                'rubble_quantity' => (float) ($buildingStats->rubble_quantity ?? 0),
+            ],
+            'damageChart' => $damageChart,
+            'safetyStats' => [
+                'destroyed' => $this->percentage((int) ($unitStats->fully_damaged ?? 0), $totalUnits),
+                'support_needed' => $this->percentage((int) ($unitStats->support_needed ?? 0), $totalUnits),
+                'habitable' => $this->percentage((int) ($unitStats->habitable ?? 0), $totalUnits),
+            ],
+            'municipalityReports' => $municipalityReports,
+            'assessedUnitsTotal' => array_sum($damageChart['data']),
+        ];
+    }
+
+    private function hudBuildingQuery(Request $request): Builder
+    {
+        $query = Building::query();
+        $this->applyHudBuildingFilters($query, $request);
+
+        return $query;
+    }
+
+    private function hudHousingUnitQuery(Request $request): Builder
+    {
+        $query = HousingUnit::query();
+
+        if ($this->hasHudBuildingFilters($request)) {
+            $query->whereIn('parentglobalid', $this->hudBuildingQuery($request)->select('globalid'));
+        }
+
+        return $query;
+    }
+
+    private function applyHudBuildingFilters(Builder $query, Request $request): void
+    {
+        foreach (['assignedto', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood'] as $field) {
+            if ($request->filled($field)) {
+                $query->where($field, (string) $request->string($field));
+            }
+        }
+
+        if ($request->filled('building_name')) {
+            $query->where('building_name', 'like', '%'.str_replace(['%', '_'], ['\\%', '\\_'], (string) $request->string('building_name')).'%');
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->string('search'));
+
+            $query->where(function (Builder $searchQuery) use ($search) {
+                if (ctype_digit($search)) {
+                    $searchQuery->where('objectid', (int) $search);
+
+                    return;
+                }
+
+                $searchQuery->where('globalid', 'like', '%'.str_replace(['%', '_'], ['\\%', '\\_'], $search).'%');
+            });
+        }
+
+        [$startDate, $endDate] = $this->dashboardDateRange($request);
+
+        if ($startDate !== null) {
+            $query->whereDate('end', '>=', $startDate);
+        }
+
+        if ($endDate !== null) {
+            $query->whereDate('end', '<=', $endDate);
+        }
+    }
+
+    private function hasHudBuildingFilters(Request $request): bool
+    {
+        foreach (['assignedto', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood', 'building_name', 'search', 'from_date', 'to_date'] as $field) {
+            if ($request->filled($field)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function search(Request $request)
     {
         $term = $request->search;
@@ -537,6 +761,7 @@ class DamageAssessmentController extends Controller
                 Rule::in([
                     'assignedto',
                     'building_name',
+                    'field_status',
                     'building_damage_status',
                     'municipalitie',
                     'neighborhood',

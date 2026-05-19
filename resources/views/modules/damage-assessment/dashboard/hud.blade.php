@@ -579,7 +579,7 @@
                 <div class="card-hud-glass d-flex align-items-center justify-content-between" style="border-left: 3px solid var(--neon-blue);">
                     <div>
                         <span class="hud-label d-block mb-1">إجمالي مباني القطاع</span>
-                        <span class="hud-digital-number">{{ $formatNumber($summaryStats['total_buildings']) }}</span>
+                        <span id="hudTotalBuildings" class="hud-digital-number">{{ $formatNumber($summaryStats['total_buildings']) }}</span>
                     </div>
                     <i class="fa-solid fa-layer-group text-info fs-4 opacity-50"></i>
                 </div>
@@ -588,7 +588,7 @@
                 <div class="card-hud-glass d-flex align-items-center justify-content-between" style="border-left: 3px solid var(--neon-green);">
                     <div>
                         <span class="hud-label d-block mb-1">المباني المقيّمة ميدانياً</span>
-                        <span class="hud-digital-number text-success">{{ $formatNumber($summaryStats['assessed_buildings']) }}</span>
+                        <span id="hudAssessedBuildings" class="hud-digital-number text-success">{{ $formatNumber($summaryStats['assessed_buildings']) }}</span>
                     </div>
                     <i class="fa-solid fa-satellite-dish text-success fs-4 opacity-50"></i>
                 </div>
@@ -597,7 +597,7 @@
                 <div class="card-hud-glass d-flex align-items-center justify-content-between" style="border-left: 3px solid var(--neon-red);">
                     <div>
                         <span class="hud-label d-block mb-1">وحدات مدمرة كلياً</span>
-                        <span class="hud-digital-number text-danger">{{ $formatNumber($summaryStats['fully_damaged_units']) }}</span>
+                        <span id="hudFullyDamagedUnits" class="hud-digital-number text-danger">{{ $formatNumber($summaryStats['fully_damaged_units']) }}</span>
                     </div>
                     <i class="fa-solid fa-house-damage text-danger fs-4 opacity-50"></i>
                 </div>
@@ -606,7 +606,7 @@
                 <div class="card-hud-glass d-flex align-items-center justify-content-between" style="border-left: 3px solid var(--neon-yellow);">
                     <div>
                         <span class="hud-label d-block mb-1">تقديرات الركام الكلي</span>
-                        <span class="hud-digital-number text-warning">{{ $formattedRubble }} <small class="fs-6 text-muted">طن</small></span>
+                        <span id="hudRubbleQuantity" class="hud-digital-number text-warning">{{ $formattedRubble }} <small class="fs-6 text-muted">طن</small></span>
                     </div>
                     <i class="fa-solid fa-truck-pickup text-warning fs-4 opacity-50"></i>
                 </div>
@@ -710,23 +710,23 @@
                     <div class="mb-2">
                         <div class="d-flex justify-content-between small opacity-75">
                             <span>مدمرة كلياً</span>
-                            <span class="text-danger fw-bold">{{ $safetyStats['destroyed'] }}%</span>
+                            <span id="hudSafetyDestroyedValue" class="text-danger fw-bold">{{ $safetyStats['destroyed'] }}%</span>
                         </div>
-                        <div class="cyber-progress text-danger"><div class="cyber-progress-fill bg-danger" style="width: {{ $safetyStats['destroyed'] }}%"></div></div>
+                        <div class="cyber-progress text-danger"><div id="hudSafetyDestroyedBar" class="cyber-progress-fill bg-danger" style="width: {{ $safetyStats['destroyed'] }}%"></div></div>
                     </div>
                     <div class="mb-2">
                         <div class="d-flex justify-content-between small opacity-75">
                             <span>تحتاج تدعيم إنشائي</span>
-                            <span class="text-warning fw-bold">{{ $safetyStats['support_needed'] }}%</span>
+                            <span id="hudSafetySupportValue" class="text-warning fw-bold">{{ $safetyStats['support_needed'] }}%</span>
                         </div>
-                        <div class="cyber-progress text-warning"><div class="cyber-progress-fill bg-warning" style="width: {{ $safetyStats['support_needed'] }}%"></div></div>
+                        <div class="cyber-progress text-warning"><div id="hudSafetySupportBar" class="cyber-progress-fill bg-warning" style="width: {{ $safetyStats['support_needed'] }}%"></div></div>
                     </div>
                     <div>
                         <div class="d-flex justify-content-between small opacity-75">
                             <span>صالحة للسكن</span>
-                            <span class="text-success fw-bold">{{ $safetyStats['habitable'] }}%</span>
+                            <span id="hudSafetyHabitableValue" class="text-success fw-bold">{{ $safetyStats['habitable'] }}%</span>
                         </div>
-                        <div class="cyber-progress text-success"><div class="cyber-progress-fill bg-success" style="width: {{ $safetyStats['habitable'] }}%"></div></div>
+                        <div class="cyber-progress text-success"><div id="hudSafetyHabitableBar" class="cyber-progress-fill bg-success" style="width: {{ $safetyStats['habitable'] }}%"></div></div>
                     </div>
                 </div>
             </div>
@@ -736,7 +736,7 @@
             <div class="hud-sidebar hud-interactive">
                 <div class="card-hud-glass" style="flex: 1; display: flex; flex-direction: column;">
                     <div class="hud-section-title"><i class="fa-solid fa-globe"></i> تقارير البلديات والأحياء</div>
-                    <div style="flex: 1; overflow-y: auto;">
+                    <div id="hudMunicipalityReports" style="flex: 1; overflow-y: auto;">
                         @forelse ($municipalityReports as $report)
                             <section class="governorate-report">
                                 <div class="governorate-report-header">
@@ -791,7 +791,7 @@
                         @endforelse
                     </div>
                     <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
-                        <small class="text-white-50">إجمالي الوحدات التي فُحصت: <span class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
+                        <small class="text-white-50">إجمالي الوحدات التي فُحصت: <span id="hudAssessedUnitsTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
                     </div>
                 </div>
             </div>
@@ -809,6 +809,7 @@
         const arcgisToken = @json($token);
         const assessmentBaseUrl = @json(url('assessment'));
         const arcgisOptionsUrl = window.location.pathname.replace(/\/hud\/?$/, '/arcgis/options');
+        const hudStatsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/stats');
 
         require([
             'esri/Map',
@@ -1053,6 +1054,7 @@
                 query.where = whereExpression;
                 query.returnGeometry = true;
                 buildingsLayer.definitionExpression = whereExpression;
+                refreshHudDashboardData();
 
                 Promise.all([
                     buildingsLayer.queryFeatureCount(query),
@@ -1087,6 +1089,7 @@
 
                 buildingsLayer.definitionExpression = '1=1';
                 updateHudFilterCount('1=1');
+                refreshHudDashboardData();
                 view.goTo(gazaStripExtent, { duration: 900 }).catch(function (error) {
                     if (error.name !== 'AbortError') {
                         console.error('HUD reset goTo failed:', error);
@@ -1233,7 +1236,7 @@
         });
 
         const ctxDoughnut = document.getElementById('hudDoughnutChart').getContext('2d');
-        new Chart(ctxDoughnut, {
+        const hudDoughnutChart = new Chart(ctxDoughnut, {
             type: 'doughnut',
             data: {
                 labels: @json($damageChart['labels']),
@@ -1261,44 +1264,232 @@
             }
         });
 
-        municipalityReports.forEach((report, index) => {
-            const canvas = document.getElementById(`municipalityChart${index}`);
+        const hudMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة', 'غير مصنف'];
+        let hudMunicipalityCharts = [];
 
-            if (!canvas) {
+        function formatHudNumber(value) {
+            return Number(value || 0).toLocaleString('en-US');
+        }
+
+        function formatHudRubble(value) {
+            const numericValue = Number(value || 0);
+
+            if (numericValue >= 1000000) {
+                return (numericValue / 1000000).toFixed(1) + 'M <small class="fs-6 text-muted">طن</small>';
+            }
+
+            return formatHudNumber(numericValue) + ' <small class="fs-6 text-muted">طن</small>';
+        }
+
+        function escapeHudHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, function (character) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[character];
+            });
+        }
+
+        function currentHudFilterParams() {
+            const params = new URLSearchParams();
+
+            document.querySelectorAll('#hudMapFilterPanel [data-field]').forEach(function (element) {
+                if (element.value) {
+                    params.set(element.dataset.field, element.value);
+                }
+            });
+
+            const fields = {
+                building_name: document.getElementById('hud_filter_building_name')?.value || '',
+                search: document.getElementById('hud_filter_search')?.value || '',
+                from_date: document.getElementById('hud_filter_from_date')?.value || '',
+                to_date: document.getElementById('hud_filter_to_date')?.value || ''
+            };
+
+            Object.entries(fields).forEach(function ([field, value]) {
+                if (String(value).trim() !== '') {
+                    params.set(field, value);
+                }
+            });
+
+            return params;
+        }
+
+        function updateHudSafetyMetric(key, value) {
+            const textElement = document.getElementById(`hudSafety${key}Value`);
+            const barElement = document.getElementById(`hudSafety${key}Bar`);
+            const percentage = Number(value || 0);
+
+            if (textElement) {
+                textElement.textContent = percentage + '%';
+            }
+
+            if (barElement) {
+                barElement.style.width = percentage + '%';
+            }
+        }
+
+        function createHudMunicipalityCharts(reports) {
+            reports.forEach((report, index) => {
+                const canvas = document.getElementById(`municipalityChart${index}`);
+
+                if (!canvas) {
+                    return;
+                }
+
+                hudMunicipalityCharts.push(new Chart(canvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: hudMunicipalityChartLabels,
+                        datasets: [{
+                            data: report.chart,
+                            backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#00ff87'],
+                            borderWidth: 0,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#8fa0b7', font: { family: 'Cairo', size: 10 } },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#8fa0b7', precision: 0, font: { family: 'Orbitron', size: 9 } },
+                                grid: { color: 'rgba(255,255,255,0.06)' }
+                            }
+                        }
+                    }
+                }));
+            });
+        }
+
+        function renderHudMunicipalityReports(reports) {
+            const container = document.getElementById('hudMunicipalityReports');
+
+            hudMunicipalityCharts.forEach(function (chart) {
+                chart.destroy();
+            });
+            hudMunicipalityCharts = [];
+
+            if (!container) {
                 return;
             }
 
-            new Chart(canvas.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: ['مدمر', 'جزئي', 'لجنة', 'غير مصنف'],
-                    datasets: [{
-                        data: report.chart,
-                        backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#00ff87'],
-                        borderWidth: 0,
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#8fa0b7', font: { family: 'Cairo', size: 10 } },
-                            grid: { color: 'rgba(255,255,255,0.04)' }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            ticks: { color: '#8fa0b7', precision: 0, font: { family: 'Orbitron', size: 9 } },
-                            grid: { color: 'rgba(255,255,255,0.06)' }
-                        }
-                    }
-                }
+            if (!Array.isArray(reports) || reports.length === 0) {
+                container.innerHTML = '<div class="text-center text-white-50 py-4">لا توجد بيانات بلديات حالياً</div>';
+
+                return;
+            }
+
+            container.innerHTML = reports.map(function (report, index) {
+                const neighborhoods = Array.isArray(report.neighborhoods) && report.neighborhoods.length > 0
+                    ? report.neighborhoods.map(function (neighborhood) {
+                        return `
+                            <tr>
+                                <td class="text-start fw-bold text-info">${escapeHudHtml(neighborhood.name)}</td>
+                                <td>${formatHudNumber(neighborhood.assessed)}</td>
+                                <td>${formatHudNumber(neighborhood.units)}</td>
+                                <td class="text-danger fw-bold">${formatHudNumber(neighborhood.destroyed)}</td>
+                            </tr>
+                        `;
+                    }).join('')
+                    : '<tr><td colspan="4" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td></tr>';
+
+                return `
+                    <section class="governorate-report">
+                        <div class="governorate-report-header">
+                            <div class="governorate-report-name">${escapeHudHtml(report.name)}</div>
+                            <div class="governorate-report-metric">
+                                <span>مقيّم</span>
+                                <strong>${formatHudNumber(report.summary?.assessed)}</strong>
+                            </div>
+                            <div class="governorate-report-metric">
+                                <span>وحدات</span>
+                                <strong>${formatHudNumber(report.summary?.units)}</strong>
+                            </div>
+                            <div class="governorate-report-metric">
+                                <span>مدمر</span>
+                                <strong class="text-danger">${formatHudNumber(report.summary?.destroyed)}</strong>
+                            </div>
+                        </div>
+
+                        <div class="governorate-report-body">
+                            <div class="municipality-chart-wrap">
+                                <canvas id="municipalityChart${index}"></canvas>
+                            </div>
+
+                            <table class="table table-sm table-cyber align-middle mb-0 text-center">
+                                <thead>
+                                    <tr>
+                                        <th class="text-start">الحي</th>
+                                        <th>مقيّم</th>
+                                        <th>وحدات</th>
+                                        <th>مدمر</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${neighborhoods}</tbody>
+                            </table>
+                        </div>
+                    </section>
+                `;
+            }).join('');
+
+            createHudMunicipalityCharts(reports);
+        }
+
+        function refreshHudDashboardData() {
+            const url = new URL(hudStatsUrl, window.location.origin);
+            const params = currentHudFilterParams();
+
+            params.forEach(function (value, key) {
+                url.searchParams.set(key, value);
             });
-        });
+
+            fetch(url.toString(), {
+                headers: {
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('HUD stats request failed with status ' + response.status);
+                    }
+
+                    return response.json();
+                })
+                .then(function (data) {
+                    document.getElementById('hudTotalBuildings').textContent = formatHudNumber(data.summaryStats.total_buildings);
+                    document.getElementById('hudAssessedBuildings').textContent = formatHudNumber(data.summaryStats.assessed_buildings);
+                    document.getElementById('hudFullyDamagedUnits').textContent = formatHudNumber(data.summaryStats.fully_damaged_units);
+                    document.getElementById('hudRubbleQuantity').innerHTML = formatHudRubble(data.summaryStats.rubble_quantity);
+                    document.getElementById('hudAssessedUnitsTotal').textContent = formatHudNumber(data.assessedUnitsTotal);
+
+                    hudDoughnutChart.data.datasets[0].data = data.damageChart.data;
+                    hudDoughnutChart.update();
+
+                    updateHudSafetyMetric('Destroyed', data.safetyStats.destroyed);
+                    updateHudSafetyMetric('Support', data.safetyStats.support_needed);
+                    updateHudSafetyMetric('Habitable', data.safetyStats.habitable);
+                    renderHudMunicipalityReports(data.municipalityReports);
+                })
+                .catch(function (error) {
+                    console.error('HUD stats refresh failed:', error);
+                });
+        }
+
+        createHudMunicipalityCharts(municipalityReports);
+
     </script>
 </body>
 </html>

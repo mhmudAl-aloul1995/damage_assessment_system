@@ -37,6 +37,27 @@ it('renders the hud arcgis map filter controls', function () {
         'neighborhood' => 'Rimal',
     ]);
 
+    Building::query()->create([
+        'objectid' => 101,
+        'globalid' => 'other-building-global-id',
+        'building_name' => 'Other Building',
+        'assignedto' => 'Other Engineer',
+        'field_status' => 'Not_Completed',
+        'building_damage_status' => 'partially_damaged',
+        'municipalitie' => 'North Gaza',
+        'neighborhood' => 'Jabalia',
+        'end' => '2026-05-18 08:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 201,
+        'globalid' => 'other-unit-global-id',
+        'parentglobalid' => 'other-building-global-id',
+        'unit_damage_status' => 'partially_damaged2',
+        'municipalitie' => 'North Gaza',
+        'neighborhood' => 'Jabalia',
+    ]);
+
     $response = $this->actingAs($user)->get(route('damageAssessment.hud'));
 
     $response
@@ -59,5 +80,77 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee("expandIconClass: 'esri-icon-basemap'", false)
         ->assertSee('id="hudBasemapSelect"', false)
         ->assertSee('ArcGIS Satellite', false)
-        ->assertSee("map.basemap = event.target.value", false);
+        ->assertSee("map.basemap = event.target.value", false)
+        ->assertSee('hudStatsUrl', false)
+        ->assertSee('refreshHudDashboardData', false)
+        ->assertSee('id="hudTotalBuildings"', false);
+});
+
+it('returns hud stats for all data by default and filtered data when filters are present', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 300,
+        'globalid' => 'gaza-building',
+        'building_name' => 'Gaza Building',
+        'assignedto' => 'Field Engineer',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'building_debris_qty' => '10',
+        'end' => '2026-05-19 08:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 400,
+        'globalid' => 'gaza-unit',
+        'parentglobalid' => 'gaza-building',
+        'unit_damage_status' => 'fully_damaged2',
+        'unit_support_needed' => 'yes',
+        'is_the_housing_unit_or_living_habitable' => 'no',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 301,
+        'globalid' => 'north-building',
+        'building_name' => 'North Building',
+        'assignedto' => 'Other Engineer',
+        'field_status' => 'Not_Completed',
+        'building_damage_status' => 'partially_damaged',
+        'municipalitie' => 'North Gaza',
+        'neighborhood' => 'Jabalia',
+        'building_debris_qty' => '5',
+        'end' => '2026-05-18 08:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 401,
+        'globalid' => 'north-unit',
+        'parentglobalid' => 'north-building',
+        'unit_damage_status' => 'partially_damaged2',
+        'unit_support_needed' => 'no',
+        'is_the_housing_unit_or_living_habitable' => 'yes',
+        'municipalitie' => 'North Gaza',
+        'neighborhood' => 'Jabalia',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats'))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 2)
+        ->assertJsonPath('summaryStats.fully_damaged_units', 1)
+        ->assertJsonPath('assessedUnitsTotal', 2);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats', ['municipalitie' => 'Gaza']))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 1)
+        ->assertJsonPath('summaryStats.assessed_buildings', 1)
+        ->assertJsonPath('summaryStats.fully_damaged_units', 1)
+        ->assertJsonPath('damageChart.data.0', 1)
+        ->assertJsonPath('damageChart.data.1', 0)
+        ->assertJsonPath('municipalityReports.0.name', 'Gaza');
 });
