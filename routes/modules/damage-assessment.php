@@ -271,9 +271,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('audit/housing-status-history', [AuditStatusHistoryController::class, 'housingHistory'])
         ->name('housing.status.history');
-    Route::get('assessment/notes/edit-data', [AuditStatusHistoryController::class, 'getEditableNote'])
-        ->name('assessment.notes.edit.data');
-
     Route::post('assessment/notes/update', [AuditStatusHistoryController::class, 'updateNote'])
         ->name('assessment.notes.update');
     Route::get('audit/building-history', [AuditStatusHistoryController::class, 'buildingHistory'])

@@ -610,26 +610,26 @@ it('returns structured status history payload for rendering badges safely', func
         ->assertJsonPath('history.0.notes', '<strong>Needs review</strong>');
 });
 
-it('shows note edit actions to database officers and auditors', function () {
-    $legalAuditorRole = Role::query()->create([
-        'name' => 'Legal Auditor',
-        'guard_name' => 'web',
-    ]);
+it('does not show the separate note edit action', function () {
+    $moduleView = file_get_contents(resource_path('views/modules/damage-assessment/audit/assessmentAudit.blade.php'));
+    $legacyView = file_get_contents(resource_path('views/DamageAssessment/assessmentAudit.blade.php'));
+    $routes = file_get_contents(base_path('routes/modules/damage-assessment.php'));
+    $controller = file_get_contents(app_path('Http/Controllers/Modules/DamageAssessment/Audit/AuditStatusHistoryController.php'));
 
-    $legalAuditor = User::factory()->create();
-    $legalAuditor->assignRole($legalAuditorRole);
-
-    $building = Building::query()->create([
-        'objectid' => 9811,
-        'globalid' => 'note-edit-visible-building',
-        'building_name' => 'Note Edit Building',
-    ]);
-
-    $this->actingAs($legalAuditor)
-        ->get("showAssessmentAudit/{$building->globalid}")
-        ->assertOk()
-        ->assertSee("openNotesModal('building','edit_note')", false)
-        ->assertSee("openNotesModal('housing','edit_note')", false);
+    expect($moduleView)
+        ->not->toContain("openNotesModal('building','edit_note')")
+        ->not->toContain("openNotesModal('housing','edit_note')")
+        ->not->toContain('loadEditableNote(')
+        ->not->toContain('updateExistingNote(')
+        ->and($legacyView)
+        ->not->toContain("openNotesModal('building','edit_note')")
+        ->not->toContain("openNotesModal('housing','edit_note')")
+        ->not->toContain('loadEditableNote(')
+        ->not->toContain('updateExistingNote(')
+        ->and($routes)
+        ->not->toContain('assessment.notes.edit.data')
+        ->and($controller)
+        ->not->toContain('function getEditableNote');
 });
 
 it('allows auditors to edit only their own matching note type', function () {
@@ -672,20 +672,20 @@ it('allows auditors to edit only their own matching note type', function () {
     ]);
 
     $this->actingAs($legalAuditor)
-        ->getJson(route('assessment.notes.edit.data', [
-            'type' => 'building',
+        ->getJson(route('building.status.history', [
             'globalid' => $building->globalid,
         ]))
         ->assertOk()
-        ->assertJsonPath('id', $history->id)
-        ->assertJsonPath('notes', 'Original note');
+        ->assertJsonPath('history.0.note_id', $history->id)
+        ->assertJsonPath('history.0.can_edit', true);
 
     $this->actingAs($engineer)
-        ->getJson(route('assessment.notes.edit.data', [
-            'type' => 'building',
+        ->getJson(route('building.status.history', [
             'globalid' => $building->globalid,
         ]))
-        ->assertNotFound();
+        ->assertOk()
+        ->assertJsonPath('history.0.note_id', $history->id)
+        ->assertJsonPath('history.0.can_edit', false);
 
     $this->actingAs($legalAuditor)
         ->postJson(route('assessment.notes.update'), [

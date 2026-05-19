@@ -608,10 +608,6 @@
                                             @endif
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('building','history')">ملاحظات</button>
-                                            @hasanyrole('Database Officer|Legal Auditor|QC/QA Engineer|Engineering Auditor')
-                                            <button type="button" class="btn btn-sm btn-light-info"
-                                                onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
-                                            @endhasanyrole
                                             <button type="button" class="btn btn-sm btn-light-primary ms-3"
                                                 onclick="reloadBuildingAssessmentTable()">تحديث</button>
 
@@ -841,10 +837,6 @@
 
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('housing','history')">ملاحظات</button>
-                                            @hasanyrole('Database Officer|Legal Auditor|QC/QA Engineer|Engineering Auditor')
-                                            <button type="button" class="btn btn-sm btn-light-info"
-                                                onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
-                                            @endhasanyrole
                                             <button type="button" class="btn btn-sm btn-light-primary"
                                                 onclick="reloadHousingAssessmentTable();">
                                                 <i class="ki-duotone ki-arrows-circle fs-6">
@@ -1642,11 +1634,6 @@
                 $('#notesModalTitle').text(type === 'building' ? 'إضافة ملاحظة للمبنى' : 'إضافة ملاحظة للوحدة');
                 $('#notesInputWrapper').show();
                 $('#notesSaveBtn').show().text('حفظ').prop('disabled', false).attr('onclick', 'submitStatusWithNotes()');
-            } else if (mode === 'edit_note') {
-                $('#notesModalTitle').text(type === 'building' ? 'تعديل ملاحظة المبنى' : 'تعديل ملاحظة الوحدة');
-                $('#notesInputWrapper').show();
-                $('#notesSaveBtn').show().text('تحديث').prop('disabled', true).attr('onclick', 'updateExistingNote()');
-                loadEditableNote(type, globalid);
             }
 
             bootstrap.Modal.getOrCreateInstance(document.getElementById('notesModal')).show();
@@ -1843,86 +1830,6 @@
             notesContext = null;
         }
 
-        function loadEditableNote(type, globalid) {
-            $('#notesInput').val('جاري التحميل...').prop('readonly', true);
-            $('#notesSaveBtn').prop('disabled', true);
-            $('#notesLockText').hide();
-
-            $.ajax({
-                url: "{{ route('assessment.notes.edit.data') }}",
-                method: "GET",
-                data: { type: type, globalid: globalid },
-                success: function (response) {
-                    noteEditMode = true;
-                    currentNoteRecordId = response.id ?? null;
-                    currentApprovalLocked = !!response.has_final_approve;
-
-                    $('#noteId').val(currentNoteRecordId || '');
-                    $('#notesInput').val(response.notes ?? '');
-
-                    if (currentApprovalLocked) {
-                        $('#notesInput').prop('readonly', true);
-                        $('#notesSaveBtn').prop('disabled', true);
-                        $('#notesLockText').show();
-                        toastr.warning('لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود');
-                    } else {
-                        $('#notesInput').prop('readonly', false);
-                        $('#notesSaveBtn').prop('disabled', false);
-                        $('#notesLockText').hide();
-                    }
-                },
-                error: function (xhr) {
-                    $('#notesInput').val('').prop('readonly', true);
-                    $('#notesSaveBtn').prop('disabled', true);
-                    toastr.error(xhr.responseJSON?.message || 'تعذر تحميل الملاحظة');
-                }
-            });
-        }
-
-        function updateExistingNote() {
-            if (currentApprovalLocked) {
-                toastr.warning('لا يمكن تعديل الملاحظة لأن الاعتماد النهائي موجود');
-                return;
-            }
-
-            let noteId = $('#noteId').val();
-            let notes = $('#notesInput').val();
-
-            if (!noteId) {
-                toastr.warning('لا يوجد ملاحظة للتعديل');
-                return;
-            }
-
-            $.ajax({
-                url: "{{ route('assessment.notes.update') }}",
-                method: "POST",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    id: noteId,
-                    notes: notes,
-                    type: notesContext
-                },
-                beforeSend: function () { $('#notesSaveBtn').prop('disabled', true); },
-                success: function (response) {
-                    toastr.success(response.message || 'تم تحديث الملاحظة بنجاح');
-                    closeNotesModal();
-
-                    if (notesContext === 'building') {
-                        reloadBuildingAssessmentTable();
-                        reloadBuildingUnitsTable();
-                    } else if (notesContext === 'housing') {
-                        reloadHousingAssessmentTable();
-                        reloadBuildingUnitsTable();
-                    }
-                },
-                error: function (xhr) {
-                    toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء تحديث الملاحظة');
-                },
-                complete: function () {
-                    if (!currentApprovalLocked) $('#notesSaveBtn').prop('disabled', false);
-                }
-            });
-        }
         function reloadBuildingAssessmentTable() {
             if ($.fn.DataTable.isDataTable('#kt_table_building_assessment')) {
                 $('#kt_table_building_assessment')
