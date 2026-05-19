@@ -3564,6 +3564,7 @@ COALESCE(
             'globalid' => ['required', 'string'],
             'status' => ['required', 'in:rejected,accepted,need_review,legal_notes,undp_final_approve'],
             'notes' => ['nullable', 'string'],
+            'audit_type' => ['nullable', 'in:Legal Auditor,QC/QA Engineer'],
         ]);
 
         DB::beginTransaction();
@@ -3586,6 +3587,8 @@ COALESCE(
                 $type = 'QC/QA Engineer';
             } elseif ($user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
+            } elseif ($user->hasRole('Database Officer') && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
+                $type = $request->audit_type;
             } elseif (
                 $request->status === 'undp_final_approve'
                 && $user->hasAnyRole(['undp-Project Manager', 'Database Officer'])
@@ -3690,6 +3693,7 @@ COALESCE(
             'globalid' => ['required', 'string'],
             'status' => ['required', 'in:rejected,accepted,need_review,legal_notes,undp_final_approve'],
             'notes' => ['nullable', 'string'],
+            'audit_type' => ['nullable', 'in:Legal Auditor,QC/QA Engineer'],
         ]);
 
         DB::beginTransaction();
@@ -3712,6 +3716,8 @@ COALESCE(
                 $type = 'QC/QA Engineer';
             } elseif ($user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
+            } elseif ($user->hasRole('Database Officer') && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
+                $type = $request->audit_type;
             } elseif (
                 $request->status === 'undp_final_approve'
                 && $user->hasAnyRole(['undp-Project Manager', 'Database Officer'])

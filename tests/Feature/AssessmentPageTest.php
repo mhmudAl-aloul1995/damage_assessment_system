@@ -495,7 +495,7 @@ it('checks parent building final approval before housing undp final approval sta
         ->assertJsonPath('message', 'لا يمكن تكرار نفس الحالة الحالية.');
 });
 
-it('allows database officers to set undp final approval only after final approval', function () {
+it('allows database officers to set audit statuses and undp final approval', function () {
     $role = Role::query()->create([
         'name' => 'Database Officer',
         'guard_name' => 'web',
@@ -513,6 +513,13 @@ it('allows database officers to set undp final approval only after final approva
     ]);
 
     $undpStatus = AssessmentStatus::query()->where('name', 'undp_final_approve')->firstOrFail();
+    $lawyerAcceptedStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_lawyer',
+        'label_en' => 'Accepted By Lawyer',
+        'label_ar' => 'Accepted By Lawyer',
+        'stage' => 'lawyer',
+        'order_step' => 10,
+    ]);
 
     $building = Building::query()->create([
         'objectid' => 9501,
@@ -531,8 +538,17 @@ it('allows database officers to set undp final approval only after final approva
         ->postJson(route('building.assessment.set.status'), [
             'globalid' => $building->globalid,
             'status' => 'accepted',
+            'audit_type' => 'Legal Auditor',
         ])
-        ->assertForbidden();
+        ->assertOk()
+        ->assertJsonPath('data.type', 'Legal Auditor')
+        ->assertJsonPath('data.status_name', 'accepted_by_lawyer');
+
+    $this->assertDatabaseHas('building_statuses', [
+        'building_id' => $building->objectid,
+        'status_id' => $lawyerAcceptedStatus->id,
+        'type' => 'Legal Auditor',
+    ]);
 
     $this->actingAs($user)
         ->postJson(route('building.assessment.set.status'), [
@@ -573,6 +589,79 @@ it('allows database officers to set undp final approval only after final approva
         'building_id' => $bulkBuilding->objectid,
         'status_id' => $undpStatus->id,
         'type' => 'Database Officer',
+    ]);
+});
+
+it('allows database officers to set housing audit statuses for legal and engineering tracks', function () {
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $legalNotesStatus = AssessmentStatus::query()->create([
+        'name' => 'legal_notes',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'Legal Notes',
+        'stage' => 'lawyer',
+        'order_step' => 10,
+    ]);
+
+    $needReviewStatus = AssessmentStatus::query()->create([
+        'name' => 'need_review',
+        'label_en' => 'Need Review',
+        'label_ar' => 'Need Review',
+        'stage' => 'engineer',
+        'order_step' => 11,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9511,
+        'globalid' => 'database-officer-all-buttons-building',
+        'building_name' => 'Database Officer All Buttons Building',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 9512,
+        'globalid' => 'database-officer-all-buttons-housing',
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Owner',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.set.status'), [
+            'globalid' => $housing->globalid,
+            'status' => 'legal_notes',
+            'audit_type' => 'Legal Auditor',
+            'notes' => 'Legal note',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.type', 'Legal Auditor')
+        ->assertJsonPath('data.status_name', 'legal_notes');
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.set.status'), [
+            'globalid' => $housing->globalid,
+            'status' => 'need_review',
+            'audit_type' => 'QC/QA Engineer',
+            'notes' => 'Engineering note',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.type', 'QC/QA Engineer')
+        ->assertJsonPath('data.status_name', 'need_review');
+
+    $this->assertDatabaseHas('housing_statuses', [
+        'housing_id' => $housing->objectid,
+        'status_id' => $legalNotesStatus->id,
+        'type' => 'Legal Auditor',
+    ]);
+
+    $this->assertDatabaseHas('housing_statuses', [
+        'housing_id' => $housing->objectid,
+        'status_id' => $needReviewStatus->id,
+        'type' => 'QC/QA Engineer',
     ]);
 });
 
@@ -630,6 +719,18 @@ it('does not show the separate note edit action', function () {
         ->not->toContain('assessment.notes.edit.data')
         ->and($controller)
         ->not->toContain('function getEditableNote');
+});
+
+it('shows all audit status button groups to database officers in the assessment audit view', function () {
+    $view = file_get_contents(resource_path('views/modules/damage-assessment/audit/assessmentAudit.blade.php'));
+
+    expect($view)
+        ->toContain("@hasanyrole('Legal Auditor|Database Officer')")
+        ->toContain("@hasanyrole('QC/QA Engineer|Database Officer')")
+        ->toContain("setBuildingStatus('accepted', 'Legal Auditor')")
+        ->toContain("setBuildingStatus('accepted', 'QC/QA Engineer')")
+        ->toContain("setHousingStatus('legal_notes', 'Legal Auditor')")
+        ->toContain("setHousingStatus('need_review', 'QC/QA Engineer')");
 });
 
 it('allows auditors to edit only their own matching note type', function () {

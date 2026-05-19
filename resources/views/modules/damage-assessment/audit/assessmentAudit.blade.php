@@ -572,26 +572,28 @@
                                                 </div>
                                             </div>
                                             
-                                            @role('Legal Auditor')
+                                            @hasanyrole('Legal Auditor|Database Officer')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
-                                                data-status="accepted"
-                                                onclick="setBuildingStatus('accepted')">مقبول</button>
+                                                data-status="accepted" data-audit-type="Legal Auditor"
+                                                onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                             <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
-                                                data-status="legal_notes" onclick="setBuildingStatus('legal_notes')">ملاحظات
+                                                data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                onclick="setBuildingStatus('legal_notes', 'Legal Auditor')">ملاحظات
                                                 قانونية</button>
-                                            @endrole
+                                            @endhasanyrole
 
-                                            @role('QC/QA Engineer')
+                                            @hasanyrole('QC/QA Engineer|Database Officer')
                                             <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
-                                                data-status="rejected"
-                                                onclick="setBuildingStatus('rejected')">مرفوض</button>
+                                                data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                onclick="setBuildingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
-                                                data-status="accepted"
-                                                onclick="setBuildingStatus('accepted')">مقبول</button>
+                                                data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                onclick="setBuildingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                             <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
-                                                data-status="need_review" onclick="setBuildingStatus('need_review')">بحاجة
+                                                data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                onclick="setBuildingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                 لمراجعة</button>
-                                            @endrole
+                                            @endhasanyrole
 
                                             @hasanyrole('Database Officer|undp-Project Manager')
                                             <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
@@ -810,23 +812,28 @@
                                                 </div>
                                             </div>
                                            
-                                            @role('Legal Auditor')
+                                            @hasanyrole('Legal Auditor|Database Officer')
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                                data-status="accepted" onclick="setHousingStatus('accepted')">مقبول</button>
+                                                data-status="accepted" data-audit-type="Legal Auditor"
+                                                onclick="setHousingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                             <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                                data-status="legal_notes" onclick="setHousingStatus('legal_notes')">بحاجة
+                                                data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                onclick="setHousingStatus('legal_notes', 'Legal Auditor')">بحاجة
                                                 لمراجعة</button>
-                                            @endrole
+                                            @endhasanyrole
 
-                                            @role('QC/QA Engineer')
+                                            @hasanyrole('QC/QA Engineer|Database Officer')
                                             <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
-                                                data-status="rejected" onclick="setHousingStatus('rejected')">مرفوض</button>
+                                                data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                onclick="setHousingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                                data-status="accepted" onclick="setHousingStatus('accepted')">مقبول</button>
+                                                data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                onclick="setHousingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                             <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                                data-status="need_review" onclick="setHousingStatus('need_review')">بحاجة
+                                                data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                onclick="setHousingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                 لمراجعة</button>
-                                            @endrole
+                                            @endhasanyrole
 
                                             <!--    @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
                                                         <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
@@ -977,6 +984,7 @@
         let isAreaManager = @json(auth()->user()->hasRole('Area Manager'));
         let notesContext = null;
         let pendingStatus = null;
+        let pendingAuditType = null;
         let isSubmittingStatus = false;
         let noteEditMode = false;
         let currentNoteRecordId = null;
@@ -1004,7 +1012,7 @@
             KTBuildingAssessmentList.init();
             KTBuildingUnitsList.init();
             KTHousingAssessmentList.init();
-            setActiveStatusButton('.building-status-btn', normalizeStatus(buildingCurrentStatus));
+            setActiveStatusButton('.building-status-btn', normalizeStatus(buildingCurrentStatus), normalizeAuditType(buildingCurrentStatus));
             syncFinalApproveButton();
             selectInitialHousingOption();
         });
@@ -1021,6 +1029,14 @@
             if (statusName.includes('rejected')) return 'rejected';
             if (statusName.includes('need_review')) return 'need_review';
             if (statusName.includes('legal_notes')) return 'legal_notes';
+            return null;
+        }
+
+        function normalizeAuditType(statusName) {
+            if (!statusName) return null;
+            statusName = String(statusName).toLowerCase();
+            if (statusName.includes('lawyer') || statusName.includes('legal_notes')) return 'Legal Auditor';
+            if (statusName.includes('engineer') || statusName.includes('rejected') || statusName.includes('need_review')) return 'QC/QA Engineer';
             return null;
         }
 
@@ -1524,10 +1540,16 @@
             return BUILDING_SURVEY_MAP[name] || null;
         }
 
-        function setActiveStatusButton(selector, status) {
+        function setActiveStatusButton(selector, status, auditType = null) {
             $(selector).removeClass('is-active').prop('disabled', false);
             if (!status) return;
-            $(selector + '[data-status="' + status + '"]').addClass('is-active').prop('disabled', true);
+
+            let activeSelector = selector + '[data-status="' + status + '"]';
+            if (auditType) {
+                activeSelector += '[data-audit-type="' + auditType + '"]';
+            }
+
+            $(activeSelector).addClass('is-active').prop('disabled', true);
         }
 
         function getFirstHousingOptionValue() {
@@ -1603,9 +1625,10 @@
             }
         }
 
-        function openNotesModal(type, mode = 'history', status = null) {
+        function openNotesModal(type, mode = 'history', status = null, auditType = null) {
             notesContext = type;
             pendingStatus = status;
+            pendingAuditType = auditType;
             noteEditMode = false;
             currentNoteRecordId = null;
             currentApprovalLocked = false;
@@ -1827,6 +1850,7 @@
 
             $('#notesInput').val('');
             pendingStatus = null;
+            pendingAuditType = null;
             notesContext = null;
         }
 
@@ -1953,7 +1977,7 @@
             return null;
         }
 
-        function setBuildingStatus(status) {
+        function setBuildingStatus(status, auditType = null) {
             let globalid = '{{ $buildingGlobalid }}';
 
             if (!globalid) {
@@ -1961,10 +1985,10 @@
                 return;
             }
 
-            openNotesModal('building', 'note', status);
+            openNotesModal('building', 'note', status, auditType);
         }
 
-        function setHousingStatus(status) {
+        function setHousingStatus(status, auditType = null) {
             let globalid = $("[name='globalid']").val();
 
             if (!globalid) {
@@ -1972,7 +1996,7 @@
                 return;
             }
 
-            openNotesModal('housing', 'note', status);
+            openNotesModal('housing', 'note', status, auditType);
         }
 
         function openLegalChallengeModal(type) {
@@ -2078,6 +2102,7 @@
                     _token: "{{ csrf_token() }}",
                     globalid: globalid,
                     status: pendingStatus,
+                    audit_type: pendingAuditType,
                     notes: notes
                 },
                 beforeSend: function () {
@@ -2089,10 +2114,10 @@
                     toastr.success(response.message || 'تم تحديث الحالة بنجاح');
 
                     if (isBuilding) {
-                        setActiveStatusButton('.building-status-btn', pendingStatus);
+                        setActiveStatusButton('.building-status-btn', pendingStatus, pendingAuditType);
                         reloadBuildingAssessmentTable();
                     } else {
-                        setActiveStatusButton('.housing-status-btn', pendingStatus);
+                        setActiveStatusButton('.housing-status-btn', pendingStatus, pendingAuditType);
                         reloadHousingAssessmentTable();
                     }
 
@@ -2296,7 +2321,7 @@
 
                     $('[name="globalid"]').val(row.globalid).trigger('change');
                     currentHousingLegalChallenge = row.legal_challenge || null;
-                    setActiveStatusButton('.housing-status-btn', normalizeStatus(row.current_status));
+                    setActiveStatusButton('.housing-status-btn', normalizeStatus(row.current_status), normalizeAuditType(row.current_status));
                 });
             };
 
