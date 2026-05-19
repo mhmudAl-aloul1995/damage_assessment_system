@@ -566,7 +566,7 @@
                                                 </div>
                                             </div>
                                             
-                                            @hasanyrole('Legal Auditor|Database Officer')
+                                            @hasanyrole('Legal Auditor')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
                                                 onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
@@ -805,7 +805,7 @@
                                                 </div>
                                             </div>
                                            
-                                            @hasanyrole('Legal Auditor|Database Officer')
+                                            @hasanyrole('Legal Auditor')
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
                                                 onclick="setHousingStatus('accepted', 'Legal Auditor')">مقبول</button>
