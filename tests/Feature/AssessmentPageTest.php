@@ -575,3 +575,37 @@ it('allows database officers to set undp final approval only after final approva
         'type' => 'Database Officer',
     ]);
 });
+
+it('returns structured status history payload for rendering badges safely', function () {
+    $user = User::factory()->create();
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'rejected_by_engineer',
+        'label_en' => 'Rejected By Engineer',
+        'label_ar' => 'Rejected By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 2,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9801,
+        'globalid' => 'status-history-badge-building',
+        'building_name' => 'Status Badge Building',
+    ]);
+
+    BuildingStatusHistory::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => '<strong>Needs review</strong>',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('building.status.history', ['globalid' => $building->globalid]))
+        ->assertOk()
+        ->assertJsonPath('history.0.status_name', 'Rejected By Engineer')
+        ->assertJsonPath('history.0.status_label', 'Rejected By Engineer')
+        ->assertJsonPath('history.0.status_badge_class', 'badge badge-light-danger fw-bold')
+        ->assertJsonPath('history.0.notes', '<strong>Needs review</strong>');
+});

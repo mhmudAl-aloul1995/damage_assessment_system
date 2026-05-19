@@ -66,9 +66,7 @@ class AuditStatusHistoryController extends Controller
                     return [
                         'id' => 'status_' . $item->id,
                         'source' => 'building_status',
-                        'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">'
-                            . e($statusLabel) .
-                            '</span>',
+                        ...$this->statusPayload($statusName, $statusLabel, $roleName),
                         'user_name' => $item->user->name ?? '-',
                         'role_name' => $roleName,
                         'notes' => $item->notes,
@@ -88,9 +86,7 @@ class AuditStatusHistoryController extends Controller
                 return [
                     'id' => 'history_' . $item->id,
                     'source' => 'building_history',
-                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">'
-                        . e($statusLabel) .
-                        '</span>',
+                    ...$this->statusPayload($statusName, $statusLabel, $roleName),
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
                     'notes' => $item->notes,
@@ -134,7 +130,7 @@ class AuditStatusHistoryController extends Controller
                     return [
                         'id' => 'history_' . $item->id,
                         'source' => 'housing_history',
-                        'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                        ...$this->statusPayload($statusName, $statusLabel, $roleName),
                         'user_name' => $item->user->name ?? '-',
                         'role_name' => $roleName,
                         'notes' => $item->notes,
@@ -159,7 +155,7 @@ class AuditStatusHistoryController extends Controller
                 return [
                     'id' => 'status_' . $item->id,
                     'source' => 'housing_status',
-                    'status_name' => '<span class="' . $this->getStatusBadge($statusName, $roleName) . '">' . e($statusLabel) . '</span>',
+                    ...$this->statusPayload($statusName, $statusLabel, $roleName),
                     'user_name' => $item->user->name ?? '-',
                     'role_name' => $roleName,
                     'notes' => $item->notes,
@@ -167,6 +163,20 @@ class AuditStatusHistoryController extends Controller
                 ];
             })
             ->values();
+    }
+
+    /**
+     * @return array{status_name: string, status_label: string, status_badge_class: string}
+     */
+    private function statusPayload(?string $statusName, ?string $statusLabel, ?string $roleName): array
+    {
+        $label = $statusLabel ?: ($statusName ?: '-');
+
+        return [
+            'status_name' => $label,
+            'status_label' => $label,
+            'status_badge_class' => $this->getStatusBadge($statusName ?: '-', $roleName),
+        ];
     }
 
     private function getStatusBadge(string $statusName, ?string $role = null): string

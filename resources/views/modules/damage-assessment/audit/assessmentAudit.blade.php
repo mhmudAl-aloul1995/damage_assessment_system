@@ -1660,6 +1660,14 @@
             return $('<div>').text(text).html();
         }
 
+        function renderStatusBadge(item) {
+            let label = item.status_label ?? item.status_name ?? '-';
+            let badgeClass = item.status_badge_class ?? 'badge badge-light-secondary fw-bold';
+            badgeClass = String(badgeClass).replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+
+            return `<span class="${badgeClass}">${escapeHtml(label)}</span>`;
+        }
+
         function loadStatusHistory(type, globalid) {
             let url = type === 'building' ? "{{ route('building.status.history') }}" : "{{ route('housing.status.history') }}";
 
@@ -1681,7 +1689,7 @@
                     history.forEach(function (item) {
                         rows += `
                                                                                                                                                                                             <tr>
-                                                                                                                                                                                                <td>${escapeHtml(item.status_name ?? '-')}</td>
+                                                                                                                                                                                                <td>${renderStatusBadge(item)}</td>
                                                                                                                                                                                                 <td>${escapeHtml(item.user_name ?? '-')}</td>
                                                                                                                                                                                                 <td>${escapeHtml(item.notes ?? '-')}</td>
                                                                                                                                                                                                 <td>${escapeHtml(item.created_at ?? '-')}</td>
