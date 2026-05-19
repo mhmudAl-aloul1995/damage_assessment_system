@@ -694,6 +694,14 @@
                         </div>
 
                         <div class="hud-map-filter-field">
+                            <label for="hud_filter_security_priority">يوجد عائق</label>
+                            <div class="form-check form-switch text-white-50">
+                                <input type="checkbox" id="hud_filter_security_priority" class="form-check-input">
+                                <label class="form-check-label" for="hud_filter_security_priority">السيمبولجي الأزرق</label>
+                            </div>
+                        </div>
+
+                        <div class="hud-map-filter-field">
                             <label for="hud_filter_municipalitie">البلدية</label>
                             <select id="hud_filter_municipalitie" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="municipalitie" data-placeholder="الكل" multiple>
                             </select>
@@ -1008,6 +1016,10 @@
                 }) || null;
             }
 
+            function hudArcgisFieldName(fieldName) {
+                return getArcgisField(fieldName)?.name || fieldName;
+            }
+
             function resolveHudArcgisDateField() {
                 if (hudArcgisDateField) {
                     return hudArcgisDateField;
@@ -1056,6 +1068,10 @@
                 return field + ' IN (' + escapedValues + ')';
             }
 
+            function hudArcgisSecurityPriorityExpression() {
+                return "(LOWER(TRIM(" + hudArcgisFieldName('assessment_obstacle') + ")) = 'yes' OR LOWER(TRIM(" + hudArcgisFieldName('security_situation') + ")) = 'unsafe')";
+            }
+
             function buildHudArcgisWhere() {
                 const clauses = [];
                 const allowedFields = [
@@ -1069,27 +1085,32 @@
                 allowedFields.forEach(function (field) {
                     const element = document.querySelector('[data-field="' + field + '"]');
                     const fieldValues = hudSelectedValues(element);
+                    const arcgisField = hudArcgisFieldName(field);
 
                     if (fieldValues.length === 1) {
-                        clauses.push(field + " = '" + escapeArcgisValue(fieldValues[0]) + "'");
+                        clauses.push(arcgisField + " = '" + escapeArcgisValue(fieldValues[0]) + "'");
                     } else if (fieldValues.length > 1) {
-                        clauses.push(hudArcgisInExpression(field, fieldValues));
+                        clauses.push(hudArcgisInExpression(arcgisField, fieldValues));
                     }
                 });
+
+                if (document.getElementById('hud_filter_security_priority')?.checked) {
+                    clauses.push(hudArcgisSecurityPriorityExpression());
+                }
 
                 const buildingNameValue = (document.getElementById('hud_filter_building_name')?.value || '').trim();
 
                 if (buildingNameValue !== '') {
-                    clauses.push("building_name LIKE '%" + escapeArcgisValue(buildingNameValue) + "%'");
+                    clauses.push(hudArcgisFieldName('building_name') + " LIKE '%" + escapeArcgisValue(buildingNameValue) + "%'");
                 }
 
                 const searchValue = (document.getElementById('hud_filter_search')?.value || '').trim();
 
                 if (searchValue !== '') {
                     if (/^\d+$/.test(searchValue)) {
-                        clauses.push('objectid = ' + parseInt(searchValue, 10));
+                        clauses.push(hudArcgisFieldName('objectid') + ' = ' + parseInt(searchValue, 10));
                     } else {
-                        clauses.push("globalid LIKE '%" + escapeArcgisValue(searchValue) + "%'");
+                        clauses.push(hudArcgisFieldName('globalid') + " LIKE '%" + escapeArcgisValue(searchValue) + "%'");
                     }
                 }
 
@@ -1173,6 +1194,7 @@
                 }
                 document.getElementById('hud_filter_building_name').value = '';
                 document.getElementById('hud_filter_search').value = '';
+                document.getElementById('hud_filter_security_priority').checked = false;
                 document.getElementById('hud_filter_from_date').value = '';
                 document.getElementById('hud_filter_to_date').value = '';
 
@@ -1415,6 +1437,7 @@
             const fields = {
                 building_name: document.getElementById('hud_filter_building_name')?.value || '',
                 search: document.getElementById('hud_filter_search')?.value || '',
+                security_priority: document.getElementById('hud_filter_security_priority')?.checked ? '1' : '',
                 from_date: document.getElementById('hud_filter_from_date')?.value || '',
                 to_date: document.getElementById('hud_filter_to_date')?.value || ''
             };
@@ -1562,7 +1585,7 @@
             const params = currentHudFilterParams();
 
             params.forEach(function (value, key) {
-                url.searchParams.set(key, value);
+                url.searchParams.append(key, value);
             });
 
             fetch(url.toString(), {

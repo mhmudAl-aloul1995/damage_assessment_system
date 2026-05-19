@@ -68,11 +68,14 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('id="hud_filter_building_name"', false)
         ->assertSee('data-field="field_status"', false)
         ->assertSee('data-field="building_damage_status"', false)
+        ->assertSee('id="hud_filter_security_priority"', false)
         ->assertSee('data-field="municipalitie"', false)
         ->assertSee('data-field="neighborhood"', false)
         ->assertSee("replace(/\\/hud\\/?$/, '/arcgis/options')", false)
         ->assertSee('buildHudArcgisWhere', false)
-        ->assertSee("building_name LIKE '%", false)
+        ->assertSee("hudArcgisFieldName('building_name') + \" LIKE", false)
+        ->assertSee('hudArcgisFieldName', false)
+        ->assertSee('hudArcgisSecurityPriorityExpression', false)
         ->assertSee('buildingsLayer.definitionExpression = whereExpression', false)
         ->assertSee('assessment_obstacle', false)
         ->assertSee('security_situation', false)
@@ -93,7 +96,8 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('multiple', false)
         ->assertSee('select2', false)
         ->assertSee('hudArcgisInExpression', false)
-        ->assertSee("params.append(element.dataset.field + '[]'", false);
+        ->assertSee("params.append(element.dataset.field + '[]'", false)
+        ->assertSee('url.searchParams.append(key, value)', false);
 });
 
 it('returns hud stats for all data by default and filtered data when filters are present', function () {
@@ -136,6 +140,21 @@ it('returns hud stats for all data by default and filtered data when filters are
         'end' => '2026-05-18 08:00:00',
     ]);
 
+    Building::query()->create([
+        'objectid' => 302,
+        'globalid' => 'obstacle-building',
+        'building_name' => 'Obstacle Building',
+        'assignedto' => 'Security Engineer',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'committee_review',
+        'assessment_obstacle' => 'yes',
+        'security_situation' => 'Unsafe',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'building_debris_qty' => '7',
+        'end' => '2026-05-17 08:00:00',
+    ]);
+
     HousingUnit::query()->create([
         'objectid' => 401,
         'globalid' => 'north-unit',
@@ -147,21 +166,33 @@ it('returns hud stats for all data by default and filtered data when filters are
         'neighborhood' => 'Jabalia',
     ]);
 
+    HousingUnit::query()->create([
+        'objectid' => 402,
+        'globalid' => 'obstacle-unit',
+        'parentglobalid' => 'obstacle-building',
+        'unit_damage_status' => 'committee_review2',
+        'unit_support_needed' => 'no',
+        'is_the_housing_unit_or_living_habitable' => 'no',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+    ]);
+
     $this->actingAs($user)
         ->getJson(route('damageAssessment.hud.stats'))
         ->assertOk()
-        ->assertJsonPath('summaryStats.total_buildings', 2)
+        ->assertJsonPath('summaryStats.total_buildings', 3)
         ->assertJsonPath('summaryStats.fully_damaged_units', 1)
-        ->assertJsonPath('assessedUnitsTotal', 2);
+        ->assertJsonPath('assessedUnitsTotal', 3);
 
     $this->actingAs($user)
         ->getJson(route('damageAssessment.hud.stats', ['municipalitie' => 'Gaza']))
         ->assertOk()
-        ->assertJsonPath('summaryStats.total_buildings', 1)
-        ->assertJsonPath('summaryStats.assessed_buildings', 1)
+        ->assertJsonPath('summaryStats.total_buildings', 2)
+        ->assertJsonPath('summaryStats.assessed_buildings', 2)
         ->assertJsonPath('summaryStats.fully_damaged_units', 1)
         ->assertJsonPath('damageChart.data.0', 1)
         ->assertJsonPath('damageChart.data.1', 0)
+        ->assertJsonPath('damageChart.data.2', 1)
         ->assertJsonPath('municipalityReports.0.name', 'Gaza');
 
     $this->actingAs($user)
@@ -169,6 +200,15 @@ it('returns hud stats for all data by default and filtered data when filters are
             'municipalitie' => ['Gaza', 'North Gaza'],
         ]))
         ->assertOk()
-        ->assertJsonPath('summaryStats.total_buildings', 2)
-        ->assertJsonPath('assessedUnitsTotal', 2);
+        ->assertJsonPath('summaryStats.total_buildings', 3)
+        ->assertJsonPath('assessedUnitsTotal', 3);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats', ['security_priority' => '1']))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 1)
+        ->assertJsonPath('summaryStats.assessed_buildings', 1)
+        ->assertJsonPath('damageChart.data.0', 0)
+        ->assertJsonPath('damageChart.data.2', 1)
+        ->assertJsonPath('municipalityReports.0.summary.units', 1);
 });

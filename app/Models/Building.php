@@ -44,6 +44,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $note08
  * @property string|null $note09
  * @property string|null $weather
+ * @property string|null $assessment_obstacle
  * @property string|null $security_situation
  * @property string|null $building_damage_status
  * @property string|null $building_type
@@ -216,6 +217,7 @@ class Building extends Model
         'id',
         'attachments',
         'assignedto',
+        'assessment_obstacle',
         'objectid',
         'globalid',
         'field_status',
