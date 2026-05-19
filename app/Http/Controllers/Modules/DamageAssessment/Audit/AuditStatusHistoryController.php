@@ -200,6 +200,8 @@ class AuditStatusHistoryController extends Controller
 
     public function getEditableNote(Request $request): JsonResponse
     {
+        abort_unless($request->user()?->hasRole('Database Officer'), 403);
+
         $request->validate([
             'type' => 'required|in:building,housing',
             'globalid' => 'required|string',
@@ -388,6 +390,8 @@ class AuditStatusHistoryController extends Controller
     }
     public function updateNote(Request $request): JsonResponse
     {
+        abort_unless($request->user()?->hasRole('Database Officer'), 403);
+
         $request->validate([
             'id' => 'required|integer',
             'type' => 'required|in:building,housing',

@@ -600,8 +600,10 @@
                                             @endif
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('building','history')">ملاحظات</button>
+                                            @role('Database Officer')
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('building','edit_note')">تعديل الملاحظة</button>
+                                            @endrole
                                             @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
                                             <button type="button" class="btn btn-sm btn-light-warning"
                                                 onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
@@ -827,8 +829,10 @@
 
                                             <button type="button" class="btn btn-sm btn-light-dark"
                                                 onclick="openNotesModal('housing','history')">ملاحظات</button>
+                                            @role('Database Officer')
                                             <button type="button" class="btn btn-sm btn-light-info"
                                                 onclick="openNotesModal('housing','edit_note')">تعديل الملاحظة</button>
+                                            @endrole
                                             @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
                                             <button type="button" class="btn btn-sm btn-light-warning"
                                                 onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>

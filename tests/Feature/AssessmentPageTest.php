@@ -609,3 +609,91 @@ it('returns structured status history payload for rendering badges safely', func
         ->assertJsonPath('history.0.status_badge_class', 'badge badge-light-danger fw-bold')
         ->assertJsonPath('history.0.notes', '<strong>Needs review</strong>');
 });
+
+it('shows note edit actions only to database officers', function () {
+    $databaseOfficerRole = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $legalAuditorRole = Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $databaseOfficer = User::factory()->create();
+    $databaseOfficer->assignRole($databaseOfficerRole);
+
+    $legalAuditor = User::factory()->create();
+    $legalAuditor->assignRole($legalAuditorRole);
+
+    $building = Building::query()->create([
+        'objectid' => 9811,
+        'globalid' => 'note-edit-visible-building',
+        'building_name' => 'Note Edit Building',
+    ]);
+
+    $this->actingAs($databaseOfficer)
+        ->get("showAssessmentAudit/{$building->globalid}")
+        ->assertOk()
+        ->assertSee("openNotesModal('building','edit_note')", false)
+        ->assertSee("openNotesModal('housing','edit_note')", false);
+
+    $this->actingAs($legalAuditor)
+        ->get("showAssessmentAudit/{$building->globalid}")
+        ->assertOk()
+        ->assertDontSee("openNotesModal('building','edit_note')", false)
+        ->assertDontSee("openNotesModal('housing','edit_note')", false);
+});
+
+it('forbids non database officers from editing notes directly', function () {
+    $role = Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'legal_notes',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'Legal Notes',
+        'stage' => 'lawyer',
+        'order_step' => 6,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9821,
+        'globalid' => 'note-edit-forbidden-building',
+        'building_name' => 'Note Edit Forbidden Building',
+    ]);
+
+    $history = BuildingStatusHistory::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'Legal Auditor',
+        'notes' => 'Original note',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('assessment.notes.edit.data', [
+            'type' => 'building',
+            'globalid' => $building->globalid,
+        ]))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.notes.update'), [
+            'id' => $history->id,
+            'type' => 'building',
+            'notes' => 'Changed note',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('building_status_histories', [
+        'id' => $history->id,
+        'notes' => 'Original note',
+    ]);
+});
