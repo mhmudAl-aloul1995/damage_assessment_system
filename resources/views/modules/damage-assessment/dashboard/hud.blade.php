@@ -855,6 +855,16 @@
         const arcgisOptionsUrl = window.location.pathname.replace(/\/hud\/?$/, '/arcgis/options');
         const hudStatsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/stats');
 
+        function hudSelectedValues(element) {
+            return Array.from(element?.selectedOptions || [])
+                .map(function (option) {
+                    return option.value;
+                })
+                .filter(function (optionValue) {
+                    return optionValue !== '';
+                });
+        }
+
         require([
             'esri/Map',
             'esri/views/MapView',
@@ -1046,16 +1056,6 @@
                 }
 
                 return fieldExpression + " " + operator + " '" + escapeArcgisValue(value) + "'";
-            }
-
-            function hudSelectedValues(element) {
-                return Array.from(element?.selectedOptions || [])
-                    .map(function (option) {
-                        return option.value;
-                    })
-                    .filter(function (optionValue) {
-                        return optionValue !== '';
-                    });
             }
 
             function hudArcgisInExpression(field, values) {
