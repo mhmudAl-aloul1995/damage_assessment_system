@@ -331,7 +331,7 @@
             box-shadow: 0 0 22px rgba(0, 242, 254, 0.14), 0 18px 42px rgba(0, 0, 0, 0.4);
             color: #ffffff;
             flex-shrink: 0;
-            max-height: calc(100vh - 220px);
+            max-height: min(520px, calc(100vh - 230px));
             overflow: hidden;
             position: relative;
             transition: max-height 0.22s ease, width 0.22s ease;
@@ -392,20 +392,20 @@
         }
 
         .hud-map-filter-body {
-            max-height: calc(100vh - 172px);
+            max-height: min(468px, calc(100vh - 282px));
             overflow-y: auto;
-            padding: 12px;
+            padding: 10px 12px 0;
         }
 
         .hud-map-filter-field {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .hud-map-filter-field label {
             color: #d8e8ff;
-            font-size: 0.76rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
         .hud-map-filter-panel .form-control,
@@ -415,7 +415,7 @@
             border-radius: 7px;
             color: #ffffff;
             font-size: 0.8rem;
-            min-height: 38px;
+            min-height: 34px;
         }
 
         .hud-map-filter-panel .form-control:focus,
@@ -441,8 +441,8 @@
             display: grid;
             gap: 8px;
             grid-template-columns: 1fr 1fr;
-            margin: 0 -12px -12px;
-            padding: 12px;
+            margin: 0 -12px;
+            padding: 10px 12px 12px;
             position: sticky;
             z-index: 2;
         }
@@ -451,7 +451,7 @@
             border-radius: 7px;
             font-size: 0.8rem;
             font-weight: 800;
-            min-height: 38px;
+            min-height: 36px;
         }
 
         ::-webkit-scrollbar {
