@@ -135,10 +135,10 @@ it('hides legal challenge actions from auditing engineers and shows them to othe
         ->get("showAssessmentAudit/{$building->globalid}")
         ->assertOk()
         ->assertSee('id="btn_building_legal_challenge"', false)
-        ->assertDontSee('id="btn_housing_legal_challenge"', false)
-        ->assertSee('housing-legal-challenge-btn', false)
+        ->assertSee('id="btn_housing_legal_challenge"', false)
+        ->assertDontSee('housing-legal-challenge-btn', false)
         ->assertSee("openLegalChallengeModal('building')", false)
-        ->assertSee("openLegalChallengeModal('housing', this.dataset.globalid", false);
+        ->assertSee("openLegalChallengeModal('housing')", false);
 });
 
 it('forbids auditing engineers from updating legal challenges directly', function () {

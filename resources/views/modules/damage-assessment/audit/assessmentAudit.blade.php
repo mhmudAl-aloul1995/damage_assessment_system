@@ -828,6 +828,12 @@
                                                 لمراجعة</button>
                                             @endhasanyrole
 
+                                            @hasanyrole('Legal Auditor|Database Officer')
+                                            <button type="button" id="btn_housing_legal_challenge"
+                                                class="btn btn-sm btn-light-warning"
+                                                onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
+                                            @endhasanyrole
+
                                             <!--    @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
                                                         <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
                                                             data-status="undp_final_approve"
@@ -2299,27 +2305,7 @@
                                     return data;
                                 }
 
-                                const label = $('<div>').text(data || '-').html();
-
-                                @if (auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
-                                    return label;
-                                @else
-
-                                const globalid = $('<div>').text(row.globalid || '').html();
-                                const legalChallenge = $('<div>').text(row.legal_challenge || '').html();
-
-                                return `
-                                    <div class="d-flex flex-column align-items-center gap-2">
-                                        <span>${label}</span>
-                                        <button type="button"
-                                            class="btn btn-sm btn-light-warning housing-legal-challenge-btn"
-                                            data-globalid="${globalid}"
-                                            data-legal-challenge="${legalChallenge}">
-                                            تعديل
-                                        </button>
-                                    </div>
-                                `;
-                                @endif
+                                return $('<div>').text(data || '-').html();
                             }
                         },
                         { data: 'legal_audit_status', name: 'legal_audit_status', className: 'text-center px-2 py-3' },
@@ -2340,15 +2326,6 @@
                         }, 150);
                     }
                 });
-
-                @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
-                    $('#housing_table tbody').on('click', '.housing-legal-challenge-btn', function (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-
-                        openLegalChallengeModal('housing', this.dataset.globalid, this.dataset.legalChallenge || null);
-                    });
-                @endunless
 
                 $('#housing_table tbody').on('click', 'tr', function () {
                     let row = datatable.row(this).data();
