@@ -868,7 +868,15 @@
 
             const damageRenderer = {
                 type: 'unique-value',
-                field: 'building_damage_status',
+                valueExpression: `
+                    When(
+                        Lower(Trim(DefaultValue($feature.assessment_obstacle, ''))) == 'yes' ||
+                        Lower(Trim(DefaultValue($feature.security_situation, ''))) == 'unsafe',
+                        'security_priority',
+                        DefaultValue($feature.building_damage_status, '')
+                    )
+                `,
+                valueExpressionTitle: 'Damage / Security priority',
                 defaultSymbol: {
                     type: 'simple-fill',
                     color: [0, 255, 135, 0.26],
@@ -879,6 +887,18 @@
                 },
                 defaultLabel: 'Unclassified',
                 uniqueValueInfos: [
+                    {
+                        value: 'security_priority',
+                        label: 'Security / assessment obstacle',
+                        symbol: {
+                            type: 'simple-fill',
+                            color: [0, 122, 255, 0.66],
+                            outline: {
+                                color: [255, 255, 255, 1],
+                                width: 1.2
+                            }
+                        }
+                    },
                     {
                         value: 'fully_damaged',
                         label: 'Fully damaged',
@@ -955,6 +975,8 @@
                     popupTableRow('Object ID', value(attributes, 'objectid', 'OBJECTID')),
                     popupTableRow('Global ID', globalId),
                     popupTableRow('Damage', value(attributes, 'building_damage_status')),
+                    popupTableRow('Assessment obstacle', value(attributes, 'assessment_obstacle')),
+                    popupTableRow('Security situation', value(attributes, 'security_situation')),
                     popupTableRow('Field status', value(attributes, 'field_status')),
                     popupTableRow('Assigned to', value(attributes, 'assignedto', 'AssignedTo')),
                     popupTableRow('Municipality', value(attributes, 'municipalitie')),
