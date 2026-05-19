@@ -1003,22 +1003,54 @@ class FieldEngineerReportService
 
         $baseQuery = fn (): Builder => DB::query()
             ->fromSub(clone $housingIdentifiersQuery, 'filtered_housing_units')
-            ->join('housing_statuses', 'housing_statuses.housing_id', '=', 'filtered_housing_units.objectid')
-            ->join('assessment_statuses', 'assessment_statuses.id', '=', 'housing_statuses.status_id')
-            ->where('housing_statuses.type', 'QC/QA Engineer')
+            ->joinSub($this->engineeringHousingStatusSourceQuery(), 'engineering_housing_statuses', function ($join) {
+                $join->on('engineering_housing_statuses.housing_id', '=', 'filtered_housing_units.objectid');
+            })
+            ->join('assessment_statuses', 'assessment_statuses.id', '=', 'engineering_housing_statuses.status_id')
             ->whereIn('assessment_statuses.name', $auditedStatusNames);
 
         $statusCounts = $baseQuery()
-            ->selectRaw('assessment_statuses.name as status_name, COUNT(DISTINCT housing_statuses.housing_id) as total')
+            ->selectRaw('assessment_statuses.name as status_name, COUNT(DISTINCT engineering_housing_statuses.housing_id) as total')
             ->groupBy('assessment_statuses.name')
             ->pluck('total', 'status_name');
 
         return [
-            'audited_housing_units' => (int) $baseQuery()->distinct('housing_statuses.housing_id')->count('housing_statuses.housing_id'),
+            'audited_housing_units' => (int) $baseQuery()->distinct('engineering_housing_statuses.housing_id')->count('engineering_housing_statuses.housing_id'),
             'accepted_statuses' => (int) ($statusCounts['accepted_by_engineer'] ?? 0),
             'rejected_statuses' => (int) ($statusCounts['rejected_by_engineer'] ?? 0),
             'need_review_statuses' => (int) ($statusCounts['need_review'] ?? 0),
         ];
+    }
+
+    private function engineeringHousingStatusSourceQuery(): Builder
+    {
+        $currentStatuses = DB::table('housing_statuses')
+            ->select([
+                'housing_id',
+                'status_id',
+            ])
+            ->where('type', 'QC/QA Engineer');
+
+        $latestHistoryIds = DB::table('housing_status_histories')
+            ->selectRaw('MAX(id) as id')
+            ->where('type', 'QC/QA Engineer')
+            ->groupBy('housing_id');
+
+        $historyFallbackStatuses = DB::table('housing_status_histories as housing_status_history')
+            ->joinSub($latestHistoryIds, 'latest_housing_status_history', function ($join) {
+                $join->on('latest_housing_status_history.id', '=', 'housing_status_history.id');
+            })
+            ->leftJoin('housing_statuses as current_housing_status', function ($join) {
+                $join->on('current_housing_status.housing_id', '=', 'housing_status_history.housing_id')
+                    ->where('current_housing_status.type', 'QC/QA Engineer');
+            })
+            ->whereNull('current_housing_status.id')
+            ->select([
+                'housing_status_history.housing_id',
+                'housing_status_history.status_id',
+            ]);
+
+        return $currentStatuses->unionAll($historyFallbackStatuses);
     }
 
     private function filteredHousingIdentifiersQuery(array $filters, string $dateColumn = 'housing_units.building_submit_date'): Builder

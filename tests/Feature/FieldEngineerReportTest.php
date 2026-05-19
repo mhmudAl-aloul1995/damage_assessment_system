@@ -420,3 +420,109 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ])))
         ->assertOk();
 });
+
+it('counts engineer housing audit statuses from latest history when current status is missing', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $acceptedStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $rejectedStatus = AssessmentStatus::query()->create([
+        'name' => 'rejected_by_engineer',
+        'label_en' => 'Rejected By Engineer',
+        'label_ar' => 'Rejected By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 2,
+    ]);
+
+    $needReviewStatus = AssessmentStatus::query()->create([
+        'name' => 'need_review',
+        'label_en' => 'Need Review',
+        'label_ar' => 'Need Review',
+        'stage' => 'engineer',
+        'order_step' => 3,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 5101,
+        'globalid' => 'history-only-status-building',
+        'assignedto' => 'History Engineer',
+        'building_name' => 'History Status Building',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'building_damage_status' => 'partially_damaged',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-04-21 08:00:00',
+    ]);
+
+    $acceptedHousing = HousingUnit::query()->create([
+        'objectid' => 9101,
+        'globalid' => 'history-only-accepted-housing',
+        'parentglobalid' => $building->globalid,
+        'unit_damage_status' => 'minor_damage',
+        'building_submit_date' => '2026-04-21 12:15:00',
+        'creationdate' => '2026-04-21 11:00:00',
+    ]);
+
+    $rejectedHousing = HousingUnit::query()->create([
+        'objectid' => 9102,
+        'globalid' => 'history-only-rejected-housing',
+        'parentglobalid' => $building->globalid,
+        'unit_damage_status' => 'major_damage',
+        'building_submit_date' => '2026-04-21 12:20:00',
+        'creationdate' => '2026-04-21 11:10:00',
+    ]);
+
+    $needReviewHousing = HousingUnit::query()->create([
+        'objectid' => 9103,
+        'globalid' => 'history-only-review-housing',
+        'parentglobalid' => $building->globalid,
+        'unit_damage_status' => 'major_damage',
+        'building_submit_date' => '2026-04-21 12:25:00',
+        'creationdate' => '2026-04-21 11:20:00',
+    ]);
+
+    HousingStatusHistory::query()->create([
+        'housing_id' => $acceptedHousing->objectid,
+        'status_id' => $acceptedStatus->id,
+        'type' => 'QC/QA Engineer',
+        'user_id' => $user->id,
+        'created_at' => '2026-04-22 09:00:00',
+        'updated_at' => '2026-04-22 09:00:00',
+    ]);
+
+    HousingStatusHistory::query()->create([
+        'housing_id' => $rejectedHousing->objectid,
+        'status_id' => $rejectedStatus->id,
+        'type' => 'QC/QA Engineer',
+        'user_id' => $user->id,
+        'created_at' => '2026-04-22 09:05:00',
+        'updated_at' => '2026-04-22 09:05:00',
+    ]);
+
+    HousingStatusHistory::query()->create([
+        'housing_id' => $needReviewHousing->objectid,
+        'status_id' => $needReviewStatus->id,
+        'type' => 'QC/QA Engineer',
+        'user_id' => $user->id,
+        'created_at' => '2026-04-22 09:10:00',
+        'updated_at' => '2026-04-22 09:10:00',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('reports.field-engineer.stats', [
+            'assignedto' => 'History Engineer',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summary.audited_housing_units', 3)
+        ->assertJsonPath('summary.accepted_statuses', 1)
+        ->assertJsonPath('summary.rejected_statuses', 1)
+        ->assertJsonPath('summary.need_review_statuses', 1);
+});
