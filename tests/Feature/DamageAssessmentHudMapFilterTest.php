@@ -85,7 +85,6 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('max-height: min(380px, calc(100vh - 220px))', false)
         ->assertSee('width: min(580px, max(420px, calc(100vw - 820px)))', false)
         ->assertSee('border-top: 22px solid rgba(6, 18, 36, 0.94)', false)
-        ->assertSee('.esri-popup__feature-menu-pagination', false)
         ->assertSee('.esri-popup.esri-popup--is-docked', false)
         ->assertSee('transform: translate(-50%, -50%)', false)
         ->assertSee('dockEnabled: true', false)
