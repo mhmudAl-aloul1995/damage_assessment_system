@@ -1245,7 +1245,7 @@
                 action.target = '_blank';
                 action.rel = 'noopener';
                 action.href = globalId !== '-' ? `${assessmentBaseUrl}/${encodeURIComponent(globalId)}` : '#';
-                action.textContent = 'فتح تفاصيل التقييم';
+                action.textContent = 'الإستبيان';
 
                 auditAction.className = 'hud-map-popup-action is-audit';
                 auditAction.target = '_blank';
