@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Modules\DamageAssessment\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DamageAssessment\HudBuildingUnitsRequest;
 use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\EditAssessment;
@@ -455,6 +456,45 @@ class DamageAssessmentController extends Controller
     public function hudStats(Request $request): \Illuminate\Http\JsonResponse
     {
         return response()->json($this->buildHudDashboardData($request));
+    }
+
+    public function hudBuildingUnits(HudBuildingUnitsRequest $request): \Illuminate\Http\JsonResponse
+    {
+        $buildingGlobalId = (string) $request->string('building_globalid');
+
+        $units = HousingUnit::query()
+            ->where('parentglobalid', $buildingGlobalId)
+            ->orderBy('objectid')
+            ->get([
+                'objectid',
+                'globalid',
+                'unit_owner',
+                'housing_unit_number',
+                'q_9_3_1_first_name',
+                'q_9_3_2_second_name__father',
+                'q_9_3_4_last_name',
+            ])
+            ->map(function (HousingUnit $unit): array {
+                $ownerName = trim((string) ($unit->unit_owner ?: $unit->full_name));
+
+                if ($ownerName === '') {
+                    $unitNumber = trim((string) $unit->housing_unit_number);
+                    $ownerName = $unitNumber !== ''
+                        ? 'وحدة '.$unitNumber
+                        : 'وحدة '.($unit->objectid ?: $unit->globalid);
+                }
+
+                return [
+                    'id' => (string) $unit->globalid,
+                    'text' => $ownerName,
+                ];
+            })
+            ->filter(fn (array $unit): bool => $unit['id'] !== '')
+            ->values();
+
+        return response()->json([
+            'results' => $units,
+        ]);
     }
 
     private function buildHudDashboardData(Request $request): array

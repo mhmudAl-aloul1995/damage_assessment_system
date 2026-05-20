@@ -32,6 +32,7 @@ it('renders the hud arcgis map filter controls', function () {
         'objectid' => 200,
         'globalid' => 'unit-global-id',
         'parentglobalid' => 'building-global-id',
+        'unit_owner' => 'Unit Owner',
         'unit_damage_status' => 'fully_damaged2',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
@@ -84,6 +85,13 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('auditBaseUrl', false)
         ->assertSee('/showAssessmentAudit', false)
         ->assertSee('is-audit', false)
+        ->assertSee('hudBuildingUnitsUrl', false)
+        ->assertSee('/hud/building-units', false)
+        ->assertSee('hud-map-popup-unit-select', false)
+        ->assertSee('populateHudUnitAuditSelect', false)
+        ->assertSee('أسماء مالكي الوحدات', false)
+        ->assertSee('window.location.href = auditUrl(globalId, housingGlobalId)', false)
+        ->assertSee('auditUrl(globalId, housingGlobalId)', false)
         ->assertSee('googleMapsUrl', false)
         ->assertSee('https://www.google.com/maps?q=', false)
         ->assertSee('Google Maps', false)
@@ -130,6 +138,39 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('hudArcgisInExpression', false)
         ->assertSee("params.append(element.dataset.field + '[]'", false)
         ->assertSee('url.searchParams.append(key, value)', false);
+});
+
+it('returns housing unit owners for the hud building popup unit audit select', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 110,
+        'globalid' => 'popup-building-global-id',
+        'building_name' => 'Popup Building',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 210,
+        'globalid' => 'popup-unit-global-id',
+        'parentglobalid' => 'popup-building-global-id',
+        'unit_owner' => 'Popup Unit Owner',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 211,
+        'globalid' => 'other-popup-unit-global-id',
+        'parentglobalid' => 'other-building-global-id',
+        'unit_owner' => 'Other Popup Unit Owner',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.building-units', [
+            'building_globalid' => 'popup-building-global-id',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('results.0.id', 'popup-unit-global-id')
+        ->assertJsonPath('results.0.text', 'Popup Unit Owner')
+        ->assertJsonCount(1, 'results');
 });
 
 it('returns hud stats for all data by default and filtered data when filters are present', function () {

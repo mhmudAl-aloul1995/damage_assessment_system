@@ -340,6 +340,23 @@
             border-color: rgba(0, 255, 135, 0.42);
         }
 
+        .hud-map-popup-unit-select {
+            background: rgba(0, 242, 254, 0.10);
+            border: 1px solid rgba(0, 242, 254, 0.38);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 0.75rem;
+            font-weight: 800;
+            min-height: 36px;
+            min-width: 170px;
+            padding: 7px 10px;
+        }
+
+        .hud-map-popup-unit-select option {
+            background: #081529;
+            color: #ffffff;
+        }
+
         .hud-map-filter-panel {
             background: rgba(6, 18, 36, 0.88);
             backdrop-filter: blur(14px) saturate(160%);
@@ -967,6 +984,7 @@
         const auditBaseUrl = window.location.pathname.replace(/\/damageAssessment\/hud\/?$/, '/showAssessmentAudit');
         const arcgisOptionsUrl = window.location.pathname.replace(/\/hud\/?$/, '/arcgis/options');
         const hudStatsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/stats');
+        const hudBuildingUnitsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/building-units');
 
         function hudSelectedValues(element) {
             return Array.from(element?.selectedOptions || [])
@@ -1146,6 +1164,53 @@
                 return `https://www.google.com/maps?q=${latitude},${longitude}`;
             }
 
+            function auditUrl(buildingGlobalId, housingGlobalId = null) {
+                const url = `${auditBaseUrl}/${encodeURIComponent(buildingGlobalId)}`;
+
+                return housingGlobalId ? `${url}/${encodeURIComponent(housingGlobalId)}` : url;
+            }
+
+            function populateHudUnitAuditSelect(select, buildingGlobalId) {
+                if (!buildingGlobalId || buildingGlobalId === '-') {
+                    select.disabled = true;
+                    select.replaceChildren(new Option('لا توجد وحدات', ''));
+
+                    return;
+                }
+
+                const url = new URL(hudBuildingUnitsUrl, window.location.origin);
+                url.searchParams.set('building_globalid', buildingGlobalId);
+
+                fetch(url.toString(), {
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('Building units request failed with status ' + response.status);
+                        }
+
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        const units = Array.isArray(data.results) ? data.results : [];
+                        select.replaceChildren(new Option(units.length ? 'أسماء مالكي الوحدات' : 'لا توجد وحدات', ''));
+
+                        units.forEach(function (unit) {
+                            select.appendChild(new Option(unit.text, unit.id));
+                        });
+
+                        select.disabled = units.length === 0;
+                    })
+                    .catch(function (error) {
+                        console.error('HUD building units failed:', error);
+                        select.disabled = true;
+                        select.replaceChildren(new Option('تعذر تحميل الوحدات', ''));
+                    });
+            }
+
             function buildBuildingPopup(event) {
                 const attributes = event.graphic.attributes || {};
                 const wrapper = document.createElement('div');
@@ -1154,6 +1219,7 @@
                 const action = document.createElement('a');
                 const auditAction = document.createElement('a');
                 const mapAction = document.createElement('a');
+                const unitAuditSelect = document.createElement('select');
                 const actions = document.createElement('div');
                 const globalId = value(attributes, 'globalid', 'GlobalID', 'GLOBALID');
                 const mapsUrl = googleMapsUrl(event.graphic);
@@ -1178,13 +1244,13 @@
                 action.className = 'hud-map-popup-action';
                 action.target = '_blank';
                 action.rel = 'noopener';
-                action.href = globalId !== '-' ? `${assessmentBaseUrl}/${globalId}` : '#';
+                action.href = globalId !== '-' ? `${assessmentBaseUrl}/${encodeURIComponent(globalId)}` : '#';
                 action.textContent = 'فتح تفاصيل التقييم';
 
                 auditAction.className = 'hud-map-popup-action is-audit';
                 auditAction.target = '_blank';
                 auditAction.rel = 'noopener';
-                auditAction.href = globalId !== '-' ? `${auditBaseUrl}/${globalId}` : '#';
+                auditAction.href = globalId !== '-' ? auditUrl(globalId) : '#';
                 auditAction.textContent = 'التدقيق';
 
                 mapAction.className = 'hud-map-popup-action is-map';
@@ -1193,8 +1259,21 @@
                 mapAction.href = mapsUrl;
                 mapAction.textContent = 'Google Maps';
 
-                actions.append(action, auditAction, mapAction);
+                unitAuditSelect.className = 'hud-map-popup-unit-select';
+                unitAuditSelect.disabled = true;
+                unitAuditSelect.appendChild(new Option('تحميل الوحدات...', ''));
+                unitAuditSelect.addEventListener('change', function (selectEvent) {
+                    const housingGlobalId = selectEvent.target.value;
+
+                    if (housingGlobalId && globalId !== '-') {
+                        window.location.href = auditUrl(globalId, housingGlobalId);
+                        selectEvent.target.value = '';
+                    }
+                });
+
+                actions.append(action, auditAction, mapAction, unitAuditSelect);
                 wrapper.append(title, actions, table);
+                populateHudUnitAuditSelect(unitAuditSelect, globalId);
 
                 return wrapper;
             }
