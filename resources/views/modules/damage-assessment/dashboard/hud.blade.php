@@ -1086,11 +1086,11 @@
                 const securityField = getArcgisField('security_situation');
 
                 if (obstacleField) {
-                    clauses.push("LOWER(TRIM(" + obstacleField.name + ")) = 'yes'");
+                    clauses.push(hudArcgisInExpression(obstacleField.name, ['yes', 'Yes', 'YES']));
                 }
 
                 if (securityField) {
-                    clauses.push("LOWER(TRIM(" + securityField.name + ")) = 'unsafe'");
+                    clauses.push(hudArcgisInExpression(securityField.name, ['Unsafe', 'unsafe', 'UNSAFE']));
                 }
 
                 return clauses.length ? '(' + clauses.join(' OR ') + ')' : '1=0';

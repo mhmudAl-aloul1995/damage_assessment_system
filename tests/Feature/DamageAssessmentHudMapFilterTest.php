@@ -82,6 +82,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('security_priority', false)
         ->assertSee('Lower(Trim(DefaultValue($feature.assessment_obstacle', false)
         ->assertSee('Lower(Trim(DefaultValue($feature.security_situation', false)
+        ->assertSee("['Unsafe', 'unsafe', 'UNSAFE']", false)
         ->assertSee('يوجد عائق', false)
         ->assertSee('مراجعة لجنة', false)
         ->assertSee('178, 92, 255', false)
