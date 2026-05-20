@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/pull', function () {
         // Run the git pull command in the project root
+        dd(base_path());
         $result = Process::path(base_path())
             ->run('git pull');
 
