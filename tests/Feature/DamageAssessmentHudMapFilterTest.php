@@ -134,7 +134,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('id="hudBuildingMunicipalityReports"', false)
         ->assertSee('id="hudUnitMunicipalityReports"', false)
         ->assertSee('يوجد عائق', false)
-        ->assertSee('#b25cff', false)
+        ->assertSee('#007aff', false)
         ->assertSee('buildingMunicipalityReports', false)
         ->assertSee('unitMunicipalityReports', false)
         ->assertSee('نتائج الخريطة:', false)

@@ -1765,7 +1765,7 @@
                 labels: @json($buildingDamageChart['labels']),
                 datasets: [{
                     data: @json($buildingDamageChart['data']),
-                    backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#b25cff'],
+                    backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#007aff'],
                     borderColor: '#061224',
                     borderWidth: 2
                 }]
@@ -1790,7 +1790,7 @@
 
         const hudBuildingMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة', 'عائق'];
         const hudUnitMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة', 'غير مصنف'];
-        const hudBuildingMunicipalityChartColors = ['#ff0055', '#fae813', '#00f2fe', '#b25cff'];
+        const hudBuildingMunicipalityChartColors = ['#ff0055', '#fae813', '#00f2fe', '#007aff'];
         const hudUnitMunicipalityChartColors = ['#ff0055', '#fae813', '#00f2fe', '#00ff87'];
         let hudMunicipalityCharts = [];
 
