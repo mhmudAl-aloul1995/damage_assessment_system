@@ -215,7 +215,6 @@
 		margin-inline-start: .35rem;
 		border-radius: 999px;
 		background: #ff2f8a;
-		box-shadow: 0 0 0 3px rgba(255, 47, 138, .18);
 	}
 
 	body.locale-rtl #kt_app_sidebar_menu .phc-sidebar-section-active>.menu-link {
