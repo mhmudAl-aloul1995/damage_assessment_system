@@ -82,6 +82,8 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('security_situation', false)
         ->assertSee('Building Name', false)
         ->assertSee('building_damage_status', false)
+        ->assertSee('max-height: min(460px, calc(100vh - 180px))', false)
+        ->assertSee('max-width: min(360px, calc(100vw - 48px))', false)
         ->assertSee('auditBaseUrl', false)
         ->assertSee('/showAssessmentAudit', false)
         ->assertSee('is-audit', false)

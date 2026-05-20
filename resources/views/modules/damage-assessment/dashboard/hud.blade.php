@@ -53,7 +53,7 @@
 
         .hud-container {
             position: relative;
-            z-index: 3;
+            z-index: 20;
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -262,6 +262,17 @@
         .esri-popup__main-container {
             border: 1px solid rgba(0, 242, 254, 0.25);
             box-shadow: 0 0 18px rgba(0, 242, 254, 0.22);
+            max-height: min(460px, calc(100vh - 180px));
+            max-width: min(360px, calc(100vw - 48px));
+        }
+
+        .esri-popup__content {
+            max-height: min(350px, calc(100vh - 280px));
+            overflow-y: auto;
+        }
+
+        .esri-popup {
+            z-index: 10 !important;
         }
 
         .esri-ui .esri-widget {
