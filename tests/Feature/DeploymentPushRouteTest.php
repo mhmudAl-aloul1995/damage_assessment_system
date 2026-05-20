@@ -7,16 +7,39 @@ use Illuminate\Support\Facades\Process;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 it('allows the deployment pull route with the configured token', function (): void {
-    Process::fake([
-        'git pull' => Process::result('Already up to date.'),
-    ]);
+    $sequence = Process::sequence()
+        ->push(Process::result('## main...origin/main'))
+        ->push(Process::result('Already up to date.'));
+
+    Process::fake(fn () => $sequence());
 
     $this->get('/deployment/pull/'.config('app.deployment_pull_token'))
         ->assertOk()
+        ->assertJsonPath('status', 'success')
         ->assertJsonPath('message', 'Successfully pulled latest changes')
-        ->assertJsonPath('output', 'Already up to date.');
+        ->assertJsonPath('steps.0.name', 'server_git_status')
+        ->assertJsonPath('steps.1.name', 'server_git_pull_rebase');
 
-    Process::assertRan(fn ($process): bool => $process->command === 'git pull');
+    Process::assertRan(fn ($process): bool => is_array($process->command)
+        && in_array('status', $process->command, true));
+    Process::assertRan(fn ($process): bool => is_array($process->command)
+        && in_array('pull', $process->command, true)
+        && in_array('--rebase', $process->command, true));
+});
+
+it('returns deployment pull errors with diagnostic steps', function (): void {
+    $sequence = Process::sequence()
+        ->push(Process::result('## main...origin/main'))
+        ->push(Process::result('', 'conflict while rebasing', 1));
+
+    Process::fake(fn () => $sequence());
+
+    $this->get('/deployment/pull/'.config('app.deployment_pull_token'))
+        ->assertStatus(500)
+        ->assertJsonPath('status', 'failed')
+        ->assertJsonPath('failed_step', 'server_git_pull_rebase')
+        ->assertJsonPath('error', 'conflict while rebasing')
+        ->assertJsonPath('steps.1.error', 'conflict while rebasing');
 });
 
 it('rejects the deployment pull route when the token is invalid', function (): void {

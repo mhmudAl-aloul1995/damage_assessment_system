@@ -31,19 +31,64 @@ Route::get('/deployment/pull/{token}', function (string $token) {
 
     abort_if($expectedToken === '' || ! hash_equals($expectedToken, $token), 403);
 
-    $result = Process::path(base_path())
-        ->run('git pull');
+    $repo = base_path();
+    $safeRepo = str_replace('\\', '/', $repo);
+    $steps = [];
 
-    if ($result->successful()) {
+    try {
+        $statusResult = Process::path($repo)
+            ->timeout(120)
+            ->run(['git', '-c', 'safe.directory='.$safeRepo, 'status', '--short', '--branch']);
+
+        $steps[] = [
+            'name' => 'server_git_status',
+            'exit_code' => $statusResult->exitCode(),
+            'output' => trim($statusResult->output()),
+            'error' => trim($statusResult->errorOutput()),
+        ];
+
+        if (! $statusResult->successful()) {
+            return response()->json([
+                'status' => 'failed',
+                'failed_step' => 'server_git_status',
+                'error' => trim($statusResult->errorOutput() ?: $statusResult->output()),
+                'steps' => $steps,
+            ], 500);
+        }
+
+        $pullResult = Process::path($repo)
+            ->timeout(120)
+            ->run(['git', '-c', 'safe.directory='.$safeRepo, 'pull', '--rebase', 'origin', 'main']);
+
+        $steps[] = [
+            'name' => 'server_git_pull_rebase',
+            'exit_code' => $pullResult->exitCode(),
+            'output' => trim($pullResult->output()),
+            'error' => trim($pullResult->errorOutput()),
+        ];
+
+        if ($pullResult->successful()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Successfully pulled latest changes',
+                'steps' => $steps,
+            ]);
+        }
+
         return response()->json([
-            'message' => 'Successfully pulled latest changes',
-            'output' => trim($result->output()),
-        ]);
+            'status' => 'failed',
+            'failed_step' => 'server_git_pull_rebase',
+            'error' => trim($pullResult->errorOutput() ?: $pullResult->output()),
+            'steps' => $steps,
+        ], 500);
+    } catch (\Throwable $exception) {
+        return response()->json([
+            'status' => 'failed',
+            'failed_step' => 'server_exception',
+            'error' => $exception->getMessage(),
+            'steps' => $steps,
+        ], 500);
     }
-
-    return response()->json([
-        'error' => $result->errorOutput() ?: $result->output(),
-    ], 500);
 })->name('deployment.pull');
 
 Route::middleware('auth')->group(function () {
