@@ -5,17 +5,11 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.hud.title',
         'icon' => 'ki-chart-pie-4',
+        'url' => 'damageAssessment/hud',
+        'pattern' => 'damageAssessment/hud*',
         'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager'],
         'active_patterns' => [
             'damageAssessment/hud*',
-        ],
-        'items' => [
-            [
-                'title' => 'menu.hud.dashboard',
-                'url' => 'damageAssessment/hud',
-                'pattern' => 'damageAssessment/hud*',
-                'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager'],
-            ],
         ],
     ],
     [

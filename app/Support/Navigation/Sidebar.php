@@ -47,6 +47,15 @@ class Sidebar
             return null;
         }
 
+        if (isset($section['url'])) {
+            $section['items'] = collect();
+            $section['visible_item_count'] = 0;
+            $section['is_active'] = request()->is(...($section['active_patterns'] ?? [$section['pattern'] ?? '']));
+            $section['is_direct'] = true;
+
+            return $section;
+        }
+
         $visibleItems = collect($section['items'] ?? [])
             ->map(fn (array $item): ?array => self::visibleItem($item, $user))
             ->filter()

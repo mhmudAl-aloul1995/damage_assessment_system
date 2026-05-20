@@ -1168,8 +1168,24 @@
 									</div>
 
 									@foreach($sidebarModule['sections'] as $menu)
-										<div data-kt-menu-trigger="click"
-											class="menu-item menu-accordion phc-sidebar-section {{ $menu['is_active'] ? 'show phc-sidebar-section-active' : '' }}">
+										@if($menu['is_direct'] ?? false)
+											<div class="menu-item phc-sidebar-section {{ $menu['is_active'] ? 'phc-sidebar-section-active' : '' }}">
+												<a class="menu-link" href="{{ url($menu['url']) }}">
+													<span class="menu-icon">
+														<span class="phc-sidebar-icon">
+															<i class="ki-duotone {{ $menu['icon'] }} fs-2">
+																<span class="path1"></span>
+																<span class="path2"></span>
+															</i>
+														</span>
+													</span>
+
+													<span class="menu-title">{{ __($menu['title']) }}</span>
+												</a>
+											</div>
+										@else
+											<div data-kt-menu-trigger="click"
+												class="menu-item menu-accordion phc-sidebar-section {{ $menu['is_active'] ? 'show phc-sidebar-section-active' : '' }}">
 
 												<span class="menu-link">
 													<span class="menu-icon">
@@ -1217,7 +1233,8 @@
 														@endif
 													@endforeach
 												</div>
-										</div>
+											</div>
+										@endif
 									@endforeach
 								@endforeach
 							</div>

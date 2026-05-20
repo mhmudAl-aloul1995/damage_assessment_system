@@ -17,8 +17,7 @@ return [
         'engineers' => 'Researchers',
     ],
     'hud' => [
-        'title' => 'HUD',
-        'dashboard' => 'HUD',
+        'title' => 'LIVE GIS HUD',
     ],
     'reports' => [
         'title' => 'Reports',

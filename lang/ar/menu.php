@@ -17,8 +17,7 @@ return [
         'engineers' => 'الباحثين',
     ],
     'hud' => [
-        'title' => 'HUD',
-        'dashboard' => 'HUD',
+        'title' => 'LIVE GIS HUD',
     ],
     'reports' => [
         'building_productivity' => 'تقرير إنتاجية حصر المباني',

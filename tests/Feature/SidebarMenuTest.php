@@ -124,12 +124,16 @@ it('places hud above damage assessment for non auditor sidebar roles', function 
     $user->assignRole($role);
 
     $damageAssessmentModule = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment');
+    $hudSection = $damageAssessmentModule['sections']->firstWhere('title', 'menu.hud.title');
     $sectionTitles = $damageAssessmentModule['sections']->pluck('title')->all();
 
     expect($sectionTitles[0])->toBe('menu.hud.title')
         ->and($sectionTitles)->toContain('menu.damage_assessment.title')
         ->and(array_search('menu.hud.title', $sectionTitles, true))
-        ->toBeLessThan(array_search('menu.damage_assessment.title', $sectionTitles, true));
+        ->toBeLessThan(array_search('menu.damage_assessment.title', $sectionTitles, true))
+        ->and($hudSection['is_direct'])->toBeTrue()
+        ->and($hudSection['url'])->toBe('damageAssessment/hud')
+        ->and($hudSection['items'])->toBeEmpty();
 });
 
 it('hides hud from auditors and field engineers', function (string $roleName) {
