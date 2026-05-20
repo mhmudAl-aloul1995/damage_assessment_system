@@ -112,8 +112,40 @@ it('groups visible sidebar sections by module', function () {
     $administrationModule = $modules->firstWhere('key', 'administration');
 
     expect($damageAssessmentModule['sections']->pluck('title')->all())
-        ->toContain('menu.damage_assessment.title', 'menu.reports.title', 'menu.audit.title');
+        ->toContain('menu.hud.title', 'menu.damage_assessment.title', 'menu.reports.title', 'menu.audit.title');
 
     expect($administrationModule['sections']->pluck('title')->all())
         ->toContain('menu.user_management.title');
 });
+
+it('places hud above damage assessment for non auditor sidebar roles', function () {
+    $role = Role::findOrCreate('Area Manager', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $damageAssessmentModule = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment');
+    $sectionTitles = $damageAssessmentModule['sections']->pluck('title')->all();
+
+    expect($sectionTitles[0])->toBe('menu.hud.title')
+        ->and($sectionTitles)->toContain('menu.damage_assessment.title')
+        ->and(array_search('menu.hud.title', $sectionTitles, true))
+        ->toBeLessThan(array_search('menu.damage_assessment.title', $sectionTitles, true));
+});
+
+it('hides hud from auditors and field engineers', function (string $roleName) {
+    $role = Role::findOrCreate($roleName, 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $sectionTitles = Sidebar::forUser($user)
+        ->flatMap(fn (array $module) => $module['sections']->pluck('title'))
+        ->all();
+
+    expect($sectionTitles)->not->toContain('menu.hud.title');
+})->with([
+    'legal auditor' => 'Legal Auditor',
+    'quality auditor' => 'QC/QA Engineer',
+    'auditing supervisor' => 'Auditing Supervisor',
+    'infrastructure auditor' => 'Inf - QC/QA Engineer',
+    'field engineer' => 'Field Engineer',
+]);

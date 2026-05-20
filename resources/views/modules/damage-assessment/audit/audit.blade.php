@@ -46,7 +46,7 @@
 		}
 
 		#kt_datatable_audits tbody td {
-			font-size: .95rem;
+			font-size: .1rem;
 			line-height: 1.4;
 		}
 

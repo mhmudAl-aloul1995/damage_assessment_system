@@ -16,6 +16,10 @@ return [
         'road_facilities' => 'Road Facilities',
         'engineers' => 'Researchers',
     ],
+    'hud' => [
+        'title' => 'HUD',
+        'dashboard' => 'HUD',
+    ],
     'reports' => [
         'title' => 'Reports',
         'groups' => [

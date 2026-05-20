@@ -16,6 +16,10 @@ return [
         'road_facilities' => 'مرافق الطرق',
         'engineers' => 'الباحثين',
     ],
+    'hud' => [
+        'title' => 'HUD',
+        'dashboard' => 'HUD',
+    ],
     'reports' => [
         'building_productivity' => 'تقرير إنتاجية حصر المباني',
         'title' => 'التقارير',
