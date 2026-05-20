@@ -335,6 +335,11 @@
             border-color: rgba(250, 232, 19, 0.42);
         }
 
+        .hud-map-popup-action.is-map {
+            background: rgba(0, 255, 135, 0.12);
+            border-color: rgba(0, 255, 135, 0.42);
+        }
+
         .hud-map-filter-panel {
             background: rgba(6, 18, 36, 0.88);
             backdrop-filter: blur(14px) saturate(160%);
@@ -1003,6 +1008,31 @@
                 return row;
             }
 
+            function numericValue(attributes, ...keys) {
+                const rawValue = value(attributes, ...keys);
+                const parsedValue = Number(rawValue);
+
+                return Number.isFinite(parsedValue) ? parsedValue : null;
+            }
+
+            function googleMapsUrl(graphic) {
+                const attributes = graphic.attributes || {};
+                const geometry = graphic.geometry || {};
+                const point = geometry.extent?.center || geometry.centroid || geometry;
+                const latitude = Number.isFinite(point.latitude)
+                    ? point.latitude
+                    : (Number.isFinite(point.y) ? point.y : numericValue(attributes, 'latitude', 'Latitude', 'LATITUDE'));
+                const longitude = Number.isFinite(point.longitude)
+                    ? point.longitude
+                    : (Number.isFinite(point.x) ? point.x : numericValue(attributes, 'longitude', 'Longitude', 'LONGITUDE'));
+
+                if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                    return '#';
+                }
+
+                return `https://www.google.com/maps?q=${latitude},${longitude}`;
+            }
+
             function buildBuildingPopup(event) {
                 const attributes = event.graphic.attributes || {};
                 const wrapper = document.createElement('div');
@@ -1010,8 +1040,10 @@
                 const table = document.createElement('table');
                 const action = document.createElement('a');
                 const auditAction = document.createElement('a');
+                const mapAction = document.createElement('a');
                 const actions = document.createElement('div');
                 const globalId = value(attributes, 'globalid', 'GlobalID', 'GLOBALID');
+                const mapsUrl = googleMapsUrl(event.graphic);
 
                 wrapper.className = 'hud-map-popup';
                 title.textContent = value(attributes, 'building_name', 'Building_Name', 'name', 'NAME');
@@ -1042,7 +1074,13 @@
                 auditAction.href = globalId !== '-' ? `${auditBaseUrl}/${globalId}` : '#';
                 auditAction.textContent = 'التدقيق';
 
-                actions.append(action, auditAction);
+                mapAction.className = 'hud-map-popup-action is-map';
+                mapAction.target = '_blank';
+                mapAction.rel = 'noopener';
+                mapAction.href = mapsUrl;
+                mapAction.textContent = 'Google Maps';
+
+                actions.append(action, auditAction, mapAction);
                 wrapper.append(title, table, actions);
 
                 return wrapper;
