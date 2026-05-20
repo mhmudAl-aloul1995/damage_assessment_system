@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Orbitron:wght@500;700;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/dark/main.css">
@@ -580,6 +583,7 @@
         }
 
         @media (max-width: 991.98px) {
+
             body,
             html {
                 height: auto;
@@ -607,12 +611,13 @@
         }
     </style>
 </head>
+
 <body>
     @php
-        $formatNumber = fn ($value) => number_format((float) $value);
+        $formatNumber = fn($value) => number_format((float) $value);
         $rubbleQuantity = (float) $summaryStats['rubble_quantity'];
         $formattedRubble = $rubbleQuantity >= 1000000
-            ? number_format($rubbleQuantity / 1000000, 1).'M'
+            ? number_format($rubbleQuantity / 1000000, 1) . 'M'
             : number_format($rubbleQuantity);
     @endphp
 
@@ -642,44 +647,53 @@
                 </div>
                 <div class="col-md-4 text-md-end text-start mt-2 mt-md-0">
                     <span class="hud-label d-block text-white-50">المجلس الفلسطيني للإسكان</span>
-                    <a href="{{ route('damageAssessment.index') }}" class="small text-info text-decoration-none">العودة للوحة الرئيسية</a>
+                    <a href="{{ route('damageAssessment.index') }}" class="small text-info text-decoration-none">العودة
+                        للوحة الرئيسية</a>
                 </div>
             </div>
         </header>
 
         <div class="row g-3 mb-3 hud-interactive">
             <div class="col-md-3">
-                <div class="card-hud-glass d-flex align-items-center justify-content-between" style="border-left: 3px solid var(--neon-blue);">
+                <div class="card-hud-glass d-flex align-items-center justify-content-between"
+                    style="border-left: 3px solid var(--neon-blue);">
                     <div>
                         <span class="hud-label d-block mb-1">إجمالي مباني القطاع</span>
-                        <span id="hudTotalBuildings" class="hud-digital-number">{{ $formatNumber($summaryStats['total_buildings']) }}</span>
+                        <span id="hudTotalBuildings"
+                            class="hud-digital-number">{{ $formatNumber($summaryStats['total_buildings']) }}</span>
                     </div>
                     <i class="fa-solid fa-layer-group text-info fs-4 opacity-50"></i>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card-hud-glass d-flex align-items-center justify-content-between" style="border-left: 3px solid var(--neon-green);">
+                <div class="card-hud-glass d-flex align-items-center justify-content-between"
+                    style="border-left: 3px solid var(--neon-green);">
                     <div>
                         <span class="hud-label d-block mb-1">المباني المقيّمة ميدانياً</span>
-                        <span id="hudAssessedBuildings" class="hud-digital-number text-success">{{ $formatNumber($summaryStats['assessed_buildings']) }}</span>
+                        <span id="hudAssessedBuildings"
+                            class="hud-digital-number text-success">{{ $formatNumber($summaryStats['assessed_buildings']) }}</span>
                     </div>
                     <i class="fa-solid fa-satellite-dish text-success fs-4 opacity-50"></i>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card-hud-glass d-flex align-items-center justify-content-between" style="border-left: 3px solid var(--neon-red);">
+                <div class="card-hud-glass d-flex align-items-center justify-content-between"
+                    style="border-left: 3px solid var(--neon-red);">
                     <div>
                         <span class="hud-label d-block mb-1">وحدات مدمرة كلياً</span>
-                        <span id="hudFullyDamagedUnits" class="hud-digital-number text-danger">{{ $formatNumber($summaryStats['fully_damaged_units']) }}</span>
+                        <span id="hudFullyDamagedUnits"
+                            class="hud-digital-number text-danger">{{ $formatNumber($summaryStats['fully_damaged_units']) }}</span>
                     </div>
                     <i class="fa-solid fa-house-damage text-danger fs-4 opacity-50"></i>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card-hud-glass d-flex align-items-center justify-content-between" style="border-left: 3px solid var(--neon-yellow);">
+                <div class="card-hud-glass d-flex align-items-center justify-content-between"
+                    style="border-left: 3px solid var(--neon-yellow);">
                     <div>
                         <span class="hud-label d-block mb-1">تقديرات الركام الكلي</span>
-                        <span id="hudRubbleQuantity" class="hud-digital-number text-warning">{{ $formattedRubble }} <small class="fs-6 text-muted">طن</small></span>
+                        <span id="hudRubbleQuantity" class="hud-digital-number text-warning">{{ $formattedRubble }}
+                            <small class="fs-6 text-muted">طن</small></span>
                     </div>
                     <i class="fa-solid fa-truck-pickup text-warning fs-4 opacity-50"></i>
                 </div>
@@ -694,8 +708,10 @@
                             <h2 class="hud-map-filter-title"><i class="fa-solid fa-filter"></i> فلترة الخريطة</h2>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="hud-map-filter-count">نتائج الخريطة: <span id="hudMapFilterCount">0</span> مبنى</span>
-                            <button type="button" id="hudMapFilterToggle" class="hud-map-filter-toggle" aria-label="إظهار أو إخفاء فلتر الخريطة">
+                            <span class="hud-map-filter-count">نتائج الخريطة: <span id="hudMapFilterCount">0</span>
+                                مبنى</span>
+                            <button type="button" id="hudMapFilterToggle" class="hud-map-filter-toggle"
+                                aria-label="إظهار أو إخفاء فلتر الخريطة">
                                 <i class="fa-solid fa-chevron-up"></i>
                             </button>
                         </div>
@@ -704,18 +720,22 @@
                     <div class="hud-map-filter-body">
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_assignedto">المهندس الميداني</label>
-                            <select id="hud_filter_assignedto" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="assignedto" data-placeholder="الكل" multiple>
+                            <select id="hud_filter_assignedto"
+                                class="form-select hud-map-filter-select hud-map-filter-multiple"
+                                data-field="assignedto" data-placeholder="الكل" multiple>
                             </select>
                         </div>
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_building_name">اسم المبنى</label>
-                            <input type="text" id="hud_filter_building_name" class="form-control" placeholder="اسم المبنى">
+                            <input type="text" id="hud_filter_building_name" class="form-control"
+                                placeholder="اسم المبنى">
                         </div>
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_field_status">حالة الإستبيان</label>
-                            <select id="hud_filter_field_status" class="form-select hud-map-filter-multiple" data-field="field_status" data-placeholder="الكل" multiple>
+                            <select id="hud_filter_field_status" class="form-select hud-map-filter-multiple"
+                                data-field="field_status" data-placeholder="الكل" multiple>
                                 <option value="COMPLETED">مكتمل</option>
                                 <option value="Not_Completed">غير مكتمل</option>
                             </select>
@@ -723,35 +743,41 @@
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_building_damage_status">حالة الضرر</label>
-                            <select id="hud_filter_building_damage_status" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="building_damage_status" data-placeholder="الكل" multiple>
+                            <select id="hud_filter_building_damage_status"
+                                class="form-select hud-map-filter-select hud-map-filter-multiple"
+                                data-field="building_damage_status" data-placeholder="الكل" multiple>
                             </select>
                         </div>
 
-                        <div class="hud-map-filter-field">
-                            <label for="hud_filter_security_priority">يوجد عائق</label>
-                            <div class="form-check form-switch text-white-50">
-                                <input type="checkbox" id="hud_filter_security_priority" class="form-check-input">
-                                <label class="form-check-label" for="hud_filter_security_priority">السيمبولجي الأزرق</label>
-                            </div>
-                        </div>
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_municipalitie">البلدية</label>
-                            <select id="hud_filter_municipalitie" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="municipalitie" data-placeholder="الكل" multiple>
+                            <select id="hud_filter_municipalitie"
+                                class="form-select hud-map-filter-select hud-map-filter-multiple"
+                                data-field="municipalitie" data-placeholder="الكل" multiple>
                             </select>
                         </div>
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_neighborhood">الحي</label>
-                            <select id="hud_filter_neighborhood" class="form-select hud-map-filter-select hud-map-filter-multiple" data-field="neighborhood" data-placeholder="الكل" multiple>
+                            <select id="hud_filter_neighborhood"
+                                class="form-select hud-map-filter-select hud-map-filter-multiple"
+                                data-field="neighborhood" data-placeholder="الكل" multiple>
                             </select>
                         </div>
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_search">بحث ObjectID / GlobalID</label>
-                            <input type="text" id="hud_filter_search" class="form-control" placeholder="ObjectID / GlobalID">
+                            <input type="text" id="hud_filter_search" class="form-control"
+                                placeholder="ObjectID / GlobalID">
                         </div>
+                        <div class="hud-map-filter-field">
 
+                            <div class="form-check form-switch text-white-50">
+                                <input type="checkbox" id="hud_filter_security_priority" class="form-check-input">
+                                <label class="form-check-label" for="hud_filter_security_priority">يوجد عائق</label>
+                            </div>
+                        </div>
                         <div class="row g-2">
                             <div class="col-6">
                                 <div class="hud-map-filter-field">
@@ -775,47 +801,67 @@
                 </aside>
 
                 <div class="card-hud-glass">
-                    <div class="hud-section-title"><i class="fa-solid fa-building"></i> تحليل المباني حسب حالة الضرر</div>
+                    <div class="hud-section-title"><i class="fa-solid fa-building"></i> تحليل المباني حسب حالة الضرر
+                    </div>
                     <div style="position: relative; height: 135px;">
                         <canvas id="hudBuildingDamageChart"></canvas>
                     </div>
-                    <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
-                        <small class="text-white-50">إجمالي المباني المفلترة: <span id="hudBuildingChartTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($buildingDamageChart['data'])) }}</span></small>
+                    <div class="p-2 text-center border-top border-secondary mt-2"
+                        style="background: rgba(255, 255, 255, 0.03);">
+                        <small class="text-white-50">إجمالي المباني المفلترة: <span id="hudBuildingChartTotal"
+                                class="text-info fw-bold">{{ $formatNumber(array_sum($buildingDamageChart['data'])) }}</span></small>
                     </div>
                 </div>
 
                 <div class="card-hud-glass">
-                    <div class="hud-section-title"><i class="fa-solid fa-chart-pie"></i> تحليل الوحدات حسب حالة الضرر</div>
+                    <div class="hud-section-title"><i class="fa-solid fa-chart-pie"></i> تحليل الوحدات حسب حالة الضرر
+                    </div>
                     <div style="position: relative; height: 135px;">
                         <canvas id="hudDoughnutChart"></canvas>
                     </div>
-                    <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
-                        <small class="text-white-50">إجمالي الوحدات التابعة للمباني المفلترة: <span id="hudUnitChartTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
+                    <div class="p-2 text-center border-top border-secondary mt-2"
+                        style="background: rgba(255, 255, 255, 0.03);">
+                        <small class="text-white-50">إجمالي الوحدات التابعة للمباني المفلترة: <span
+                                id="hudUnitChartTotal"
+                                class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
                     </div>
                 </div>
 
                 <div class="card-hud-glass">
-                    <div class="hud-section-title"><i class="fa-solid fa-shield-halved"></i> تقييم السلامة الإنشائية للوحدات</div>
+                    <div class="hud-section-title"><i class="fa-solid fa-shield-halved"></i> تقييم السلامة الإنشائية
+                        للوحدات</div>
                     <div class="mb-2">
                         <div class="d-flex justify-content-between small opacity-75">
                             <span>مدمرة كلياً</span>
-                            <span id="hudSafetyDestroyedValue" class="text-danger fw-bold">{{ $safetyStats['destroyed'] }}%</span>
+                            <span id="hudSafetyDestroyedValue"
+                                class="text-danger fw-bold">{{ $safetyStats['destroyed'] }}%</span>
                         </div>
-                        <div class="cyber-progress text-danger"><div id="hudSafetyDestroyedBar" class="cyber-progress-fill bg-danger" style="width: {{ $safetyStats['destroyed'] }}%"></div></div>
+                        <div class="cyber-progress text-danger">
+                            <div id="hudSafetyDestroyedBar" class="cyber-progress-fill bg-danger"
+                                style="width: {{ $safetyStats['destroyed'] }}%"></div>
+                        </div>
                     </div>
                     <div class="mb-2">
                         <div class="d-flex justify-content-between small opacity-75">
                             <span>تحتاج تدعيم إنشائي</span>
-                            <span id="hudSafetySupportValue" class="text-warning fw-bold">{{ $safetyStats['support_needed'] }}%</span>
+                            <span id="hudSafetySupportValue"
+                                class="text-warning fw-bold">{{ $safetyStats['support_needed'] }}%</span>
                         </div>
-                        <div class="cyber-progress text-warning"><div id="hudSafetySupportBar" class="cyber-progress-fill bg-warning" style="width: {{ $safetyStats['support_needed'] }}%"></div></div>
+                        <div class="cyber-progress text-warning">
+                            <div id="hudSafetySupportBar" class="cyber-progress-fill bg-warning"
+                                style="width: {{ $safetyStats['support_needed'] }}%"></div>
+                        </div>
                     </div>
                     <div>
                         <div class="d-flex justify-content-between small opacity-75">
                             <span>صالحة للسكن</span>
-                            <span id="hudSafetyHabitableValue" class="text-success fw-bold">{{ $safetyStats['habitable'] }}%</span>
+                            <span id="hudSafetyHabitableValue"
+                                class="text-success fw-bold">{{ $safetyStats['habitable'] }}%</span>
                         </div>
-                        <div class="cyber-progress text-success"><div id="hudSafetyHabitableBar" class="cyber-progress-fill bg-success" style="width: {{ $safetyStats['habitable'] }}%"></div></div>
+                        <div class="cyber-progress text-success">
+                            <div id="hudSafetyHabitableBar" class="cyber-progress-fill bg-success"
+                                style="width: {{ $safetyStats['habitable'] }}%"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -827,140 +873,155 @@
                     <div class="hud-section-title"><i class="fa-solid fa-globe"></i> تقارير البلديات والأحياء</div>
                     <ul class="nav nav-pills nav-fill gap-2 mb-3" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active py-2 fw-bold" id="hudBuildingReportsTab" data-bs-toggle="tab" data-bs-target="#hudBuildingReportsPane" type="button" role="tab">المباني</button>
+                            <button class="nav-link active py-2 fw-bold" id="hudBuildingReportsTab" data-bs-toggle="tab"
+                                data-bs-target="#hudBuildingReportsPane" type="button" role="tab">المباني</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link py-2 fw-bold" id="hudUnitReportsTab" data-bs-toggle="tab" data-bs-target="#hudUnitReportsPane" type="button" role="tab">الوحدات</button>
+                            <button class="nav-link py-2 fw-bold" id="hudUnitReportsTab" data-bs-toggle="tab"
+                                data-bs-target="#hudUnitReportsPane" type="button" role="tab">الوحدات</button>
                         </li>
                     </ul>
                     <div class="tab-content" style="flex: 1; min-height: 0;">
-                        <div id="hudBuildingReportsPane" class="tab-pane fade show active h-100" role="tabpanel" aria-labelledby="hudBuildingReportsTab">
+                        <div id="hudBuildingReportsPane" class="tab-pane fade show active h-100" role="tabpanel"
+                            aria-labelledby="hudBuildingReportsTab">
                             <div id="hudBuildingMunicipalityReports" style="height: 100%; overflow-y: auto;">
                                 @forelse ($buildingMunicipalityReports as $report)
-                            <section class="governorate-report">
-                                <div class="governorate-report-header">
-                                    <div class="governorate-report-name">{{ $report['name'] }}</div>
-                                    <div class="governorate-report-metric">
-                                        <span>مبانٍ</span>
-                                        <strong>{{ $formatNumber($report['summary']['assessed']) }}</strong>
-                                    </div>
-                                    <div class="governorate-report-metric">
-                                        <span>جزئي</span>
-                                        <strong>{{ $formatNumber($report['summary']['partial']) }}</strong>
-                                    </div>
-                                    <div class="governorate-report-metric">
-                                        <span>مدمر</span>
-                                        <strong class="text-danger">{{ $formatNumber($report['summary']['destroyed']) }}</strong>
-                                    </div>
-                                    <div class="governorate-report-metric">
-                                        <span>عائق</span>
-                                        <strong>{{ $formatNumber($report['summary']['obstacle']) }}</strong>
-                                    </div>
-                                </div>
+                                    <section class="governorate-report">
+                                        <div class="governorate-report-header">
+                                            <div class="governorate-report-name">{{ $report['name'] }}</div>
+                                            <div class="governorate-report-metric">
+                                                <span>مبانٍ</span>
+                                                <strong>{{ $formatNumber($report['summary']['assessed']) }}</strong>
+                                            </div>
+                                            <div class="governorate-report-metric">
+                                                <span>جزئي</span>
+                                                <strong>{{ $formatNumber($report['summary']['partial']) }}</strong>
+                                            </div>
+                                            <div class="governorate-report-metric">
+                                                <span>مدمر</span>
+                                                <strong
+                                                    class="text-danger">{{ $formatNumber($report['summary']['destroyed']) }}</strong>
+                                            </div>
+                                            <div class="governorate-report-metric">
+                                                <span>عائق</span>
+                                                <strong>{{ $formatNumber($report['summary']['obstacle']) }}</strong>
+                                            </div>
+                                        </div>
 
-                                <div class="governorate-report-body">
-                                    <div class="municipality-chart-wrap">
-                                        <canvas id="buildingMunicipalityChart{{ $loop->index }}"></canvas>
-                                    </div>
+                                        <div class="governorate-report-body">
+                                            <div class="municipality-chart-wrap">
+                                                <canvas id="buildingMunicipalityChart{{ $loop->index }}"></canvas>
+                                            </div>
 
-                                    <table class="table table-sm table-cyber align-middle mb-0 text-center">
-                                        <thead>
-                                            <tr>
-                                                <th class="text-start">الحي</th>
-                                                <th>مبانٍ</th>
-                                                <th>مدمر</th>
-                                                <th>جزئي</th>
-                                                <th>لجنة</th>
-                                                <th>عائق</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @forelse ($report['neighborhoods'] as $neighborhood)
-                                                <tr>
-                                                    <td class="text-start fw-bold text-info">{{ $neighborhood['name'] }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['assessed']) }}</td>
-                                                    <td class="text-danger fw-bold">{{ $formatNumber($neighborhood['destroyed']) }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['partial']) }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['committee']) }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['obstacle']) }}</td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="6" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </section>
-                        @empty
-                            <div class="text-center text-white-50 py-4">لا توجد بيانات بلديات حالياً</div>
-                        @endforelse
+                                            <table class="table table-sm table-cyber align-middle mb-0 text-center">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="text-start">الحي</th>
+                                                        <th>مبانٍ</th>
+                                                        <th>مدمر</th>
+                                                        <th>جزئي</th>
+                                                        <th>لجنة</th>
+                                                        <th>عائق</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($report['neighborhoods'] as $neighborhood)
+                                                        <tr>
+                                                            <td class="text-start fw-bold text-info">{{ $neighborhood['name'] }}
+                                                            </td>
+                                                            <td>{{ $formatNumber($neighborhood['assessed']) }}</td>
+                                                            <td class="text-danger fw-bold">
+                                                                {{ $formatNumber($neighborhood['destroyed']) }}</td>
+                                                            <td>{{ $formatNumber($neighborhood['partial']) }}</td>
+                                                            <td>{{ $formatNumber($neighborhood['committee']) }}</td>
+                                                            <td>{{ $formatNumber($neighborhood['obstacle']) }}</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="6" class="text-white-50 py-3">لا توجد أحياء لهذه
+                                                                المحافظة</td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </section>
+                                @empty
+                                    <div class="text-center text-white-50 py-4">لا توجد بيانات بلديات حالياً</div>
+                                @endforelse
                             </div>
                         </div>
-                        <div id="hudUnitReportsPane" class="tab-pane fade h-100" role="tabpanel" aria-labelledby="hudUnitReportsTab">
+                        <div id="hudUnitReportsPane" class="tab-pane fade h-100" role="tabpanel"
+                            aria-labelledby="hudUnitReportsTab">
                             <div id="hudUnitMunicipalityReports" style="height: 100%; overflow-y: auto;">
                                 @forelse ($unitMunicipalityReports as $report)
-                            <section class="governorate-report">
-                                <div class="governorate-report-header">
-                                    <div class="governorate-report-name">{{ $report['name'] }}</div>
-                                    <div class="governorate-report-metric">
-                                        <span>وحدات</span>
-                                        <strong>{{ $formatNumber($report['summary']['units']) }}</strong>
-                                    </div>
-                                    <div class="governorate-report-metric">
-                                        <span>جزئي</span>
-                                        <strong>{{ $formatNumber($report['summary']['partial']) }}</strong>
-                                    </div>
-                                    <div class="governorate-report-metric">
-                                        <span>مدمر</span>
-                                        <strong class="text-danger">{{ $formatNumber($report['summary']['destroyed']) }}</strong>
-                                    </div>
-                                </div>
+                                    <section class="governorate-report">
+                                        <div class="governorate-report-header">
+                                            <div class="governorate-report-name">{{ $report['name'] }}</div>
+                                            <div class="governorate-report-metric">
+                                                <span>وحدات</span>
+                                                <strong>{{ $formatNumber($report['summary']['units']) }}</strong>
+                                            </div>
+                                            <div class="governorate-report-metric">
+                                                <span>جزئي</span>
+                                                <strong>{{ $formatNumber($report['summary']['partial']) }}</strong>
+                                            </div>
+                                            <div class="governorate-report-metric">
+                                                <span>مدمر</span>
+                                                <strong
+                                                    class="text-danger">{{ $formatNumber($report['summary']['destroyed']) }}</strong>
+                                            </div>
+                                        </div>
 
-                                <div class="governorate-report-body">
-                                    <div class="municipality-chart-wrap">
-                                        <canvas id="unitMunicipalityChart{{ $loop->index }}"></canvas>
-                                    </div>
+                                        <div class="governorate-report-body">
+                                            <div class="municipality-chart-wrap">
+                                                <canvas id="unitMunicipalityChart{{ $loop->index }}"></canvas>
+                                            </div>
 
-                                    <table class="table table-sm table-cyber align-middle mb-0 text-center">
-                                        <thead>
-                                            <tr>
-                                                <th class="text-start">الحي</th>
-                                                <th>وحدات</th>
-                                                <th>مدمر</th>
-                                                <th>جزئي</th>
-                                                <th>لجنة</th>
-                                                <th>غير مصنف</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @forelse ($report['neighborhoods'] as $neighborhood)
-                                                <tr>
-                                                    <td class="text-start fw-bold text-info">{{ $neighborhood['name'] }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['units']) }}</td>
-                                                    <td class="text-danger fw-bold">{{ $formatNumber($neighborhood['destroyed']) }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['partial']) }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['committee']) }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['unclassified']) }}</td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="6" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </section>
-                        @empty
-                            <div class="text-center text-white-50 py-4">لا توجد بيانات وحدات حالياً</div>
-                        @endforelse
+                                            <table class="table table-sm table-cyber align-middle mb-0 text-center">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="text-start">الحي</th>
+                                                        <th>وحدات</th>
+                                                        <th>مدمر</th>
+                                                        <th>جزئي</th>
+                                                        <th>لجنة</th>
+                                                        <th>غير مصنف</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($report['neighborhoods'] as $neighborhood)
+                                                        <tr>
+                                                            <td class="text-start fw-bold text-info">{{ $neighborhood['name'] }}
+                                                            </td>
+                                                            <td>{{ $formatNumber($neighborhood['units']) }}</td>
+                                                            <td class="text-danger fw-bold">
+                                                                {{ $formatNumber($neighborhood['destroyed']) }}</td>
+                                                            <td>{{ $formatNumber($neighborhood['partial']) }}</td>
+                                                            <td>{{ $formatNumber($neighborhood['committee']) }}</td>
+                                                            <td>{{ $formatNumber($neighborhood['unclassified']) }}</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="6" class="text-white-50 py-3">لا توجد أحياء لهذه
+                                                                المحافظة</td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </section>
+                                @empty
+                                    <div class="text-center text-white-50 py-4">لا توجد بيانات وحدات حالياً</div>
+                                @endforelse
                             </div>
                         </div>
                     </div>
-                    <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
-                        <small class="text-white-50">إجمالي الوحدات التابعة للمباني المفلترة: <span id="hudAssessedUnitsTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
+                    <div class="p-2 text-center border-top border-secondary mt-2"
+                        style="background: rgba(255, 255, 255, 0.03);">
+                        <small class="text-white-50">إجمالي الوحدات التابعة للمباني المفلترة: <span
+                                id="hudAssessedUnitsTotal"
+                                class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
                     </div>
                 </div>
             </div>
@@ -1638,7 +1699,7 @@
             });
 
             view.when(function () {
-                view.goTo(gazaStripExtent, { duration: 1200 }).catch(function () {});
+                view.goTo(gazaStripExtent, { duration: 1200 }).catch(function () { });
                 initializeHudMapFilters();
             });
         });
@@ -2015,4 +2076,5 @@
 
     </script>
 </body>
+
 </html>
