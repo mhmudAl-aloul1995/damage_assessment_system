@@ -46,7 +46,7 @@
 		}
 
 		#kt_datatable_audits tbody td {
-			font-size: 0.9rem;
+			font-size: 1rem;
 			line-height: 1.4;
 		}
 
@@ -79,7 +79,7 @@
 			padding: 0.3rem 0.4rem;
 			justify-content: center;
 			align-items: center;
-			font-size: 0.74rem;
+			font-size: 1rem;
 			line-height: 1.25;
 			text-align: center;
 			
@@ -91,7 +91,7 @@
 
 		#kt_datatable_audits .btn {
 			padding: 0.35rem 0.45rem;
-			font-size: 0.76rem;
+			font-size: 0.1rem;
 		}
 
 		@media (min-width: 1600px) {
