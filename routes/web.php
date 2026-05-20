@@ -48,7 +48,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/pull', function () {
         // Run the git pull command in the project root
-        dd(base_path());
+
         $result = Process::path(base_path())
             ->run('git pull');
 
@@ -64,10 +64,10 @@ Route::middleware('auth')->group(function () {
         $safeRepo = str_replace('\\', '/', $repo);
 
         $commands = [
-            'git -c safe.directory="'.$safeRepo.'" add .',
-            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
-            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
-            'git -c safe.directory="'.$safeRepo.'" push',
+            'git -c safe.directory="' . $safeRepo . '" add .',
+            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
+            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
+            'git -c safe.directory="' . $safeRepo . '" push',
         ];
 
         $outputs = [];
@@ -87,7 +87,7 @@ Route::middleware('auth')->group(function () {
                 continue;
             }
 
-            if (! $result->successful()) {
+            if (!$result->successful()) {
                 return response()->json([
                     'status' => 'failed',
                     'command' => $command,
@@ -99,6 +99,8 @@ Route::middleware('auth')->group(function () {
             $outputs[] = $result->output();
         }
 
+        $result = Process::path('D:\html\damage_assessment_system')
+            ->run('git pull');
         return response()->json([
             'status' => 'success',
             'output' => $outputs,
@@ -198,5 +200,5 @@ Route::middleware('auth')->group(function () {
 
 });
 
-require __DIR__.'/modules/damage-assessment.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/modules/damage-assessment.php';
+require __DIR__ . '/auth.php';
