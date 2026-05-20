@@ -202,7 +202,7 @@
 
         .governorate-report-header {
             display: grid;
-            grid-template-columns: 1fr repeat(3, minmax(58px, auto));
+            grid-template-columns: 1fr repeat(4, minmax(52px, auto));
             gap: 10px;
             align-items: center;
             padding: 10px;
@@ -835,6 +835,10 @@
                                         <span>مدمر</span>
                                         <strong class="text-danger">{{ $formatNumber($report['summary']['destroyed']) }}</strong>
                                     </div>
+                                    <div class="governorate-report-metric">
+                                        <span>عائق</span>
+                                        <strong>{{ $formatNumber($report['summary']['obstacle']) }}</strong>
+                                    </div>
                                 </div>
 
                                 <div class="governorate-report-body">
@@ -850,6 +854,7 @@
                                                 <th>مدمر</th>
                                                 <th>جزئي</th>
                                                 <th>لجنة</th>
+                                                <th>عائق</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -860,10 +865,11 @@
                                                     <td class="text-danger fw-bold">{{ $formatNumber($neighborhood['destroyed']) }}</td>
                                                     <td>{{ $formatNumber($neighborhood['partial']) }}</td>
                                                     <td>{{ $formatNumber($neighborhood['committee']) }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['obstacle']) }}</td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="5" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td>
+                                                    <td colspan="6" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -1586,8 +1592,10 @@
             options: hudChartOptions('left')
         });
 
-        const hudBuildingMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة'];
+        const hudBuildingMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة', 'عائق'];
         const hudUnitMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة', 'غير مصنف'];
+        const hudBuildingMunicipalityChartColors = ['#ff0055', '#fae813', '#00f2fe', '#b25cff'];
+        const hudUnitMunicipalityChartColors = ['#ff0055', '#fae813', '#00f2fe', '#00ff87'];
         let hudMunicipalityCharts = [];
 
         function formatHudNumber(value) {
@@ -1660,7 +1668,7 @@
             }
         }
 
-        function createHudMunicipalityCharts(reports, chartPrefix, labels) {
+        function createHudMunicipalityCharts(reports, chartPrefix, labels, colors) {
             reports.forEach((report, index) => {
                 const canvas = document.getElementById(`${chartPrefix}${index}`);
 
@@ -1674,7 +1682,7 @@
                         labels,
                         datasets: [{
                             data: report.chart,
-                            backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#00ff87'],
+                            backgroundColor: colors,
                             borderWidth: 0,
                             borderRadius: 4
                         }]
@@ -1724,10 +1732,11 @@
                                 <td class="text-danger fw-bold">${formatHudNumber(neighborhood.destroyed)}</td>
                                 <td>${formatHudNumber(neighborhood.partial)}</td>
                                 <td>${formatHudNumber(neighborhood.committee)}</td>
+                                <td>${formatHudNumber(neighborhood.obstacle)}</td>
                             </tr>
                         `;
                     }).join('')
-                    : '<tr><td colspan="5" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td></tr>';
+                    : '<tr><td colspan="6" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td></tr>';
 
                 return `
                     <section class="governorate-report">
@@ -1745,6 +1754,10 @@
                                 <span>مدمر</span>
                                 <strong class="text-danger">${formatHudNumber(report.summary?.destroyed)}</strong>
                             </div>
+                            <div class="governorate-report-metric">
+                                <span>عائق</span>
+                                <strong>${formatHudNumber(report.summary?.obstacle)}</strong>
+                            </div>
                         </div>
 
                         <div class="governorate-report-body">
@@ -1760,6 +1773,7 @@
                                         <th>مدمر</th>
                                         <th>جزئي</th>
                                         <th>لجنة</th>
+                                        <th>عائق</th>
                                     </tr>
                                 </thead>
                                 <tbody>${neighborhoods}</tbody>
@@ -1848,8 +1862,8 @@
             hudMunicipalityCharts = [];
             renderHudBuildingMunicipalityReports(buildingReports);
             renderHudUnitMunicipalityReports(unitReports);
-            createHudMunicipalityCharts(buildingReports || [], 'buildingMunicipalityChart', hudBuildingMunicipalityChartLabels);
-            createHudMunicipalityCharts(unitReports || [], 'unitMunicipalityChart', hudUnitMunicipalityChartLabels);
+            createHudMunicipalityCharts(buildingReports || [], 'buildingMunicipalityChart', hudBuildingMunicipalityChartLabels, hudBuildingMunicipalityChartColors);
+            createHudMunicipalityCharts(unitReports || [], 'unitMunicipalityChart', hudUnitMunicipalityChartLabels, hudUnitMunicipalityChartColors);
         }
 
         function refreshHudDashboardData() {
@@ -1897,8 +1911,8 @@
                 });
         }
 
-        createHudMunicipalityCharts(buildingMunicipalityReports, 'buildingMunicipalityChart', hudBuildingMunicipalityChartLabels);
-        createHudMunicipalityCharts(unitMunicipalityReports, 'unitMunicipalityChart', hudUnitMunicipalityChartLabels);
+        createHudMunicipalityCharts(buildingMunicipalityReports, 'buildingMunicipalityChart', hudBuildingMunicipalityChartLabels, hudBuildingMunicipalityChartColors);
+        createHudMunicipalityCharts(unitMunicipalityReports, 'unitMunicipalityChart', hudUnitMunicipalityChartLabels, hudUnitMunicipalityChartColors);
 
     </script>
 </body>

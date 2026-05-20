@@ -211,6 +211,8 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertJsonPath('assessedUnitsTotal', 3)
         ->assertJsonPath('buildingDamageChart.data.3', 1)
         ->assertJsonPath('buildingMunicipalityReports.0.summary.assessed', 2)
+        ->assertJsonPath('buildingMunicipalityReports.0.summary.obstacle', 1)
+        ->assertJsonPath('buildingMunicipalityReports.0.neighborhoods.0.obstacle', 1)
         ->assertJsonPath('unitMunicipalityReports.0.summary.units', 2);
 
     $this->actingAs($user)
@@ -225,6 +227,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertJsonPath('municipalityReports.0.name', 'Gaza')
         ->assertJsonPath('buildingMunicipalityReports.0.name', 'Gaza')
         ->assertJsonPath('buildingMunicipalityReports.0.summary.assessed', 2)
+        ->assertJsonPath('buildingMunicipalityReports.0.summary.obstacle', 1)
         ->assertJsonPath('unitMunicipalityReports.0.name', 'Gaza')
         ->assertJsonPath('unitMunicipalityReports.0.summary.units', 2);
 
