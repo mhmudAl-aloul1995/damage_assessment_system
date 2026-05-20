@@ -894,7 +894,7 @@
                         DefaultValue($feature.building_damage_status, '')
                     )
                 `,
-                valueExpressionTitle: 'Damage / Security priority',
+                valueExpressionTitle: 'حالة الضرر / يوجد عائق',
                 defaultSymbol: {
                     type: 'simple-fill',
                     color: [0, 255, 135, 0.26],
@@ -907,7 +907,7 @@
                 uniqueValueInfos: [
                     {
                         value: 'security_priority',
-                        label: 'Security / assessment obstacle',
+                        label: 'يوجد عائق',
                         symbol: {
                             type: 'simple-fill',
                             color: [0, 122, 255, 0.66],
@@ -919,7 +919,7 @@
                     },
                     {
                         value: 'fully_damaged',
-                        label: 'Fully damaged',
+                        label: 'مدمر كلياً',
                         symbol: {
                             type: 'simple-fill',
                             color: [255, 0, 85, 0.62],
@@ -931,7 +931,7 @@
                     },
                     {
                         value: 'partially_damaged',
-                        label: 'Partially damaged',
+                        label: 'متضرر جزئياً',
                         symbol: {
                             type: 'simple-fill',
                             color: [250, 232, 19, 0.50],
@@ -943,10 +943,10 @@
                     },
                     {
                         value: 'committee_review',
-                        label: 'Committee review',
+                        label: 'مراجعة لجنة',
                         symbol: {
                             type: 'simple-fill',
-                            color: [0, 242, 254, 0.48],
+                            color: [178, 92, 255, 0.52],
                             outline: {
                                 color: [255, 255, 255, 0.9],
                                 width: 0.9
