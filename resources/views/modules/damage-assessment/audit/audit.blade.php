@@ -918,32 +918,32 @@
 					},
 					{
 						targets: 1,
-						width: '30%',
+						width: '22%',
 						className: 'text-start'
 					},
 					{
 						targets: 2,
-						width: '6%',
+						width: '7%',
 						className: 'text-center'
 					},
 					{
 						targets: 3,
-						width: '9%',
+						width: '10%',
 						className: 'audit-cell-ltr'
 					},
 					{
 						targets: [4, 5],
-						width: '8%',
+						width: '9%',
 						className: 'text-center'
 					},
 					{
 						targets: [6, 7, 8],
-						width: '10%',
+						width: '11%',
 						className: 'text-center'
 					},
 					{
 						targets: 9,
-						width: '7%',
+						width: '8%',
 						className: 'text-center'
 					},
 				],
