@@ -54,7 +54,7 @@
 		#kt_datatable_audits .audit-cell-name {
 			display: block;
 			line-height: 1.4;
-			white-space: normal;
+			
 			overflow-wrap: anywhere;
 			word-break: normal;
 		}
@@ -69,7 +69,7 @@
 			display: block;
 			direction: ltr;
 			line-height: 1.45;
-			white-space: normal;
+			
 		}
 
 		#kt_datatable_audits .badge {
@@ -82,7 +82,7 @@
 			font-size: 0.74rem;
 			line-height: 1.25;
 			text-align: center;
-			white-space: normal;
+			
 		}
 
 		#kt_datatable_audits .form-check {
@@ -92,7 +92,6 @@
 		#kt_datatable_audits .btn {
 			padding: 0.35rem 0.45rem;
 			font-size: 0.76rem;
-			white-space: normal;
 		}
 
 		@media (min-width: 1600px) {
