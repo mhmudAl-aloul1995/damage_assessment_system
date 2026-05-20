@@ -1330,7 +1330,8 @@
                     popupTableRow('Field status', value(attributes, 'field_status', 'Field_Status')),
                     popupTableRow('Assigned to', value(attributes, 'assignedto', 'AssignedTo')),
                     popupTableRow('Municipality', value(attributes, 'municipalitie', 'Municipalitie')),
-                    popupTableRow('Neighborhood', value(attributes, 'neighborhood', 'Neighborhood'))
+                    popupTableRow('Neighborhood', value(attributes, 'neighborhood', 'Neighborhood')),
+                    popupTableRow('مساحة المضلع (م²)', value(attributes, 'Shape__Area', 'shape__area'))
                 );
 
                 action.className = 'hud-map-popup-action';
