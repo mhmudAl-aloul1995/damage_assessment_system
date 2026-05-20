@@ -91,7 +91,7 @@
 
 		#kt_datatable_audits .btn {
 			padding: 0.35rem 0.45rem;
-			font-size: 0.1rem;
+			font-size: .95rem;
 		}
 
 		@media (min-width: 1600px) {
