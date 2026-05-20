@@ -26,6 +26,26 @@ Route::get('/dashboard', function () {
     return redirect('damageAssessment');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::get('/deployment/pull/{token}', function (string $token) {
+    $expectedToken = (string) config('app.deployment_pull_token');
+
+    abort_if($expectedToken === '' || ! hash_equals($expectedToken, $token), 403);
+
+    $result = Process::path(base_path())
+        ->run('git pull');
+
+    if ($result->successful()) {
+        return response()->json([
+            'message' => 'Successfully pulled latest changes',
+            'output' => trim($result->output()),
+        ]);
+    }
+
+    return response()->json([
+        'error' => $result->errorOutput() ?: $result->output(),
+    ], 500);
+})->name('deployment.pull');
+
 Route::middleware('auth')->group(function () {
 
     Route::get('/system-logs', [SystemLogController::class, 'index'])

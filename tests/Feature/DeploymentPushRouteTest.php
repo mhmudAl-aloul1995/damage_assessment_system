@@ -6,6 +6,28 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
+it('allows the deployment pull route with the configured token', function (): void {
+    Process::fake([
+        'git pull' => Process::result('Already up to date.'),
+    ]);
+
+    $this->get('/deployment/pull/'.config('app.deployment_pull_token'))
+        ->assertOk()
+        ->assertJsonPath('message', 'Successfully pulled latest changes')
+        ->assertJsonPath('output', 'Already up to date.');
+
+    Process::assertRan(fn ($process): bool => $process->command === 'git pull');
+});
+
+it('rejects the deployment pull route when the token is invalid', function (): void {
+    Process::fake();
+
+    $this->get('/deployment/pull/wrong-token')
+        ->assertForbidden();
+
+    Process::assertNothingRan();
+});
+
 it('calls the server pull url even when there are no local changes to push', function (): void {
     $sequence = Process::sequence()
         ->push(Process::result('added'))
