@@ -1093,12 +1093,13 @@
             'esri/views/MapView',
             'esri/layers/FeatureLayer',
             'esri/geometry/Extent',
+            'esri/geometry/geometryEngine',
             'esri/identity/IdentityManager',
             'esri/widgets/Legend',
             'esri/widgets/ScaleBar',
             'esri/widgets/BasemapGallery',
             'esri/widgets/Expand'
-        ], function (Map, MapView, FeatureLayer, Extent, esriId, Legend, ScaleBar, BasemapGallery, Expand) {
+        ], function (Map, MapView, FeatureLayer, Extent, geometryEngine, esriId, Legend, ScaleBar, BasemapGallery, Expand) {
             if (buildingLayerUrl && arcgisToken) {
                 esriId.registerToken({
                     server: buildingLayerUrl,
@@ -1238,10 +1239,22 @@
                 return Number.isFinite(parsedValue) ? parsedValue : null;
             }
 
-            function squareMeterValue(attributes, ...keys) {
+            function formatSquareMeters(area) {
+                return Number.isFinite(area) ? `${area.toLocaleString('en-US', { maximumFractionDigits: 2 })} m²` : '-';
+            }
+
+            function polygonSquareMeterValue(graphic, attributes, ...keys) {
+                const geometryArea = graphic.geometry
+                    ? Math.abs(geometryEngine.geodesicArea(graphic.geometry, 'square-meters'))
+                    : null;
+
+                if (Number.isFinite(geometryArea) && geometryArea > 0) {
+                    return formatSquareMeters(geometryArea);
+                }
+
                 const area = numericValue(attributes, ...keys);
 
-                return area === null ? '-' : `${area.toLocaleString('en-US', { maximumFractionDigits: 2 })} m²`;
+                return formatSquareMeters(area);
             }
 
             function googleMapsUrl(graphic) {
@@ -1330,7 +1343,7 @@
                     popupTableRow('Object ID', value(attributes, 'objectid', 'OBJECTID')),
                     popupTableRow('Global ID', globalId),
                     popupTableRow('Building Name', value(attributes, 'building_name', 'Building_Name', 'name', 'NAME')),
-                    popupTableRow('Polygon Area', squareMeterValue(attributes, 'Shape__Area', 'shape__area')),
+                    popupTableRow('Polygon Area', polygonSquareMeterValue(event.graphic, attributes, 'Shape__Area', 'shape__area')),
                     popupTableRow('Building Damage Status', value(attributes, 'building_damage_status', 'Building_Damage_Status')),
                     popupTableRow('Assessment obstacle', value(attributes, 'assessment_obstacle', 'Assessment_Obstacle')),
                     popupTableRow('Security situation', value(attributes, 'security_situation', 'Security_Situation')),
