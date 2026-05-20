@@ -10,7 +10,6 @@ use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\roleController;
 use App\Http\Controllers\UserManagement\userController;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
 
@@ -25,71 +24,6 @@ Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('loca
 Route::get('/dashboard', function () {
     return redirect('damageAssessment');
 })->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::get('/deployment/pull/{token}', function (string $token) {
-    $expectedToken = (string) config('app.deployment_pull_token');
-
-    abort_if($expectedToken === '' || ! hash_equals($expectedToken, $token), 403);
-
-    $repo = base_path();
-    $safeRepo = str_replace('\\', '/', $repo);
-    $steps = [];
-
-    try {
-        $statusResult = Process::path($repo)
-            ->timeout(120)
-            ->run(['git', '-c', 'safe.directory='.$safeRepo, 'status', '--short', '--branch']);
-
-        $steps[] = [
-            'name' => 'server_git_status',
-            'exit_code' => $statusResult->exitCode(),
-            'output' => trim($statusResult->output()),
-            'error' => trim($statusResult->errorOutput()),
-        ];
-
-        if (! $statusResult->successful()) {
-            return response()->json([
-                'status' => 'failed',
-                'failed_step' => 'server_git_status',
-                'error' => trim($statusResult->errorOutput() ?: $statusResult->output()),
-                'steps' => $steps,
-            ], 500);
-        }
-
-        $pullResult = Process::path($repo)
-            ->timeout(120)
-            ->run(['git', '-c', 'safe.directory='.$safeRepo, 'pull', '--rebase', 'origin', 'main']);
-
-        $steps[] = [
-            'name' => 'server_git_pull_rebase',
-            'exit_code' => $pullResult->exitCode(),
-            'output' => trim($pullResult->output()),
-            'error' => trim($pullResult->errorOutput()),
-        ];
-
-        if ($pullResult->successful()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Successfully pulled latest changes',
-                'steps' => $steps,
-            ]);
-        }
-
-        return response()->json([
-            'status' => 'failed',
-            'failed_step' => 'server_git_pull_rebase',
-            'error' => trim($pullResult->errorOutput() ?: $pullResult->output()),
-            'steps' => $steps,
-        ], 500);
-    } catch (\Throwable $exception) {
-        return response()->json([
-            'status' => 'failed',
-            'failed_step' => 'server_exception',
-            'error' => $exception->getMessage(),
-            'steps' => $steps,
-        ], 500);
-    }
-})->name('deployment.pull');
 
 Route::middleware('auth')->group(function () {
 
@@ -114,7 +48,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/pull', function () {
         // Run the git pull command in the project root
-
+        
         $result = Process::path(base_path())
             ->run('git pull');
 
@@ -128,91 +62,47 @@ Route::middleware('auth')->group(function () {
     Route::get('/push', function () {
         $repo = base_path();
         $safeRepo = str_replace('\\', '/', $repo);
-        $serverPullUrl = config('app.server_pull_url');
-        $steps = [];
 
-        $runCommand = function (string $name, string $path, array $command, array $successfulExitCodes = [0]) use (&$steps) {
-            $result = Process::path($path)->run($command);
+        $commands = [
+            'git -c safe.directory="'.$safeRepo.'" add .',
+            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
+            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
+            'git -c safe.directory="'.$safeRepo.'" push',
+        ];
 
-            $steps[] = [
-                'name' => $name,
-                'command' => implode(' ', $command),
-                'exit_code' => $result->exitCode(),
-                'output' => trim($result->output()),
-                'error' => trim($result->errorOutput()),
-            ];
+        $outputs = [];
 
-            if (! in_array($result->exitCode(), $successfulExitCodes, true)) {
+        foreach ($commands as $index => $command) {
+            $result = Process::path($repo)->run($command);
+
+            // diff --cached --quiet Ã™Å Ã˜Â±Ã˜Â¬Ã˜Â¹ 1 Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™ÂÃ™Å Ã™â€¡ Ã˜ÂªÃ˜ÂºÃ™Å Ã™Å Ã˜Â±Ã˜Â§Ã˜Âª
+            if ($index === 1) {
+                if ($result->exitCode() === 0) {
+                    return response()->json([
+                        'status' => 'success',
+                        'output' => ['No changes to commit.'],
+                    ]);
+                }
+
+                continue;
+            }
+
+            if (! $result->successful()) {
                 return response()->json([
                     'status' => 'failed',
-                    'failed_step' => $name,
-                    'command' => implode(' ', $command),
+                    'command' => $command,
                     'error' => $result->errorOutput() ?: $result->output(),
                     'exit_code' => $result->exitCode(),
-                    'steps' => $steps,
                 ], 500);
             }
 
-            return $result;
-        };
-
-        $addResult = $runCommand('local_git_add', $repo, ['git', '-c', 'safe.directory='.$safeRepo, 'add', '.']);
-
-        if ($addResult instanceof \Illuminate\Http\JsonResponse) {
-            return $addResult;
+            $outputs[] = $result->output();
         }
 
-        $diffResult = $runCommand('local_git_diff_cached', $repo, ['git', '-c', 'safe.directory='.$safeRepo, 'diff', '--cached', '--quiet'], [0, 1]);
-
-        if ($diffResult instanceof \Illuminate\Http\JsonResponse) {
-            return $diffResult;
-        }
-
-        $pushStatus = 'no_changes';
-
-        if ($diffResult->exitCode() === 1) {
-            $commitResult = $runCommand('local_git_commit', $repo, ['git', '-c', 'safe.directory='.$safeRepo, 'commit', '-m', 'Auto-update: '.now()->toDateTimeString()]);
-
-            if ($commitResult instanceof \Illuminate\Http\JsonResponse) {
-                return $commitResult;
-            }
-
-            $pushResult = $runCommand('local_git_push', $repo, ['git', '-c', 'safe.directory='.$safeRepo, 'push']);
-
-            if ($pushResult instanceof \Illuminate\Http\JsonResponse) {
-                return $pushResult;
-            }
-
-            $pushStatus = 'pushed';
-        }
-
-        $pullResponse = Http::acceptJson()->get($serverPullUrl);
-
-        $steps[] = [
-            'name' => 'server_http_pull',
-            'url' => $serverPullUrl,
-            'status' => $pullResponse->status(),
-            'output' => trim($pullResponse->body()),
-        ];
-
-        if (! $pullResponse->successful()) {
-            return response()->json([
-                'status' => 'failed',
-                'failed_step' => 'server_http_pull',
-                'url' => $serverPullUrl,
-                'error' => $pullResponse->body(),
-                'http_status' => $pullResponse->status(),
-                'steps' => $steps,
-            ], 500);
-        }
-
+        redirect('/pull');
         return response()->json([
             'status' => 'success',
-            'push_status' => $pushStatus,
-            'message' => $pushStatus === 'pushed'
-                ? 'Successfully pushed local changes and pulled latest changes on the server.'
-                : 'No local changes to push. Server pull completed successfully.',
-            'steps' => $steps,
+            'output' => $outputs,
         ]);
     })->middleware('role_or_permission:Database Officer|system.maintenance');
     /*     Route::get('/deleteUsers', function () {
