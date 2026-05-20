@@ -308,6 +308,13 @@
             width: 42%;
         }
 
+        .hud-map-popup-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
         .hud-map-popup-action {
             align-items: center;
             background: rgba(0, 242, 254, 0.14);
@@ -321,6 +328,11 @@
             justify-content: center;
             padding: 7px 10px;
             text-decoration: none;
+        }
+
+        .hud-map-popup-action.is-audit {
+            background: rgba(250, 232, 19, 0.12);
+            border-color: rgba(250, 232, 19, 0.42);
         }
 
         .hud-map-filter-panel {
@@ -852,6 +864,7 @@
         const buildingLayerUrl = @json($buildingLayerUrl);
         const arcgisToken = @json($token);
         const assessmentBaseUrl = @json(url('assessment'));
+        const auditBaseUrl = window.location.pathname.replace(/\/damageAssessment\/hud\/?$/, '/showAssessmentAudit');
         const arcgisOptionsUrl = window.location.pathname.replace(/\/hud\/?$/, '/arcgis/options');
         const hudStatsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/stats');
 
@@ -996,15 +1009,19 @@
                 const title = document.createElement('strong');
                 const table = document.createElement('table');
                 const action = document.createElement('a');
+                const auditAction = document.createElement('a');
+                const actions = document.createElement('div');
                 const globalId = value(attributes, 'globalid', 'GlobalID', 'GLOBALID');
 
                 wrapper.className = 'hud-map-popup';
                 title.textContent = value(attributes, 'building_name', 'Building_Name', 'name', 'NAME');
+                actions.className = 'hud-map-popup-actions';
 
                 table.append(
                     popupTableRow('Object ID', value(attributes, 'objectid', 'OBJECTID')),
                     popupTableRow('Global ID', globalId),
-                    popupTableRow('Damage', value(attributes, 'building_damage_status', 'Building_Damage_Status')),
+                    popupTableRow('Building Name', value(attributes, 'building_name', 'Building_Name', 'name', 'NAME')),
+                    popupTableRow('building_damage_status', value(attributes, 'building_damage_status', 'Building_Damage_Status')),
                     popupTableRow('Assessment obstacle', value(attributes, 'assessment_obstacle', 'Assessment_Obstacle')),
                     popupTableRow('Security situation', value(attributes, 'security_situation', 'Security_Situation')),
                     popupTableRow('Field status', value(attributes, 'field_status', 'Field_Status')),
@@ -1019,7 +1036,14 @@
                 action.href = globalId !== '-' ? `${assessmentBaseUrl}/${globalId}` : '#';
                 action.textContent = 'فتح تفاصيل التقييم';
 
-                wrapper.append(title, table, action);
+                auditAction.className = 'hud-map-popup-action is-audit';
+                auditAction.target = '_blank';
+                auditAction.rel = 'noopener';
+                auditAction.href = globalId !== '-' ? `${auditBaseUrl}/${globalId}` : '#';
+                auditAction.textContent = 'التدقيق';
+
+                actions.append(action, auditAction);
+                wrapper.append(title, table, actions);
 
                 return wrapper;
             }
