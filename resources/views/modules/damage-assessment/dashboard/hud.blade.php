@@ -265,13 +265,28 @@
             box-shadow: 0 0 18px rgba(0, 242, 254, 0.22);
             max-height: min(380px, calc(100vh - 220px));
             max-width: calc(100vw - 48px);
+            overflow: visible;
             position: relative;
             width: min(580px, max(420px, calc(100vw - 820px)));
+        }
+
+        .esri-popup__header {
+            border-bottom: 1px solid rgba(0, 242, 254, 0.12);
+            min-height: 44px;
         }
 
         .esri-popup__content {
             max-height: min(270px, calc(100vh - 330px));
             overflow-y: auto;
+        }
+
+        .esri-popup__feature-menu,
+        .esri-popup__feature-menu-container,
+        .esri-popup__feature-menu-pagination {
+            background: rgba(6, 18, 36, 0.94);
+            border-bottom: 1px solid rgba(0, 242, 254, 0.12);
+            color: #8fa0b7;
+            position: static !important;
         }
 
         .esri-popup {
