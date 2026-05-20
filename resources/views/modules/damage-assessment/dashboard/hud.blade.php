@@ -677,7 +677,7 @@
                             <h2 class="hud-map-filter-title"><i class="fa-solid fa-filter"></i> فلترة الخريطة</h2>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="hud-map-filter-count">عدد النتائج: <span id="hudMapFilterCount">0</span></span>
+                            <span class="hud-map-filter-count">نتائج الخريطة: <span id="hudMapFilterCount">0</span> مبنى</span>
                             <button type="button" id="hudMapFilterToggle" class="hud-map-filter-toggle" aria-label="إظهار أو إخفاء فلتر الخريطة">
                                 <i class="fa-solid fa-chevron-up"></i>
                             </button>
@@ -758,9 +758,22 @@
                 </aside>
 
                 <div class="card-hud-glass">
-                    <div class="hud-section-title"><i class="fa-solid fa-chart-pie"></i> الهيكل التحليلي لمستويات الضرر</div>
-                    <div style="position: relative; height: 160px;">
+                    <div class="hud-section-title"><i class="fa-solid fa-building"></i> تحليل المباني حسب حالة الضرر</div>
+                    <div style="position: relative; height: 135px;">
+                        <canvas id="hudBuildingDamageChart"></canvas>
+                    </div>
+                    <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
+                        <small class="text-white-50">إجمالي المباني المفلترة: <span id="hudBuildingChartTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($buildingDamageChart['data'])) }}</span></small>
+                    </div>
+                </div>
+
+                <div class="card-hud-glass">
+                    <div class="hud-section-title"><i class="fa-solid fa-chart-pie"></i> تحليل الوحدات حسب حالة الضرر</div>
+                    <div style="position: relative; height: 135px;">
                         <canvas id="hudDoughnutChart"></canvas>
+                    </div>
+                    <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
+                        <small class="text-white-50">إجمالي الوحدات التابعة للمباني المفلترة: <span id="hudUnitChartTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
                     </div>
                 </div>
 
@@ -850,7 +863,7 @@
                         @endforelse
                     </div>
                     <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
-                        <small class="text-white-50">إجمالي الوحدات التي فُحصت: <span id="hudAssessedUnitsTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
+                        <small class="text-white-50">إجمالي الوحدات التابعة للمباني المفلترة: <span id="hudAssessedUnitsTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
                     </div>
                 </div>
             </div>
@@ -1449,6 +1462,39 @@
             });
         });
 
+        function hudChartOptions(legendPosition = 'left') {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: legendPosition,
+                        labels: {
+                            color: '#8fa0b7',
+                            font: { family: 'Cairo', size: 10, weight: '600' },
+                            boxWidth: 10
+                        }
+                    }
+                },
+                cutout: '72%'
+            };
+        }
+
+        const ctxBuildingDamage = document.getElementById('hudBuildingDamageChart').getContext('2d');
+        const hudBuildingDamageChart = new Chart(ctxBuildingDamage, {
+            type: 'doughnut',
+            data: {
+                labels: @json($buildingDamageChart['labels']),
+                datasets: [{
+                    data: @json($buildingDamageChart['data']),
+                    backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#00ff87'],
+                    borderColor: '#061224',
+                    borderWidth: 2
+                }]
+            },
+            options: hudChartOptions('left')
+        });
+
         const ctxDoughnut = document.getElementById('hudDoughnutChart').getContext('2d');
         const hudDoughnutChart = new Chart(ctxDoughnut, {
             type: 'doughnut',
@@ -1461,21 +1507,7 @@
                     borderWidth: 2
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'left',
-                        labels: {
-                            color: '#8fa0b7',
-                            font: { family: 'Cairo', size: 10, weight: '600' },
-                            boxWidth: 10
-                        }
-                    }
-                },
-                cutout: '75%'
-            }
+            options: hudChartOptions('left')
         });
 
         const hudMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة', 'غير مصنف'];
@@ -1693,7 +1725,11 @@
                     document.getElementById('hudFullyDamagedUnits').textContent = formatHudNumber(data.summaryStats.fully_damaged_units);
                     document.getElementById('hudRubbleQuantity').innerHTML = formatHudRubble(data.summaryStats.rubble_quantity);
                     document.getElementById('hudAssessedUnitsTotal').textContent = formatHudNumber(data.assessedUnitsTotal);
+                    document.getElementById('hudBuildingChartTotal').textContent = formatHudNumber(data.buildingDamageChart.data.reduce((total, value) => total + Number(value || 0), 0));
+                    document.getElementById('hudUnitChartTotal').textContent = formatHudNumber(data.assessedUnitsTotal);
 
+                    hudBuildingDamageChart.data.datasets[0].data = data.buildingDamageChart.data;
+                    hudBuildingDamageChart.update();
                     hudDoughnutChart.data.datasets[0].data = data.damageChart.data;
                     hudDoughnutChart.update();
 

@@ -356,8 +356,23 @@ class DamageAssessmentController extends Controller
                 'fully_damaged_units' => (int) ($unitStats->fully_damaged ?? 0),
                 'rubble_quantity' => (float) ($buildingStats->rubble_quantity ?? 0),
             ],
+            'buildingDamageChart' => [
+                'labels' => ['مبانٍ مدمرة كلياً', 'مبانٍ متضررة جزئياً', 'مبانٍ مراجعة لجنة', 'مبانٍ غير مصنفة'],
+                'data' => [
+                    (int) ($buildingStats->fully_damaged_buildings ?? 0),
+                    (int) ($buildingStats->partially_damaged_buildings ?? 0),
+                    (int) ($buildingStats->committee_review_buildings ?? 0),
+                    max(
+                        (int) ($buildingStats->total_buildings ?? 0)
+                        - (int) ($buildingStats->fully_damaged_buildings ?? 0)
+                        - (int) ($buildingStats->partially_damaged_buildings ?? 0)
+                        - (int) ($buildingStats->committee_review_buildings ?? 0),
+                        0
+                    ),
+                ],
+            ],
             'damageChart' => [
-                'labels' => ['مدمر كلياً', 'متضرر جزئياً', 'مراجعة لجنة', 'غير مصنف'],
+                'labels' => ['وحدات مدمرة كلياً', 'وحدات متضررة جزئياً', 'وحدات مراجعة لجنة', 'وحدات غير مصنفة'],
                 'data' => [
                     (int) ($unitStats->fully_damaged ?? 0),
                     (int) ($unitStats->partially_damaged ?? 0),
@@ -503,7 +518,7 @@ class DamageAssessmentController extends Controller
 
         $totalUnits = max((int) ($unitStats->total_units ?? 0), 1);
         $damageChart = [
-            'labels' => ['مدمر كلياً', 'متضرر جزئياً', 'مراجعة لجنة', 'غير مصنف'],
+            'labels' => ['وحدات مدمرة كلياً', 'وحدات متضررة جزئياً', 'وحدات مراجعة لجنة', 'وحدات غير مصنفة'],
             'data' => [
                 (int) ($unitStats->fully_damaged ?? 0),
                 (int) ($unitStats->partially_damaged ?? 0),
@@ -518,6 +533,21 @@ class DamageAssessmentController extends Controller
                 'assessed_buildings' => (int) ($buildingStats->assessed_buildings ?? 0),
                 'fully_damaged_units' => (int) ($unitStats->fully_damaged ?? 0),
                 'rubble_quantity' => (float) ($buildingStats->rubble_quantity ?? 0),
+            ],
+            'buildingDamageChart' => [
+                'labels' => ['مبانٍ مدمرة كلياً', 'مبانٍ متضررة جزئياً', 'مبانٍ مراجعة لجنة', 'مبانٍ غير مصنفة'],
+                'data' => [
+                    (int) ($buildingStats->fully_damaged_buildings ?? 0),
+                    (int) ($buildingStats->partially_damaged_buildings ?? 0),
+                    (int) ($buildingStats->committee_review_buildings ?? 0),
+                    max(
+                        (int) ($buildingStats->total_buildings ?? 0)
+                        - (int) ($buildingStats->fully_damaged_buildings ?? 0)
+                        - (int) ($buildingStats->partially_damaged_buildings ?? 0)
+                        - (int) ($buildingStats->committee_review_buildings ?? 0),
+                        0
+                    ),
+                ],
             ],
             'damageChart' => $damageChart,
             'safetyStats' => [
