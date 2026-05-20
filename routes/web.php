@@ -61,49 +61,79 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/push', function () {
         $repo = base_path();
+        $serverRepo = 'D:\html\damage_assessment_system';
         $safeRepo = str_replace('\\', '/', $repo);
+        $safeServerRepo = str_replace('\\', '/', $serverRepo);
+        $steps = [];
 
-        $commands = [
-            'git -c safe.directory="' . $safeRepo . '" add .',
-            'git -c safe.directory="' . $safeRepo . '" diff --cached --quiet',
-            'git -c safe.directory="' . $safeRepo . '" commit -m "Auto-update: ' . now()->toDateTimeString() . '"',
-            'git -c safe.directory="' . $safeRepo . '" push',
-        ];
+        $runCommand = function (string $name, string $path, array $command, array $successfulExitCodes = [0]) use (&$steps) {
+            $result = Process::path($path)->run($command);
 
-        $outputs = [];
+            $steps[] = [
+                'name' => $name,
+                'command' => implode(' ', $command),
+                'exit_code' => $result->exitCode(),
+                'output' => trim($result->output()),
+                'error' => trim($result->errorOutput()),
+            ];
 
-        foreach ($commands as $index => $command) {
-            $result = Process::path($repo)->run($command);
-
-            // diff --cached --quiet Ã™Å Ã˜Â±Ã˜Â¬Ã˜Â¹ 1 Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™ÂÃ™Å Ã™â€¡ Ã˜ÂªÃ˜ÂºÃ™Å Ã™Å Ã˜Â±Ã˜Â§Ã˜Âª
-            if ($index === 1) {
-                if ($result->exitCode() === 0) {
-                    return response()->json([
-                        'status' => 'success',
-                        'output' => ['No changes to commit.'],
-                    ]);
-                }
-
-                continue;
-            }
-
-            if (!$result->successful()) {
+            if (! in_array($result->exitCode(), $successfulExitCodes, true)) {
                 return response()->json([
                     'status' => 'failed',
-                    'command' => $command,
+                    'failed_step' => $name,
+                    'command' => implode(' ', $command),
                     'error' => $result->errorOutput() ?: $result->output(),
                     'exit_code' => $result->exitCode(),
+                    'steps' => $steps,
                 ], 500);
             }
 
-            $outputs[] = $result->output();
+            return $result;
+        };
+
+        $addResult = $runCommand('local_git_add', $repo, ['git', '-c', 'safe.directory='.$safeRepo, 'add', '.']);
+
+        if ($addResult instanceof \Illuminate\Http\JsonResponse) {
+            return $addResult;
         }
 
-        $result = Process::path('D:\html\damage_assessment_system')
-            ->run('git pull');
+        $diffResult = $runCommand('local_git_diff_cached', $repo, ['git', '-c', 'safe.directory='.$safeRepo, 'diff', '--cached', '--quiet'], [0, 1]);
+
+        if ($diffResult instanceof \Illuminate\Http\JsonResponse) {
+            return $diffResult;
+        }
+
+        $pushStatus = 'no_changes';
+
+        if ($diffResult->exitCode() === 1) {
+            $commitResult = $runCommand('local_git_commit', $repo, ['git', '-c', 'safe.directory='.$safeRepo, 'commit', '-m', 'Auto-update: '.now()->toDateTimeString()]);
+
+            if ($commitResult instanceof \Illuminate\Http\JsonResponse) {
+                return $commitResult;
+            }
+
+            $pushResult = $runCommand('local_git_push', $repo, ['git', '-c', 'safe.directory='.$safeRepo, 'push']);
+
+            if ($pushResult instanceof \Illuminate\Http\JsonResponse) {
+                return $pushResult;
+            }
+
+            $pushStatus = 'pushed';
+        }
+
+        $pullResult = $runCommand('server_git_pull', $serverRepo, ['git', '-c', 'safe.directory='.$safeServerRepo, 'pull']);
+
+        if ($pullResult instanceof \Illuminate\Http\JsonResponse) {
+            return $pullResult;
+        }
+
         return response()->json([
             'status' => 'success',
-            'output' => $outputs,
+            'push_status' => $pushStatus,
+            'message' => $pushStatus === 'pushed'
+                ? 'Successfully pushed local changes and pulled latest changes on the server.'
+                : 'No local changes to push. Server pull completed successfully.',
+            'steps' => $steps,
         ]);
     })->middleware('role_or_permission:Database Officer|system.maintenance');
     /*     Route::get('/deleteUsers', function () {
@@ -200,5 +230,5 @@ Route::middleware('auth')->group(function () {
 
 });
 
-require __DIR__ . '/modules/damage-assessment.php';
-require __DIR__ . '/auth.php';
+require __DIR__.'/modules/damage-assessment.php';
+require __DIR__.'/auth.php';
