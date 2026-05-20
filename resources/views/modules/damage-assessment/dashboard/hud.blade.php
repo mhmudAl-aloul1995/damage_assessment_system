@@ -312,7 +312,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-top: 10px;
+            margin: 10px 0 8px;
         }
 
         .hud-map-popup-action {
@@ -1194,7 +1194,7 @@
                 mapAction.textContent = 'Google Maps';
 
                 actions.append(action, auditAction, mapAction);
-                wrapper.append(title, table, actions);
+                wrapper.append(title, actions, table);
 
                 return wrapper;
             }

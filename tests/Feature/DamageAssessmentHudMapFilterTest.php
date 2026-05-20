@@ -88,6 +88,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('https://www.google.com/maps?q=', false)
         ->assertSee('Google Maps', false)
         ->assertSee('is-map', false)
+        ->assertSee('wrapper.append(title, actions, table)', false)
         ->assertSee('security_priority', false)
         ->assertSee('buildingNameLabelingInfo', false)
         ->assertSee('DefaultValue($feature.building_name, \'\')', false)
