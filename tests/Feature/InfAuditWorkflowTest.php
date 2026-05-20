@@ -9,6 +9,7 @@ use App\Models\PublicBuildingFilter;
 use App\Models\PublicBuildingSurvey;
 use App\Models\PublicBuildingSurveyUnit;
 use App\Models\RoadFacilityAuditHistory;
+use App\Models\RoadFacilityAuditStatus;
 use App\Models\RoadFacilityFilter;
 use App\Models\RoadFacilitySurvey;
 use App\Models\RoadFacilitySurveyItem;
@@ -368,5 +369,14 @@ test('database officer can assign and inf engineer can audit road facilities and
         ])
         ->assertOk();
 
-    expect(RoadFacilityAuditHistory::query()->where('road_facility_survey_id', $road->id)->count())->toBe(2);
+    $historyCount = RoadFacilityAuditHistory::query()->where('road_facility_survey_id', $road->id)->count();
+
+    $this->actingAs($engineer)
+        ->postJson(route('inf-audit.roads.status', $road), [
+            'status' => 'need_review',
+        ])
+        ->assertStatus(422);
+
+    expect(RoadFacilityAuditHistory::query()->where('road_facility_survey_id', $road->id)->count())->toBe($historyCount);
+    expect(RoadFacilityAuditStatus::query()->where('globalid', $road->globalid)->count())->toBeGreaterThan(1);
 });

@@ -93,6 +93,7 @@ class InfAuditRoadFacilityController extends Controller
         DB::transaction(function () use ($data, $status, &$updatedCount): void {
             RoadFacilitySurvey::query()
                 ->whereIn('id', $data['ids'])
+                ->lockForUpdate()
                 ->get()
                 ->each(function (RoadFacilitySurvey $survey) use ($data, $status, &$updatedCount): void {
                     $current = $this->latestAuditStatus($survey);
@@ -179,6 +180,12 @@ class InfAuditRoadFacilityController extends Controller
     {
         $data = $request->validated();
 
+        return DB::transaction(function () use ($data, $road): JsonResponse {
+            $road = RoadFacilitySurvey::query()
+                ->whereKey($road->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
         $status = InfAuditStatus::query()->where('name', $data['status'])->firstOrFail();
         $this->authorizeStatusChange($status->name);
 
@@ -240,6 +247,7 @@ class InfAuditRoadFacilityController extends Controller
                 'updated_at' => $assignment?->updated_at?->format('Y-m-d H:i') ?? '-',
             ],
         ]);
+        });
     }
 
     public function storeChild(InfAuditChildStoreRequest $request, RoadFacilitySurvey $road): JsonResponse

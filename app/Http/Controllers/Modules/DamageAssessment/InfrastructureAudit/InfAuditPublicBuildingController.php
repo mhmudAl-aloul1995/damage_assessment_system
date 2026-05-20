@@ -93,6 +93,7 @@ class InfAuditPublicBuildingController extends Controller
         DB::transaction(function () use ($data, $status, &$updatedCount): void {
             PublicBuildingSurvey::query()
                 ->whereIn('id', $data['ids'])
+                ->lockForUpdate()
                 ->get()
                 ->each(function (PublicBuildingSurvey $survey) use ($data, $status, &$updatedCount): void {
                     $current = $this->latestAuditStatus($survey);
@@ -178,6 +179,12 @@ class InfAuditPublicBuildingController extends Controller
     {
         $data = $request->validated();
 
+        return DB::transaction(function () use ($data, $publicBuilding): JsonResponse {
+            $publicBuilding = PublicBuildingSurvey::query()
+                ->whereKey($publicBuilding->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
         $status = InfAuditStatus::query()->where('name', $data['status'])->firstOrFail();
         $this->authorizeStatusChange($status->name);
 
@@ -239,6 +246,7 @@ class InfAuditPublicBuildingController extends Controller
                 'updated_at' => $assignment?->updated_at?->format('Y-m-d H:i') ?? '-',
             ],
         ]);
+        });
     }
 
     public function storeChild(InfAuditChildStoreRequest $request, PublicBuildingSurvey $publicBuilding): JsonResponse
