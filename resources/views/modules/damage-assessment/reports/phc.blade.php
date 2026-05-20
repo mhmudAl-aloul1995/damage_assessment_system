@@ -629,7 +629,7 @@
         <div class="phc-topbar no-print">
             <div class="phc-topbar-inner">
                 <div>
-                    <h1>المجلس الفلسطيني للإسكان بالتعاون مع UNDP</h1>
+                    <h1>مشروع حصر الأضرار -قطاع غزة</h1>
                     <p>مشروع حصر الأضرار - قطاع غزة</p>
                 </div>
                 <div class="phc-actions">
