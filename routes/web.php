@@ -99,7 +99,7 @@ Route::middleware('auth')->group(function () {
             $outputs[] = $result->output();
         }
 
-        redirect('/pull');
+        //redirect('/pull');
         return response()->json([
             'status' => 'success',
             'output' => $outputs,
