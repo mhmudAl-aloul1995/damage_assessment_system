@@ -242,7 +242,7 @@ return [
         'no_data' => 'لا توجد بيانات',
         'close' => 'إغلاق',
         'building_name' => 'اسم المبنى',
-        'total_cases_col' => 'إجمالي الحالات',
+        'total_cases_col' => '% الحالات',
         'field_engineer_col' => 'المهندس الميداني',
         'engineer_col' => 'المهندس',
         'lawyer_col' => 'المحامي',
