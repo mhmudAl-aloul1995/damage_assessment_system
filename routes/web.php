@@ -99,7 +99,7 @@ Route::middleware('auth')->group(function () {
             $outputs[] = $result->output();
         }
 
-        $result = Process::path('D:\html\damage_assessment_system')
+        $result = Process::path('http://213.6.135.115/damage_assessment_system')
             ->run('git pull');
         return response()->json([
             'status' => 'success',
