@@ -604,9 +604,9 @@
     <div class="hud-basemap-switcher" aria-label="تغيير خريطة ArcGIS">
         <label for="hudBasemapSelect">نوع الخريطة</label>
         <select id="hudBasemapSelect" class="form-select">
-            <option value="satellite" selected>ArcGIS Satellite</option>
+            <option value="satellite">ArcGIS Satellite</option>
             <option value="hybrid">ArcGIS Hybrid</option>
-            <option value="streets-vector">ArcGIS Streets</option>
+            <option value="streets-vector" selected>ArcGIS Streets</option>
             <option value="topo-vector">ArcGIS Topographic</option>
             <option value="osm">OpenStreetMap</option>
             <option value="gray-vector">ArcGIS Light Gray</option>
@@ -1516,7 +1516,7 @@
             });
 
             const map = new Map({
-                basemap: 'satellite',
+                basemap: 'streets-vector',
                 layers: [buildingsLayer]
             });
 

@@ -104,6 +104,8 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee("expandIconClass: 'esri-icon-basemap'", false)
         ->assertSee('id="hudBasemapSelect"', false)
         ->assertSee('ArcGIS Satellite', false)
+        ->assertSee('<option value="streets-vector" selected>ArcGIS Streets</option>', false)
+        ->assertSee("basemap: 'streets-vector'", false)
         ->assertSee('map.basemap = event.target.value', false)
         ->assertSee('hudStatsUrl', false)
         ->assertSee('refreshHudDashboardData', false)
