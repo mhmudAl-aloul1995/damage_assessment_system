@@ -10,6 +10,7 @@ use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\roleController;
 use App\Http\Controllers\UserManagement\userController;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
 
@@ -61,9 +62,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/push', function () {
         $repo = base_path();
-        $serverRepo = 'D:\html\damage_assessment_system';
         $safeRepo = str_replace('\\', '/', $repo);
-        $safeServerRepo = str_replace('\\', '/', $serverRepo);
+        $serverPullUrl = config('app.server_pull_url');
         $steps = [];
 
         $runCommand = function (string $name, string $path, array $command, array $successfulExitCodes = [0]) use (&$steps) {
@@ -121,10 +121,24 @@ Route::middleware('auth')->group(function () {
             $pushStatus = 'pushed';
         }
 
-        $pullResult = $runCommand('server_git_pull', $serverRepo, ['git', '-c', 'safe.directory='.$safeServerRepo, 'pull']);
+        $pullResponse = Http::acceptJson()->get($serverPullUrl);
 
-        if ($pullResult instanceof \Illuminate\Http\JsonResponse) {
-            return $pullResult;
+        $steps[] = [
+            'name' => 'server_http_pull',
+            'url' => $serverPullUrl,
+            'status' => $pullResponse->status(),
+            'output' => trim($pullResponse->body()),
+        ];
+
+        if (! $pullResponse->successful()) {
+            return response()->json([
+                'status' => 'failed',
+                'failed_step' => 'server_http_pull',
+                'url' => $serverPullUrl,
+                'error' => $pullResponse->body(),
+                'http_status' => $pullResponse->status(),
+                'steps' => $steps,
+            ], 500);
         }
 
         return response()->json([

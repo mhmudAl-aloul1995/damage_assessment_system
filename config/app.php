@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'server_pull_url' => env('SERVER_PULL_URL', 'http://213.6.135.115/damage_assessment_system/pull'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
