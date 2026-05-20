@@ -261,13 +261,16 @@
 
         .esri-popup__main-container {
             border: 1px solid rgba(0, 242, 254, 0.25);
+            border-radius: 3px;
             box-shadow: 0 0 18px rgba(0, 242, 254, 0.22);
-            max-height: min(460px, calc(100vh - 180px));
-            max-width: min(360px, calc(100vw - 48px));
+            max-height: min(380px, calc(100vh - 220px));
+            max-width: calc(100vw - 48px);
+            position: relative;
+            width: min(580px, max(420px, calc(100vw - 820px)));
         }
 
         .esri-popup__content {
-            max-height: min(350px, calc(100vh - 280px));
+            max-height: min(270px, calc(100vh - 330px));
             overflow-y: auto;
         }
 
@@ -280,6 +283,17 @@
             transform: translate(-50%, -50%) !important;
         }
 
+        .esri-popup.esri-popup--is-docked .esri-popup__main-container::after {
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 22px solid rgba(6, 18, 36, 0.94);
+            bottom: -22px;
+            content: "";
+            left: 50%;
+            position: absolute;
+            transform: translateX(-50%);
+        }
+
         .esri-ui .esri-widget {
             background: rgba(6, 18, 36, 0.82);
             color: #ffffff;
@@ -287,7 +301,7 @@
 
         .hud-map-popup {
             color: #ffffff;
-            min-width: 260px;
+            min-width: 0;
         }
 
         .hud-map-popup strong {
