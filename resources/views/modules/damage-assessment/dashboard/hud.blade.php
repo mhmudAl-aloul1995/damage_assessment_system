@@ -1324,14 +1324,14 @@
                     popupTableRow('Object ID', value(attributes, 'objectid', 'OBJECTID')),
                     popupTableRow('Global ID', globalId),
                     popupTableRow('Building Name', value(attributes, 'building_name', 'Building_Name', 'name', 'NAME')),
+                    popupTableRow('Polygon Area', value(attributes, 'Shape__Area', 'shape__area')),
                     popupTableRow('Building Damage Status', value(attributes, 'building_damage_status', 'Building_Damage_Status')),
                     popupTableRow('Assessment obstacle', value(attributes, 'assessment_obstacle', 'Assessment_Obstacle')),
                     popupTableRow('Security situation', value(attributes, 'security_situation', 'Security_Situation')),
                     popupTableRow('Field status', value(attributes, 'field_status', 'Field_Status')),
                     popupTableRow('Assigned to', value(attributes, 'assignedto', 'AssignedTo')),
                     popupTableRow('Municipality', value(attributes, 'municipalitie', 'Municipalitie')),
-                    popupTableRow('Neighborhood', value(attributes, 'neighborhood', 'Neighborhood')),
-                    popupTableRow('مساحة المضلع (م²)', value(attributes, 'Shape__Area', 'shape__area'))
+                    popupTableRow('Neighborhood', value(attributes, 'neighborhood', 'Neighborhood'))
                 );
 
                 action.className = 'hud-map-popup-action';
