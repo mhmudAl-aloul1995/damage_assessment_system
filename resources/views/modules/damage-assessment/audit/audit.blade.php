@@ -23,13 +23,13 @@
 
 		#kt_datatable_audits {
 			width: 100% !important;
-			min-width: 1180px;
-			table-layout: auto;
+			min-width: 940px;
+			table-layout: fixed;
 		}
 
 		#kt_datatable_audits th,
 		#kt_datatable_audits td {
-			padding: clamp(0.65rem, 0.45rem + 0.35vw, 1rem) clamp(0.55rem, 0.35rem + 0.35vw, 0.95rem) !important;
+			padding: 0.45rem 0.35rem !important;
 			vertical-align: middle;
 		}
 
@@ -39,21 +39,21 @@
 		}
 
 		#kt_datatable_audits thead th {
-			font-size: clamp(0.78rem, 0.68rem + 0.18vw, 0.94rem);
-			line-height: 1.45;
+			font-size: 0.74rem;
+			line-height: 1.35;
 			white-space: normal;
 			overflow-wrap: anywhere;
 		}
 
 		#kt_datatable_audits tbody td {
-			font-size: clamp(0.84rem, 0.76rem + 0.16vw, 0.98rem);
-			line-height: 1.55;
+			font-size: 0.78rem;
+			line-height: 1.4;
 		}
 
 		#kt_datatable_audits .audit-cell-text,
 		#kt_datatable_audits .audit-cell-name {
 			display: block;
-			line-height: 1.55;
+			line-height: 1.4;
 			white-space: normal;
 			overflow-wrap: anywhere;
 			word-break: normal;
@@ -75,12 +75,12 @@
 		#kt_datatable_audits .badge {
 			display: inline-flex;
 			max-width: 100%;
-			min-height: 30px;
-			padding: 0.4rem 0.6rem;
+			min-height: 26px;
+			padding: 0.3rem 0.4rem;
 			justify-content: center;
 			align-items: center;
-			font-size: clamp(0.78rem, 0.7rem + 0.14vw, 0.9rem);
-			line-height: 1.35;
+			font-size: 0.74rem;
+			line-height: 1.25;
 			text-align: center;
 			white-space: normal;
 		}
@@ -90,13 +90,35 @@
 		}
 
 		#kt_datatable_audits .btn {
-			padding-inline: 0.65rem;
+			padding: 0.35rem 0.45rem;
+			font-size: 0.76rem;
 			white-space: normal;
 		}
 
 		@media (min-width: 1600px) {
 			#kt_datatable_audits {
 				min-width: 100%;
+			}
+		}
+
+		@media (max-width: 1399.98px) {
+			#kt_datatable_audits {
+				min-width: 900px;
+			}
+
+			#kt_datatable_audits th,
+			#kt_datatable_audits td {
+				padding: 0.4rem 0.28rem !important;
+			}
+
+			#kt_datatable_audits thead th {
+				font-size: 0.68rem;
+			}
+
+			#kt_datatable_audits tbody td,
+			#kt_datatable_audits .badge,
+			#kt_datatable_audits .btn {
+				font-size: 0.72rem;
 			}
 		}
 
@@ -891,32 +913,37 @@
 						visible: false,
 						orderable: false,
 						searchable: false,
-						width: '1%',
+						width: '32px',
 						className: 'text-center'
 					},
 					{
 						targets: 1,
-						width: '2%',
+						width: '16%',
 						className: 'text-start'
 					},
 					{
 						targets: 2,
-						width: '1%',
+						width: '8%',
 						className: 'text-center'
 					},
 					{
 						targets: 3,
-						width: '2%',
+						width: '14%',
 						className: 'audit-cell-ltr'
 					},
 					{
 						targets: [4, 5],
-						width: '2%',
+						width: '13%',
 						className: 'text-center'
 					},
 					{
-						targets: [6, 7, 8, 9],
-						width: '1%',
+						targets: [6, 7, 8],
+						width: '9%',
+						className: 'text-center'
+					},
+					{
+						targets: 9,
+						width: '8%',
 						className: 'text-center'
 					},
 				],
