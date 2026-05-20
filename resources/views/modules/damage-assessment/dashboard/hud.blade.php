@@ -676,7 +676,7 @@
                     </div>
                 </div>
                 <div class="col-md-4 text-md-end text-start mt-2 mt-md-0">
-                    <span class="hud-label d-block text-white-50">المجلس الفلسطيني للإسكان</span>
+                    <span class="hud-label d-block text-white-50">-UNDPالمجلس الفلسطيني للإسكان</span>
                     <a href="{{ route('damageAssessment.index') }}" class="small text-info text-decoration-none">العودة
                         للوحة الرئيسية</a>
                 </div>
