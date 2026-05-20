@@ -90,7 +90,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('hud-map-popup-unit-select', false)
         ->assertSee('populateHudUnitAuditSelect', false)
         ->assertSee('أسماء مالكي الوحدات', false)
-        ->assertSee('window.location.href = auditUrl(globalId, housingGlobalId)', false)
+        ->assertSee("window.open(auditUrl(globalId, housingGlobalId), '_blank', 'noopener')", false)
         ->assertSee('auditUrl(globalId, housingGlobalId)', false)
         ->assertSee('googleMapsUrl', false)
         ->assertSee('https://www.google.com/maps?q=', false)
@@ -171,6 +171,33 @@ it('returns housing unit owners for the hud building popup unit audit select', f
         ->assertJsonPath('results.0.id', 'popup-unit-global-id')
         ->assertJsonPath('results.0.text', 'Popup Unit Owner')
         ->assertJsonCount(1, 'results');
+});
+
+it('opens the housing tab by default on assessment audit when a housing global id is present', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 120,
+        'globalid' => 'audit-tab-building-global-id',
+        'building_name' => 'Audit Tab Building',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 220,
+        'globalid' => 'audit-tab-unit-global-id',
+        'parentglobalid' => 'audit-tab-building-global-id',
+        'unit_owner' => 'Audit Tab Unit Owner',
+    ]);
+
+    $this->actingAs($user)
+        ->get('showAssessmentAudit/audit-tab-building-global-id/audit-tab-unit-global-id')
+        ->assertOk()
+        ->assertSee('href="#tab_building">', false)
+        ->assertSee('href="#tab_housing">', false)
+        ->assertSee('id="tab_building" role="tabpanel"', false)
+        ->assertSee('id="tab_housing" role="tabpanel"', false)
+        ->assertSee('tab-pane fade show active" id="tab_housing"', false)
+        ->assertSee('let urlHousingGlobalId = "audit-tab-unit-global-id"', false);
 });
 
 it('returns hud stats for all data by default and filtered data when filters are present', function () {

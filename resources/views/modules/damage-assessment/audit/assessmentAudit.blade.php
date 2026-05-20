@@ -6,6 +6,7 @@
 @php
     $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     $housingGlobalid = $housingGlobalid ?? null;
+    $showHousingTab = filled($housingGlobalid);
 @endphp
 
 @section('content')
@@ -491,15 +492,15 @@
         <div class="card-body">
             <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bold mb-8">
                 <li class="nav-item">
-                    <a class="nav-link text-active-primary active" data-bs-toggle="tab" href="#tab_building">المبنى</a>
+                    <a class="nav-link text-active-primary {{ $showHousingTab ? '' : 'active' }}" data-bs-toggle="tab" href="#tab_building">المبنى</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-active-primary" data-bs-toggle="tab" href="#tab_housing">الوحدة السكنية</a>
+                    <a class="nav-link text-active-primary {{ $showHousingTab ? 'active' : '' }}" data-bs-toggle="tab" href="#tab_housing">الوحدة السكنية</a>
                 </li>
             </ul>
 
             <div class="tab-content">
-                <div class="tab-pane fade show active" id="tab_building" role="tabpanel">
+                <div class="tab-pane fade {{ $showHousingTab ? '' : 'show active' }}" id="tab_building" role="tabpanel">
                     <div class="card card-flush shadow-sm border-0">
                         <div class="card-header border-0 pt-6 pb-4">
                             <div class="card-title">
@@ -633,7 +634,7 @@
                     </div>
                 </div>
 
-                <div class="tab-pane fade" id="tab_housing" role="tabpanel">
+                <div class="tab-pane fade {{ $showHousingTab ? 'show active' : '' }}" id="tab_housing" role="tabpanel">
                     <div class="card card-flush mb-7 shadow-sm border-0">
                         <div class="card-header pt-6 pb-4 border-0">
                             <div class="card-title">

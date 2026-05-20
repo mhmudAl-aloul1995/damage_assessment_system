@@ -1266,7 +1266,7 @@
                     const housingGlobalId = selectEvent.target.value;
 
                     if (housingGlobalId && globalId !== '-') {
-                        window.location.href = auditUrl(globalId, housingGlobalId);
+                        window.open(auditUrl(globalId, housingGlobalId), '_blank', 'noopener');
                         selectEvent.target.value = '';
                     }
                 });
