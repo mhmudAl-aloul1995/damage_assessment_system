@@ -71,6 +71,11 @@ return [
         'password' => 'Password',
         'remember_me' => 'Remember me',
         'forgot_password' => 'Forgot your password?',
+        'password_reset_hint' => 'Enter your email address and we will send you a password reset link.',
+        'email_password_reset_link' => 'Email Password Reset Link',
+        'reset_password' => 'Reset Password',
+        'password_confirmation' => 'Confirm Password',
+        'back_to_login' => 'Back to sign in',
         'please_wait' => 'Please wait...',
     ],
     'profile' => [

@@ -71,6 +71,11 @@ return [
         'password' => 'كلمة المرور',
         'remember_me' => 'تذكرني',
         'forgot_password' => 'نسيت كلمة المرور؟',
+        'password_reset_hint' => 'أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور.',
+        'email_password_reset_link' => 'إرسال رابط إعادة التعيين',
+        'reset_password' => 'إعادة تعيين كلمة المرور',
+        'password_confirmation' => 'تأكيد كلمة المرور',
+        'back_to_login' => 'العودة لتسجيل الدخول',
         'please_wait' => 'انتظر قليلًا...',
     ],
     'profile' => [

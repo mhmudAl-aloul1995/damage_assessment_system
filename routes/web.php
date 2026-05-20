@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Admin\TeamLeaderFieldEngineerController;
 use App\Http\Controllers\Admin\LocalDatabaseImportController;
+use App\Http\Controllers\Admin\TeamLeaderFieldEngineerController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginLogController;
 use App\Http\Controllers\ProfileController;
@@ -21,10 +21,6 @@ Route::get('/', function () {
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
-Route::get('/forgot-password', function () {
-    return view('auth.forgot-password');
-})->middleware(['auth', 'verified'])->name('forgot-password');
-
 Route::get('/dashboard', function () {
     return redirect('damageAssessment');
 })->middleware(['auth', 'verified'])->name('dashboard');
