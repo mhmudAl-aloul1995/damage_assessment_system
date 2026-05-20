@@ -17,6 +17,7 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/backups/database/
 /storage/pail
 Homestead.json
 Homestead.yaml
