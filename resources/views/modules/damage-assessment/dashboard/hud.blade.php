@@ -1068,6 +1068,24 @@
                     }
                 ]
             };
+            const buildingNameLabelingInfo = [{
+                labelExpressionInfo: {
+                    expression: "DefaultValue($feature.building_name, '')"
+                },
+                labelPlacement: 'always-horizontal',
+                symbol: {
+                    type: 'text',
+                    color: [255, 255, 255, 0.96],
+                    haloColor: [3, 10, 24, 0.95],
+                    haloSize: 1.6,
+                    font: {
+                        family: 'Cairo',
+                        size: 10,
+                        weight: 'bold'
+                    }
+                },
+                where: "building_name IS NOT NULL AND building_name <> ''"
+            }];
 
             function value(attributes, ...keys) {
                 const normalizedAttributes = Object.entries(attributes).reduce(function (carry, [key, attributeValue]) {
@@ -1477,6 +1495,8 @@
             const buildingsLayer = new FeatureLayer({
                 url: buildingLayerUrl,
                 renderer: damageRenderer,
+                labelingInfo: buildingNameLabelingInfo,
+                labelsVisible: true,
                 outFields: ['*'],
                 minScale: 0,
                 maxScale: 0,
