@@ -1324,7 +1324,7 @@
                     popupTableRow('Object ID', value(attributes, 'objectid', 'OBJECTID')),
                     popupTableRow('Global ID', globalId),
                     popupTableRow('Building Name', value(attributes, 'building_name', 'Building_Name', 'name', 'NAME')),
-                    popupTableRow('building_damage_status', value(attributes, 'building_damage_status', 'Building_Damage_Status')),
+                    popupTableRow('Building Damage Status', value(attributes, 'building_damage_status', 'Building_Damage_Status')),
                     popupTableRow('Assessment obstacle', value(attributes, 'assessment_obstacle', 'Assessment_Obstacle')),
                     popupTableRow('Security situation', value(attributes, 'security_situation', 'Security_Situation')),
                     popupTableRow('Field status', value(attributes, 'field_status', 'Field_Status')),
