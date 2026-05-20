@@ -1238,6 +1238,12 @@
                 return Number.isFinite(parsedValue) ? parsedValue : null;
             }
 
+            function squareMeterValue(attributes, ...keys) {
+                const area = numericValue(attributes, ...keys);
+
+                return area === null ? '-' : `${area.toLocaleString('en-US', { maximumFractionDigits: 2 })} m²`;
+            }
+
             function googleMapsUrl(graphic) {
                 const attributes = graphic.attributes || {};
                 const geometry = graphic.geometry || {};
@@ -1324,7 +1330,7 @@
                     popupTableRow('Object ID', value(attributes, 'objectid', 'OBJECTID')),
                     popupTableRow('Global ID', globalId),
                     popupTableRow('Building Name', value(attributes, 'building_name', 'Building_Name', 'name', 'NAME')),
-                    popupTableRow('Polygon Area', value(attributes, 'Shape__Area', 'shape__area')),
+                    popupTableRow('Polygon Area', squareMeterValue(attributes, 'Shape__Area', 'shape__area')),
                     popupTableRow('Building Damage Status', value(attributes, 'building_damage_status', 'Building_Damage_Status')),
                     popupTableRow('Assessment obstacle', value(attributes, 'assessment_obstacle', 'Assessment_Obstacle')),
                     popupTableRow('Security situation', value(attributes, 'security_situation', 'Security_Situation')),
