@@ -89,7 +89,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('/hud/building-units', false)
         ->assertSee('hud-map-popup-unit-select', false)
         ->assertSee('populateHudUnitAuditSelect', false)
-        ->assertSee('أسماء مالكي الوحدات', false)
+        ->assertSee('الوحدات السكانية', false)
         ->assertSee("window.open(auditUrl(globalId, housingGlobalId), '_blank', 'noopener')", false)
         ->assertSee('auditUrl(globalId, housingGlobalId)', false)
         ->assertSee('googleMapsUrl', false)

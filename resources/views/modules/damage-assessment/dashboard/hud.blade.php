@@ -1196,7 +1196,7 @@
                     })
                     .then(function (data) {
                         const units = Array.isArray(data.results) ? data.results : [];
-                        select.replaceChildren(new Option(units.length ? 'أسماء مالكي الوحدات' : 'لا توجد وحدات', ''));
+                        select.replaceChildren(new Option(units.length ? 'الوحدات السكانية' : 'لا توجد وحدات', ''));
 
                         units.forEach(function (unit) {
                             select.appendChild(new Option(unit.text, unit.id));
