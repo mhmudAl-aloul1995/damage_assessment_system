@@ -5,6 +5,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.hud.title',
         'icon' => 'ki-chart-pie-4',
+        'variant' => 'hud',
         'url' => 'damageAssessment/hud',
         'pattern' => 'damageAssessment/hud*',
         'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager'],

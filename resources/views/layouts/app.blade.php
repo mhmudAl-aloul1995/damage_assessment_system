@@ -191,8 +191,39 @@
 		box-shadow: inset 3px 0 0 #3e97ff;
 	}
 
+	#kt_app_sidebar_menu .phc-sidebar-hud>.menu-link,
+	#kt_app_sidebar_menu .phc-sidebar-hud>.menu-link:hover,
+	#kt_app_sidebar_menu .phc-sidebar-hud.phc-sidebar-section-active>.menu-link {
+		border: 1px solid rgba(255, 47, 138, .7);
+		background: rgba(255, 47, 138, .08);
+		color: #ff2f8a;
+		box-shadow: none;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-hud .menu-title {
+		color: #ff2f8a;
+		font-size: .78rem;
+		font-weight: 800;
+		letter-spacing: 0;
+		text-transform: uppercase;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-hud-live-dot {
+		display: inline-flex;
+		width: 10px;
+		height: 10px;
+		margin-inline-start: .35rem;
+		border-radius: 999px;
+		background: #ff2f8a;
+		box-shadow: 0 0 0 3px rgba(255, 47, 138, .18);
+	}
+
 	body.locale-rtl #kt_app_sidebar_menu .phc-sidebar-section-active>.menu-link {
 		box-shadow: inset -3px 0 0 #3e97ff;
+	}
+
+	body.locale-rtl #kt_app_sidebar_menu .phc-sidebar-hud.phc-sidebar-section-active>.menu-link {
+		box-shadow: none;
 	}
 
 	#kt_app_sidebar_menu .phc-sidebar-icon {
@@ -1169,18 +1200,23 @@
 
 									@foreach($sidebarModule['sections'] as $menu)
 										@if($menu['is_direct'] ?? false)
-											<div class="menu-item phc-sidebar-section {{ $menu['is_active'] ? 'phc-sidebar-section-active' : '' }}">
+											<div class="menu-item phc-sidebar-section {{ ($menu['variant'] ?? null) === 'hud' ? 'phc-sidebar-hud' : '' }} {{ $menu['is_active'] ? 'phc-sidebar-section-active' : '' }}">
 												<a class="menu-link" href="{{ url($menu['url']) }}">
-													<span class="menu-icon">
-														<span class="phc-sidebar-icon">
-															<i class="ki-duotone {{ $menu['icon'] }} fs-2">
-																<span class="path1"></span>
-																<span class="path2"></span>
-															</i>
+													@if(($menu['variant'] ?? null) === 'hud')
+														<span class="menu-title">{{ __($menu['title']) }}</span>
+														<span class="phc-sidebar-hud-live-dot" aria-hidden="true"></span>
+													@else
+														<span class="menu-icon">
+															<span class="phc-sidebar-icon">
+																<i class="ki-duotone {{ $menu['icon'] }} fs-2">
+																	<span class="path1"></span>
+																	<span class="path2"></span>
+																</i>
+															</span>
 														</span>
-													</span>
 
-													<span class="menu-title">{{ __($menu['title']) }}</span>
+														<span class="menu-title">{{ __($menu['title']) }}</span>
+													@endif
 												</a>
 											</div>
 										@else

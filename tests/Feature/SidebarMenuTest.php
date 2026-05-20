@@ -132,6 +132,7 @@ it('places hud above damage assessment for non auditor sidebar roles', function 
         ->and(array_search('menu.hud.title', $sectionTitles, true))
         ->toBeLessThan(array_search('menu.damage_assessment.title', $sectionTitles, true))
         ->and($hudSection['is_direct'])->toBeTrue()
+        ->and($hudSection['variant'])->toBe('hud')
         ->and($hudSection['url'])->toBe('damageAssessment/hud')
         ->and($hudSection['items'])->toBeEmpty();
 });
