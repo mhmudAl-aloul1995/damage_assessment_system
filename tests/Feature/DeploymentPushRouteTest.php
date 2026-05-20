@@ -1,84 +1,30 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
-it('allows the deployment pull route with the configured token', function (): void {
-    $sequence = Process::sequence()
-        ->push(Process::result('## main...origin/main'))
-        ->push(Process::result('Already up to date.'));
-
-    Process::fake(fn () => $sequence());
-
-    $this->get('/deployment/pull/'.config('app.deployment_pull_token'))
-        ->assertOk()
-        ->assertJsonPath('status', 'success')
-        ->assertJsonPath('message', 'Successfully pulled latest changes')
-        ->assertJsonPath('steps.0.name', 'server_git_status')
-        ->assertJsonPath('steps.1.name', 'server_git_pull_rebase');
-
-    Process::assertRan(fn ($process): bool => is_array($process->command)
-        && in_array('status', $process->command, true));
-    Process::assertRan(fn ($process): bool => is_array($process->command)
-        && in_array('pull', $process->command, true)
-        && in_array('--rebase', $process->command, true));
-});
-
-it('returns deployment pull errors with diagnostic steps', function (): void {
-    $sequence = Process::sequence()
-        ->push(Process::result('## main...origin/main'))
-        ->push(Process::result('', 'conflict while rebasing', 1));
-
-    Process::fake(fn () => $sequence());
-
-    $this->get('/deployment/pull/'.config('app.deployment_pull_token'))
-        ->assertStatus(500)
-        ->assertJsonPath('status', 'failed')
-        ->assertJsonPath('failed_step', 'server_git_pull_rebase')
-        ->assertJsonPath('error', 'conflict while rebasing')
-        ->assertJsonPath('steps.1.error', 'conflict while rebasing');
-});
-
-it('rejects the deployment pull route when the token is invalid', function (): void {
-    Process::fake();
-
-    $this->get('/deployment/pull/wrong-token')
-        ->assertForbidden();
-
-    Process::assertNothingRan();
-});
-
-it('calls the server pull url even when there are no local changes to push', function (): void {
+it('redirects to the server pull url when there are no local changes to push', function (): void {
     $sequence = Process::sequence()
         ->push(Process::result('added'))
         ->push(Process::result('', '', 0));
 
     Process::fake(fn () => $sequence());
-    Http::fake([
-        config('app.server_pull_url') => Http::response(['message' => 'Successfully pulled latest changes']),
-    ]);
 
     $this->withoutMiddleware(RoleOrPermissionMiddleware::class);
 
     $this->actingAs(User::factory()->create())
         ->get('/push')
-        ->assertOk()
-        ->assertJsonPath('status', 'success')
-        ->assertJsonPath('push_status', 'no_changes')
-        ->assertJsonPath('steps.2.name', 'server_http_pull');
+        ->assertRedirect(config('app.server_pull_url'));
 
     Process::assertRanTimes(fn (): bool => true, 2);
     Process::assertNotRan(fn ($process): bool => is_array($process->command)
         && in_array('commit', $process->command, true));
     Process::assertNotRan(fn ($process): bool => is_array($process->command)
         && in_array('push', $process->command, true));
-    Http::assertSent(fn (Request $request): bool => $request->url() === config('app.server_pull_url'));
 });
 
-it('commits pushes and then calls the server pull url when local changes exist', function (): void {
+it('commits pushes and then redirects to the server pull url when local changes exist', function (): void {
     $sequence = Process::sequence()
         ->push(Process::result('added'))
         ->push(Process::result('', '', 1))
@@ -86,24 +32,16 @@ it('commits pushes and then calls the server pull url when local changes exist',
         ->push(Process::result('pushed'));
 
     Process::fake(fn () => $sequence());
-    Http::fake([
-        config('app.server_pull_url') => Http::response(['message' => 'Successfully pulled latest changes']),
-    ]);
 
     $this->withoutMiddleware(RoleOrPermissionMiddleware::class);
 
     $this->actingAs(User::factory()->create())
         ->get('/push')
-        ->assertOk()
-        ->assertJsonPath('status', 'success')
-        ->assertJsonPath('push_status', 'pushed')
-        ->assertJsonPath('steps.3.name', 'local_git_push')
-        ->assertJsonPath('steps.4.name', 'server_http_pull');
+        ->assertRedirect(config('app.server_pull_url'));
 
     Process::assertRanTimes(fn (): bool => true, 4);
     Process::assertRan(fn ($process): bool => is_array($process->command)
         && in_array('commit', $process->command, true));
     Process::assertRan(fn ($process): bool => is_array($process->command)
         && in_array('push', $process->command, true));
-    Http::assertSent(fn (Request $request): bool => $request->url() === config('app.server_pull_url'));
 });

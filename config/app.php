@@ -54,9 +54,7 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
-    'deployment_pull_token' => env('DEPLOYMENT_PULL_TOKEN', 'damage-assessment-system-pull'),
-
-    'server_pull_url' => env('SERVER_PULL_URL', 'http://213.6.135.115/damage_assessment_system/deployment/pull/'.env('DEPLOYMENT_PULL_TOKEN', 'damage-assessment-system-pull')),
+    'server_pull_url' => env('SERVER_PULL_URL', 'http://213.6.135.115/damage_assessment_system/pull'),
 
     /*
     |--------------------------------------------------------------------------

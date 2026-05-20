@@ -48,7 +48,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/pull', function () {
         // Run the git pull command in the project root
-        
+
         $result = Process::path(base_path())
             ->run('git pull');
 
@@ -62,48 +62,58 @@ Route::middleware('auth')->group(function () {
     Route::get('/push', function () {
         $repo = base_path();
         $safeRepo = str_replace('\\', '/', $repo);
+        $serverPullUrl = config('app.server_pull_url');
 
-        $commands = [
-            'git -c safe.directory="'.$safeRepo.'" add .',
-            'git -c safe.directory="'.$safeRepo.'" diff --cached --quiet',
-            'git -c safe.directory="'.$safeRepo.'" commit -m "Auto-update: '.now()->toDateTimeString().'"',
-            'git -c safe.directory="'.$safeRepo.'" push',
-        ];
+        $addResult = Process::path($repo)
+            ->run(['git', '-c', 'safe.directory='.$safeRepo, 'add', '.']);
 
-        $outputs = [];
+        if (! $addResult->successful()) {
+            return response()->json([
+                'status' => 'failed',
+                'command' => 'git add .',
+                'error' => $addResult->errorOutput() ?: $addResult->output(),
+                'exit_code' => $addResult->exitCode(),
+            ], 500);
+        }
 
-        foreach ($commands as $index => $command) {
-            $result = Process::path($repo)->run($command);
+        $diffResult = Process::path($repo)
+            ->run(['git', '-c', 'safe.directory='.$safeRepo, 'diff', '--cached', '--quiet']);
 
-            // diff --cached --quiet Ã™Å Ã˜Â±Ã˜Â¬Ã˜Â¹ 1 Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™ÂÃ™Å Ã™â€¡ Ã˜ÂªÃ˜ÂºÃ™Å Ã™Å Ã˜Â±Ã˜Â§Ã˜Âª
-            if ($index === 1) {
-                if ($result->exitCode() === 0) {
-                    return response()->json([
-                        'status' => 'success',
-                        'output' => ['No changes to commit.'],
-                    ]);
-                }
+        if ($diffResult->exitCode() === 1) {
+            $commitResult = Process::path($repo)
+                ->run(['git', '-c', 'safe.directory='.$safeRepo, 'commit', '-m', 'Auto-update: '.now()->toDateTimeString()]);
 
-                continue;
-            }
-
-            if (! $result->successful()) {
+            if (! $commitResult->successful()) {
                 return response()->json([
                     'status' => 'failed',
-                    'command' => $command,
-                    'error' => $result->errorOutput() ?: $result->output(),
-                    'exit_code' => $result->exitCode(),
+                    'command' => 'git commit',
+                    'error' => $commitResult->errorOutput() ?: $commitResult->output(),
+                    'exit_code' => $commitResult->exitCode(),
                 ], 500);
             }
 
-            $outputs[] = $result->output();
+            $pushResult = Process::path($repo)
+                ->run(['git', '-c', 'safe.directory='.$safeRepo, 'push']);
+
+            if (! $pushResult->successful()) {
+                return response()->json([
+                    'status' => 'failed',
+                    'command' => 'git push',
+                    'error' => $pushResult->errorOutput() ?: $pushResult->output(),
+                    'exit_code' => $pushResult->exitCode(),
+                ], 500);
+            }
+        } elseif ($diffResult->exitCode() !== 0) {
+            return response()->json([
+                'status' => 'failed',
+                'command' => 'git diff --cached --quiet',
+                'error' => $diffResult->errorOutput() ?: $diffResult->output(),
+                'exit_code' => $diffResult->exitCode(),
+            ], 500);
         }
 
-        //redirect('/pull');
-        return response()->json([
-            'status' => 'success',
-            'output' => $outputs,
-        ]);
+        return redirect()->away($serverPullUrl);
+
     })->middleware('role_or_permission:Database Officer|system.maintenance');
     /*     Route::get('/deleteUsers', function () {
             user::where('id', '>', '3')->delete();
