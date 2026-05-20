@@ -750,6 +750,7 @@
                         </div>
 
 
+
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_municipalitie">البلدية</label>
                             <select id="hud_filter_municipalitie"
@@ -771,13 +772,7 @@
                             <input type="text" id="hud_filter_search" class="form-control"
                                 placeholder="ObjectID / GlobalID">
                         </div>
-                        <div class="hud-map-filter-field">
 
-                            <div class="form-check form-switch text-white-50">
-                                <input type="checkbox" id="hud_filter_security_priority" class="form-check-input">
-                                <label class="form-check-label" for="hud_filter_security_priority">يوجد عائق</label>
-                            </div>
-                        </div>
                         <div class="row g-2">
                             <div class="col-6">
                                 <div class="hud-map-filter-field">
@@ -792,7 +787,13 @@
                                 </div>
                             </div>
                         </div>
-
+                        <div class="hud-map-filter-field">
+                            <label for="hud_filter_security_priority"> </label>
+                            <div class="form-check form-switch text-white-50">
+                                <input type="checkbox" id="hud_filter_security_priority" class="form-check-input">
+                                <label class="form-check-label" for="hud_filter_security_priority">يوجد عائق</label>
+                            </div>
+                        </div>
                         <div class="hud-map-filter-actions">
                             <button type="button" id="hudMapFilterApply" class="btn btn-primary">بحث</button>
                             <button type="button" id="hudMapFilterReset" class="btn btn-light">إعادة تعيين</button>
