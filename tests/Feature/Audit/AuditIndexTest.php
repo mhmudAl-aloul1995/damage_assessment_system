@@ -26,6 +26,14 @@ it('includes the housing units status progress in the audit table response', fun
     $user = User::factory()->create();
     $user->assignRole($role);
 
+    $engineer = User::factory()->create([
+        'name' => 'Wafaa Nafeth Aqeel Sror',
+    ]);
+
+    $lawyer = User::factory()->create([
+        'name' => 'Rawan Mahdi Yousef Al Haj Yousef',
+    ]);
+
     foreach (range(1, 3) as $statusIndex) {
         AssessmentStatus::query()->create([
             'name' => 'placeholder_status_'.$statusIndex,
@@ -60,6 +68,20 @@ it('includes the housing units status progress in the audit table response', fun
         'assignedto' => 'Engineer A',
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-25 10:00:00',
+    ]);
+
+    AssignedAssessmentUser::query()->create([
+        'manager_id' => $user->id,
+        'user_id' => $engineer->id,
+        'type' => 'QC/QA Engineer',
+        'building_id' => $building->objectid,
+    ]);
+
+    AssignedAssessmentUser::query()->create([
+        'manager_id' => $user->id,
+        'user_id' => $lawyer->id,
+        'type' => 'Legal Auditor',
+        'building_id' => $building->objectid,
     ]);
 
     $housingWithStatus = HousingUnit::query()->create([
@@ -181,6 +203,14 @@ it('includes the housing units status progress in the audit table response', fun
             'housing_status_progress' => '1 / 2',
             'housing_units_count' => 2,
             'housing_units_with_status_count' => 1,
+        ])
+        ->assertJsonFragment([
+            'engineer' => 'Wafaa Sror',
+            'lawyer' => 'Rawan Yousef',
+        ])
+        ->assertJsonMissing([
+            'engineer' => 'Wafaa Nafeth Aqeel Sror',
+            'lawyer' => 'Rawan Mahdi Yousef Al Haj Yousef',
         ])
         ->assertJsonFragment([
             'globalid' => $assignedOnlyBuilding->globalid,

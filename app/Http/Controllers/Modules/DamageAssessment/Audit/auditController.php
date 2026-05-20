@@ -2865,16 +2865,16 @@ class auditController extends Controller
                 // Engineer Name
                 ->addColumn('engineer', function ($row) {
 
-                    return $row->assignedUsers
+                    return $this->firstAndLastName($row->assignedUsers
                         ->where('type', 'QC/QA Engineer')
-                        ->first()?->user?->name ?? '-';
+                        ->first()?->user?->name);
                 })
 
                 // Lawyer Name
                 ->addColumn('lawyer', function ($row) {
-                    return $row->assignedUsers
+                    return $this->firstAndLastName($row->assignedUsers
                         ->where('type', 'Legal Auditor')
-                        ->first()?->user?->name ?? '-';
+                        ->first()?->user?->name);
                 })
                 // finalApproval
                 ->addColumn('finalApproval', function ($row) {
@@ -4188,6 +4188,25 @@ COALESCE(
             ->first()
             ?->status
             ?->name;
+    }
+
+    private function firstAndLastName(?string $name): string
+    {
+        if ($name === null || trim($name) === '') {
+            return '-';
+        }
+
+        $parts = preg_split('/\s+/u', trim($name), -1, PREG_SPLIT_NO_EMPTY);
+
+        if ($parts === false || $parts === []) {
+            return '-';
+        }
+
+        if (count($parts) === 1) {
+            return $parts[0];
+        }
+
+        return $parts[0].' '.$parts[array_key_last($parts)];
     }
 
     private function legalChallengeLabel(?string $value): string
