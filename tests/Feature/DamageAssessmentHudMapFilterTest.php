@@ -108,6 +108,12 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('id="hudBuildingDamageChart"', false)
         ->assertSee('id="hudBuildingChartTotal"', false)
         ->assertSee('id="hudUnitChartTotal"', false)
+        ->assertSee('id="hudBuildingReportsTab"', false)
+        ->assertSee('id="hudUnitReportsTab"', false)
+        ->assertSee('id="hudBuildingMunicipalityReports"', false)
+        ->assertSee('id="hudUnitMunicipalityReports"', false)
+        ->assertSee('buildingMunicipalityReports', false)
+        ->assertSee('unitMunicipalityReports', false)
         ->assertSee('نتائج الخريطة:', false)
         ->assertSee('مبنى', false)
         ->assertSee('buildingDamageChart', false)
@@ -200,7 +206,9 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertOk()
         ->assertJsonPath('summaryStats.total_buildings', 3)
         ->assertJsonPath('summaryStats.fully_damaged_units', 1)
-        ->assertJsonPath('assessedUnitsTotal', 3);
+        ->assertJsonPath('assessedUnitsTotal', 3)
+        ->assertJsonPath('buildingMunicipalityReports.0.summary.assessed', 2)
+        ->assertJsonPath('unitMunicipalityReports.0.summary.units', 2);
 
     $this->actingAs($user)
         ->getJson(route('damageAssessment.hud.stats', ['municipalitie' => 'Gaza']))
@@ -211,7 +219,11 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertJsonPath('damageChart.data.0', 1)
         ->assertJsonPath('damageChart.data.1', 0)
         ->assertJsonPath('damageChart.data.2', 1)
-        ->assertJsonPath('municipalityReports.0.name', 'Gaza');
+        ->assertJsonPath('municipalityReports.0.name', 'Gaza')
+        ->assertJsonPath('buildingMunicipalityReports.0.name', 'Gaza')
+        ->assertJsonPath('buildingMunicipalityReports.0.summary.assessed', 2)
+        ->assertJsonPath('unitMunicipalityReports.0.name', 'Gaza')
+        ->assertJsonPath('unitMunicipalityReports.0.summary.units', 2);
 
     $this->actingAs($user)
         ->getJson(route('damageAssessment.hud.stats', [

@@ -329,6 +329,91 @@ class DamageAssessmentController extends Controller
             })
             ->values();
 
+        $buildingMunicipalityReports = $buildingMunicipalities
+            ->keys()
+            ->merge($buildingMunicipalityNeighborhoodStats->keys())
+            ->unique()
+            ->sort()
+            ->map(function (string $municipalityName) use ($buildingMunicipalities, $buildingMunicipalityNeighborhoodStats): array {
+                $buildingRow = $buildingMunicipalities->get($municipalityName);
+                $buildingNeighborhoodRows = $buildingMunicipalityNeighborhoodStats->get($municipalityName, collect());
+
+                return [
+                    'name' => $municipalityName,
+                    'summary' => [
+                        'assessed' => (int) ($buildingRow->assessed_buildings ?? 0),
+                        'destroyed' => (int) ($buildingRow->destroyed_buildings ?? 0),
+                        'partial' => (int) ($buildingRow->partially_damaged_buildings ?? 0),
+                        'committee' => (int) ($buildingRow->committee_review_buildings ?? 0),
+                    ],
+                    'chart' => [
+                        (int) ($buildingRow->destroyed_buildings ?? 0),
+                        (int) ($buildingRow->partially_damaged_buildings ?? 0),
+                        (int) ($buildingRow->committee_review_buildings ?? 0),
+                    ],
+                    'neighborhoods' => $buildingNeighborhoodRows
+                        ->keys()
+                        ->sort()
+                        ->map(function (string $neighborhoodName) use ($buildingNeighborhoodRows): array {
+                            $buildingNeighborhood = $buildingNeighborhoodRows->get($neighborhoodName);
+
+                            return [
+                                'name' => $neighborhoodName,
+                                'assessed' => (int) ($buildingNeighborhood->assessed_buildings ?? 0),
+                                'destroyed' => (int) ($buildingNeighborhood->destroyed_buildings ?? 0),
+                                'partial' => (int) ($buildingNeighborhood->partially_damaged_buildings ?? 0),
+                                'committee' => (int) ($buildingNeighborhood->committee_review_buildings ?? 0),
+                            ];
+                        })
+                        ->values(),
+                ];
+            })
+            ->values();
+
+        $unitMunicipalityReports = $unitMunicipalities
+            ->keys()
+            ->merge($unitMunicipalityNeighborhoodStats->keys())
+            ->unique()
+            ->sort()
+            ->map(function (string $municipalityName) use ($unitMunicipalities, $unitMunicipalityNeighborhoodStats): array {
+                $unitRow = $unitMunicipalities->get($municipalityName);
+                $unitNeighborhoodRows = $unitMunicipalityNeighborhoodStats->get($municipalityName, collect());
+
+                return [
+                    'name' => $municipalityName,
+                    'summary' => [
+                        'units' => (int) ($unitRow->units ?? 0),
+                        'destroyed' => (int) ($unitRow->destroyed_units ?? 0),
+                        'partial' => (int) ($unitRow->partially_damaged_units ?? 0),
+                        'committee' => (int) ($unitRow->committee_review_units ?? 0),
+                        'unclassified' => (int) ($unitRow->unclassified_units ?? 0),
+                    ],
+                    'chart' => [
+                        (int) ($unitRow->destroyed_units ?? 0),
+                        (int) ($unitRow->partially_damaged_units ?? 0),
+                        (int) ($unitRow->committee_review_units ?? 0),
+                        (int) ($unitRow->unclassified_units ?? 0),
+                    ],
+                    'neighborhoods' => $unitNeighborhoodRows
+                        ->keys()
+                        ->sort()
+                        ->map(function (string $neighborhoodName) use ($unitNeighborhoodRows): array {
+                            $unitNeighborhood = $unitNeighborhoodRows->get($neighborhoodName);
+
+                            return [
+                                'name' => $neighborhoodName,
+                                'units' => (int) ($unitNeighborhood->units ?? 0),
+                                'destroyed' => (int) ($unitNeighborhood->destroyed_units ?? 0),
+                                'partial' => (int) ($unitNeighborhood->partially_damaged_units ?? 0),
+                                'committee' => (int) ($unitNeighborhood->committee_review_units ?? 0),
+                                'unclassified' => (int) ($unitNeighborhood->unclassified_units ?? 0),
+                            ];
+                        })
+                        ->values(),
+                ];
+            })
+            ->values();
+
         $mapPoints = Building::query()
             ->select(['building_name', 'neighborhood', 'latitude', 'longitude', 'building_damage_status'])
             ->whereNotNull('latitude')
@@ -349,39 +434,16 @@ class DamageAssessmentController extends Controller
             'habitable' => $this->percentage((int) ($unitStats->habitable ?? 0), $totalUnits),
         ];
 
+        $hudDashboardData = $this->buildHudDashboardData($request);
+
         return View::make('modules.damage-assessment.dashboard.hud', [
-            'summaryStats' => [
-                'total_buildings' => (int) ($buildingStats->total_buildings ?? 0),
-                'assessed_buildings' => (int) ($buildingStats->assessed_buildings ?? 0),
-                'fully_damaged_units' => (int) ($unitStats->fully_damaged ?? 0),
-                'rubble_quantity' => (float) ($buildingStats->rubble_quantity ?? 0),
-            ],
-            'buildingDamageChart' => [
-                'labels' => ['مبانٍ مدمرة كلياً', 'مبانٍ متضررة جزئياً', 'مبانٍ مراجعة لجنة', 'مبانٍ غير مصنفة'],
-                'data' => [
-                    (int) ($buildingStats->fully_damaged_buildings ?? 0),
-                    (int) ($buildingStats->partially_damaged_buildings ?? 0),
-                    (int) ($buildingStats->committee_review_buildings ?? 0),
-                    max(
-                        (int) ($buildingStats->total_buildings ?? 0)
-                        - (int) ($buildingStats->fully_damaged_buildings ?? 0)
-                        - (int) ($buildingStats->partially_damaged_buildings ?? 0)
-                        - (int) ($buildingStats->committee_review_buildings ?? 0),
-                        0
-                    ),
-                ],
-            ],
-            'damageChart' => [
-                'labels' => ['وحدات مدمرة كلياً', 'وحدات متضررة جزئياً', 'وحدات مراجعة لجنة', 'وحدات غير مصنفة'],
-                'data' => [
-                    (int) ($unitStats->fully_damaged ?? 0),
-                    (int) ($unitStats->partially_damaged ?? 0),
-                    (int) ($unitStats->committee_review ?? 0),
-                    (int) ($unitStats->unclassified ?? 0),
-                ],
-            ],
-            'safetyStats' => $safetyStats,
-            'municipalityReports' => $municipalityReports,
+            'summaryStats' => $hudDashboardData['summaryStats'],
+            'buildingDamageChart' => $hudDashboardData['buildingDamageChart'],
+            'damageChart' => $hudDashboardData['damageChart'],
+            'safetyStats' => $hudDashboardData['safetyStats'],
+            'municipalityReports' => $hudDashboardData['municipalityReports'],
+            'buildingMunicipalityReports' => $hudDashboardData['buildingMunicipalityReports'],
+            'unitMunicipalityReports' => $hudDashboardData['unitMunicipalityReports'],
             'mapPoints' => $mapPoints,
             'buildingLayerUrl' => $buildingLayerUrl,
             'token' => $token,
@@ -448,7 +510,9 @@ class DamageAssessmentController extends Controller
                 COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
                 COALESCE(NULLIF(neighborhood, ''), 'غير محدد') as neighborhood_name,
                 COUNT(*) as assessed_buildings,
-                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings
+                COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
+                COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings
             ")
             ->groupBy('municipality_name', 'neighborhood_name')
             ->get()
@@ -460,7 +524,10 @@ class DamageAssessmentController extends Controller
                 COALESCE(NULLIF(municipalitie, ''), 'غير محدد') as municipality_name,
                 COALESCE(NULLIF(neighborhood, ''), 'غير محدد') as neighborhood_name,
                 COUNT(*) as units,
-                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END), 0) as destroyed_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END), 0) as partially_damaged_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status = 'committee_review2' THEN 1 ELSE 0 END), 0) as committee_review_units,
+                COALESCE(SUM(CASE WHEN unit_damage_status IS NULL OR unit_damage_status = '' THEN 1 ELSE 0 END), 0) as unclassified_units
             ")
             ->groupBy('municipality_name', 'neighborhood_name')
             ->get()
@@ -516,6 +583,91 @@ class DamageAssessmentController extends Controller
             })
             ->values();
 
+        $buildingMunicipalityReports = $buildingMunicipalities
+            ->keys()
+            ->merge($buildingMunicipalityNeighborhoodStats->keys())
+            ->unique()
+            ->sort()
+            ->map(function (string $municipalityName) use ($buildingMunicipalities, $buildingMunicipalityNeighborhoodStats): array {
+                $buildingRow = $buildingMunicipalities->get($municipalityName);
+                $buildingNeighborhoodRows = $buildingMunicipalityNeighborhoodStats->get($municipalityName, collect());
+
+                return [
+                    'name' => $municipalityName,
+                    'summary' => [
+                        'assessed' => (int) ($buildingRow->assessed_buildings ?? 0),
+                        'destroyed' => (int) ($buildingRow->destroyed_buildings ?? 0),
+                        'partial' => (int) ($buildingRow->partially_damaged_buildings ?? 0),
+                        'committee' => (int) ($buildingRow->committee_review_buildings ?? 0),
+                    ],
+                    'chart' => [
+                        (int) ($buildingRow->destroyed_buildings ?? 0),
+                        (int) ($buildingRow->partially_damaged_buildings ?? 0),
+                        (int) ($buildingRow->committee_review_buildings ?? 0),
+                    ],
+                    'neighborhoods' => $buildingNeighborhoodRows
+                        ->keys()
+                        ->sort()
+                        ->map(function (string $neighborhoodName) use ($buildingNeighborhoodRows): array {
+                            $buildingNeighborhood = $buildingNeighborhoodRows->get($neighborhoodName);
+
+                            return [
+                                'name' => $neighborhoodName,
+                                'assessed' => (int) ($buildingNeighborhood->assessed_buildings ?? 0),
+                                'destroyed' => (int) ($buildingNeighborhood->destroyed_buildings ?? 0),
+                                'partial' => (int) ($buildingNeighborhood->partially_damaged_buildings ?? 0),
+                                'committee' => (int) ($buildingNeighborhood->committee_review_buildings ?? 0),
+                            ];
+                        })
+                        ->values(),
+                ];
+            })
+            ->values();
+
+        $unitMunicipalityReports = $unitMunicipalities
+            ->keys()
+            ->merge($unitMunicipalityNeighborhoodStats->keys())
+            ->unique()
+            ->sort()
+            ->map(function (string $municipalityName) use ($unitMunicipalities, $unitMunicipalityNeighborhoodStats): array {
+                $unitRow = $unitMunicipalities->get($municipalityName);
+                $unitNeighborhoodRows = $unitMunicipalityNeighborhoodStats->get($municipalityName, collect());
+
+                return [
+                    'name' => $municipalityName,
+                    'summary' => [
+                        'units' => (int) ($unitRow->units ?? 0),
+                        'destroyed' => (int) ($unitRow->destroyed_units ?? 0),
+                        'partial' => (int) ($unitRow->partially_damaged_units ?? 0),
+                        'committee' => (int) ($unitRow->committee_review_units ?? 0),
+                        'unclassified' => (int) ($unitRow->unclassified_units ?? 0),
+                    ],
+                    'chart' => [
+                        (int) ($unitRow->destroyed_units ?? 0),
+                        (int) ($unitRow->partially_damaged_units ?? 0),
+                        (int) ($unitRow->committee_review_units ?? 0),
+                        (int) ($unitRow->unclassified_units ?? 0),
+                    ],
+                    'neighborhoods' => $unitNeighborhoodRows
+                        ->keys()
+                        ->sort()
+                        ->map(function (string $neighborhoodName) use ($unitNeighborhoodRows): array {
+                            $unitNeighborhood = $unitNeighborhoodRows->get($neighborhoodName);
+
+                            return [
+                                'name' => $neighborhoodName,
+                                'units' => (int) ($unitNeighborhood->units ?? 0),
+                                'destroyed' => (int) ($unitNeighborhood->destroyed_units ?? 0),
+                                'partial' => (int) ($unitNeighborhood->partially_damaged_units ?? 0),
+                                'committee' => (int) ($unitNeighborhood->committee_review_units ?? 0),
+                                'unclassified' => (int) ($unitNeighborhood->unclassified_units ?? 0),
+                            ];
+                        })
+                        ->values(),
+                ];
+            })
+            ->values();
+
         $totalUnits = max((int) ($unitStats->total_units ?? 0), 1);
         $damageChart = [
             'labels' => ['وحدات مدمرة كلياً', 'وحدات متضررة جزئياً', 'وحدات مراجعة لجنة', 'وحدات غير مصنفة'],
@@ -556,6 +708,8 @@ class DamageAssessmentController extends Controller
                 'habitable' => $this->percentage((int) ($unitStats->habitable ?? 0), $totalUnits),
             ],
             'municipalityReports' => $municipalityReports,
+            'buildingMunicipalityReports' => $buildingMunicipalityReports,
+            'unitMunicipalityReports' => $unitMunicipalityReports,
             'assessedUnitsTotal' => array_sum($damageChart['data']),
         ];
     }

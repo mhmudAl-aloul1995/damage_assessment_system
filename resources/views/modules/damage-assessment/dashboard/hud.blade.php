@@ -808,18 +808,28 @@
             <div class="hud-sidebar hud-interactive">
                 <div class="card-hud-glass" style="flex: 1; display: flex; flex-direction: column;">
                     <div class="hud-section-title"><i class="fa-solid fa-globe"></i> تقارير البلديات والأحياء</div>
-                    <div id="hudMunicipalityReports" style="flex: 1; overflow-y: auto;">
-                        @forelse ($municipalityReports as $report)
+                    <ul class="nav nav-pills nav-fill gap-2 mb-3" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-2 fw-bold" id="hudBuildingReportsTab" data-bs-toggle="tab" data-bs-target="#hudBuildingReportsPane" type="button" role="tab">المباني</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-2 fw-bold" id="hudUnitReportsTab" data-bs-toggle="tab" data-bs-target="#hudUnitReportsPane" type="button" role="tab">الوحدات</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" style="flex: 1; min-height: 0;">
+                        <div id="hudBuildingReportsPane" class="tab-pane fade show active h-100" role="tabpanel" aria-labelledby="hudBuildingReportsTab">
+                            <div id="hudBuildingMunicipalityReports" style="height: 100%; overflow-y: auto;">
+                                @forelse ($buildingMunicipalityReports as $report)
                             <section class="governorate-report">
                                 <div class="governorate-report-header">
                                     <div class="governorate-report-name">{{ $report['name'] }}</div>
                                     <div class="governorate-report-metric">
-                                        <span>مقيّم</span>
+                                        <span>مبانٍ</span>
                                         <strong>{{ $formatNumber($report['summary']['assessed']) }}</strong>
                                     </div>
                                     <div class="governorate-report-metric">
-                                        <span>وحدات</span>
-                                        <strong>{{ $formatNumber($report['summary']['units']) }}</strong>
+                                        <span>جزئي</span>
+                                        <strong>{{ $formatNumber($report['summary']['partial']) }}</strong>
                                     </div>
                                     <div class="governorate-report-metric">
                                         <span>مدمر</span>
@@ -829,16 +839,17 @@
 
                                 <div class="governorate-report-body">
                                     <div class="municipality-chart-wrap">
-                                        <canvas id="municipalityChart{{ $loop->index }}"></canvas>
+                                        <canvas id="buildingMunicipalityChart{{ $loop->index }}"></canvas>
                                     </div>
 
                                     <table class="table table-sm table-cyber align-middle mb-0 text-center">
                                         <thead>
                                             <tr>
                                                 <th class="text-start">الحي</th>
-                                                <th>مقيّم</th>
-                                                <th>وحدات</th>
+                                                <th>مبانٍ</th>
                                                 <th>مدمر</th>
+                                                <th>جزئي</th>
+                                                <th>لجنة</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -846,12 +857,13 @@
                                                 <tr>
                                                     <td class="text-start fw-bold text-info">{{ $neighborhood['name'] }}</td>
                                                     <td>{{ $formatNumber($neighborhood['assessed']) }}</td>
-                                                    <td>{{ $formatNumber($neighborhood['units']) }}</td>
                                                     <td class="text-danger fw-bold">{{ $formatNumber($neighborhood['destroyed']) }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['partial']) }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['committee']) }}</td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="4" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td>
+                                                    <td colspan="5" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -861,6 +873,68 @@
                         @empty
                             <div class="text-center text-white-50 py-4">لا توجد بيانات بلديات حالياً</div>
                         @endforelse
+                            </div>
+                        </div>
+                        <div id="hudUnitReportsPane" class="tab-pane fade h-100" role="tabpanel" aria-labelledby="hudUnitReportsTab">
+                            <div id="hudUnitMunicipalityReports" style="height: 100%; overflow-y: auto;">
+                                @forelse ($unitMunicipalityReports as $report)
+                            <section class="governorate-report">
+                                <div class="governorate-report-header">
+                                    <div class="governorate-report-name">{{ $report['name'] }}</div>
+                                    <div class="governorate-report-metric">
+                                        <span>وحدات</span>
+                                        <strong>{{ $formatNumber($report['summary']['units']) }}</strong>
+                                    </div>
+                                    <div class="governorate-report-metric">
+                                        <span>جزئي</span>
+                                        <strong>{{ $formatNumber($report['summary']['partial']) }}</strong>
+                                    </div>
+                                    <div class="governorate-report-metric">
+                                        <span>مدمر</span>
+                                        <strong class="text-danger">{{ $formatNumber($report['summary']['destroyed']) }}</strong>
+                                    </div>
+                                </div>
+
+                                <div class="governorate-report-body">
+                                    <div class="municipality-chart-wrap">
+                                        <canvas id="unitMunicipalityChart{{ $loop->index }}"></canvas>
+                                    </div>
+
+                                    <table class="table table-sm table-cyber align-middle mb-0 text-center">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-start">الحي</th>
+                                                <th>وحدات</th>
+                                                <th>مدمر</th>
+                                                <th>جزئي</th>
+                                                <th>لجنة</th>
+                                                <th>غير مصنف</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse ($report['neighborhoods'] as $neighborhood)
+                                                <tr>
+                                                    <td class="text-start fw-bold text-info">{{ $neighborhood['name'] }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['units']) }}</td>
+                                                    <td class="text-danger fw-bold">{{ $formatNumber($neighborhood['destroyed']) }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['partial']) }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['committee']) }}</td>
+                                                    <td>{{ $formatNumber($neighborhood['unclassified']) }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="6" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        @empty
+                            <div class="text-center text-white-50 py-4">لا توجد بيانات وحدات حالياً</div>
+                        @endforelse
+                            </div>
+                        </div>
                     </div>
                     <div class="p-2 text-center border-top border-secondary mt-2" style="background: rgba(255, 255, 255, 0.03);">
                         <small class="text-white-50">إجمالي الوحدات التابعة للمباني المفلترة: <span id="hudAssessedUnitsTotal" class="text-info fw-bold">{{ $formatNumber(array_sum($damageChart['data'])) }}</span></small>
@@ -879,6 +953,8 @@
     <script>
         const mapPoints = @json($mapPoints);
         const municipalityReports = @json($municipalityReports);
+        const buildingMunicipalityReports = @json($buildingMunicipalityReports);
+        const unitMunicipalityReports = @json($unitMunicipalityReports);
         const buildingLayerUrl = @json($buildingLayerUrl);
         const arcgisToken = @json($token);
         const assessmentBaseUrl = @json(url('assessment'));
@@ -1510,7 +1586,8 @@
             options: hudChartOptions('left')
         });
 
-        const hudMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة', 'غير مصنف'];
+        const hudBuildingMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة'];
+        const hudUnitMunicipalityChartLabels = ['مدمر', 'جزئي', 'لجنة', 'غير مصنف'];
         let hudMunicipalityCharts = [];
 
         function formatHudNumber(value) {
@@ -1583,9 +1660,9 @@
             }
         }
 
-        function createHudMunicipalityCharts(reports) {
+        function createHudMunicipalityCharts(reports, chartPrefix, labels) {
             reports.forEach((report, index) => {
-                const canvas = document.getElementById(`municipalityChart${index}`);
+                const canvas = document.getElementById(`${chartPrefix}${index}`);
 
                 if (!canvas) {
                     return;
@@ -1594,7 +1671,7 @@
                 hudMunicipalityCharts.push(new Chart(canvas.getContext('2d'), {
                     type: 'bar',
                     data: {
-                        labels: hudMunicipalityChartLabels,
+                        labels,
                         datasets: [{
                             data: report.chart,
                             backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#00ff87'],
@@ -1624,20 +1701,15 @@
             });
         }
 
-        function renderHudMunicipalityReports(reports) {
-            const container = document.getElementById('hudMunicipalityReports');
-
-            hudMunicipalityCharts.forEach(function (chart) {
-                chart.destroy();
-            });
-            hudMunicipalityCharts = [];
+        function renderHudBuildingMunicipalityReports(reports) {
+            const container = document.getElementById('hudBuildingMunicipalityReports');
 
             if (!container) {
                 return;
             }
 
             if (!Array.isArray(reports) || reports.length === 0) {
-                container.innerHTML = '<div class="text-center text-white-50 py-4">لا توجد بيانات بلديات حالياً</div>';
+                container.innerHTML = '<div class="text-center text-white-50 py-4">لا توجد بيانات مبانٍ حالياً</div>';
 
                 return;
             }
@@ -1649,24 +1721,25 @@
                             <tr>
                                 <td class="text-start fw-bold text-info">${escapeHudHtml(neighborhood.name)}</td>
                                 <td>${formatHudNumber(neighborhood.assessed)}</td>
-                                <td>${formatHudNumber(neighborhood.units)}</td>
                                 <td class="text-danger fw-bold">${formatHudNumber(neighborhood.destroyed)}</td>
+                                <td>${formatHudNumber(neighborhood.partial)}</td>
+                                <td>${formatHudNumber(neighborhood.committee)}</td>
                             </tr>
                         `;
                     }).join('')
-                    : '<tr><td colspan="4" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td></tr>';
+                    : '<tr><td colspan="5" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td></tr>';
 
                 return `
                     <section class="governorate-report">
                         <div class="governorate-report-header">
                             <div class="governorate-report-name">${escapeHudHtml(report.name)}</div>
                             <div class="governorate-report-metric">
-                                <span>مقيّم</span>
+                                <span>مبانٍ</span>
                                 <strong>${formatHudNumber(report.summary?.assessed)}</strong>
                             </div>
                             <div class="governorate-report-metric">
-                                <span>وحدات</span>
-                                <strong>${formatHudNumber(report.summary?.units)}</strong>
+                                <span>جزئي</span>
+                                <strong>${formatHudNumber(report.summary?.partial)}</strong>
                             </div>
                             <div class="governorate-report-metric">
                                 <span>مدمر</span>
@@ -1676,16 +1749,17 @@
 
                         <div class="governorate-report-body">
                             <div class="municipality-chart-wrap">
-                                <canvas id="municipalityChart${index}"></canvas>
+                                <canvas id="buildingMunicipalityChart${index}"></canvas>
                             </div>
 
                             <table class="table table-sm table-cyber align-middle mb-0 text-center">
                                 <thead>
                                     <tr>
                                         <th class="text-start">الحي</th>
-                                        <th>مقيّم</th>
-                                        <th>وحدات</th>
+                                        <th>مبانٍ</th>
                                         <th>مدمر</th>
+                                        <th>جزئي</th>
+                                        <th>لجنة</th>
                                     </tr>
                                 </thead>
                                 <tbody>${neighborhoods}</tbody>
@@ -1694,8 +1768,88 @@
                     </section>
                 `;
             }).join('');
+        }
 
-            createHudMunicipalityCharts(reports);
+        function renderHudUnitMunicipalityReports(reports) {
+            const container = document.getElementById('hudUnitMunicipalityReports');
+
+            if (!container) {
+                return;
+            }
+
+            if (!Array.isArray(reports) || reports.length === 0) {
+                container.innerHTML = '<div class="text-center text-white-50 py-4">لا توجد بيانات وحدات حالياً</div>';
+
+                return;
+            }
+
+            container.innerHTML = reports.map(function (report, index) {
+                const neighborhoods = Array.isArray(report.neighborhoods) && report.neighborhoods.length > 0
+                    ? report.neighborhoods.map(function (neighborhood) {
+                        return `
+                            <tr>
+                                <td class="text-start fw-bold text-info">${escapeHudHtml(neighborhood.name)}</td>
+                                <td>${formatHudNumber(neighborhood.units)}</td>
+                                <td class="text-danger fw-bold">${formatHudNumber(neighborhood.destroyed)}</td>
+                                <td>${formatHudNumber(neighborhood.partial)}</td>
+                                <td>${formatHudNumber(neighborhood.committee)}</td>
+                                <td>${formatHudNumber(neighborhood.unclassified)}</td>
+                            </tr>
+                        `;
+                    }).join('')
+                    : '<tr><td colspan="6" class="text-white-50 py-3">لا توجد أحياء لهذه المحافظة</td></tr>';
+
+                return `
+                    <section class="governorate-report">
+                        <div class="governorate-report-header">
+                            <div class="governorate-report-name">${escapeHudHtml(report.name)}</div>
+                            <div class="governorate-report-metric">
+                                <span>وحدات</span>
+                                <strong>${formatHudNumber(report.summary?.units)}</strong>
+                            </div>
+                            <div class="governorate-report-metric">
+                                <span>جزئي</span>
+                                <strong>${formatHudNumber(report.summary?.partial)}</strong>
+                            </div>
+                            <div class="governorate-report-metric">
+                                <span>مدمر</span>
+                                <strong class="text-danger">${formatHudNumber(report.summary?.destroyed)}</strong>
+                            </div>
+                        </div>
+
+                        <div class="governorate-report-body">
+                            <div class="municipality-chart-wrap">
+                                <canvas id="unitMunicipalityChart${index}"></canvas>
+                            </div>
+
+                            <table class="table table-sm table-cyber align-middle mb-0 text-center">
+                                <thead>
+                                    <tr>
+                                        <th class="text-start">الحي</th>
+                                        <th>وحدات</th>
+                                        <th>مدمر</th>
+                                        <th>جزئي</th>
+                                        <th>لجنة</th>
+                                        <th>غير مصنف</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${neighborhoods}</tbody>
+                            </table>
+                        </div>
+                    </section>
+                `;
+            }).join('');
+        }
+
+        function renderHudMunicipalityReports(buildingReports, unitReports) {
+            hudMunicipalityCharts.forEach(function (chart) {
+                chart.destroy();
+            });
+            hudMunicipalityCharts = [];
+            renderHudBuildingMunicipalityReports(buildingReports);
+            renderHudUnitMunicipalityReports(unitReports);
+            createHudMunicipalityCharts(buildingReports || [], 'buildingMunicipalityChart', hudBuildingMunicipalityChartLabels);
+            createHudMunicipalityCharts(unitReports || [], 'unitMunicipalityChart', hudUnitMunicipalityChartLabels);
         }
 
         function refreshHudDashboardData() {
@@ -1736,14 +1890,15 @@
                     updateHudSafetyMetric('Destroyed', data.safetyStats.destroyed);
                     updateHudSafetyMetric('Support', data.safetyStats.support_needed);
                     updateHudSafetyMetric('Habitable', data.safetyStats.habitable);
-                    renderHudMunicipalityReports(data.municipalityReports);
+                    renderHudMunicipalityReports(data.buildingMunicipalityReports, data.unitMunicipalityReports);
                 })
                 .catch(function (error) {
                     console.error('HUD stats refresh failed:', error);
                 });
         }
 
-        createHudMunicipalityCharts(municipalityReports);
+        createHudMunicipalityCharts(buildingMunicipalityReports, 'buildingMunicipalityChart', hudBuildingMunicipalityChartLabels);
+        createHudMunicipalityCharts(unitMunicipalityReports, 'unitMunicipalityChart', hudUnitMunicipalityChartLabels);
 
     </script>
 </body>
