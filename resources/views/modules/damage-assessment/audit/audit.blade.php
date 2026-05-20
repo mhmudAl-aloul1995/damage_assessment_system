@@ -79,7 +79,7 @@
 			padding: 0.3rem 0.4rem;
 			justify-content: center;
 			align-items: center;
-			font-size: .95rem;
+			font-size: .85rem;
 			line-height: 1.25;
 			text-align: center;
 			

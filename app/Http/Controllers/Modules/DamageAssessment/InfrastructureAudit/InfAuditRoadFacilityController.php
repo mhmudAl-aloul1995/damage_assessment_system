@@ -186,67 +186,67 @@ class InfAuditRoadFacilityController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-        $status = InfAuditStatus::query()->where('name', $data['status'])->firstOrFail();
-        $this->authorizeStatusChange($status->name);
+            $status = InfAuditStatus::query()->where('name', $data['status'])->firstOrFail();
+            $this->authorizeStatusChange($status->name);
 
-        $current = $this->latestAuditStatus($road);
+            $current = $this->latestAuditStatus($road);
 
-        $assignedTo = array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $current?->assigned_to;
+            $assignedTo = array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $current?->assigned_to;
 
-        if ($status->name === 'assigned' && ! $assignedTo) {
-            return response()->json(['message' => 'يرجى اختيار المدقق.'], 422);
-        }
+            if ($status->name === 'assigned' && ! $assignedTo) {
+                return response()->json(['message' => 'يرجى اختيار المدقق.'], 422);
+            }
 
-        $isSameStatus = (int) ($current?->status_id ?? 0) === (int) $status->id
-            && (int) ($current->assigned_to ?? 0) === (int) ($assignedTo ?? 0);
+            $isSameStatus = (int) ($current?->status_id ?? 0) === (int) $status->id
+                && (int) ($current->assigned_to ?? 0) === (int) ($assignedTo ?? 0);
 
-        if ($isSameStatus) {
-            return response()->json(['message' => 'لا يمكن تكرار نفس الحالة الحالية.'], 422);
-        }
+            if ($isSameStatus) {
+                return response()->json(['message' => 'لا يمكن تكرار نفس الحالة الحالية.'], 422);
+            }
 
-        $current = RoadFacilityAuditStatus::query()->create([
-            'road_facility_survey_id' => $road->id,
-            'objectid' => $road->objectid,
-            'globalid' => $road->globalid,
-            'status_id' => $status->id,
-            'assigned_to' => $assignedTo,
-            'updated_by' => Auth::id(),
-            'notes' => $data['notes'] ?? null,
-        ]);
+            $current = RoadFacilityAuditStatus::query()->create([
+                'road_facility_survey_id' => $road->id,
+                'objectid' => $road->objectid,
+                'globalid' => $road->globalid,
+                'status_id' => $status->id,
+                'assigned_to' => $assignedTo,
+                'updated_by' => Auth::id(),
+                'notes' => $data['notes'] ?? null,
+            ]);
 
-        if ($status->name === 'assigned' && $assignedTo) {
-            InfAuditAssignment::query()->updateOrCreate(
-                [
-                    'type' => 'road_facility',
-                    'globalid' => $road->globalid,
+            if ($status->name === 'assigned' && $assignedTo) {
+                InfAuditAssignment::query()->updateOrCreate(
+                    [
+                        'type' => 'road_facility',
+                        'globalid' => $road->globalid,
+                    ],
+                    [
+                        'manager_id' => Auth::id(),
+                        'user_id' => $assignedTo,
+                    ],
+                );
+            }
+
+            RoadFacilityAuditHistory::query()->create([
+                'road_facility_survey_id' => $road->id,
+                'objectid' => $road->objectid,
+                'globalid' => $road->globalid,
+                'status_id' => $status->id,
+                'assigned_to' => $assignedTo,
+                'user_id' => Auth::id(),
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            $assignment = $this->assignment($road->globalid);
+
+            return response()->json([
+                'message' => 'تم تحديث الحالة بنجاح.',
+                'assignment' => [
+                    'user_name' => $assignment?->user?->name ?? $current->assignee?->name ?? '-',
+                    'manager_name' => $assignment?->manager?->name ?? '-',
+                    'updated_at' => $assignment?->updated_at?->format('Y-m-d H:i') ?? '-',
                 ],
-                [
-                    'manager_id' => Auth::id(),
-                    'user_id' => $assignedTo,
-                ],
-            );
-        }
-
-        RoadFacilityAuditHistory::query()->create([
-            'road_facility_survey_id' => $road->id,
-            'objectid' => $road->objectid,
-            'globalid' => $road->globalid,
-            'status_id' => $status->id,
-            'assigned_to' => $assignedTo,
-            'user_id' => Auth::id(),
-            'notes' => $data['notes'] ?? null,
-        ]);
-
-        $assignment = $this->assignment($road->globalid);
-
-        return response()->json([
-            'message' => 'تم تحديث الحالة بنجاح.',
-            'assignment' => [
-                'user_name' => $assignment?->user?->name ?? $current->assignee?->name ?? '-',
-                'manager_name' => $assignment?->manager?->name ?? '-',
-                'updated_at' => $assignment?->updated_at?->format('Y-m-d H:i') ?? '-',
-            ],
-        ]);
+            ]);
         });
     }
 
