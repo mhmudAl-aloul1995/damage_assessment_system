@@ -896,12 +896,12 @@
 					},
 					{
 						targets: 1,
-						width: '3%',
+						width: '2%',
 						className: 'text-start'
 					},
 					{
 						targets: 2,
-						width: '3%',
+						width: '1%',
 						className: 'text-center'
 					},
 					{
