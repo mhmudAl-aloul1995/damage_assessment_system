@@ -906,12 +906,12 @@
 					},
 					{
 						targets: 3,
-						width: '7%',
+						width: '2%',
 						className: 'audit-cell-ltr'
 					},
 					{
 						targets: [4, 5],
-						width: '7%',
+						width: '2%',
 						className: 'text-center'
 					},
 					{
