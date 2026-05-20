@@ -112,6 +112,8 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('id="hudUnitReportsTab"', false)
         ->assertSee('id="hudBuildingMunicipalityReports"', false)
         ->assertSee('id="hudUnitMunicipalityReports"', false)
+        ->assertSee('يوجد عائق', false)
+        ->assertSee('#b25cff', false)
         ->assertSee('buildingMunicipalityReports', false)
         ->assertSee('unitMunicipalityReports', false)
         ->assertSee('نتائج الخريطة:', false)
@@ -207,6 +209,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertJsonPath('summaryStats.total_buildings', 3)
         ->assertJsonPath('summaryStats.fully_damaged_units', 1)
         ->assertJsonPath('assessedUnitsTotal', 3)
+        ->assertJsonPath('buildingDamageChart.data.3', 1)
         ->assertJsonPath('buildingMunicipalityReports.0.summary.assessed', 2)
         ->assertJsonPath('unitMunicipalityReports.0.summary.units', 2);
 

@@ -215,6 +215,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as fully_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as obstacle_buildings,
                 COALESCE(SUM(CAST(building_debris_qty AS DECIMAL(15, 2))), 0) as rubble_quantity
             ")
             ->first();
@@ -464,6 +465,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as fully_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as obstacle_buildings,
                 COALESCE(SUM(CAST(building_debris_qty AS DECIMAL(15, 2))), 0) as rubble_quantity
             ")
             ->first();
@@ -687,18 +689,12 @@ class DamageAssessmentController extends Controller
                 'rubble_quantity' => (float) ($buildingStats->rubble_quantity ?? 0),
             ],
             'buildingDamageChart' => [
-                'labels' => ['مبانٍ مدمرة كلياً', 'مبانٍ متضررة جزئياً', 'مبانٍ مراجعة لجنة', 'مبانٍ غير مصنفة'],
+                'labels' => ['مبانٍ مدمرة كلياً', 'مبانٍ متضررة جزئياً', 'مبانٍ مراجعة لجنة', 'يوجد عائق'],
                 'data' => [
                     (int) ($buildingStats->fully_damaged_buildings ?? 0),
                     (int) ($buildingStats->partially_damaged_buildings ?? 0),
                     (int) ($buildingStats->committee_review_buildings ?? 0),
-                    max(
-                        (int) ($buildingStats->total_buildings ?? 0)
-                        - (int) ($buildingStats->fully_damaged_buildings ?? 0)
-                        - (int) ($buildingStats->partially_damaged_buildings ?? 0)
-                        - (int) ($buildingStats->committee_review_buildings ?? 0),
-                        0
-                    ),
+                    (int) ($buildingStats->obstacle_buildings ?? 0),
                 ],
             ],
             'damageChart' => $damageChart,

@@ -1563,7 +1563,7 @@
                 labels: @json($buildingDamageChart['labels']),
                 datasets: [{
                     data: @json($buildingDamageChart['data']),
-                    backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#00ff87'],
+                    backgroundColor: ['#ff0055', '#fae813', '#00f2fe', '#b25cff'],
                     borderColor: '#061224',
                     borderWidth: 2
                 }]
