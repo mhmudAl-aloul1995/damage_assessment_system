@@ -918,17 +918,17 @@
 					},
 					{
 						targets: 1,
-						width: '22%',
+						width: '18%',
 						className: 'text-start'
 					},
 					{
 						targets: 2,
-						width: '7%',
+						width: '8%',
 						className: 'text-center'
 					},
 					{
 						targets: 3,
-						width: '10%',
+						width: '12%',
 						className: 'audit-cell-ltr'
 					},
 					{
