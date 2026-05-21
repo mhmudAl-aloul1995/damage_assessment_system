@@ -15,7 +15,9 @@ class UpdateHousingLegalChallengeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'globalid' => ['required', 'string', 'exists:housing_units,globalid'],
+            'globalid' => ['required_without:globalids', 'string', 'exists:housing_units,globalid'],
+            'globalids' => ['required_without:globalid', 'array', 'min:1'],
+            'globalids.*' => ['required', 'string', 'distinct', 'exists:housing_units,globalid'],
             'legal_challenge' => ['required', 'string', Rule::in($this->legalChallengeValues())],
         ];
     }
@@ -24,6 +26,8 @@ class UpdateHousingLegalChallengeRequest extends FormRequest
     {
         return [
             'globalid.required' => 'Please select a housing unit.',
+            'globalids.required_without' => 'Please select at least one housing unit.',
+            'globalids.min' => 'Please select at least one housing unit.',
             'legal_challenge.required' => 'Please select a legal challenge.',
             'legal_challenge.in' => 'The selected legal challenge is invalid.',
         ];

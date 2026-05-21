@@ -69,6 +69,44 @@ it('updates the selected housing unit legal challenge', function () {
     ]);
 });
 
+it('updates selected housing units with the same legal challenge', function () {
+    $user = User::factory()->create();
+
+    $firstHousingUnit = HousingUnit::query()->create([
+        'objectid' => 9202,
+        'globalid' => 'legal-challenge-housing-2',
+        'parentglobalid' => 'legal-challenge-building-1',
+    ]);
+
+    $secondHousingUnit = HousingUnit::query()->create([
+        'objectid' => 9203,
+        'globalid' => 'legal-challenge-housing-3',
+        'parentglobalid' => 'legal-challenge-building-1',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.legalChallenge'), [
+            'globalids' => [$firstHousingUnit->globalid, $secondHousingUnit->globalid],
+            'legal_challenge' => 'missing_inheritance_documents',
+        ])
+        ->assertOk()
+        ->assertJson([
+            'status' => true,
+            'updated_count' => 2,
+            'legal_challenge' => 'missing_inheritance_documents',
+        ]);
+
+    $this->assertDatabaseHas('housing_units', [
+        'globalid' => $firstHousingUnit->globalid,
+        'legal_challenge' => 'missing_inheritance_documents',
+    ]);
+
+    $this->assertDatabaseHas('housing_units', [
+        'globalid' => $secondHousingUnit->globalid,
+        'legal_challenge' => 'missing_inheritance_documents',
+    ]);
+});
+
 it('rejects unknown legal challenge values', function () {
     $user = User::factory()->create();
 

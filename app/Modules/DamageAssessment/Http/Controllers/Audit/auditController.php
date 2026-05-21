@@ -3232,19 +3232,21 @@ COALESCE(
 
     public function updateHousingLegalChallenge(UpdateHousingLegalChallengeRequest $request)
     {
-        $housingUnit = HousingUnit::query()
-            ->where('globalid', $request->validated('globalid'))
-            ->firstOrFail();
+        $globalids = $request->validated('globalids')
+            ?? [$request->validated('globalid')];
 
-        $housingUnit->forceFill([
-            'legal_challenge' => $request->validated('legal_challenge'),
-        ])->save();
+        $updated = HousingUnit::query()
+            ->whereIn('globalid', $globalids)
+            ->update([
+                'legal_challenge' => $request->validated('legal_challenge'),
+            ]);
 
         return response()->json([
             'status' => true,
             'message' => 'تم تحديث التحديات القانونية للوحدة السكنية بنجاح',
-            'legal_challenge' => $housingUnit->legal_challenge,
-            'legal_challenge_label' => $this->legalChallengeLabel($housingUnit->legal_challenge),
+            'updated_count' => $updated,
+            'legal_challenge' => $request->validated('legal_challenge'),
+            'legal_challenge_label' => $this->legalChallengeLabel($request->validated('legal_challenge')),
         ]);
     }
 

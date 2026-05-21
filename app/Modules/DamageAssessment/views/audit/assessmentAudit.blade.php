@@ -27,40 +27,46 @@
         }
 
         /* أعمدة الحالات تكون أضيق */
-        #housing_table th:nth-child(8),
-        #housing_table td:nth-child(8),
         #housing_table th:nth-child(9),
         #housing_table td:nth-child(9),
         #housing_table th:nth-child(10),
-        #housing_table td:nth-child(10) {
+        #housing_table td:nth-child(10),
+        #housing_table th:nth-child(11),
+        #housing_table td:nth-child(11) {
             width: 140px !important;
             max-width: 140px !important;
         }
 
         /* اسم المالك لا يأخذ مساحة كبيرة */
-        #housing_table th:nth-child(5),
-        #housing_table td:nth-child(5) {
+        #housing_table th:nth-child(6),
+        #housing_table td:nth-child(6) {
             width: 120px !important;
             max-width: 120px !important;
             word-break: break-word;
         }
 
         /* نوع الوحدة وحالة الضرر */
-        #housing_table th:nth-child(1),
-        #housing_table td:nth-child(1),
         #housing_table th:nth-child(2),
-        #housing_table td:nth-child(2) {
+        #housing_table td:nth-child(2),
+        #housing_table th:nth-child(3),
+        #housing_table td:nth-child(3) {
             width: 130px !important;
             max-width: 130px !important;
         }
 
         /* الأرقام */
-        #housing_table th:nth-child(3),
-        #housing_table td:nth-child(3),
         #housing_table th:nth-child(4),
-        #housing_table td:nth-child(4) {
+        #housing_table td:nth-child(4),
+        #housing_table th:nth-child(5),
+        #housing_table td:nth-child(5) {
             width: 80px !important;
             max-width: 80px !important;
+        }
+
+        #housing_table th:nth-child(1),
+        #housing_table td:nth-child(1) {
+            width: 48px !important;
+            max-width: 48px !important;
         }
 
         .building-status-btn,
@@ -115,6 +121,10 @@
 
         #housing_table tbody tr.selected {
             background-color: rgba(0, 158, 247, .12) !important
+        }
+
+        #housing_table tbody tr.multi-selected {
+            box-shadow: inset 4px 0 0 var(--bs-warning);
         }
 
         .container-loader {
@@ -641,12 +651,19 @@
                                 <h3 class="fw-bold mb-0">وحدات المبنى</h3>
                             </div>
                             <div class="card-toolbar">
-                                <button type="button" class="btn btn-sm btn-light-primary"
-                                    onclick="reloadBuildingUnitsTable()">
-                                    <i class="ki-duotone ki-arrows-circle fs-6"><span class="path1"></span><span
-                                            class="path2"></span></i>
-                                    تحديث
-                                </button>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @hasanyrole('Legal Auditor|Database Officer')
+                                    <button type="button" id="btn_housing_legal_challenge"
+                                        class="btn btn-sm btn-light-warning"
+                                        onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
+                                    @endhasanyrole
+                                    <button type="button" class="btn btn-sm btn-light-primary"
+                                        onclick="reloadBuildingUnitsTable()">
+                                        <i class="ki-duotone ki-arrows-circle fs-6"><span class="path1"></span><span
+                                                class="path2"></span></i>
+                                        تحديث
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -656,6 +673,9 @@
                                     id="housing_table">
                                     <thead>
                                         <tr class="fw-bold fs-7 text-black-800 border-bottom border-gray-300">
+                                            <th class="px-2 py-3">
+                                                <input type="checkbox" class="form-check-input" id="select_all_housing_units">
+                                            </th>
                                             <th class="px-2 py-3">نوع الوحدة</th>
                                             <th class="px-2 py-3">حالة الضرر</th>
                                             <th class="px-2 py-3">رقم الطابق</th>
@@ -829,12 +849,6 @@
                                                 لمراجعة</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('Legal Auditor|Database Officer')
-                                            <button type="button" id="btn_housing_legal_challenge"
-                                                class="btn btn-sm btn-light-warning"
-                                                onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
-                                            @endhasanyrole
-
                                             <!--    @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
                                                         <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
                                                             data-status="undp_final_approve"
@@ -997,6 +1011,7 @@
         let currentHousingLegalChallenge = null;
         let initialHousingSelectionDone = false;
         let pendingHousingGlobalId = null;
+        let selectedHousingGlobalIds = new Set();
         let inlineSaveLocks = new Set();
 
         let currentHousingFilter = 'all';
@@ -1596,6 +1611,29 @@
             return null;
         }
 
+        function getSelectedHousingGlobalIds() {
+            return Array.from(selectedHousingGlobalIds);
+        }
+
+        function syncHousingSelectionCheckboxes(datatable) {
+            let visibleIds = [];
+
+            $('#housing_table tbody tr').each(function () {
+                let row = datatable.row(this).data();
+                if (!row || !row.globalid) return;
+
+                visibleIds.push(row.globalid);
+                let isSelected = selectedHousingGlobalIds.has(row.globalid);
+                $(this).toggleClass('multi-selected', isSelected);
+                $(this).find('.housing-unit-select').prop('checked', isSelected);
+            });
+
+            $('#select_all_housing_units').prop(
+                'checked',
+                visibleIds.length > 0 && visibleIds.every((globalid) => selectedHousingGlobalIds.has(globalid))
+            );
+        }
+
         function autoSelectAndClickHousingRow(datatable) {
             let selectedId = pendingHousingGlobalId || $('[name="globalid"]').val();
 
@@ -2002,20 +2040,26 @@
         function openLegalChallengeModal(type, housingGlobalid = null, housingLegalChallenge = null) {
             let isBuilding = type === 'building';
             let globalid = isBuilding ? @json($buildingGlobalid) : (housingGlobalid || $("[name='globalid']").val());
+            let selectedHousingIds = isBuilding ? [] : getSelectedHousingGlobalIds();
 
-            if (!globalid) {
+            if (!isBuilding && !housingGlobalid && selectedHousingIds.length === 0) {
+                toastr.warning('يرجى اختيار وحدة واحدة على الأقل');
+                return;
+            }
+
+            if (!globalid && selectedHousingIds.length === 0) {
                 toastr.warning(isBuilding ? 'لا يوجد مبنى محدد' : 'يرجى اختيار الوحدة أولاً');
                 return;
             }
 
-            if (!isBuilding) {
+            if (!isBuilding && housingGlobalid) {
                 $('[name="globalid"]').val(globalid).trigger('change');
                 currentHousingLegalChallenge = housingLegalChallenge ?? currentHousingLegalChallenge;
             }
 
             $('#legalChallengeType').val(type);
             $('#legalChallengeHousingGlobalId').val(isBuilding ? '' : globalid);
-            $('#legal_challenge').val(isBuilding ? buildingLegalChallenge : (housingLegalChallenge ?? currentHousingLegalChallenge)).trigger('change');
+            $('#legal_challenge').val(isBuilding ? buildingLegalChallenge : (selectedHousingIds.length === 1 ? (housingLegalChallenge ?? currentHousingLegalChallenge) : null)).trigger('change');
             $('#legalChallengeModal').modal('show');
         }
 
@@ -2024,6 +2068,11 @@
 
             let type = $('#legalChallengeType').val();
             let isBuilding = type === 'building';
+            let selectedHousingIds = getSelectedHousingGlobalIds();
+            let housingGlobalid = $('#legalChallengeHousingGlobalId').val();
+            if (!isBuilding && selectedHousingIds.length === 0 && housingGlobalid) {
+                selectedHousingIds = [housingGlobalid];
+            }
             let submitButton = $('#legalChallengeSubmit');
             let data = isBuilding
                 ? {
@@ -2031,7 +2080,16 @@
                     building_ids: [buildingObjectId],
                     legal_challenge: $('#legal_challenge').val()
                 }
-                : $(this).serialize();
+                : {
+                    _token: "{{ csrf_token() }}",
+                    globalids: selectedHousingIds,
+                    legal_challenge: $('#legal_challenge').val()
+                };
+
+            if (!isBuilding && selectedHousingIds.length === 0) {
+                toastr.warning('يرجى اختيار وحدة واحدة على الأقل');
+                return;
+            }
 
             submitButton.prop('disabled', true);
 
@@ -2291,6 +2349,20 @@
                     scrollX: false,
                     responsive: false,
                     columns: [
+                        {
+                            data: 'globalid',
+                            name: 'select_unit',
+                            searchable: false,
+                            orderable: false,
+                            className: 'text-center px-2 py-3',
+                            render: function (data, type) {
+                                if (type !== 'display') {
+                                    return data;
+                                }
+
+                                return '<input type="checkbox" class="form-check-input housing-unit-select" value="' + $('<div>').text(data || '').html() + '">';
+                            }
+                        },
                         { data: 'housing_unit_type', name: 'housing_unit_type', className: 'text-start px-2 py-3' },
                         { data: 'unit_damage_status', name: 'unit_damage_status', className: 'text-center px-2 py-3' },
                         { data: 'floor_number', name: 'floor_number', className: 'text-center px-2 py-3' },
@@ -2320,6 +2392,7 @@
 
                 datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') KTMenu.createInstances();
+                    syncHousingSelectionCheckboxes(datatable);
 
                     if (!initialHousingSelectionDone || pendingHousingGlobalId) {
                         setTimeout(function () {
@@ -2328,7 +2401,41 @@
                     }
                 });
 
-                $('#housing_table tbody').on('click', 'tr', function () {
+                $('#select_all_housing_units').on('change', function () {
+                    let checked = $(this).is(':checked');
+
+                    $('#housing_table tbody tr').each(function () {
+                        let row = datatable.row(this).data();
+                        if (!row || !row.globalid) return;
+
+                        if (checked) {
+                            selectedHousingGlobalIds.add(row.globalid);
+                        } else {
+                            selectedHousingGlobalIds.delete(row.globalid);
+                        }
+                    });
+
+                    syncHousingSelectionCheckboxes(datatable);
+                });
+
+                $('#housing_table tbody').on('change', '.housing-unit-select', function (event) {
+                    event.stopPropagation();
+
+                    let row = datatable.row($(this).closest('tr')).data();
+                    if (!row || !row.globalid) return;
+
+                    if ($(this).is(':checked')) {
+                        selectedHousingGlobalIds.add(row.globalid);
+                    } else {
+                        selectedHousingGlobalIds.delete(row.globalid);
+                    }
+
+                    syncHousingSelectionCheckboxes(datatable);
+                });
+
+                $('#housing_table tbody').on('click', 'tr', function (event) {
+                    if ($(event.target).is('input, label')) return;
+
                     let row = datatable.row(this).data();
                     if (!row || !row.globalid) return;
 
