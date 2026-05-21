@@ -92,8 +92,13 @@
 		#kt_datatable_audits .audit-select-cell {
 			min-width: 64px;
 			width: 64px;
-			padding-inline: 0.25rem !important;
+			padding: 0.45rem 0 !important;
 			text-align: center !important;
+		}
+
+		#kt_datatable_audits th.audit-select-cell,
+		#kt_datatable_audits td.audit-select-cell {
+			justify-items: center;
 		}
 
 		#kt_datatable_audits .audit-select-cell .form-check {
@@ -103,6 +108,7 @@
 			margin: 0 !important;
 			padding: 0 !important;
 			width: 100%;
+			min-height: 26px;
 		}
 
 		#kt_datatable_audits .audit-select-cell .form-check-input {

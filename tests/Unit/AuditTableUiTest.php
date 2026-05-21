@@ -22,6 +22,7 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('audit-select-cell')
         ->toContain('audit-actions-cell')
         ->toContain('float: none !important')
+        ->toContain('padding: 0.45rem 0 !important')
         ->toContain("width: '64px'")
         ->toContain("width: '16%'")
         ->toContain("width: '8%'")
