@@ -8,12 +8,20 @@ test('login screen can be rendered', function () {
     $response->assertStatus(200);
 });
 
+test('login screen can be rendered with an existing session', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/login');
+
+    $response->assertStatus(200);
+});
+
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 
     $response = $this->post('/login', [
         'email' => $user->email,
-        'password' => 'password',
+        'password' => '123456',
     ]);
 
     $this->assertAuthenticated();

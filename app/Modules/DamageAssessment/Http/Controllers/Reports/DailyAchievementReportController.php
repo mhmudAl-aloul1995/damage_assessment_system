@@ -77,7 +77,7 @@ class DailyAchievementReportController extends Controller
             ? $this->getLawyersDailyAchievementData($request)
             : $this->getEngineersDailyAchievementData($request);
 
-        return View::make('modules.damage-assessment.reports.daily_achievement', array_merge($reportData, [
+        return View::make('damage-assessment::reports.daily_achievement', array_merge($reportData, [
             'activeTab' => $activeTab,
         ]));
     }

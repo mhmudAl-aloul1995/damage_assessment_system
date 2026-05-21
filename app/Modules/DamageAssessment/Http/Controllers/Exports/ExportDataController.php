@@ -65,7 +65,7 @@ class ExportDataController extends Controller
         $assessmentLabels = Assessment::pluck('label', 'name');
         $assessmentLabels['building_states_auditig'] = 'حالات المبنى - التدقيق';
 
-        return view('modules.damage-assessment.exports.index', [
+        return view('damage-assessment::exports.index', [
             'assessmentLabels' => $assessmentLabels,
             'buildingColumns' => $buildingColumns,
             'housingColumns' => $housingColumns,

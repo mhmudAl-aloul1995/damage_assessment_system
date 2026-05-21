@@ -39,7 +39,7 @@ class BuildingController extends Controller
             ? $filters->whereNotNull('list_name_arabic')->pluck('list_name', 'list_name_arabic')
             : $filters->pluck('list_name', 'list_name');
 
-        return View::make('modules.damage-assessment.surveys.buildings.buildings', [
+        return View::make('damage-assessment::surveys.buildings.buildings', [
             'engineers' => Building::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
             'owners' => Building::query()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
             'municip' => Building::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
@@ -76,8 +76,8 @@ class BuildingController extends Controller
                     </div>';
             })
             ->editColumn('action', function ($ctr) {
-                $housingUrl = url("/showHousing/{$ctr->globalid}");
-                $assessmentUrl = url("/assessment/{$ctr->globalid}");
+                $housingUrl = url("/damage-assessment/showHousing/{$ctr->globalid}");
+                $assessmentUrl = url("/damage-assessment/assessment/{$ctr->globalid}");
 
                 return '
                 <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">'.e(__('ui.damage_common.actions')).'
@@ -125,7 +125,7 @@ class BuildingController extends Controller
             ->keyBy('name');
 
         if ($format == 'pdf') {
-            return Pdf::view('modules.damage-assessment.pdf.building', compact('building', 'buildingColumns', 'assessmentHints'))
+            return Pdf::view('damage-assessment::pdf.building', compact('building', 'buildingColumns', 'assessmentHints'))
                 ->format('a4')
                 ->name('building-'.time().'.pdf');
         }

@@ -31,30 +31,30 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         if ($user->hasRole('Database Officer')) {
-            return redirect()->route('dashboard');
+            return redirect()->to(route('dashboard', [], false));
         }
 
         if ($user->hasRole('Area Manager')) {
-            return redirect()->route('dashboard');
+            return redirect()->to(route('dashboard', [], false));
         }
 
         if ($user->hasAnyRole(['Team Leader', 'Team Leader -INF'])) {
-            return redirect()->route('dashboard');
+            return redirect()->to(route('dashboard', [], false));
         }
 
         if ($user->hasRole('QC/QA Engineer')) {
-            return redirect()->route('audit.auditBuilding');
+            return redirect()->to(route('audit.auditBuilding', [], false));
         }
 
         if ($user->hasRole('Legal Auditor')) {
-            return redirect()->route('audit.auditBuilding');
+            return redirect()->to(route('audit.auditBuilding', [], false));
         }
 
         if ($user->hasRole('Auditing Supervisor')) {
-            return redirect()->route('audit.index');
+            return redirect()->to(route('audit.index', [], false));
         }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('dashboard', [], false));
     }
 
     /**

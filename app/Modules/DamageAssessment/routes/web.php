@@ -42,16 +42,16 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('sync', controller: ArcGISController::class);
 
-    Route::get('/damage-assessment/reports/phc', [phcPdfReportController::class, 'index'])
+    Route::get('/reports/phc', [phcPdfReportController::class, 'index'])
         ->name('damage-assessment.reports.phc');
 
-    Route::get('/damage-assessment/reports/phc/export', [phcPdfReportController::class, 'export'])
+    Route::get('/reports/phc/export', [phcPdfReportController::class, 'export'])
         ->name('damage-assessment.reports.phc.export');
 
-    Route::get('/damage-assessment/reports/indas', [IndasPdfReportController::class, 'index'])
+    Route::get('/reports/indas', [IndasPdfReportController::class, 'index'])
         ->name('damage-assessment.reports.indas');
 
-    Route::get('/damage-assessment/reports/indas/export', [IndasPdfReportController::class, 'export'])
+    Route::get('/reports/indas/export', [IndasPdfReportController::class, 'export'])
         ->name('damage-assessment.reports.indas.export');
     Route::prefix('attendance')->name('attendance.')->group(function () {
         Route::get('/', [AttendanceController::class, 'index'])->name('index');
@@ -180,8 +180,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/damageAssessment/hud/building-units', [DamageAssessmentController::class, 'hudBuildingUnits'])
         ->name('damageAssessment.hud.building-units');
     Route::resource('damageAssessment', controller: DamageAssessmentController::class);
-    Route::get('/phc/damageAssessment/arcgis/options', [DamageAssessmentController::class, 'arcgisOptions'])
-        ->name('phc.damageAssessment.arcgis.options');
     Route::get('/showBuildings', action: [DamageAssessmentController::class, 'showBuildings']);
     Route::get('/showHousings', action: [DamageAssessmentController::class, 'showHousings']);
     Route::get('/housing-units-map', [DamageAssessmentController::class, 'housingUnitsMap'])

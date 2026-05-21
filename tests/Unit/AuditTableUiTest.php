@@ -1,7 +1,7 @@
 <?php
 
 test('audit table keeps all columns with responsive text cells', function () {
-    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/modules/damage-assessment/audit/audit.blade.php');
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/audit.blade.php');
     $exportService = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Services/Audit/AuditExportService.php');
 
     expect($view)
@@ -42,7 +42,7 @@ test('audit table keeps all columns with responsive text cells', function () {
 });
 
 test('assessment audit inline edits resolve missing global ids before saving', function () {
-    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/modules/damage-assessment/audit/assessmentAudit.blade.php');
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
 
     expect($view)
         ->toContain('assessment-audit-page')

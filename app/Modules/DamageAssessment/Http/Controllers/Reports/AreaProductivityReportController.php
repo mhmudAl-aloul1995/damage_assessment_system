@@ -61,7 +61,7 @@ class AreaProductivityReportController extends Controller
 
     private function renderReport(string $type, array $filters): View
     {
-        return view('modules.damage-assessment.reports.area_productivity', $this->reportService->build($type, $filters));
+        return view('damage-assessment::reports.area_productivity', $this->reportService->build($type, $filters));
     }
 
     private function exportReport(string $type, array $filters): BinaryFileResponse

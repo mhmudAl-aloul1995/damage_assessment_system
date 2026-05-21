@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -33,7 +33,9 @@ class ModuleServiceProvider extends ServiceProvider
         $routeFile = $modulePath.DIRECTORY_SEPARATOR.'routes'.DIRECTORY_SEPARATOR.'web.php';
 
         if (is_file($routeFile)) {
-            $this->loadRoutesFrom($routeFile);
+            Route::prefix(Str::kebab(basename($modulePath)))
+                ->middleware('web')
+                ->group($routeFile);
         }
     }
 
@@ -42,7 +44,6 @@ class ModuleServiceProvider extends ServiceProvider
         $viewPath = $modulePath.DIRECTORY_SEPARATOR.'views';
 
         if (is_dir($viewPath)) {
-            View::addLocation($viewPath);
             $this->loadViewsFrom($viewPath, Str::kebab(basename($modulePath)));
         }
     }

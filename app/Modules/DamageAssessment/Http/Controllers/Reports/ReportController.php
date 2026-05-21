@@ -102,7 +102,7 @@ class ReportController extends Controller
             ->groupBy('buildings.neighborhood')
             ->get();
 
-        return View::make('modules.damage-assessment.reports.commulatives', compact('commualtive', 'startDate', 'endDate'));
+        return View::make('damage-assessment::reports.commulatives', compact('commualtive', 'startDate', 'endDate'));
     }
 
     public function exportCommulative(Request $request): BinaryFileResponse
@@ -174,6 +174,6 @@ class ReportController extends Controller
                 ];
             });
 
-        return View::make('modules.damage-assessment.reports.productivity', compact('period', 'assignedto', 'stats'));
+        return View::make('damage-assessment::reports.productivity', compact('period', 'assignedto', 'stats'));
     }
 }

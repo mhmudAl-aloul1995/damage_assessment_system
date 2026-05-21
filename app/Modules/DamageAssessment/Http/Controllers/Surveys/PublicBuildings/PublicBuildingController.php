@@ -69,7 +69,7 @@ class PublicBuildingController extends Controller
             )?->format('Y-m-d'),
         ];
 
-        return view('modules.damage-assessment.surveys.public-buildings.index', compact('summary', 'filterOptions', 'filterGroups'));
+        return view('damage-assessment::surveys.public-buildings.index', compact('summary', 'filterOptions', 'filterGroups'));
     }
 
     // ================= DATATABLE =================
@@ -103,7 +103,7 @@ class PublicBuildingController extends Controller
         $fileBaseName = 'public_buildings_'.now()->format('Ymd_His');
 
         if ($format === 'pdf') {
-            return Pdf::loadView('modules.damage-assessment.surveys.public-buildings.export_pdf', [
+            return Pdf::loadView('damage-assessment::surveys.public-buildings.export_pdf', [
                 'surveys' => $surveys,
                 'filters' => $request->all(),
             ])->setPaper('a4', 'landscape')->download($fileBaseName.'.pdf');
@@ -122,7 +122,7 @@ class PublicBuildingController extends Controller
     {
         $publicBuilding->load(['units' => fn ($q) => $q->orderBy('objectid')]);
 
-        return view('modules.damage-assessment.surveys.public-buildings.show', [
+        return view('damage-assessment::surveys.public-buildings.show', [
             'survey' => $publicBuilding,
             'sections' => $this->buildSurveySections($publicBuilding),
             'unitSections' => $this->buildUnitSections($publicBuilding),

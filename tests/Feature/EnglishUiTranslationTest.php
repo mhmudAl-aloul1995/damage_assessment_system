@@ -24,7 +24,7 @@ it('shows translated english strings on the main dashboard and audit dashboard',
 
     $this->actingAs($user)
         ->withSession(['locale' => 'en'])
-        ->get('/damageAssessment')
+        ->get('/damage-assessment/damageAssessment')
         ->assertOk()
         ->assertSee('Buildings Status Summary')
         ->assertSee('Housing Units')

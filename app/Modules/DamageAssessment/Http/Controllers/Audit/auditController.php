@@ -2898,7 +2898,7 @@ class auditController extends Controller
                 })
                 ->addColumn('actions', function ($row) {
 
-                    $assessmentUrl = url("/showAssessmentAudit/{$row->globalid}");
+                    $assessmentUrl = url("/damage-assessment/showAssessmentAudit/{$row->globalid}");
 
                     return '
     <div class="d-flex justify-content-end audit-actions-wrapper">
@@ -2959,7 +2959,7 @@ class auditController extends Controller
         $housingExportColumns = $auditExportService->housingColumns();
 
         return View::make(
-            'modules.damage-assessment.audit.audit',
+            'damage-assessment::audit.audit',
             compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns')
         );
     }
@@ -3009,7 +3009,7 @@ class auditController extends Controller
                 })
                 ->editColumn('actions', function ($ctr) {
                     // Using route() helpers is cleaner than url()
-                    $assessmentUrl = url("/showAssessmentAudit/{$ctr->globalid}");
+                    $assessmentUrl = url("/damage-assessment/showAssessmentAudit/{$ctr->globalid}");
 
                     return '
                 <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">إجراءات
@@ -3037,7 +3037,7 @@ class auditController extends Controller
 
         $legalChallenges = self::LEGAL_CHALLENGES;
 
-        return View::make('modules.damage-assessment.audit.auditBuilding', compact(
+        return View::make('damage-assessment::audit.auditBuilding', compact(
             'assignedTo',
             'users',
             'neighborhoods',
@@ -4038,7 +4038,7 @@ COALESCE(
                 })
 
                 ->addColumn('actions', function ($row) {
-                    $assessmentUrl = url("/showAassessmentAudit/{$row->globalid}");
+                    $assessmentUrl = url("/damage-assessment/showAassessmentAudit/{$row->globalid}");
 
                     return '
     <div class="d-flex justify-content-end">
@@ -4073,7 +4073,7 @@ COALESCE(
         $filters = Filter::all();
         $legalChallenges = self::LEGAL_CHALLENGES;
 
-        return View::make('modules.damage-assessment.audit.auditBuilding', compact(
+        return View::make('damage-assessment::audit.auditBuilding', compact(
             'users',
             'neighborhoods',
             'filterName',
@@ -4112,7 +4112,7 @@ COALESCE(
 
         $legalChallenges = self::LEGAL_CHALLENGES;
 
-        return View::make('modules.damage-assessment.audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges'));
+        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges'));
     }
 
     public function housingUnitAudit(Request $request)

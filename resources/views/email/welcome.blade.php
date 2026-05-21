@@ -73,7 +73,7 @@
                             <table border="0" cellspacing="0" cellpadding="0" style="margin:25px 0;">
                                 <tr>
                                     <td align="center" bgcolor="#004a99" style="border-radius:5px;">
-                                        <a href="{{ url('damageAssessment') }}" target="_blank"
+                                        <a href="{{ route('damageAssessment.index') }}" target="_blank"
                                             style="font-size:16px; font-family:Arial, sans-serif; color:#ffffff; text-decoration:none; padding:13px 28px; display:inline-block; font-weight:bold; border-radius:5px;">
                                             Login to Dashboard
                                         </a>

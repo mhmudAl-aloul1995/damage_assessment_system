@@ -74,7 +74,7 @@ class AuditDashboardController extends Controller
         $startDateValue = $startDate->toDateString();
         $endDateValue = $endDate->toDateString();
 
-        return View::make('modules.damage-assessment.audit.auditDashboard', compact(
+        return View::make('damage-assessment::audit.auditDashboard', compact(
             'summaryMetrics',
             'chartData',
             'startDateValue',

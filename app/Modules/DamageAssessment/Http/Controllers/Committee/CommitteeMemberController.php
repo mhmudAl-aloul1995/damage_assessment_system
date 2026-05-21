@@ -23,7 +23,7 @@ class CommitteeMemberController extends Controller
 
     public function index(): View
     {
-        return view('modules.damage-assessment.committee.members.index', [
+        return view('damage-assessment::committee.members.index', [
             'users' => User::query()->orderBy('name')->get(['id', 'name', 'phone']),
         ]);
     }

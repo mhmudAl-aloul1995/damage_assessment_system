@@ -2097,7 +2097,7 @@
                     order: [],
                     pageLength: 500,
                     ajax: {
-                        url: "{{ url('showBuildings') }}",
+                        url: "{{ url('damage-assessment/showBuildings') }}",
                         data: function (d) { d.globalid = '{{ $buildingGlobalid }}'; },
                         dataSrc: function (json) {
                             let rows = json.data || [];
@@ -2243,7 +2243,7 @@
                     order: [],
                     pageLength: 500,
                     ajax: {
-                        url: "{{ url('showHousings') }}",
+                        url: "{{ url('damage-assessment/showHousings') }}",
                         data: function (d) {
                             d.parentglobalid = '{{ $buildingGlobalid }}';
                             d.globalid = $("[name='globalid']").val();

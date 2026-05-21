@@ -188,7 +188,7 @@ class DamageAssessmentController extends Controller
         $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedNeighborhood');
 
         return View::make(
-            'modules.damage-assessment.dashboard.damageAssessment',
+            'damage-assessment::dashboard.damageAssessment',
             compact(
                 'token',
                 'unitStats',
@@ -439,7 +439,7 @@ class DamageAssessmentController extends Controller
 
         $hudDashboardData = $this->buildHudDashboardData($request);
 
-        return View::make('modules.damage-assessment.dashboard.hud', [
+        return View::make('damage-assessment::dashboard.hud', [
             'summaryStats' => $hudDashboardData['summaryStats'],
             'buildingDamageChart' => $hudDashboardData['buildingDamageChart'],
             'damageChart' => $hudDashboardData['damageChart'],

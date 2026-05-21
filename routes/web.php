@@ -9,6 +9,7 @@ use App\Http\Controllers\SystemLogController;
 use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\roleController;
 use App\Http\Controllers\UserManagement\userController;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
@@ -18,11 +19,75 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::get('/clear-session', function () {
+    auth()->guard('web')->logout();
+
+    session()->invalidate();
+    session()->regenerateToken();
+
+    return redirect()
+        ->route('login')
+        ->withCookie(cookie()->forget('laravel-session', '/'))
+        ->withCookie(cookie()->forget('laravel-session', '/phc'))
+        ->withCookie(cookie()->forget('phc_session', '/'))
+        ->withCookie(cookie()->forget('phc_session', '/phc'))
+        ->withCookie(cookie()->forget('XSRF-TOKEN', '/'))
+        ->withCookie(cookie()->forget('XSRF-TOKEN', '/phc'));
+})->name('session.clear');
+
+$legacyDamageAssessmentPrefixes = [
+    'damageAssessment' => 'damage-assessment/damageAssessment',
+    'assessmentAll' => 'damage-assessment/assessmentAll',
+    'assessment' => 'damage-assessment/assessment',
+    'showAssessmentAudit' => 'damage-assessment/showAssessmentAudit',
+    'showAassessmentAudit' => 'damage-assessment/showAassessmentAudit',
+    'showBuildings' => 'damage-assessment/showBuildings',
+    'showHousings' => 'damage-assessment/showHousings',
+    'showHousing' => 'damage-assessment/showHousing',
+    'building' => 'damage-assessment/building',
+    'housing' => 'damage-assessment/housing',
+    'public-buildings' => 'damage-assessment/public-buildings',
+    'road-facilities' => 'damage-assessment/road-facilities',
+    'housing-units-map' => 'damage-assessment/housing-units-map',
+    'public-buildings-map' => 'damage-assessment/public-buildings-map',
+    'road-facilities-map' => 'damage-assessment/road-facilities-map',
+    'audit' => 'damage-assessment/audit',
+    'auditBuilding' => 'damage-assessment/auditBuilding',
+    'area-manager-review' => 'damage-assessment/area-manager-review',
+    'inf-audit' => 'damage-assessment/inf-audit',
+    'attendance' => 'damage-assessment/attendance',
+    'committee-decisions' => 'damage-assessment/committee-decisions',
+    'committee-members' => 'damage-assessment/committee-members',
+    'engineer' => 'damage-assessment/engineer',
+    'engineerAssessments' => 'damage-assessment/engineerAssessments',
+    'engineers' => 'damage-assessment/engineers',
+    'field-engineer' => 'damage-assessment/field-engineer',
+    'reports' => 'damage-assessment/reports',
+    'export-data' => 'damage-assessment/export-data',
+    'exports' => 'damage-assessment/exports',
+    'export' => 'damage-assessment/export',
+    'export_building' => 'damage-assessment/export_building',
+    'export_housings' => 'damage-assessment/export_housings',
+    'export_productivity' => 'damage-assessment/export_productivity',
+    'sync' => 'damage-assessment/sync',
+    'search-buildings' => 'damage-assessment/search-buildings',
+    'global-search' => 'damage-assessment/global-search',
+];
+
+foreach ($legacyDamageAssessmentPrefixes as $legacyPrefix => $modulePrefix) {
+    Route::get($legacyPrefix.'/{path?}', function (?string $path = null) use ($modulePrefix): RedirectResponse {
+        $target = $modulePrefix.($path !== null ? '/'.$path : '');
+        $query = request()->getQueryString();
+
+        return redirect()->to($query !== null ? $target.'?'.$query : $target);
+    })->where('path', '.*');
+}
+
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
 Route::get('/dashboard', function () {
-    return redirect('damageAssessment');
+    return redirect()->to(route('damageAssessment.index', [], false));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

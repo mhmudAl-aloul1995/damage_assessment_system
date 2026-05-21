@@ -26,7 +26,7 @@ class FieldEngineerReportController extends Controller
         $filters = $this->fieldEngineerReportService->normalizeFilters($request->validated());
         $startedAt = microtime(true);
 
-        $response = response()->view('modules.damage-assessment.reports.field-engineer.index', [
+        $response = response()->view('damage-assessment::reports.field-engineer.index', [
             'filters' => $filters,
             'filterOptions' => $this->fieldEngineerReportService->filterOptions(),
             'summary' => $this->fieldEngineerReportService->hasActiveFilters($filters)
@@ -56,7 +56,7 @@ class FieldEngineerReportController extends Controller
         $data = $result['rows']->map(fn ($row) => [
             'objectid' => $row->objectid,
             'globalid' => $row->globalid,
-            'assessment_url' => url('showAssessmentAudit/'.rawurlencode((string) $row->globalid)),
+            'assessment_url' => url('damage-assessment/showAssessmentAudit/'.rawurlencode((string) $row->globalid)),
             'building_name' => $row->building_name,
             'assignedto' => $row->assignedto,
             'municipalitie' => $row->municipalitie,

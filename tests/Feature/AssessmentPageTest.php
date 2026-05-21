@@ -125,7 +125,7 @@ it('exports the assessment page as a pdf with attachments', function () {
     $response->assertOk();
 
     Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf) {
-        return $pdf->viewName === 'modules.damage-assessment.pdf.assessment'
+        return $pdf->viewName === 'damage-assessment::pdf.assessment'
             && $pdf->contains('Tower A')
             && $pdf->contains('Edited Owner')
             && $pdf->contains('building-photo.jpg')
@@ -345,7 +345,7 @@ it('allows auditing supervisors to final approve from the assessment audit page'
     ]);
 
     $this->actingAs($user)
-        ->get("showAssessmentAudit/{$building->globalid}")
+        ->get("damage-assessment/showAssessmentAudit/{$building->globalid}")
         ->assertOk()
         ->assertSee('btn_show_assessment_final_approve');
 
@@ -700,7 +700,7 @@ it('returns structured status history payload for rendering badges safely', func
 });
 
 it('does not show the separate note edit action', function () {
-    $moduleView = file_get_contents(base_path('app/Modules/DamageAssessment/views/modules/damage-assessment/audit/assessmentAudit.blade.php'));
+    $moduleView = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
     $legacyView = file_get_contents(resource_path('views/DamageAssessment/assessmentAudit.blade.php'));
     $routes = file_get_contents(base_path('app/Modules/DamageAssessment/routes/web.php'));
     $controller = file_get_contents(app_path('Modules/DamageAssessment/Http/Controllers/Audit/AuditStatusHistoryController.php'));
@@ -722,7 +722,7 @@ it('does not show the separate note edit action', function () {
 });
 
 it('shows all audit status button groups to database officers in the assessment audit view', function () {
-    $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/modules/damage-assessment/audit/assessmentAudit.blade.php'));
+    $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
 
     expect($view)
         ->toContain("@hasanyrole('Legal Auditor|Database Officer')")

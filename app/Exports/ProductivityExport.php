@@ -29,7 +29,7 @@ class ProductivityExport implements FromView, ShouldAutoSize, WithEvents
 
     public function view(): View
     {
-        return view('modules.damage-assessment.exports.productivity', [
+        return view('damage-assessment::exports.productivity', [
             'period' => $this->period,
             'assignedto' => $this->assignedto,
             'stats' => $this->stats,

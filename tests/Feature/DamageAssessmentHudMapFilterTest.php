@@ -197,7 +197,7 @@ it('opens the housing tab by default on assessment audit when a housing global i
     ]);
 
     $this->actingAs($user)
-        ->get('showAssessmentAudit/audit-tab-building-global-id/audit-tab-unit-global-id')
+        ->get('damage-assessment/showAssessmentAudit/audit-tab-building-global-id/audit-tab-unit-global-id')
         ->assertOk()
         ->assertSee('href="#tab_building">', false)
         ->assertSee('href="#tab_housing">', false)

@@ -20,7 +20,7 @@ class HlpAuditReportController extends Controller
 
     public function index(AreaProductivityReportFilterRequest $request, HlpAuditReportService $reportService): View
     {
-        return ViewFactory::make('modules.damage-assessment.reports.hlp_audit', $reportService->build($request->validated()));
+        return ViewFactory::make('damage-assessment::reports.hlp_audit', $reportService->build($request->validated()));
     }
 
     public function export(AreaProductivityReportFilterRequest $request, HlpAuditReportService $reportService): BinaryFileResponse

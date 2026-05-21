@@ -56,7 +56,7 @@ class RoadFacilityController extends Controller
             'max_submissiondate' => optional(RoadFacilitySurvey::query()->whereNotNull('submissiondate')->max('submissiondate'))?->format('Y-m-d'),
         ];
 
-        return view('modules.damage-assessment.surveys.road-facilities.index', [
+        return view('damage-assessment::surveys.road-facilities.index', [
             'summary' => $summary,
             'filterOptions' => $filterOptions,
             'filterGroups' => $filterGroups,
@@ -90,7 +90,7 @@ class RoadFacilityController extends Controller
         $fileBaseName = 'road_facilities_'.now()->format('Ymd_His');
 
         if ($format === 'pdf') {
-            return Pdf::loadView('modules.damage-assessment.surveys.road-facilities.export_pdf', [
+            return Pdf::loadView('damage-assessment::surveys.road-facilities.export_pdf', [
                 'surveys' => $surveys,
                 'filters' => $request->validated(),
             ])->setPaper('a4', 'landscape')->download($fileBaseName.'.pdf');
@@ -108,7 +108,7 @@ class RoadFacilityController extends Controller
         $roadFacility->load(['items' => fn ($q) => $q->orderBy('objectid')]);
         $itemSections = RoadFacilitySurveyLayout::repeatSections('R2');
 
-        return view('modules.damage-assessment.surveys.road-facilities.show', [
+        return view('damage-assessment::surveys.road-facilities.show', [
             'survey' => $roadFacility,
             'sections' => $this->buildSurveySections($roadFacility),
             'itemSections' => $roadFacility->items

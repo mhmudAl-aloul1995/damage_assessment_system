@@ -34,7 +34,7 @@ class EngineerController extends Controller
     {
         $engineers = Building::distinct('assignedto')->select(columns: 'assignedto')->get();
 
-        return View::make('modules.damage-assessment.field-operations.engineers', compact('engineers'));
+        return View::make('damage-assessment::field-operations.engineers', compact('engineers'));
     }
 
     public function engineerAssessments(Request $request)
@@ -52,12 +52,12 @@ class EngineerController extends Controller
         $completion = intval($completion);
         $assignedto = $request->assignedto;
 
-        return View::make('modules.damage-assessment.field-operations.engineerAssessments', compact('assignedto', 'completion', 'completed', 'notCompleted'));
+        return View::make('damage-assessment::field-operations.engineerAssessments', compact('assignedto', 'completion', 'completed', 'notCompleted'));
     }
 
     public function assessmentAll(Request $request)
     {
-        return View::make('modules.damage-assessment.field-operations.assessmentAll');
+        return View::make('damage-assessment::field-operations.assessmentAll');
     }
 
     public function filter(Request $request)
@@ -107,7 +107,7 @@ class EngineerController extends Controller
         ];
 
         return view(
-            'modules.damage-assessment.field-operations.partials.engineers_cards',
+            'damage-assessment::field-operations.partials.engineers_cards',
             compact('engineers', 'building_damage_ststus')
         )->render();
     }
@@ -119,7 +119,7 @@ class EngineerController extends Controller
         $assessments = Assessment::all();
         $buildingTitle = $this->resolveBuildingTitle($building);
 
-        return View::make('modules.damage-assessment.field-operations.assessment', compact('globalid', 'building', 'buildingTitle', 'assessments', 'HousingUnit'));
+        return View::make('damage-assessment::field-operations.assessment', compact('globalid', 'building', 'buildingTitle', 'assessments', 'HousingUnit'));
     }
 
     public function exportAssessmentPdf(string $globalid)
@@ -139,7 +139,7 @@ class EngineerController extends Controller
             ];
         });
 
-        return Pdf::view('modules.damage-assessment.pdf.assessment', compact(
+        return Pdf::view('damage-assessment::pdf.assessment', compact(
             'building',
             'buildingTitle',
             'buildingRows',

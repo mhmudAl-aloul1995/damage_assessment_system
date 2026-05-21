@@ -39,7 +39,7 @@ class BuildingSurveyReturnRequestController extends Controller
             ->limit(1000)
             ->get(['id', 'objectid', 'globalid', 'building_name']);
 
-        return view('modules.damage-assessment.field-operations.building-survey-return-requests.index', compact('requests', 'buildings'));
+        return view('damage-assessment::field-operations.building-survey-return-requests.index', compact('requests', 'buildings'));
     }
 
     public function create(): View
@@ -51,7 +51,7 @@ class BuildingSurveyReturnRequestController extends Controller
             ->limit(1000)
             ->get(['id', 'objectid', 'globalid', 'building_name']);
 
-        return view('modules.damage-assessment.field-operations.building-survey-return-requests.create', compact('buildings'));
+        return view('damage-assessment::field-operations.building-survey-return-requests.create', compact('buildings'));
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -138,7 +138,7 @@ class BuildingSurveyReturnRequestController extends Controller
 
         $areaManagers = User::role('Area Manager')->orderBy('name')->get(['id', 'name', 'region']);
 
-        return view('modules.damage-assessment.field-operations.building-survey-return-requests.show', compact('returnRequest', 'areaManagers'));
+        return view('damage-assessment::field-operations.building-survey-return-requests.show', compact('returnRequest', 'areaManagers'));
     }
 
     public function approveByTeamLeader(Request $request, BuildingSurveyReturnRequest $returnRequest): RedirectResponse|JsonResponse

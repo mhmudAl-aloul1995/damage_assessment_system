@@ -36,7 +36,7 @@ class HousingUnitController extends Controller
             ? $filters->whereNotNull('list_name_arabic')->pluck('list_name', 'list_name_arabic')
             : $filters->pluck('list_name', 'list_name');
 
-        return View::make('modules.damage-assessment.surveys.housing-units.housing', [
+        return View::make('damage-assessment::surveys.housing-units.housing', [
             'filters' => $filters,
             'filterName' => $filterName,
             'globalid' => $globalid,
@@ -79,7 +79,7 @@ class HousingUnitController extends Controller
 															<i class="ki-duotone ki-down fs-5 ms-1"></i></a>
 															<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
 																<div class="menu-item px-3">
-																	<a class="menu-link px-3" target="_blank" href="'.url('').'/assessment/'.$ctr->parentglobalid.'" data-kt-users-table-filter="delete_row">'.e(__('ui.damage_common.assessment')).'</a>
+																	<a class="menu-link px-3" target="_blank" href="'.url('damage-assessment/assessment/'.$ctr->parentglobalid).'" data-kt-users-table-filter="delete_row">'.e(__('ui.damage_common.assessment')).'</a>
 																</div>
 															</div>';
             })
@@ -118,7 +118,7 @@ class HousingUnitController extends Controller
         $housing = HousingUnit::select($housingColumns)->where($data)->get();
 
         if ($format == 'pdf') {
-            return Pdf::view('modules.damage-assessment.pdf.building', compact('building', 'housingColumns'))
+            return Pdf::view('damage-assessment::pdf.building', compact('building', 'housingColumns'))
                 ->format('a4')
                 ->name('building-'.time().'.pdf');
         }

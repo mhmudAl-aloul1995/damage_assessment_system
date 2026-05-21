@@ -42,7 +42,7 @@ class BuildingProductivityReportController extends Controller
         $filters = $this->filters($request);
         $report = $this->buildReport($filters);
 
-        return view('modules.damage-assessment.reports.building_productivity', [
+        return view('damage-assessment::reports.building_productivity', [
             ...$report,
             'filters' => $filters,
             'filterOptions' => $this->filterOptions(),

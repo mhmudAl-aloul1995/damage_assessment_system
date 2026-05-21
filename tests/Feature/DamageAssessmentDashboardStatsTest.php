@@ -57,7 +57,7 @@ it('shows eight summary statistics for public buildings and road facilities on t
         'uxo_present' => 'yes',
     ]);
 
-    $response = $this->actingAs($user)->get('/damageAssessment');
+    $response = $this->actingAs($user)->get('/damage-assessment/damageAssessment');
 
     $response
         ->assertOk()

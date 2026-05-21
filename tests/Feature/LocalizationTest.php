@@ -64,7 +64,7 @@ test('damage assessment dashboard does not show mixed english summary labels in 
 
     $this->actingAs($user)
         ->withSession(['locale' => 'ar'])
-        ->get('/damageAssessment')
+        ->get('/damage-assessment/damageAssessment')
         ->assertOk()
         ->assertSee('dir="rtl"', false)
         ->assertSee(__('ui.damage_dashboard.public_buildings'), false)

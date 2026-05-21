@@ -119,7 +119,7 @@ it('hides legal challenge actions from auditing engineers and shows them to othe
         ->assertDontSee('id="btn_legal_challenge"', false);
 
     $this->actingAs($engineer)
-        ->get("showAssessmentAudit/{$building->globalid}")
+        ->get("damage-assessment/showAssessmentAudit/{$building->globalid}")
         ->assertOk()
         ->assertDontSee('id="btn_building_legal_challenge"', false)
         ->assertDontSee('id="btn_housing_legal_challenge"', false)
@@ -132,7 +132,7 @@ it('hides legal challenge actions from auditing engineers and shows them to othe
         ->assertSee('id="btn_legal_challenge"', false);
 
     $this->actingAs($legalAuditor)
-        ->get("showAssessmentAudit/{$building->globalid}")
+        ->get("damage-assessment/showAssessmentAudit/{$building->globalid}")
         ->assertOk()
         ->assertSee('id="btn_building_legal_challenge"', false)
         ->assertSee('id="btn_housing_legal_challenge"', false)

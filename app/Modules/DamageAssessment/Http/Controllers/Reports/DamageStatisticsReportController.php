@@ -40,7 +40,7 @@ class DamageStatisticsReportController extends Controller
             ->orderBy('building_damage_status')
             ->pluck('building_damage_status');
 
-        return view('modules.damage-assessment.reports.damage_statistics.index', compact(
+        return view('damage-assessment::reports.damage_statistics.index', compact(
             'municipalities',
             'neighborhoods',
             'fieldEngineers',

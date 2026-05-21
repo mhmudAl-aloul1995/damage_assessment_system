@@ -51,7 +51,7 @@ class SurveyReportController extends Controller
             ->sortByDesc('total_surveys')
             ->values();
 
-        return view('modules.damage-assessment.reports.survey_overview', [
+        return view('damage-assessment::reports.survey_overview', [
             'reportTitle' => 'Public Buildings Report',
             'reportSubtitle' => 'Overview of public building survey records, statuses, municipalities, and daily trend.',
             'reportRoute' => route('reports.public-buildings'),
@@ -150,7 +150,7 @@ class SurveyReportController extends Controller
             ->sortByDesc('total_surveys')
             ->values();
 
-        return view('modules.damage-assessment.reports.survey_overview', [
+        return view('damage-assessment::reports.survey_overview', [
             'reportTitle' => 'Road Facilities Report',
             'reportSubtitle' => 'Overview of road facility survey records, damage levels, access conditions, and daily trend.',
             'reportRoute' => route('reports.road-facilities'),

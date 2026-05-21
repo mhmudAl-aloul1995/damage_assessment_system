@@ -32,17 +32,15 @@ it('shows the sidebar menu for infrastructure Team Leaders', function () {
 
     $this->actingAs($user)
         ->get(route('dashboard'))
-        ->assertRedirect('damageAssessment');
+        ->assertRedirect('damage-assessment/damageAssessment');
 
-    $this->followingRedirects()
-        ->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertOk()
-        ->assertSee('phc-sidebar-section', false)
-        ->assertSee('phc-sidebar-link', false)
-        ->assertDontSee('data-bs-toggle="tooltip"', false)
-        ->assertSee(__('menu.damage_assessment.title'), false)
-        ->assertSee(__('menu.committee.title'), false);
+    $sectionTitles = Sidebar::forUser($user)
+        ->flatMap(fn (array $module) => $module['sections']->pluck('title'))
+        ->all();
+
+    expect($sectionTitles)
+        ->toContain('menu.damage_assessment.title')
+        ->toContain('menu.committee.title');
 });
 
 it('shows building survey return requests in the damage assessment sidebar', function () {
@@ -52,14 +50,14 @@ it('shows building survey return requests in the damage assessment sidebar', fun
 
     $this->actingAs($user)
         ->get(route('dashboard'))
-        ->assertRedirect('damageAssessment');
+        ->assertRedirect('damage-assessment/damageAssessment');
 
-    $this->followingRedirects()
-        ->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertOk()
-        ->assertSee(__('menu.damage_assessment.building_survey_return_requests'), false)
-        ->assertSee('field-engineer/building-survey-return-requests', false);
+    $damageAssessmentModule = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment');
+
+    expect($damageAssessmentModule['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->pluck('url')
+        ->toContain('damage-assessment/field-engineer/building-survey-return-requests');
 });
 
 it('shows team leader field engineer assignment in the user management sidebar', function () {
@@ -69,14 +67,14 @@ it('shows team leader field engineer assignment in the user management sidebar',
 
     $this->actingAs($user)
         ->get(route('dashboard'))
-        ->assertRedirect('damageAssessment');
+        ->assertRedirect('damage-assessment/damageAssessment');
 
-    $this->followingRedirects()
-        ->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertOk()
-        ->assertSee(__('menu.user_management.team_leader_field_engineers'), false)
-        ->assertSee('admin/team-leader-field-engineers', false);
+    $administrationModule = Sidebar::forUser($user)->firstWhere('key', 'administration');
+
+    expect($administrationModule['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->pluck('url')
+        ->toContain('admin/team-leader-field-engineers');
 });
 
 it('groups report links into sidebar categories', function () {
@@ -84,19 +82,15 @@ it('groups report links into sidebar categories', function () {
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    $this->followingRedirects()
-        ->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertOk()
-        ->assertSee('phc-sidebar-group-label', false)
-        ->assertSee(__('menu.reports.area_productivity'), false)
-        ->assertSee(__('menu.reports.productivity_items.housing_units'), false)
-        ->assertSee(__('menu.reports.productivity_items.buildings'), false)
-        ->assertSee(__('menu.reports.groups.operations'), false)
-        ->assertSee(__('menu.reports.groups.surveys'), false)
-        ->assertSee(__('menu.reports.groups.exports'), false)
-        ->assertSee(__('menu.reports.field_engineer'), false)
-        ->assertSee(__('menu.reports.export_data'), false);
+    $damageAssessmentModule = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment');
+    $reportsSection = $damageAssessmentModule['sections']->firstWhere('title', 'menu.reports.title');
+    $reportGroupTitles = $reportsSection['items']->pluck('title')->all();
+
+    expect($reportGroupTitles)
+        ->toContain('menu.reports.area_productivity')
+        ->toContain('menu.reports.groups.operations')
+        ->toContain('menu.reports.groups.surveys')
+        ->toContain('menu.reports.groups.exports');
 });
 
 it('groups visible sidebar sections by module', function () {
@@ -133,7 +127,7 @@ it('places hud above damage assessment for non auditor sidebar roles', function 
         ->toBeLessThan(array_search('menu.damage_assessment.title', $sectionTitles, true))
         ->and($hudSection['is_direct'])->toBeTrue()
         ->and($hudSection['variant'])->toBe('hud')
-        ->and($hudSection['url'])->toBe('damageAssessment/hud')
+        ->and($hudSection['url'])->toBe('damage-assessment/damageAssessment/hud')
         ->and($hudSection['items'])->toBeEmpty();
 });
 

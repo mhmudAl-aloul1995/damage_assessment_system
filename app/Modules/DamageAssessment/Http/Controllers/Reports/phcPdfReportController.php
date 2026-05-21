@@ -23,7 +23,7 @@ class phcPdfReportController extends Controller
     {
         $data = $this->reportService->build($request);
 
-        return view('modules.damage-assessment.reports.phc', $data);
+        return view('damage-assessment::reports.phc', $data);
     }
 
     public function export(Request $request): BinaryFileResponse
@@ -41,13 +41,13 @@ class phcPdfReportController extends Controller
         $pdfData = array_merge($data, ['isPdfExport' => true]);
 
         if (! $this->shouldUseBrowsershot()) {
-            $html = view('modules.damage-assessment.reports.phc', $pdfData)->render();
+            $html = view('damage-assessment::reports.phc', $pdfData)->render();
             $this->saveWithMpdf($html, $filePath);
 
             return response()->download($filePath, $fileName);
         }
 
-        $html = view('modules.damage-assessment.reports.phc', $pdfData)->render();
+        $html = view('damage-assessment::reports.phc', $pdfData)->render();
 
         $browser = Browsershot::html($html)
             ->format('A4')

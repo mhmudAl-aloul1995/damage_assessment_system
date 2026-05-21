@@ -45,7 +45,7 @@ class InfAuditRoadFacilityController extends Controller
 
     public function index(): View
     {
-        return view('modules.damage-assessment.infrastructure-audit.roads.index', $this->indexData());
+        return view('damage-assessment::infrastructure-audit.roads.index', $this->indexData());
     }
 
     public function data(Request $request): JsonResponse
@@ -155,7 +155,7 @@ class InfAuditRoadFacilityController extends Controller
 
         $this->authorizeRecord($road);
 
-        return view('modules.damage-assessment.infrastructure-audit.roads.show', [
+        return view('damage-assessment::infrastructure-audit.roads.show', [
             ...$this->indexData(),
             'survey' => $road,
             'sections' => $this->surveySections($road),

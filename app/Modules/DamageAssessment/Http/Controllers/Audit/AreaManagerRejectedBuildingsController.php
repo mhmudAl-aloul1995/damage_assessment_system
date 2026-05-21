@@ -28,7 +28,7 @@ class AreaManagerRejectedBuildingsController extends Controller
             ->all();
         $filterOptions = $this->filterOptions($municipalities);
 
-        return View::make('modules.damage-assessment.audit.areaManagerRejectedBuildings', [
+        return View::make('damage-assessment::audit.areaManagerRejectedBuildings', [
             'regionKey' => $regionKey,
             'regionLabel' => data_get($regionConfig, 'label', $regionKey ?: __('multilingual.area_manager_review.default_region')),
             'municipalities' => $municipalities,
@@ -106,7 +106,7 @@ class AreaManagerRejectedBuildingsController extends Controller
                     : '-';
             })
             ->addColumn('actions', function ($row): string {
-                $assessmentUrl = url('/assessment/'.$row->globalid);
+                $assessmentUrl = url('/damage-assessment/assessment/'.$row->globalid);
 
                 return '<a href="'.$assessmentUrl.'" class="btn btn-light-primary btn-sm" target="_blank">'.e(__('multilingual.area_manager_review.actions.open_audit')).'</a>';
             })

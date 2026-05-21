@@ -6,19 +6,19 @@
 		[
 			'title' => __('ui.search.dashboard'),
 			'subtitle' => __('ui.damage_dashboard.title'),
-			'url' => url('damageAssessment'),
+			'url' => route('damageAssessment.index'),
 			'icon' => 'ki-element-11',
 		],
 		[
 			'title' => __('ui.search.buildings'),
 			'subtitle' => __('ui.damage_dashboard.buildings'),
-			'url' => url('building'),
+			'url' => url('damage-assessment/building'),
 			'icon' => 'ki-home',
 		],
 		[
 			'title' => __('ui.search.housing_units'),
 			'subtitle' => __('ui.damage_dashboard.housing_units'),
-			'url' => url('housing'),
+			'url' => url('damage-assessment/housing'),
 			'icon' => 'ki-home-2',
 		],
 		[

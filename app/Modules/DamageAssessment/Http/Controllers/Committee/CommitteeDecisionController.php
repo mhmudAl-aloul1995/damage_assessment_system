@@ -28,7 +28,7 @@ class CommitteeDecisionController extends Controller
 
     public function index(): View
     {
-        return view('modules.damage-assessment.committee.decisions.index', [
+        return view('damage-assessment::committee.decisions.index', [
             'buildingCount' => $this->buildingQuery()->count(),
             'housingCount' => $this->housingUnitQuery()->count(),
         ]);
@@ -157,7 +157,7 @@ class CommitteeDecisionController extends Controller
         $decisionable = $decision->decisionable;
         $building = $decisionable instanceof HousingUnit ? $decisionable->loadMissing('building')->building : $decisionable;
 
-        return view('modules.damage-assessment.committee.decisions.show', [
+        return view('damage-assessment::committee.decisions.show', [
             'decision' => $decision,
             'decisionable' => $decisionable,
             'building' => $building,

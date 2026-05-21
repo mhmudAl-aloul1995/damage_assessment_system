@@ -15,7 +15,7 @@ class AttendanceController extends Controller
 {
     public function index()
     {
-        return view('modules.damage-assessment.attendance.attendance');
+        return view('damage-assessment::attendance.attendance');
     }
 
     public function data(Request $request)
@@ -464,7 +464,7 @@ class AttendanceController extends Controller
             ->values()
             ->toArray();
 
-        return view('modules.damage-assessment.attendance.attendance_dashboard', compact(
+        return view('damage-assessment::attendance.attendance_dashboard', compact(
             'month',
             'year',
             'totalUsers',

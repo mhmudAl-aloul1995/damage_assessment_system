@@ -35,7 +35,7 @@ it('returns distinct arcgis options for allowed fields', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->getJson(route('phc.damageAssessment.arcgis.options', ['field' => 'assignedto']))
+        ->getJson(route('damageAssessment.arcgis.options', ['field' => 'assignedto']))
         ->assertOk()
         ->assertExactJson([
             ['id' => 'engineer-a', 'text' => 'engineer-a'],
@@ -47,7 +47,7 @@ it('rejects arcgis option fields outside the allow list', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->getJson(route('phc.damageAssessment.arcgis.options', ['field' => 'globalid']))
+        ->getJson(route('damageAssessment.arcgis.options', ['field' => 'globalid']))
         ->assertUnprocessable();
 });
 
