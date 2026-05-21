@@ -941,7 +941,9 @@
 				pageLength: 20,
 				autoWidth: false,
 				scrollX: true,
-				responsive: true,
+				responsive: {
+					details: false
+				},
 				columnDefs: [
 					{
 						targets: 0,

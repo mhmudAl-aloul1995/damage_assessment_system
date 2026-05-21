@@ -12,6 +12,7 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('audit-cell-date')
         ->toContain('autoWidth: false')
         ->toContain('scrollX: true')
+        ->toContain('details: false')
         ->toContain('width: 100% !important')
         ->toContain('min-width: 940px')
         ->toContain('table-layout: fixed')
