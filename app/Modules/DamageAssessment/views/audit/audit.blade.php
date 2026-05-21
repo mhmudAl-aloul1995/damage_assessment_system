@@ -11,25 +11,28 @@
 			padding-right: 15px !important;
 		}
 
-		#kt_datatable_audits thead th.sorting,
-		#kt_datatable_audits thead th.sorting_asc,
-		#kt_datatable_audits thead th.sorting_desc {
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_asc,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_desc,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_disabled {
 			background-image: none !important;
 			padding-inline-end: 0.35rem !important;
 		}
 
-		#kt_datatable_audits thead th.sorting::before,
-		#kt_datatable_audits thead th.sorting::after,
-		#kt_datatable_audits thead th.sorting_asc::before,
-		#kt_datatable_audits thead th.sorting_asc::after,
-		#kt_datatable_audits thead th.sorting_desc::before,
-		#kt_datatable_audits thead th.sorting_desc::after {
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting::before,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting::after,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_asc::before,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_asc::after,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_desc::before,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_desc::after,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_disabled::before,
+		#kt_datatable_audits_wrapper table.dataTable thead th.sorting_disabled::after {
 			display: none !important;
 			content: "" !important;
 		}
 
-		#kt_datatable_audits thead th .dt-column-order,
-		#kt_datatable_audits thead th .dt-column-title::after {
+		#kt_datatable_audits_wrapper table.dataTable thead th .dt-column-order,
+		#kt_datatable_audits_wrapper table.dataTable thead th .dt-column-title::after {
 			display: none !important;
 			content: "" !important;
 		}
@@ -965,7 +968,12 @@
 				autoWidth: false,
 				scrollX: true,
 				responsive: false,
+				ordering: false,
 				columnDefs: [
+					{
+						targets: '_all',
+						orderable: false
+					},
 					{
 						targets: 0,
 						visible: false,
