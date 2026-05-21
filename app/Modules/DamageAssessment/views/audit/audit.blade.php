@@ -941,9 +941,7 @@
 				pageLength: 20,
 				autoWidth: false,
 				scrollX: true,
-				responsive: {
-					details: false
-				},
+				responsive: false,
 				columnDefs: [
 					{
 						targets: 0,
@@ -1110,7 +1108,7 @@
 				const shouldShow = !selectColumn.visible();
 
 				selectColumn.visible(shouldShow);
-				table.columns.adjust().responsive.recalc();
+				table.columns.adjust();
 				$("[type='checkbox']").prop('checked', false);
 				button.attr('data-select-visible', shouldShow ? 'true' : 'false');
 				button.html((shouldShow ? 'إخفاء التحديد' : 'إظهار التحديد') + ' <i class="ki-duotone ki-check-square"></i>');
