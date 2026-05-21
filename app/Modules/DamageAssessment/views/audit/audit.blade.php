@@ -11,6 +11,22 @@
 			padding-right: 15px !important;
 		}
 
+		#kt_datatable_audits thead th.sorting,
+		#kt_datatable_audits thead th.sorting_asc,
+		#kt_datatable_audits thead th.sorting_desc {
+			background-image: none !important;
+		}
+
+		#kt_datatable_audits thead th.sorting::before,
+		#kt_datatable_audits thead th.sorting::after,
+		#kt_datatable_audits thead th.sorting_asc::before,
+		#kt_datatable_audits thead th.sorting_asc::after,
+		#kt_datatable_audits thead th.sorting_desc::before,
+		#kt_datatable_audits thead th.sorting_desc::after {
+			display: none !important;
+			content: "" !important;
+		}
+
 		.container-loader {
 			display: none !important;
 		}
