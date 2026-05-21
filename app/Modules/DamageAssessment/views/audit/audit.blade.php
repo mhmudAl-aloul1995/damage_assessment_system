@@ -124,22 +124,21 @@
 		}
 
 		#kt_datatable_audits_wrapper table.dataTable .audit-select-cell .form-check {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			inset: 0;
+			display: block;
 			margin: 0 !important;
 			padding: 0 !important;
-			position: absolute;
+			position: static !important;
 			width: 100%;
 			min-height: 100%;
 		}
 
 		#kt_datatable_audits_wrapper table.dataTable .audit-select-cell .form-check-input {
 			float: none !important;
+			left: 50%;
 			margin: 0 !important;
-			position: static !important;
-			transform: none !important;
+			position: absolute !important;
+			top: 50%;
+			transform: translate(-50%, -50%) !important;
 		}
 
 		#kt_datatable_audits .audit-actions-cell {
