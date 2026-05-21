@@ -9,6 +9,18 @@ test('login screen can be rendered', function () {
     $response->assertSee('action="/login"', false);
 });
 
+test('login screen uses relative submit and redirect urls', function () {
+    config(['app.url' => 'http://localhost']);
+
+    $response = $this->get('/login');
+
+    $response->assertOk()
+        ->assertSee('action="/login"', false)
+        ->assertSee('data-kt-redirect-url="/dashboard"', false)
+        ->assertDontSee('http://localhost/login', false)
+        ->assertDontSee('http://localhost/dashboard', false);
+});
+
 test('login screen can be rendered with an existing session', function () {
     $user = User::factory()->create();
 

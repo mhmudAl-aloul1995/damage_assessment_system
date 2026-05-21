@@ -43,7 +43,7 @@
             <div class="d-flex flex-center w-lg-50 pt-15 pt-lg-0 px-10">
                 <div class="d-flex flex-center flex-lg-start flex-column">
                     <div class="mb-7 d-flex align-items-center gap-3">
-                        <a href="{{ route('login') }}">
+                        <a href="{{ route('login', [], false) }}">
                             <img style="max-width: 400px; height: auto;" class="h-100px" alt="Logo" src="{{ asset('assets/media/logos/LogoGaza2.jpeg') }}" />
                         </a>
 
@@ -66,7 +66,7 @@
             <div class="d-flex flex-column-fluid flex-lg-row-auto justify-content-center justify-content-lg-end p-12 p-lg-20">
                 <div class="bg-body d-flex flex-column align-items-stretch flex-center rounded-4 w-md-600px p-20">
                     <div class="d-flex flex-center flex-column flex-column-fluid px-lg-10 pb-15 pb-lg-20">
-                        <form class="form w-100" data-kt-redirect-url="{{ url('/') }}" novalidate="novalidate" id="kt_sign_in_form" method="POST" action="{{ route('login', [], false) }}">
+                        <form class="form w-100" data-kt-redirect-url="{{ route('dashboard', [], false) }}" novalidate="novalidate" id="kt_sign_in_form" method="POST" action="{{ route('login', [], false) }}">
                             @csrf
                             <input type="hidden" name="remember" value="true" />
 

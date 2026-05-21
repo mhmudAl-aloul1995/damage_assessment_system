@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
 
-    return redirect()->route('login');
+    return redirect()->to(route('login', [], false));
 });
 
 Route::get('/clear-session', function () {
@@ -26,7 +26,7 @@ Route::get('/clear-session', function () {
     session()->regenerateToken();
 
     return redirect()
-        ->route('login')
+        ->to(route('login', [], false))
         ->withCookie(cookie()->forget('laravel-session', '/'))
         ->withCookie(cookie()->forget('laravel-session', '/phc'))
         ->withCookie(cookie()->forget('phc_session', '/'))
