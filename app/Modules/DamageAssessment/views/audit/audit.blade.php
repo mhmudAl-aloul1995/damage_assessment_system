@@ -115,31 +115,31 @@
 			min-height: 1rem;
 		}
 
-		#kt_datatable_audits .audit-select-cell {
+		#kt_datatable_audits_wrapper table.dataTable .audit-select-cell {
 			min-width: 64px;
 			width: 64px;
-			padding: 0.45rem 0 !important;
+			padding: 0 !important;
+			position: relative;
 			text-align: center !important;
 		}
 
-		#kt_datatable_audits th.audit-select-cell,
-		#kt_datatable_audits td.audit-select-cell {
-			justify-items: center;
-		}
-
-		#kt_datatable_audits .audit-select-cell .form-check {
+		#kt_datatable_audits_wrapper table.dataTable .audit-select-cell .form-check {
 			display: flex;
 			justify-content: center;
 			align-items: center;
+			inset: 0;
 			margin: 0 !important;
 			padding: 0 !important;
+			position: absolute;
 			width: 100%;
-			min-height: 26px;
+			min-height: 100%;
 		}
 
-		#kt_datatable_audits .audit-select-cell .form-check-input {
+		#kt_datatable_audits_wrapper table.dataTable .audit-select-cell .form-check-input {
 			float: none !important;
 			margin: 0 !important;
+			position: static !important;
+			transform: none !important;
 		}
 
 		#kt_datatable_audits .audit-actions-cell {
