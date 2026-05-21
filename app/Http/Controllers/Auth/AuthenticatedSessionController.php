@@ -24,6 +24,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        $request->session()->forget('url.intended');
+
         $request->authenticate();
 
         $request->session()->regenerate();
@@ -31,30 +33,30 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         if ($user->hasRole('Database Officer')) {
-            return redirect()->to(route('dashboard', [], false));
+            return redirect()->to(app_route('dashboard'));
         }
 
         if ($user->hasRole('Area Manager')) {
-            return redirect()->to(route('dashboard', [], false));
+            return redirect()->to(app_route('dashboard'));
         }
 
         if ($user->hasAnyRole(['Team Leader', 'Team Leader -INF'])) {
-            return redirect()->to(route('dashboard', [], false));
+            return redirect()->to(app_route('dashboard'));
         }
 
         if ($user->hasRole('QC/QA Engineer')) {
-            return redirect()->to(route('audit.auditBuilding', [], false));
+            return redirect()->to(app_route('audit.auditBuilding'));
         }
 
         if ($user->hasRole('Legal Auditor')) {
-            return redirect()->to(route('audit.auditBuilding', [], false));
+            return redirect()->to(app_route('audit.auditBuilding'));
         }
 
         if ($user->hasRole('Auditing Supervisor')) {
-            return redirect()->to(route('audit.index', [], false));
+            return redirect()->to(app_route('audit.index'));
         }
 
-        return redirect()->intended(route('dashboard', [], false));
+        return redirect()->to(app_route('dashboard'));
     }
 
     /**

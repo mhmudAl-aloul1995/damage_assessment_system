@@ -12,7 +12,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::match(['GET', 'POST'], 'login.php', function () {
-    return redirect()->to(route('login', [], false));
+    return redirect()->to(app_route('login'));
 });
 
 Route::get('login', [AuthenticatedSessionController::class, 'create'])

@@ -14,9 +14,13 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
 
+Route::any('phc/{path?}', function (?string $path = null) {
+    return redirect()->to(app_path_url($path ?? ''));
+})->where('path', '.*');
+
 Route::get('/', function () {
 
-    return redirect()->to(route('login', [], false));
+    return redirect()->to(app_route('login'));
 });
 
 Route::get('/clear-session', function () {
@@ -26,7 +30,7 @@ Route::get('/clear-session', function () {
     session()->regenerateToken();
 
     return redirect()
-        ->to(route('login', [], false))
+        ->to(app_route('login'))
         ->withCookie(cookie()->forget('laravel-session', '/'))
         ->withCookie(cookie()->forget('laravel-session', '/phc'))
         ->withCookie(cookie()->forget('phc_session', '/'))
@@ -87,7 +91,7 @@ Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('loca
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
 Route::get('/dashboard', function () {
-    return redirect()->to(route('damageAssessment.index', [], false));
+    return redirect()->to(app_route('damageAssessment.index'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

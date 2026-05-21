@@ -36,7 +36,7 @@
             <div class="d-flex flex-center w-lg-50 pt-15 pt-lg-0 px-10">
                 <div class="d-flex flex-center flex-lg-start flex-column">
                     <div class="mb-7">
-                        <a href="{{ route('login', [], false) }}">
+                        <a href="{{ app_route('login') }}">
                             <img style="max-width: 400px; height: auto;" class="h-100px" alt="Logo" src="{{ asset('assets/media/logos/LogoGaza2.jpeg') }}" />
                         </a>
                     </div>
@@ -83,7 +83,7 @@
                             </div>
 
                             <div class="text-center">
-                                <a href="{{ route('login', [], false) }}" class="link-primary">{{ __('ui.auth.back_to_login') }}</a>
+                                <a href="{{ app_route('login') }}" class="link-primary">{{ __('ui.auth.back_to_login') }}</a>
                             </div>
                         </form>
                     </div>
