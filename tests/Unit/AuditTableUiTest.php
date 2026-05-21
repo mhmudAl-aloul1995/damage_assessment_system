@@ -17,7 +17,7 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('table-layout: fixed')
         ->toContain('padding: 0.45rem 0.35rem')
         ->toContain('font-size: 0.74rem')
-        ->toContain("#kt_datatable_audits tbody td {\n\t\t\tfont-size: 0.74rem;")
+        ->toContain("#kt_datatable_audits tbody td {\n\t\t\tfont-size: 0.82rem;")
         ->not->toContain('font-size: .1rem')
         ->toContain("width: '18%'")
         ->toContain("width: '8%'")
