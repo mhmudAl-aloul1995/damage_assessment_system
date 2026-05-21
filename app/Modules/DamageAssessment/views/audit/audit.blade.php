@@ -90,15 +90,24 @@
 		}
 
 		#kt_datatable_audits .audit-select-cell {
-			min-width: 44px;
-			width: 44px;
+			min-width: 64px;
+			width: 64px;
 			padding-inline: 0.25rem !important;
+			text-align: center !important;
 		}
 
 		#kt_datatable_audits .audit-select-cell .form-check {
+			display: flex;
 			justify-content: center;
+			align-items: center;
 			margin: 0 !important;
-			padding: 0;
+			padding: 0 !important;
+			width: 100%;
+		}
+
+		#kt_datatable_audits .audit-select-cell .form-check-input {
+			float: none !important;
+			margin: 0 !important;
 		}
 
 		#kt_datatable_audits .audit-actions-cell {
@@ -357,7 +366,7 @@
 						<table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_datatable_audits">
 							<thead>
 								<tr class="text-muted fw-bold fs-7 text-uppercase gs-0">
-									<th class="w-10px pe-2">
+									<th class="audit-select-cell">
 										<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
 											<input class="form-check-input" type="checkbox" data-kt-check="true"
 												data-kt-check-target="#kt_datatable_audits .form-check-input" value="1" />
@@ -933,7 +942,7 @@
 						visible: false,
 						orderable: false,
 						searchable: false,
-						width: '44px',
+						width: '64px',
 						className: 'text-center audit-select-cell'
 					},
 					{
