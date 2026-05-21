@@ -46,6 +46,8 @@
 			'icon' => 'ki-file-down',
 		],
 	];
+	$user = auth()->user();
+	$sidebarModules = \App\Support\Navigation\Sidebar::forUser($user);
 @endphp
 <!DOCTYPE html>
 
@@ -334,6 +336,58 @@
 		margin-inline: 0;
 		font-size: 0;
 	}
+
+	#kt_app_header_menu {
+		display: none;
+	}
+
+	body.phc-top-menu-mode #kt_app_header_menu {
+		display: flex;
+	}
+
+	#kt_app_header_menu .phc-top-menu-icon {
+		display: inline-flex;
+		width: 28px;
+		height: 28px;
+		align-items: center;
+		justify-content: center;
+		border-radius: .5rem;
+		background: rgba(62, 151, 255, .12);
+	}
+
+	#kt_app_header_menu .phc-top-menu-link.active {
+		background: var(--bs-primary-light);
+		color: var(--bs-primary);
+	}
+
+	body.phc-top-menu-mode #kt_app_sidebar {
+		display: none !important;
+	}
+
+	body.phc-top-menu-mode #kt_app_wrapper,
+	body.phc-top-menu-mode #kt_app_header {
+		margin-inline-start: 0 !important;
+		padding-inline-start: 0 !important;
+	}
+
+	body.phc-top-menu-mode #kt_app_header {
+		inset-inline-start: 0 !important;
+	}
+
+	body.phc-top-menu-mode #kt_app_sidebar_mobile_toggle,
+	body.phc-top-menu-mode #kt_app_header_menu_toggle {
+		display: none !important;
+	}
+
+	@media (max-width: 991.98px) {
+		body.phc-top-menu-mode #kt_app_header_menu {
+			display: none;
+		}
+
+		body.phc-top-menu-mode #kt_app_sidebar {
+			display: flex !important;
+		}
+	}
 </style>
 
 <body id="kt_app_body" data-kt-app-layout="dark-sidebar" data-kt-app-header-fixed="true"
@@ -384,6 +438,79 @@
 						<div class="menu menu-rounded menu-column menu-lg-row my-5 my-lg-0 align-items-stretch fw-semibold px-2 px-lg-0"
 							id="kt_app_header_menu" data-kt-menu="true">
 
+							@foreach($sidebarModules as $sidebarModule)
+								@foreach($sidebarModule['sections'] as $menu)
+									@if($menu['is_direct'] ?? false)
+										<div class="menu-item me-lg-1">
+											<a class="menu-link py-3 {{ $menu['is_active'] ? 'active' : '' }}" href="{{ url($menu['url']) }}">
+												@if(($menu['variant'] ?? null) === 'hud')
+													<span class="menu-title">{{ __($menu['title']) }}</span>
+												@else
+													<span class="menu-icon">
+														<span class="phc-top-menu-icon">
+															<i class="ki-duotone {{ $menu['icon'] }} fs-3">
+																<span class="path1"></span>
+																<span class="path2"></span>
+															</i>
+														</span>
+													</span>
+													<span class="menu-title">{{ __($menu['title']) }}</span>
+												@endif
+											</a>
+										</div>
+									@else
+										<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
+											class="menu-item menu-lg-down-accordion me-lg-1 {{ $menu['is_active'] ? 'here show' : '' }}">
+											<span class="menu-link py-3">
+												<span class="menu-icon">
+													<span class="phc-top-menu-icon">
+														<i class="ki-duotone {{ $menu['icon'] }} fs-3">
+															<span class="path1"></span>
+															<span class="path2"></span>
+														</i>
+													</span>
+												</span>
+												<span class="menu-title">{{ __($menu['title']) }}</span>
+												<span class="menu-arrow d-lg-none"></span>
+											</span>
+
+											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-rounded-0 py-lg-4 w-lg-275px">
+												@foreach($menu['items'] as $item)
+													@if(isset($item['children']))
+														<div class="menu-item">
+															<div class="menu-content pt-4 pb-2">
+																<span class="menu-section text-muted text-uppercase fs-8 ls-1">{{ __($item['title']) }}</span>
+															</div>
+														</div>
+
+														@foreach($item['children'] as $child)
+															<div class="menu-item">
+																<a class="menu-link py-3 phc-top-menu-link {{ request()->is($child['pattern']) ? 'active' : '' }}"
+																	href="{{ url($child['url']) }}">
+																	<span class="menu-bullet">
+																		<span class="bullet bullet-dot"></span>
+																	</span>
+																	<span class="menu-title">{{ __($child['title']) }}</span>
+																</a>
+															</div>
+														@endforeach
+													@else
+														<div class="menu-item">
+															<a class="menu-link py-3 phc-top-menu-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
+																href="{{ url($item['url']) }}">
+																<span class="menu-bullet">
+																	<span class="bullet bullet-dot"></span>
+																</span>
+																<span class="menu-title">{{ __($item['title']) }}</span>
+															</a>
+														</div>
+													@endif
+												@endforeach
+											</div>
+										</div>
+									@endif
+								@endforeach
+							@endforeach
 
 
 						</div>
@@ -392,6 +519,18 @@
 					<!--end::Menu wrapper-->
 					<!--begin::Navbar-->
 					<div class="app-navbar flex-shrink-0">
+						<!--begin::Navigation layout toggle-->
+						<div class="app-navbar-item ms-1 ms-md-4 d-none d-lg-flex">
+							<button type="button"
+								class="btn btn-icon btn-custom btn-icon-muted btn-active-light btn-active-color-primary w-35px h-35px"
+								id="phc_navigation_layout_toggle" title="Switch navigation">
+								<i class="ki-duotone ki-element-4 fs-2">
+									<span class="path1"></span>
+									<span class="path2"></span>
+								</i>
+							</button>
+						</div>
+						<!--end::Navigation layout toggle-->
 						<!--begin::Search-->
 						<div class="app-navbar-item align-items-stretch ms-1 ms-md-4">
 							<!--begin::Search-->
@@ -1188,11 +1327,6 @@
 							<div class="menu menu-column menu-rounded menu-sub-indention fw-semibold fs-6"
 								id="kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="false">
 
-								@php
-									$user = auth()->user();
-									$sidebarModules = \App\Support\Navigation\Sidebar::forUser($user);
-								@endphp
-
 								@foreach($sidebarModules as $sidebarModule)
 									<div class="phc-sidebar-module-label" data-module="{{ $sidebarModule['key'] }}">
 										{{ __($sidebarModule['title']) }}
@@ -1446,6 +1580,39 @@
 
 		$(document).ready(function () {
 			const persistedLocale = document.body.dataset.locale;
+			const navigationModeKey = 'phc_navigation_mode';
+			const navigationToggle = $('#phc_navigation_layout_toggle');
+			const appBody = $('#kt_app_body');
+
+			const isDesktopNavigation = () => window.matchMedia('(min-width: 992px)').matches;
+
+			const applyNavigationMode = (mode) => {
+				const useTopMenu = mode === 'top' && isDesktopNavigation();
+
+				appBody.toggleClass('phc-top-menu-mode', useTopMenu);
+				appBody.attr('data-kt-app-sidebar-enabled', useTopMenu ? 'false' : 'true');
+				appBody.attr('data-kt-app-sidebar-push-header', useTopMenu ? 'false' : 'true');
+				appBody.attr('data-kt-app-sidebar-push-toolbar', useTopMenu ? 'false' : 'true');
+				appBody.attr('data-kt-app-sidebar-push-footer', useTopMenu ? 'false' : 'true');
+				navigationToggle.toggleClass('active', useTopMenu);
+				navigationToggle.attr('aria-pressed', useTopMenu ? 'true' : 'false');
+				navigationToggle.attr('title', useTopMenu ? 'Switch to sidebar menu' : 'Switch to top menu');
+			};
+
+			const preferredNavigationMode = localStorage.getItem(navigationModeKey) || 'sidebar';
+
+			applyNavigationMode(preferredNavigationMode);
+
+			navigationToggle.on('click', function () {
+				const nextMode = appBody.hasClass('phc-top-menu-mode') ? 'sidebar' : 'top';
+
+				localStorage.setItem(navigationModeKey, nextMode);
+				applyNavigationMode(nextMode);
+			});
+
+			window.addEventListener('resize', function () {
+				applyNavigationMode(localStorage.getItem(navigationModeKey) || 'sidebar');
+			});
 
 			if (persistedLocale) {
 				localStorage.setItem('preferred_locale', persistedLocale);
