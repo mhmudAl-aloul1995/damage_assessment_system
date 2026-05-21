@@ -209,5 +209,4 @@ Route::middleware('auth')->group(function () {
 
 });
 
-require __DIR__.'/modules/damage-assessment.php';
 require __DIR__.'/auth.php';

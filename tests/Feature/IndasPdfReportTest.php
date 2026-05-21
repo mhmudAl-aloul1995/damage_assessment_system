@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-use App\Services\DamageAssessment\Reports\phcPdfReportService;
+use App\Modules\DamageAssessment\Services\Reports\phcPdfReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 

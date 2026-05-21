@@ -1,10 +1,10 @@
 <?php
 
-use App\Services\DamageAssessment\Reports\phcPdfReportService;
+use App\Modules\DamageAssessment\Services\Reports\phcPdfReportService;
 use Illuminate\Support\Collection;
 
 test('phc report arcgis map uses the selected area bounds', function () {
-    $service = new phcPdfReportService();
+    $service = new phcPdfReportService;
     $method = new ReflectionMethod($service, 'arcgisMap');
     $method->setAccessible(true);
 

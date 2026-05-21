@@ -6,7 +6,7 @@ use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
 use App\Models\User;
-use App\Services\DamageAssessment\Reports\AreaProductivityReportService;
+use App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;

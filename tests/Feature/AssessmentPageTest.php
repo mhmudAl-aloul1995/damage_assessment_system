@@ -700,10 +700,10 @@ it('returns structured status history payload for rendering badges safely', func
 });
 
 it('does not show the separate note edit action', function () {
-    $moduleView = file_get_contents(resource_path('views/modules/damage-assessment/audit/assessmentAudit.blade.php'));
+    $moduleView = file_get_contents(base_path('app/Modules/DamageAssessment/views/modules/damage-assessment/audit/assessmentAudit.blade.php'));
     $legacyView = file_get_contents(resource_path('views/DamageAssessment/assessmentAudit.blade.php'));
-    $routes = file_get_contents(base_path('routes/modules/damage-assessment.php'));
-    $controller = file_get_contents(app_path('Http/Controllers/Modules/DamageAssessment/Audit/AuditStatusHistoryController.php'));
+    $routes = file_get_contents(base_path('app/Modules/DamageAssessment/routes/web.php'));
+    $controller = file_get_contents(app_path('Modules/DamageAssessment/Http/Controllers/Audit/AuditStatusHistoryController.php'));
 
     expect($moduleView)
         ->not->toContain("openNotesModal('building','edit_note')")
@@ -722,7 +722,7 @@ it('does not show the separate note edit action', function () {
 });
 
 it('shows all audit status button groups to database officers in the assessment audit view', function () {
-    $view = file_get_contents(resource_path('views/modules/damage-assessment/audit/assessmentAudit.blade.php'));
+    $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/modules/damage-assessment/audit/assessmentAudit.blade.php'));
 
     expect($view)
         ->toContain("@hasanyrole('Legal Auditor|Database Officer')")
