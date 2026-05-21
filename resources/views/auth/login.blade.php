@@ -17,6 +17,7 @@
     <meta property="og:title" content="{{ __('ui.app.damage_program') }}" />
     <meta property="og:url" content="{{ url()->current() }}" />
     <meta property="og:site_name" content="{{ __('ui.app.name') }}" />
+    @include('pwa.head')
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
     <link rel="stylesheet" href="{{ asset('assets/css/fontface.css') }}">
     <link href="{{ asset('assets/plugins/global/plugins.bundle' . $suffix . '.css') }}" rel="stylesheet" type="text/css" />
@@ -48,7 +49,7 @@
 
                         <div class="btn-group" role="group" aria-label="{{ __('ui.locale.switcher') }}">
                             @foreach(config('app.supported_locales', ['en']) as $locale)
-                                <form method="POST" action="{{ route('locale.update', $locale) }}" class="locale-switcher-form" data-locale="{{ $locale }}">
+                                <form method="POST" action="{{ route('locale.update', $locale, false) }}" class="locale-switcher-form" data-locale="{{ $locale }}">
                                     @csrf
                                     <button type="submit" class="btn btn-sm {{ app()->getLocale() === $locale ? 'btn-primary' : 'btn-light' }}">
                                         {{ __('ui.locale.' . ($locale === 'ar' ? 'arabic' : 'english')) }}
@@ -65,7 +66,7 @@
             <div class="d-flex flex-column-fluid flex-lg-row-auto justify-content-center justify-content-lg-end p-12 p-lg-20">
                 <div class="bg-body d-flex flex-column align-items-stretch flex-center rounded-4 w-md-600px p-20">
                     <div class="d-flex flex-center flex-column flex-column-fluid px-lg-10 pb-15 pb-lg-20">
-                        <form class="form w-100" data-kt-redirect-url="{{ url('/') }}" novalidate="novalidate" id="kt_sign_in_form" method="POST" action="{{ route('login') }}">
+                        <form class="form w-100" data-kt-redirect-url="{{ url('/') }}" novalidate="novalidate" id="kt_sign_in_form" method="POST" action="{{ route('login', [], false) }}">
                             @csrf
                             <input type="hidden" name="remember" value="true" />
 
@@ -110,7 +111,7 @@
                                         <span class="form-check-label text-gray-700 fs-base ms-1">{{ __('ui.auth.remember_me') }}</span>
                                     </label>
                                 </div>
-                                <a href="{{ route('password.request') }}" class="link-primary">{{ __('ui.auth.forgot_password') }}</a>
+                                <a href="{{ route('password.request', [], false) }}" class="link-primary">{{ __('ui.auth.forgot_password') }}</a>
                             </div>
 
                             <div class="d-grid mb-10">
@@ -148,6 +149,8 @@
                 }
             });
         });
+
     </script>
+    @include('pwa.scripts')
 </body>
 </html>

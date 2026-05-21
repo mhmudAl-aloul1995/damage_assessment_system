@@ -6,6 +6,7 @@ test('login screen can be rendered', function () {
     $response = $this->get('/login');
 
     $response->assertStatus(200);
+    $response->assertSee('action="/login"', false);
 });
 
 test('login screen can be rendered with an existing session', function () {
@@ -31,12 +32,13 @@ test('users can authenticate using the login screen', function () {
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();
 
-    $this->post('/login', [
+    $response = $this->post('/login', [
         'email' => $user->email,
         'password' => 'wrong-password',
     ]);
 
     $this->assertGuest();
+    $response->assertSessionHasErrors('email');
 });
 
 test('users can logout', function () {

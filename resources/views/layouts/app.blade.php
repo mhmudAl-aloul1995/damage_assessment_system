@@ -85,7 +85,7 @@
 	<link href="{{ asset('assets/css/font-unified.css') }}" rel="stylesheet" type="text/css" />
 	<!--end::Global Stylesheets Bundle-->
 	<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
-	@pwaHead
+	@include('pwa.head')
 </head>
 <!--end::Head-->
 <!--begin::Body-->
@@ -1943,8 +1943,7 @@
 			}
 		);
 	</script>
-	@laravelPwa
-	@pwaInstallButton
+	@include('pwa.scripts')
 </body>
 <!--end::Body-->
 

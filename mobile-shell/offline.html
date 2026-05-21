@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PHC Offline</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            align-items: center;
+            background: #f7f9fc;
+            color: #0f172a;
+            display: flex;
+            justify-content: center;
+            margin: 0;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        main {
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .brand {
+            color: #1d8cf8;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            line-height: 1.2;
+            margin: 0 0 12px;
+        }
+
+        p {
+            color: #475569;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 0 0 24px;
+        }
+
+        button {
+            background: #1d8cf8;
+            border: 0;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            min-height: 48px;
+            padding: 0 24px;
+        }
+
+        .secondary {
+            background: #e2e8f0;
+            color: #0f172a;
+            margin-inline-start: 8px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="brand">Palestinian Housing Council</div>
+        <h1>You are offline</h1>
+        <p>The PHC server or network connection is not available. Reconnect, then try again.</p>
+        <button type="button" onclick="window.location.reload()">Retry</button>
+        <button class="secondary" type="button" onclick="window.location.href = 'http://192.168.1.152:8000/login'">Open Login</button>
+    </main>
+</body>
+</html>

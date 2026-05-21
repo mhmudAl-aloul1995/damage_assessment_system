@@ -11,6 +11,7 @@
     <meta charset="utf-8" />
     <meta name="description" content="{{ __('ui.auth.forgot_password') }}" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @include('pwa.head')
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
     <link rel="stylesheet" href="{{ asset('assets/css/fontface.css') }}">
     <link href="{{ asset('assets/plugins/global/plugins.bundle' . $suffix . '.css') }}" rel="stylesheet" type="text/css" />
@@ -94,5 +95,6 @@
     <script>var hostUrl = "assets/";</script>
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
+    @include('pwa.scripts')
 </body>
 </html>

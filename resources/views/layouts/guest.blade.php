@@ -13,6 +13,7 @@
 
         <link rel="stylesheet" href="{{ asset('assets/css/fontface.css') }}">
         <link rel="stylesheet" href="{{ asset('assets/css/font-unified.css') }}">
+        @include('pwa.head')
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -29,5 +30,6 @@
                 {{ $slot }}
             </div>
         </div>
+        @include('pwa.scripts')
     </body>
 </html>

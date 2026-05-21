@@ -1,0 +1,13 @@
+{
+    "appId": "com.phc.mobile",
+    "appName": "PHC",
+    "webDir": "mobile-shell",
+    "server": {
+        "url": "http://192.168.1.152:8000",
+        "cleartext": true,
+        "errorPath": "offline.html"
+    },
+    "android": {
+        "allowMixedContent": true
+    }
+}

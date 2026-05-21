@@ -73,7 +73,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <form id="borrowerSurveyForm" class="row g-5">
+                    <form id="borrowerSurveyForm" class="row g-5" data-offline-sync="true">
                         @csrf
 
                         <div class="col-md-6">
@@ -507,10 +507,35 @@
 
             const form = event.currentTarget;
             const button = document.getElementById('borrowerSubmitBtn');
+            const payload = formPayload(form);
             button.setAttribute('data-kt-indicator', 'on');
             button.disabled = true;
 
             try {
+                if (!navigator.onLine && window.phcOfflineSync) {
+                    await window.phcOfflineSync.queue({
+                        url: borrowerRoutes.store,
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken(),
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    form.reset();
+                    document.getElementById('deceasedGuarantorsRepeater').innerHTML = '';
+                    document.getElementById('affectedGuarantorsRepeater').innerHTML = '';
+                    document.getElementById('householdsRepeater').innerHTML = '';
+
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success('تم حفظ الاستبيان أوفلاين. سيتم إرساله تلقائيًا عند رجوع الإنترنت.');
+                    }
+
+                    return;
+                }
+
                 const response = await fetch(borrowerRoutes.store, {
                     method: 'POST',
                     headers: {
@@ -518,7 +543,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken(),
                     },
-                    body: JSON.stringify(formPayload(form)),
+                    body: JSON.stringify(payload),
                 });
                 const result = await response.json();
 

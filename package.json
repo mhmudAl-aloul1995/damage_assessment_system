@@ -4,7 +4,10 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "cap:add:android": "cap add android",
+        "cap:sync": "cap sync",
+        "cap:open:android": "cap open android"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
@@ -19,6 +22,9 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "@capacitor/android": "^7.4.3",
+        "@capacitor/cli": "^7.4.3",
+        "@capacitor/core": "^7.4.3",
         "@arcgis/core": "^4.34.8",
         "esri-loader": "^3.7.0",
         "puppeteer": "^24.43.1"

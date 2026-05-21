@@ -1,0 +1,10 @@
+{
+    "name": "Palestinian Housing Council",
+    "short_name": "PHC",
+    "start_url": "/",
+    "scope": "/",
+    "background_color": "#f7f9fc",
+    "description": "Palestinian Housing Council mobile shell.",
+    "display": "standalone",
+    "theme_color": "#1d8cf8"
+}

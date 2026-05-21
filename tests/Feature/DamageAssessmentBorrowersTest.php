@@ -15,6 +15,8 @@ it('allows field engineers to open the borrowers survey page', function () {
         ->get(route('damage-assessment-borrowers.index'))
         ->assertOk()
         ->assertSee('borrowerSurveyForm', false)
+        ->assertSee('data-offline-sync="true"', false)
+        ->assertSee('window.phcOfflineSync.queue', false)
         ->assertSee('استبيان المقترضين', false);
 });
 
