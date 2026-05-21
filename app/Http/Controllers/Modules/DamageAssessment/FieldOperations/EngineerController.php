@@ -9,6 +9,7 @@ use App\Models\EditAssessment;
 use App\Models\Filter;
 use App\Models\HousingUnit;
 use App\services\ArcgisService;
+use App\Support\BrowsershotConfiguration;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -148,69 +149,8 @@ class EngineerController extends Controller
             ->format('a4')
             ->name('assessment-'.($building->objectid ?? $building->globalid).'.pdf')
             ->withBrowsershot(function (Browsershot $browsershot) {
-                $browsershot
-                    ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
-                    ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
-                    ->setNodeModulePath(base_path('node_modules'))
-                    ->withBrowsershot(function (Browsershot $browsershot) {
-                        $browsershot
-                            ->setNodeBinary('C:\\Program Files\\nodejs\\node.exe')
-                            ->setNpmBinary('C:\\Program Files\\nodejs\\npm.cmd')
-                            ->setNodeModulePath(base_path('node_modules')) // 👈 أهم سطر
-                            ->noSandbox()
-                            ->showBackground()
-                            ->timeout(120)
-                            ->addChromiumArguments([
-                                '--disable-dev-shm-usage',
-                                '--disable-gpu',
-                            ]);
-                    })
-                    ->showBackground()
-                    ->timeout(120)
-                    ->addChromiumArguments([
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--disable-gpu',
-                    ]);
+                app(BrowsershotConfiguration::class)->apply($browsershot);
             });
-    }
-
-    private function detectChromiumBrowser(): string
-    {
-        $envPath = env('BROWSERSHOT_CHROME_PATH');
-
-        if ($envPath && file_exists($envPath)) {
-            return $envPath;
-        }
-
-        $paths = [
-            // Google Chrome
-            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-
-            // Microsoft Edge
-            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-
-            // Chromium
-            'C:\\Program Files\\Chromium\\Application\\chrome.exe',
-            'C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe',
-
-            // Brave
-            'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
-            'C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
-        ];
-
-        foreach ($paths as $path) {
-            if (file_exists($path)) {
-                return $path;
-            }
-        }
-
-        throw new \RuntimeException(
-            'No Chromium browser found. Install Google Chrome, Microsoft Edge, Chromium, or Brave, or set BROWSERSHOT_CHROME_PATH in .env'
-        );
     }
 
     public function show(Request $request)
