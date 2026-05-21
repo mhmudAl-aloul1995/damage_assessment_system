@@ -89,6 +89,27 @@
 			min-height: 1rem;
 		}
 
+		#kt_datatable_audits .audit-select-cell {
+			min-width: 44px;
+			width: 44px;
+			padding-inline: 0.25rem !important;
+		}
+
+		#kt_datatable_audits .audit-select-cell .form-check {
+			justify-content: center;
+			margin: 0 !important;
+			padding: 0;
+		}
+
+		#kt_datatable_audits .audit-actions-cell {
+			min-width: 96px;
+			white-space: nowrap;
+		}
+
+		#kt_datatable_audits .audit-actions-wrapper {
+			justify-content: center !important;
+		}
+
 		#kt_datatable_audits .btn {
 			padding: 0.35rem 0.45rem;
 			font-size: .95rem;
@@ -912,12 +933,12 @@
 						visible: false,
 						orderable: false,
 						searchable: false,
-						width: '32px',
-						className: 'text-center'
+						width: '44px',
+						className: 'text-center audit-select-cell'
 					},
 					{
 						targets: 1,
-						width: '18%',
+						width: '16%',
 						className: 'text-start'
 					},
 					{
@@ -942,8 +963,8 @@
 					},
 					{
 						targets: 9,
-						width: '8%',
-						className: 'text-center'
+						width: '10%',
+						className: 'text-center audit-actions-cell'
 					},
 				],
 				//order: [[9, 'desc']],
@@ -954,7 +975,7 @@
 						orderable: false,
 						searchable: false,
 						render: (data) => `
-																																																					<div class="form-check form-check-sm form-check-custom form-check-solid me-3">
+																																																					<div class="form-check form-check-sm form-check-custom form-check-solid">
 																																																						<input class="form-check-input" type="checkbox"
 																																																							data-kt-check-target="#kt_datatable_audits .form-check-input" value="${data}" />
 																																																					</div>`
@@ -1072,6 +1093,7 @@
 				const shouldShow = !selectColumn.visible();
 
 				selectColumn.visible(shouldShow);
+				table.columns.adjust().responsive.recalc();
 				$("[type='checkbox']").prop('checked', false);
 				button.attr('data-select-visible', shouldShow ? 'true' : 'false');
 				button.html((shouldShow ? 'إخفاء التحديد' : 'إظهار التحديد') + ' <i class="ki-duotone ki-check-square"></i>');
