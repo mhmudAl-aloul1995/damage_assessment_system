@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
 
-Route::any('phc/{path?}', function (?string $path = null) {
+Route::any('phc/phc/{path?}', function (?string $path = null) {
     return redirect()->to(app_path_url($path ?? ''));
 })->where('path', '.*');
 

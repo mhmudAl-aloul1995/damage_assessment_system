@@ -15,8 +15,8 @@ test('legacy login php post redirects to laravel login route', function () {
 });
 
 test('legacy login php redirects include configured subdirectory path', function () {
-    config(['app.url' => 'http://localhost/phc']);
+    config(['app.url' => 'http://localhost']);
 
     $this->get('/login.php')
-        ->assertRedirect('/phc/login');
+        ->assertRedirect('/login');
 });

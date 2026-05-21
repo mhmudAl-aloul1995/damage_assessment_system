@@ -55,7 +55,7 @@ test('login path helper does not duplicate when app url already contains duplica
 test('duplicated phc path redirects to the normalized app path', function () {
     config(['app.url' => 'http://localhost/phc']);
 
-    $this->get('/phc/login')
+    $this->get('/phc/phc/login')
         ->assertRedirect('/phc/login');
 });
 
