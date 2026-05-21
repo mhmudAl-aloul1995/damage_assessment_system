@@ -109,6 +109,7 @@ return array(
     'Laravel\\Mcp\\' => array($vendorDir . '/laravel/mcp/src'),
     'Laravel\\Breeze\\' => array($vendorDir . '/laravel/breeze/src'),
     'Laravel\\Boost\\' => array($vendorDir . '/laravel/boost/src'),
+    'Ladumor\\LaravelPwa\\' => array($vendorDir . '/ladumor/laravel-pwa/src'),
     'Jean85\\' => array($vendorDir . '/jean85/pretty-package-versions/src'),
     'Intervention\\Image\\' => array($vendorDir . '/intervention/image/src'),
     'Intervention\\Gif\\' => array($vendorDir . '/intervention/gif/src'),

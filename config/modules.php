@@ -7,6 +7,12 @@ return [
         'enabled' => true,
         'order' => 10,
     ],
+    'damage_assessment_borrowers' => [
+        'title' => 'مقترضو بنك التنمية الإسلامي',
+        'central' => false,
+        'enabled' => true,
+        'order' => 20,
+    ],
     'administration' => [
         'title' => 'menu.modules.administration',
         'central' => true,

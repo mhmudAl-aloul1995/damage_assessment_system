@@ -14,7 +14,7 @@ it('loads module routes and view namespaces', function () {
     expect(Route::has('damageAssessment.index'))->toBeTrue()
         ->and(View::getFinder()->getHints())->toHaveKeys([
             'damage-assessment',
-            'rubble',
+            'damage-assessment-borrowers',
         ])
         ->and(view()->exists('damage-assessment::dashboard.damageAssessment'))->toBeTrue();
 });

@@ -1,0 +1,94 @@
+<?php
+
+use App\Models\User;
+use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
+use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
+use App\Support\Navigation\Sidebar;
+use Spatie\Permission\Models\Role;
+
+it('allows field engineers to open the borrowers survey page', function () {
+    $role = Role::findOrCreate('Field Engineer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.index'))
+        ->assertOk()
+        ->assertSee('borrowerSurveyForm', false)
+        ->assertSee('استبيان المقترضين', false);
+});
+
+it('stores borrower surveys through ajax and returns risk analysis', function () {
+    $role = Role::findOrCreate('Field Engineer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('damage-assessment-borrowers.store'), [
+            'borrower_name' => 'Ahmad Saleh',
+            'borrower_id_number' => '900000001',
+            'family_members_count' => 7,
+            'employment_status' => 'not_working',
+            'is_borrower_alive' => false,
+            'vulnerability_types' => ['disabled', 'elderly'],
+            'guarantors_count' => 2,
+            'guarantors_alive_status' => 'no',
+            'guarantors_employment_statuses' => ['lost_job'],
+            'displacement_status' => 'displaced',
+            'displaced_to_governorate' => 'gaza',
+            'loan_unit_occupancy_status' => 'none_due_damage',
+            'loan_unit_damage_status' => 'destroyed',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('analysis.risk_level', 'critical');
+
+    expect(DamageAssessmentBorrower::query()->where('borrower_id_number', '900000001')->exists())->toBeTrue();
+});
+
+it('lists borrower surveys as json rows', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    DamageAssessmentBorrower::query()->create([
+        'submitted_by' => $user->id,
+        'borrower_name' => 'Mona Borrower',
+        'borrower_id_number' => '800000001',
+        'is_borrower_alive' => true,
+        'risk_level' => 'medium',
+        'risk_score' => 33,
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('damage-assessment-borrowers.data', ['q' => 'Mona']))
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('data.0.borrower_name', 'Mona Borrower');
+});
+
+it('adds borrowers to the sidebar for field engineers', function () {
+    $role = Role::findOrCreate('Field Engineer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $module = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment_borrowers');
+
+    expect($module)->not->toBeNull()
+        ->and($module['sections']->first()['url'])->toBe('damage-assessment-borrowers');
+});
+
+it('calculates borrower risk levels', function () {
+    $analysis = app(BorrowerRiskAnalysisService::class)->analyze([
+        'is_borrower_alive' => true,
+        'employment_status' => 'working',
+        'guarantors_alive_status' => 'yes',
+        'guarantors_employment_statuses' => ['all_working'],
+        'displacement_status' => 'resident',
+        'loan_unit_damage_status' => 'minor',
+    ]);
+
+    expect($analysis['risk_level'])->toBe('low');
+});

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5e6b7b25e545b0ea0b96bf8e7bdfab31",
+    "content-hash": "b4124963d2341080bf7e9d31a6ebd7b1",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -1727,6 +1727,69 @@
                 "source": "https://github.com/irazasyed/telegram-bot-sdk/tree/v3.16.0"
             },
             "time": "2026-03-07T09:57:43+00:00"
+        },
+        {
+            "name": "ladumor/laravel-pwa",
+            "version": "v1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/shailesh-ladumor/laravel-pwa.git",
+                "reference": "c98712ad1277a2efc7b00c1918f2dd9502a7a74e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/shailesh-ladumor/laravel-pwa/zipball/c98712ad1277a2efc7b00c1918f2dd9502a7a74e",
+                "reference": "c98712ad1277a2efc7b00c1918f2dd9502a7a74e",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": ">=5.4",
+                "php": ">=5.6"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "LaravelPwa": "Ladumor\\LaravelPwa\\LaravelPwa"
+                    },
+                    "providers": [
+                        "\\Ladumor\\LaravelPwa\\PWAServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Ladumor\\LaravelPwa\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Shailesh Ladumor",
+                    "email": "shaileshmladumor@gmail.com"
+                }
+            ],
+            "description": "this package used for the make pwa website.",
+            "keywords": [
+                "laravel",
+                "laravel-pwa",
+                "php",
+                "pwa-laravel"
+            ],
+            "support": {
+                "issues": "https://github.com/shailesh-ladumor/laravel-pwa/issues",
+                "source": "https://github.com/shailesh-ladumor/laravel-pwa/tree/v1.0.1"
+            },
+            "funding": [
+                {
+                    "url": "https://www.buymeacoffee.com/ladumor",
+                    "type": "custom"
+                }
+            ],
+            "time": "2026-02-22T04:55:03+00:00"
         },
         {
             "name": "laravel/framework",

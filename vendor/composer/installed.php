@@ -3,7 +3,7 @@
         'name' => 'laravel/laravel',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '879263b02575e2451ba0ed8e9e547b47d78d02bf',
+        'reference' => '65529b599bbfc541cb8853a2965aa6ddc8b60d6c',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -550,6 +550,15 @@
                 0 => '*',
             ),
         ),
+        'ladumor/laravel-pwa' => array(
+            'pretty_version' => 'v1.0.1',
+            'version' => '1.0.1.0',
+            'reference' => 'c98712ad1277a2efc7b00c1918f2dd9502a7a74e',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../ladumor/laravel-pwa',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'laravel/boost' => array(
             'pretty_version' => 'v2.1.8',
             'version' => '2.1.8.0',
@@ -580,7 +589,7 @@
         'laravel/laravel' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '879263b02575e2451ba0ed8e9e547b47d78d02bf',
+            'reference' => '65529b599bbfc541cb8853a2965aa6ddc8b60d6c',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

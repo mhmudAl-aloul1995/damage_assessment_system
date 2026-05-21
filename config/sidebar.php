@@ -305,6 +305,17 @@ return [
         ],
     ],
     [
+        'module' => 'damage_assessment_borrowers',
+        'title' => 'استبيان المقترضين',
+        'icon' => 'ki-profile-user',
+        'url' => 'damage-assessment-borrowers',
+        'pattern' => 'damage-assessment-borrowers*',
+        'roles' => ['Field Engineer', 'Database Officer', 'Project Officer', 'Area Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
+        'active_patterns' => [
+            'damage-assessment-borrowers*',
+        ],
+    ],
+    [
         'module' => 'administration',
         'title' => 'menu.user_management.title',
         'icon' => 'ki-user',

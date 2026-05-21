@@ -85,6 +85,7 @@
 	<link href="{{ asset('assets/css/font-unified.css') }}" rel="stylesheet" type="text/css" />
 	<!--end::Global Stylesheets Bundle-->
 	<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
+	@pwaHead
 </head>
 <!--end::Head-->
 <!--begin::Body-->
@@ -442,7 +443,8 @@
 								@foreach($sidebarModule['sections'] as $menu)
 									@if($menu['is_direct'] ?? false)
 										<div class="menu-item me-lg-1">
-											<a class="menu-link py-3 {{ $menu['is_active'] ? 'active' : '' }}" href="{{ url($menu['url']) }}">
+											<a class="menu-link py-3 {{ $menu['is_active'] ? 'active' : '' }}"
+												href="{{ url($menu['url']) }}">
 												@if(($menu['variant'] ?? null) === 'hud')
 													<span class="menu-title">{{ __($menu['title']) }}</span>
 												@else
@@ -459,7 +461,8 @@
 											</a>
 										</div>
 									@else
-										<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
+										<div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+											data-kt-menu-placement="bottom-start"
 											class="menu-item menu-lg-down-accordion me-lg-1 {{ $menu['is_active'] ? 'here show' : '' }}">
 											<span class="menu-link py-3">
 												<span class="menu-icon">
@@ -474,12 +477,14 @@
 												<span class="menu-arrow d-lg-none"></span>
 											</span>
 
-											<div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-rounded-0 py-lg-4 w-lg-275px">
+											<div
+												class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-rounded-0 py-lg-4 w-lg-275px">
 												@foreach($menu['items'] as $item)
 													@if(isset($item['children']))
 														<div class="menu-item">
 															<div class="menu-content pt-4 pb-2">
-																<span class="menu-section text-muted text-uppercase fs-8 ls-1">{{ __($item['title']) }}</span>
+																<span
+																	class="menu-section text-muted text-uppercase fs-8 ls-1">{{ __($item['title']) }}</span>
 															</div>
 														</div>
 
@@ -1334,7 +1339,8 @@
 
 									@foreach($sidebarModule['sections'] as $menu)
 										@if($menu['is_direct'] ?? false)
-											<div class="menu-item phc-sidebar-section {{ ($menu['variant'] ?? null) === 'hud' ? 'phc-sidebar-hud' : '' }} {{ $menu['is_active'] ? 'phc-sidebar-section-active' : '' }}">
+											<div
+												class="menu-item phc-sidebar-section {{ ($menu['variant'] ?? null) === 'hud' ? 'phc-sidebar-hud' : '' }} {{ $menu['is_active'] ? 'phc-sidebar-section-active' : '' }}">
 												<a class="menu-link" href="{{ url($menu['url']) }}">
 													@if(($menu['variant'] ?? null) === 'hud')
 														<span class="menu-title">{{ __($menu['title']) }}</span>
@@ -1937,6 +1943,8 @@
 			}
 		);
 	</script>
+	@laravelPwa
+	@pwaInstallButton
 </body>
 <!--end::Body-->
 

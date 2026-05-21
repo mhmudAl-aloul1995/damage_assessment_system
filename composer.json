@@ -14,6 +14,7 @@
         "dompdf/dompdf": "*",
         "intervention/image": "^3.11",
         "irazasyed/telegram-bot-sdk": "^3.16",
+        "ladumor/laravel-pwa": "^1.0",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.10.1",
