@@ -19,6 +19,7 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('padding: 0.45rem 0.35rem')
         ->toContain('#kt_datatable_audits thead th.sorting::before')
         ->toContain('background-image: none !important')
+        ->toContain('.dt-column-order')
         ->toContain('font-size: 0.74rem')
         ->toContain("#kt_datatable_audits tbody td {\n\t\t\tfont-size: 1rem;")
         ->not->toContain('font-size: .1rem')

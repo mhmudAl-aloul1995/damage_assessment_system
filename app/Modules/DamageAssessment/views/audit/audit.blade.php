@@ -15,6 +15,7 @@
 		#kt_datatable_audits thead th.sorting_asc,
 		#kt_datatable_audits thead th.sorting_desc {
 			background-image: none !important;
+			padding-inline-end: 0.35rem !important;
 		}
 
 		#kt_datatable_audits thead th.sorting::before,
@@ -23,6 +24,12 @@
 		#kt_datatable_audits thead th.sorting_asc::after,
 		#kt_datatable_audits thead th.sorting_desc::before,
 		#kt_datatable_audits thead th.sorting_desc::after {
+			display: none !important;
+			content: "" !important;
+		}
+
+		#kt_datatable_audits thead th .dt-column-order,
+		#kt_datatable_audits thead th .dt-column-title::after {
 			display: none !important;
 			content: "" !important;
 		}
