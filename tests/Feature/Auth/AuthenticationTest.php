@@ -109,7 +109,7 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect('/dashboard');
+    $response->assertRedirect('/damage-assessment/damageAssessment');
 });
 
 test('login ignores stale localhost intended urls', function () {
@@ -123,10 +123,10 @@ test('login ignores stale localhost intended urls', function () {
         ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect('/dashboard');
+    $response->assertRedirect('/damage-assessment/damageAssessment');
 });
 
-test('login redirects to configured subdirectory dashboard', function () {
+test('login redirects to configured subdirectory damage assessment dashboard', function () {
     config(['app.url' => 'http://localhost/phc']);
 
     $user = User::factory()->create();
@@ -137,7 +137,7 @@ test('login redirects to configured subdirectory dashboard', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect('/phc/dashboard');
+    $response->assertRedirect('/phc/damage-assessment/damageAssessment');
 });
 
 test('configured subdirectory login path submits to the configured login route', function () {
@@ -161,7 +161,7 @@ test('users can authenticate from the server subdirectory login path', function 
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect('/damage_assessment_system/dashboard');
+    $response->assertRedirect('/damage_assessment_system/damage-assessment/damageAssessment');
 });
 
 test('users can not authenticate with invalid password', function () {

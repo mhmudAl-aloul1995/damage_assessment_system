@@ -33,15 +33,15 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         if ($user->hasRole('Database Officer')) {
-            return redirect()->to(app_route('dashboard'));
+            return redirect()->to(app_route('damageAssessment.index'));
         }
 
         if ($user->hasRole('Area Manager')) {
-            return redirect()->to(app_route('dashboard'));
+            return redirect()->to(app_route('damageAssessment.index'));
         }
 
         if ($user->hasAnyRole(['Team Leader', 'Team Leader -INF'])) {
-            return redirect()->to(app_route('dashboard'));
+            return redirect()->to(app_route('damageAssessment.index'));
         }
 
         if ($user->hasRole('QC/QA Engineer')) {
@@ -56,7 +56,7 @@ class AuthenticatedSessionController extends Controller
             return redirect()->to(app_route('audit.index'));
         }
 
-        return redirect()->to(app_route('dashboard'));
+        return redirect()->to(app_route('damageAssessment.index'));
     }
 
     /**
