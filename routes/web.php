@@ -95,6 +95,7 @@ Route::get('/clear-session', function () {
 
 if (app()->environment('testing')) {
     Route::get('/testing/legacy-login-redirect', fn (): RedirectResponse => redirect()->away('/login.php'));
+    Route::get('/testing/duplicated-base-redirect', fn (): RedirectResponse => redirect()->away('/damage_assessment_system/damage_assessment_system/damage-assessment/damageAssessment'));
 }
 
 $legacyDamageAssessmentPrefixes = [

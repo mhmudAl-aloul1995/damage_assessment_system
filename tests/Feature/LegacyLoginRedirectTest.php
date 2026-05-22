@@ -28,3 +28,11 @@ test('application redirects to legacy login php are normalized to configured log
     $this->get('/testing/legacy-login-redirect')
         ->assertRedirect('/damage_assessment_system/login');
 });
+
+test('application redirects with duplicated server base path are normalized', function () {
+    config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
+
+    $this->get('/testing/duplicated-base-redirect')
+        ->assertStatus(302)
+        ->assertHeader('Location', '/damage_assessment_system/damage-assessment/damageAssessment');
+});
