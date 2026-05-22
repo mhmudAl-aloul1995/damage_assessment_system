@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 $configuredBasePath = trim(app_deduplicated_path((string) parse_url((string) config('app.url'), PHP_URL_PATH)), '/');
@@ -36,7 +37,7 @@ foreach ($supportedBasePaths as $supportedBasePath) {
 
             $queryString = $request->getQueryString();
 
-            return redirect()->to(app_path_url($targetPath).($queryString !== null ? '?'.$queryString : ''));
+            return new SymfonyRedirectResponse(app_path_url($targetPath).($queryString !== null ? '?'.$queryString : ''));
         }
 
         $server = array_replace($request->server->all(), [
