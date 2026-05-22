@@ -46,3 +46,4 @@ info*
 *.log
 storage/logs/*
 /.htaccess
+/public/.htaccess

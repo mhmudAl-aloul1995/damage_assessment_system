@@ -93,6 +93,10 @@ Route::get('/clear-session', function () {
         ->withCookie(cookie()->forget('XSRF-TOKEN', '/phc'));
 })->name('session.clear');
 
+if (app()->environment('testing')) {
+    Route::get('/testing/legacy-login-redirect', fn (): RedirectResponse => redirect()->away('/login.php'));
+}
+
 $legacyDamageAssessmentPrefixes = [
     'damageAssessment' => 'damage-assessment/damageAssessment',
     'assessmentAll' => 'damage-assessment/assessmentAll',

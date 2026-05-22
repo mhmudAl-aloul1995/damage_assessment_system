@@ -1,5 +1,6 @@
 <?php
-//dd
+
+// dd
 beforeEach(function () {
     config(['app.url' => 'http://localhost']);
 });
@@ -19,4 +20,11 @@ test('legacy login php redirects include configured subdirectory path', function
 
     $this->get('/login.php')
         ->assertRedirect('/login');
+});
+
+test('application redirects to legacy login php are normalized to configured login route', function () {
+    config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
+
+    $this->get('/testing/legacy-login-redirect')
+        ->assertRedirect('/damage_assessment_system/login');
 });
