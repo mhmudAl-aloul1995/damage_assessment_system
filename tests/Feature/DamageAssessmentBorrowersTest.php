@@ -32,7 +32,10 @@ it('wires borrowers surveys into pwa offline caching and sync', function () {
         ->and($serviceWorker)->toContain('PHC_OFFLINE_SYNC_COMPLETE')
         ->and($backgroundSync)->toContain('cacheCurrentPage')
         ->and($view)->toContain('borrowersPendingRowsKey')
-        ->and($view)->toContain('window.phcOfflineSync?.registerSync?.()');
+        ->and($view)->toContain('window.phcOfflineSync?.registerSync?.()')
+        ->and($view)->toContain('damage-assessment-borrowers-page')
+        ->and($view)->toContain('borrowersMobileList')
+        ->and($view)->toContain('borrower-mobile-card');
 });
 
 it('stores borrower surveys through ajax and returns risk analysis', function () {

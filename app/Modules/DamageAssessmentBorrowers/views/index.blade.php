@@ -13,9 +13,139 @@
         ];
     @endphp
 
+    <style>
+        .damage-assessment-borrowers-page .borrower-stat-card .card-body {
+            min-height: 104px;
+        }
+
+        .damage-assessment-borrowers-page .borrower-repeat-row {
+            overflow: hidden;
+        }
+
+        .damage-assessment-borrowers-page .borrowers-mobile-list {
+            display: none;
+        }
+
+        @media (max-width: 767.98px) {
+            .damage-assessment-borrowers-page {
+                margin-inline: -0.75rem;
+            }
+
+            .damage-assessment-borrowers-page .row {
+                --bs-gutter-x: 1rem;
+                --bs-gutter-y: 1rem;
+            }
+
+            .damage-assessment-borrowers-page .card-header {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 0.75rem;
+                padding: 1rem 1rem 0;
+            }
+
+            .damage-assessment-borrowers-page .card-title {
+                margin: 0;
+            }
+
+            .damage-assessment-borrowers-page .card-title h3,
+            .damage-assessment-borrowers-page h4 {
+                font-size: 1.05rem;
+                line-height: 1.6;
+            }
+
+            .damage-assessment-borrowers-page .card-body {
+                padding: 1rem;
+            }
+
+            .damage-assessment-borrowers-page .borrower-stat-card .card-body {
+                min-height: 86px;
+                padding: 0.875rem;
+            }
+
+            .damage-assessment-borrowers-page .borrower-stat-card .fs-2hx {
+                font-size: 1.75rem !important;
+            }
+
+            .damage-assessment-borrowers-page .form-label {
+                margin-bottom: 0.35rem;
+                font-size: 0.925rem;
+            }
+
+            .damage-assessment-borrowers-page .form-control,
+            .damage-assessment-borrowers-page .form-select,
+            .damage-assessment-borrowers-page .btn {
+                min-height: 44px;
+            }
+
+            .damage-assessment-borrowers-page .form-check-inline {
+                display: flex;
+                width: 100%;
+                margin-inline-end: 0;
+            }
+
+            .damage-assessment-borrowers-page .card-toolbar,
+            .damage-assessment-borrowers-page .card-toolbar .form-control {
+                width: 100% !important;
+            }
+
+            .damage-assessment-borrowers-page .borrower-repeat-row.d-flex,
+            .damage-assessment-borrowers-page .borrower-repeat-row .d-flex {
+                flex-direction: column;
+            }
+
+            .damage-assessment-borrowers-page #analysisPanel .d-flex {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+
+            .damage-assessment-borrowers-page [data-add-row],
+            .damage-assessment-borrowers-page #borrowerSubmitBtn {
+                width: 100%;
+            }
+
+            .damage-assessment-borrowers-page .table-responsive {
+                display: none;
+            }
+
+            .damage-assessment-borrowers-page .borrowers-mobile-list {
+                display: grid;
+                gap: 0.75rem;
+            }
+
+            .damage-assessment-borrowers-page .borrower-mobile-card {
+                border: 1px solid #e4e6ef;
+                border-radius: 0.65rem;
+                padding: 0.9rem;
+                background: #fff;
+            }
+
+            .damage-assessment-borrowers-page .borrower-mobile-meta {
+                display: grid;
+                gap: 0.45rem;
+                margin-top: 0.75rem;
+            }
+
+            .damage-assessment-borrowers-page .borrower-mobile-meta-item {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 0.75rem;
+                color: #5e6278;
+                font-size: 0.9rem;
+            }
+
+            .damage-assessment-borrowers-page .borrower-mobile-meta-item span:last-child {
+                color: #181c32;
+                font-weight: 600;
+                text-align: end;
+            }
+        }
+    </style>
+
+    <div class="damage-assessment-borrowers-page">
     <div class="row g-5 mb-6" id="borrowerStats">
         <div class="col-md-2 col-6">
-            <div class="card card-flush h-100">
+            <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">الإجمالي</div>
                     <div class="fs-2hx fw-bold" data-stat="total">{{ $stats['total'] }}</div>
@@ -23,7 +153,7 @@
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card card-flush h-100">
+            <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">حرج</div>
                     <div class="fs-2hx fw-bold text-danger" data-stat="critical">{{ $stats['critical'] }}</div>
@@ -31,7 +161,7 @@
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card card-flush h-100">
+            <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">مرتفع</div>
                     <div class="fs-2hx fw-bold text-warning" data-stat="high">{{ $stats['high'] }}</div>
@@ -39,7 +169,7 @@
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card card-flush h-100">
+            <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">نازحون</div>
                     <div class="fs-2hx fw-bold text-info" data-stat="displaced">{{ $stats['displaced'] }}</div>
@@ -47,7 +177,7 @@
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card card-flush h-100">
+            <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">هدم كلي</div>
                     <div class="fs-2hx fw-bold text-danger" data-stat="destroyed">{{ $stats['destroyed'] }}</div>
@@ -55,7 +185,7 @@
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card card-flush h-100">
+            <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">كفلاء غير فعالين</div>
                     <div class="fs-2hx fw-bold text-warning" data-stat="inactive_guarantors">{{ $stats['inactive_guarantors'] }}</div>
@@ -322,6 +452,7 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    <div id="borrowersMobileList" class="borrowers-mobile-list mb-2"></div>
                     <div class="table-responsive">
                         <table class="table table-row-dashed align-middle">
                             <thead>
@@ -342,6 +473,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 @endsection
 
@@ -507,10 +639,12 @@
 
         function renderRows(rows) {
             const body = document.getElementById('borrowersTableBody');
+            const mobileList = document.getElementById('borrowersMobileList');
             const allRows = [...pendingRows(), ...(rows || [])];
 
             if (!allRows.length) {
                 body.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
+                mobileList.innerHTML = '<div class="text-center text-muted py-4">لا توجد بيانات بعد</div>';
                 return;
             }
 
@@ -525,6 +659,30 @@
                     <td>${row.damage_label || '-'}</td>
                     <td><span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span></td>
                 </tr>`;
+            }).join('');
+
+            mobileList.innerHTML = allRows.map((row) => {
+                const color = riskClasses[row.risk_level] || 'secondary';
+
+                return `<article class="borrower-mobile-card">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="fw-bold">${row.borrower_name}</div>
+                            <div class="text-muted small">${row.borrower_id_number || '-'}</div>
+                        </div>
+                        <span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span>
+                    </div>
+                    <div class="borrower-mobile-meta">
+                        <div class="borrower-mobile-meta-item">
+                            <span>النزوح</span>
+                            <span>${row.displacement_label || '-'}</span>
+                        </div>
+                        <div class="borrower-mobile-meta-item">
+                            <span>الوحدة</span>
+                            <span>${row.damage_label || '-'}</span>
+                        </div>
+                    </div>
+                </article>`;
             }).join('');
         }
 
