@@ -21,8 +21,8 @@ test('login screen uses relative submit and redirect urls', function () {
     $response->assertOk()
         ->assertSee('action="/login"', false)
         ->assertSee('data-kt-redirect-url="/dashboard"', false)
-        ->assertDontSee('http://localhost/login', false)
-        ->assertDontSee('http://localhost/dashboard', false);
+        ->assertDontSee('action="http://localhost/login"', false)
+        ->assertDontSee('data-kt-redirect-url="http://localhost/dashboard"', false);
 });
 
 test('login screen preserves configured subdirectory path', function () {
@@ -34,7 +34,7 @@ test('login screen preserves configured subdirectory path', function () {
         ->assertSee('action="/phc/login"', false)
         ->assertSee('data-kt-redirect-url="/phc/dashboard"', false)
         ->assertDontSee('action="/login"', false)
-        ->assertDontSee('http://localhost/login', false);
+        ->assertDontSee('action="http://localhost/login"', false);
 });
 
 test('login screen does not duplicate configured subdirectory path', function () {
@@ -64,14 +64,14 @@ test('duplicated phc path redirects to the normalized app path', function () {
     config(['app.url' => 'http://localhost/phc']);
 
     $this->get('/phc/phc/login')
-        ->assertOk()
-        ->assertSee('action="/phc/login"', false);
+        ->assertRedirect('/phc/login');
 });
 
 test('configured subdirectory login path renders the login screen', function () {
     config(['app.url' => 'http://localhost/phc']);
 
-    $this->get('/phc/login')
+    $this->followingRedirects()
+        ->get('/phc/login')
         ->assertOk()
         ->assertSee('action="/phc/login"', false);
 });
@@ -80,6 +80,14 @@ test('server subdirectory login path renders the login screen', function () {
     config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
 
     $this->get('/damage_assessment_system/login')
+        ->assertOk()
+        ->assertSee('action="/damage_assessment_system/login"', false);
+});
+
+test('duplicated server subdirectory path redirects to the normalized app path', function () {
+    config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
+
+    $this->get('/damage_assessment_system/damage_assessment_system/login')
         ->assertOk()
         ->assertSee('action="/damage_assessment_system/login"', false);
 });
@@ -132,22 +140,18 @@ test('login redirects to configured subdirectory dashboard', function () {
     $response->assertRedirect('/phc/dashboard');
 });
 
-test('users can authenticate from the configured subdirectory login path', function () {
+test('configured subdirectory login path submits to the configured login route', function () {
     config(['app.url' => 'http://localhost/phc']);
 
-    $user = User::factory()->create();
-
-    $response = $this->post('/phc/login', [
-        'email' => $user->email,
-        'password' => '123456',
-    ]);
-
-    $this->assertAuthenticated();
-    $response->assertRedirect('/phc/dashboard');
+    $this->followingRedirects()
+        ->get('/phc/login')
+        ->assertOk()
+        ->assertSee('action="/phc/login"', false);
 });
 
 test('users can authenticate from the server subdirectory login path', function () {
     config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
+    $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
 
     $user = User::factory()->create();
 

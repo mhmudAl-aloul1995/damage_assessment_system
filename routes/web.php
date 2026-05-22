@@ -26,13 +26,14 @@ $supportedBasePaths = array_values(array_unique(array_filter([
 foreach ($supportedBasePaths as $supportedBasePath) {
     Route::any($supportedBasePath.'/{path?}', function (Request $request, ?string $path = null) use ($supportedBasePath): Response {
         $targetPath = app_deduplicated_path('/'.ltrim($path ?? '', '/'));
-        $originalTargetPath = $targetPath;
+        $requestPath = '/'.trim($request->path(), '/');
+        $duplicatedPrefix = '/'.$supportedBasePath.'/'.$supportedBasePath;
 
-        while ($targetPath === '/'.$supportedBasePath || str_starts_with($targetPath, '/'.$supportedBasePath.'/')) {
-            $targetPath = substr($targetPath, strlen('/'.$supportedBasePath)) ?: '/';
-        }
+        if ($requestPath === $duplicatedPrefix || str_starts_with($requestPath, $duplicatedPrefix.'/')) {
+            while ($targetPath === '/'.$supportedBasePath || str_starts_with($targetPath, '/'.$supportedBasePath.'/')) {
+                $targetPath = substr($targetPath, strlen('/'.$supportedBasePath)) ?: '/';
+            }
 
-        if ($targetPath !== $originalTargetPath) {
             $queryString = $request->getQueryString();
 
             return redirect()->to(app_path_url($targetPath).($queryString !== null ? '?'.$queryString : ''));
@@ -57,7 +58,16 @@ foreach ($supportedBasePaths as $supportedBasePath) {
             $forwardedRequest->setLaravelSession($request->session());
         }
 
-        return app('router')->dispatch($forwardedRequest);
+        $app = app();
+        $originalRequest = $app['request'];
+
+        $app->instance('request', $forwardedRequest);
+
+        try {
+            return app('router')->dispatch($forwardedRequest);
+        } finally {
+            $app->instance('request', $originalRequest);
+        }
     })->where('path', '.*');
 }
 
