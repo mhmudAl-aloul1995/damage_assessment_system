@@ -1,4 +1,4 @@
-const CACHE_NAME = 'phc-pwa-v3';
+const CACHE_NAME = 'phc-pwa-v4';
 const OFFLINE_URL = '/offline.html';
 const DB_NAME = 'laravel-pwa-sync';
 const DB_VERSION = 1;
@@ -10,6 +10,7 @@ const PRECACHE_URLS = [
     '/manifest.json',
     '/icon-192x192.png',
     '/icon-512x512.png',
+    '/background-sync.js',
     '/assets/css/fontface.css',
     '/assets/css/font-unified.css',
     '/assets/plugins/global/plugins.bundle.css',
@@ -47,7 +48,31 @@ self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'PHC_SYNC_NOW') {
         event.waitUntil(syncOfflineRequests());
     }
+
+    if (event.data && event.data.type === 'PHC_CACHE_URLS') {
+        event.waitUntil(cacheUrls(event.data.urls || []));
+    }
 });
+
+async function cacheUrls(urls) {
+    const cache = await caches.open(CACHE_NAME);
+
+    await Promise.all(urls.map(async (url) => {
+        try {
+            const request = new Request(url, {
+                cache: 'reload',
+                credentials: 'same-origin',
+            });
+            const response = await fetch(request);
+
+            if (response.ok) {
+                await cache.put(request, response.clone());
+            }
+        } catch (error) {
+            console.error('[PHC PWA] Failed to cache URL:', url, error);
+        }
+    }));
+}
 
 function openSyncDB() {
     return new Promise((resolve, reject) => {
@@ -92,6 +117,7 @@ async function deleteQueuedRequest(id) {
 
 async function syncOfflineRequests() {
     const queuedRequests = await getQueuedRequests();
+    let syncedCount = 0;
 
     for (const queuedRequest of queuedRequests) {
         const response = await fetch(queuedRequest.url, {
@@ -103,8 +129,25 @@ async function syncOfflineRequests() {
 
         if (response.ok || (response.status >= 400 && response.status < 500)) {
             await deleteQueuedRequest(queuedRequest.id);
+            syncedCount++;
         }
     }
+
+    if (syncedCount > 0) {
+        await notifyClients({
+            type: 'PHC_OFFLINE_SYNC_COMPLETE',
+            syncedCount,
+        });
+    }
+}
+
+async function notifyClients(message) {
+    const clients = await self.clients.matchAll({
+        includeUncontrolled: true,
+        type: 'window',
+    });
+
+    clients.forEach((client) => client.postMessage(message));
 }
 
 self.addEventListener('sync', (event) => {
@@ -138,12 +181,15 @@ self.addEventListener('fetch', (event) => {
                     const copy = response.clone();
 
                     caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, copy);
+                        cache.put(request, copy.clone());
+                        cache.put(requestUrl.pathname, copy);
                     });
 
                     return response;
                 })
-                .catch(() => caches.match(request).then((cached) => cached || caches.match(OFFLINE_URL)))
+                .catch(() => caches.match(request)
+                    .then((cached) => cached || caches.match(requestUrl.pathname))
+                    .then((cached) => cached || caches.match(OFFLINE_URL)))
         );
 
         return;

@@ -20,6 +20,21 @@ it('allows field engineers to open the borrowers survey page', function () {
         ->assertSee('استبيان المقترضين', false);
 });
 
+it('wires borrowers surveys into pwa offline caching and sync', function () {
+    $manifest = json_decode(file_get_contents(public_path('manifest.json')), true);
+    $serviceWorker = file_get_contents(public_path('sw.js'));
+    $backgroundSync = file_get_contents(public_path('background-sync.js'));
+    $view = file_get_contents(base_path('app/Modules/DamageAssessmentBorrowers/views/index.blade.php'));
+
+    expect(collect($manifest['shortcuts'] ?? [])->pluck('url'))->toContain('/damage-assessment-borrowers')
+        ->and($serviceWorker)->toContain('PHC_CACHE_URLS')
+        ->and($serviceWorker)->toContain('cache.put(requestUrl.pathname, copy)')
+        ->and($serviceWorker)->toContain('PHC_OFFLINE_SYNC_COMPLETE')
+        ->and($backgroundSync)->toContain('cacheCurrentPage')
+        ->and($view)->toContain('borrowersPendingRowsKey')
+        ->and($view)->toContain('window.phcOfflineSync?.registerSync?.()');
+});
+
 it('stores borrower surveys through ajax and returns risk analysis', function () {
     $role = Role::findOrCreate('Field Engineer', 'web');
     $user = User::factory()->create();

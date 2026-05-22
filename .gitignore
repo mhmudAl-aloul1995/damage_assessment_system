@@ -37,6 +37,7 @@ Thumbs.db
 !/public/login.php
 !/public/index.php
 !/public/sw.js
+!/public/background-sync.js
 !/public/offline.html
 !/public/manifest.json
 !/public/icon-*.png

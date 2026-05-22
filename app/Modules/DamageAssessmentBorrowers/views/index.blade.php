@@ -358,6 +358,8 @@
             medium: 'primary',
             low: 'success',
         };
+        const borrowersOfflineRowsKey = 'phc.damageAssessmentBorrowers.rows';
+        const borrowersPendingRowsKey = 'phc.damageAssessmentBorrowers.pendingRows';
 
         function csrfToken() {
             return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -466,14 +468,53 @@
             `;
         }
 
+        function cachedRows() {
+            try {
+                return JSON.parse(localStorage.getItem(borrowersOfflineRowsKey) || '[]');
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function pendingRows() {
+            try {
+                return JSON.parse(localStorage.getItem(borrowersPendingRowsKey) || '[]');
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function rememberRows(rows) {
+            localStorage.setItem(borrowersOfflineRowsKey, JSON.stringify(rows || []));
+        }
+
+        function rememberPendingRows(rows) {
+            localStorage.setItem(borrowersPendingRowsKey, JSON.stringify(rows || []));
+        }
+
+        function pendingRowFromPayload(payload) {
+            return {
+                id: `offline-${Date.now()}`,
+                borrower_name: payload.borrower_name,
+                borrower_id_number: payload.borrower_id_number,
+                displacement_label: payload.displacement_status || '-',
+                damage_label: payload.loan_unit_damage_status || '-',
+                risk_level: 'medium',
+                risk_label: 'Pending sync',
+                risk_score: '-',
+            };
+        }
+
         function renderRows(rows) {
             const body = document.getElementById('borrowersTableBody');
-            if (!rows.length) {
+            const allRows = [...pendingRows(), ...(rows || [])];
+
+            if (!allRows.length) {
                 body.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
                 return;
             }
 
-            body.innerHTML = rows.map((row) => {
+            body.innerHTML = allRows.map((row) => {
                 const color = riskClasses[row.risk_level] || 'secondary';
                 return `<tr>
                     <td>
@@ -492,14 +533,23 @@
             const url = new URL(borrowerRoutes.data, window.location.origin);
             if (q) url.searchParams.set('q', q);
 
-            const response = await fetch(url, {
-                headers: {
-                    'Accept': 'application/json'
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                const result = await response.json();
+                rememberRows(result.data || []);
+                renderStats(result.stats);
+                renderRows(result.data || []);
+            } catch (error) {
+                renderRows(cachedRows());
+
+                if (typeof toastr !== 'undefined') {
+                    toastr.info('Offline mode: showing saved borrower rows.');
                 }
-            });
-            const result = await response.json();
-            renderStats(result.stats);
-            renderRows(result.data || []);
+            }
         }
 
         document.getElementById('borrowerSurveyForm').addEventListener('submit', async (event) => {
@@ -524,10 +574,12 @@
                         body: JSON.stringify(payload),
                     });
 
+                    rememberPendingRows([pendingRowFromPayload(payload), ...pendingRows()]);
                     form.reset();
                     document.getElementById('deceasedGuarantorsRepeater').innerHTML = '';
                     document.getElementById('affectedGuarantorsRepeater').innerHTML = '';
                     document.getElementById('householdsRepeater').innerHTML = '';
+                    renderRows(cachedRows());
 
                     if (typeof toastr !== 'undefined') {
                         toastr.success('تم حفظ الاستبيان أوفلاين. سيتم إرساله تلقائيًا عند رجوع الإنترنت.');
@@ -570,6 +622,25 @@
         document.getElementById('borrowerSearch').addEventListener('input', () => {
             clearTimeout(window.borrowerSearchTimer);
             window.borrowerSearchTimer = setTimeout(loadBorrowers, 300);
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', async (event) => {
+                if (event.data?.type !== 'PHC_OFFLINE_SYNC_COMPLETE') {
+                    return;
+                }
+
+                rememberPendingRows([]);
+                await loadBorrowers();
+
+                if (typeof toastr !== 'undefined') {
+                    toastr.success('Offline borrower surveys synced successfully.');
+                }
+            });
+        }
+
+        window.addEventListener('online', () => {
+            window.phcOfflineSync?.registerSync?.();
         });
 
         loadBorrowers();
