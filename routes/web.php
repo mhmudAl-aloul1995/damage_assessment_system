@@ -10,12 +10,40 @@ use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\roleController;
 use App\Http\Controllers\UserManagement\userController;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpFoundation\Response;
 
-Route::any('phc/phc/{path?}', function (?string $path = null) {
-    return redirect()->to(app_path_url($path ?? ''));
+Route::any('phc/{path?}', function (Request $request, ?string $path = null): Response {
+    $basePath = trim(app_deduplicated_path((string) parse_url((string) config('app.url'), PHP_URL_PATH)), '/');
+    $targetPath = app_deduplicated_path('/'.ltrim($path ?? '', '/'));
+
+    while ($basePath !== '' && ($targetPath === '/'.$basePath || str_starts_with($targetPath, '/'.$basePath.'/'))) {
+        $targetPath = substr($targetPath, strlen('/'.$basePath)) ?: '/';
+    }
+
+    $server = array_replace($request->server->all(), [
+        'REQUEST_URI' => $targetPath.($request->getQueryString() !== null ? '?'.$request->getQueryString() : ''),
+        'PATH_INFO' => $targetPath,
+    ]);
+
+    $forwardedRequest = Request::create(
+        $server['REQUEST_URI'],
+        $request->method(),
+        $request->request->all(),
+        $request->cookies->all(),
+        $request->files->all(),
+        $server,
+        $request->getContent()
+    );
+
+    if ($request->hasSession()) {
+        $forwardedRequest->setLaravelSession($request->session());
+    }
+
+    return app('router')->dispatch($forwardedRequest);
 })->where('path', '.*');
 
 Route::get('/', function () {

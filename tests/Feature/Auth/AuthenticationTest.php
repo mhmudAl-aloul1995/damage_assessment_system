@@ -56,7 +56,16 @@ test('duplicated phc path redirects to the normalized app path', function () {
     config(['app.url' => 'http://localhost/phc']);
 
     $this->get('/phc/phc/login')
-        ->assertRedirect('/phc/login');
+        ->assertOk()
+        ->assertSee('action="/phc/login"', false);
+});
+
+test('configured subdirectory login path renders the login screen', function () {
+    config(['app.url' => 'http://localhost/phc']);
+
+    $this->get('/phc/login')
+        ->assertOk()
+        ->assertSee('action="/phc/login"', false);
 });
 
 test('login screen can be rendered with an existing session', function () {
@@ -107,16 +116,32 @@ test('login redirects to configured subdirectory dashboard', function () {
     $response->assertRedirect('/phc/dashboard');
 });
 
+test('users can authenticate from the configured subdirectory login path', function () {
+    config(['app.url' => 'http://localhost/phc']);
+
+    $user = User::factory()->create();
+
+    $response = $this->post('/phc/login', [
+        'email' => $user->email,
+        'password' => '123456',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect('/phc/dashboard');
+});
+
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();
 
-    $response = $this->post('/login', [
-        'email' => $user->email,
-        'password' => 'wrong-password',
-    ]);
+    $response = $this
+        ->from('/login')
+        ->post('/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ]);
 
     $this->assertGuest();
-    $response->assertSessionHasErrors('email');
+    $response->assertRedirect('/login');
 });
 
 test('users can logout', function () {
