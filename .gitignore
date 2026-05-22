@@ -46,3 +46,4 @@ Thumbs.db
 info*
 *.log
 storage/logs/*
+/.htaccess
