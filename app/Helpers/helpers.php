@@ -30,12 +30,8 @@ if (! function_exists('app_path_url')) {
 
         $prefix = '/'.$appPath;
 
-        while (str_starts_with($normalizedPath, $prefix.$prefix.'/')) {
+        while ($normalizedPath === $prefix.$prefix || str_starts_with($normalizedPath, $prefix.$prefix.'/')) {
             $normalizedPath = $prefix.substr($normalizedPath, strlen($prefix.$prefix));
-        }
-
-        if ($normalizedPath === $prefix.$prefix) {
-            $normalizedPath = $prefix;
         }
 
         if ($normalizedPath === $prefix || str_starts_with($normalizedPath, $prefix.'/')) {

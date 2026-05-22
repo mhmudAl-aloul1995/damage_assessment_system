@@ -52,6 +52,14 @@ test('login path helper does not duplicate when app url already contains duplica
         ->and(app_path_url('/phc/phc/login'))->toBe('/phc/login');
 });
 
+test('login path helper does not duplicate server subdirectory path', function () {
+    config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
+
+    expect(app_path_url('/login'))->toBe('/damage_assessment_system/login')
+        ->and(app_path_url('/damage_assessment_system/login'))->toBe('/damage_assessment_system/login')
+        ->and(app_path_url('/damage_assessment_system/damage_assessment_system/login'))->toBe('/damage_assessment_system/login');
+});
+
 test('duplicated phc path redirects to the normalized app path', function () {
     config(['app.url' => 'http://localhost/phc']);
 

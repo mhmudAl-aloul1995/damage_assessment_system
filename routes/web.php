@@ -26,9 +26,16 @@ $supportedBasePaths = array_values(array_unique(array_filter([
 foreach ($supportedBasePaths as $supportedBasePath) {
     Route::any($supportedBasePath.'/{path?}', function (Request $request, ?string $path = null) use ($supportedBasePath): Response {
         $targetPath = app_deduplicated_path('/'.ltrim($path ?? '', '/'));
+        $originalTargetPath = $targetPath;
 
         while ($targetPath === '/'.$supportedBasePath || str_starts_with($targetPath, '/'.$supportedBasePath.'/')) {
             $targetPath = substr($targetPath, strlen('/'.$supportedBasePath)) ?: '/';
+        }
+
+        if ($targetPath !== $originalTargetPath) {
+            $queryString = $request->getQueryString();
+
+            return redirect()->to(app_path_url($targetPath).($queryString !== null ? '?'.$queryString : ''));
         }
 
         $server = array_replace($request->server->all(), [
