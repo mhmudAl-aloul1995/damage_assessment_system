@@ -5,7 +5,13 @@
 
     RewriteEngine On
 
-    RewriteRule ^login\.php$ login [R=301,L]
+    RewriteRule ^damage_assessment_system/damage_assessment_system/?$ damage_assessment_system/ [R=302,L]
+    RewriteRule ^damage_assessment_system/damage_assessment_system/(.*)$ damage_assessment_system/$1 [R=302,L]
+    RewriteRule ^phc/phc/?$ phc/ [R=302,L]
+    RewriteRule ^phc/phc/(.*)$ phc/$1 [R=302,L]
+    RewriteRule ^damage_assessment_system/login\.php$ damage_assessment_system/login [R=302,L]
+    RewriteRule ^phc/login\.php$ phc/login [R=302,L]
+    RewriteRule ^login\.php$ login [R=302,L]
 
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
