@@ -68,6 +68,14 @@ test('configured subdirectory login path renders the login screen', function () 
         ->assertSee('action="/phc/login"', false);
 });
 
+test('server subdirectory login path renders the login screen', function () {
+    config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
+
+    $this->get('/damage_assessment_system/login')
+        ->assertOk()
+        ->assertSee('action="/damage_assessment_system/login"', false);
+});
+
 test('login screen can be rendered with an existing session', function () {
     $user = User::factory()->create();
 
@@ -128,6 +136,20 @@ test('users can authenticate from the configured subdirectory login path', funct
 
     $this->assertAuthenticated();
     $response->assertRedirect('/phc/dashboard');
+});
+
+test('users can authenticate from the server subdirectory login path', function () {
+    config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
+
+    $user = User::factory()->create();
+
+    $response = $this->post('/damage_assessment_system/login', [
+        'email' => $user->email,
+        'password' => '123456',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect('/damage_assessment_system/dashboard');
 });
 
 test('users can not authenticate with invalid password', function () {

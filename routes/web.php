@@ -16,35 +16,43 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 
-Route::any('phc/{path?}', function (Request $request, ?string $path = null): Response {
-    $basePath = trim(app_deduplicated_path((string) parse_url((string) config('app.url'), PHP_URL_PATH)), '/');
-    $targetPath = app_deduplicated_path('/'.ltrim($path ?? '', '/'));
+$configuredBasePath = trim(app_deduplicated_path((string) parse_url((string) config('app.url'), PHP_URL_PATH)), '/');
+$supportedBasePaths = array_values(array_unique(array_filter([
+    $configuredBasePath,
+    'phc',
+    'damage_assessment_system',
+])));
 
-    while ($basePath !== '' && ($targetPath === '/'.$basePath || str_starts_with($targetPath, '/'.$basePath.'/'))) {
-        $targetPath = substr($targetPath, strlen('/'.$basePath)) ?: '/';
-    }
+foreach ($supportedBasePaths as $supportedBasePath) {
+    Route::any($supportedBasePath.'/{path?}', function (Request $request, ?string $path = null) use ($supportedBasePath): Response {
+        $targetPath = app_deduplicated_path('/'.ltrim($path ?? '', '/'));
 
-    $server = array_replace($request->server->all(), [
-        'REQUEST_URI' => $targetPath.($request->getQueryString() !== null ? '?'.$request->getQueryString() : ''),
-        'PATH_INFO' => $targetPath,
-    ]);
+        while ($targetPath === '/'.$supportedBasePath || str_starts_with($targetPath, '/'.$supportedBasePath.'/')) {
+            $targetPath = substr($targetPath, strlen('/'.$supportedBasePath)) ?: '/';
+        }
 
-    $forwardedRequest = Request::create(
-        $server['REQUEST_URI'],
-        $request->method(),
-        $request->request->all(),
-        $request->cookies->all(),
-        $request->files->all(),
-        $server,
-        $request->getContent()
-    );
+        $server = array_replace($request->server->all(), [
+            'REQUEST_URI' => $targetPath.($request->getQueryString() !== null ? '?'.$request->getQueryString() : ''),
+            'PATH_INFO' => $targetPath,
+        ]);
 
-    if ($request->hasSession()) {
-        $forwardedRequest->setLaravelSession($request->session());
-    }
+        $forwardedRequest = Request::create(
+            $server['REQUEST_URI'],
+            $request->method(),
+            $request->request->all(),
+            $request->cookies->all(),
+            $request->files->all(),
+            $server,
+            $request->getContent()
+        );
 
-    return app('router')->dispatch($forwardedRequest);
-})->where('path', '.*');
+        if ($request->hasSession()) {
+            $forwardedRequest->setLaravelSession($request->session());
+        }
+
+        return app('router')->dispatch($forwardedRequest);
+    })->where('path', '.*');
+}
 
 Route::get('/', function () {
 
