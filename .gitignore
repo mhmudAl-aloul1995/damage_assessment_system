@@ -34,7 +34,6 @@ Thumbs.db
 *.zip
 *.7z
 /public/*
-!/public/.htaccess
 !/public/login.php
 !/public/index.php
 !/public/sw.js
