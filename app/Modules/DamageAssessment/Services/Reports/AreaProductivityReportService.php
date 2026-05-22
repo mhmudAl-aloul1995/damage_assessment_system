@@ -529,25 +529,25 @@ class AreaProductivityReportService
     {
         if ($type === self::TYPE_HOUSING_UNITS) {
             return [
-                ['key' => 'tda_range', 'label' => 'Totally Damaged', 'color' => '#F1416C'],
-                ['key' => 'pda_range', 'label' => 'Partially Damaged', 'color' => '#FFC700'],
-                ['key' => 'cra_range', 'label' => 'Committee Review', 'color' => '#E879F9'],
+                ['key' => 'tda_range', 'label' => __('multilingual.area_productivity_reports.metrics.totally_damaged'), 'color' => '#F1416C'],
+                ['key' => 'pda_range', 'label' => __('multilingual.area_productivity_reports.metrics.partially_damaged'), 'color' => '#FFC700'],
+                ['key' => 'cra_range', 'label' => __('multilingual.area_productivity_reports.metrics.committee_review'), 'color' => '#E879F9'],
             ];
         }
 
         if ($type === self::TYPE_ROAD_FACILITIES) {
             return [
-                ['key' => 'destroyed_count', 'label' => 'Destroyed', 'color' => '#F1416C'],
-                ['key' => 'severe_count', 'label' => 'Severe', 'color' => '#E879F9'],
-                ['key' => 'moderate_count', 'label' => 'Moderate', 'color' => '#FFC700'],
-                ['key' => 'minor_count', 'label' => 'Minor', 'color' => '#009EF7'],
-                ['key' => 'no_damage_count', 'label' => 'No Damage', 'color' => '#50CD89'],
+                ['key' => 'destroyed_count', 'label' => __('multilingual.area_productivity_reports.metrics.destroyed'), 'color' => '#F1416C'],
+                ['key' => 'severe_count', 'label' => __('multilingual.area_productivity_reports.metrics.severe'), 'color' => '#E879F9'],
+                ['key' => 'moderate_count', 'label' => __('multilingual.area_productivity_reports.metrics.moderate'), 'color' => '#FFC700'],
+                ['key' => 'minor_count', 'label' => __('multilingual.area_productivity_reports.metrics.minor'), 'color' => '#009EF7'],
+                ['key' => 'no_damage_count', 'label' => __('multilingual.area_productivity_reports.metrics.no_damage'), 'color' => '#50CD89'],
             ];
         }
 
         return [
-            ['key' => 'tda_range', 'label' => 'Totally Damaged', 'color' => '#F1416C'],
-            ['key' => 'pda_range', 'label' => 'Partially Damaged', 'color' => '#FFC700'],
+            ['key' => 'tda_range', 'label' => __('multilingual.area_productivity_reports.metrics.totally_damaged'), 'color' => '#F1416C'],
+            ['key' => 'pda_range', 'label' => __('multilingual.area_productivity_reports.metrics.partially_damaged'), 'color' => '#FFC700'],
         ];
     }
 

@@ -632,7 +632,7 @@
                 displacement_label: payload.displacement_status || '-',
                 damage_label: payload.loan_unit_damage_status || '-',
                 risk_level: 'medium',
-                risk_label: 'Pending sync',
+                risk_label: @json(app()->getLocale() === 'ar' ? 'بانتظار المزامنة' : 'Pending sync'),
                 risk_score: '-',
             };
         }
@@ -705,7 +705,7 @@
                 renderRows(cachedRows());
 
                 if (typeof toastr !== 'undefined') {
-                    toastr.info('Offline mode: showing saved borrower rows.');
+                    toastr.info(@json(app()->getLocale() === 'ar' ? 'وضع عدم الاتصال: يتم عرض سجلات المقترضين المحفوظة.' : 'Offline mode: showing saved borrower rows.'));
                 }
             }
         }
@@ -792,7 +792,7 @@
                 await loadBorrowers();
 
                 if (typeof toastr !== 'undefined') {
-                    toastr.success('Offline borrower surveys synced successfully.');
+                    toastr.success(@json(app()->getLocale() === 'ar' ? 'تمت مزامنة استبيانات المقترضين المحفوظة بنجاح.' : 'Offline borrower surveys synced successfully.'));
                 }
             });
         }

@@ -671,7 +671,7 @@
             <div class="row align-items-center">
                 <div class="col-md-8 text-start">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="hud-badge-pulse"><i class="fa-solid fa-circle-dot me-1"></i>LIVE GIS HUD</span>
+                        <span class="hud-badge-pulse"><i class="fa-solid fa-circle-dot me-1"></i>{{ __('menu.hud.title') }}</span>
                         <h1 class="hud-title-main">مشروع حصر الأضرار -قطاع غزة</h1>
                     </div>
                 </div>

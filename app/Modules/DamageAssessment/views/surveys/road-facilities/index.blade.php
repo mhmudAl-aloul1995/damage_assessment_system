@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'Road Facilities')
-@section('pageName', 'Road Facilities')
+@section('title', __('multilingual.road_facilities_page.title'))
+@section('pageName', __('multilingual.road_facilities_page.title'))
 
 @section('content')
     <div class="row g-5 mb-5">
         <div class="col-md-4">
             <div class="card card-flush border border-gray-200 h-100">
                 <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="text-muted fs-6 mb-2">Total Surveys</div>
+                    <div class="text-muted fs-6 mb-2">{{ __('multilingual.road_facilities_page.total_surveys') }}</div>
                     <div class="fs-2hx fw-bold text-gray-900">{{ $summary['total_surveys'] }}</div>
                 </div>
             </div>
@@ -16,7 +16,7 @@
         <div class="col-md-4">
             <div class="card card-flush border border-gray-200 h-100">
                 <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="text-muted fs-6 mb-2">Repeated Items</div>
+                    <div class="text-muted fs-6 mb-2">{{ __('multilingual.road_facilities_page.repeated_items') }}</div>
                     <div class="fs-2hx fw-bold text-primary">{{ $summary['total_items'] }}</div>
                 </div>
             </div>
@@ -24,7 +24,7 @@
         <div class="col-md-4">
             <div class="card card-flush border border-gray-200 h-100">
                 <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="text-muted fs-6 mb-2">Damaged Roads</div>
+                    <div class="text-muted fs-6 mb-2">{{ __('multilingual.road_facilities_page.damaged_roads') }}</div>
                     <div class="fs-2hx fw-bold text-danger">{{ $summary['damaged_roads'] }}</div>
                 </div>
             </div>
@@ -34,22 +34,22 @@
     <div class="card card-flush shadow-sm mb-5">
         <div class="card-header pt-6">
             <div class="card-title">
-                <h3 class="fw-bold m-0">Road Facilities Filters</h3>
+                <h3 class="fw-bold m-0">{{ __('multilingual.road_facilities_page.filters_title') }}</h3>
             </div>
         </div>
         <div class="card-body">
             <div class="row g-5">
                 <div class="col-md-3">
-                    <label class="form-label">Municipality</label>
-                    <select id="filter_municipalitie" class="form-select form-select-solid road-select2" data-placeholder="Select municipality" data-allow-clear="true" data-close-on-select="false" multiple>
+                    <label class="form-label">{{ __('multilingual.road_facilities_page.municipality') }}</label>
+                    <select id="filter_municipalitie" class="form-select form-select-solid road-select2" data-placeholder="{{ __('multilingual.road_facilities_page.select_municipality') }}" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['municipalities'] as $municipality)
                             <option value="{{ $municipality }}">{{ $municipality }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Neighborhood</label>
-                    <select id="filter_neighborhood" class="form-select form-select-solid road-select2" data-placeholder="Select neighborhood" data-allow-clear="true" data-close-on-select="false" multiple>
+                    <label class="form-label">{{ __('multilingual.road_facilities_page.neighborhood') }}</label>
+                    <select id="filter_neighborhood" class="form-select form-select-solid road-select2" data-placeholder="{{ __('multilingual.road_facilities_page.select_neighborhood') }}" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['neighborhoods'] as $neighborhood)
                             <option value="{{ $neighborhood }}">{{ $neighborhood }}</option>
                         @endforeach
@@ -58,7 +58,7 @@
                 @foreach ($filterGroups as $groupName => $items)
                     <div class="col-md-3">
                         <label class="form-label">{{ str($groupName)->replace('_', ' ')->title() }}</label>
-                        <select id="filter_{{ $groupName }}" class="form-select form-select-solid road-filter-select road-select2" data-filter-key="{{ $groupName }}" data-placeholder="Select {{ str($groupName)->replace('_', ' ')->lower() }}" data-allow-clear="true" data-close-on-select="false" multiple>
+                        <select id="filter_{{ $groupName }}" class="form-select form-select-solid road-filter-select road-select2" data-filter-key="{{ $groupName }}" data-placeholder="{{ __('multilingual.road_facilities_page.select_filter', ['label' => str($groupName)->replace('_', ' ')->lower()]) }}" data-allow-clear="true" data-close-on-select="false" multiple>
                             @foreach ($items as $item)
                                 <option value="{{ $item->name }}">{{ $item->label }}</option>
                             @endforeach
@@ -66,23 +66,23 @@
                     </div>
                 @endforeach
                 <div class="col-md-3">
-                    <label class="form-label">Researcher</label>
-                    <select id="filter_assignedto" class="form-select form-select-solid road-select2" data-placeholder="Select researcher" data-allow-clear="true" data-close-on-select="false" multiple>
+                    <label class="form-label">{{ __('multilingual.road_facilities_page.researcher') }}</label>
+                    <select id="filter_assignedto" class="form-select form-select-solid road-select2" data-placeholder="{{ __('multilingual.road_facilities_page.select_researcher') }}" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['researchers'] as $researcher)
                             <option value="{{ $researcher }}">{{ $researcher }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <input id="filter_search" type="text" class="form-control form-control-solid" placeholder="Road, municipality, objectid...">
+                    <label class="form-label">{{ __('multilingual.road_facilities_page.search') }}</label>
+                    <input id="filter_search" type="text" class="form-control form-control-solid" placeholder="{{ __('multilingual.road_facilities_page.search_placeholder') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">From Date</label>
+                    <label class="form-label">{{ __('multilingual.road_facilities_page.from_date') }}</label>
                     <input id="filter_from_date" type="date" class="form-control form-control-solid" value="{{ $filterOptions['min_submissiondate'] }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">To Date</label>
+                    <label class="form-label">{{ __('multilingual.road_facilities_page.to_date') }}</label>
                     <input id="filter_to_date" type="date" class="form-control form-control-solid" value="{{ $filterOptions['max_submissiondate'] }}">
                 </div>
             </div>
@@ -92,13 +92,13 @@
     <div class="card card-flush shadow-sm">
         <div class="card-header pt-6 d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div class="card-title">
-                <h3 class="fw-bold m-0">Road Facilities Surveys</h3>
+                <h3 class="fw-bold m-0">{{ __('multilingual.road_facilities_page.surveys_title') }}</h3>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <button type="button" class="btn btn-light-primary road-facilities-export" data-format="xlsx">Export Excel</button>
-                <button type="button" class="btn btn-light-success road-facilities-export" data-format="csv">Export CSV</button>
-                <button type="button" class="btn btn-light-danger road-facilities-export" data-format="pdf">Export PDF</button>
-                <button type="button" id="reset_filters" class="btn btn-light">Reset Filters</button>
+                <button type="button" class="btn btn-light-primary road-facilities-export" data-format="xlsx">{{ __('multilingual.road_facilities_page.export_excel') }}</button>
+                <button type="button" class="btn btn-light-success road-facilities-export" data-format="csv">{{ __('multilingual.road_facilities_page.export_csv') }}</button>
+                <button type="button" class="btn btn-light-danger road-facilities-export" data-format="pdf">{{ __('multilingual.road_facilities_page.export_pdf') }}</button>
+                <button type="button" id="reset_filters" class="btn btn-light">{{ __('multilingual.road_facilities_page.reset_filters') }}</button>
             </div>
         </div>
         <div class="card-body">
@@ -106,16 +106,16 @@
                 <table id="road_facilities_table" class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3 w-100">
                     <thead>
                         <tr class="fw-bold text-muted bg-light">
-                            <th>Object ID</th>
-                            <th>Road Name</th>
-                            <th>Municipality</th>
-                            <th>Neighborhood</th>
-                            <th>Damage Level</th>
-                            <th>Road Access</th>
-                            <th>Submission Date</th>
-                            <th>Linked Items</th>
-                            <th>Researcher</th>
-                            <th class="text-end">Actions</th>
+                            <th>{{ __('multilingual.road_facilities_page.object_id') }}</th>
+                            <th>{{ __('multilingual.road_facilities_page.road_name') }}</th>
+                            <th>{{ __('multilingual.road_facilities_page.municipality') }}</th>
+                            <th>{{ __('multilingual.road_facilities_page.neighborhood') }}</th>
+                            <th>{{ __('multilingual.road_facilities_page.damage_level') }}</th>
+                            <th>{{ __('multilingual.road_facilities_page.road_access') }}</th>
+                            <th>{{ __('multilingual.road_facilities_page.submission_date') }}</th>
+                            <th>{{ __('multilingual.road_facilities_page.linked_items') }}</th>
+                            <th>{{ __('multilingual.road_facilities_page.researcher') }}</th>
+                            <th class="text-end">{{ __('multilingual.road_facilities_page.actions') }}</th>
                         </tr>
                     </thead>
                 </table>
@@ -188,6 +188,22 @@
             const table = $('#road_facilities_table').DataTable({
                 processing: true,
                 serverSide: true,
+                language: {
+                    processing: @json(__('multilingual.road_facilities_page.table.processing')),
+                    search: @json(__('multilingual.road_facilities_page.table.search')),
+                    lengthMenu: @json(__('multilingual.road_facilities_page.table.length_menu')),
+                    info: @json(__('multilingual.road_facilities_page.table.info')),
+                    infoEmpty: @json(__('multilingual.road_facilities_page.table.info_empty')),
+                    infoFiltered: @json(__('multilingual.road_facilities_page.table.info_filtered')),
+                    emptyTable: @json(__('multilingual.road_facilities_page.table.empty_table')),
+                    zeroRecords: @json(__('multilingual.road_facilities_page.table.zero_records')),
+                    paginate: {
+                        first: @json(__('multilingual.road_facilities_page.table.paginate_first')),
+                        last: @json(__('multilingual.road_facilities_page.table.paginate_last')),
+                        next: @json(__('multilingual.road_facilities_page.table.paginate_next')),
+                        previous: @json(__('multilingual.road_facilities_page.table.paginate_previous')),
+                    },
+                },
                 ajax: {
                     url: '{{ route('road-facilities.data') }}',
                     data: function (d) {

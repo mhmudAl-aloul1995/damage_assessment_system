@@ -678,7 +678,7 @@
 											<!--begin::Heading-->
 											<div class="d-flex flex-stack fw-semibold mb-4">
 												<!--begin::Label-->
-												<span class="text-muted fs-6 me-2">Recently Searched:</span>
+												<span class="text-muted fs-6 me-2">{{ __('ui.search.recently_searched') }}</span>
 												<!--end::Label-->
 											</div>
 											<!--end::Heading-->
@@ -857,8 +857,8 @@
 											<!--end::Icon-->
 											<!--begin::Message-->
 											<div class="pb-15 fw-semibold">
-												<h3 class="text-gray-600 fs-5 mb-2">No result found</h3>
-												<div class="text-muted fs-7">Please try again with a different query
+												<h3 class="text-gray-600 fs-5 mb-2">{{ __('ui.search.no_result_found') }}</h3>
+												<div class="text-muted fs-7">{{ __('ui.search.try_different_query') }}
 												</div>
 											</div>
 											<!--end::Message-->
@@ -869,12 +869,12 @@
 									<!--begin::Preferences-->
 									<form data-kt-search-element="advanced-options-form" class="pt-1 d-none">
 										<!--begin::Heading-->
-										<h3 class="fw-semibold text-dark mb-7">Advanced Search</h3>
+										<h3 class="fw-semibold text-dark mb-7">{{ __('ui.search.advanced_search') }}</h3>
 										<!--end::Heading-->
 										<!--begin::Input group-->
 										<div class="mb-5">
 											<input type="text" class="form-control form-control-sm form-control-solid"
-												placeholder="Contains the word" name="query" />
+												placeholder="{{ __('ui.search.contains_word') }}" name="query" />
 										</div>
 										<!--end::Input group-->
 										<!--begin::Input group-->
@@ -886,7 +886,7 @@
 													<input type="radio" class="btn-check" name="type" value="has"
 														checked="checked" />
 													<span
-														class="btn btn-sm btn-color-muted btn-active btn-active-primary">All</span>
+														class="btn btn-sm btn-color-muted btn-active btn-active-primary">{{ __('ui.search.all') }}</span>
 												</label>
 												<!--end::Option-->
 												<!--begin::Option-->
@@ -900,7 +900,7 @@
 												<label>
 													<input type="radio" class="btn-check" name="type" value="orders" />
 													<span
-														class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4">Orders</span>
+														class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4">{{ __('ui.search.orders') }}</span>
 												</label>
 												<!--end::Option-->
 												<!--begin::Option-->
@@ -919,14 +919,14 @@
 										<div class="mb-5">
 											<input type="text" name="assignedto"
 												class="form-control form-control-sm form-control-solid"
-												placeholder="Assigned to" value="" />
+												placeholder="{{ __('ui.search.assigned_to') }}" value="" />
 										</div>
 										<!--end::Input group-->
 										<!--begin::Input group-->
 										<div class="mb-5">
 											<input type="text" name="collaborators"
 												class="form-control form-control-sm form-control-solid"
-												placeholder="Collaborators" value="" />
+												placeholder="{{ __('ui.search.collaborators') }}" value="" />
 										</div>
 										<!--end::Input group-->
 										<!--begin::Input group-->
@@ -938,8 +938,7 @@
 													<input type="radio" class="btn-check" name="attachment" value="has"
 														checked="checked" />
 													<span
-														class="btn btn-sm btn-color-muted btn-active btn-active-primary">Has
-														attachment</span>
+														class="btn btn-sm btn-color-muted btn-active btn-active-primary">{{ __('ui.search.has_attachment') }}</span>
 												</label>
 												<!--end::Option-->
 												<!--begin::Option-->
@@ -947,7 +946,7 @@
 													<input type="radio" class="btn-check" name="attachment"
 														value="any" />
 													<span
-														class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4">Any</span>
+														class="btn btn-sm btn-color-muted btn-active btn-active-primary px-4">{{ __('ui.search.any') }}</span>
 												</label>
 												<!--end::Option-->
 											</div>
@@ -956,14 +955,14 @@
 										<!--end::Input group-->
 										<!--begin::Input group-->
 										<div class="mb-5">
-											<select name="timezone" aria-label="Select a Timezone"
+											<select name="timezone" aria-label="{{ __('ui.search.select_time_period') }}"
 												data-control="select2" data-dropdown-parent="#kt_header_search"
 												data-placeholder="date_period"
 												class="form-select form-select-sm form-select-solid">
-												<option value="next">Within the next</option>
-												<option value="last">Within the last</option>
-												<option value="between">Between</option>
-												<option value="on">On</option>
+												<option value="next">{{ __('ui.search.within_next') }}</option>
+												<option value="last">{{ __('ui.search.within_last') }}</option>
+												<option value="between">{{ __('ui.search.between') }}</option>
+												<option value="on">{{ __('ui.search.on') }}</option>
 											</select>
 										</div>
 										<!--end::Input group-->
@@ -973,19 +972,19 @@
 											<div class="col-6">
 												<input type="number" name="date_number"
 													class="form-control form-control-sm form-control-solid"
-													placeholder="Lenght" value="" />
+													placeholder="{{ __('ui.search.length') }}" value="" />
 											</div>
 											<!--end::Col-->
 											<!--begin::Col-->
 											<div class="col-6">
-												<select name="date_typer" aria-label="Select a Timezone"
+												<select name="date_typer" aria-label="{{ __('ui.search.period') }}"
 													data-control="select2" data-dropdown-parent="#kt_header_search"
-													data-placeholder="Period"
+													data-placeholder="{{ __('ui.search.period') }}"
 													class="form-select form-select-sm form-select-solid">
-													<option value="days">Days</option>
-													<option value="weeks">Weeks</option>
-													<option value="months">Months</option>
-													<option value="years">Years</option>
+													<option value="days">{{ __('ui.search.days') }}</option>
+													<option value="weeks">{{ __('ui.search.weeks') }}</option>
+													<option value="months">{{ __('ui.search.months') }}</option>
+													<option value="years">{{ __('ui.search.years') }}</option>
 												</select>
 											</div>
 											<!--end::Col-->
@@ -998,7 +997,7 @@
 												data-kt-search-element="advanced-options-form-cancel">{{ __('ui.buttons.cancel') }}</button>
 											<a href="../../demo1/dist/pages/search/horizontal.html"
 												class="btn btn-sm fw-bold btn-primary"
-												data-kt-search-element="advanced-options-form-search">Search</a>
+												data-kt-search-element="advanced-options-form-search">{{ __('ui.search.search_action') }}</a>
 										</div>
 										<!--end::Actions-->
 									</form>
@@ -1006,7 +1005,7 @@
 									<!--begin::Preferences-->
 									<form data-kt-search-element="preferences" class="pt-1 d-none">
 										<!--begin::Heading-->
-										<h3 class="fw-semibold text-dark mb-7">Search Preferences</h3>
+										<h3 class="fw-semibold text-dark mb-7">{{ __('ui.search.preferences_title') }}</h3>
 										<!--end::Heading-->
 										<!--begin::Input group-->
 										<div class="pb-4 border-bottom">
@@ -1024,7 +1023,7 @@
 											<label
 												class="form-check form-switch form-switch-sm form-check-custom form-check-solid flex-stack">
 												<span
-													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2">Targets</span>
+													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2">{{ __('ui.search.targets') }}</span>
 												<input class="form-check-input" type="checkbox" value="1"
 													checked="checked" />
 											</label>
@@ -1035,8 +1034,7 @@
 											<label
 												class="form-check form-switch form-switch-sm form-check-custom form-check-solid flex-stack">
 												<span
-													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2">Affiliate
-													Programs</span>
+													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2">{{ __('ui.search.affiliate_programs') }}</span>
 												<input class="form-check-input" type="checkbox" value="1" />
 											</label>
 										</div>
@@ -1046,7 +1044,7 @@
 											<label
 												class="form-check form-switch form-switch-sm form-check-custom form-check-solid flex-stack">
 												<span
-													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2">Referrals</span>
+													class="form-check-label text-gray-700 fs-6 fw-semibold ms-0 me-2">{{ __('ui.search.referrals') }}</span>
 												<input class="form-check-input" type="checkbox" value="1"
 													checked="checked" />
 											</label>

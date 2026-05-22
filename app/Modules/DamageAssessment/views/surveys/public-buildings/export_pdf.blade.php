@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
-    <title>Public Buildings Export</title>
+    <title>{{ __('multilingual.public_buildings_page.title') }}</title>
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;
@@ -34,7 +34,7 @@
         td {
             border: 1px solid #d1d5db;
             padding: 8px;
-            text-align: left;
+            text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }};
             vertical-align: top;
         }
 
@@ -56,39 +56,39 @@
 </head>
 <body>
     <div class="heading">
-        <h1>Public Building Surveys</h1>
-        <div class="meta">Generated at {{ now()->format('Y-m-d H:i') }}</div>
+        <h1>{{ __('multilingual.public_buildings_page.surveys_title') }}</h1>
+        <div class="meta">{{ __('multilingual.public_buildings_page.generated_at') }} {{ now()->format('Y-m-d H:i') }}</div>
     </div>
 
     <div class="filters">
         @if (! empty($filters['municipalitie']))
-            <span><strong>Municipality:</strong> {{ $filters['municipalitie'] }}</span>
+            <span><strong>{{ __('multilingual.public_buildings_page.municipality') }}:</strong> {{ $filters['municipalitie'] }}</span>
         @endif
         @if (! empty($filters['building_damage_status']))
-            <span><strong>Damage Status:</strong> {{ $filters['building_damage_status'] }}</span>
+            <span><strong>{{ __('multilingual.public_buildings_page.damage_status') }}:</strong> {{ $filters['building_damage_status'] }}</span>
         @endif
         @if (! empty($filters['assignedto']))
-            <span><strong>Researcher:</strong> {{ $filters['assignedto'] }}</span>
+            <span><strong>{{ __('multilingual.public_buildings_page.researcher') }}:</strong> {{ $filters['assignedto'] }}</span>
         @endif
         @if (! empty($filters['from_date']))
-            <span><strong>From:</strong> {{ $filters['from_date'] }}</span>
+            <span><strong>{{ __('multilingual.public_buildings_page.from') }}:</strong> {{ $filters['from_date'] }}</span>
         @endif
         @if (! empty($filters['to_date']))
-            <span><strong>To:</strong> {{ $filters['to_date'] }}</span>
+            <span><strong>{{ __('multilingual.public_buildings_page.to') }}:</strong> {{ $filters['to_date'] }}</span>
         @endif
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>Object ID</th>
-                <th>Building Name</th>
-                <th>Municipality</th>
-                <th>Neighborhood</th>
-                <th>Damage Status</th>
-                <th>Date Of Damage</th>
-                <th>Linked Units</th>
-                <th>Researcher</th>
+                <th>{{ __('multilingual.public_buildings_page.object_id') }}</th>
+                <th>{{ __('multilingual.public_buildings_page.building_name') }}</th>
+                <th>{{ __('multilingual.public_buildings_page.municipality') }}</th>
+                <th>{{ __('multilingual.public_buildings_page.neighborhood') }}</th>
+                <th>{{ __('multilingual.public_buildings_page.damage_status') }}</th>
+                <th>{{ __('multilingual.public_buildings_page.date_of_damage') }}</th>
+                <th>{{ __('multilingual.public_buildings_page.linked_units') }}</th>
+                <th>{{ __('multilingual.public_buildings_page.researcher') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -105,7 +105,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8">No surveys found for the selected filters.</td>
+                    <td colspan="8">{{ __('multilingual.public_buildings_page.no_surveys') }}</td>
                 </tr>
             @endforelse
         </tbody>

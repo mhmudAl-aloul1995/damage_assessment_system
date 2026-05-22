@@ -52,46 +52,46 @@ class SurveyReportController extends Controller
             ->values();
 
         return view('damage-assessment::reports.survey_overview', [
-            'reportTitle' => 'Public Buildings Report',
-            'reportSubtitle' => 'Overview of public building survey records, statuses, municipalities, and daily trend.',
+            'reportTitle' => __('multilingual.public_buildings_page.report_title'),
+            'reportSubtitle' => __('multilingual.public_buildings_page.report_subtitle'),
             'reportRoute' => route('reports.public-buildings'),
             'startDateValue' => $startDate->toDateString(),
             'endDateValue' => $endDate->toDateString(),
             'summaryCards' => [
-                ['label' => 'Total Surveys', 'value' => $surveys->count(), 'class' => 'primary'],
-                ['label' => 'Damaged Buildings', 'value' => $surveys->whereNotNull('building_damage_status')->where('building_damage_status', '!=', '')->count(), 'class' => 'danger'],
-                ['label' => 'Total Units', 'value' => (int) $surveys->sum('units_count'), 'class' => 'success'],
-                ['label' => 'Municipalities', 'value' => $municipalityRows->count(), 'class' => 'info'],
+                ['label' => __('multilingual.public_buildings_page.total_surveys'), 'value' => $surveys->count(), 'class' => 'primary'],
+                ['label' => __('multilingual.public_buildings_page.damaged_buildings'), 'value' => $surveys->whereNotNull('building_damage_status')->where('building_damage_status', '!=', '')->count(), 'class' => 'danger'],
+                ['label' => __('multilingual.public_buildings_page.total_units'), 'value' => (int) $surveys->sum('units_count'), 'class' => 'success'],
+                ['label' => __('multilingual.public_buildings_page.municipalities'), 'value' => $municipalityRows->count(), 'class' => 'info'],
             ],
             'primaryChart' => [
                 'selector' => 'public_buildings_status_chart',
-                'title' => 'Damage Status Distribution',
+                'title' => __('multilingual.public_buildings_page.damage_distribution'),
                 'labels' => $statusCounts->keys()->map(fn (string $label) => str($label)->replace('_', ' ')->headline()->toString())->values()->all(),
                 'series' => $statusCounts->values()->all(),
                 'colors' => ['#f1416c', '#ffc700', '#50cd89', '#7239ea', '#009ef7', '#e4e6ef'],
             ],
             'secondaryChart' => [
                 'selector' => 'public_buildings_municipality_chart',
-                'title' => 'Surveys by Municipality',
+                'title' => __('multilingual.public_buildings_page.surveys_by_municipality'),
                 'labels' => $municipalityRows->pluck('name')->all(),
                 'series' => $municipalityRows->pluck('total_surveys')->all(),
                 'colors' => ['#009ef7'],
             ],
             'curveChart' => [
                 'selector' => 'public_buildings_curve_chart',
-                'title' => 'Daily Public Buildings Curve',
+                'title' => __('multilingual.public_buildings_page.daily_curve'),
                 'labels' => $this->buildCurveChartData($surveys, 'date_of_damage', $startDate, $endDate)['labels'],
                 'series' => $this->buildCurveChartData($surveys, 'date_of_damage', $startDate, $endDate)['series'],
                 'color' => '#7239ea',
             ],
-            'tableTitle' => 'Municipality',
+            'tableTitle' => __('multilingual.public_buildings_page.municipality'),
             'tableColumns' => [
-                ['label' => 'Total Surveys', 'key' => 'total_surveys', 'class' => 'primary'],
-                ['label' => 'Damaged Buildings', 'key' => 'damaged_surveys', 'class' => 'danger'],
-                ['label' => 'Total Units', 'key' => 'total_units', 'class' => 'success'],
+                ['label' => __('multilingual.public_buildings_page.total_surveys'), 'key' => 'total_surveys', 'class' => 'primary'],
+                ['label' => __('multilingual.public_buildings_page.damaged_buildings'), 'key' => 'damaged_surveys', 'class' => 'danger'],
+                ['label' => __('multilingual.public_buildings_page.total_units'), 'key' => 'total_units', 'class' => 'success'],
             ],
             'rows' => $municipalityRows,
-            'emptyMessage' => 'No public building survey data found for the selected range.',
+            'emptyMessage' => __('multilingual.public_buildings_page.empty_report'),
         ]);
     }
 
@@ -151,8 +151,8 @@ class SurveyReportController extends Controller
             ->values();
 
         return view('damage-assessment::reports.survey_overview', [
-            'reportTitle' => 'Road Facilities Report',
-            'reportSubtitle' => 'Overview of road facility survey records, damage levels, access conditions, and daily trend.',
+            'reportTitle' => __('multilingual.road_facilities_page.report_title'),
+            'reportSubtitle' => __('multilingual.road_facilities_page.report_subtitle'),
             'reportRoute' => route('reports.road-facilities'),
 
             'startDateValue' => $startDate->toDateString(),
@@ -160,13 +160,13 @@ class SurveyReportController extends Controller
 
             'summaryCards' => [
                 [
-                    'label' => 'Total Surveys',
+                    'label' => __('multilingual.road_facilities_page.total_surveys'),
                     'value' => $surveys->count(),
                     'class' => 'primary',
                 ],
 
                 [
-                    'label' => 'Damaged Roads',
+                    'label' => __('multilingual.road_facilities_page.damaged_roads'),
                     'value' => $surveys
                         ->whereNotNull('road_damage_level')
                         ->where('road_damage_level', '!=', '')
@@ -175,13 +175,13 @@ class SurveyReportController extends Controller
                 ],
 
                 [
-                    'label' => 'Total Items',
+                    'label' => __('multilingual.road_facilities_page.total_items'),
                     'value' => (int) $surveys->sum('items_count'),
                     'class' => 'success',
                 ],
 
                 [
-                    'label' => 'Municipalities',
+                    'label' => __('multilingual.road_facilities_page.municipalities'),
                     'value' => $municipalityRows->count(),
                     'class' => 'info',
                 ],
@@ -190,14 +190,14 @@ class SurveyReportController extends Controller
             'primaryChart' => [
                 'selector' => 'road_facilities_damage_chart',
 
-                'title' => 'Road Damage Level Distribution',
+                'title' => __('multilingual.road_facilities_page.damage_distribution'),
 
                 'labels' => [
-                    'Destroyed',
-                    'Severe',
-                    'Moderate',
-                    'Minor',
-                    'No Damage',
+                    __('multilingual.area_productivity_reports.metrics.destroyed'),
+                    __('multilingual.area_productivity_reports.metrics.severe'),
+                    __('multilingual.area_productivity_reports.metrics.moderate'),
+                    __('multilingual.area_productivity_reports.metrics.minor'),
+                    __('multilingual.area_productivity_reports.metrics.no_damage'),
                 ],
 
                 'series' => [
@@ -220,7 +220,7 @@ class SurveyReportController extends Controller
             'secondaryChart' => [
                 'selector' => 'road_facilities_access_chart',
 
-                'title' => 'Road Access Distribution',
+                'title' => __('multilingual.road_facilities_page.access_distribution'),
 
                 'labels' => $accessCounts->keys()
                     ->map(
@@ -240,7 +240,7 @@ class SurveyReportController extends Controller
             'curveChart' => [
                 'selector' => 'road_facilities_curve_chart',
 
-                'title' => 'Daily Road Facilities Curve',
+                'title' => __('multilingual.road_facilities_page.daily_curve'),
 
                 'labels' => $this->buildRoadFacilitiesCurveChartData(
                     $surveys,
@@ -257,23 +257,23 @@ class SurveyReportController extends Controller
                 'color' => '#009ef7',
             ],
 
-            'tableTitle' => 'Municipality',
+            'tableTitle' => __('multilingual.road_facilities_page.municipality'),
 
             'tableColumns' => [
                 [
-                    'label' => 'Total Surveys',
+                    'label' => __('multilingual.road_facilities_page.total_surveys'),
                     'key' => 'total_surveys',
                     'class' => 'primary',
                 ],
 
                 [
-                    'label' => 'Damaged Roads',
+                    'label' => __('multilingual.road_facilities_page.damaged_roads'),
                     'key' => 'damaged_roads',
                     'class' => 'danger',
                 ],
 
                 [
-                    'label' => 'Total Items',
+                    'label' => __('multilingual.road_facilities_page.total_items'),
                     'key' => 'total_items',
                     'class' => 'success',
                 ],
@@ -281,7 +281,7 @@ class SurveyReportController extends Controller
 
             'rows' => $municipalityRows,
 
-            'emptyMessage' => 'No road facility survey data found for the selected range.',
+            'emptyMessage' => __('multilingual.road_facilities_page.empty_report'),
         ]);
 
     }

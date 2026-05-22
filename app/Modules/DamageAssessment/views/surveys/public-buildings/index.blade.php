@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'Public Buildings')
-@section('pageName', 'Public Buildings')
+@section('title', __('multilingual.public_buildings_page.title'))
+@section('pageName', __('multilingual.public_buildings_page.title'))
 
 @section('content')
     <div class="row g-5 mb-5">
         <div class="col-md-4">
             <div class="card card-flush border border-gray-200 h-100">
                 <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="text-muted fs-6 mb-2">Total Surveys</div>
+                    <div class="text-muted fs-6 mb-2">{{ __('multilingual.public_buildings_page.total_surveys') }}</div>
                     <div class="fs-2hx fw-bold text-gray-900">{{ $summary['total_surveys'] }}</div>
                 </div>
             </div>
@@ -16,7 +16,7 @@
         <div class="col-md-4">
             <div class="card card-flush border border-gray-200 h-100">
                 <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="text-muted fs-6 mb-2">Repeated Units</div>
+                    <div class="text-muted fs-6 mb-2">{{ __('multilingual.public_buildings_page.repeated_units') }}</div>
                     <div class="fs-2hx fw-bold text-primary">{{ $summary['total_units'] }}</div>
                 </div>
             </div>
@@ -24,7 +24,7 @@
         <div class="col-md-4">
             <div class="card card-flush border border-gray-200 h-100">
                 <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="text-muted fs-6 mb-2">Damaged Buildings</div>
+                    <div class="text-muted fs-6 mb-2">{{ __('multilingual.public_buildings_page.damaged_buildings') }}</div>
                     <div class="fs-2hx fw-bold text-danger">{{ $summary['damaged_buildings'] }}</div>
                 </div>
             </div>
@@ -34,22 +34,22 @@
     <div class="card card-flush shadow-sm mb-5">
         <div class="card-header pt-6">
             <div class="card-title">
-                <h3 class="fw-bold m-0">Public Building Filters</h3>
+                <h3 class="fw-bold m-0">{{ __('multilingual.public_buildings_page.filters_title') }}</h3>
             </div>
         </div>
         <div class="card-body">
             <div class="row g-5">
                 <div class="col-md-3">
-                    <label class="form-label">Municipality</label>
-                    <select id="filter_municipalitie" class="form-select form-select-solid public-building-select2" data-placeholder="Select municipality" data-allow-clear="true" data-close-on-select="false" multiple>
+                    <label class="form-label">{{ __('multilingual.public_buildings_page.municipality') }}</label>
+                    <select id="filter_municipalitie" class="form-select form-select-solid public-building-select2" data-placeholder="{{ __('multilingual.public_buildings_page.select_municipality') }}" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['municipalities'] as $municipality)
                             <option value="{{ $municipality }}">{{ $municipality }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Neighborhood</label>
-                    <select id="filter_neighborhood" class="form-select form-select-solid public-building-select2" data-placeholder="Select neighborhood" data-allow-clear="true" data-close-on-select="false" multiple>
+                    <label class="form-label">{{ __('multilingual.public_buildings_page.neighborhood') }}</label>
+                    <select id="filter_neighborhood" class="form-select form-select-solid public-building-select2" data-placeholder="{{ __('multilingual.public_buildings_page.select_neighborhood') }}" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['neighborhoods'] as $neighborhood)
                             <option value="{{ $neighborhood }}">{{ $neighborhood }}</option>
                         @endforeach
@@ -58,7 +58,7 @@
                 @foreach ($filterGroups as $groupName => $items)
                     <div class="col-md-3">
                         <label class="form-label">{{ str($groupName)->replace('_', ' ')->title() }}</label>
-                        <select id="filter_{{ $groupName }}" class="form-select form-select-solid public-building-filter-select public-building-select2" data-filter-key="{{ $groupName }}" data-placeholder="Select {{ str($groupName)->replace('_', ' ')->lower() }}" data-allow-clear="true" data-close-on-select="false" multiple>
+                        <select id="filter_{{ $groupName }}" class="form-select form-select-solid public-building-filter-select public-building-select2" data-filter-key="{{ $groupName }}" data-placeholder="{{ __('multilingual.public_buildings_page.select_filter', ['label' => str($groupName)->replace('_', ' ')->lower()]) }}" data-allow-clear="true" data-close-on-select="false" multiple>
                             @foreach ($items as $item)
                                 <option value="{{ $item->name }}">{{ $item->label }}</option>
                             @endforeach
@@ -66,23 +66,23 @@
                     </div>
                 @endforeach
                 <div class="col-md-3">
-                    <label class="form-label">Researcher</label>
-                    <select id="filter_assignedto" class="form-select form-select-solid public-building-select2" data-placeholder="Select researcher" data-allow-clear="true" data-close-on-select="false" multiple>
+                    <label class="form-label">{{ __('multilingual.public_buildings_page.researcher') }}</label>
+                    <select id="filter_assignedto" class="form-select form-select-solid public-building-select2" data-placeholder="{{ __('multilingual.public_buildings_page.select_researcher') }}" data-allow-clear="true" data-close-on-select="false" multiple>
                         @foreach ($filterOptions['researchers'] as $researcher)
                             <option value="{{ $researcher }}">{{ $researcher }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <input id="filter_search" type="text" class="form-control form-control-solid" placeholder="Building, municipality, objectid...">
+                    <label class="form-label">{{ __('multilingual.public_buildings_page.search') }}</label>
+                    <input id="filter_search" type="text" class="form-control form-control-solid" placeholder="{{ __('multilingual.public_buildings_page.search_placeholder') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">From Date</label>
+                    <label class="form-label">{{ __('multilingual.public_buildings_page.from_date') }}</label>
                     <input id="filter_from_date" type="date" class="form-control form-control-solid" value="{{ $filterOptions['min_damage_date'] }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">To Date</label>
+                    <label class="form-label">{{ __('multilingual.public_buildings_page.to_date') }}</label>
                     <input id="filter_to_date" type="date" class="form-control form-control-solid" value="{{ $filterOptions['max_damage_date'] }}">
                 </div>
             </div>
@@ -92,13 +92,13 @@
     <div class="card card-flush shadow-sm">
         <div class="card-header pt-6 d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div class="card-title">
-                <h3 class="fw-bold m-0">Public Building Surveys</h3>
+                <h3 class="fw-bold m-0">{{ __('multilingual.public_buildings_page.surveys_title') }}</h3>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <button type="button" class="btn btn-light-primary public-buildings-export" data-format="xlsx">Export Excel</button>
-                <button type="button" class="btn btn-light-success public-buildings-export" data-format="csv">Export CSV</button>
-                <button type="button" class="btn btn-light-danger public-buildings-export" data-format="pdf">Export PDF</button>
-                <button type="button" id="reset_filters" class="btn btn-light">Reset Filters</button>
+                <button type="button" class="btn btn-light-primary public-buildings-export" data-format="xlsx">{{ __('multilingual.public_buildings_page.export_excel') }}</button>
+                <button type="button" class="btn btn-light-success public-buildings-export" data-format="csv">{{ __('multilingual.public_buildings_page.export_csv') }}</button>
+                <button type="button" class="btn btn-light-danger public-buildings-export" data-format="pdf">{{ __('multilingual.public_buildings_page.export_pdf') }}</button>
+                <button type="button" id="reset_filters" class="btn btn-light">{{ __('multilingual.public_buildings_page.reset_filters') }}</button>
             </div>
         </div>
         <div class="card-body">
@@ -106,15 +106,15 @@
                 <table id="public_buildings_table" class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3 w-100">
                     <thead>
                         <tr class="fw-bold text-muted bg-light">
-                            <th>Object ID</th>
-                            <th>Building Name</th>
-                            <th>Municipality</th>
-                            <th>Neighborhood</th>
-                            <th>Damage Status</th>
-                            <th>Date Of Damage</th>
-                            <th>Linked Units</th>
-                            <th>Researcher</th>
-                            <th class="text-end">Actions</th>
+                            <th>{{ __('multilingual.public_buildings_page.object_id') }}</th>
+                            <th>{{ __('multilingual.public_buildings_page.building_name') }}</th>
+                            <th>{{ __('multilingual.public_buildings_page.municipality') }}</th>
+                            <th>{{ __('multilingual.public_buildings_page.neighborhood') }}</th>
+                            <th>{{ __('multilingual.public_buildings_page.damage_status') }}</th>
+                            <th>{{ __('multilingual.public_buildings_page.date_of_damage') }}</th>
+                            <th>{{ __('multilingual.public_buildings_page.linked_units') }}</th>
+                            <th>{{ __('multilingual.public_buildings_page.researcher') }}</th>
+                            <th class="text-end">{{ __('multilingual.public_buildings_page.actions') }}</th>
                         </tr>
                     </thead>
                 </table>
@@ -210,6 +210,22 @@
             const table = $('#public_buildings_table').DataTable({
                 processing: true,
                 serverSide: true,
+                language: {
+                    processing: @json(__('multilingual.road_facilities_page.table.processing')),
+                    search: @json(__('multilingual.road_facilities_page.table.search')),
+                    lengthMenu: @json(__('multilingual.road_facilities_page.table.length_menu')),
+                    info: @json(__('multilingual.road_facilities_page.table.info')),
+                    infoEmpty: @json(__('multilingual.road_facilities_page.table.info_empty')),
+                    infoFiltered: @json(__('multilingual.road_facilities_page.table.info_filtered')),
+                    emptyTable: @json(__('multilingual.road_facilities_page.table.empty_table')),
+                    zeroRecords: @json(__('multilingual.road_facilities_page.table.zero_records')),
+                    paginate: {
+                        first: @json(__('multilingual.road_facilities_page.table.paginate_first')),
+                        last: @json(__('multilingual.road_facilities_page.table.paginate_last')),
+                        next: @json(__('multilingual.road_facilities_page.table.paginate_next')),
+                        previous: @json(__('multilingual.road_facilities_page.table.paginate_previous')),
+                    },
+                },
                 ajax: {
                     url: '{{ route('public-buildings.data') }}',
                     data: function (d) {

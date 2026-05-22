@@ -124,7 +124,7 @@
                     </div>
                     <div id="fieldEngineerLoadingState" class="loading-box mt-3">
                         <span class="spinner-border spinner-border-sm"></span>
-                        <span>Loading data...</span>
+                        <span>{{ __('multilingual.field_engineer_report.messages.loading_data') }}</span>
                     </div>
                     <div id="fieldEngineerErrorState" class="alert alert-danger error-box mt-3 mb-0"></div>
                 </div>
@@ -314,9 +314,9 @@
                             </div>
 
                             <div class="col-md-4 d-flex align-items-end gap-3">
-                                <button type="submit" class="btn btn-primary flex-fill">Search</button>
+                                <button type="submit" class="btn btn-primary flex-fill">{{ __('multilingual.field_engineer_report.actions.apply_filters') }}</button>
                                 <button type="button" class="btn btn-light flex-fill"
-                                    id="resetFieldEngineerFilters">Reset</button>
+                                    id="resetFieldEngineerFilters">{{ __('multilingual.field_engineer_report.actions.reset') }}</button>
                             </div>
                         </div>
                     </form>
