@@ -146,6 +146,68 @@ foreach ($legacyDamageAssessmentPrefixes as $legacyPrefix => $modulePrefix) {
     })->where('path', '.*');
 }
 
+Route::get('/manifest.webmanifest', function (): Response {
+    $manifest = json_decode((string) file_get_contents(public_path('manifest.json')), true) ?: [];
+
+    $manifest['id'] = app_path_url('/');
+    $manifest['start_url'] = app_path_url('/login');
+    $manifest['scope'] = app_path_url('/');
+
+    foreach ($manifest['icons'] ?? [] as &$icon) {
+        if (isset($icon['src'])) {
+            $icon['src'] = app_path_url($icon['src']);
+        }
+    }
+    unset($icon);
+
+    foreach ($manifest['shortcuts'] ?? [] as &$shortcut) {
+        if (isset($shortcut['url'])) {
+            $shortcut['url'] = app_path_url($shortcut['url']);
+        }
+
+        foreach ($shortcut['icons'] ?? [] as &$icon) {
+            if (isset($icon['src'])) {
+                $icon['src'] = app_path_url($icon['src']);
+            }
+        }
+        unset($icon);
+    }
+    unset($shortcut);
+
+    return response()
+        ->json($manifest)
+        ->header('Content-Type', 'application/manifest+json');
+})->name('pwa.manifest');
+
+Route::get('/sw.js', function (): Response {
+    return response((string) file_get_contents(public_path('sw.js')), 200, [
+        'Content-Type' => 'application/javascript; charset=UTF-8',
+        'Service-Worker-Allowed' => app_path_url('/'),
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+    ]);
+})->name('pwa.service-worker');
+
+Route::get('/background-sync.js', function (): Response {
+    return response((string) file_get_contents(public_path('background-sync.js')), 200, [
+        'Content-Type' => 'application/javascript; charset=UTF-8',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+    ]);
+})->name('pwa.background-sync');
+
+Route::get('/pwa-install.js', function (): Response {
+    return response((string) file_get_contents(public_path('pwa-install.js')), 200, [
+        'Content-Type' => 'application/javascript; charset=UTF-8',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+    ]);
+})->name('pwa.install-script');
+
+Route::get('/offline.html', function (): Response {
+    return response((string) file_get_contents(public_path('offline.html')), 200, [
+        'Content-Type' => 'text/html; charset=UTF-8',
+        'Cache-Control' => 'no-cache',
+    ]);
+})->name('pwa.offline');
+
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */

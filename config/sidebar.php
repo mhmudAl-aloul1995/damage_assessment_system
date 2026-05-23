@@ -304,7 +304,7 @@ return [
             ],
         ],
     ],
-    [
+   /* [
         'module' => 'damage_assessment_borrowers',
         'title' => 'استبيان المقترضين',
         'icon' => 'ki-profile-user',
@@ -314,7 +314,7 @@ return [
         'active_patterns' => [
             'damage-assessment-borrowers*',
         ],
-    ],
+    ],*/
     [
         'module' => 'administration',
         'title' => 'menu.user_management.title',
