@@ -47,6 +47,71 @@
             word-break: break-word;
         }
 
+        .damage-assessment-borrowers-page .borrower-create-layout {
+            align-items: flex-start;
+        }
+
+        .damage-assessment-borrowers-page .borrower-create-card,
+        .damage-assessment-borrowers-page .borrower-analysis-card {
+            border: 1px solid var(--bs-gray-200);
+            box-shadow: 0 0.85rem 2.4rem rgba(15, 23, 42, 0.06);
+        }
+
+        .damage-assessment-borrowers-page .borrower-create-card > .card-header {
+            background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.08), rgba(var(--bs-info-rgb), 0.04));
+            border-bottom: 1px solid var(--bs-gray-200);
+            padding: 1.5rem 1.75rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-create-hero {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .damage-assessment-borrowers-page .borrower-create-hero-note {
+            max-width: 18rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-form-progress {
+            display: grid;
+            gap: 0.75rem;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            margin-top: 1.25rem;
+            width: 100%;
+        }
+
+        .damage-assessment-borrowers-page .borrower-form-progress-item {
+            align-items: center;
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.95rem;
+            color: var(--bs-gray-700);
+            display: flex;
+            font-weight: 600;
+            gap: 0.6rem;
+            padding: 0.8rem 0.9rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-form-progress-item span {
+            align-items: center;
+            background: var(--bs-primary-light);
+            border-radius: 999px;
+            color: var(--bs-primary);
+            display: inline-flex;
+            flex: 0 0 auto;
+            font-size: 0.8rem;
+            height: 1.85rem;
+            justify-content: center;
+            width: 1.85rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-analysis-column {
+            position: sticky;
+            top: 6rem;
+        }
+
         .damage-assessment-borrowers-page .borrower-survey-form .form-control,
         .damage-assessment-borrowers-page .borrower-survey-form .form-select {
             background-color: var(--bs-gray-100);
@@ -124,6 +189,12 @@
             width: 0.35rem;
         }
 
+        @media (max-width: 1199.98px) {
+            .damage-assessment-borrowers-page .borrower-analysis-column {
+                position: static;
+            }
+        }
+
         @media (max-width: 767.98px) {
             .damage-assessment-borrowers-page {
                 margin-inline: -0.75rem;
@@ -143,6 +214,22 @@
 
             .damage-assessment-borrowers-page .card-title {
                 margin: 0;
+            }
+
+            .damage-assessment-borrowers-page .borrower-create-card > .card-header {
+                padding: 1rem;
+            }
+
+            .damage-assessment-borrowers-page .borrower-create-hero {
+                flex-direction: column;
+            }
+
+            .damage-assessment-borrowers-page .borrower-create-hero-note {
+                max-width: none;
+            }
+
+            .damage-assessment-borrowers-page .borrower-form-progress {
+                grid-template-columns: 1fr;
             }
 
             .damage-assessment-borrowers-page .card-title h3,
@@ -309,18 +396,36 @@
         @endif
     </div>
 
-    <div class="row g-6">
+    <div class="row g-6 borrower-create-layout">
         @if ($isFormPage)
-        <div class="col-xl-7">
-            <div class="card card-flush">
-                <div class="card-header">
-                    <div class="card-title">
-                        <h3 class="fw-bold mb-0">تعبئة استبيان المقترض</h3>
+        <div class="col-12 col-xxl-8 col-xl-9">
+            <div class="card card-flush borrower-create-card">
+                <div class="card-header align-items-stretch">
+                    <div class="card-title flex-column align-items-stretch w-100">
+                        <div class="borrower-create-hero">
+                            <div>
+                                <span class="badge badge-light-primary mb-3">استبيان ميداني</span>
+                                <h3 class="fw-bold mb-0">تعبئة استبيان المقترض</h3>
+                                <div class="text-muted fs-6 mt-2">رتّب البيانات حسب الأقسام التالية، ثم احفظ الاستبيان لعرض درجة الخطورة مباشرة.</div>
+                            </div>
+                            <div class="borrower-create-hero-note alert alert-light mb-0 py-3 px-4">
+                                <div class="fw-semibold text-gray-800">مناسب للجوال</div>
+                                <div class="text-muted fs-7">الحقول ستظهر كسطر واحد واضح على الشاشات الصغيرة لتسهيل التعبئة الميدانية.</div>
+                            </div>
+                        </div>
+                        <div class="borrower-form-progress" aria-label="أقسام الاستبيان">
+                            <div class="borrower-form-progress-item"><span>1</span> بيانات المقترض</div>
+                            <div class="borrower-form-progress-item"><span>2</span> الكفلاء</div>
+                            <div class="borrower-form-progress-item"><span>3</span> النزوح والسكن</div>
+                            <div class="borrower-form-progress-item"><span>4</span> الوحدة السكنية</div>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-5 p-lg-8">
                     <form id="borrowerSurveyForm" class="row g-5 borrower-survey-form" data-offline-sync="true">
                         @csrf
+
+                        <div class="col-12"><h4 class="fw-bold borrower-form-section-title mb-0">بيانات المقترض الأساسية</h4></div>
 
                         <div class="col-md-6">
                             <label class="form-label required">اسم المقترض رباعي</label>
@@ -531,8 +636,8 @@
                             <textarea class="form-control" name="notes" rows="3"></textarea>
                         </div>
 
-                        <div class="col-12 d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary" id="borrowerSubmitBtn">
+                        <div class="col-12 d-grid d-sm-flex justify-content-sm-end">
+                            <button type="submit" class="btn btn-primary btn-lg" id="borrowerSubmitBtn">
                                 <span class="indicator-label">حفظ الاستبيان وتحليل الحالة</span>
                                 <span class="indicator-progress">جاري الحفظ...
                                     <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
@@ -545,9 +650,9 @@
         </div>
         @endif
 
-        <div class="{{ $isFormPage ? 'col-xl-5' : 'col-12' }}">
+        <div class="{{ $isFormPage ? 'col-12 col-xxl-4 col-xl-9 borrower-analysis-column' : 'col-12' }}">
             @if ($isFormPage)
-            <div class="card card-flush mb-6">
+            <div class="card card-flush mb-6 borrower-analysis-card">
                 <div class="card-header">
                     <div class="card-title">
                         <h3 class="fw-bold mb-0">نتيجة التحليل</h3>

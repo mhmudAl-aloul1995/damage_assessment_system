@@ -36,10 +36,14 @@ it('allows field engineers to open the borrower survey form page', function () {
         ->assertOk()
         ->assertSee('borrowerSurveyForm', false)
         ->assertSee('borrower-survey-form', false)
+        ->assertSee('borrower-create-hero', false)
+        ->assertSee('borrower-form-progress', false)
         ->assertSee('borrower-form-section-title', false)
         ->assertSee('data-offline-sync="true"', false)
         ->assertSee('window.phcOfflineSync.queue', false)
-        ->assertSee('تعبئة استبيان المقترض', false);
+        ->assertSee('تعبئة استبيان المقترض', false)
+        ->assertSee('بيانات المقترض الأساسية', false)
+        ->assertSee('مناسب للجوال', false);
 });
 
 it('wires borrowers surveys into pwa offline caching and sync', function () {
