@@ -47,6 +47,70 @@
             word-break: break-word;
         }
 
+        .damage-assessment-borrowers-page .borrower-survey-form .form-control,
+        .damage-assessment-borrowers-page .borrower-survey-form .form-select {
+            background-color: var(--bs-gray-100);
+            border-color: var(--bs-gray-100);
+            border-radius: 0.85rem;
+            color: var(--bs-gray-700);
+            min-height: 46px;
+            transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .damage-assessment-borrowers-page .borrower-survey-form textarea.form-control {
+            min-height: 86px;
+            resize: vertical;
+        }
+
+        .damage-assessment-borrowers-page .borrower-survey-form .form-control:focus,
+        .damage-assessment-borrowers-page .borrower-survey-form .form-select:focus {
+            background-color: var(--bs-body-bg);
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.08);
+            color: var(--bs-gray-800);
+        }
+
+        .damage-assessment-borrowers-page .borrower-survey-form .form-label {
+            color: var(--bs-gray-700);
+            font-weight: 600;
+            margin-bottom: 0.45rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-survey-form .form-check-inline {
+            align-items: center;
+            background: var(--bs-gray-100);
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.85rem;
+            gap: 0.45rem;
+            margin-inline-end: 0;
+            padding: 0.75rem 0.9rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-survey-form .borrower-repeat-row {
+            background: var(--bs-gray-100);
+            border: 1px dashed var(--bs-gray-300);
+            border-radius: 0.85rem;
+            padding: 0.65rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-form-section-title {
+            align-items: center;
+            background: var(--bs-light);
+            border-radius: 0.95rem;
+            color: var(--bs-gray-800);
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.95rem 1.1rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-form-section-title::before {
+            background: var(--bs-primary);
+            border-radius: 999px;
+            content: "";
+            height: 1.5rem;
+            width: 0.35rem;
+        }
+
         @media (max-width: 767.98px) {
             .damage-assessment-borrowers-page {
                 margin-inline: -0.75rem;
@@ -242,7 +306,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <form id="borrowerSurveyForm" class="row g-5" data-offline-sync="true">
+                    <form id="borrowerSurveyForm" class="row g-5 borrower-survey-form" data-offline-sync="true">
                         @csrf
 
                         <div class="col-md-6">
@@ -322,7 +386,7 @@
                         </div>
 
                         <div class="separator my-3"></div>
-                        <div class="col-12"><h4 class="fw-bold">الكفلاء</h4></div>
+                        <div class="col-12"><h4 class="fw-bold borrower-form-section-title mb-0">الكفلاء</h4></div>
 
                         <div class="col-md-3">
                             <label class="form-label">عدد الكفلاء</label>
@@ -365,7 +429,7 @@
                         </div>
 
                         <div class="separator my-3"></div>
-                        <div class="col-12"><h4 class="fw-bold">النزوح والسكن الحالي</h4></div>
+                        <div class="col-12"><h4 class="fw-bold borrower-form-section-title mb-0">النزوح والسكن الحالي</h4></div>
 
                         <div class="col-md-4">
                             <label class="form-label">حالة النزوح</label>
@@ -401,7 +465,7 @@
                         </div>
 
                         <div class="separator my-3"></div>
-                        <div class="col-12"><h4 class="fw-bold">بيانات الوحدة السكنية المستهدفة بالقرض</h4></div>
+                        <div class="col-12"><h4 class="fw-bold borrower-form-section-title mb-0">بيانات الوحدة السكنية المستهدفة بالقرض</h4></div>
 
                         <div class="col-md-6">
                             <label class="form-label">عنوان الوحدة</label>
