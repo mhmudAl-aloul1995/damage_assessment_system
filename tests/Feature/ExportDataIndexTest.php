@@ -18,6 +18,8 @@ it('shows export page actions including objectid import', function () {
     $response->assertSee('value="latitude"', false);
     $response->assertSee('value="longitude"', false);
     $response->assertSee(__('ui.exports.import_objectids_excel'));
+    $response->assertSee('name="building_end_from"', false);
+    $response->assertSee('name="building_end_to"', false);
 });
 
 it('shows real database columns even when they are not assessment fields', function () {

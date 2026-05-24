@@ -76,6 +76,8 @@ class ExportDataJob implements ShouldQueue
 
             $familyMembersFrom = $params['family_members_from'] ?? null;
             $familyMembersTo = $params['family_members_to'] ?? null;
+            $buildingEndFrom = $params['building_end_from'] ?? null;
+            $buildingEndTo = $params['building_end_to'] ?? null;
 
             $buildingUnitsCountColumn = ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN;
             $needsHousingUnitsCount = in_array($buildingUnitsCountColumn, $buildingColumns, true);
@@ -95,6 +97,14 @@ class ExportDataJob implements ShouldQueue
             $query = $needsHousingJoin
                 ? DB::table('housing_units as h')->join('buildings as b', 'b.globalid', '=', 'h.parentglobalid')
                 : DB::table('buildings as b');
+
+            if ($buildingEndFrom !== null && $buildingEndFrom !== '') {
+                $query->whereDate('b.end', '>=', $buildingEndFrom);
+            }
+
+            if ($buildingEndTo !== null && $buildingEndTo !== '') {
+                $query->whereDate('b.end', '<=', $buildingEndTo);
+            }
 
             if ($needsFamily) {
                 $familySub = DB::table('housing_units as hf')
@@ -302,6 +312,8 @@ class ExportDataJob implements ShouldQueue
                     'housing_columns_count' => count($housingColumns),
                     'family_members_from' => $familyMembersFrom,
                     'family_members_to' => $familyMembersTo,
+                    'building_end_from' => $buildingEndFrom,
+                    'building_end_to' => $buildingEndTo,
                 ]);
 
                 return;

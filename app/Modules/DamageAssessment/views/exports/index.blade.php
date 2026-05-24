@@ -188,6 +188,22 @@
 											class="form-control form-control-solid" min="0"
 											value="{{ old('family_members_to') }}">
 									</div>
+
+									<div class="col-md-4 mb-4 filter-card-item static-filter-card">
+										<label
+											class="form-label fw-bold searchable-filter-name">{{ __('ui.exports.building_end_from') }}</label>
+										<input type="date" name="building_end_from"
+											class="form-control form-control-solid"
+											value="{{ old('building_end_from') }}">
+									</div>
+
+									<div class="col-md-4 mb-4 filter-card-item static-filter-card">
+										<label
+											class="form-label fw-bold searchable-filter-name">{{ __('ui.exports.building_end_to') }}</label>
+										<input type="date" name="building_end_to"
+											class="form-control form-control-solid"
+											value="{{ old('building_end_to') }}">
+									</div>
 								</div>
 							</div>
 						</div>

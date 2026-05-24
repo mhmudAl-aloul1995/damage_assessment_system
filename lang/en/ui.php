@@ -469,6 +469,8 @@ return [
         'select' => 'Select :label',
         'family_members_from' => 'Family members from',
         'family_members_to' => 'Family members to',
+        'building_end_from' => 'Building end date from',
+        'building_end_to' => 'Building end date to',
         'building_table_fields' => 'Building table fields',
         'housing_table_fields' => 'Housing unit table fields',
         'select_all' => 'Select all',

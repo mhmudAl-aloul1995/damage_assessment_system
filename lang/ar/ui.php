@@ -449,6 +449,8 @@ return [
         'select' => 'اختر :label',
         'family_members_from' => 'عدد أفراد الأسرة من',
         'family_members_to' => 'عدد أفراد الأسرة إلى',
+        'building_end_from' => 'تاريخ نهاية المبنى من',
+        'building_end_to' => 'تاريخ نهاية المبنى إلى',
         'building_table_fields' => 'حقول جدول المبنى',
         'housing_table_fields' => 'حقول جدول الوحد السكانية',
         'select_all' => 'تحديد الكل',
