@@ -456,8 +456,23 @@
 
 									<div id="buildingColumnsList">
 										@foreach($groupedBuilding as $group => $columns)
-											<div class="mb-5">
-												<h5 class="fw-bold text-primary border-bottom pb-2 mb-4">{{ $group }}</h5>
+											<div class="mb-5 column-group">
+												<div
+													class="d-flex align-items-center justify-content-between flex-wrap gap-2 border-bottom pb-2 mb-4">
+													<h5 class="fw-bold text-primary mb-0">{{ $group }}</h5>
+
+													<div class="d-flex gap-2 flex-wrap">
+														<button type="button" class="btn btn-sm btn-light-primary"
+															onclick="toggleColumnGroup(this,'building_columns[]',true)">
+															{{ __('ui.exports.select_all') }}
+														</button>
+
+														<button type="button" class="btn btn-sm btn-light-danger"
+															onclick="toggleColumnGroup(this,'building_columns[]',false)">
+															{{ __('ui.exports.deselect_all') }}
+														</button>
+													</div>
+												</div>
 
 												<div class="row">
 													@foreach($columns as $column)
@@ -532,8 +547,23 @@
 
 									<div id="housingColumnsList">
 										@foreach($groupedHousing as $group => $columns)
-											<div class="mb-5">
-												<h5 class="fw-bold text-success border-bottom pb-2 mb-4">{{ $group }}</h5>
+											<div class="mb-5 column-group">
+												<div
+													class="d-flex align-items-center justify-content-between flex-wrap gap-2 border-bottom pb-2 mb-4">
+													<h5 class="fw-bold text-success mb-0">{{ $group }}</h5>
+
+													<div class="d-flex gap-2 flex-wrap">
+														<button type="button" class="btn btn-sm btn-light-primary"
+															onclick="toggleColumnGroup(this,'housing_columns[]',true)">
+															{{ __('ui.exports.select_all') }}
+														</button>
+
+														<button type="button" class="btn btn-sm btn-light-danger"
+															onclick="toggleColumnGroup(this,'housing_columns[]',false)">
+															{{ __('ui.exports.deselect_all') }}
+														</button>
+													</div>
+												</div>
 
 												<div class="row">
 													@foreach($columns as $column)
@@ -628,6 +658,22 @@
 			if (!list) return;
 
 			const visibleItems = list.querySelectorAll('.column-item');
+
+			visibleItems.forEach(function (item) {
+				if (item.style.display !== 'none') {
+					const checkbox = item.querySelector('input[name="' + inputName + '"]');
+					if (checkbox) {
+						checkbox.checked = checked;
+					}
+				}
+			});
+		}
+
+		function toggleColumnGroup(button, inputName, checked) {
+			const group = button.closest('.column-group');
+			if (!group) return;
+
+			const visibleItems = group.querySelectorAll('.column-item');
 
 			visibleItems.forEach(function (item) {
 				if (item.style.display !== 'none') {

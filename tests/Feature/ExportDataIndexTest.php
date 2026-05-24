@@ -36,6 +36,21 @@ it('shows real database columns even when they are not assessment fields', funct
     $response->assertSee('Other');
 });
 
+it('shows select controls for each export field group', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response->assertOk();
+    $response->assertSee('class="mb-5 column-group"', false);
+    $response->assertSee("toggleColumnGroup(this,'building_columns[]',true)", false);
+    $response->assertSee("toggleColumnGroup(this,'building_columns[]',false)", false);
+    $response->assertSee("toggleColumnGroup(this,'housing_columns[]',true)", false);
+    $response->assertSee("toggleColumnGroup(this,'housing_columns[]',false)", false);
+});
+
 it('fills the neighborhood filter from unique building neighborhoods', function () {
     Filter::query()->create([
         'list_name' => 'neighborhood',
