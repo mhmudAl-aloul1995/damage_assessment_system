@@ -5,6 +5,7 @@
 
 @section('content')
     @php
+        $isFormPage = $isFormPage ?? false;
         $riskColors = [
             'critical' => 'danger',
             'high' => 'warning',
@@ -143,6 +144,7 @@
     </style>
 
     <div class="damage-assessment-borrowers-page">
+    @if (! $isFormPage)
     <div class="row g-5 mb-6" id="borrowerStats">
         <div class="col-md-2 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
@@ -193,8 +195,22 @@
             </div>
         </div>
     </div>
+    @endif
+
+    <div class="d-flex justify-content-end mb-6">
+        @if ($isFormPage)
+            <a href="{{ route('damage-assessment-borrowers.index') }}" class="btn btn-light-primary">
+                العودة إلى الاستبيانات
+            </a>
+        @else
+            <a href="{{ route('damage-assessment-borrowers.create') }}" class="btn btn-primary">
+                تعبئة استبيان جديد
+            </a>
+        @endif
+    </div>
 
     <div class="row g-6">
+        @if ($isFormPage)
         <div class="col-xl-7">
             <div class="card card-flush">
                 <div class="card-header">
@@ -427,8 +443,10 @@
                 </div>
             </div>
         </div>
+        @endif
 
-        <div class="col-xl-5">
+        <div class="{{ $isFormPage ? 'col-xl-5' : 'col-12' }}">
+            @if ($isFormPage)
             <div class="card card-flush mb-6">
                 <div class="card-header">
                     <div class="card-title">
@@ -441,6 +459,7 @@
                     </div>
                 </div>
             </div>
+            @else
 
             <div class="card card-flush">
                 <div class="card-header align-items-center gap-3">
@@ -472,6 +491,7 @@
                     </div>
                 </div>
             </div>
+            @endif
         </div>
     </div>
     </div>
@@ -710,7 +730,10 @@
             }
         }
 
-        document.getElementById('borrowerSurveyForm').addEventListener('submit', async (event) => {
+        const borrowerSurveyForm = document.getElementById('borrowerSurveyForm');
+        const borrowerSearch = document.getElementById('borrowerSearch');
+
+        borrowerSurveyForm?.addEventListener('submit', async (event) => {
             event.preventDefault();
 
             const form = event.currentTarget;
@@ -737,7 +760,9 @@
                     document.getElementById('deceasedGuarantorsRepeater').innerHTML = '';
                     document.getElementById('affectedGuarantorsRepeater').innerHTML = '';
                     document.getElementById('householdsRepeater').innerHTML = '';
-                    renderRows(cachedRows());
+                    if (borrowerSearch) {
+                        renderRows(cachedRows());
+                    }
 
                     if (typeof toastr !== 'undefined') {
                         toastr.success('تم حفظ الاستبيان أوفلاين. سيتم إرساله تلقائيًا عند رجوع الإنترنت.');
@@ -769,7 +794,9 @@
                 document.getElementById('householdsRepeater').innerHTML = '';
                 renderAnalysis(result.analysis);
                 renderStats(result.stats);
-                await loadBorrowers();
+                if (borrowerSearch) {
+                    await loadBorrowers();
+                }
                 if (typeof toastr !== 'undefined') toastr.success(result.message);
             } finally {
                 button.removeAttribute('data-kt-indicator');
@@ -777,7 +804,7 @@
             }
         });
 
-        document.getElementById('borrowerSearch').addEventListener('input', () => {
+        borrowerSearch?.addEventListener('input', () => {
             clearTimeout(window.borrowerSearchTimer);
             window.borrowerSearchTimer = setTimeout(loadBorrowers, 300);
         });
@@ -789,7 +816,9 @@
                 }
 
                 rememberPendingRows([]);
-                await loadBorrowers();
+                if (borrowerSearch) {
+                    await loadBorrowers();
+                }
 
                 if (typeof toastr !== 'undefined') {
                     toastr.success(@json(app()->getLocale() === 'ar' ? 'تمت مزامنة استبيانات المقترضين المحفوظة بنجاح.' : 'Offline borrower surveys synced successfully.'));
@@ -801,6 +830,8 @@
             window.phcOfflineSync?.registerSync?.();
         });
 
-        loadBorrowers();
+        if (borrowerSearch) {
+            loadBorrowers();
+        }
     </script>
 @endsection

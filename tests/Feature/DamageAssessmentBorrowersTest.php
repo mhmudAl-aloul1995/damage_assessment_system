@@ -6,7 +6,7 @@ use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Support\Navigation\Sidebar;
 use Spatie\Permission\Models\Role;
 
-it('allows field engineers to open the borrowers survey page', function () {
+it('allows field engineers to open the borrowers overview page', function () {
     $role = Role::findOrCreate('Field Engineer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
@@ -14,10 +14,23 @@ it('allows field engineers to open the borrowers survey page', function () {
     $this->actingAs($user)
         ->get(route('damage-assessment-borrowers.index'))
         ->assertOk()
+        ->assertDontSee('<form id="borrowerSurveyForm"', false)
+        ->assertSee('تعبئة استبيان جديد', false)
+        ->assertSee('استبيان المقترضين', false);
+});
+
+it('allows field engineers to open the borrower survey form page', function () {
+    $role = Role::findOrCreate('Field Engineer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.create'))
+        ->assertOk()
         ->assertSee('borrowerSurveyForm', false)
         ->assertSee('data-offline-sync="true"', false)
         ->assertSee('window.phcOfflineSync.queue', false)
-        ->assertSee('استبيان المقترضين', false);
+        ->assertSee('تعبئة استبيان المقترض', false);
 });
 
 it('wires borrowers surveys into pwa offline caching and sync', function () {
@@ -111,8 +124,8 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('data.0.borrower_name', 'Mona Borrower');
 });
 
-it('adds borrowers to the sidebar for field engineers', function () {
-    $role = Role::findOrCreate('Field Engineer', 'web');
+it('adds borrowers to the sidebar for database officers', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 

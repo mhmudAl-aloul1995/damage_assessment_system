@@ -18,6 +18,16 @@ class BorrowerSurveyController extends Controller
 
         return view('damage-assessment-borrowers::index', [
             'stats' => $this->stats(),
+            'isFormPage' => false,
+        ]);
+    }
+
+    public function create(): View
+    {
+        $this->authorizeAccess();
+
+        return view('damage-assessment-borrowers::index', [
+            'isFormPage' => true,
         ]);
     }
 
