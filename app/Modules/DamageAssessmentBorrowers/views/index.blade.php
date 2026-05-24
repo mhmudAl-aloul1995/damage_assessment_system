@@ -27,6 +27,26 @@
             display: none;
         }
 
+        .damage-assessment-borrowers-page .borrowers-import-dropzone {
+            border: 1px dashed var(--bs-primary);
+            border-radius: 0.95rem;
+            background: var(--bs-primary-light);
+            cursor: pointer;
+            transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .damage-assessment-borrowers-page .borrowers-import-dropzone:hover,
+        .damage-assessment-borrowers-page .borrowers-import-dropzone.is-active {
+            border-color: var(--bs-primary);
+            background: #f1faff;
+            box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.08);
+        }
+
+        .damage-assessment-borrowers-page .borrowers-import-file-name {
+            max-width: 100%;
+            word-break: break-word;
+        }
+
         @media (max-width: 767.98px) {
             .damage-assessment-borrowers-page {
                 margin-inline: -0.75rem;
@@ -516,8 +536,22 @@
                         </div>
                         <div class="modal-body">
                             <label class="required fw-semibold fs-6 mb-2 d-block" for="borrowersFile">ملف Excel</label>
-                            <input type="file" name="borrowers_file" id="borrowersFile" class="form-control" accept=".xlsx" required>
-                            <div class="form-text">ارفع ملف الاستبيان بصيغة XLSX. سيتم تجاوز الصفوف المكررة أو غير المكتملة تلقائيًا.</div>
+                            <label class="dropzone borrowers-import-dropzone d-flex align-items-center p-8 mb-5" for="borrowersFile" id="borrowersImportDropzone">
+                                <input type="file" name="borrowers_file" id="borrowersFile" class="d-none" accept=".xlsx" required>
+                                <span class="symbol symbol-50px me-5">
+                                    <span class="symbol-label bg-light-success">
+                                        <i class="ki-duotone ki-file-up fs-2x text-success">
+                                            <span class="path1"></span>
+                                            <span class="path2"></span>
+                                        </i>
+                                    </span>
+                                </span>
+                                <span class="d-flex flex-column text-start">
+                                    <span class="fs-5 fw-bold text-gray-900">اسحب ملف Excel هنا أو اضغط للاختيار</span>
+                                    <span class="fs-7 text-gray-600 mt-1 borrowers-import-file-name" id="borrowersImportFileName">صيغة XLSX فقط، حتى 20 ميغابايت.</span>
+                                </span>
+                            </label>
+                            <div class="form-text">سيتم تجاوز الصفوف المكررة أو غير المكتملة تلقائيًا، ثم تحديث الإحصائيات بعد الاستيراد.</div>
                             <div class="invalid-feedback d-block mt-3" id="borrowersImportError" style="display: none;"></div>
                         </div>
                         <div class="modal-footer">
@@ -773,6 +807,9 @@
         const borrowerSurveyForm = document.getElementById('borrowerSurveyForm');
         const borrowerSearch = document.getElementById('borrowerSearch');
         const borrowersImportForm = document.getElementById('borrowersImportForm');
+        const borrowersFile = document.getElementById('borrowersFile');
+        const borrowersImportDropzone = document.getElementById('borrowersImportDropzone');
+        const borrowersImportFileName = document.getElementById('borrowersImportFileName');
 
         borrowerSurveyForm?.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -850,6 +887,18 @@
             window.borrowerSearchTimer = setTimeout(loadBorrowers, 300);
         });
 
+        borrowersFile?.addEventListener('change', () => {
+            borrowersImportFileName.textContent = borrowersFile.files?.[0]?.name || 'صيغة XLSX فقط، حتى 20 ميغابايت.';
+        });
+
+        ['dragenter', 'dragover'].forEach((eventName) => {
+            borrowersImportDropzone?.addEventListener(eventName, () => borrowersImportDropzone.classList.add('is-active'));
+        });
+
+        ['dragleave', 'drop'].forEach((eventName) => {
+            borrowersImportDropzone?.addEventListener(eventName, () => borrowersImportDropzone.classList.remove('is-active'));
+        });
+
         borrowersImportForm?.addEventListener('submit', async (event) => {
             event.preventDefault();
 
@@ -880,6 +929,7 @@
                 }
 
                 form.reset();
+                borrowersImportFileName.textContent = 'صيغة XLSX فقط، حتى 20 ميغابايت.';
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('borrowersImportModal')).hide();
                 renderStats(result.stats);
                 await loadBorrowers();

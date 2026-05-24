@@ -20,6 +20,8 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertDontSee('<form id="borrowerSurveyForm"', false)
         ->assertSee('استيراد من Excel', false)
         ->assertSee('borrowersImportModal', false)
+        ->assertSee('borrowers-import-dropzone', false)
+        ->assertSee('اسحب ملف Excel هنا أو اضغط للاختيار', false)
         ->assertSee('تعبئة استبيان جديد', false)
         ->assertSee('استبيان المقترضين', false);
 });
