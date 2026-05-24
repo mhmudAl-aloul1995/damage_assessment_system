@@ -16,6 +16,8 @@ class DamageAssessmentBorrower extends Model
     protected $fillable = [
         'submitted_by',
         'submitted_by_name',
+        'source_uuid',
+        'source_submission_id',
         'surveyed_at',
         'form_number',
         'borrower_name',
@@ -59,6 +61,7 @@ class DamageAssessmentBorrower extends Model
     {
         return [
             'submitted_by' => 'integer',
+            'source_submission_id' => 'integer',
             'surveyed_at' => 'datetime',
             'family_members_count' => 'integer',
             'is_borrower_alive' => 'boolean',

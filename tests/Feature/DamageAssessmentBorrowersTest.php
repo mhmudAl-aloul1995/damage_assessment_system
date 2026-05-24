@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
+use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
 use Spatie\Permission\Models\Role;
 
@@ -146,4 +147,83 @@ it('calculates borrower risk levels', function () {
     ]);
 
     expect($analysis['risk_level'])->toBe('low');
+});
+
+it('imports borrower records idempotently while skipping invalid and duplicate identities', function () {
+    $path = tempnam(sys_get_temp_dir(), 'borrower-import-').'.json';
+    file_put_contents($path, json_encode([
+        'records' => [
+            [
+                'row_number' => 2,
+                'source_uuid' => 'uuid-valid',
+                'source_submission_id' => 1,
+                'submitted_by_name' => 'ميداني',
+                'surveyed_at' => '2026-05-23 10:00:00',
+                'form_number' => 'IDB1',
+                'borrower_name' => 'مستفيد صالح',
+                'borrower_id_number' => '1001',
+                'marital_status_label' => 'أعزب/ آنسة',
+                'employment_status_label' => 'لا يعمل حاليا',
+                'alive_label' => 'نعم',
+                'guarantors_count' => 1,
+                'guarantors_alive_label' => 'لا',
+                'guarantors_employment_statuses' => ['lost_job'],
+                'affected_guarantor_names' => ['كفيل متأثر'],
+                'deceased_guarantor_names' => ['كفيل متوفى'],
+                'displacement_status_label' => 'نازح',
+                'displaced_to_governorate_label' => 'محافظة غزة',
+                'loan_unit_occupancy_label' => 'لا يوجد (في حال الوحدة السكنية هدم كلي او بليغ غيرصالح للسكن)',
+                'loan_unit_damage_label' => 'هدم كلي',
+            ],
+            [
+                'row_number' => 3,
+                'source_uuid' => 'uuid-duplicate-a',
+                'borrower_name' => 'مستفيد مكرر أ',
+                'borrower_id_number' => '2001',
+                'employment_status_label' => 'متقاعد',
+                'alive_label' => 'نعم',
+            ],
+            [
+                'row_number' => 4,
+                'source_uuid' => 'uuid-duplicate-b',
+                'borrower_name' => 'مستفيد مكرر ب',
+                'borrower_id_number' => '2001',
+                'employment_status_label' => 'متقاعد',
+                'alive_label' => 'نعم',
+            ],
+            [
+                'row_number' => 5,
+                'source_uuid' => 'uuid-invalid',
+                'borrower_name' => 'مستفيد غير صالح',
+                'borrower_id_number' => '3001',
+                'employment_status_label' => 'نعم',
+                'alive_label' => 'يوجد شهداء',
+            ],
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+
+    try {
+        $importer = app(BorrowerSpreadsheetImportService::class);
+        $summary = $importer->import($path);
+        $secondSummary = $importer->import($path);
+        $borrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid-valid')->sole();
+
+        expect($summary['total'])->toBe(4)
+            ->and($summary['ready'])->toBe(1)
+            ->and($summary['created'])->toBe(1)
+            ->and($summary['skipped'])->toBe(3)
+            ->and($summary['risk_levels']['critical'])->toBe(1)
+            ->and($secondSummary['created'])->toBe(0)
+            ->and($secondSummary['updated'])->toBe(1)
+            ->and(DamageAssessmentBorrower::query()->where('source_uuid', 'uuid-valid')->count())->toBe(1)
+            ->and($borrower->source_uuid)->toBe('uuid-valid')
+            ->and($borrower->employment_status)->toBe('not_working')
+            ->and($borrower->marital_status)->toBe('single')
+            ->and($borrower->loan_unit_damage_status)->toBe('destroyed')
+            ->and($borrower->affected_guarantors)->toBe([['name' => 'كفيل متأثر', 'status' => 'lost_job']])
+            ->and($borrower->deceased_guarantors)->toBe([['name' => 'كفيل متوفى']])
+            ->and($borrower->risk_level)->toBe('critical');
+    } finally {
+        @unlink($path);
+    }
 });
