@@ -5,6 +5,8 @@ use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
+use Illuminate\Http\UploadedFile;
+use Mockery\MockInterface;
 use Spatie\Permission\Models\Role;
 
 it('allows field engineers to open the borrowers overview page', function () {
@@ -16,6 +18,8 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->get(route('damage-assessment-borrowers.index'))
         ->assertOk()
         ->assertDontSee('<form id="borrowerSurveyForm"', false)
+        ->assertSee('استيراد من Excel', false)
+        ->assertSee('borrowersImportModal', false)
         ->assertSee('تعبئة استبيان جديد', false)
         ->assertSee('استبيان المقترضين', false);
 });
@@ -102,6 +106,46 @@ it('stores borrower surveys through ajax and returns risk analysis', function ()
         ->assertJsonPath('analysis.risk_level', 'critical');
 
     expect(DamageAssessmentBorrower::query()->where('borrower_id_number', '900000001')->exists())->toBeTrue();
+});
+
+it('imports an uploaded borrower workbook through ajax', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->mock(BorrowerSpreadsheetImportService::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('importWorkbook')
+            ->once()
+            ->withArgs(fn (string $path): bool => is_file($path))
+            ->andReturn([
+                'total' => 3,
+                'ready' => 2,
+                'created' => 2,
+                'updated' => 0,
+                'skipped' => 1,
+                'issues' => [],
+                'duplicate_form_numbers' => 0,
+                'risk_levels' => [
+                    'critical' => 1,
+                    'high' => 1,
+                    'medium' => 0,
+                    'low' => 0,
+                ],
+            ]);
+    });
+
+    $this->actingAs($user)
+        ->post(route('damage-assessment-borrowers.import'), [
+            'borrowers_file' => UploadedFile::fake()->create(
+                'beneficiaries.xlsx',
+                20,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ),
+        ], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('summary.created', 2)
+        ->assertJsonPath('summary.skipped', 1);
 });
 
 it('lists borrower surveys as json rows', function () {

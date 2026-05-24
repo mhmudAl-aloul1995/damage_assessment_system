@@ -5,7 +5,9 @@ namespace App\Modules\DamageAssessmentBorrowers\Services;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use Illuminate\Support\Facades\DB;
 use JsonException;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use RuntimeException;
 
 class BorrowerSpreadsheetImportService
@@ -110,6 +112,55 @@ class BorrowerSpreadsheetImportService
             ->map(fn (array $sourceRow): array => $this->sourceRow($sourceRow))
             ->values()
             ->all();
+
+        return $this->importRows($sourceRows, $dryRun, $includeDuplicateIdentities);
+    }
+
+    /**
+     * @return array{
+     *     total: int,
+     *     ready: int,
+     *     created: int,
+     *     updated: int,
+     *     skipped: int,
+     *     issues: array<int, array{row: int, reasons: array<int, string>}>,
+     *     duplicate_form_numbers: int,
+     *     risk_levels: array{critical: int, high: int, medium: int, low: int}
+     * }
+     */
+    public function importWorkbook(string $path, bool $dryRun = false, bool $includeDuplicateIdentities = false): array
+    {
+        if (! class_exists(\ZipArchive::class)) {
+            throw new RuntimeException('تعذر قراءة ملف Excel على الخادم لأن امتداد PHP Zip غير مفعّل.');
+        }
+
+        $spreadsheet = IOFactory::load($path);
+        $affectedGuarantors = $this->repeatedNamesByUuid($spreadsheet->getSheet(1));
+        $deceasedGuarantors = $this->repeatedNamesByUuid($spreadsheet->getSheet(2));
+        $rows = $spreadsheet->getSheet(0)->toArray(null, true, true, false);
+        $headers = $this->headers(array_shift($rows) ?? []);
+        $sourceRows = collect($this->sourceRowsFromWorksheet($rows, $headers, $affectedGuarantors, $deceasedGuarantors))
+            ->map(fn (array $sourceRow): array => $this->sourceRow($sourceRow))
+            ->all();
+
+        return $this->importRows($sourceRows, $dryRun, $includeDuplicateIdentities);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $sourceRows
+     * @return array{
+     *     total: int,
+     *     ready: int,
+     *     created: int,
+     *     updated: int,
+     *     skipped: int,
+     *     issues: array<int, array{row: int, reasons: array<int, string>}>,
+     *     duplicate_form_numbers: int,
+     *     risk_levels: array{critical: int, high: int, medium: int, low: int}
+     * }
+     */
+    private function importRows(array $sourceRows, bool $dryRun, bool $includeDuplicateIdentities): array
+    {
         $duplicateIdentityValues = collect($sourceRows)
             ->pluck('borrower_id_number')
             ->filter()
@@ -187,6 +238,91 @@ class BorrowerSpreadsheetImportService
         }
 
         return $summary;
+    }
+
+    /**
+     * @param  array<int, mixed>  $headerRow
+     * @return array<string, array<int, int>>
+     */
+    private function headers(array $headerRow): array
+    {
+        $headers = [];
+
+        foreach ($headerRow as $index => $heading) {
+            $heading = $this->text($heading);
+
+            if ($heading !== '') {
+                $headers[$heading][] = $index;
+            }
+        }
+
+        return $headers;
+    }
+
+    /**
+     * @param  array<int, array<int, mixed>>  $rows
+     * @param  array<string, array<int, int>>  $headers
+     * @param  array<string, array<int, string>>  $affectedGuarantors
+     * @param  array<string, array<int, string>>  $deceasedGuarantors
+     * @return array<int, array<string, mixed>>
+     */
+    private function sourceRowsFromWorksheet(array $rows, array $headers, array $affectedGuarantors, array $deceasedGuarantors): array
+    {
+        $sourceRows = [];
+
+        foreach ($rows as $index => $row) {
+            if (collect($row)->filter(fn (mixed $value): bool => $this->text($value) !== '')->isEmpty()) {
+                continue;
+            }
+
+            $uuid = $this->value($row, $headers, '_uuid');
+            $sourceRows[] = [
+                'row_number' => $index + 2,
+                'source_uuid' => $uuid,
+                'source_submission_id' => $this->value($row, $headers, '_id'),
+                'submitted_by_name' => $this->value($row, $headers, 'اسم الموظف/ة'),
+                'surveyed_at' => $this->value($row, $headers, 'التاريخ والوقت'),
+                'form_number' => $this->value($row, $headers, 'رقم الاستمارة'),
+                'borrower_name' => $this->value($row, $headers, 'اسم المقترض/ة رباعي:'),
+                'borrower_id_number' => $this->value($row, $headers, 'رقم هوية المقترض/ة:'),
+                'family_members_count' => $this->value($row, $headers, 'عدد افراد أسرته/ها:'),
+                'marital_status_label' => $this->value($row, $headers, 'الحالة الاجنماعية للمقترض/ة:'),
+                'spouse_name' => $this->value($row, $headers, 'اسم الزوج/ة:'),
+                'spouse_id_number' => $this->value($row, $headers, 'رقم هوية الزوج/ة:'),
+                'employment_status_label' => $this->value($row, $headers, 'الوضع الوظيفي(للمقترض/ة)'),
+                'alive_label' => $this->value($row, $headers, 'هل المقترض/ة على قيد الحياة؟'),
+                'vulnerability_types' => $this->checkboxValues($row, $headers, [
+                    'وجود شهداء او مصابين او ذوي الاعاقات في عائلة المقترض/ة؟/يوجد شهداء' => 'martyrs',
+                    'وجود شهداء او مصابين او ذوي الاعاقات في عائلة المقترض/ة؟/يوجد مصابين' => 'injured',
+                    'وجود شهداء او مصابين او ذوي الاعاقات في عائلة المقترض/ة؟/يوجد اشخاص ذوي اعاقة' => 'disabled',
+                    'وجود شهداء او مصابين او ذوي الاعاقات في عائلة المقترض/ة؟/يوجد كبار سن في العائلة' => 'elderly',
+                    'وجود شهداء او مصابين او ذوي الاعاقات في عائلة المقترض/ة؟/ليس مما سبق' => 'none',
+                ]),
+                'guarantors_count' => $this->value($row, $headers, 'عدد الكفلاء للقرض'),
+                'guarantors_alive_label' => $this->value($row, $headers, 'هل جميع الكفلاء على قيد الحياة ؟'),
+                'guarantors_employment_statuses' => $this->checkboxValues($row, $headers, [
+                    'الوضع الوظيفي للكفلاء/جميعهم على رأس عملهم' => 'all_working',
+                    'الوضع الوظيفي للكفلاء/يوجد كفيل متقاعد' => 'retired',
+                    'الوضع الوظيفي للكفلاء/يوجد كفيل فقد عمله' => 'lost_job',
+                ]),
+                'affected_guarantor_names' => $affectedGuarantors[$uuid] ?? [],
+                'deceased_guarantor_names' => $deceasedGuarantors[$uuid] ?? [],
+                'displacement_status_label' => $this->value($row, $headers, 'حالة النزوح الحالية (تستهدف حالة المستفيد وعائلته ولا علاقة له بالوحدة السكنية المستهدفة بالقرض)'),
+                'displaced_to_governorate_label' => $this->value($row, $headers, 'المحافظة النازح اليها (المستفيد)'),
+                'current_residence_address' => $this->value($row, $headers, 'عنوان السكن الحالي للمقترض او النازح اليه'),
+                'phone_primary' => $this->value($row, $headers, 'رقم التواصل 1'),
+                'phone_secondary' => $this->value($row, $headers, 'رقم التواصل 2'),
+                'loan_unit_address' => $this->value($row, $headers, 'عنوان الوحدة السكنية المستهدفة بالقرض( المحافظة- المدينة- أقرب معلم)'),
+                'loan_unit_area' => $this->value($row, $headers, 'مساحة الوحدة السكنية م2'),
+                'parcel_number' => $this->value($row, $headers, 'رقم القطعة'),
+                'plot_number' => $this->value($row, $headers, 'رقم القسيمة'),
+                'loan_unit_occupancy_label' => $this->value($row, $headers, 'وضع  الاشخاص الذين يعيشون داخل الشقة المستهدفة بالقرض'),
+                'loan_unit_damage_label' => $this->value($row, $headers, 'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض'),
+                'notes' => $this->values($row, $headers, 'اضافة ملاحظات'),
+            ];
+        }
+
+        return $sourceRows;
     }
 
     /**
@@ -324,6 +460,90 @@ class BorrowerSpreadsheetImportService
             'loan_unit_damage_status' => self::DAMAGE_MAP[$sourceRow['loan_unit_damage_label']] ?? null,
             'notes' => collect($sourceRow['notes'])->filter()->unique()->implode("\n") ?: null,
         ];
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    private function repeatedNamesByUuid(Worksheet $sheet): array
+    {
+        $rows = $sheet->toArray(null, true, true, false);
+        $headers = $this->headers(array_shift($rows) ?? []);
+        $namesByUuid = [];
+
+        foreach ($rows as $row) {
+            $uuid = $this->value($row, $headers, '_submission__uuid');
+            $name = collect($row)
+                ->map(fn (mixed $value): string => $this->text($value))
+                ->first(fn (string $value, int $index): bool => str_starts_with($this->headerAt($headers, $index), 'تحديد اسم الكفيل') && $value !== '');
+
+            if ($uuid !== '' && is_string($name) && $name !== '') {
+                $namesByUuid[$uuid][] = $name;
+            }
+        }
+
+        return $namesByUuid;
+    }
+
+    /**
+     * @param  array<string, array<int, int>>  $headers
+     */
+    private function headerAt(array $headers, int $index): string
+    {
+        foreach ($headers as $heading => $indexes) {
+            if (in_array($index, $indexes, true)) {
+                return $heading;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @param  array<string, array<int, int>>  $headers
+     * @param  array<string, string>  $options
+     * @return array<int, string>
+     */
+    private function checkboxValues(array $row, array $headers, array $options): array
+    {
+        $selected = [];
+
+        foreach ($options as $header => $value) {
+            if ($this->truthy($this->value($row, $headers, $header))) {
+                $selected[] = $value;
+            }
+        }
+
+        return $selected;
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @param  array<string, array<int, int>>  $headers
+     */
+    private function value(array $row, array $headers, string $header): string
+    {
+        return $this->values($row, $headers, $header)[0] ?? '';
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @param  array<string, array<int, int>>  $headers
+     * @return array<int, string>
+     */
+    private function values(array $row, array $headers, string $header): array
+    {
+        return collect($headers[$header] ?? [])
+            ->map(fn (int $index): string => $this->text($row[$index] ?? null))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function truthy(string $value): bool
+    {
+        return in_array($value, ['1', 'نعم', 'true'], true);
     }
 
     private function text(mixed $value): string

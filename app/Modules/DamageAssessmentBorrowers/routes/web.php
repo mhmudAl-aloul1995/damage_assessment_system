@@ -12,6 +12,8 @@ Route::middleware('auth')->group(function () {
         ->name('damage-assessment-borrowers.data');
     Route::post('/', [BorrowerSurveyController::class, 'store'])
         ->name('damage-assessment-borrowers.store');
+    Route::post('/import', [BorrowerSurveyController::class, 'import'])
+        ->name('damage-assessment-borrowers.import');
     Route::get('/{borrower}', [BorrowerSurveyController::class, 'show'])
         ->name('damage-assessment-borrowers.show');
 });

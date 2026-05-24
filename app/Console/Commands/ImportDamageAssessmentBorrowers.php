@@ -9,11 +9,11 @@ use RuntimeException;
 class ImportDamageAssessmentBorrowers extends Command
 {
     protected $signature = 'borrowers:import
-        {file : Absolute path to the normalized beneficiary JSON file}
+        {file : Absolute path to the beneficiary XLSX workbook or normalized JSON file}
         {--dry-run : Analyze the workbook without saving records}
         {--include-duplicate-identities : Include submissions whose borrower identity number occurs more than once in the workbook}';
 
-    protected $description = 'Import normalized damage assessment borrower survey records';
+    protected $description = 'Import damage assessment borrower survey records from Excel or normalized JSON';
 
     public function __construct(private readonly BorrowerSpreadsheetImportService $importer)
     {
@@ -23,11 +23,18 @@ class ImportDamageAssessmentBorrowers extends Command
     public function handle(): int
     {
         try {
-            $summary = $this->importer->import(
-                (string) $this->argument('file'),
-                (bool) $this->option('dry-run'),
-                (bool) $this->option('include-duplicate-identities')
-            );
+            $path = (string) $this->argument('file');
+            $summary = strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'xlsx'
+                ? $this->importer->importWorkbook(
+                    $path,
+                    (bool) $this->option('dry-run'),
+                    (bool) $this->option('include-duplicate-identities')
+                )
+                : $this->importer->import(
+                    $path,
+                    (bool) $this->option('dry-run'),
+                    (bool) $this->option('include-duplicate-identities')
+                );
         } catch (RuntimeException $exception) {
             $this->error($exception->getMessage());
 

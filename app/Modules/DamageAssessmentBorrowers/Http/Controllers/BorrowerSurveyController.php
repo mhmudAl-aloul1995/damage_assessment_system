@@ -3,12 +3,16 @@
 namespace App\Modules\DamageAssessmentBorrowers\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Modules\DamageAssessmentBorrowers\ImportBorrowerSpreadsheetRequest;
 use App\Modules\DamageAssessmentBorrowers\Http\Requests\StoreBorrowerSurveyRequest;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
+use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use RuntimeException;
+use Throwable;
 
 class BorrowerSurveyController extends Controller
 {
@@ -80,6 +84,30 @@ class BorrowerSurveyController extends Controller
             'message' => 'تم حفظ استبيان المقترض بنجاح.',
             'borrower' => $this->row($borrower),
             'analysis' => $analysis,
+            'stats' => $this->stats(),
+        ]);
+    }
+
+    public function import(ImportBorrowerSpreadsheetRequest $request, BorrowerSpreadsheetImportService $importer): JsonResponse
+    {
+        try {
+            $summary = $importer->importWorkbook($request->file('borrowers_file')->getRealPath());
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'status' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        } catch (Throwable) {
+            return response()->json([
+                'status' => false,
+                'message' => 'تعذر قراءة ملف Excel. تأكد من أنه ملف الاستبيان الصحيح.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => "تم استيراد {$summary['created']} سجل وتحديث {$summary['updated']} سجل، مع تجاوز {$summary['skipped']} سجل يحتاج مراجعة.",
+            'summary' => $summary,
             'stats' => $this->stats(),
         ]);
     }

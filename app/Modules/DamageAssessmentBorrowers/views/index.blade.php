@@ -197,12 +197,15 @@
     </div>
     @endif
 
-    <div class="d-flex justify-content-end mb-6">
+    <div class="d-flex justify-content-end gap-3 mb-6">
         @if ($isFormPage)
             <a href="{{ route('damage-assessment-borrowers.index') }}" class="btn btn-light-primary">
                 العودة إلى الاستبيانات
             </a>
         @else
+            <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#borrowersImportModal">
+                استيراد من Excel
+            </button>
             <a href="{{ route('damage-assessment-borrowers.create') }}" class="btn btn-primary">
                 تعبئة استبيان جديد
             </a>
@@ -495,6 +498,42 @@
         </div>
     </div>
     </div>
+
+    @if (! $isFormPage)
+        <div class="modal fade" id="borrowersImportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form id="borrowersImportForm" enctype="multipart/form-data">
+                        @csrf
+                        <div class="modal-header">
+                            <h2 class="fw-bold mb-0">استيراد بيانات المستفيدين</h2>
+                            <button type="button" class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="إغلاق">
+                                <i class="ki-duotone ki-cross fs-1">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <label class="required fw-semibold fs-6 mb-2 d-block" for="borrowersFile">ملف Excel</label>
+                            <input type="file" name="borrowers_file" id="borrowersFile" class="form-control" accept=".xlsx" required>
+                            <div class="form-text">ارفع ملف الاستبيان بصيغة XLSX. سيتم تجاوز الصفوف المكررة أو غير المكتملة تلقائيًا.</div>
+                            <div class="invalid-feedback d-block mt-3" id="borrowersImportError" style="display: none;"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="submit" class="btn btn-primary" id="borrowersImportSubmitBtn">
+                                <span class="indicator-label">بدء الاستيراد</span>
+                                <span class="indicator-progress">جاري الاستيراد...
+                                    <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 @endsection
 
 @section('script')
@@ -502,6 +541,7 @@
         const borrowerRoutes = {
             data: @json(route('damage-assessment-borrowers.data')),
             store: @json(route('damage-assessment-borrowers.store')),
+            import: @json(route('damage-assessment-borrowers.import')),
         };
 
         const riskClasses = {
@@ -732,6 +772,7 @@
 
         const borrowerSurveyForm = document.getElementById('borrowerSurveyForm');
         const borrowerSearch = document.getElementById('borrowerSearch');
+        const borrowersImportForm = document.getElementById('borrowersImportForm');
 
         borrowerSurveyForm?.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -807,6 +848,49 @@
         borrowerSearch?.addEventListener('input', () => {
             clearTimeout(window.borrowerSearchTimer);
             window.borrowerSearchTimer = setTimeout(loadBorrowers, 300);
+        });
+
+        borrowersImportForm?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const form = event.currentTarget;
+            const button = document.getElementById('borrowersImportSubmitBtn');
+            const error = document.getElementById('borrowersImportError');
+            error.style.display = 'none';
+            error.textContent = '';
+            button.setAttribute('data-kt-indicator', 'on');
+            button.disabled = true;
+
+            try {
+                const response = await fetch(borrowerRoutes.import, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    body: new FormData(form),
+                });
+                const result = await response.json();
+
+                if (! response.ok || ! result.status) {
+                    const message = result.errors?.borrowers_file?.[0] || result.message || 'فشل استيراد الملف.';
+                    error.textContent = message;
+                    error.style.display = 'block';
+                    if (typeof toastr !== 'undefined') toastr.error(message);
+                    return;
+                }
+
+                form.reset();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('borrowersImportModal')).hide();
+                renderStats(result.stats);
+                await loadBorrowers();
+
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(result.message);
+                }
+            } finally {
+                button.removeAttribute('data-kt-indicator');
+                button.disabled = false;
+            }
         });
 
         if ('serviceWorker' in navigator) {
