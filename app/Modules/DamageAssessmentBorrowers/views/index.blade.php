@@ -81,9 +81,22 @@
             background: var(--bs-gray-100);
             border: 1px solid var(--bs-gray-200);
             border-radius: 0.85rem;
+            display: inline-flex;
+            flex-direction: row-reverse;
             gap: 0.45rem;
             margin-inline-end: 0;
             padding: 0.75rem 0.9rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-survey-form .form-check-inline .form-check-input {
+            flex: 0 0 auto;
+            float: none;
+            margin: 0;
+        }
+
+        .damage-assessment-borrowers-page .borrower-survey-form .form-check-inline .form-check-label {
+            color: var(--bs-gray-700);
+            line-height: 1.4;
         }
 
         .damage-assessment-borrowers-page .borrower-survey-form .borrower-repeat-row {
