@@ -73,5 +73,10 @@
         <button type="button" onclick="window.location.reload()">إعادة المحاولة</button>
         <button class="secondary" type="button" onclick="window.location.href = '/login'">تسجيل الدخول</button>
     </main>
+    <script>
+        document.querySelector('.secondary').onclick = () => {
+            window.location.href = new URL('login', window.location.href).href;
+        };
+    </script>
 </body>
 </html>

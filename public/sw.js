@@ -1,5 +1,8 @@
-const CACHE_NAME = 'phc-pwa-v4';
-const OFFLINE_URL = '/offline.html';
+const CACHE_NAME = 'phc-pwa-v5';
+const APP_SCOPE_URL = new URL(self.registration.scope);
+const scopedUrl = (path) => new URL(path.replace(/^\//, ''), APP_SCOPE_URL).toString();
+const originUrl = (path) => new URL(path, self.location.origin).toString();
+const OFFLINE_URL = scopedUrl('offline.html');
 const DB_NAME = 'laravel-pwa-sync';
 const DB_VERSION = 1;
 const SYNC_STORE_NAME = 'offline-requests';
@@ -7,24 +10,40 @@ const SYNC_TAG = 'phc-offline-sync';
 
 const PRECACHE_URLS = [
     OFFLINE_URL,
-    '/manifest.json',
-    '/icon-192x192.png',
-    '/icon-512x512.png',
-    '/background-sync.js',
-    '/assets/css/fontface.css',
-    '/assets/css/font-unified.css',
-    '/assets/plugins/global/plugins.bundle.css',
-    '/assets/plugins/global/plugins.bundle.rtl.css',
-    '/assets/css/style.bundle.css',
-    '/assets/css/style.bundle.rtl.css',
-    '/assets/media/logos/LogoGaza2.jpeg',
+    scopedUrl('manifest.webmanifest'),
+    scopedUrl('icon-192x192.png'),
+    scopedUrl('icon-512x512.png'),
+    scopedUrl('pwa-install.js'),
+    scopedUrl('background-sync.js'),
+    originUrl('/assets/css/fontface.css'),
+    originUrl('/assets/css/font-unified.css'),
+    originUrl('/assets/plugins/global/plugins.bundle.css'),
+    originUrl('/assets/plugins/global/plugins.bundle.rtl.css'),
+    originUrl('/assets/css/style.bundle.css'),
+    originUrl('/assets/css/style.bundle.rtl.css'),
+    originUrl('/assets/media/logos/LogoGaza2.jpeg'),
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: 'reload' }))))
-            .then(() => self.skipWaiting())
+        caches.open(CACHE_NAME).then(async (cache) => {
+            await Promise.all(PRECACHE_URLS.map(async (url) => {
+                try {
+                    const response = await fetch(new Request(url, {
+                        cache: 'reload',
+                        credentials: 'same-origin',
+                    }));
+
+                    if (response.ok) {
+                        await cache.put(url, response.clone());
+                    }
+                } catch (error) {
+                    console.warn('[PHC PWA] Failed to precache URL:', url, error);
+                }
+            }));
+
+            await self.skipWaiting();
+        })
     );
 });
 
@@ -67,6 +86,7 @@ async function cacheUrls(urls) {
 
             if (response.ok) {
                 await cache.put(request, response.clone());
+                await cache.put(new URL(url, self.location.origin).pathname, response.clone());
             }
         } catch (error) {
             console.error('[PHC PWA] Failed to cache URL:', url, error);

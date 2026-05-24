@@ -3,6 +3,10 @@ const DB_NAME = 'laravel-pwa-sync';
 const DB_VERSION = 1;
 const SYNC_TAG = 'phc-offline-sync';
 
+function pwaUrl(name, fallback) {
+    return window.PHC_PWA_URLS?.[name] || fallback;
+}
+
 function openDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -56,9 +60,11 @@ async function cacheCurrentPage() {
         type: 'PHC_CACHE_URLS',
         urls: [
             window.location.href,
-            '/manifest.json',
-            '/pwa-install.js',
-            '/background-sync.js',
+            pwaUrl('manifest', '/manifest.webmanifest'),
+            pwaUrl('installScript', '/pwa-install.js'),
+            pwaUrl('backgroundSync', '/background-sync.js'),
+            pwaUrl('offline', '/offline.html'),
+            pwaUrl('login', '/login'),
         ],
     });
 }

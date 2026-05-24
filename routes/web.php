@@ -153,31 +153,44 @@ Route::get('/manifest.webmanifest', function (): Response {
     $manifest['start_url'] = app_path_url('/login');
     $manifest['scope'] = app_path_url('/');
 
-    foreach ($manifest['icons'] ?? [] as &$icon) {
-        if (isset($icon['src'])) {
-            $icon['src'] = app_path_url($icon['src']);
-        }
-    }
-    unset($icon);
-
-    foreach ($manifest['shortcuts'] ?? [] as &$shortcut) {
-        if (isset($shortcut['url'])) {
-            $shortcut['url'] = app_path_url($shortcut['url']);
-        }
-
-        foreach ($shortcut['icons'] ?? [] as &$icon) {
+    if (isset($manifest['icons'])) {
+        foreach ($manifest['icons'] as &$icon) {
             if (isset($icon['src'])) {
                 $icon['src'] = app_path_url($icon['src']);
             }
         }
         unset($icon);
     }
-    unset($shortcut);
+
+    if (isset($manifest['shortcuts'])) {
+        foreach ($manifest['shortcuts'] as &$shortcut) {
+            if (isset($shortcut['url'])) {
+                $shortcut['url'] = app_path_url($shortcut['url']);
+            }
+
+            if (isset($shortcut['icons'])) {
+                foreach ($shortcut['icons'] as &$icon) {
+                    if (isset($icon['src'])) {
+                        $icon['src'] = app_path_url($icon['src']);
+                    }
+                }
+                unset($icon);
+            }
+        }
+        unset($shortcut);
+    }
 
     return response()
         ->json($manifest)
         ->header('Content-Type', 'application/manifest+json');
 })->name('pwa.manifest');
+
+Route::get('/{pwaIcon}', function (string $pwaIcon): Response {
+    return response()->file(public_path($pwaIcon), [
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->where('pwaIcon', 'icon-(72x72|96x96|128x128|144x144|152x152|192x192|384x384|512x512)\.png')
+    ->name('pwa.icon');
 
 Route::get('/sw.js', function (): Response {
     return response((string) file_get_contents(public_path('sw.js')), 200, [

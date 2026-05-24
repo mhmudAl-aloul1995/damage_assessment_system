@@ -3,5 +3,5 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}" />
-<link rel="manifest" href="{{ asset('manifest.json') }}" />
-<link rel="apple-touch-icon" href="{{ asset('icon-192x192.png') }}" />
+<link rel="manifest" href="{{ app_path_url('/manifest.webmanifest') }}" />
+<link rel="apple-touch-icon" href="{{ app_path_url('/icon-192x192.png') }}" />

@@ -28,14 +28,36 @@ it('wires borrowers surveys into pwa offline caching and sync', function () {
 
     expect(collect($manifest['shortcuts'] ?? [])->pluck('url'))->toContain('/damage-assessment-borrowers')
         ->and($serviceWorker)->toContain('PHC_CACHE_URLS')
+        ->and($serviceWorker)->toContain("const CACHE_NAME = 'phc-pwa-v5'")
+        ->and($serviceWorker)->toContain('APP_SCOPE_URL')
         ->and($serviceWorker)->toContain('cache.put(requestUrl.pathname, copy)')
         ->and($serviceWorker)->toContain('PHC_OFFLINE_SYNC_COMPLETE')
         ->and($backgroundSync)->toContain('cacheCurrentPage')
+        ->and($backgroundSync)->toContain('PHC_PWA_URLS')
         ->and($view)->toContain('borrowersPendingRowsKey')
         ->and($view)->toContain('window.phcOfflineSync?.registerSync?.()')
         ->and($view)->toContain('damage-assessment-borrowers-page')
         ->and($view)->toContain('borrowersMobileList')
         ->and($view)->toContain('borrower-mobile-card');
+});
+
+it('serves pwa resources within the configured deployment path', function () {
+    config(['app.url' => 'http://localhost/damage_assessment_system']);
+
+    $this->get('/damage_assessment_system/manifest.webmanifest')
+        ->assertOk()
+        ->assertJsonPath('scope', '/damage_assessment_system/')
+        ->assertJsonPath('start_url', '/damage_assessment_system/login')
+        ->assertJsonPath('shortcuts.0.url', '/damage_assessment_system/damage-assessment-borrowers')
+        ->assertJsonPath('icons.5.src', '/damage_assessment_system/icon-192x192.png');
+
+    $this->get('/damage_assessment_system/sw.js')
+        ->assertOk()
+        ->assertHeader('Service-Worker-Allowed', '/damage_assessment_system/')
+        ->assertSee('phc-pwa-v5');
+
+    $this->get('/damage_assessment_system/icon-192x192.png')
+        ->assertOk();
 });
 
 it('stores borrower surveys through ajax and returns risk analysis', function () {
