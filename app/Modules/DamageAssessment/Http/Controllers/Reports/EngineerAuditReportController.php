@@ -17,7 +17,7 @@ class EngineerAuditReportController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|QC/QA Engineer');
+        //$this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|QC/QA Engineer');
     }
 
     public function index(AreaProductivityReportFilterRequest $request, EngineerAuditReportService $reportService): View
