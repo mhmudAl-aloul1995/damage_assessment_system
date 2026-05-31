@@ -193,7 +193,7 @@ return [
                         'title' => 'menu.reports.engineer_audit',
                         'url' => 'damage-assessment/reports/engineer-audit',
                         'pattern' => 'damage-assessment/reports/engineer-audit*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+                        'roles' => ['Database Officer', 'Project Officer', 'Area Manager', 'Auditing Supervisor'],
                     ],
                 ],
             ],
