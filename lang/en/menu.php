@@ -46,6 +46,7 @@ return [
         'daily_audit' => 'Daily Audit Achievement',
         'hlp' => 'HLP',
         'hlp_audit' => 'HLP Audit Report',
+        'engineer_audit' => 'Engineer Audit Evaluation',
         'public_buildings' => 'Public Buildings Report',
         'road_facilities' => 'Road Facilities Report',
         'export_data' => 'Export Data',

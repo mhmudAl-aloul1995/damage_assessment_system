@@ -23,6 +23,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Reports\AreaProductivityReport
 use App\Modules\DamageAssessment\Http\Controllers\Reports\BuildingProductivityReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\DailyAchievementReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\DamageStatisticsReportController;
+use App\Modules\DamageAssessment\Http\Controllers\Reports\EngineerAuditReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\FieldEngineerReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\HlpAuditReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\IndasPdfReportController;
@@ -229,6 +230,8 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/lawyers-daily', [DailyAchievementReportController::class, 'lawyersDailyAchievement'])->name('reports.lawyers-daily');
     Route::get('reports/hlp-audit', [HlpAuditReportController::class, 'index'])->name('reports.hlp-audit');
     Route::get('reports/hlp-audit/export', [HlpAuditReportController::class, 'export'])->name('reports.hlp-audit.export');
+    Route::get('reports/engineer-audit', [EngineerAuditReportController::class, 'index'])->name('reports.engineer-audit');
+    Route::get('reports/engineer-audit/export', [EngineerAuditReportController::class, 'export'])->name('reports.engineer-audit.export');
     Route::get('reports/public-buildings', [SurveyReportController::class, 'publicBuildings'])->name('reports.public-buildings');
     Route::get('reports/road-facilities', [SurveyReportController::class, 'roadFacilities'])->name('reports.road-facilities');
 

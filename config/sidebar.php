@@ -116,7 +116,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.reports.title',
         'icon' => 'ki-chart-line',
-        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Team Leader', 'Area Manager', 'QC/QA Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Team Leader', 'Area Manager', 'QC/QA Engineer', 'Auditing Supervisor'],
         'active_patterns' => [
             'damage-assessment/reports*',
             'damage-assessment/export-data*',
@@ -188,6 +188,12 @@ return [
                         'url' => 'damage-assessment/reports/hlp-audit',
                         'pattern' => 'damage-assessment/reports/hlp-audit*',
                         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Auditing Supervisor'],
+                    ],
+                    [
+                        'title' => 'menu.reports.engineer_audit',
+                        'url' => 'damage-assessment/reports/engineer-audit',
+                        'pattern' => 'damage-assessment/reports/engineer-audit*',
+                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
                     ],
                 ],
             ],

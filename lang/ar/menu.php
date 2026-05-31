@@ -46,6 +46,7 @@ return [
         'daily_audit' => 'إنجاز التدقيق اليومي',
         'hlp' => 'HLP',
         'hlp_audit' => 'تقرير تدقيق HLP',
+        'engineer_audit' => 'تقرير تقييم المهندسين',
         'public_buildings' => 'تقرير المباني العامة',
         'road_facilities' => 'تقرير مرافق الطرق',
         'export_data' => 'تصدير البيانات',

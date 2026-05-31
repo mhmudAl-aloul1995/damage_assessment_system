@@ -89,8 +89,15 @@ it('groups report links into sidebar categories', function () {
     expect($reportGroupTitles)
         ->toContain('menu.reports.area_productivity')
         ->toContain('menu.reports.groups.operations')
+        ->toContain('menu.reports.groups.auditing')
         ->toContain('menu.reports.groups.surveys')
         ->toContain('menu.reports.groups.exports');
+
+    $auditingGroup = $reportsSection['items']->firstWhere('title', 'menu.reports.groups.auditing');
+
+    expect($auditingGroup['children'])
+        ->pluck('url')
+        ->toContain('damage-assessment/reports/engineer-audit');
 });
 
 it('groups visible sidebar sections by module', function () {
