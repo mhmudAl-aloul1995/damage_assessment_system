@@ -29,9 +29,9 @@ use Yajra\Datatables\Datatables;
 class auditController extends Controller
 {
     private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES = [
-        'م. ياسمين أبو مدللة',
-        'م. غادة الهباش',
-        'م. رانية شعث',
+        'ياسمين ماهر مصطفى ابومدللة',
+        'غادة محمود عبدالحي الهباش',
+        'رانيه سليمان راشد شعت',
     ];
 
     private const LEGAL_CHALLENGES = [

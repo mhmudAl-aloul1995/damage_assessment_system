@@ -160,7 +160,7 @@ it('temporarily shows the audit home sidebar link for selected users only', func
     $role = Role::findOrCreate('QC/QA Engineer', 'web');
 
     $exceptedUser = User::factory()->create([
-        'name' => 'م. ياسمين أبو مدللة',
+        'name' => 'ياسمين ماهر مصطفى ابومدللة',
     ]);
     $exceptedUser->assignRole($role);
 

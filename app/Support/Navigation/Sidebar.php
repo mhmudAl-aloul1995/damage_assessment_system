@@ -8,9 +8,9 @@ use Illuminate\Support\Collection;
 class Sidebar
 {
     private const TEMPORARY_AUDIT_HOME_USER_NAMES = [
-        'م. ياسمين أبو مدللة',
-        'م. غادة الهباش',
-        'م. رانية شعث',
+        'ياسمين ماهر مصطفى ابومدللة',
+        'غادة محمود عبدالحي الهباش',
+        'رانيه سليمان راشد شعت',
     ];
 
     private const TEMPORARY_AUDIT_HOME_URL = 'damage-assessment/audit';

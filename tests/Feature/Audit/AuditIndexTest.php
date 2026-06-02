@@ -413,7 +413,7 @@ it('hides audit management action buttons for temporary excepted users only', fu
     ]);
 
     $exceptedUser = User::factory()->create([
-        'name' => 'م. ياسمين أبو مدللة',
+        'name' => 'ياسمين ماهر مصطفى ابومدللة',
     ]);
     $exceptedUser->assignRole($role);
 
