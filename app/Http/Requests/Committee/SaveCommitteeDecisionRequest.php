@@ -18,14 +18,8 @@ class SaveCommitteeDecisionRequest extends FormRequest
     {
         return [
             'decision_type' => ['required', 'string', Rule::in([
-                'accepted',
-                'rejected',
-                'needs_completion',
-                'needs_review',
-                'recount',
-                'full_demolition',
-                'partial_demolition',
-                'other',
+                'fully_damaged',
+                'partially_damaged',
             ])],
             'decision_text' => ['required', 'string'],
             'action_text' => ['nullable', 'string'],

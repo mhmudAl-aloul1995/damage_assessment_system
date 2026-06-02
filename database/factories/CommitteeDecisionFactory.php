@@ -18,7 +18,7 @@ class CommitteeDecisionFactory extends Factory
         return [
             'decisionable_type' => Building::class,
             'decisionable_id' => 1,
-            'decision_type' => 'accepted',
+            'decision_type' => 'fully_damaged',
             'decision_text' => fake()->sentence(),
             'action_text' => fake()->sentence(),
             'notes' => fake()->sentence(),

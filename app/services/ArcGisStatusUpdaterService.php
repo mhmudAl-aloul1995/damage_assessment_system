@@ -29,8 +29,7 @@ class ArcGisStatusUpdaterService
             }
 
             $identifierField = (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid');
-            $statusField = (string) config('services.committee_decisions.arcgis.status_field', 'field_status');
-            $statusValue = (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed');
+            [$statusField, $statusValue] = $this->resolveDecisionStatusAttributes($decision);
             $baseUrl = $this->resolveBaseUrl();
 
             if ($baseUrl === '') {
@@ -167,11 +166,24 @@ class ArcGisStatusUpdaterService
             return [null, null];
         }
 
-        if ((string) config('services.committee_decisions.arcgis.unit_target', 'unit') === 'building') {
-            return [$decisionable->building, config('services.committee_decisions.arcgis.building_layer_id', 0)];
+        return [$decisionable, config('services.committee_decisions.arcgis.housing_unit_layer_id', 1)];
+    }
+
+    private function resolveDecisionStatusAttributes(CommitteeDecision $decision): array
+    {
+        $decisionable = $decision->decisionable;
+
+        if ($decisionable instanceof HousingUnit) {
+            return [
+                'unit_damage_status',
+                $decision->decision_type === 'fully_damaged' ? 'fully_damaged2' : 'partially_damaged2',
+            ];
         }
 
-        return [$decisionable, config('services.committee_decisions.arcgis.housing_unit_layer_id', 1)];
+        return [
+            'building_damage_status',
+            $decision->decision_type === 'fully_damaged' ? 'fully_damaged' : 'partially_damaged',
+        ];
     }
 
     private function arcGisHttpClient(): \Illuminate\Http\Client\PendingRequest

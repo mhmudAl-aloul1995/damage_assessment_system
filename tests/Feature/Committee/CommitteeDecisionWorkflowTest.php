@@ -70,8 +70,6 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
     config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
     config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
     config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
-    config()->set('services.committee_decisions.arcgis.status_field', 'field_status');
-    config()->set('services.committee_decisions.arcgis.status_value', 'Not_Completed');
     config()->set('services.committee_decisions.arcgis.token', 'static-token');
 
     Http::fake([
@@ -124,7 +122,7 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
         'created_by' => $manager->id,
         'updated_by' => $manager->id,
     ])), [
-        'decision_type' => 'accepted',
+        'decision_type' => 'fully_damaged',
         'decision_text' => 'The final decision for the building was approved.',
         'action_text' => 'Run field action',
         'notes' => 'Reviewed',
@@ -160,6 +158,93 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
         $features = json_decode((string) data_get($request->data(), 'features'), true);
 
         return str_contains($request->url(), '/updateFeatures')
-            && data_get($features, '0.attributes.field_status') === 'Not_Completed';
+            && data_get($features, '0.attributes.building_damage_status') === 'fully_damaged';
+    });
+});
+
+it('syncs housing unit committee decisions to the unit damage status and archives the unit object', function () {
+    config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
+    config()->set('services.committee_decisions.arcgis.housing_unit_layer_id', 1);
+    config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
+    config()->set('services.committee_decisions.arcgis.token', 'static-token');
+
+    Http::fake([
+        'https://example.test/arcgis/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+    ]);
+
+    $manager = User::factory()->create();
+    $manager->givePermissionTo([
+        'view committee decisions',
+        'manage committee decision content',
+        'edit committee decisions',
+    ]);
+
+    $signerUser = User::factory()->create();
+    $signerUser->givePermissionTo('sign committee decisions');
+
+    $member = CommitteeMember::factory()->linkedUser($signerUser)->create([
+        'name' => 'Unit Signer',
+        'sort_order' => 1,
+        'is_required' => true,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9401,
+        'globalid' => 'building-guid-unit-parent',
+        'building_name' => 'Unit Parent',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'Engineer Field',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $unit = HousingUnit::query()->create([
+        'objectid' => 9402,
+        'globalid' => 'housing-guid-committee-unit',
+        'parentglobalid' => $building->globalid,
+        'housing_unit_number' => 'B-5',
+        'neighborhood' => 'Rimal',
+        'unit_damage_status' => 'committee_review2',
+    ]);
+
+    $this->actingAs($manager)->put(route('committee-decisions.update', CommitteeDecision::query()->firstOrCreate([
+        'decisionable_type' => HousingUnit::class,
+        'decisionable_id' => $unit->id,
+    ], [
+        'created_by' => $manager->id,
+        'updated_by' => $manager->id,
+    ])), [
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'The final decision for the housing unit was approved.',
+        'action_text' => 'Run unit field action',
+        'notes' => 'Unit reviewed',
+        'decision_date' => '2026-04-22',
+    ])->assertRedirect();
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $unit)->firstOrFail();
+
+    $this->actingAs($signerUser)->post(route('committee-decisions.sign', $decision), [
+        'committee_member_id' => $member->id,
+        'status' => 'approved',
+        'notes' => 'Approved',
+    ])->assertRedirect();
+
+    $decision->refresh();
+
+    expect($decision->status)->toBe('completed');
+    expect($decision->arcgis_sync_status)->toBe('synced');
+    expect(BuildingSurveyArchiveObject::query()
+        ->where('source_type', 'committee_decision')
+        ->where('committee_decision_id', $decision->id)
+        ->where('building_objectid', $building->objectid)
+        ->where('housing_unit_objectid', $unit->objectid)
+        ->exists())->toBeTrue();
+
+    Http::assertSent(function ($request): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/1/updateFeatures')
+            && data_get($features, '0.attributes.unit_damage_status') === 'partially_damaged2';
     });
 });
