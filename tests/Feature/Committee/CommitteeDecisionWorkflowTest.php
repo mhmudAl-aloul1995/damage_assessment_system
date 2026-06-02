@@ -158,6 +158,7 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
         $features = json_decode((string) data_get($request->data(), 'features'), true);
 
         return str_contains($request->url(), '/updateFeatures')
+            && data_get($features, '0.attributes.field_status') === 'Not_Completed'
             && data_get($features, '0.attributes.building_damage_status') === 'fully_damaged';
     });
 });
@@ -170,6 +171,9 @@ it('syncs housing unit committee decisions to the unit damage status and archive
 
     Http::fake([
         'https://example.test/arcgis/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+        'https://example.test/arcgis/FeatureServer/0/updateFeatures' => Http::response([
             'updateResults' => [['success' => true]],
         ], 200),
     ]);
@@ -246,5 +250,13 @@ it('syncs housing unit committee decisions to the unit damage status and archive
 
         return str_contains($request->url(), '/1/updateFeatures')
             && data_get($features, '0.attributes.unit_damage_status') === 'partially_damaged2';
+    });
+
+    Http::assertSent(function ($request) use ($building): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/0/updateFeatures')
+            && data_get($features, '0.attributes.globalid') === $building->globalid
+            && data_get($features, '0.attributes.field_status') === 'Not_Completed';
     });
 });

@@ -40,53 +40,34 @@ class ArcGisStatusUpdaterService
                 ];
             }
 
-            $identifierValue = data_get($featureRecord, $identifierField);
+            $token = $this->resolveToken();
+            $result = $this->sendArcGisUpdate($baseUrl, (int) $layerId, [
+                $identifierField => data_get($featureRecord, $identifierField),
+                ...$this->decisionStatusAttributes($decision, $statusField, $statusValue),
+            ], $token, $decision);
 
-            if ($identifierValue === null || $identifierValue === '') {
+            if (! $result['success']) {
+                return $result;
+            }
+
+            if ($featureRecord instanceof HousingUnit) {
+                $parentResult = $this->sendParentBuildingStatusUpdate($featureRecord, $baseUrl, $token, $decision);
+
+                if (! $parentResult['success']) {
+                    return $parentResult;
+                }
+
                 return [
-                    'success' => false,
-                    'status' => 'missing_identifier',
-                    'message' => 'The target ArcGIS identifier is missing.',
+                    'success' => true,
+                    'status' => 'synced',
+                    'message' => $result['message']."\n".$parentResult['message'],
                 ];
             }
 
-            $payload = [
-                'f' => 'json',
-                'features' => json_encode([
-                    [
-                        'attributes' => [
-                            $identifierField => $identifierValue,
-                            $statusField => $statusValue,
-                        ],
-                    ],
-                ], JSON_THROW_ON_ERROR),
-            ];
-
-            $token = $this->resolveToken();
-
-            if ($token !== '') {
-                $payload['token'] = $token;
-            }
-
-            /** @var Response $response */
-            $response = $this->arcGisHttpClient()
-                ->post(sprintf('%s/%s/updateFeatures', $baseUrl, $layerId), $payload);
-
-            $body = $response->json();
-            $success = $response->successful() && (bool) data_get($body, 'updateResults.0.success', false);
-
-            if (! $success) {
-                Log::error('Committee ArcGIS sync failed.', [
-                    'committee_decision_id' => $decision->id,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-            }
-
             return [
-                'success' => $success,
-                'status' => $success ? 'synced' : 'failed',
-                'message' => $response->body(),
+                'success' => true,
+                'status' => 'synced',
+                'message' => $result['message'],
             ];
         } catch (Throwable $exception) {
             Log::error('Committee ArcGIS sync exception.', [
@@ -183,6 +164,80 @@ class ArcGisStatusUpdaterService
         return [
             'building_damage_status',
             $decision->decision_type === 'fully_damaged' ? 'fully_damaged' : 'partially_damaged',
+        ];
+    }
+
+    private function decisionStatusAttributes(CommitteeDecision $decision, string $statusField, string $statusValue): array
+    {
+        $attributes = [
+            $statusField => $statusValue,
+        ];
+
+        if ($decision->decisionable instanceof Building) {
+            $attributes[(string) config('services.committee_decisions.arcgis.status_field', 'field_status')]
+                = (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed');
+        }
+
+        return $attributes;
+    }
+
+    private function sendParentBuildingStatusUpdate(HousingUnit $housingUnit, string $baseUrl, string $token, CommitteeDecision $decision): array
+    {
+        if (blank($housingUnit->parentglobalid)) {
+            return [
+                'success' => false,
+                'status' => 'missing_identifier',
+                'message' => 'The parent building globalid is missing.',
+            ];
+        }
+
+        return $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
+            'globalid' => $housingUnit->parentglobalid,
+            (string) config('services.committee_decisions.arcgis.status_field', 'field_status') => (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed'),
+        ], $token, $decision);
+    }
+
+    private function sendArcGisUpdate(string $baseUrl, int $layerId, array $attributes, string $token, CommitteeDecision $decision): array
+    {
+        if (collect($attributes)->contains(fn ($value): bool => $value === null || $value === '')) {
+            return [
+                'success' => false,
+                'status' => 'missing_identifier',
+                'message' => 'The target ArcGIS identifier is missing.',
+            ];
+        }
+
+        $payload = [
+            'f' => 'json',
+            'features' => json_encode([
+                [
+                    'attributes' => $attributes,
+                ],
+            ], JSON_THROW_ON_ERROR),
+        ];
+
+        if ($token !== '') {
+            $payload['token'] = $token;
+        }
+
+        /** @var Response $response */
+        $response = $this->arcGisHttpClient()
+            ->post(sprintf('%s/%s/updateFeatures', $baseUrl, $layerId), $payload);
+
+        $success = $response->successful() && (bool) data_get($response->json(), 'updateResults.0.success', false);
+
+        if (! $success) {
+            Log::error('Committee ArcGIS sync failed.', [
+                'committee_decision_id' => $decision->id,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+        }
+
+        return [
+            'success' => $success,
+            'status' => $success ? 'synced' : 'failed',
+            'message' => $response->body(),
         ];
     }
 
