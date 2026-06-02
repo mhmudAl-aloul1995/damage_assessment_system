@@ -366,7 +366,7 @@
 							data-select-visible="false">
 							إظهار التحديد <i class="ki-duotone ki-check-square"></i>
 						</button>
-						@unless(auth()->user()->hasRole('Area Manager'))
+						@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
 							<button id="btn_final_approve" class="btn btn-warning btn-sm">
 								{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
 							</button>

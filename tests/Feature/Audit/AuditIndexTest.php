@@ -397,3 +397,52 @@ it('allows reassigning an already assigned audit building to a different enginee
         ]);
     }
 });
+
+it('hides audit management action buttons for temporary excepted users only', function () {
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $exceptedUser = User::factory()->create([
+        'name' => 'م. ياسمين أبو مدللة',
+    ]);
+    $exceptedUser->assignRole($role);
+
+    $regularUser = User::factory()->create([
+        'name' => 'Regular Database Officer',
+    ]);
+    $regularUser->assignRole($role);
+
+    $hiddenActionIds = [
+        'id="btn_final_approve"',
+        'id="btn_undp_final_approve"',
+        'id="btn_assign_to_lawyer"',
+        'id="btn_assign_to_engineer"',
+        'id="btn_import_final_approve"',
+    ];
+
+    $response = $this->actingAs($exceptedUser)
+        ->get(route('audit.index'))
+        ->assertOk();
+
+    foreach ($hiddenActionIds as $buttonId) {
+        $response->assertDontSee($buttonId, false);
+    }
+
+    $response = $this->actingAs($regularUser)
+        ->get(route('audit.index'))
+        ->assertOk();
+
+    foreach ($hiddenActionIds as $buttonId) {
+        $response->assertSee($buttonId, false);
+    }
+});

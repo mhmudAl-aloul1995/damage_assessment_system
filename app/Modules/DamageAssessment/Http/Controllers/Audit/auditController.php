@@ -28,6 +28,12 @@ use Yajra\Datatables\Datatables;
 
 class auditController extends Controller
 {
+    private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES = [
+        'م. ياسمين أبو مدللة',
+        'م. غادة الهباش',
+        'م. رانية شعث',
+    ];
+
     private const LEGAL_CHALLENGES = [
         'missing_legal_documents' => 'فقدان الوثائق القانونية',
         'broken_ownership_chain' => 'انقطاع تسلسل الملكية',
@@ -2957,10 +2963,11 @@ class auditController extends Controller
         $auditExportService = app(AuditExportService::class);
         $buildingExportColumns = $auditExportService->buildingColumns();
         $housingExportColumns = $auditExportService->housingColumns();
+        $hideAuditManagementActions = $this->shouldHideAuditManagementActions(Auth::user());
 
         return View::make(
             'damage-assessment::audit.audit',
-            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns')
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions')
         );
     }
 
@@ -4190,6 +4197,15 @@ COALESCE(
             ->first()
             ?->status
             ?->name;
+    }
+
+    private function shouldHideAuditManagementActions(?User $user): bool
+    {
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true);
     }
 
     private function firstAndLastName(?string $name): string
