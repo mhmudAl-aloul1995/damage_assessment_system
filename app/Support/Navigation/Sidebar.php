@@ -7,6 +7,14 @@ use Illuminate\Support\Collection;
 
 class Sidebar
 {
+    private const TEMPORARY_AUDIT_HOME_USER_NAMES = [
+        'م. ياسمين أبو مدللة',
+        'م. غادة الهباش',
+        'م. رانية شعث',
+    ];
+
+    private const TEMPORARY_AUDIT_HOME_URL = 'damage-assessment/audit';
+
     /**
      * @return Collection<int, array<string, mixed>>
      */
@@ -43,7 +51,7 @@ class Sidebar
      */
     private static function visibleSection(array $section, User $user): ?array
     {
-        if (! $user->hasAnyRole($section['roles'] ?? [])) {
+        if (! $user->hasAnyRole($section['roles'] ?? []) && ! self::hasTemporaryVisibleItem($section, $user)) {
             return null;
         }
 
@@ -93,6 +101,18 @@ class Sidebar
             return $item;
         }
 
-        return $user->hasAnyRole($item['roles'] ?? []) ? $item : null;
+        return $user->hasAnyRole($item['roles'] ?? []) || self::isTemporaryAuditHomeItem($item, $user) ? $item : null;
+    }
+
+    private static function hasTemporaryVisibleItem(array $section, User $user): bool
+    {
+        return collect($section['items'] ?? [])
+            ->contains(fn (array $item): bool => self::isTemporaryAuditHomeItem($item, $user));
+    }
+
+    private static function isTemporaryAuditHomeItem(array $item, User $user): bool
+    {
+        return ($item['url'] ?? null) === self::TEMPORARY_AUDIT_HOME_URL
+            && in_array(trim($user->name), self::TEMPORARY_AUDIT_HOME_USER_NAMES, true);
     }
 }

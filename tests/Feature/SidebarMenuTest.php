@@ -155,3 +155,34 @@ it('hides hud from auditors and field engineers', function (string $roleName) {
     'infrastructure auditor' => 'Inf - QC/QA Engineer',
     'field engineer' => 'Field Engineer',
 ]);
+
+it('temporarily shows the audit home sidebar link for selected users only', function () {
+    $role = Role::findOrCreate('QC/QA Engineer', 'web');
+
+    $exceptedUser = User::factory()->create([
+        'name' => 'م. ياسمين أبو مدللة',
+    ]);
+    $exceptedUser->assignRole($role);
+
+    $regularUser = User::factory()->create([
+        'name' => 'Regular QC Engineer',
+    ]);
+    $regularUser->assignRole($role);
+
+    $exceptedUrls = Sidebar::forUser($exceptedUser)
+        ->flatMap(fn (array $module) => $module['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->pluck('url')
+        ->all();
+
+    $regularUrls = Sidebar::forUser($regularUser)
+        ->flatMap(fn (array $module) => $module['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->pluck('url')
+        ->all();
+
+    expect($exceptedUrls)
+        ->toContain('damage-assessment/audit')
+        ->and($regularUrls)
+        ->not->toContain('damage-assessment/audit');
+});
