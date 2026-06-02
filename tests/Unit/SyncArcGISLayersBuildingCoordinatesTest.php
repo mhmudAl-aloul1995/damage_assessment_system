@@ -22,6 +22,9 @@ beforeEach(function (): void {
         $table->string('globalid')->nullable();
         $table->string('field_status')->nullable();
         $table->string('building_name')->nullable();
+        $table->string('owner_mobile')->nullable();
+        $table->string('owner_mobile_1')->nullable();
+        $table->string('owner_mobile_v_1')->nullable();
         $table->string('end')->nullable();
         $table->string('creationdate')->nullable();
         $table->double('latitude')->nullable();
@@ -134,4 +137,61 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
     expect($pointBuilding->end)->toBe('2026-05-10 09:30:00');
     expect((float) $polygonBuilding->latitude)->toBe(31.5);
     expect((float) $polygonBuilding->longitude)->toBe(34.5);
+});
+
+it('fills missing owner mobile from alternate arcgis owner mobile fields', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.buildings_url', 'https://example.com/FeatureServer/0');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/FeatureServer/0?*' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'owner_mobile', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'owner_mobile_1', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'owner_mobile_v_1', 'type' => 'esriFieldTypeString', 'length' => 255],
+            ],
+        ]),
+        'https://example.com/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                [
+                    'attributes' => [
+                        'objectid' => 601,
+                        'owner_mobile' => null,
+                        'owner_mobile_1' => '599854475',
+                        'owner_mobile_v_1' => null,
+                    ],
+                ],
+                [
+                    'attributes' => [
+                        'objectid' => 602,
+                        'owner_mobile' => '',
+                        'owner_mobile_1' => '',
+                        'owner_mobile_v_1' => '599854476',
+                    ],
+                ],
+                [
+                    'attributes' => [
+                        'objectid' => 603,
+                        'owner_mobile' => '599854477',
+                        'owner_mobile_1' => '599854478',
+                        'owner_mobile_v_1' => '599854479',
+                    ],
+                ],
+            ],
+            'exceededTransferLimit' => false,
+        ]),
+    ]);
+
+    $exitCode = Artisan::call('sync:arcgis-layers', ['table' => 'buildings']);
+
+    expect($exitCode)->toBe(0);
+
+    expect(DB::table('buildings')->where('objectid', 601)->value('owner_mobile'))->toBe('599854475');
+    expect(DB::table('buildings')->where('objectid', 602)->value('owner_mobile'))->toBe('599854476');
+    expect(DB::table('buildings')->where('objectid', 603)->value('owner_mobile'))->toBe('599854477');
 });

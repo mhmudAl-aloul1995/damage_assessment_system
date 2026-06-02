@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Schema;
 class SyncArcGISLayers extends Command
 {
     protected $signature = 'sync:arcgis-layers {table?} {--chunk=1000}';
-/**s */
+
+    /**s */
     protected $description = 'Sync ArcGIS layers';
 
     public function handle(): int
@@ -328,19 +329,7 @@ class SyncArcGISLayers extends Command
                             }
                         }
                     }
-//ss
-                    // Handle _v1 fallback columns: if main column is null, use _v1 value
-                    foreach ($row as $column => $value) {
-                        if (($value === null || $value === '') && ! str_ends_with($column, '_v1')) {
-                            $v1Key = strtolower($column.'_v1');
-                            if (array_key_exists($v1Key, $arcgisMap)) {
-                                $v1Value = $this->normalizeValue($arcgisMap[$v1Key], $column.'_v1', $table);
-                                if ($v1Value !== null && $v1Value !== '') {
-                                    $row[$column] = $v1Value;
-                                }
-                            }
-                        }
-                    }
+                    $row = $this->applyFallbackColumns($row, $arcgisMap, $syncColumns, $table);
 
                     $row[$unique] = $objectId;
 
@@ -649,6 +638,62 @@ class SyncArcGISLayers extends Command
             ->reject(fn ($col) => in_array($col, $ignoredColumns, true))
             ->values()
             ->toArray();
+    }
+
+    private function applyFallbackColumns(array $row, array $arcgisMap, array $syncColumns, string $table): array
+    {
+        $row = $this->applyFallbackColumn($row, $arcgisMap, $syncColumns, $table, 'owner_mobile', [
+            'owner_mobile_1',
+            'owner_mobile_v_1',
+        ]);
+
+        foreach ($syncColumns as $column) {
+            if (str_ends_with($column, '_v1')) {
+                continue;
+            }
+
+            $row = $this->applyFallbackColumn($row, $arcgisMap, $syncColumns, $table, $column, [
+                $column.'_v1',
+            ]);
+        }
+
+        return $row;
+    }
+
+    private function applyFallbackColumn(
+        array $row,
+        array $arcgisMap,
+        array $syncColumns,
+        string $table,
+        string $targetColumn,
+        array $sourceColumns
+    ): array {
+        if (! in_array($targetColumn, $syncColumns, true) || ! $this->isBlankSyncValue($row[$targetColumn] ?? null)) {
+            return $row;
+        }
+
+        foreach ($sourceColumns as $sourceColumn) {
+            $sourceKey = strtolower($sourceColumn);
+
+            if (! array_key_exists($sourceKey, $arcgisMap)) {
+                continue;
+            }
+
+            $sourceValue = $this->normalizeValue($arcgisMap[$sourceKey], $sourceColumn, $table);
+
+            if (! $this->isBlankSyncValue($sourceValue)) {
+                $row[$targetColumn] = $sourceValue;
+
+                return $row;
+            }
+        }
+
+        return $row;
+    }
+
+    private function isBlankSyncValue(mixed $value): bool
+    {
+        return $value === null || $value === '';
     }
 
     private function shouldSkipDynamicColumn(string $column): bool
