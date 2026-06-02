@@ -32,7 +32,9 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'zone_code' => 'Z-1',
+        'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-10 10:00:00',
+        'end' => '2026-04-10 10:00:00',
     ]);
 
     Building::query()->create([
@@ -45,7 +47,9 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'zone_code' => 'Z-9',
+        'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-11 10:00:00',
+        'end' => '2026-04-11 10:00:00',
     ]);
 
     Building::query()->create([
@@ -58,7 +62,9 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Jabalia',
         'neighborhood' => 'Camp',
         'zone_code' => 'Z-2',
+        'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-11 10:00:00',
+        'end' => '2026-04-11 10:00:00',
     ]);
 
     Building::query()->create([
@@ -71,7 +77,9 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'zone_code' => 'Z-7',
+        'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-12 10:00:00',
+        'end' => '2026-04-12 10:00:00',
     ]);
 
     Building::query()->create([
@@ -84,7 +92,9 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'zone_code' => 'Z-8',
-        'creationdate' => '2026-04-13 10:00:00',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-03-13 10:00:00',
+        'end' => '2026-04-13 10:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -300,22 +310,22 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSeeInOrder(['<td>Gaza</td>', '<td>Buildings</td>'], false);
 
     $buildingResponse->assertViewHas('summary', function (array $summary): bool {
-        return $summary['total_records'] === 3
+        return $summary['total_records'] === 4
             && $summary['tda'] === 1
             && $summary['pda'] === 2
             && $summary['cra'] === 0
-            && $summary['housing_units_count'] === 4;
+            && $summary['housing_units_count'] === 5;
     });
 
     $buildingResponse->assertViewHas('rows', function ($rows): bool {
         $rimal = $rows->firstWhere('neighborhood', 'Rimal');
 
         return $rimal !== null
-            && (int) $rimal->total_count === 3
+            && (int) $rimal->total_count === 4
             && (int) $rimal->tda_range === 1
             && (int) $rimal->pda_range === 2
             && (int) $rimal->cra_range === 0
-            && (int) $rimal->housing_units_count === 4;
+            && (int) $rimal->housing_units_count === 5;
     });
 
     $publicBuildingsResponse = $this->actingAs($user)

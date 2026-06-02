@@ -157,6 +157,7 @@ class AreaProductivityReportService
         $groupKey = $this->normalizedGroupExpression('buildings.neighborhood');
 
         $query = Building::query()
+            ->where('buildings.field_status', 'COMPLETED')
             ->selectRaw("
                 {$this->preferredValueExpression('buildings.governorate')} as governorate,
                 {$this->preferredValueExpression('buildings.municipalitie')} as municipalitie,
@@ -165,34 +166,12 @@ class AreaProductivityReportService
                 SUM(CASE WHEN buildings.building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN buildings.building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN buildings.building_damage_status IN ('committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1 ELSE 0 END) as cra_range,
-                SUM(CASE
-                    WHEN buildings.building_damage_status IN (
-                        'fully_damaged',
-                        'partially_damaged',
-                        'committee_review',
-                        'commite_review',
-                        'commitee_review',
-                        'committee_review2',
-                        'commitee_review2'
-                    ) THEN 1
-                    ELSE 0
-                END) as total_count,
-                SUM(CASE
-                    WHEN buildings.building_damage_status IN (
-                        'fully_damaged',
-                        'partially_damaged',
-                        'committee_review',
-                        'commite_review',
-                        'commitee_review',
-                        'committee_review2',
-                        'commitee_review2'
-                    ) THEN (
-                        SELECT COUNT(*)
-                        FROM housing_units
-                        WHERE housing_units.parentglobalid = buildings.globalid
-                    )
-                    ELSE 0
-                END) as housing_units_count
+                COUNT(*) as total_count,
+                SUM((
+                    SELECT COUNT(*)
+                    FROM housing_units
+                    WHERE housing_units.parentglobalid = buildings.globalid
+                )) as housing_units_count
             ")
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
@@ -203,7 +182,7 @@ class AreaProductivityReportService
             'neighborhood' => 'buildings.neighborhood',
             'zone_code' => 'buildings.zone_code',
             'assignedto' => 'buildings.assignedto',
-        ], 'buildings.creationdate', $fromDate, $toDate);
+        ], 'buildings.end', $fromDate, $toDate);
 
         return $query;
     }
