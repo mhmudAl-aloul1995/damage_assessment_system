@@ -11,6 +11,7 @@ use App\Models\RoadFacilitySurvey;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
@@ -23,6 +24,19 @@ class AreaProductivityReportService
     public const TYPE_PUBLIC_BUILDINGS = 'public_buildings';
 
     public const TYPE_ROAD_FACILITIES = 'road_facilities';
+
+    /**
+     * @var list<string>
+     */
+    private const HOUSING_UNIT_PRODUCTIVITY_STATUSES = [
+        'fully_damaged2',
+        'partially_damaged2',
+        'committee_review2',
+        'committee_review',
+        'commite_review',
+        'commitee_review2',
+        'commitee_review',
+    ];
 
     public function build(string $type, array $filters): array
     {
@@ -126,15 +140,7 @@ class AreaProductivityReportService
                 SUM(CASE WHEN housing_units.unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN housing_units.unit_damage_status IN ('committee_review2', 'committee_review', 'commite_review', 'commitee_review2', 'commitee_review') THEN 1 ELSE 0 END) as cra_range,
                 SUM(CASE
-                    WHEN housing_units.unit_damage_status IN (
-                        'fully_damaged2',
-                        'partially_damaged2',
-                        'committee_review2',
-                        'committee_review',
-                        'commite_review',
-                        'commitee_review2',
-                        'commitee_review'
-                    ) THEN 1
+                    WHEN housing_units.unit_damage_status IN ('".implode("', '", self::HOUSING_UNIT_PRODUCTIVITY_STATUSES)."') THEN 1
                     ELSE 0
                 END) as total_count
             ")
@@ -155,8 +161,12 @@ class AreaProductivityReportService
     private function buildingsQuery(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
     {
         $groupKey = $this->normalizedGroupExpression('buildings.neighborhood');
+        $housingUnitsCountSubquery = $this->housingUnitsCountSubquery($filters, $fromDate, $toDate);
 
         $query = Building::query()
+            ->leftJoinSub($housingUnitsCountSubquery, 'filtered_housing_units', function ($join) use ($groupKey): void {
+                $join->on('filtered_housing_units.neighborhood_group', '=', DB::raw($groupKey));
+            })
             ->where('buildings.field_status', 'COMPLETED')
             ->selectRaw("
                 {$this->preferredValueExpression('buildings.governorate')} as governorate,
@@ -167,11 +177,7 @@ class AreaProductivityReportService
                 SUM(CASE WHEN buildings.building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN buildings.building_damage_status IN ('committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1 ELSE 0 END) as cra_range,
                 COUNT(*) as total_count,
-                SUM((
-                    SELECT COUNT(*)
-                    FROM housing_units
-                    WHERE housing_units.parentglobalid = buildings.globalid
-                )) as housing_units_count
+                COALESCE(MAX(filtered_housing_units.housing_units_count), 0) as housing_units_count
             ")
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
@@ -183,6 +189,30 @@ class AreaProductivityReportService
             'zone_code' => 'buildings.zone_code',
             'assignedto' => 'buildings.assignedto',
         ], 'buildings.end', $fromDate, $toDate);
+
+        return $query;
+    }
+
+    private function housingUnitsCountSubquery(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
+    {
+        $groupKey = $this->normalizedGroupExpression('unit_buildings.neighborhood');
+
+        $query = HousingUnit::query()
+            ->join('buildings as unit_buildings', 'housing_units.parentglobalid', '=', 'unit_buildings.globalid')
+            ->whereIn('housing_units.unit_damage_status', self::HOUSING_UNIT_PRODUCTIVITY_STATUSES)
+            ->selectRaw("
+                {$groupKey} as neighborhood_group,
+                COUNT(*) as housing_units_count
+            ")
+            ->groupByRaw($groupKey);
+
+        $this->applyFilters($query, $filters, [
+            'governorate' => 'unit_buildings.governorate',
+            'municipalitie' => 'unit_buildings.municipalitie',
+            'neighborhood' => 'unit_buildings.neighborhood',
+            'zone_code' => 'unit_buildings.zone_code',
+            'assignedto' => 'unit_buildings.assignedto',
+        ], 'housing_units.creationdate', $fromDate, $toDate);
 
         return $query;
     }

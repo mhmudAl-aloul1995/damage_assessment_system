@@ -5,7 +5,7 @@
 
 @section('content')
     @php
-        $showHousingUnitsCount = false;
+        $showHousingUnitsCount = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS;
         $showRoadDamageColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES;
         $showLocationPies = in_array($type, [
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS,

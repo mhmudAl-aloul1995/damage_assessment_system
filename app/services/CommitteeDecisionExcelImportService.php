@@ -30,19 +30,43 @@ class CommitteeDecisionExcelImportService
         $rows = $sheet->toArray(null, true, true, true);
         $headerRow = array_shift($rows) ?? [];
         $headers = $this->normalizeHeaders($headerRow);
-        $users = $this->userLookup();
-        $summary = $this->emptySummary();
+        $records = [];
 
         foreach ($rows as $rowNumber => $row) {
             if ($this->isBlankRow($row)) {
                 continue;
             }
 
+            $records[] = [
+                'row' => $rowNumber,
+                'objectid' => $this->cellByHeader($row, $headers, 'ObjectID'),
+                'globalid' => $this->cellByHeader($row, $headers, 'GlobalID'),
+                'decision' => $this->cell($row, 'V'),
+                'action' => $this->cell($row, 'W'),
+                'members' => $this->cell($row, 'X'),
+                'hint' => $this->cell($row, 'Y'),
+            ];
+        }
+
+        return $this->importRecords($records, $dryRun);
+    }
+
+    public function importRecords(array $records, bool $dryRun = false): array
+    {
+        $users = $this->userLookup();
+        $summary = $this->emptySummary();
+
+        foreach ($records as $index => $record) {
+            if ($this->isBlankRecord($record)) {
+                continue;
+            }
+
             $summary['rows']++;
-            $decisionText = $this->cell($row, 'V');
-            $actionText = $this->cell($row, 'W');
-            $membersText = $this->cell($row, 'X');
-            $recordHint = $this->cell($row, 'Y') ?: $membersText;
+            $rowNumber = (int) ($record['row'] ?? $index + 1);
+            $decisionText = $this->value($record['decision'] ?? null);
+            $actionText = $this->value($record['action'] ?? null);
+            $membersText = $this->value($record['members'] ?? null);
+            $recordHint = $this->value($record['hint'] ?? null) ?: $membersText;
 
             if ($decisionText === '') {
                 $summary['skipped_rows']++;
@@ -55,8 +79,8 @@ class CommitteeDecisionExcelImportService
             }
 
             $decisionable = $this->resolveDecisionable(
-                $this->cellByHeader($row, $headers, 'ObjectID'),
-                $this->cellByHeader($row, $headers, 'GlobalID'),
+                $this->value($record['objectid'] ?? null),
+                $this->value($record['globalid'] ?? null),
                 $recordHint,
             );
 
@@ -87,8 +111,20 @@ class CommitteeDecisionExcelImportService
                 $matchedUsers[] = [$user, $memberName, $title];
             }
 
+            $decisionType = $this->resolveDecisionType($decisionText);
+
+            if ($decisionType === null) {
+                $summary['skipped_rows']++;
+                $summary['issues'][] = [
+                    'row' => $rowNumber,
+                    'reason' => 'Decision text is not classified as fully or partially damaged.',
+                ];
+
+                continue;
+            }
+
             $payload = [
-                'decision_type' => $this->resolveDecisionType($decisionText),
+                'decision_type' => $decisionType,
                 'decision_text' => $decisionText,
                 'action_text' => $actionText !== '' ? $actionText : null,
                 'notes' => $missingUsers === [] ? null : 'Missing committee users: '.implode(', ', $missingUsers),
@@ -189,13 +225,25 @@ class CommitteeDecisionExcelImportService
             ->first();
     }
 
-    private function resolveDecisionType(string $decisionText): string
+    private function resolveDecisionType(string $decisionText): ?string
     {
         if (str_contains($decisionText, 'جزئي')) {
             return 'partially_damaged';
         }
 
-        return 'fully_damaged';
+        if (str_contains($decisionText, 'كلي')) {
+            return 'fully_damaged';
+        }
+
+        if (str_contains($decisionText, 'جزئي')) {
+            return 'partially_damaged';
+        }
+
+        if (str_contains($decisionText, 'كلي') || str_contains($decisionText, 'ظƒظ„ظٹ')) {
+            return 'fully_damaged';
+        }
+
+        return null;
     }
 
     /**
@@ -280,6 +328,15 @@ class CommitteeDecisionExcelImportService
     {
         $value = $row[$column] ?? null;
 
+        return $this->value($value);
+    }
+
+    private function value(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
         if ($value instanceof \DateTimeInterface) {
             return $value->format('Y-m-d H:i:s');
         }
@@ -291,6 +348,17 @@ class CommitteeDecisionExcelImportService
     {
         foreach ($row as $value) {
             if ($value !== null && trim((string) $value) !== '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function isBlankRecord(array $record): bool
+    {
+        foreach (['objectid', 'globalid', 'decision', 'action', 'members', 'hint'] as $key) {
+            if ($this->value($record[$key] ?? null) !== '') {
                 return false;
             }
         }

@@ -6,6 +6,7 @@ use App\Models\CommitteeDecisionSignature;
 use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\Models\User;
+use App\services\CommitteeDecisionExcelImportService;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -96,6 +97,31 @@ it('can dry run the temporary excel import without saving records', function () 
     expect(CommitteeDecision::query()->count())->toBe(0)
         ->and(CommitteeMember::query()->count())->toBe(0)
         ->and(CommitteeDecisionSignature::query()->count())->toBe(0);
+});
+
+it('skips committee decision rows that are not fully or partially damaged', function () {
+    Building::query()->create([
+        'objectid' => 3001,
+        'globalid' => 'building-globalid-3001',
+        'building_name' => 'Skipped Building',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $summary = app(CommitteeDecisionExcelImportService::class)->importRecords([
+        [
+            'objectid' => 3001,
+            'globalid' => 'building-globalid-3001',
+            'decision' => 'تحول لجنة فنية أخرى',
+            'action' => null,
+            'members' => null,
+            'hint' => null,
+        ],
+    ]);
+
+    expect($summary['rows'])->toBe(1)
+        ->and($summary['skipped_rows'])->toBe(1)
+        ->and($summary['issues'][0]['reason'])->toBe('Decision text is not classified as fully or partially damaged.')
+        ->and(CommitteeDecision::query()->count())->toBe(0);
 });
 
 function committeeDecisionWorkbookPath(array $records): string

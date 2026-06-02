@@ -137,6 +137,14 @@ it('renders separated area productivity reports for all supported datasets with 
         'creationdate' => '2026-04-13 14:00:00',
     ]);
 
+    HousingUnit::query()->create([
+        'objectid' => 2006,
+        'globalid' => 'housing-outside-report-range',
+        'parentglobalid' => 'building-1',
+        'unit_damage_status' => 'fully_damaged2',
+        'creationdate' => '2026-05-01 14:00:00',
+    ]);
+
     PublicBuildingSurvey::query()->create([
         'objectid' => 3001,
         'building_name' => 'School A',
@@ -303,7 +311,7 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee(__('multilingual.area_productivity_reports.titles.buildings'), false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('3', false)
-        ->assertDontSee('<th>'.__('multilingual.area_productivity_reports.columns.housing_units_count').'</th>', false)
+        ->assertSee('<th>'.__('multilingual.area_productivity_reports.columns.housing_units_count').'</th>', false)
         ->assertDontSee('<td>Camp</td>', false)
         ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.buildings'), false)
@@ -314,7 +322,7 @@ it('renders separated area productivity reports for all supported datasets with 
             && $summary['tda'] === 1
             && $summary['pda'] === 2
             && $summary['cra'] === 0
-            && $summary['housing_units_count'] === 5;
+            && $summary['housing_units_count'] === 4;
     });
 
     $buildingResponse->assertViewHas('rows', function ($rows): bool {
@@ -325,7 +333,7 @@ it('renders separated area productivity reports for all supported datasets with 
             && (int) $rimal->tda_range === 1
             && (int) $rimal->pda_range === 2
             && (int) $rimal->cra_range === 0
-            && (int) $rimal->housing_units_count === 5;
+            && (int) $rimal->housing_units_count === 4;
     });
 
     $publicBuildingsResponse = $this->actingAs($user)
