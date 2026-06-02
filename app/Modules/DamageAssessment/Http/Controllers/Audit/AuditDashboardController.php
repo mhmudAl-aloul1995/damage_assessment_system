@@ -31,8 +31,13 @@ class AuditDashboardController extends Controller
             'legal_notes' => 'Legal Notes',
         ];
 
-        $totalBuildingsCount = Building::query()->count();
-        $totalHousingUnitsCount = HousingUnit::query()->count();
+        $totalBuildingsCount = Building::query()
+            ->where('field_status', 'COMPLETED')
+            ->count();
+        $totalHousingUnitsCount = HousingUnit::query()
+            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
+            ->where('buildings.field_status', 'COMPLETED')
+            ->count('housing_units.id');
         $dailyHousingAchievementStartDate = $startDate->copy();
 
         $engineerMetrics = $this->buildAuditDashboardMetrics(
@@ -100,7 +105,9 @@ class AuditDashboardController extends Controller
         Carbon $dailyHousingAchievementStartDate,
     ): array {
         $buildingStatusRaw = BuildingStatus::query()
+            ->join('buildings', 'building_statuses.building_id', '=', 'buildings.objectid')
             ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('buildings.field_status', 'COMPLETED')
             ->where('building_statuses.type', $type)
             ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', array_keys($buildingStatuses))
@@ -109,7 +116,10 @@ class AuditDashboardController extends Controller
             ->pluck('total', 'status_name');
 
         $housingStatusRaw = HousingStatus::query()
+            ->join('housing_units', 'housing_statuses.housing_id', '=', 'housing_units.objectid')
+            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
             ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('buildings.field_status', 'COMPLETED')
             ->where('housing_statuses.type', $type)
             ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', array_keys($housingStatuses))
@@ -118,7 +128,9 @@ class AuditDashboardController extends Controller
             ->pluck('total', 'status_name');
 
         $auditedBuildingsCount = BuildingStatus::query()
+            ->join('buildings', 'building_statuses.building_id', '=', 'buildings.objectid')
             ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('buildings.field_status', 'COMPLETED')
             ->where('building_statuses.type', $type)
             ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
@@ -126,7 +138,10 @@ class AuditDashboardController extends Controller
             ->count('building_statuses.building_id');
 
         $auditedHousingUnitsCount = HousingStatus::query()
+            ->join('housing_units', 'housing_statuses.housing_id', '=', 'housing_units.objectid')
+            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
             ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('buildings.field_status', 'COMPLETED')
             ->where('housing_statuses.type', $type)
             ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)
@@ -134,7 +149,10 @@ class AuditDashboardController extends Controller
             ->count('housing_statuses.housing_id');
 
         $dailyHousingAchievementRaw = HousingStatus::query()
+            ->join('housing_units', 'housing_statuses.housing_id', '=', 'housing_units.objectid')
+            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
             ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->where('buildings.field_status', 'COMPLETED')
             ->where('housing_statuses.type', $type)
             ->whereBetween('housing_statuses.updated_at', [$dailyHousingAchievementStartDate, $endDate])
             ->whereIn('assessment_statuses.name', $trackedAuditedStatuses)

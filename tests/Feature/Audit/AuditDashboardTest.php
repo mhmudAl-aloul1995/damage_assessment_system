@@ -80,11 +80,19 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
     Building::query()->create([
         'objectid' => 101,
         'globalid' => 'building-101',
+        'field_status' => 'COMPLETED',
     ]);
 
     Building::query()->create([
         'objectid' => 102,
         'globalid' => 'building-102',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 103,
+        'globalid' => 'building-103',
+        'field_status' => 'IN_PROGRESS',
     ]);
 
     HousingUnit::query()->create([
@@ -105,6 +113,12 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
         'parentglobalid' => 'building-102',
     ]);
 
+    HousingUnit::query()->create([
+        'objectid' => 204,
+        'globalid' => 'housing-204',
+        'parentglobalid' => 'building-103',
+    ]);
+
     BuildingStatus::query()->insert([
         [
             'building_id' => 101,
@@ -123,6 +137,15 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'notes' => 'assigned building',
             'created_at' => $assignedDay,
             'updated_at' => $assignedDay,
+        ],
+        [
+            'building_id' => 103,
+            'status_id' => $acceptedByEngineerStatus->id,
+            'user_id' => $viewer->id,
+            'type' => 'QC/QA Engineer',
+            'notes' => 'excluded incomplete building',
+            'created_at' => $acceptedDay,
+            'updated_at' => $acceptedDay,
         ],
         [
             'building_id' => 101,
@@ -171,6 +194,15 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
             'notes' => 'old housing',
             'created_at' => $oldDay,
             'updated_at' => $oldDay,
+        ],
+        [
+            'housing_id' => 204,
+            'status_id' => $acceptedByEngineerStatus->id,
+            'user_id' => $viewer->id,
+            'type' => 'QC/QA Engineer',
+            'notes' => 'excluded incomplete housing',
+            'created_at' => $acceptedDay,
+            'updated_at' => $acceptedDay,
         ],
         [
             'housing_id' => 201,
