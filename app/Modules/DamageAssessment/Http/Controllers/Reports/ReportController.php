@@ -25,49 +25,7 @@ class ReportController extends Controller
 
     public function export_productivity(Request $request): BinaryFileResponse
     {
-        $data = $request->all();
-
-        $minDate = $data['minDate'];
-        $maxDate = $data['maxDate'];
-        $year = 2026;
-        $month_number = 2; // February
-
-        $assignedto = Building::where('assignedto', '!=', '')->pluck('assignedto')->unique();
-        $start = Carbon::createFromDate($year, $month_number, 1)->startOfMonth();
-        $end = $start->copy()->endOfMonth(); // Use copy() to avoid modifying the start date
-
-        if (isset($data['minDate'])) {
-
-            $start = $data['minDate'];
-        }
-        if (isset($data['maxDate'])) {
-
-            $end = $data['maxDate'];
-        }
-        $period = CarbonPeriod::create($start, 'P1D', $end);
-
-        $stats = Building::whereIn('assignedto', $assignedto)
-            ->whereBetween('creationdate', [$start, $end])
-            ->selectRaw("
-        assignedto, 
-        DATE(creationdate) as date, 
-        COUNT(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 END) as tda, 
-        COUNT(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 END) as pda
-    ")
-            ->groupBy('assignedto', 'date')
-            ->get()
-            ->groupBy(['assignedto', 'date'])
-            ->map(function ($dates, $engineerId) {
-                // Flatten the nested 'date' collections into one list to sum them up
-                $totalForEngineer = $dates->flatten(1)->sum(function ($item) {
-                    return $item->pda + $item->tda;
-                });
-
-                return [
-                    'daily_breakdown' => $dates,
-                    'engineer_total' => $totalForEngineer,
-                ];
-            });
+        ['assignedto' => $assignedto, 'period' => $period, 'stats' => $stats] = $this->buildProductivityReportData($request);
 
         return Excel::download(new ProductivityExport($assignedto, $period, $stats), 'productivity.xlsx');
     }
@@ -130,6 +88,14 @@ class ReportController extends Controller
 
     public function productivity(Request $request): ViewContract
     {
+        return View::make('damage-assessment::reports.productivity', $this->buildProductivityReportData($request));
+    }
+
+    /**
+     * @return array{period: CarbonPeriod, assignedto: \Illuminate\Support\Collection<int, string>, stats: \Illuminate\Support\Collection}
+     */
+    private function buildProductivityReportData(Request $request): array
+    {
         $data = $request->all();
 
         $assignedto = Building::whereNotNull('assignedto')
@@ -174,6 +140,6 @@ class ReportController extends Controller
                 ];
             });
 
-        return View::make('damage-assessment::reports.productivity', compact('period', 'assignedto', 'stats'));
+        return compact('period', 'assignedto', 'stats');
     }
 }

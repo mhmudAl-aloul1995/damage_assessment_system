@@ -29,19 +29,29 @@
                 <td class="bg-warning">{{ $val }}</td>
                 @foreach ($period as $date)
                     @php
-                        $dayData = $stats[$val]['daily_breakdown'][$date->format('Y-m-d')] ?? null;
+                        $dateStr = $date->format('Y-m-d');
+                        $dayData = $stats[$val]['daily_breakdown'][$dateStr] ?? null;
 
                         $pda = $dayData[0]['pda'] ?? 0;
                         $tda = $dayData[0]['tda'] ?? 0;
+                        $rowDayTotal = $pda + $tda;
+
+                        $columnTotals[$dateStr]['pda'] = ($columnTotals[$dateStr]['pda'] ?? 0) + $pda;
+                        $columnTotals[$dateStr]['tda'] = ($columnTotals[$dateStr]['tda'] ?? 0) + $tda;
+                        $columnTotals[$dateStr]['total'] = ($columnTotals[$dateStr]['total'] ?? 0) + $rowDayTotal;
                     @endphp
                     <td class=" text-white bg-danger-active">{{ $pda }}</td>
                     <td class="text-white bg-success-active">{{ $tda }}</td>
-                    <td class="text-white bg-primary-active">{{ $pda + $tda }}</td>
+                    <td class="text-white bg-primary-active">{{ $rowDayTotal }}</td>
                 @endforeach
                 <td style=" background-color: gray; " class="text-white">
-                    <b>@if (isset($stats[$val]))
-                        {{  $stats[$val]['engineer_total']}}
-                    @endif </b>
+                    <b>
+                        @if (isset($stats[$val]))
+                            @php $engTotal = $stats[$val]['engineer_total']; @endphp
+                            {{ $engTotal }}
+                            @php $grandTotal += $engTotal; @endphp
+                        @endif
+                    </b>
                 </td>
             </tr>
         @endforeach
