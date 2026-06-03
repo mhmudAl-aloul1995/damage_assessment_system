@@ -42,3 +42,13 @@ it('does not record activity log datatable requests', function (): void {
 
     expect(UserActivityLog::query()->count())->toBe(0);
 });
+
+it('does not record technical pwa asset requests', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/background-sync.js')
+        ->assertOk();
+
+    expect(UserActivityLog::query()->count())->toBe(0);
+});

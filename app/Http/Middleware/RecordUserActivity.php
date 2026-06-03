@@ -13,6 +13,38 @@ use Throwable;
 class RecordUserActivity
 {
     /**
+     * @var array<int, string>
+     */
+    private const TECHNICAL_PATHS = [
+        'background-sync.js',
+        'manifest.webmanifest',
+        'offline.html',
+        'pwa-install.js',
+        'sw.js',
+    ];
+
+    /**
+     * @var array<int, string>
+     */
+    private const STATIC_FILE_EXTENSIONS = [
+        'css',
+        'eot',
+        'gif',
+        'ico',
+        'jpeg',
+        'jpg',
+        'js',
+        'json',
+        'map',
+        'png',
+        'svg',
+        'ttf',
+        'webmanifest',
+        'woff',
+        'woff2',
+    ];
+
+    /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
@@ -38,7 +70,7 @@ class RecordUserActivity
             return false;
         }
 
-        if ($request->is('livewire/*', '_debugbar/*', 'build/*', 'storage/*', 'api/*')) {
+        if ($this->isTechnicalRequest($request)) {
             return false;
         }
 
@@ -53,6 +85,31 @@ class RecordUserActivity
         }
 
         return true;
+    }
+
+    private function isTechnicalRequest(Request $request): bool
+    {
+        $path = trim($request->path(), '/');
+
+        if (in_array($path, self::TECHNICAL_PATHS, true)) {
+            return true;
+        }
+
+        if (Str::is([
+            'livewire/*',
+            '_debugbar/*',
+            'build/*',
+            'storage/*',
+            'api/*',
+            'assets/*',
+            'icon-*.png',
+        ], $path)) {
+            return true;
+        }
+
+        $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+
+        return in_array($extension, self::STATIC_FILE_EXTENSIONS, true);
     }
 
     private function record(Request $request, Response $response): void
