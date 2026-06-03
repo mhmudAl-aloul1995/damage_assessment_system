@@ -24,6 +24,11 @@ class ArcgisAuditedUploadService
      */
     private array $targetLayerMetadata = [];
 
+    /**
+     * @var array<string, string>
+     */
+    private array $targetBuildingGlobalIdsBySourceGlobalId = [];
+
     public function upload(?int $buildingsLimit = null): array
     {
         $summary = $this->emptySummary();
@@ -129,7 +134,7 @@ class ArcgisAuditedUploadService
     public function buildingFeature(VBuildingAudited $building, string $token): array
     {
         $attributes = collect($building->getAttributes())
-            ->except(['objectid', 'OBJECTID', 'shape', 'created_at', 'updated_at'])
+            ->except(['objectid', 'OBJECTID', 'globalid', 'GlobalID', 'GLOBALID', 'shape', 'created_at', 'updated_at'])
             ->toArray();
 
         $attributes['old_objectid_B'] = $building->objectid;
@@ -154,12 +159,18 @@ class ArcgisAuditedUploadService
     public function unitFeature(VHousingUnitAudited $unit, string $token): array
     {
         $attributes = collect($unit->getAttributes())
-            ->except(['objectid', 'OBJECTID', 'shape', 'created_at', 'updated_at'])
+            ->except(['objectid', 'OBJECTID', 'globalid', 'GlobalID', 'GLOBALID', 'shape', 'created_at', 'updated_at'])
             ->toArray();
 
         $attributes['old_objectid_U'] = $unit->objectid;
         $attributes['old_global_id_U'] = $unit->getAttribute('globalid');
         $attributes['is_audited'] = 1;
+
+        $parentGlobalId = $unit->getAttribute('parentglobalid');
+
+        if (is_string($parentGlobalId) && $parentGlobalId !== '') {
+            $attributes['parentglobalid'] = $this->targetBuildingGlobalId($parentGlobalId, $token);
+        }
 
         $feature = ['attributes' => $attributes];
 
@@ -395,6 +406,53 @@ class ArcgisAuditedUploadService
             ->toArray();
 
         return $feature;
+    }
+
+    private function targetBuildingGlobalId(string $sourceBuildingGlobalId, string $token): string
+    {
+        if (array_key_exists($sourceBuildingGlobalId, $this->targetBuildingGlobalIdsBySourceGlobalId)) {
+            return $this->targetBuildingGlobalIdsBySourceGlobalId[$sourceBuildingGlobalId];
+        }
+
+        $targetLayerId = $this->layerId('target_buildings_layer');
+        $metadata = $this->targetLayerMetadata($targetLayerId, $token);
+        $fields = $metadata['fields'];
+        $globalIdField = $fields['globalid'] ?? null;
+
+        if ($globalIdField === null) {
+            throw new RuntimeException('Target buildings layer is missing globalid field.');
+        }
+
+        foreach (['old_global_id_B', 'globalid'] as $matchField) {
+            $targetMatchField = $fields[strtolower($matchField)] ?? null;
+
+            if ($targetMatchField === null) {
+                continue;
+            }
+
+            $response = $this->http()->get($this->targetLayerUrl($targetLayerId).'/query', [
+                'f' => 'json',
+                'token' => $token,
+                'where' => $targetMatchField.' = '.$this->whereValue($sourceBuildingGlobalId),
+                'outFields' => $globalIdField,
+                'returnGeometry' => 'false',
+                'resultRecordCount' => 1,
+            ]);
+
+            $this->throwIfArcgisError($response, 'ArcGIS target building parent lookup failed');
+
+            if (! $response->successful()) {
+                throw new RuntimeException('ArcGIS target building parent lookup failed: '.$response->body());
+            }
+
+            $targetGlobalId = $response->json('features.0.attributes.'.$globalIdField);
+
+            if (is_string($targetGlobalId) && $targetGlobalId !== '') {
+                return $this->targetBuildingGlobalIdsBySourceGlobalId[$sourceBuildingGlobalId] = $targetGlobalId;
+            }
+        }
+
+        throw new RuntimeException("Target building parent not found for source globalid {$sourceBuildingGlobalId}.");
     }
 
     /**

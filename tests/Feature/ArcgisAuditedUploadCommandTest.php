@@ -89,7 +89,17 @@ it('uploads audited views to arcgis and copies attachments', function () {
                 ['name' => 'is_audited'],
             ],
         ]),
-        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            if ($request['where'] === "old_global_id_B = 'building-globalid'") {
+                return Http::response([
+                    'features' => [
+                        ['attributes' => ['globalid' => 'target-building-globalid']],
+                    ],
+                ]);
+            }
+
+            return Http::response(['features' => []]);
+        },
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response([
             'features' => [
                 ['attributes' => ['objectid' => 9002, 'old_objectid_U' => 200]],
@@ -123,7 +133,6 @@ it('uploads audited views to arcgis and copies attachments', function () {
             expect($features[0]['attributes'])->toMatchArray([
                 'old_objectid_B' => 100,
                 'old_global_id_B' => 'building-globalid',
-                'globalid' => 'building-globalid',
                 'building_damage_status' => 'major',
                 'municipalitie' => 'Gaza',
                 'neighborhood' => 'Rimal',
@@ -145,8 +154,7 @@ it('uploads audited views to arcgis and copies attachments', function () {
                 'objectid' => 9002,
                 'old_objectid_U' => 200,
                 'old_global_id_U' => 'unit-globalid',
-                'globalid' => 'unit-globalid',
-                'parentglobalid' => 'building-globalid',
+                'parentglobalid' => 'target-building-globalid',
                 'unit_damage_status' => 'minor',
                 'is_audited' => 1,
             ]);
@@ -351,7 +359,19 @@ it('can upload only a limited number of buildings with their housing units', fun
                 ['name' => 'is_audited'],
             ],
         ]),
-        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            if (str_starts_with((string) $request['where'], 'old_global_id_B = ')) {
+                $sourceGlobalId = trim(str_replace('old_global_id_B = ', '', (string) $request['where']), "'");
+
+                return Http::response([
+                    'features' => [
+                        ['attributes' => ['globalid' => "target-{$sourceGlobalId}"]],
+                    ],
+                ]);
+            }
+
+            return Http::response(['features' => []]);
+        },
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response(['features' => []]),
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/query*' => Http::response(['features' => []]),
@@ -369,6 +389,7 @@ it('can upload only a limited number of buildings with their housing units', fun
             $features = json_decode($request['features'], true);
 
             expect($features[0]['attributes']['parentglobalid'])->not->toBe('building-6');
+            expect(str_starts_with($features[0]['attributes']['parentglobalid'], 'target-building-'))->toBeTrue();
 
             $unitUploads++;
             $nextObjectId++;
