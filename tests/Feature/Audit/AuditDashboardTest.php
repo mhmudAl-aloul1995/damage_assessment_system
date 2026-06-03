@@ -81,42 +81,63 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
         'objectid' => 101,
         'globalid' => 'building-101',
         'field_status' => 'COMPLETED',
+        'end' => '2026-02-21 10:00:00',
     ]);
 
     Building::query()->create([
         'objectid' => 102,
         'globalid' => 'building-102',
         'field_status' => 'COMPLETED',
+        'end' => '2026-02-22 11:00:00',
     ]);
 
     Building::query()->create([
         'objectid' => 103,
         'globalid' => 'building-103',
         'field_status' => 'IN_PROGRESS',
+        'end' => '2026-02-21 12:00:00',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 104,
+        'globalid' => 'building-104',
+        'field_status' => 'COMPLETED',
+        'end' => '2026-01-10 08:00:00',
     ]);
 
     HousingUnit::query()->create([
         'objectid' => 201,
         'globalid' => 'housing-201',
         'parentglobalid' => 'building-101',
+        'editdate' => '2026-02-20 09:00:00',
     ]);
 
     HousingUnit::query()->create([
         'objectid' => 202,
         'globalid' => 'housing-202',
         'parentglobalid' => 'building-101',
+        'editdate' => '2026-02-21 10:00:00',
     ]);
 
     HousingUnit::query()->create([
         'objectid' => 203,
         'globalid' => 'housing-203',
         'parentglobalid' => 'building-102',
+        'editdate' => '2026-02-22 11:00:00',
     ]);
 
     HousingUnit::query()->create([
         'objectid' => 204,
         'globalid' => 'housing-204',
         'parentglobalid' => 'building-103',
+        'editdate' => '2026-02-21 12:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 205,
+        'globalid' => 'housing-205',
+        'parentglobalid' => 'building-104',
+        'editdate' => '2026-01-10 08:00:00',
     ]);
 
     BuildingStatus::query()->insert([
