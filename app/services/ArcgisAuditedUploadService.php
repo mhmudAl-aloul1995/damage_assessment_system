@@ -19,6 +19,11 @@ class ArcgisAuditedUploadService
 {
     private string $token = '';
 
+    /**
+     * @var array<string, array{object_id_field: string|null, fields: array<string, string>}>
+     */
+    private array $targetLayerMetadata = [];
+
     public function upload(?int $buildingsLimit = null): array
     {
         $summary = $this->emptySummary();
@@ -127,7 +132,8 @@ class ArcgisAuditedUploadService
             ->except(['objectid', 'OBJECTID', 'shape', 'created_at', 'updated_at'])
             ->toArray();
 
-        $attributes['old_objectid'] = $building->objectid;
+        $attributes['old_objectid_B'] = $building->objectid;
+        $attributes['old_global_id_B'] = $building->getAttribute('globalid');
         $attributes['is_audited'] = 1;
 
         $feature = ['attributes' => $attributes];
@@ -151,7 +157,8 @@ class ArcgisAuditedUploadService
             ->except(['objectid', 'OBJECTID', 'shape', 'created_at', 'updated_at'])
             ->toArray();
 
-        $attributes['old_objectid'] = $unit->objectid;
+        $attributes['old_objectid_U'] = $unit->objectid;
+        $attributes['old_global_id_U'] = $unit->getAttribute('globalid');
         $attributes['is_audited'] = 1;
 
         $feature = ['attributes' => $attributes];
@@ -178,7 +185,10 @@ class ArcgisAuditedUploadService
 
         echo "Checking target building exists...\n";
 
-        $targetFeature = $this->targetFeatureWithToken($targetLayerId, $oldObjectId);
+        $targetFeature = $this->targetFeatureWithToken($targetLayerId, [
+            'old_objectid_B' => $oldObjectId,
+            'old_global_id_B' => $building->getAttribute('globalid'),
+        ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
 
         if ($targetObjectId === null) {
@@ -222,10 +232,10 @@ class ArcgisAuditedUploadService
 
         echo "Checking target unit exists...\n";
 
-        $targetFeature = $this->targetFeatureWithToken(
-            $targetLayerId,
-            $oldObjectId,
-        );
+        $targetFeature = $this->targetFeatureWithToken($targetLayerId, [
+            'old_objectid_U' => $oldObjectId,
+            'old_global_id_U' => $unit->getAttribute('globalid'),
+        ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
 
         if ($targetObjectId === null) {
@@ -267,7 +277,7 @@ class ArcgisAuditedUploadService
     private function addFeature(int|string $layerId, Closure $featureFactory): int
     {
         return $this->withTokenRetry(function (string $token) use ($layerId, $featureFactory): int {
-            $feature = $featureFactory($token);
+            $feature = $this->targetFeatureForLayer($layerId, $featureFactory($token), $token);
             $response = $this->http()->post($this->targetLayerUrl($layerId).'/addFeatures', [
                 'f' => 'json',
                 'token' => $token,
@@ -297,6 +307,7 @@ class ArcgisAuditedUploadService
         $this->withTokenRetry(function (string $token) use ($layerId, $targetObjectId, $objectIdField, $featureFactory): void {
             $feature = $featureFactory($token);
             $feature['attributes'][$objectIdField] = $targetObjectId;
+            $feature = $this->targetFeatureForLayer($layerId, $feature, $token);
 
             $response = $this->http()->post($this->targetLayerUrl($layerId).'/updateFeatures', [
                 'f' => 'json',
@@ -317,35 +328,45 @@ class ArcgisAuditedUploadService
     /**
      * @return array{object_id: int, object_id_field: string}|null
      */
-    private function targetFeatureWithToken(int|string $layerId, int|string|null $oldObjectId): ?array
+    private function targetFeatureWithToken(int|string $layerId, array $matchCandidates): ?array
     {
-        return $this->withTokenRetry(function (string $token) use ($layerId, $oldObjectId): ?array {
-            if ($oldObjectId === null || $oldObjectId === '') {
+        return $this->withTokenRetry(function (string $token) use ($layerId, $matchCandidates): ?array {
+            $metadata = $this->targetLayerMetadata($layerId, $token);
+            $fields = $metadata['fields'];
+            $objectIdField = $metadata['object_id_field'];
+
+            if ($objectIdField === null) {
                 return null;
             }
 
-            $response = $this->http()->get($this->targetLayerUrl($layerId).'/query', [
-                'f' => 'json',
-                'token' => $token,
-                'where' => 'old_objectid = '.$this->whereValue($oldObjectId),
-                'outFields' => 'objectid,OBJECTID,old_objectid',
-                'returnGeometry' => 'false',
-                'resultRecordCount' => 1,
-            ]);
+            foreach ($matchCandidates as $field => $value) {
+                if ($value === null || $value === '' || ! array_key_exists(strtolower((string) $field), $fields)) {
+                    continue;
+                }
 
-            $this->throwIfArcgisError($response, 'ArcGIS target lookup failed');
+                $targetField = $fields[strtolower((string) $field)];
 
-            if (! $response->successful()) {
-                throw new RuntimeException('ArcGIS target lookup failed: '.$response->body());
-            }
+                $response = $this->http()->get($this->targetLayerUrl($layerId).'/query', [
+                    'f' => 'json',
+                    'token' => $token,
+                    'where' => $targetField.' = '.$this->whereValue($value),
+                    'outFields' => $objectIdField,
+                    'returnGeometry' => 'false',
+                    'resultRecordCount' => 1,
+                ]);
 
-            $feature = $response->json('features.0.attributes');
+                $this->throwIfArcgisError($response, 'ArcGIS target lookup failed');
 
-            if (! is_array($feature)) {
-                return null;
-            }
+                if (! $response->successful()) {
+                    throw new RuntimeException('ArcGIS target lookup failed: '.$response->body());
+                }
 
-            foreach (['objectid', 'OBJECTID', 'ObjectId'] as $objectIdField) {
+                $feature = $response->json('features.0.attributes');
+
+                if (! is_array($feature)) {
+                    continue;
+                }
+
                 $objectId = $feature[$objectIdField] ?? null;
 
                 if (is_numeric($objectId)) {
@@ -358,6 +379,58 @@ class ArcgisAuditedUploadService
 
             return null;
         });
+    }
+
+    private function targetFeatureForLayer(int|string $layerId, array $feature, string $token): array
+    {
+        $fields = $this->targetLayerMetadata($layerId, $token)['fields'];
+
+        if ($fields === []) {
+            return $feature;
+        }
+
+        $feature['attributes'] = collect($feature['attributes'] ?? [])
+            ->filter(fn (mixed $value, string $field): bool => array_key_exists(strtolower($field), $fields))
+            ->mapWithKeys(fn (mixed $value, string $field): array => [$fields[strtolower($field)] => $value])
+            ->toArray();
+
+        return $feature;
+    }
+
+    /**
+     * @return array{object_id_field: string|null, fields: array<string, string>}
+     */
+    private function targetLayerMetadata(int|string $layerId, string $token): array
+    {
+        $cacheKey = (string) $layerId;
+
+        if (array_key_exists($cacheKey, $this->targetLayerMetadata)) {
+            return $this->targetLayerMetadata[$cacheKey];
+        }
+
+        $response = $this->http()->get($this->targetLayerUrl($layerId), [
+            'f' => 'json',
+            'token' => $token,
+        ]);
+
+        $this->throwIfArcgisError($response, 'ArcGIS target layer metadata failed');
+
+        if (! $response->successful()) {
+            throw new RuntimeException('ArcGIS target layer metadata failed: '.$response->body());
+        }
+
+        $fields = collect($response->json('fields') ?? [])
+            ->pluck('name')
+            ->filter(fn (mixed $field): bool => is_string($field) && $field !== '')
+            ->mapWithKeys(fn (string $field): array => [strtolower($field) => $field])
+            ->toArray();
+
+        $objectIdField = $response->json('objectIdField');
+
+        return $this->targetLayerMetadata[$cacheKey] = [
+            'object_id_field' => is_string($objectIdField) && $objectIdField !== '' ? $objectIdField : null,
+            'fields' => $fields,
+        ];
     }
 
     private function sourceGeometry(int|string $layerId, int|string $objectId, string $token): ?array

@@ -63,10 +63,36 @@ it('uploads audited views to arcgis and copies attachments', function () {
 
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'globalid'],
+                ['name' => 'building_damage_status'],
+                ['name' => 'municipalitie'],
+                ['name' => 'neighborhood'],
+                ['name' => 'assignedto'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_U'],
+                ['name' => 'old_global_id_U'],
+                ['name' => 'globalid'],
+                ['name' => 'parentglobalid'],
+                ['name' => 'unit_damage_status'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response(['features' => []]),
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response([
             'features' => [
-                ['attributes' => ['objectid' => 9002, 'old_objectid' => 200]],
+                ['attributes' => ['objectid' => 9002, 'old_objectid_U' => 200]],
             ],
         ]),
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response([
@@ -95,7 +121,8 @@ it('uploads audited views to arcgis and copies attachments', function () {
             $features = json_decode($request['features'], true);
 
             expect($features[0]['attributes'])->toMatchArray([
-                'old_objectid' => 100,
+                'old_objectid_B' => 100,
+                'old_global_id_B' => 'building-globalid',
                 'globalid' => 'building-globalid',
                 'building_damage_status' => 'major',
                 'municipalitie' => 'Gaza',
@@ -116,7 +143,8 @@ it('uploads audited views to arcgis and copies attachments', function () {
 
             expect($features[0]['attributes'])->toMatchArray([
                 'objectid' => 9002,
-                'old_objectid' => 200,
+                'old_objectid_U' => 200,
+                'old_global_id_U' => 'unit-globalid',
                 'globalid' => 'unit-globalid',
                 'parentglobalid' => 'building-globalid',
                 'unit_damage_status' => 'minor',
@@ -207,6 +235,17 @@ it('refreshes the arcgis token and retries when adding a feature fails with an i
                 'token' => $tokenRequests === 1 ? 'expired-token' : 'refreshed-token',
             ]);
         },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_U'],
+                ['name' => 'old_global_id_U'],
+                ['name' => 'globalid'],
+                ['name' => 'unit_damage_status'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response(['features' => []]),
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/query*' => Http::response([
             'features' => [
@@ -291,6 +330,27 @@ it('can upload only a limited number of buildings with their housing units', fun
 
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'globalid'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_U'],
+                ['name' => 'old_global_id_U'],
+                ['name' => 'globalid'],
+                ['name' => 'parentglobalid'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response(['features' => []]),
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response(['features' => []]),
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
@@ -329,4 +389,83 @@ it('can upload only a limited number of buildings with their housing units', fun
 
     expect($buildingUploads)->toBe(5);
     expect($unitUploads)->toBe(5);
+});
+
+it('uses building old global id when the target layer does not have building old objectid', function () {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+        $table->string('building_damage_status')->nullable();
+    });
+
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+    });
+
+    DB::table('v_buildings_audited')->insert([
+        'objectid' => 1000,
+        'globalid' => 'existing-building-globalid',
+        'building_damage_status' => 'updated',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'building_damage_status'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            expect($request['where'])->toBe("old_global_id_B = 'existing-building-globalid'");
+
+            return Http::response([
+                'features' => [
+                    ['attributes' => ['objectid' => 9901]],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toMatchArray([
+                'objectid' => 9901,
+                'old_global_id_B' => 'existing-building-globalid',
+                'building_damage_status' => 'updated',
+                'is_audited' => 1,
+            ]);
+            expect($features[0]['attributes'])->not->toHaveKey('old_objectid_B');
+            expect($features[0]['attributes'])->not->toHaveKey('globalid');
+
+            return Http::response([
+                'updateResults' => [
+                    ['success' => true, 'objectId' => 9901],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/1000/attachments?*' => Http::response(['attachmentInfos' => []]),
+    ]);
+
+    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures');
 });
