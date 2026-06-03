@@ -13,7 +13,7 @@
 
         #kt_datatable_activity_logs {
             width: 100% !important;
-            min-width: 1500px;
+            min-width: 1300px;
             white-space: nowrap;
         }
 
@@ -129,9 +129,7 @@
                                 <tr class="fw-bold text-muted bg-light">
                                     <th>#</th>
                                     <th>User</th>
-                                    <th>Email</th>
                                     <th>Activity</th>
-                                    <th>Method</th>
                                     <th>URL</th>
                                     <th>Route</th>
                                     <th>Description</th>
@@ -191,9 +189,7 @@
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'user_name', name: 'user_name' },
-                    { data: 'user_email', name: 'user_email', defaultContent: '-' },
                     { data: 'action_badge', name: 'action_type', orderable: false, searchable: false },
-                    { data: 'method_badge', name: 'method', orderable: false, searchable: false },
                     { data: 'url_label', name: 'url' },
                     { data: 'route_name', name: 'route_name', defaultContent: '-' },
                     { data: 'description', name: 'description', defaultContent: '-' },
