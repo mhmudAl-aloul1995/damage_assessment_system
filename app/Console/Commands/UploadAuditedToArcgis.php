@@ -8,7 +8,7 @@ use Illuminate\Support\Arr;
 
 class UploadAuditedToArcgis extends Command
 {
-    protected $signature = 'arcgis:upload-audited';
+    protected $signature = 'arcgis:upload-audited {--buildings-limit= : Upload only the first N audited buildings and their housing units.}';
 
     protected $description = 'Upload audited building and housing unit views to ArcGIS and copy attachments.';
 
@@ -29,7 +29,10 @@ class UploadAuditedToArcgis extends Command
 
         try {
             $this->info('Processing...');
-            $summary = $arcgisAuditedUploadService->upload();
+            $buildingsLimit = $this->option('buildings-limit');
+            $summary = $arcgisAuditedUploadService->upload(
+                is_numeric($buildingsLimit) ? (int) $buildingsLimit : null,
+            );
         } catch (\Throwable $e) {
             $this->error('Upload failed.');
             $this->error($e->getMessage());
@@ -63,6 +66,7 @@ class UploadAuditedToArcgis extends Command
 
         if ($errors > 0) {
             $this->error("Completed with {$errors} errors.");
+
             return self::FAILURE;
         }
 

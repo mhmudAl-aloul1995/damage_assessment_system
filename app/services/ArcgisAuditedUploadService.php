@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\VBuildingAudited;
 use App\Models\VHousingUnitAudited;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +19,7 @@ class ArcgisAuditedUploadService
 {
     private string $token = '';
 
-    public function upload(): array
+    public function upload(?int $buildingsLimit = null): array
     {
         $summary = $this->emptySummary();
 
@@ -28,11 +29,25 @@ class ArcgisAuditedUploadService
 
         echo "Uploading buildings...\n";
 
-        foreach (VBuildingAudited::query()->orderBy('objectid')->cursor() as $building) {
+        $buildingQuery = VBuildingAudited::query()->orderBy('objectid');
+
+        if ($buildingsLimit !== null) {
+            $buildingQuery->limit($buildingsLimit);
+            $summary['buildings_limit'] = $buildingsLimit;
+        }
+
+        $buildingGlobalIds = [];
+
+        foreach ($buildingQuery->cursor() as $building) {
             try {
                 echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
 
                 $this->uploadBuilding($building, $summary);
+                $buildingGlobalId = $building->getAttribute('globalid');
+
+                if (is_string($buildingGlobalId) && $buildingGlobalId !== '') {
+                    $buildingGlobalIds[] = $buildingGlobalId;
+                }
 
                 echo "Building uploaded/copied successfully.\n";
             } catch (Throwable $exception) {
@@ -50,7 +65,13 @@ class ArcgisAuditedUploadService
 
         echo "Uploading housing units...\n";
 
-        foreach (VHousingUnitAudited::query()->orderBy('objectid')->cursor() as $unit) {
+        $unitQuery = VHousingUnitAudited::query()
+            ->when($buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
+                $query->whereIn('parentglobalid', array_values(array_unique($buildingGlobalIds)));
+            })
+            ->orderBy('objectid');
+
+        foreach ($unitQuery->cursor() as $unit) {
             try {
                 echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
 
