@@ -231,6 +231,7 @@ class ArcgisAuditedUploadService
         );
 
         $summary['attachments_uploaded'] += $attachmentsSummary['uploaded'];
+        $summary['attachments_skipped'] += $attachmentsSummary['skipped'];
         $summary['errors'] += $attachmentsSummary['errors'];
     }
 
@@ -282,6 +283,7 @@ class ArcgisAuditedUploadService
         );
 
         $summary['attachments_uploaded'] += $attachmentsSummary['uploaded'];
+        $summary['attachments_skipped'] += $attachmentsSummary['skipped'];
         $summary['errors'] += $attachmentsSummary['errors'];
     }
 
@@ -521,10 +523,11 @@ class ArcgisAuditedUploadService
         int $targetObjectId,
     ): array {
         if ($sourceObjectId === null || $sourceObjectId === '') {
-            return ['uploaded' => 0, 'errors' => 0];
+            return ['uploaded' => 0, 'skipped' => 0, 'errors' => 0];
         }
 
         $uploaded = 0;
+        $skipped = 0;
         $errors = 0;
 
         $attachments = $this->attachmentInfos($sourceLayerId, $sourceObjectId);
@@ -569,6 +572,24 @@ class ArcgisAuditedUploadService
 
                 $uploaded++;
             } catch (Throwable $exception) {
+                if ($this->isMissingSourceAttachmentException($exception)) {
+                    $skipped++;
+
+                    echo 'Skipped missing source attachment: '.($attachmentInfo['id'] ?? '-')."\n";
+                    echo $exception->getMessage()."\n";
+
+                    Log::warning('Skipped missing audited ArcGIS source attachment.', [
+                        'source_layer_id' => $sourceLayerId,
+                        'target_layer_id' => $targetLayerId,
+                        'source_objectid' => $sourceObjectId,
+                        'target_objectid' => $targetObjectId,
+                        'attachment_id' => $attachmentInfo['id'] ?? null,
+                        'message' => $exception->getMessage(),
+                    ]);
+
+                    continue;
+                }
+
                 $errors++;
 
                 echo 'Failed attachment: '.($attachmentInfo['id'] ?? '-')."\n";
@@ -587,6 +608,7 @@ class ArcgisAuditedUploadService
 
         return [
             'uploaded' => $uploaded,
+            'skipped' => $skipped,
             'errors' => $errors,
         ];
     }
@@ -701,6 +723,18 @@ class ArcgisAuditedUploadService
         });
     }
 
+    private function isMissingSourceAttachmentException(Throwable $exception): bool
+    {
+        $message = $exception->getMessage();
+
+        return str_contains($message, 'ArcGIS attachment download failed')
+            && (
+                str_contains($message, '"code":404')
+                || str_contains($message, '"code": 404')
+                || str_contains($message, 'has no associated attachments')
+            );
+    }
+
     private function whereValue(int|string $value): string
     {
         if (is_numeric($value)) {
@@ -807,6 +841,7 @@ class ArcgisAuditedUploadService
             'units_uploaded' => 0,
             'units_updated' => 0,
             'attachments_uploaded' => 0,
+            'attachments_skipped' => 0,
             'errors' => 0,
         ];
     }
