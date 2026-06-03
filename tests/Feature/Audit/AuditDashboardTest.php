@@ -268,27 +268,27 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
     $response->assertSee('Cumulative Audited Housing Units');
     $response->assertViewHas('summaryMetrics', function (array $summaryMetrics) {
         return $summaryMetrics['total_buildings_count'] === 2
-            && $summaryMetrics['total_housing_units_count'] === 3
+            && $summaryMetrics['total_housing_units_count'] === 4
             && $summaryMetrics['engineer']['audited_buildings_count'] === 1
             && $summaryMetrics['engineer']['audited_housing_units_count'] === 2
             && $summaryMetrics['engineer']['audited_buildings_percentage'] === 50.0
-            && $summaryMetrics['engineer']['audited_housing_units_percentage'] === 66.7
+            && $summaryMetrics['engineer']['audited_housing_units_percentage'] === 50.0
             && $summaryMetrics['lawyer']['audited_buildings_count'] === 2
             && $summaryMetrics['lawyer']['audited_housing_units_count'] === 2
             && $summaryMetrics['lawyer']['audited_buildings_percentage'] === 100.0
-            && $summaryMetrics['lawyer']['audited_housing_units_percentage'] === 66.7;
+            && $summaryMetrics['lawyer']['audited_housing_units_percentage'] === 50.0;
     });
     $response->assertViewHas('chartData', function (array $chartData) {
         return $chartData['engineer']['building_status_series'] === [1, 1, 0, 0]
             && $chartData['engineer']['housing_status_series'] === [0, 1, 0, 1]
             && $chartData['engineer']['comparison_audited_series'] === [1, 2]
-            && $chartData['engineer']['comparison_total_series'] === [2, 3]
+            && $chartData['engineer']['comparison_total_series'] === [2, 4]
             && $chartData['engineer']['daily_housing_achievement_start_date'] === '2026-02-20'
             && $chartData['engineer']['daily_housing_achievement_labels'] === ['2026-02-20', '2026-02-21']
             && $chartData['engineer']['daily_housing_achievement_series'] === [1, 2]
             && $chartData['lawyer']['building_status_series'] === [0, 1, 1]
             && $chartData['lawyer']['housing_status_series'] === [1, 1, 1]
             && $chartData['lawyer']['comparison_audited_series'] === [2, 2]
-            && $chartData['lawyer']['comparison_total_series'] === [2, 3];
+            && $chartData['lawyer']['comparison_total_series'] === [2, 4];
     });
 });

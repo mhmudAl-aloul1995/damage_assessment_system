@@ -37,11 +37,9 @@ class AuditDashboardController extends Controller
             ->whereDate('end', '<=', $endDate->toDateString())
             ->count();
         $totalHousingUnitsCount = HousingUnit::query()
-            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
-            ->where('buildings.field_status', 'COMPLETED')
-            ->whereDate('housing_units.editdate', '>=', $startDate->toDateString())
-            ->whereDate('housing_units.editdate', '<=', $endDate->toDateString())
-            ->count('housing_units.id');
+            ->whereDate('editdate', '>=', $startDate->toDateString())
+            ->whereDate('editdate', '<=', $endDate->toDateString())
+            ->count();
         $dailyHousingAchievementStartDate = $startDate->copy();
 
         $engineerMetrics = $this->buildAuditDashboardMetrics(
