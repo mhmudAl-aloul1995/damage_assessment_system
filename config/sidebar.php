@@ -330,6 +330,8 @@ return [
             'user*',
             'admin/team-leader-field-engineers*',
             'admin/local-database-import*',
+            'login-logs*',
+            'user-activity-logs*',
         ],
         'items' => [
             [
@@ -366,6 +368,12 @@ return [
                 'title' => 'Login Logs',
                 'url' => 'login-logs',
                 'pattern' => 'login-logs*',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Activity Logs',
+                'url' => 'user-activity-logs',
+                'pattern' => 'user-activity-logs*',
                 'roles' => ['Database Officer'],
             ],
             [

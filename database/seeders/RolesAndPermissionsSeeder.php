@@ -30,6 +30,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'system.maintenance',
             'system-logs.view',
             'login-logs.view',
+            'user-activity-logs.view',
             'users.view',
             'users.create',
             'users.update',

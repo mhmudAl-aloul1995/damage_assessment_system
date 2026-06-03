@@ -6,6 +6,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SystemLogController;
+use App\Http\Controllers\UserActivityLogController;
 use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\roleController;
 use App\Http\Controllers\UserManagement\userController;
@@ -408,6 +409,14 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/login-logs/data', [LoginLogController::class, 'data'])
             ->name('login-logs.data');
+    });
+
+    Route::middleware(['auth', 'role_or_permission:Database Officer|user-activity-logs.view'])->group(function () {
+        Route::get('/user-activity-logs', [UserActivityLogController::class, 'index'])
+            ->name('user-activity-logs.index');
+
+        Route::get('/user-activity-logs/data', [UserActivityLogController::class, 'data'])
+            ->name('user-activity-logs.data');
     });
 
 });

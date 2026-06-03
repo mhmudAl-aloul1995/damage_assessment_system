@@ -116,4 +116,9 @@ class User extends Authenticatable
         return $this->belongsToMany(User::class, 'team_leader_field_engineers', 'field_engineer_id', 'team_leader_id')
             ->withTimestamps();
     }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(UserActivityLog::class);
+    }
 }
