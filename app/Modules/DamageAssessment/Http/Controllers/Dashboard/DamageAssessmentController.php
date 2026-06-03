@@ -795,6 +795,10 @@ class DamageAssessmentController extends Controller
             });
         }
 
+        if ($request->boolean('has_dispute')) {
+            $query->whereRaw("LOWER(TRIM(COALESCE(has_dispute, ''))) = ?", ['yes']);
+        }
+
         if ($request->filled('building_name')) {
             $query->where('building_name', 'like', '%'.str_replace(['%', '_'], ['\\%', '\\_'], (string) $request->string('building_name')).'%');
         }
@@ -826,7 +830,7 @@ class DamageAssessmentController extends Controller
 
     private function hasHudBuildingFilters(Request $request): bool
     {
-        foreach (['assignedto', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood', 'building_name', 'search', 'security_priority', 'from_date', 'to_date'] as $field) {
+        foreach (['assignedto', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood', 'building_name', 'search', 'security_priority', 'has_dispute', 'from_date', 'to_date'] as $field) {
             if ($request->filled($field) || count($this->hudFilterValues($request, $field)) > 0) {
                 return true;
             }

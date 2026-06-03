@@ -7,7 +7,6 @@ namespace App\Services;
 use App\Models\VBuildingAudited;
 use App\Models\VHousingUnitAudited;
 use Closure;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -31,7 +30,7 @@ class ArcgisAuditedUploadService
 
         foreach (VBuildingAudited::query()->orderBy('objectid')->cursor() as $building) {
             try {
-                echo "Building OBJECTID: " . $building->getAttribute('objectid') . "\n";
+                echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
 
                 $this->uploadBuilding($building, $summary);
 
@@ -39,8 +38,8 @@ class ArcgisAuditedUploadService
             } catch (Throwable $exception) {
                 $summary['errors']++;
 
-                echo "Failed building OBJECTID: " . $building->getAttribute('objectid') . "\n";
-                echo $exception->getMessage() . "\n";
+                echo 'Failed building OBJECTID: '.$building->getAttribute('objectid')."\n";
+                echo $exception->getMessage()."\n";
 
                 Log::error('Failed uploading audited building to ArcGIS.', [
                     'objectid' => $building->getAttribute('objectid'),
@@ -53,7 +52,7 @@ class ArcgisAuditedUploadService
 
         foreach (VHousingUnitAudited::query()->orderBy('objectid')->cursor() as $unit) {
             try {
-                echo "Unit OBJECTID: " . $unit->getAttribute('objectid') . "\n";
+                echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
 
                 $this->uploadUnit($unit, $summary);
 
@@ -61,8 +60,8 @@ class ArcgisAuditedUploadService
             } catch (Throwable $exception) {
                 $summary['errors']++;
 
-                echo "Failed unit OBJECTID: " . $unit->getAttribute('objectid') . "\n";
-                echo $exception->getMessage() . "\n";
+                echo 'Failed unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+                echo $exception->getMessage()."\n";
 
                 Log::error('Failed uploading audited housing unit to ArcGIS.', [
                     'objectid' => $unit->getAttribute('objectid'),
@@ -87,8 +86,8 @@ class ArcgisAuditedUploadService
 
         $data = $response->json();
 
-        if (!$response->successful() || !is_string($data['token'] ?? null)) {
-            throw new RuntimeException('ArcGIS token failed: ' . $response->body());
+        if (! $response->successful() || ! is_string($data['token'] ?? null)) {
+            throw new RuntimeException('ArcGIS token failed: '.$response->body());
         }
 
         return $data['token'];
@@ -148,6 +147,7 @@ class ArcgisAuditedUploadService
 
         return $feature;
     }
+
     private function uploadBuilding(VBuildingAudited $building, array &$summary): void
     {
         $targetLayerId = $this->layerId('target_buildings_layer');
@@ -157,7 +157,8 @@ class ArcgisAuditedUploadService
 
         echo "Checking target building exists...\n";
 
-        $targetObjectId = $this->targetFeatureExistsWithToken($targetLayerId, $oldObjectId);
+        $targetFeature = $this->targetFeatureWithToken($targetLayerId, $oldObjectId);
+        $targetObjectId = $targetFeature['object_id'] ?? null;
 
         if ($targetObjectId === null) {
             echo "Adding building feature...\n";
@@ -166,6 +167,16 @@ class ArcgisAuditedUploadService
             $summary['buildings_uploaded']++;
         } else {
             echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
+            echo "Updating building feature...\n";
+
+            $this->updateFeature(
+                $targetLayerId,
+                $targetObjectId,
+                $targetFeature['object_id_field'],
+                fn (string $token): array => $this->buildingFeature($building, $token),
+            );
+
+            $summary['buildings_updated']++;
         }
 
         echo "Copying building attachments...\n";
@@ -181,7 +192,6 @@ class ArcgisAuditedUploadService
         $summary['errors'] += $attachmentsSummary['errors'];
     }
 
-
     private function uploadUnit(VHousingUnitAudited $unit, array &$summary): void
     {
         $targetLayerId = $this->layerId('target_units_layer');
@@ -191,10 +201,11 @@ class ArcgisAuditedUploadService
 
         echo "Checking target unit exists...\n";
 
-        $targetObjectId = $this->targetFeatureExistsWithToken(
+        $targetFeature = $this->targetFeatureWithToken(
             $targetLayerId,
             $oldObjectId,
         );
+        $targetObjectId = $targetFeature['object_id'] ?? null;
 
         if ($targetObjectId === null) {
 
@@ -207,6 +218,16 @@ class ArcgisAuditedUploadService
         } else {
 
             echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
+            echo "Updating unit feature...\n";
+
+            $this->updateFeature(
+                $targetLayerId,
+                $targetObjectId,
+                $targetFeature['object_id_field'],
+                fn (string $token): array => $this->unitFeature($unit, $token),
+            );
+
+            $summary['units_updated']++;
         }
 
         echo "Copying unit attachments...\n";
@@ -221,11 +242,12 @@ class ArcgisAuditedUploadService
         $summary['attachments_uploaded'] += $attachmentsSummary['uploaded'];
         $summary['errors'] += $attachmentsSummary['errors'];
     }
+
     private function addFeature(int|string $layerId, Closure $featureFactory): int
     {
         return $this->withTokenRetry(function (string $token) use ($layerId, $featureFactory): int {
             $feature = $featureFactory($token);
-            $response = $this->http()->post($this->targetLayerUrl($layerId) . '/addFeatures', [
+            $response = $this->http()->post($this->targetLayerUrl($layerId).'/addFeatures', [
                 'f' => 'json',
                 'token' => $token,
                 'features' => json_encode([$feature], JSON_THROW_ON_ERROR),
@@ -235,8 +257,8 @@ class ArcgisAuditedUploadService
 
             $objectId = data_get($data, 'addResults.0.objectId');
 
-            if (!$response->successful() || !data_get($data, 'addResults.0.success') || !is_numeric($objectId)) {
-                throw new RuntimeException('ArcGIS addFeatures failed: ' . $response->body());
+            if (! $response->successful() || ! data_get($data, 'addResults.0.success') || ! is_numeric($objectId)) {
+                throw new RuntimeException('ArcGIS addFeatures failed: '.$response->body());
             }
 
             echo "Feature added. Target OBJECTID: {$objectId}\n";
@@ -245,17 +267,46 @@ class ArcgisAuditedUploadService
         });
     }
 
-    private function targetFeatureExistsWithToken(int|string $layerId, int|string|null $oldObjectId): ?int
+    private function updateFeature(
+        int|string $layerId,
+        int $targetObjectId,
+        string $objectIdField,
+        Closure $featureFactory,
+    ): void {
+        $this->withTokenRetry(function (string $token) use ($layerId, $targetObjectId, $objectIdField, $featureFactory): void {
+            $feature = $featureFactory($token);
+            $feature['attributes'][$objectIdField] = $targetObjectId;
+
+            $response = $this->http()->post($this->targetLayerUrl($layerId).'/updateFeatures', [
+                'f' => 'json',
+                'token' => $token,
+                'features' => json_encode([$feature], JSON_THROW_ON_ERROR),
+            ]);
+
+            $data = $response->json();
+
+            if (! $response->successful() || ! data_get($data, 'updateResults.0.success')) {
+                throw new RuntimeException('ArcGIS updateFeatures failed: '.$response->body());
+            }
+
+            echo "Feature updated. Target OBJECTID: {$targetObjectId}\n";
+        });
+    }
+
+    /**
+     * @return array{object_id: int, object_id_field: string}|null
+     */
+    private function targetFeatureWithToken(int|string $layerId, int|string|null $oldObjectId): ?array
     {
-        return $this->withTokenRetry(function (string $token) use ($layerId, $oldObjectId): ?int {
+        return $this->withTokenRetry(function (string $token) use ($layerId, $oldObjectId): ?array {
             if ($oldObjectId === null || $oldObjectId === '') {
                 return null;
             }
 
-            $response = $this->http()->get($this->targetLayerUrl($layerId) . '/query', [
+            $response = $this->http()->get($this->targetLayerUrl($layerId).'/query', [
                 'f' => 'json',
                 'token' => $token,
-                'where' => 'old_objectid = ' . $this->whereValue($oldObjectId),
+                'where' => 'old_objectid = '.$this->whereValue($oldObjectId),
                 'outFields' => 'objectid,OBJECTID,old_objectid',
                 'returnGeometry' => 'false',
                 'resultRecordCount' => 1,
@@ -263,30 +314,37 @@ class ArcgisAuditedUploadService
 
             $this->throwIfArcgisError($response, 'ArcGIS target lookup failed');
 
-            if (!$response->successful()) {
-                throw new RuntimeException('ArcGIS target lookup failed: ' . $response->body());
+            if (! $response->successful()) {
+                throw new RuntimeException('ArcGIS target lookup failed: '.$response->body());
             }
 
             $feature = $response->json('features.0.attributes');
 
-            if (!is_array($feature)) {
+            if (! is_array($feature)) {
                 return null;
             }
 
-            $objectId = $feature['objectid']
-                ?? $feature['OBJECTID']
-                ?? $feature['ObjectId']
-                ?? null;
+            foreach (['objectid', 'OBJECTID', 'ObjectId'] as $objectIdField) {
+                $objectId = $feature[$objectIdField] ?? null;
 
-            return is_numeric($objectId) ? (int) $objectId : null;
+                if (is_numeric($objectId)) {
+                    return [
+                        'object_id' => (int) $objectId,
+                        'object_id_field' => $objectIdField,
+                    ];
+                }
+            }
+
+            return null;
         });
     }
+
     private function sourceGeometry(int|string $layerId, int|string $objectId, string $token): ?array
     {
-        $response = $this->http()->get($this->sourceLayerUrl($layerId) . '/query', [
+        $response = $this->http()->get($this->sourceLayerUrl($layerId).'/query', [
             'f' => 'json',
             'token' => $token,
-            'where' => 'objectid = ' . $this->whereValue($objectId),
+            'where' => 'objectid = '.$this->whereValue($objectId),
             'outFields' => 'objectid',
             'returnGeometry' => 'true',
             'outSR' => 4326,
@@ -295,14 +353,15 @@ class ArcgisAuditedUploadService
 
         $this->throwIfArcgisError($response, 'ArcGIS source geometry lookup failed');
 
-        if (!$response->successful()) {
-            throw new RuntimeException('ArcGIS source geometry lookup failed: ' . $response->body());
+        if (! $response->successful()) {
+            throw new RuntimeException('ArcGIS source geometry lookup failed: '.$response->body());
         }
 
         $geometry = $response->json('features.0.geometry');
 
         return is_array($geometry) ? $geometry : null;
     }
+
     private function copyAttachments(
         int|string $sourceLayerId,
         int|string $targetLayerId,
@@ -318,12 +377,12 @@ class ArcgisAuditedUploadService
 
         $attachments = $this->attachmentInfos($sourceLayerId, $sourceObjectId);
 
-        echo "Attachments found: " . count($attachments) . "\n";
+        echo 'Attachments found: '.count($attachments)."\n";
 
         foreach ($attachments as $attachmentInfo) {
             try {
                 $attachmentId = $attachmentInfo['id'] ?? null;
-                $name = (string) ($attachmentInfo['name'] ?? 'attachment-' . $attachmentId);
+                $name = (string) ($attachmentInfo['name'] ?? 'attachment-'.$attachmentId);
 
                 $size = isset($attachmentInfo['size']) && is_numeric($attachmentInfo['size'])
                     ? (int) $attachmentInfo['size']
@@ -335,6 +394,7 @@ class ArcgisAuditedUploadService
 
                 if ($this->targetAttachmentExists($targetLayerId, $targetObjectId, $name, $size)) {
                     echo "Attachment already exists: {$name}\n";
+
                     continue;
                 }
 
@@ -359,8 +419,8 @@ class ArcgisAuditedUploadService
             } catch (Throwable $exception) {
                 $errors++;
 
-                echo "Failed attachment: " . ($attachmentInfo['id'] ?? '-') . "\n";
-                echo $exception->getMessage() . "\n";
+                echo 'Failed attachment: '.($attachmentInfo['id'] ?? '-')."\n";
+                echo $exception->getMessage()."\n";
 
                 Log::error('Failed copying audited ArcGIS attachment.', [
                     'source_layer_id' => $sourceLayerId,
@@ -382,15 +442,15 @@ class ArcgisAuditedUploadService
     private function attachmentInfos(int|string $layerId, int|string $objectId): array
     {
         return $this->withTokenRetry(function (string $token) use ($layerId, $objectId): array {
-            $response = $this->http()->get($this->sourceLayerUrl($layerId) . '/' . $objectId . '/attachments', [
+            $response = $this->http()->get($this->sourceLayerUrl($layerId).'/'.$objectId.'/attachments', [
                 'f' => 'json',
                 'token' => $token,
             ]);
 
             $this->throwIfArcgisError($response, 'ArcGIS attachmentInfos failed');
 
-            if (!$response->successful()) {
-                throw new RuntimeException('ArcGIS attachmentInfos failed: ' . $response->body());
+            if (! $response->successful()) {
+                throw new RuntimeException('ArcGIS attachmentInfos failed: '.$response->body());
             }
 
             $attachmentInfos = $response->json('attachmentInfos') ?? [];
@@ -406,20 +466,20 @@ class ArcgisAuditedUploadService
         ?int $size
     ): bool {
         return $this->withTokenRetry(function (string $token) use ($layerId, $objectId, $name, $size): bool {
-            $response = $this->http()->get($this->targetLayerUrl($layerId) . '/' . $objectId . '/attachments', [
+            $response = $this->http()->get($this->targetLayerUrl($layerId).'/'.$objectId.'/attachments', [
                 'f' => 'json',
                 'token' => $token,
             ]);
 
             $this->throwIfArcgisError($response, 'ArcGIS target attachment lookup failed');
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 return false;
             }
 
             $attachmentInfos = $response->json('attachmentInfos') ?? [];
 
-            if (!is_array($attachmentInfos)) {
+            if (! is_array($attachmentInfos)) {
                 return false;
             }
 
@@ -428,7 +488,7 @@ class ArcgisAuditedUploadService
                     continue;
                 }
 
-                if ($size === null || !isset($attachmentInfo['size']) || (int) $attachmentInfo['size'] === $size) {
+                if ($size === null || ! isset($attachmentInfo['size']) || (int) $attachmentInfo['size'] === $size) {
                     return true;
                 }
             }
@@ -444,7 +504,7 @@ class ArcgisAuditedUploadService
     ): string {
         return $this->withTokenRetry(function (string $token) use ($layerId, $objectId, $attachmentId): string {
             $response = $this->http()->get(
-                $this->sourceLayerUrl($layerId) . '/' . $objectId . '/attachments/' . $attachmentId,
+                $this->sourceLayerUrl($layerId).'/'.$objectId.'/attachments/'.$attachmentId,
                 [
                     'token' => $token,
                 ]
@@ -452,8 +512,8 @@ class ArcgisAuditedUploadService
 
             $this->throwIfArcgisError($response, 'ArcGIS attachment download failed');
 
-            if (!$response->successful()) {
-                throw new RuntimeException('ArcGIS attachment download failed: ' . $response->body());
+            if (! $response->successful()) {
+                throw new RuntimeException('ArcGIS attachment download failed: '.$response->body());
             }
 
             return $response->body();
@@ -467,7 +527,7 @@ class ArcgisAuditedUploadService
         string $contents
     ): void {
         $this->withTokenRetry(function (string $token) use ($layerId, $objectId, $name, $contents): void {
-            $url = $this->targetLayerUrl($layerId) . '/' . $objectId . '/addAttachment';
+            $url = $this->targetLayerUrl($layerId).'/'.$objectId.'/addAttachment';
 
             $response = Http::acceptJson()
                 ->withHeaders(['Referer' => $this->requiredConfig('referer')])
@@ -476,63 +536,17 @@ class ArcgisAuditedUploadService
                 ->retry(2, 1000, throw: false)
                 ->withoutVerifying()
                 ->attach('attachment', $contents, $name)
-                ->post($url . '?' . http_build_query([
+                ->post($url.'?'.http_build_query([
                     'f' => 'json',
                     'token' => $token,
                 ]));
 
-            if (!$response->successful() || !$response->json('addAttachmentResult.success')) {
-                throw new RuntimeException('ArcGIS addAttachment failed: ' . $response->body());
+            if (! $response->successful() || ! $response->json('addAttachmentResult.success')) {
+                throw new RuntimeException('ArcGIS addAttachment failed: '.$response->body());
             }
 
             echo "Attachment uploaded successfully: {$name}\n";
         });
-    }
-
-    private function feature(Model $model, array $fieldMap): array
-    {
-        $attributes = [];
-
-        foreach ($fieldMap as $targetField => $sourceField) {
-            $attributes[$targetField] = $sourceField instanceof Closure
-                ? $sourceField()
-                : $model->getAttribute($sourceField);
-        }
-
-        $feature = [
-            'attributes' => $attributes,
-        ];
-
-        $geometry = $this->geometry($model);
-
-        if ($geometry !== null) {
-            $feature['geometry'] = $geometry;
-        }
-
-        return $feature;
-    }
-
-    private function geometry(Model $model): ?array
-    {
-        $x = $model->getAttribute('x');
-        $y = $model->getAttribute('y');
-
-        if ($x === null || $y === null || $x === '' || $y === '') {
-            $x = $model->getAttribute('longitude');
-            $y = $model->getAttribute('latitude');
-        }
-
-        if ($x === null || $y === null || $x === '' || $y === '') {
-            return null;
-        }
-
-        return [
-            'x' => $x,
-            'y' => $y,
-            'spatialReference' => [
-                'wkid' => 4326,
-            ],
-        ];
     }
 
     private function whereValue(int|string $value): string
@@ -541,17 +555,17 @@ class ArcgisAuditedUploadService
             return (string) $value;
         }
 
-        return "'" . str_replace("'", "''", $value) . "'";
+        return "'".str_replace("'", "''", $value)."'";
     }
 
     private function targetLayerUrl(int|string $layerId): string
     {
-        return $this->serviceUrl('target_service') . '/' . $layerId;
+        return $this->serviceUrl('target_service').'/'.$layerId;
     }
 
     private function sourceLayerUrl(int|string $layerId): string
     {
-        return $this->serviceUrl('source_service') . '/' . $layerId;
+        return $this->serviceUrl('source_service').'/'.$layerId;
     }
 
     private function serviceUrl(string $key): string
@@ -561,7 +575,7 @@ class ArcgisAuditedUploadService
 
     private function layerId(string $key): int|string
     {
-        $value = config('services.arcgis.' . $key);
+        $value = config('services.arcgis.'.$key);
 
         if ($value === null || $value === '') {
             throw new RuntimeException("Missing ArcGIS config services.arcgis.{$key}.");
@@ -572,9 +586,9 @@ class ArcgisAuditedUploadService
 
     private function requiredConfig(string $key): string
     {
-        $value = config('services.arcgis.' . $key);
+        $value = config('services.arcgis.'.$key);
 
-        if (!is_string($value) || $value === '') {
+        if (! is_string($value) || $value === '') {
             throw new RuntimeException("Missing ArcGIS config services.arcgis.{$key}.");
         }
 
@@ -601,7 +615,7 @@ class ArcgisAuditedUploadService
         try {
             return $callback($this->token);
         } catch (RuntimeException $exception) {
-            if (!$this->isInvalidTokenException($exception)) {
+            if (! $this->isInvalidTokenException($exception)) {
                 throw $exception;
             }
 
@@ -630,14 +644,16 @@ class ArcgisAuditedUploadService
             return;
         }
 
-        throw new RuntimeException($message . ': ' . $response->body());
+        throw new RuntimeException($message.': '.$response->body());
     }
 
     private function emptySummary(): array
     {
         return [
             'buildings_uploaded' => 0,
+            'buildings_updated' => 0,
             'units_uploaded' => 0,
+            'units_updated' => 0,
             'attachments_uploaded' => 0,
             'errors' => 0,
         ];

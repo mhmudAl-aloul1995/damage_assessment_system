@@ -824,6 +824,13 @@
                                 <label class="form-check-label" for="hud_filter_security_priority">يوجد عائق</label>
                             </div>
                         </div>
+                        <div class="hud-map-filter-field">
+                            <label for="hud_filter_has_dispute"> </label>
+                            <div class="form-check form-switch text-white-50">
+                                <input type="checkbox" id="hud_filter_has_dispute" class="form-check-input">
+                                <label class="form-check-label" for="hud_filter_has_dispute">يوجد نزاع</label>
+                            </div>
+                        </div>
                         <div class="hud-map-filter-actions">
                             <button type="button" id="hudMapFilterApply" class="btn btn-primary">بحث</button>
                             <button type="button" id="hudMapFilterReset" class="btn btn-light">إعادة تعيين</button>
@@ -1462,6 +1469,14 @@
                 return clauses.length ? '(' + clauses.join(' OR ') + ')' : '1=0';
             }
 
+            function hudArcgisHasDisputeExpression() {
+                const disputeField = getArcgisField('has_dispute');
+
+                return disputeField
+                    ? hudArcgisInExpression(disputeField.name, ['yes', 'Yes', 'YES'])
+                    : '1=0';
+            }
+
             function buildHudArcgisWhere() {
                 const clauses = [];
                 const allowedFields = [
@@ -1486,6 +1501,10 @@
 
                 if (document.getElementById('hud_filter_security_priority')?.checked) {
                     clauses.push(hudArcgisSecurityPriorityExpression());
+                }
+
+                if (document.getElementById('hud_filter_has_dispute')?.checked) {
+                    clauses.push(hudArcgisHasDisputeExpression());
                 }
 
                 const buildingNameValue = (document.getElementById('hud_filter_building_name')?.value || '').trim();
@@ -1585,6 +1604,7 @@
                 document.getElementById('hud_filter_building_name').value = '';
                 document.getElementById('hud_filter_search').value = '';
                 document.getElementById('hud_filter_security_priority').checked = false;
+                document.getElementById('hud_filter_has_dispute').checked = false;
                 document.getElementById('hud_filter_from_date').value = '';
                 document.getElementById('hud_filter_to_date').value = '';
 
@@ -1857,6 +1877,7 @@
                 building_name: document.getElementById('hud_filter_building_name')?.value || '',
                 search: document.getElementById('hud_filter_search')?.value || '',
                 security_priority: document.getElementById('hud_filter_security_priority')?.checked ? '1' : '',
+                has_dispute: document.getElementById('hud_filter_has_dispute')?.checked ? '1' : '',
                 from_date: document.getElementById('hud_filter_from_date')?.value || '',
                 to_date: document.getElementById('hud_filter_to_date')?.value || ''
             };

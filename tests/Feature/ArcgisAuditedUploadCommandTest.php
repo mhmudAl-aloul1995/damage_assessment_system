@@ -80,6 +80,17 @@ it('uploads audited views to arcgis and copies attachments', function () {
                 ],
             ],
         ]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/query*' => Http::response([
+            'features' => [
+                [
+                    'geometry' => [
+                        'x' => 34.1234560,
+                        'y' => 31.6543210,
+                        'spatialReference' => ['wkid' => 4326],
+                    ],
+                ],
+            ],
+        ]),
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures' => function ($request) {
             $features = json_decode($request['features'], true);
 
@@ -97,6 +108,25 @@ it('uploads audited views to arcgis and copies attachments', function () {
             return Http::response([
                 'addResults' => [
                     ['success' => true, 'objectId' => 9001],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/updateFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toMatchArray([
+                'objectid' => 9002,
+                'old_objectid' => 200,
+                'globalid' => 'unit-globalid',
+                'parentglobalid' => 'building-globalid',
+                'unit_damage_status' => 'minor',
+                'is_audited' => 1,
+            ]);
+            expect($features[0]['geometry']['spatialReference']['wkid'])->toBe(4326);
+
+            return Http::response([
+                'updateResults' => [
+                    ['success' => true, 'objectId' => 9002],
                 ],
             ]);
         },
@@ -125,6 +155,7 @@ it('uploads audited views to arcgis and copies attachments', function () {
     $this->artisan('arcgis:upload-audited')->assertSuccessful();
 
     Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures');
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/updateFeatures');
     Http::assertSent(fn ($request): bool => str_starts_with($request->url(), 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9001/addAttachment'));
     Http::assertSent(fn ($request): bool => str_starts_with($request->url(), 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/9002/addAttachment'));
 });

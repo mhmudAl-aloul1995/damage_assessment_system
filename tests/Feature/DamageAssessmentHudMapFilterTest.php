@@ -70,6 +70,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('data-field="field_status"', false)
         ->assertSee('data-field="building_damage_status"', false)
         ->assertSee('id="hud_filter_security_priority"', false)
+        ->assertSee('id="hud_filter_has_dispute"', false)
         ->assertSee('data-field="municipalitie"', false)
         ->assertSee('data-field="neighborhood"', false)
         ->assertSee("replace(/\\/hud\\/?$/, '/arcgis/options')", false)
@@ -77,8 +78,10 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee("hudArcgisFieldName('building_name') + \" LIKE", false)
         ->assertSee('hudArcgisFieldName', false)
         ->assertSee('hudArcgisSecurityPriorityExpression', false)
+        ->assertSee('hudArcgisHasDisputeExpression', false)
         ->assertSee('buildingsLayer.definitionExpression = whereExpression', false)
         ->assertSee('assessment_obstacle', false)
+        ->assertSee('has_dispute', false)
         ->assertSee('security_situation', false)
         ->assertSee('Building Name', false)
         ->assertSee('building_damage_status', false)
@@ -144,6 +147,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('select2', false)
         ->assertSee('hudArcgisInExpression', false)
         ->assertSee("params.append(element.dataset.field + '[]'", false)
+        ->assertSee("has_dispute: document.getElementById('hud_filter_has_dispute')?.checked ? '1' : ''", false)
         ->assertSee('url.searchParams.append(key, value)', false);
 });
 
@@ -241,6 +245,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         'assignedto' => 'Other Engineer',
         'field_status' => 'Not_Completed',
         'building_damage_status' => 'partially_damaged',
+        'has_dispute' => 'yes',
         'municipalitie' => 'North Gaza',
         'neighborhood' => 'Jabalia',
         'building_debris_qty' => '5',
@@ -327,5 +332,14 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertJsonPath('summaryStats.assessed_buildings', 1)
         ->assertJsonPath('damageChart.data.0', 0)
         ->assertJsonPath('damageChart.data.2', 1)
+        ->assertJsonPath('municipalityReports.0.summary.units', 1);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats', ['has_dispute' => '1']))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 1)
+        ->assertJsonPath('summaryStats.assessed_buildings', 0)
+        ->assertJsonPath('damageChart.data.1', 1)
+        ->assertJsonPath('municipalityReports.0.name', 'North Gaza')
         ->assertJsonPath('municipalityReports.0.summary.units', 1);
 });
