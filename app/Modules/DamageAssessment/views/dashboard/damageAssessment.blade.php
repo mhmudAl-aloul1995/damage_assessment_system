@@ -278,7 +278,7 @@
 			--summary-body-padding-x: 1.5rem;
 			--summary-body-padding-y: 1.25rem;
 			--summary-item-min-height: 2.9rem;
-			--summary-row-gap: 0.9rem;
+			--summary-row-gap: 1rem;
 		}
 
 		.damage-dashboard-stats>[class*="col-"] {
@@ -398,7 +398,7 @@
 				--summary-body-padding-x: 1.25rem;
 				--summary-body-padding-y: 1rem;
 				--summary-item-min-height: 2.65rem;
-				--summary-row-gap: 0.8rem;
+				--summary-row-gap: 0.9rem;
 			}
 		}
 
@@ -416,7 +416,7 @@
 				--summary-body-padding-x: 1rem;
 				--summary-body-padding-y: 0.9rem;
 				--summary-item-min-height: 2.45rem;
-				--summary-row-gap: 0.7rem;
+				--summary-row-gap: 0.8rem;
 			}
 		}
 
@@ -434,7 +434,7 @@
 				--summary-body-padding-x: 0.75rem;
 				--summary-body-padding-y: 0.75rem;
 				--summary-item-min-height: 2.3rem;
-				--summary-row-gap: 0.6rem;
+				--summary-row-gap: 0.7rem;
 			}
 		}
 
