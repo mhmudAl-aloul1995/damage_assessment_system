@@ -28,10 +28,14 @@ test('dashboard summary cards use compact vertical spacing', function () {
 
     expect($labelMatches['css'] ?? '')
         ->toContain('display: block;')
-        ->toContain('text-wrap: nowrap;')
-        ->toContain('white-space: nowrap;')
+        ->toContain('text-wrap: nowrap !important;')
+        ->toContain('white-space: nowrap !important;')
         ->toContain('overflow-wrap: normal;')
         ->not->toContain('-webkit-line-clamp');
+
+    expect($dashboardView)
+        ->toContain('col-sm-6 col-lg-6 col-xxl-3')
+        ->not->toContain('col-sm-6 col-xl-3');
 });
 
 test('dashboard toolbar has responsive control groups for all devices', function () {

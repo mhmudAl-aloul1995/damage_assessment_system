@@ -358,8 +358,8 @@
 			min-height: 1.25em;
 			font-size: var(--summary-label-size) !important;
 			overflow: visible;
-			text-wrap: nowrap;
-			white-space: nowrap;
+			text-wrap: nowrap !important;
+			white-space: nowrap !important;
 			word-break: normal;
 			overflow-wrap: normal;
 		}
@@ -610,8 +610,8 @@
 
 	<div class="row g-5 g-xl-8 damage-dashboard-stats">
 		<!--begin::Col-->
-		<!-- 1. Changed to responsive column: col-sm-6 col-xl-3 -->
-		<div class="col-sm-6 col-xl-3 mb-5">
+		<!-- 1. Changed to responsive column: col-sm-6 col-lg-6 col-xxl-3 -->
+		<div class="col-sm-6 col-lg-6 col-xxl-3 mb-5">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<!-- 2. Changed h-275px to min-h-275px to allow expansion if text wraps -->
@@ -964,7 +964,7 @@
 
 
 		<!--begin::Col-->
-		<div class="col-sm-6 col-xl-3">
+		<div class="col-sm-6 col-lg-6 col-xxl-3">
 			<!--begin::Mixed Widget 1-->
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<!--begin::Body-->
@@ -1381,7 +1381,7 @@
 			</div>
 			<!--end::Mixed Widget 1-->
 		</div>
-		<div class="col-sm-6 col-xl-3">
+		<div class="col-sm-6 col-lg-6 col-xxl-3">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<div style="background-color: rgb(191 152 7);"
@@ -1529,7 +1529,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-sm-6 col-xl-3">
+		<div class="col-sm-6 col-lg-6 col-xxl-3">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<div style="background-color: #0f766e;"
