@@ -31,9 +31,71 @@
                 }
             }
         }
+
+        $hasAdvancedFilters = collect($filters)->flatten()->filter()->isNotEmpty();
     @endphp
 
     <style>
+        .area-productivity-filter-card {
+            border: 1px solid #edf0f5;
+            border-radius: .75rem;
+            background: #fff;
+            box-shadow: 0 .35rem 1.1rem rgba(15, 23, 42, .04);
+        }
+
+        .area-productivity-filter-card .form-label {
+            color: #3f4254;
+            font-size: .85rem;
+            font-weight: 700;
+            margin-bottom: .45rem;
+        }
+
+        .area-productivity-filter-card .select2-container--bootstrap5 .select2-selection--multiple {
+            min-height: 45px;
+            padding-top: .25rem;
+            padding-bottom: .25rem;
+            border-color: #f1f1f4;
+            background-color: #f9f9f9;
+        }
+
+        .area-productivity-filter-card .select2-container--bootstrap5 .select2-selection--multiple .select2-selection__choice {
+            border: 0;
+            border-radius: .475rem;
+            background-color: #e9f3ff;
+            color: #1b84ff;
+            font-weight: 700;
+        }
+
+        .area-productivity-filter-card .select2-container--bootstrap5 .select2-selection--multiple .select2-selection__choice__remove {
+            color: #1b84ff;
+        }
+
+        .area-productivity-toolbar {
+            width: 100%;
+        }
+
+        .area-productivity-toolbar-main {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: .75rem;
+        }
+
+        .area-productivity-toolbar-main .btn {
+            min-height: 45px;
+        }
+
+        @media (max-width: 767px) {
+            .area-productivity-toolbar-main {
+                justify-content: stretch;
+            }
+
+            .area-productivity-toolbar-main > * {
+                width: 100%;
+            }
+        }
+
         #area_productivity_table th,
         #area_productivity_table td {
             text-align: center !important;
@@ -323,19 +385,20 @@
                         </h2>
                     </div>
 
-                    <div class="card-toolbar">
+                    <div class="card-toolbar area-productivity-toolbar">
                         <form action="{{ route($route_name) }}" method="GET" id="filter_form" class="w-100">
                             <input type="hidden" name="start_date" id="start_date" value="{{ $start_date }}">
                             <input type="hidden" name="end_date" id="end_date" value="{{ $end_date }}">
 
-                            <div class="d-flex flex-wrap align-items-center gap-3">
+                            <div class="area-productivity-toolbar-main">
                                 <a href="{{ route($export_route_name, array_merge(request()->query(), ['start_date' => $start_date, 'end_date' => $end_date])) }}"
-                                    class="btn btn-success">
-                                    <i class="fa fa-file-excel"></i>
+                                    class="btn btn-light-success">
+                                    <i class="ki-duotone ki-file-down fs-2"><span class="path1"></span><span class="path2"></span></i>
                                     {{ __('multilingual.area_productivity_reports.actions.export_excel') }}
                                 </a>
 
                                 <button type="submit" class="btn btn-primary">
+                                    <i class="ki-duotone ki-filter fs-2"><span class="path1"></span><span class="path2"></span></i>
                                     {{ __('multilingual.area_productivity_reports.actions.filter') }}
                                 </button>
 
@@ -347,65 +410,75 @@
                                 </div>
 
                                 <button class="btn btn-light" type="button" data-bs-toggle="collapse"
-                                    data-bs-target="#area-productivity-advanced-filters" aria-expanded="false">
+                                    data-bs-target="#area-productivity-advanced-filters" aria-expanded="{{ $hasAdvancedFilters ? 'true' : 'false' }}">
+                                    <i class="ki-duotone ki-setting-4 fs-2"></i>
                                     {{ __('multilingual.area_productivity_reports.actions.advanced_filters') }}
                                 </button>
                             </div>
 
-                            <div class="collapse mt-5" id="area-productivity-advanced-filters">
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <select name="governorate" class="form-select form-select-solid area-report-select"
-                                            data-placeholder="{{ __('multilingual.area_productivity_reports.filters.governorate') }}">
-                                            <option value="">{{ __('multilingual.area_productivity_reports.filters.all_governorates') }}</option>
-                                            @foreach ($filter_options['governorates'] as $governorate)
-                                                <option value="{{ $governorate }}" @selected($filters['governorate'] === $governorate)>{{ $governorate }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <select name="municipalitie" class="form-select form-select-solid area-report-select"
-                                            data-placeholder="{{ __('multilingual.area_productivity_reports.filters.municipality') }}">
-                                            <option value="">{{ __('multilingual.area_productivity_reports.filters.all_municipalities') }}</option>
-                                            @foreach ($filter_options['municipalities'] as $municipality)
-                                                <option value="{{ $municipality }}" @selected($filters['municipalitie'] === $municipality)>{{ $municipality }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <select name="neighborhood" class="form-select form-select-solid area-report-select"
-                                            data-placeholder="{{ __('multilingual.area_productivity_reports.filters.neighborhood') }}">
-                                            <option value="">{{ __('multilingual.area_productivity_reports.filters.all_neighborhoods') }}</option>
-                                            @foreach ($filter_options['neighborhoods'] as $neighborhood)
-                                                <option value="{{ $neighborhood }}" @selected($filters['neighborhood'] === $neighborhood)>{{ $neighborhood }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <select name="zone_code" class="form-select form-select-solid area-report-select"
-                                            data-placeholder="{{ __('multilingual.area_productivity_reports.filters.zone_code') }}">
-                                            <option value="">{{ __('multilingual.area_productivity_reports.filters.all_zone_codes') }}</option>
-                                            @foreach ($filter_options['zone_codes'] as $zoneCode)
-                                                <option value="{{ $zoneCode }}" @selected($filters['zone_code'] === $zoneCode)>{{ $zoneCode }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <select name="assignedto" class="form-select form-select-solid area-report-select"
-                                            data-placeholder="{{ __('multilingual.area_productivity_reports.filters.assignedto') }}">
-                                            <option value="">{{ __('multilingual.area_productivity_reports.filters.all_assignedto') }}</option>
-                                            @foreach ($filter_options['assignedto'] as $assignedto)
-                                                <option value="{{ $assignedto }}" @selected($filters['assignedto'] === $assignedto)>{{ $assignedto }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 d-flex gap-3">
-                                        <button type="submit" class="btn btn-primary flex-fill">
-                                            {{ __('multilingual.area_productivity_reports.actions.apply_filters') }}
-                                        </button>
-                                        <a href="{{ route($route_name) }}" class="btn btn-light flex-fill">
-                                            {{ __('multilingual.area_productivity_reports.actions.reset') }}
-                                        </a>
+                            <div class="collapse mt-5 {{ $hasAdvancedFilters ? 'show' : '' }}" id="area-productivity-advanced-filters">
+                                <div class="area-productivity-filter-card p-5">
+                                    <div class="row g-5 align-items-end">
+                                        <div class="col-md-4 col-xl-3">
+                                            <label class="form-label">{{ __('multilingual.area_productivity_reports.filters.governorate') }}</label>
+                                            <select name="governorate[]" class="form-select form-select-solid area-report-select"
+                                                data-placeholder="{{ __('multilingual.area_productivity_reports.filters.all_governorates') }}"
+                                                data-allow-clear="true" data-close-on-select="false" multiple>
+                                                @foreach ($filter_options['governorates'] as $governorate)
+                                                    <option value="{{ $governorate }}" @selected(in_array($governorate, $filters['governorate'], true))>{{ $governorate }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 col-xl-3">
+                                            <label class="form-label">{{ __('multilingual.area_productivity_reports.filters.municipality') }}</label>
+                                            <select name="municipalitie[]" class="form-select form-select-solid area-report-select"
+                                                data-placeholder="{{ __('multilingual.area_productivity_reports.filters.all_municipalities') }}"
+                                                data-allow-clear="true" data-close-on-select="false" multiple>
+                                                @foreach ($filter_options['municipalities'] as $municipality)
+                                                    <option value="{{ $municipality }}" @selected(in_array($municipality, $filters['municipalitie'], true))>{{ $municipality }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 col-xl-3">
+                                            <label class="form-label">{{ __('multilingual.area_productivity_reports.filters.neighborhood') }}</label>
+                                            <select name="neighborhood[]" class="form-select form-select-solid area-report-select"
+                                                data-placeholder="{{ __('multilingual.area_productivity_reports.filters.all_neighborhoods') }}"
+                                                data-allow-clear="true" data-close-on-select="false" multiple>
+                                                @foreach ($filter_options['neighborhoods'] as $neighborhood)
+                                                    <option value="{{ $neighborhood }}" @selected(in_array($neighborhood, $filters['neighborhood'], true))>{{ $neighborhood }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 col-xl-3">
+                                            <label class="form-label">{{ __('multilingual.area_productivity_reports.filters.zone_code') }}</label>
+                                            <select name="zone_code[]" class="form-select form-select-solid area-report-select"
+                                                data-placeholder="{{ __('multilingual.area_productivity_reports.filters.all_zone_codes') }}"
+                                                data-allow-clear="true" data-close-on-select="false" multiple>
+                                                @foreach ($filter_options['zone_codes'] as $zoneCode)
+                                                    <option value="{{ $zoneCode }}" @selected(in_array($zoneCode, $filters['zone_code'], true))>{{ $zoneCode }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 col-xl-3">
+                                            <label class="form-label">{{ __('multilingual.area_productivity_reports.filters.assignedto') }}</label>
+                                            <select name="assignedto[]" class="form-select form-select-solid area-report-select"
+                                                data-placeholder="{{ __('multilingual.area_productivity_reports.filters.all_assignedto') }}"
+                                                data-allow-clear="true" data-close-on-select="false" multiple>
+                                                @foreach ($filter_options['assignedto'] as $assignedto)
+                                                    <option value="{{ $assignedto }}" @selected(in_array($assignedto, $filters['assignedto'], true))>{{ $assignedto }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 col-xl-3 d-flex gap-3">
+                                            <button type="submit" class="btn btn-primary flex-fill">
+                                                <i class="ki-duotone ki-check fs-2"></i>
+                                                {{ __('multilingual.area_productivity_reports.actions.apply_filters') }}
+                                            </button>
+                                            <a href="{{ route($route_name) }}" class="btn btn-light flex-fill">
+                                                <i class="ki-duotone ki-arrows-circle fs-2"><span class="path1"></span><span class="path2"></span></i>
+                                                {{ __('multilingual.area_productivity_reports.actions.reset') }}
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -617,6 +690,8 @@
         $(document).ready(function () {
             $('.area-report-select').select2({
                 allowClear: true,
+                closeOnSelect: false,
+                dir: @json(app()->getLocale() === 'ar' ? 'rtl' : 'ltr'),
                 width: '100%'
             });
 

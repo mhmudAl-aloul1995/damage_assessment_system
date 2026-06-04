@@ -336,6 +336,19 @@ it('renders separated area productivity reports for all supported datasets with 
             && (int) $rimal->housing_units_count === 4;
     });
 
+    $this->actingAs($user)
+        ->get(route('reports.area-productivity.buildings', [
+            'start_date' => '2026-04-01',
+            'end_date' => '2026-04-30',
+            'municipalitie' => ['Gaza', 'Jabalia'],
+            'assignedto' => ['eng-1', 'eng-2'],
+        ]))
+        ->assertOk()
+        ->assertViewHas('rows', function ($rows): bool {
+            return $rows->pluck('neighborhood')->sort()->values()->all() === ['Camp', 'Rimal']
+                && (int) $rows->sum('total_count') === 3;
+        });
+
     $publicBuildingsResponse = $this->actingAs($user)
         ->get(route('reports.area-productivity.public-buildings', [
             'start_date' => '2026-04-01',

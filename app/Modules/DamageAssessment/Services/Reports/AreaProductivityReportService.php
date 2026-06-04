@@ -58,11 +58,11 @@ class AreaProductivityReportService
                 : 'All',
             'rows' => $rows,
             'filters' => [
-                'governorate' => (string) ($filters['governorate'] ?? ''),
-                'municipalitie' => (string) ($filters['municipalitie'] ?? ''),
-                'neighborhood' => (string) ($filters['neighborhood'] ?? ''),
-                'zone_code' => (string) ($filters['zone_code'] ?? ''),
-                'assignedto' => (string) ($filters['assignedto'] ?? ''),
+                'governorate' => $this->filterValues($filters['governorate'] ?? null),
+                'municipalitie' => $this->filterValues($filters['municipalitie'] ?? null),
+                'neighborhood' => $this->filterValues($filters['neighborhood'] ?? null),
+                'zone_code' => $this->filterValues($filters['zone_code'] ?? null),
+                'assignedto' => $this->filterValues($filters['assignedto'] ?? null),
             ],
             'filter_options' => $this->filterOptions($type),
             'charts' => [
@@ -290,12 +290,17 @@ class AreaProductivityReportService
         ?Carbon $toDate,
     ): void {
         foreach ($columnMap as $filterKey => $column) {
-            if (filled($filters[$filterKey] ?? null)) {
-                if (str_contains($column, '(')) {
-                    $query->whereRaw("{$column} = ?", [(string) $filters[$filterKey]]);
-                } else {
-                    $query->where($column, (string) $filters[$filterKey]);
-                }
+            $values = $this->filterValues($filters[$filterKey] ?? null);
+
+            if ($values === []) {
+                continue;
+            }
+
+            if (str_contains($column, '(')) {
+                $placeholders = collect($values)->map(fn (): string => '?')->implode(', ');
+                $query->whereRaw("{$column} in ({$placeholders})", $values);
+            } else {
+                $query->whereIn($column, $values);
             }
         }
 
@@ -325,6 +330,23 @@ class AreaProductivityReportService
             'from' => $fromDate,
             'to' => $toDate,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function filterValues(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        return collect(is_array($value) ? $value : [$value])
+            ->map(fn (mixed $item): string => trim((string) $item))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function buildingBackedFilterOptions(): array
