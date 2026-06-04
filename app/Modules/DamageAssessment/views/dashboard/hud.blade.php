@@ -664,6 +664,12 @@
             <option value="gray-vector">ArcGIS Light Gray</option>
             <option value="dark-gray-vector">ArcGIS Dark Gray</option>
         </select>
+        <label for="hudBoundaryMode" class="mt-2">حدود الخريطة</label>
+        <select id="hudBoundaryMode" class="form-select">
+            <option value="governorates" selected>المحافظات</option>
+            <option value="neighborhoods">المناطق</option>
+            <option value="none">بدون حدود</option>
+        </select>
     </div>
 
     <div class="hud-container">
@@ -1078,6 +1084,8 @@
         const buildingMunicipalityReports = @json($buildingMunicipalityReports);
         const unitMunicipalityReports = @json($unitMunicipalityReports);
         const buildingLayerUrl = @json($buildingLayerUrl);
+        const governoratesBoundaryLayerUrl = @json($governoratesBoundaryLayerUrl);
+        const neighborhoodsBoundaryLayerUrl = @json($neighborhoodsBoundaryLayerUrl);
         const arcgisToken = @json($token);
         const assessmentBaseUrl = @json(url('damage-assessment/assessment'));
         const auditBaseUrl = window.location.pathname.replace(/\/damageAssessment\/hud\/?$/, '/showAssessmentAudit');
@@ -1113,6 +1121,153 @@
                     token: arcgisToken,
                     expires: Date.now() + (60 * 60 * 1000)
                 });
+            }
+
+            [governoratesBoundaryLayerUrl, neighborhoodsBoundaryLayerUrl]
+                .filter(Boolean)
+                .forEach(function (boundaryLayerUrl) {
+                    if (arcgisToken) {
+                        esriId.registerToken({
+                            server: boundaryLayerUrl,
+                            token: arcgisToken,
+                            expires: Date.now() + (60 * 60 * 1000)
+                        });
+                    }
+                });
+
+            const boundaryPalette = [
+                [0, 242, 254, 0.22],
+                [0, 255, 135, 0.20],
+                [250, 232, 19, 0.22],
+                [255, 0, 85, 0.20],
+                [178, 92, 255, 0.22],
+                [255, 139, 51, 0.20],
+                [85, 170, 255, 0.22],
+                [255, 255, 255, 0.16]
+            ];
+
+            function boundaryOutlineColor(fillColor) {
+                return [fillColor[0], fillColor[1], fillColor[2], 0.95];
+            }
+
+            function boundaryDefaultSymbol(fillColor = [120, 150, 180, 0.14]) {
+                return {
+                    type: 'simple-fill',
+                    color: fillColor,
+                    outline: {
+                        color: boundaryOutlineColor(fillColor),
+                        width: 1.3
+                    }
+                };
+            }
+
+            function createBoundaryLayer(layerUrl, title, visible) {
+                return new FeatureLayer({
+                    url: layerUrl,
+                    title,
+                    visible,
+                    opacity: 1,
+                    outFields: ['*'],
+                    renderer: {
+                        type: 'simple',
+                        symbol: boundaryDefaultSymbol()
+                    }
+                });
+            }
+
+            function boundaryNameField(layer, preferredFields) {
+                const fields = layer.fields || [];
+                const textFields = fields.filter(function (field) {
+                    return String(field.type).toLowerCase() === 'string';
+                });
+                const candidates = preferredFields.concat([
+                    'name',
+                    'name_ar',
+                    'name_en',
+                    'arabic_name',
+                    'english_name'
+                ]);
+
+                for (const candidate of candidates) {
+                    const match = textFields.find(function (field) {
+                        return String(field.name).toLowerCase() === String(candidate).toLowerCase();
+                    });
+
+                    if (match) {
+                        return match.name;
+                    }
+                }
+
+                return textFields[0]?.name || fields[0]?.name || null;
+            }
+
+            function applyBoundaryRenderer(layer, preferredFields, title) {
+                return layer.load()
+                    .then(function () {
+                        const fieldName = boundaryNameField(layer, preferredFields);
+
+                        if (!fieldName) {
+                            return;
+                        }
+
+                        layer.labelingInfo = [{
+                            labelExpressionInfo: {
+                                expression: "DefaultValue($feature['" + fieldName.replace(/'/g, "\\'") + "'], '')"
+                            },
+                            labelPlacement: 'always-horizontal',
+                            symbol: {
+                                type: 'text',
+                                color: [255, 255, 255, 0.92],
+                                haloColor: [3, 10, 24, 0.92],
+                                haloSize: 1.4,
+                                font: {
+                                    family: 'Cairo',
+                                    size: 10,
+                                    weight: 'bold'
+                                }
+                            }
+                        }];
+                        layer.labelsVisible = true;
+
+                        const query = layer.createQuery();
+                        query.where = '1=1';
+                        query.outFields = [fieldName];
+                        query.returnGeometry = false;
+                        query.returnDistinctValues = true;
+
+                        return layer.queryFeatures(query).then(function (result) {
+                            const values = Array.from(new Set(result.features
+                                .map(function (feature) {
+                                    return feature.attributes[fieldName];
+                                })
+                                .filter(function (fieldValue) {
+                                    return fieldValue !== null && fieldValue !== undefined && String(fieldValue).trim() !== '';
+                                })))
+                                .sort(function (first, second) {
+                                    return String(first).localeCompare(String(second), 'ar');
+                                });
+
+                            layer.renderer = {
+                                type: 'unique-value',
+                                field: fieldName,
+                                defaultSymbol: boundaryDefaultSymbol(),
+                                defaultLabel: 'غير محدد',
+                                uniqueValueInfos: values.map(function (fieldValue, index) {
+                                    const fillColor = boundaryPalette[index % boundaryPalette.length];
+
+                                    return {
+                                        value: fieldValue,
+                                        label: String(fieldValue),
+                                        symbol: boundaryDefaultSymbol(fillColor)
+                                    };
+                                })
+                            };
+                            layer.title = title;
+                        });
+                    })
+                    .catch(function (error) {
+                        console.error('HUD boundary layer failed:', title, error);
+                    });
             }
 
             const damageRenderer = {
@@ -1716,6 +1871,16 @@
                     content: buildBuildingPopup
                 }
             });
+            const governoratesBoundaryLayer = createBoundaryLayer(
+                governoratesBoundaryLayerUrl,
+                'حدود المحافظات',
+                true
+            );
+            const neighborhoodsBoundaryLayer = createBoundaryLayer(
+                neighborhoodsBoundaryLayerUrl,
+                'حدود المناطق',
+                false
+            );
             const gazaStripExtent = new Extent({
                 xmin: 34.18,
                 ymin: 31.20,
@@ -1728,7 +1893,11 @@
 
             const map = new Map({
                 basemap: 'streets-vector',
-                layers: [buildingsLayer]
+                layers: [
+                    governoratesBoundaryLayer,
+                    neighborhoodsBoundaryLayer,
+                    buildingsLayer
+                ]
             });
 
             const view = new MapView({
@@ -1752,10 +1921,20 @@
             view.ui.components = [];
             view.ui.add(new Legend({
                 view,
-                layerInfos: [{
-                    layer: buildingsLayer,
-                    title: 'Damage Symbology'
-                }]
+                layerInfos: [
+                    {
+                        layer: governoratesBoundaryLayer,
+                        title: 'المحافظات'
+                    },
+                    {
+                        layer: neighborhoodsBoundaryLayer,
+                        title: 'المناطق'
+                    },
+                    {
+                        layer: buildingsLayer,
+                        title: 'Damage Symbology'
+                    }
+                ]
             }), 'bottom-right');
             view.ui.add(new ScaleBar({ view, unit: 'metric' }), 'bottom-left');
 
@@ -1774,7 +1953,27 @@
                 map.basemap = event.target.value;
             });
 
+            document.getElementById('hudBoundaryMode')?.addEventListener('change', function (event) {
+                governoratesBoundaryLayer.visible = event.target.value === 'governorates';
+                neighborhoodsBoundaryLayer.visible = event.target.value === 'neighborhoods';
+            });
+
             view.when(function () {
+                applyBoundaryRenderer(governoratesBoundaryLayer, [
+                    'governorate',
+                    'governorate_name',
+                    'gov_name',
+                    'governorate_ar',
+                    'governorate_en'
+                ], 'حدود المحافظات');
+                applyBoundaryRenderer(neighborhoodsBoundaryLayer, [
+                    'neighborhood',
+                    'neighborhood_name',
+                    'neighbrhood',
+                    'neighbrhood_name',
+                    'municipalitie',
+                    'area_name'
+                ], 'حدود المناطق');
                 view.goTo(gazaStripExtent, { duration: 1200 }).catch(function () { });
                 initializeHudMapFilters();
             });

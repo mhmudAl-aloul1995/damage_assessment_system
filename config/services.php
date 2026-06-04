@@ -65,6 +65,16 @@ return [
             'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1'
         ),
 
+        'governorates_boundaries_url' => env(
+            'ARCGIS_GOVERNORATES_BOUNDARIES_URL',
+            'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/Features_gdb/FeatureServer/1'
+        ),
+
+        'neighborhoods_boundaries_url' => env(
+            'ARCGIS_NEIGHBORHOODS_BOUNDARIES_URL',
+            'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/Features_gdb/FeatureServer/0'
+        ),
+
         'public_building_survey_layer_url' => env(
             'ARCGIS_PUBLIC_BUILDING_SURVEY_LAYER_URL',
             'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_409593086b6249549601f0f8c6a3007a/FeatureServer'

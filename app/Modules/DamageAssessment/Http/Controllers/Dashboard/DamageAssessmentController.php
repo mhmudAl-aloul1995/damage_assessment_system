@@ -208,6 +208,8 @@ class DamageAssessmentController extends Controller
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
         $buildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.buildings_url'));
+        $governoratesBoundaryLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.governorates_boundaries_url'));
+        $neighborhoodsBoundaryLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.neighborhoods_boundaries_url'));
 
         $buildingStats = Building::query()
             ->selectRaw("
@@ -449,6 +451,8 @@ class DamageAssessmentController extends Controller
             'unitMunicipalityReports' => $hudDashboardData['unitMunicipalityReports'],
             'mapPoints' => $mapPoints,
             'buildingLayerUrl' => $buildingLayerUrl,
+            'governoratesBoundaryLayerUrl' => $governoratesBoundaryLayerUrl,
+            'neighborhoodsBoundaryLayerUrl' => $neighborhoodsBoundaryLayerUrl,
             'token' => $token,
         ]);
     }
