@@ -109,6 +109,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('wrapper.append(title, actions, table)', false)
         ->assertSee('security_priority', false)
         ->assertSee('buildingNameLabelingInfo', false)
+        ->assertSee('minScale: 3500', false)
         ->assertSee('DefaultValue($feature.building_name, \'\')', false)
         ->assertSee('labelsVisible: true', false)
         ->assertSee('Lower(Trim(DefaultValue($feature.assessment_obstacle', false)

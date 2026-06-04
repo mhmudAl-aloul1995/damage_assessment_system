@@ -1342,6 +1342,7 @@
                 ]
             };
             const buildingNameLabelingInfo = [{
+                minScale: 3500,
                 labelExpressionInfo: {
                     expression: "DefaultValue($feature.building_name, '')"
                 },
