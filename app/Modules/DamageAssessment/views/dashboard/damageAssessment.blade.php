@@ -201,7 +201,7 @@
 			--summary-label-size: clamp(0.72rem, 0.66rem + 0.22vw, 0.92rem);
 			--summary-number-size: clamp(0.82rem, 0.78rem + 0.18vw, 1rem);
 			--summary-total-size: clamp(2rem, 1.8rem + 0.8vw, 2.8rem);
-			--summary-gap: 0.75rem;
+			--summary-gap: 0.55rem;
 			--summary-body-inline-space: 2.25rem;
 			--summary-body-padding-x: 1.5rem;
 			--summary-body-padding-y: 1.25rem;
@@ -281,15 +281,15 @@
 		}
 
 		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100>.mb-1.pe-3.flex-grow-1 a {
-			display: -webkit-box;
-			-webkit-box-orient: vertical;
-			-webkit-line-clamp: 2;
-			overflow: hidden;
-			line-height: 1.35;
-			min-height: calc(1.35em * 2);
+			display: block;
+			line-height: 1.25;
+			min-height: 1.25em;
 			font-size: var(--summary-label-size) !important;
+			overflow: visible;
+			text-wrap: nowrap;
+			white-space: nowrap;
 			word-break: normal;
-			overflow-wrap: anywhere;
+			overflow-wrap: normal;
 		}
 
 		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100>.fw-bold,
@@ -300,7 +300,7 @@
 		}
 
 		.damage-dashboard-stats .symbol.symbol-25px.w-25px.me-5 {
-			margin-inline-end: clamp(0.75rem, 0.55rem + 0.35vw, 1rem) !important;
+			margin-inline-end: clamp(0.45rem, 0.35rem + 0.25vw, 0.75rem) !important;
 		}
 
 		.damage-dashboard-stats .dashboard-summary-body .d-flex.align-items-center.mb-6 {
@@ -321,7 +321,7 @@
 				--summary-label-size: clamp(0.68rem, 0.63rem + 0.18vw, 0.82rem);
 				--summary-number-size: clamp(0.78rem, 0.74rem + 0.14vw, 0.9rem);
 				--summary-total-size: clamp(1.75rem, 1.6rem + 0.45vw, 2.25rem);
-				--summary-gap: 0.65rem;
+				--summary-gap: 0.5rem;
 				--summary-body-inline-space: 1.6rem;
 				--summary-body-padding-x: 1.25rem;
 				--summary-body-padding-y: 1rem;
@@ -339,7 +339,7 @@
 				--summary-label-size: clamp(0.64rem, 0.6rem + 0.16vw, 0.74rem);
 				--summary-number-size: clamp(0.72rem, 0.68rem + 0.12vw, 0.82rem);
 				--summary-total-size: clamp(1.5rem, 1.38rem + 0.32vw, 1.95rem);
-				--summary-gap: 0.55rem;
+				--summary-gap: 0.45rem;
 				--summary-body-inline-space: 1rem;
 				--summary-body-padding-x: 1rem;
 				--summary-body-padding-y: 0.9rem;
@@ -357,7 +357,7 @@
 				--summary-label-size: clamp(0.6rem, 0.58rem + 0.1vw, 0.68rem);
 				--summary-number-size: clamp(0.68rem, 0.66rem + 0.08vw, 0.76rem);
 				--summary-total-size: clamp(1.3rem, 1.2rem + 0.22vw, 1.65rem);
-				--summary-gap: 0.5rem;
+				--summary-gap: 0.4rem;
 				--summary-body-inline-space: 0.75rem;
 				--summary-body-padding-x: 0.75rem;
 				--summary-body-padding-y: 0.75rem;
