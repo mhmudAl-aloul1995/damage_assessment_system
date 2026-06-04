@@ -54,3 +54,19 @@ test('dashboard toolbar has responsive control groups for all devices', function
         ->toContain('flex: 1 1 100%;')
         ->toContain('width: 100% !important;');
 });
+
+test('dashboard summary icons match labels and use a consistent size', function () {
+    $dashboardView = file_get_contents(base_path('app/Modules/DamageAssessment/views/dashboard/damageAssessment.blade.php'));
+
+    expect($dashboardView)
+        ->toContain('.dashboard-summary-body .symbol-label .ki-duotone')
+        ->toContain('font-size: 1.15rem !important;')
+        ->toContain('ki-shield-cross')
+        ->toContain('ki-rescue')
+        ->toContain('ki-questionnaire-tablet')
+        ->toContain('ki-route')
+        ->toContain('ki-check-circle')
+        ->toContain('ki-warning-2')
+        ->toContain('ki-flash-circle')
+        ->toContain('ki-bucket');
+});
