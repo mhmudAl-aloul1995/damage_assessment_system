@@ -22,9 +22,10 @@ test('dashboard summary cards use compact vertical spacing', function () {
         ->toContain('--summary-body-inline-space: 0.75rem;')
         ->toContain('--summary-item-min-height: 2.9rem;')
         ->toContain('--summary-item-min-height: 2.3rem;')
-        ->toContain('--summary-row-gap: 0.35rem;')
-        ->toContain('--summary-row-gap: 0.3rem;')
-        ->toContain('--summary-row-gap: 0.25rem;');
+        ->toContain('--summary-row-gap: 0.5rem;')
+        ->toContain('--summary-row-gap: 0.45rem;')
+        ->toContain('--summary-row-gap: 0.4rem;')
+        ->toContain('--summary-row-gap: 0.35rem;');
 
     expect($labelMatches['css'] ?? '')
         ->toContain('display: block;')
