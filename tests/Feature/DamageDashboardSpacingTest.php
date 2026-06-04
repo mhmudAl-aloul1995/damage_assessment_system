@@ -33,3 +33,19 @@ test('dashboard summary cards use compact vertical spacing', function () {
         ->toContain('overflow-wrap: normal;')
         ->not->toContain('-webkit-line-clamp');
 });
+
+test('dashboard toolbar has responsive control groups for all devices', function () {
+    $dashboardView = file_get_contents(base_path('app/Modules/DamageAssessment/views/dashboard/damageAssessment.blade.php'));
+
+    expect($dashboardView)
+        ->toContain('toolbar-control-group toolbar-neighborhood-group')
+        ->toContain('toolbar-control-group toolbar-date-group')
+        ->toContain('toolbar-control-group toolbar-period-group')
+        ->toContain('@media (min-width: 768px) and (max-width: 1199.98px)')
+        ->toContain('@media (max-width: 767.98px)')
+        ->toContain('@media (max-width: 420px)')
+        ->toContain('grid-template-columns: repeat(2, minmax(0, 1fr));')
+        ->toContain('grid-template-columns: minmax(0, 1fr);')
+        ->toContain('flex: 1 1 100%;')
+        ->toContain('width: 100% !important;');
+});

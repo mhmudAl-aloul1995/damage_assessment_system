@@ -113,7 +113,8 @@
 			display: flex;
 			flex-wrap: wrap;
 			gap: 1rem;
-			justify-content: space-between;
+			justify-content: flex-end;
+			width: 100%;
 		}
 
 		.damage-dashboard-toolbar-actions {
@@ -122,6 +123,22 @@
 			display: flex;
 			flex-wrap: wrap;
 			gap: 0.75rem;
+			justify-content: flex-end;
+			min-width: 0;
+			width: 100%;
+		}
+
+		.damage-dashboard-toolbar .toolbar-control-group {
+			align-items: center;
+			display: flex;
+			flex: 0 1 auto;
+			gap: 0.5rem;
+			min-width: 0;
+		}
+
+		.damage-dashboard-toolbar .toolbar-period-group {
+			flex-wrap: wrap;
+			justify-content: flex-end;
 		}
 
 		.damage-dashboard-toolbar .toolbar-label {
@@ -148,6 +165,7 @@
 			color: var(--bs-gray-600);
 			font-weight: 700;
 			min-width: 72px;
+			white-space: nowrap;
 		}
 
 		.damage-dashboard-toolbar .toolbar-period-button.active {
@@ -156,10 +174,14 @@
 		}
 
 		.damage-dashboard-toolbar .toolbar-neighborhood-wrap {
+			flex: 1 1 168px;
+			min-width: 150px;
 			width: 168px;
 		}
 
 		.damage-dashboard-toolbar .toolbar-date-range-wrap {
+			flex: 1 1 210px;
+			min-width: 180px;
 			width: 210px;
 		}
 
@@ -175,21 +197,71 @@
 		@media (max-width: 767.98px) {
 			.damage-dashboard-toolbar {
 				margin-inline: 0;
-				padding-inline: 1rem;
+				padding: 0.85rem;
 			}
 
-			.damage-dashboard-toolbar-main,
-			.damage-dashboard-toolbar-actions {
+			.damage-dashboard-toolbar-main {
 				align-items: stretch;
+				gap: 0.75rem;
 				width: 100%;
 			}
 
-			.damage-dashboard-toolbar .toolbar-neighborhood-wrap {
-				width: 100% !important;
+			.damage-dashboard-toolbar-actions {
+				align-items: stretch;
+				gap: 0.75rem;
+				justify-content: stretch;
+				width: 100%;
 			}
 
+			.damage-dashboard-toolbar .toolbar-control-group {
+				align-items: stretch;
+				flex: 1 1 100%;
+				flex-direction: column-reverse;
+				gap: 0.4rem;
+			}
+
+			.damage-dashboard-toolbar .toolbar-period-group {
+				display: grid;
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+
+			.damage-dashboard-toolbar .toolbar-period-group .toolbar-label {
+				grid-column: 1 / -1;
+			}
+
+			.damage-dashboard-toolbar .toolbar-period-button {
+				min-width: 0;
+				width: 100%;
+			}
+
+			.damage-dashboard-toolbar .toolbar-label {
+				white-space: normal;
+			}
+
+			.damage-dashboard-toolbar .toolbar-neighborhood-wrap,
 			.damage-dashboard-toolbar .toolbar-date-range-wrap {
+				min-width: 0;
 				width: 100% !important;
+			}
+		}
+
+		@media (min-width: 768px) and (max-width: 1199.98px) {
+			.damage-dashboard-toolbar-actions {
+				justify-content: flex-start;
+			}
+
+			.damage-dashboard-toolbar .toolbar-control-group {
+				flex: 1 1 calc(50% - 0.75rem);
+			}
+
+			.damage-dashboard-toolbar .toolbar-period-group {
+				flex: 1 1 100%;
+			}
+		}
+
+		@media (max-width: 420px) {
+			.damage-dashboard-toolbar .toolbar-period-group {
+				grid-template-columns: minmax(0, 1fr);
 			}
 		}
 
@@ -483,7 +555,7 @@
 			<div class="damage-dashboard-toolbar-actions">
 
 
-				<div class="d-flex align-items-center gap-2">
+				<div class="toolbar-control-group toolbar-neighborhood-group">
 					<div class="toolbar-neighborhood-wrap">
 						<select id="dashboard_toolbar_neighborhood"
 							class="form-select form-select-sm toolbar-neighborhood-select" data-control="select2"
@@ -502,7 +574,7 @@
 
 				<div class="separator separator-vertical h-30px d-none d-md-block"></div>
 
-				<div class="d-flex align-items-center gap-2">
+				<div class="toolbar-control-group toolbar-date-group">
 					<div class="toolbar-date-range-wrap">
 						<input type="text" id="dashboard_toolbar_date_range"
 							class="form-control form-control-sm toolbar-date-range-input"
@@ -515,7 +587,7 @@
 
 				<div class="separator separator-vertical h-30px d-none d-md-block"></div>
 
-				<div class="d-flex align-items-center flex-wrap gap-2" data-kt-buttons="true">
+				<div class="toolbar-control-group toolbar-period-group" data-kt-buttons="true">
 					<button type="button"
 						class="btn btn-sm toolbar-period-button dashboard-toolbar-period @if ($dashboardFilters['period'] === 'day') active @endif"
 						data-period="day">{{ __('ui.damage_dashboard.yesterday') }}</button>
