@@ -2,6 +2,7 @@
 
 test('audit table keeps all columns with responsive text cells', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/audit.blade.php');
+    $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');
     $exportService = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Services/Audit/AuditExportService.php');
 
     expect($view)
@@ -45,11 +46,18 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('auditExportModal')
         ->toContain('auditExportForm')
         ->toContain("route('audit.export')")
+        ->toContain('notes_history')
+        ->toContain('no_notes_history')
+        ->toContain('notesHistory')
+        ->toContain('escapeAuditCell(item.notes)')
         ->toContain('building_columns[]')
         ->toContain('housing_columns[]')
         ->toContain('toggle_select_column')
         ->toContain('const selectColumn = table.column(0)')
         ->toContain('visible: false');
+
+    expect($controller)
+        ->toContain('show_all_notes');
 
     expect($exportService)
         ->toContain('public function buildingColumns(): array')

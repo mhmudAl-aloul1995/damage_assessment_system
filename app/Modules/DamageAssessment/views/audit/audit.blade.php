@@ -474,7 +474,7 @@
 		<div class="modal-dialog modal-dialog-centered mw-1000px mw-lg-1400px">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h2 class="fw-bold" id="notesHistoryModalTitle">{{ __('ui.audit.status_history') }}</h2>
+					<h2 class="fw-bold" id="notesHistoryModalTitle">{{ __('ui.audit.notes_history') }}</h2>
 					<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
 						<i class="ki-duotone ki-cross fs-1"></i>
 					</div>
@@ -1331,7 +1331,7 @@
 				let globalid = $(this).data('globalid');
 				let buildingName = $(this).data('building-name') || @json(__('ui.audit.default_building'));
 
-				$('#notesHistoryModalTitle').text(@json(__('ui.audit.status_history')) + ' - ' + buildingName);
+				$('#notesHistoryModalTitle').text(@json(__('ui.audit.notes_history')) + ' - ' + buildingName);
 				$('#buildingHistoryTableBody').html(`
 																																						<tr>
 																																							<td colspan="6" class="text-center">${@json(__('ui.audit.loading'))}</td>
@@ -1347,20 +1347,26 @@
 					success: function (response) {
 						let rows = '';
 
-						if (response.status && response.history.length > 0) {
-							response.history.forEach(function (item) {
+						const notesHistory = response.status && Array.isArray(response.history)
+							? response.history.filter(function (item) {
+								return item.notes !== null && item.notes !== undefined && String(item.notes).trim() !== '';
+							})
+							: [];
+
+						if (notesHistory.length > 0) {
+							notesHistory.forEach(function (item) {
 								rows += `
 																																										<tr>
-																																											<td>${item.status_name}</td>
-																																											<td>${item.user_name}</td>
-																																											<td>${item.role_name}</td>
-																																											<td>${item.notes}</td>
-																																											<td>${item.created_at}</td>
+																																											<td>${escapeAuditCell(item.status_name)}</td>
+																																											<td>${escapeAuditCell(item.user_name)}</td>
+																																											<td>${escapeAuditCell(item.role_name)}</td>
+																																											<td><span class="audit-cell-text">${escapeAuditCell(item.notes)}</span></td>
+																																											<td>${escapeAuditCell(item.created_at)}</td>
 																																											<td>
 																																												${item.can_delete ? `
 																																													<button type="button"
 																																														class="btn btn-sm btn-light-danger btn-delete-history"
-																																														data-id="${item.id}">
+																																														data-id="${escapeAuditCell(item.note_id ?? item.id)}">
 																																														${@json(__('ui.audit.delete_record'))}
 																																													</button>
 																																												` : '-'}
@@ -1371,7 +1377,7 @@
 						} else {
 							rows = `
 																																									<tr>
-																																										<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																																										<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_notes_history'))}</td>
 																																									</tr>
 																																								`;
 						}
@@ -1412,7 +1418,7 @@
 							if ($('#buildingHistoryTableBody tr').length === 0) {
 								$('#buildingHistoryTableBody').html(`
 																																								<tr>
-																																									<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_status_history'))}</td>
+																																									<td colspan="6" class="text-center text-muted">${@json(__('ui.audit.no_notes_history'))}</td>
 																																								</tr>
 																																							`);
 							}

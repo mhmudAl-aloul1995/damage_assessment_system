@@ -2933,7 +2933,7 @@ class auditController extends Controller
                     class="menu-link px-3 btn-show-history"
                     data-globalid="'.$row->globalid.'"
                     data-building-name="'.e($row->building_name).'">
-                    ملاحظات
+                    '.e(__('ui.audit.show_all_notes')).'
                 </a>
             </div>
 

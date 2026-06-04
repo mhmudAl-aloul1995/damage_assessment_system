@@ -398,6 +398,69 @@ it('allows reassigning an already assigned audit building to a different enginee
     }
 });
 
+it('keeps previous building notes visible in the notes history response', function () {
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $engineerStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $legalStatus = AssessmentStatus::query()->create([
+        'name' => 'legal_notes',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'Legal Notes',
+        'stage' => 'lawyer',
+        'order_step' => 2,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 7201,
+        'globalid' => 'audit-building-notes-history',
+        'building_name' => 'Building With Notes History',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-04-25 10:00:00',
+    ]);
+
+    BuildingStatusHistory::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $engineerStatus->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'Engineer note stays visible',
+    ]);
+
+    BuildingStatusHistory::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $legalStatus->id,
+        'user_id' => $user->id,
+        'type' => 'Legal Auditor',
+        'notes' => 'Lawyer note also stays visible',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.building.history', [
+            'globalid' => $building->globalid,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonFragment([
+            'notes' => 'Engineer note stays visible',
+        ])
+        ->assertJsonFragment([
+            'notes' => 'Lawyer note also stays visible',
+        ]);
+});
+
 it('hides audit management action buttons for temporary excepted users only', function () {
     $role = Role::query()->create([
         'name' => 'Database Officer',
