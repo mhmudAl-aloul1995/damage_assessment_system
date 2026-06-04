@@ -5,8 +5,11 @@ test('dashboard summary cards use compact vertical spacing', function () {
     preg_match('/\.damage-dashboard-stats \.dashboard-summary-body \{(?<css>.*?)\n\t\t\}/s', $dashboardView, $matches);
 
     expect($matches['css'] ?? '')
+        ->toContain('height: auto;')
+        ->toContain('max-height: none;')
         ->toContain('justify-content: flex-start;')
         ->toContain('gap: var(--summary-row-gap);')
+        ->toContain('overflow: visible;')
         ->not->toContain('justify-content: space-between;');
 
     expect($dashboardView)

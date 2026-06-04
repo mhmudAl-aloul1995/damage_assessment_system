@@ -211,9 +211,9 @@
 
 		.damage-dashboard-stats .dashboard-summary-card {
 			width: 100%;
-			height: var(--summary-card-height);
-			min-height: var(--summary-card-height);
-			max-height: var(--summary-card-height);
+			height: auto;
+			min-height: 0;
+			max-height: none;
 			margin-bottom: 0 !important;
 		}
 
@@ -233,15 +233,17 @@
 		}
 
 		.damage-dashboard-stats .dashboard-summary-body {
-			height: var(--summary-body-height);
-			min-height: var(--summary-body-height);
-			max-height: var(--summary-body-height);
+			height: auto;
+			min-height: 0;
+			max-height: none;
 			margin-top: calc(var(--summary-body-offset) * -1) !important;
 			display: flex;
 			flex-direction: column;
 			justify-content: flex-start;
 			gap: var(--summary-row-gap);
-			overflow: hidden;
+			overflow: visible;
+			padding-bottom: 1.25rem !important;
+			padding-top: 1.25rem !important;
 		}
 
 		.damage-dashboard-stats .dashboard-summary-header .d-flex.text-center.flex-column.text-white.pt-8 {
