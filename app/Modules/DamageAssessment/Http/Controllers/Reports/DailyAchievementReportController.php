@@ -39,8 +39,8 @@ class DailyAchievementReportController extends Controller
                 $this->buildDailyAchievementExportSheet(
                     title: 'Engineers',
                     reportTitle: 'Daily Achievement Report For Auditing Engineers',
-                    role: 'QC/QA Engineer',
-                    statusType: 'QC/QA Engineer',
+                    role: null,
+                    statusType: null,
                     statusNames: ['accepted_by_engineer', 'rejected_by_engineer', 'need_review'],
                     startDate: $startDate,
                     endDate: $endDate,
@@ -87,13 +87,8 @@ class DailyAchievementReportController extends Controller
         $startDate = Carbon::parse($request->input('start_date', now()->toDateString()))->startOfDay();
         $endDate = Carbon::parse($request->input('end_date', $startDate->toDateString()))->endOfDay();
 
-        $auditors = User::role('QC/QA Engineer')
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
         $statusCounts = HousingStatus::query()
             ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('housing_statuses.type', 'QC/QA Engineer')
             ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', [
                 'accepted_by_engineer',
@@ -109,6 +104,11 @@ class DailyAchievementReportController extends Controller
             ->groupBy('housing_statuses.user_id')
             ->get()
             ->keyBy('user_id');
+
+        $auditors = User::query()
+            ->whereIn('id', $statusCounts->keys()->filter())
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         $rows = $auditors->map(function ($auditor) use ($statusCounts) {
             $counts = $statusCounts->get($auditor->id);
@@ -146,7 +146,7 @@ class DailyAchievementReportController extends Controller
             'endDateValue' => $endDate->toDateString(),
             'rows' => $rows,
             'totals' => $totals,
-            'chartMetrics' => $this->buildChartMetrics('QC/QA Engineer', $trackedStatusNames, $startDate, $endDate),
+            'chartMetrics' => $this->buildChartMetrics(null, $trackedStatusNames, $startDate, $endDate),
             'summaryCards' => [
                 ['label' => 'Accepted', 'value' => $totals['accepted_count'], 'class' => 'success'],
                 ['label' => 'Rejected', 'value' => $totals['rejected_count'], 'class' => 'danger'],
@@ -259,8 +259,8 @@ class DailyAchievementReportController extends Controller
     private function buildDailyAchievementExportSheet(
         string $title,
         string $reportTitle,
-        string $role,
-        string $statusType,
+        ?string $role,
+        ?string $statusType,
         array $statusNames,
         string $startDate,
         string $endDate,
@@ -270,7 +270,7 @@ class DailyAchievementReportController extends Controller
 
         $dailyCounts = HousingStatus::query()
             ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('housing_statuses.type', $statusType)
+            ->when($statusType !== null, fn ($query) => $query->where('housing_statuses.type', $statusType))
             ->whereBetween('housing_statuses.updated_at', [$start, $end])
             ->whereIn('assessment_statuses.name', $statusNames)
             ->select(
@@ -292,9 +292,12 @@ class DailyAchievementReportController extends Controller
             ->groupBy('user_id')
             ->map(fn ($rows): int => (int) $rows->sum('count'));
 
-        $users = User::role($role)
-            ->orderBy('name')
-            ->get(['id', 'name'])
+        $usersQuery = User::query()
+            ->when($role !== null, fn ($query) => $query->role($role))
+            ->when($role === null, fn ($query) => $query->whereIn('id', $totalsByUser->keys()->filter()))
+            ->orderBy('name');
+
+        $users = $usersQuery->get(['id', 'name'])
             ->map(fn (User $user): array => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -317,11 +320,11 @@ class DailyAchievementReportController extends Controller
         ];
     }
 
-    private function buildChartMetrics(string $type, array $trackedStatusNames, Carbon $startDate, Carbon $endDate): array
+    private function buildChartMetrics(?string $type, array $trackedStatusNames, Carbon $startDate, Carbon $endDate): array
     {
         $auditedBuildingsCount = BuildingStatus::query()
             ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('building_statuses.type', $type)
+            ->when($type !== null, fn ($query) => $query->where('building_statuses.type', $type))
             ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', $trackedStatusNames)
             ->distinct('building_statuses.building_id')
@@ -329,7 +332,7 @@ class DailyAchievementReportController extends Controller
 
         $auditedHousingUnitsCount = HousingStatus::query()
             ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('housing_statuses.type', $type)
+            ->when($type !== null, fn ($query) => $query->where('housing_statuses.type', $type))
             ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', $trackedStatusNames)
             ->distinct('housing_statuses.housing_id')
