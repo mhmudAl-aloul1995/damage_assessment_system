@@ -29,9 +29,18 @@ class ArcgisAuditedUploadService
      */
     private array $targetBuildingGlobalIdsBySourceGlobalId = [];
 
-    public function upload(?int $buildingsLimit = null): array
-    {
+    public function upload(
+        ?int $buildingsLimit = null,
+        bool $withoutAttachments = false,
+        bool $attachmentsOnly = false,
+    ): array {
+        if ($withoutAttachments && $attachmentsOnly) {
+            throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
+        }
+
         $summary = $this->emptySummary();
+        $summary['without_attachments'] = $withoutAttachments ? 1 : 0;
+        $summary['attachments_only'] = $attachmentsOnly ? 1 : 0;
 
         echo "Generating token...\n";
         $this->refreshToken();
@@ -52,7 +61,7 @@ class ArcgisAuditedUploadService
             try {
                 echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
 
-                $this->uploadBuilding($building, $summary);
+                $this->uploadBuilding($building, $summary, ! $withoutAttachments, $attachmentsOnly);
                 $buildingGlobalId = $building->getAttribute('globalid');
 
                 if (is_string($buildingGlobalId) && $buildingGlobalId !== '') {
@@ -85,7 +94,7 @@ class ArcgisAuditedUploadService
             try {
                 echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
 
-                $this->uploadUnit($unit, $summary);
+                $this->uploadUnit($unit, $summary, ! $withoutAttachments, $attachmentsOnly);
 
                 echo "Unit uploaded/copied successfully.\n";
             } catch (Throwable $exception) {
@@ -140,6 +149,7 @@ class ArcgisAuditedUploadService
         $attributes['old_objectid_B'] = $building->objectid;
         $attributes['old_global_id_B'] = $building->getAttribute('globalid');
         $attributes['is_audited'] = 1;
+        $attributes = $this->moveCommentsRecommendations($attributes);
 
         $feature = ['attributes' => $attributes];
 
@@ -165,6 +175,7 @@ class ArcgisAuditedUploadService
         $attributes['old_objectid_U'] = $unit->objectid;
         $attributes['old_global_id_U'] = $unit->getAttribute('globalid');
         $attributes['is_audited'] = 1;
+        $attributes = $this->moveCommentsRecommendations($attributes);
 
         $parentGlobalId = $unit->getAttribute('parentglobalid');
 
@@ -187,8 +198,12 @@ class ArcgisAuditedUploadService
         return $feature;
     }
 
-    private function uploadBuilding(VBuildingAudited $building, array &$summary): void
-    {
+    private function uploadBuilding(
+        VBuildingAudited $building,
+        array &$summary,
+        bool $copyAttachments,
+        bool $attachmentsOnly,
+    ): void {
         $targetLayerId = $this->layerId('target_buildings_layer');
         $sourceLayerId = $this->layerId('source_buildings_layer');
 
@@ -202,12 +217,19 @@ class ArcgisAuditedUploadService
         ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
 
-        if ($targetObjectId === null) {
+        if ($attachmentsOnly && $targetObjectId === null) {
+            echo "Building not found in target. Skipping attachments.\n";
+            $summary['features_skipped']++;
+
+            return;
+        }
+
+        if (! $attachmentsOnly && $targetObjectId === null) {
             echo "Adding building feature...\n";
 
             $targetObjectId = $this->addFeature($targetLayerId, fn (string $token): array => $this->buildingFeature($building, $token));
             $summary['buildings_uploaded']++;
-        } else {
+        } elseif (! $attachmentsOnly) {
             echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
             echo "Updating building feature...\n";
 
@@ -219,6 +241,14 @@ class ArcgisAuditedUploadService
             );
 
             $summary['buildings_updated']++;
+        } else {
+            echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
+        }
+
+        if (! $copyAttachments) {
+            echo "Skipping building attachments.\n";
+
+            return;
         }
 
         echo "Copying building attachments...\n";
@@ -235,8 +265,12 @@ class ArcgisAuditedUploadService
         $summary['errors'] += $attachmentsSummary['errors'];
     }
 
-    private function uploadUnit(VHousingUnitAudited $unit, array &$summary): void
-    {
+    private function uploadUnit(
+        VHousingUnitAudited $unit,
+        array &$summary,
+        bool $copyAttachments,
+        bool $attachmentsOnly,
+    ): void {
         $targetLayerId = $this->layerId('target_units_layer');
         $sourceLayerId = $this->layerId('source_units_layer');
 
@@ -250,7 +284,14 @@ class ArcgisAuditedUploadService
         ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
 
-        if ($targetObjectId === null) {
+        if ($attachmentsOnly && $targetObjectId === null) {
+            echo "Unit not found in target. Skipping attachments.\n";
+            $summary['features_skipped']++;
+
+            return;
+        }
+
+        if (! $attachmentsOnly && $targetObjectId === null) {
 
             echo "Adding unit feature...\n";
 
@@ -258,7 +299,7 @@ class ArcgisAuditedUploadService
 
             $summary['units_uploaded']++;
 
-        } else {
+        } elseif (! $attachmentsOnly) {
 
             echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
             echo "Updating unit feature...\n";
@@ -271,6 +312,14 @@ class ArcgisAuditedUploadService
             );
 
             $summary['units_updated']++;
+        } else {
+            echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
+        }
+
+        if (! $copyAttachments) {
+            echo "Skipping unit attachments.\n";
+
+            return;
         }
 
         echo "Copying unit attachments...\n";
@@ -735,6 +784,23 @@ class ArcgisAuditedUploadService
             );
     }
 
+    private function moveCommentsRecommendations(array $attributes): array
+    {
+        foreach (['Comments_Recommendations', 'comments_recommendations'] as $field) {
+            if (! array_key_exists($field, $attributes)) {
+                continue;
+            }
+
+            if (! array_key_exists('comments_recommendations_v1', $attributes)) {
+                $attributes['comments_recommendations_v1'] = $attributes[$field];
+            }
+
+            unset($attributes[$field]);
+        }
+
+        return $attributes;
+    }
+
     private function whereValue(int|string $value): string
     {
         if (is_numeric($value)) {
@@ -842,6 +908,7 @@ class ArcgisAuditedUploadService
             'units_updated' => 0,
             'attachments_uploaded' => 0,
             'attachments_skipped' => 0,
+            'features_skipped' => 0,
             'errors' => 0,
         ];
     }

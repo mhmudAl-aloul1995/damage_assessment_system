@@ -8,7 +8,10 @@ use Illuminate\Support\Arr;
 
 class UploadAuditedToArcgis extends Command
 {
-    protected $signature = 'arcgis:upload-audited {--buildings-limit= : Upload only the first N audited buildings and their housing units.}';
+    protected $signature = 'arcgis:upload-audited
+        {--buildings-limit= : Upload only the first N audited buildings and their housing units.}
+        {--without-attachments : Upload or update features without copying attachments.}
+        {--attachments-only : Copy missing attachments for existing uploaded features only.}';
 
     protected $description = 'Upload audited building and housing unit views to ArcGIS and copy attachments.';
 
@@ -32,6 +35,8 @@ class UploadAuditedToArcgis extends Command
             $buildingsLimit = $this->option('buildings-limit');
             $summary = $arcgisAuditedUploadService->upload(
                 is_numeric($buildingsLimit) ? (int) $buildingsLimit : null,
+                (bool) $this->option('without-attachments'),
+                (bool) $this->option('attachments-only'),
             );
         } catch (\Throwable $e) {
             $this->error('Upload failed.');

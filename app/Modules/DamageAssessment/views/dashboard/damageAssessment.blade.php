@@ -376,11 +376,13 @@
 		}
 
 		.damage-dashboard-stats .dashboard-summary-body .symbol-label {
+			background-color: var(--bs-gray-100) !important;
 			height: 25px;
 			width: 25px;
 		}
 
 		.damage-dashboard-stats .dashboard-summary-body .symbol-label .ki-duotone {
+			color: var(--bs-gray-600);
 			font-size: 1.15rem !important;
 			line-height: 1;
 		}
@@ -708,8 +710,8 @@
 						<!-- Item 4 -->
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search fs-3"><span
-											class="path1"></span><span class="path2"></span></i></span>
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
@@ -736,7 +738,7 @@
 						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-warning-2"><span
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-cross-circle"><span
 											class="path1"></span><span class="path2"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
@@ -1127,7 +1129,7 @@
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
 								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search"><span
-											class="path1"></span><span class="path2"></span></i></span>
+											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
@@ -1154,7 +1156,7 @@
 						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-warning-2"><span
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-cross-circle"><span
 											class="path1"></span><span class="path2"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
@@ -1168,7 +1170,7 @@
 						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-home"><span
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-home-2"><span
 											class="path1"></span><span class="path2"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
@@ -1507,7 +1509,8 @@
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
 								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-people"><span
-											class="path1"></span><span class="path2"></span></i></span>
+											class="path1"></span><span class="path2"></span><span class="path3"></span><span
+											class="path4"></span><span class="path5"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
@@ -1521,7 +1524,7 @@
 						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-warning-2"><span
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-cross-circle"><span
 											class="path1"></span><span class="path2"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
@@ -1641,8 +1644,8 @@
 						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-warning-2"><span
-											class="path1"></span><span class="path2"></span></i></span>
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-information-4"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
@@ -1672,7 +1675,7 @@
 						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-warning-2"><span
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-cross-circle"><span
 											class="path1"></span><span class="path2"></span></i></span>
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">

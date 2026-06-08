@@ -558,3 +558,191 @@ it('skips source attachments that arcgis reports but cannot download', function 
 
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/addAttachment'));
 });
+
+it('moves comments recommendations into the v1 field before uploading', function () {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+        $table->text('Comments_Recommendations')->nullable();
+    });
+
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+    });
+
+    DB::table('v_buildings_audited')->insert([
+        'objectid' => 400,
+        'globalid' => 'building-with-comments',
+        'Comments_Recommendations' => str_repeat('Long comment ', 80),
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'Comments_Recommendations'],
+                ['name' => 'comments_recommendations_v1'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toHaveKey('comments_recommendations_v1');
+            expect($features[0]['attributes'])->not->toHaveKey('Comments_Recommendations');
+
+            return Http::response([
+                'addResults' => [
+                    ['success' => true, 'objectId' => 9400],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9400/attachments*' => Http::response(['attachmentInfos' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/400/attachments?*' => Http::response(['attachmentInfos' => []]),
+    ]);
+
+    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+});
+
+it('can upload features without copying attachments', function () {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+    });
+
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+    });
+
+    DB::table('v_buildings_audited')->insert([
+        'objectid' => 500,
+        'globalid' => 'building-without-attachments',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures' => Http::response([
+            'addResults' => [
+                ['success' => true, 'objectId' => 9500],
+            ],
+        ]),
+    ]);
+
+    $this->artisan('arcgis:upload-audited', ['--without-attachments' => true])->assertSuccessful();
+
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures');
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments'));
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/addAttachment'));
+});
+
+it('can copy attachments only for existing target features', function () {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+    });
+
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+    });
+
+    DB::table('v_buildings_audited')->insert([
+        'objectid' => 600,
+        'globalid' => 'building-attachments-only',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['objectid' => 9600]],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9600/attachments*' => Http::response(['attachmentInfos' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/600/attachments?*' => Http::response([
+            'attachmentInfos' => [
+                ['id' => 701, 'name' => 'photo.jpg', 'size' => 5],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/600/attachments/701*' => Http::response('image'),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9600/addAttachment*' => Http::response([
+            'addAttachmentResult' => ['success' => true],
+        ]),
+    ]);
+
+    $this->artisan('arcgis:upload-audited', ['--attachments-only' => true])->assertSuccessful();
+
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/addFeatures'));
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/updateFeatures'));
+    Http::assertSent(fn ($request): bool => str_starts_with($request->url(), 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9600/addAttachment'));
+});

@@ -61,12 +61,15 @@ test('dashboard summary icons match labels and use a consistent size', function 
     expect($dashboardView)
         ->toContain('.dashboard-summary-body .symbol-label .ki-duotone')
         ->toContain('font-size: 1.15rem !important;')
+        ->toContain('color: var(--bs-gray-600);')
         ->toContain('ki-shield-cross')
         ->toContain('ki-rescue')
         ->toContain('ki-questionnaire-tablet')
         ->toContain('ki-route')
         ->toContain('ki-check-circle')
-        ->toContain('ki-warning-2')
+        ->toContain('ki-cross-circle')
+        ->toContain('ki-information-4')
         ->toContain('ki-flash-circle')
-        ->toContain('ki-bucket');
+        ->toContain('ki-bucket')
+        ->not->toContain('ki-warning-2');
 });
