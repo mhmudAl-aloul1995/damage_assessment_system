@@ -2820,6 +2820,7 @@ class auditController extends Controller
             $query = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
+                'engineerStatus.user',
                 'lawyerStatus.status',
             ])
               //  ->whereIn('globalid', $globalIds)
@@ -2838,6 +2839,7 @@ class auditController extends Controller
 
                 return $countsByBuilding[$buildingGlobalId];
             };
+            $selectedEngineerStatuses = $this->selectedEngineerStatuses($request);
 
             return DataTables::of($query)
 
@@ -2869,11 +2871,9 @@ class auditController extends Controller
                 })
 
                 // Engineer Name
-                ->addColumn('engineer', function ($row) {
+                ->addColumn('engineer', function ($row) use ($selectedEngineerStatuses) {
 
-                    return $this->firstAndLastName($row->assignedUsers
-                        ->where('type', 'QC/QA Engineer')
-                        ->first()?->user?->name);
+                    return $this->auditEngineerName($row, $selectedEngineerStatuses);
                 })
 
                 // Lawyer Name
@@ -4206,6 +4206,49 @@ COALESCE(
         }
 
         return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function selectedEngineerStatuses(Request $request): array
+    {
+        $statuses = $request->input('eng_status', []);
+
+        if (! is_array($statuses)) {
+            $statuses = [$statuses];
+        }
+
+        return collect($statuses)
+            ->map(fn ($status): string => strtolower(trim((string) $status)))
+            ->filter(fn (string $status): bool => $status !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, string>  $selectedEngineerStatuses
+     */
+    private function auditEngineerName(Building $building, array $selectedEngineerStatuses): string
+    {
+        $assignedEngineerName = $building->assignedUsers
+            ->where('type', 'QC/QA Engineer')
+            ->first()
+            ?->user
+            ?->name;
+
+        if ($selectedEngineerStatuses === []) {
+            return $this->firstAndLastName($assignedEngineerName);
+        }
+
+        $currentStatus = strtolower(trim((string) $building->engineerStatus?->status?->name));
+
+        if ($currentStatus === 'assigned_to_engineer' || $currentStatus === 'pending' || $currentStatus === '') {
+            return $this->firstAndLastName($assignedEngineerName);
+        }
+
+        return $this->firstAndLastName($building->engineerStatus?->user?->name);
     }
 
     private function firstAndLastName(?string $name): string
