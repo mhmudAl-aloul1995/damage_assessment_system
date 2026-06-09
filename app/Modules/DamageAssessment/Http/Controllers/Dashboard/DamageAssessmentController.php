@@ -1162,6 +1162,7 @@ class DamageAssessmentController extends Controller
 
         $edits = collect();
         $allEdits = collect();
+        $isAssessmentReadOnly = request()->user()?->hasAnyRole(['Field Engineer', 'field Engineer']) ?? false;
 
         if ($globalid) {
             $edits = EditAssessment::with('user')
@@ -1445,7 +1446,11 @@ class DamageAssessmentController extends Controller
             </div>
         ';
             })
-            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type) {
+            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type, $isAssessmentReadOnly) {
+                if ($isAssessmentReadOnly) {
+                    return;
+                }
+
                 if ($row->name === 'attachments') {
                     return;
                 }

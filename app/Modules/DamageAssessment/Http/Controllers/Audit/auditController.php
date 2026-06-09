@@ -2820,7 +2820,6 @@ class auditController extends Controller
             $query = Building::with([
                 'assignedUsers.user',
                 'engineerStatus.status',
-                'engineerStatus.user',
                 'lawyerStatus.status',
             ])
               //  ->whereIn('globalid', $globalIds)
@@ -2839,7 +2838,6 @@ class auditController extends Controller
 
                 return $countsByBuilding[$buildingGlobalId];
             };
-            $selectedEngineerStatuses = $this->selectedEngineerStatuses($request);
 
             return DataTables::of($query)
 
@@ -2871,9 +2869,11 @@ class auditController extends Controller
                 })
 
                 // Engineer Name
-                ->addColumn('engineer', function ($row) use ($selectedEngineerStatuses) {
+                ->addColumn('engineer', function ($row) {
 
-                    return $this->auditEngineerName($row, $selectedEngineerStatuses);
+                    return $this->firstAndLastName($row->assignedUsers
+                        ->where('type', 'QC/QA Engineer')
+                        ->first()?->user?->name);
                 })
 
                 // Lawyer Name
@@ -2968,6 +2968,118 @@ class auditController extends Controller
         return View::make(
             'damage-assessment::audit.audit',
             compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions')
+        );
+    }
+
+    public function fieldEngineerAudit(Request $request, AuditTableService $auditTableService)
+    {
+        $user = Auth::user();
+
+        abort_unless($user?->hasAnyRole(['Field Engineer', 'field Engineer']), 403);
+
+        $fieldEngineerUsername = trim((string) $user->username_arcgis);
+
+        if ($request->ajax()) {
+            $query = Building::with([
+                'assignedUsers.user',
+                'engineerStatus.status',
+                'lawyerStatus.status',
+            ])
+                ->where('field_status', 'COMPLETED')
+                ->whereRaw('LOWER(TRIM(assignedto)) = ?', [strtolower($fieldEngineerUsername)]);
+
+            $auditTableService->applyFilters($query, $request, includeAssignmentFilters: false);
+            $auditTableService->applyStatusDateFilters($query, $request);
+
+            $housingStatusCounts = function ($row) use ($auditTableService): array {
+                static $countsByBuilding = [];
+
+                $buildingGlobalId = (string) $row->globalid;
+
+                if (! array_key_exists($buildingGlobalId, $countsByBuilding)) {
+                    $countsByBuilding[$buildingGlobalId] = $auditTableService->housingStatusCountsForBuilding($buildingGlobalId);
+                }
+
+                return $countsByBuilding[$buildingGlobalId];
+            };
+
+            return DataTables::of($query)
+                ->addColumn('building_name', function ($row) {
+                    return '<span class="text-gray-800 fw-bold">'.e($row->building_name ?? '-').'</span>';
+                })
+                ->addColumn('housing_status_progress', function ($row) use ($housingStatusCounts) {
+                    $counts = $housingStatusCounts($row);
+
+                    return $counts['housing_units_with_status_count'].' / '.$counts['housing_units_count'];
+                })
+                ->addColumn('housing_units_count', function ($row) use ($housingStatusCounts) {
+                    return $housingStatusCounts($row)['housing_units_count'];
+                })
+                ->addColumn('housing_units_with_status_count', function ($row) use ($housingStatusCounts) {
+                    return $housingStatusCounts($row)['housing_units_with_status_count'];
+                })
+                ->addColumn('engineer', function ($row) {
+                    return $this->firstAndLastName($row->assignedUsers
+                        ->where('type', 'QC/QA Engineer')
+                        ->first()?->user?->name);
+                })
+                ->addColumn('lawyer', function ($row) {
+                    return $this->firstAndLastName($row->assignedUsers
+                        ->where('type', 'Legal Auditor')
+                        ->first()?->user?->name);
+                })
+                ->addColumn('finalApproval', function ($row) {
+                    return $row->finalApproval?->status?->badge_html
+                        ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
+                })
+                ->addColumn('eng_status', function ($row) {
+                    return $row->engineerStatus?->status?->badge_html
+                        ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
+                })
+                ->addColumn('law_status', function ($row) {
+                    return $row->lawyerStatus?->status?->badge_html
+                        ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
+                })
+                ->addColumn('actions', function ($row) {
+                    $assessmentUrl = url("/damage-assessment/showAssessmentAudit/{$row->globalid}");
+
+                    return '<a target="_blank" class="btn btn-light-primary btn-sm" href="'.$assessmentUrl.'">الاستبيان</a>';
+                })
+                ->rawColumns(['building_name', 'eng_status', 'law_status', 'actions', 'finalApproval'])
+                ->make(true);
+        }
+
+        $users = collect();
+        $assignedTo = collect([(object) ['assignedto' => $fieldEngineerUsername]]);
+        $owners = Building::query()
+            ->whereRaw('LOWER(TRIM(assignedto)) = ?', [strtolower($fieldEngineerUsername)])
+            ->distinct('owner_name')
+            ->select('owner_name')
+            ->get();
+        $municip = Building::query()
+            ->whereRaw('LOWER(TRIM(assignedto)) = ?', [strtolower($fieldEngineerUsername)])
+            ->distinct('municipalitie')
+            ->select('municipalitie')
+            ->get();
+        $neighborhoods = Building::query()
+            ->whereRaw('LOWER(TRIM(assignedto)) = ?', [strtolower($fieldEngineerUsername)])
+            ->distinct()
+            ->pluck('neighborhood');
+        $assessments = Assessment::all();
+        $filterName = Filter::distinct('list_name')->pluck('list_name');
+        $filters = Filter::all();
+        $engineers = collect();
+        $lawyers = collect();
+
+        $auditExportService = app(AuditExportService::class);
+        $buildingExportColumns = $auditExportService->buildingColumns();
+        $housingExportColumns = $auditExportService->housingColumns();
+        $hideAuditManagementActions = true;
+        $isFieldEngineerAudit = true;
+
+        return View::make(
+            'damage-assessment::audit.audit',
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'isFieldEngineerAudit')
         );
     }
 
@@ -3222,6 +3334,8 @@ COALESCE(
 
     public function updateBuildingLegalChallenge(UpdateBuildingLegalChallengeRequest $request)
     {
+        $this->abortFieldEngineerWrite();
+
         $updated = Building::query()
             ->whereIn('objectid', $request->validated('building_ids'))
             ->update([
@@ -3239,6 +3353,8 @@ COALESCE(
 
     public function updateHousingLegalChallenge(UpdateHousingLegalChallengeRequest $request)
     {
+        $this->abortFieldEngineerWrite();
+
         $globalids = $request->validated('globalids')
             ?? [$request->validated('globalid')];
 
@@ -3259,6 +3375,8 @@ COALESCE(
 
     public function finalApproveSelected(Request $request)
     {
+        $this->abortFieldEngineerWrite();
+
         abort_unless(auth()->user()?->hasAnyRole(['Auditing Supervisor', 'Database Officer']), 403);
 
         $request->validate([
@@ -3569,6 +3687,8 @@ COALESCE(
 
     public function setStatus(Request $request)
     {
+        $this->abortFieldEngineerWrite();
+
         $request->validate([
             'globalid' => ['required', 'string'],
             'status' => ['required', 'in:rejected,accepted,need_review,legal_notes,undp_final_approve'],
@@ -3698,6 +3818,8 @@ COALESCE(
 
     public function setHousingStatus(Request $request)
     {
+        $this->abortFieldEngineerWrite();
+
         $request->validate([
             'globalid' => ['required', 'string'],
             'status' => ['required', 'in:rejected,accepted,need_review,legal_notes,undp_final_approve'],
@@ -4102,6 +4224,13 @@ COALESCE(
         $housingGlobalid = $request->housingGlobalid;
 
         $building = Building::where('globalid', $request->buildingGlobalid)->first();
+
+        abort_if(
+            Auth::user()?->hasAnyRole(['Field Engineer', 'field Engineer'])
+            && strtolower(trim((string) $building?->assignedto)) !== strtolower(trim((string) Auth::user()?->username_arcgis)),
+            403
+        );
+
         $HousingUnit = HousingUnit::where('parentglobalid', $request->buildingGlobalid)->get();
         $assessments = Assessment::all();
 
@@ -4120,8 +4249,9 @@ COALESCE(
             ->first()?->status?->name;
 
         $legalChallenges = self::LEGAL_CHALLENGES;
+        $isAssessmentReadOnly = Auth::user()?->hasAnyRole(['Field Engineer', 'field Engineer']);
 
-        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges'));
+        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly'));
     }
 
     public function housingUnitAudit(Request $request)
@@ -4208,47 +4338,9 @@ COALESCE(
         return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true);
     }
 
-    /**
-     * @return array<int, string>
-     */
-    private function selectedEngineerStatuses(Request $request): array
+    private function abortFieldEngineerWrite(): void
     {
-        $statuses = $request->input('eng_status', []);
-
-        if (! is_array($statuses)) {
-            $statuses = [$statuses];
-        }
-
-        return collect($statuses)
-            ->map(fn ($status): string => strtolower(trim((string) $status)))
-            ->filter(fn (string $status): bool => $status !== '')
-            ->unique()
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @param  array<int, string>  $selectedEngineerStatuses
-     */
-    private function auditEngineerName(Building $building, array $selectedEngineerStatuses): string
-    {
-        $assignedEngineerName = $building->assignedUsers
-            ->where('type', 'QC/QA Engineer')
-            ->first()
-            ?->user
-            ?->name;
-
-        if ($selectedEngineerStatuses === []) {
-            return $this->firstAndLastName($assignedEngineerName);
-        }
-
-        $currentStatus = strtolower(trim((string) $building->engineerStatus?->status?->name));
-
-        if ($currentStatus === 'assigned_to_engineer' || $currentStatus === 'pending' || $currentStatus === '') {
-            return $this->firstAndLastName($assignedEngineerName);
-        }
-
-        return $this->firstAndLastName($building->engineerStatus?->user?->name);
+        abort_if(Auth::user()?->hasAnyRole(['Field Engineer', 'field Engineer']), 403, 'هذا الاستبيان متاح للقراءة فقط.');
     }
 
     private function firstAndLastName(?string $name): string

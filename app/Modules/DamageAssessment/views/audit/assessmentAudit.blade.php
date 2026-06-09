@@ -7,6 +7,7 @@
     $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     $housingGlobalid = $housingGlobalid ?? null;
     $showHousingTab = filled($housingGlobalid);
+    $isAssessmentReadOnly = $isAssessmentReadOnly ?? false;
 @endphp
 
 @section('content')
@@ -613,7 +614,7 @@
                                                     Final Approve
                                                 </button>
                                             @endif
-                                            @unless(auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
+                                            @unless($isAssessmentReadOnly || auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
                                                 <button type="button" id="btn_building_legal_challenge"
                                                     class="btn btn-sm btn-light-warning"
                                                     onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
@@ -652,11 +653,13 @@
                             </div>
                             <div class="card-toolbar">
                                 <div class="d-flex flex-wrap gap-2">
+                                    @if(! $isAssessmentReadOnly)
                                     @hasanyrole('Legal Auditor|Database Officer')
                                     <button type="button" id="btn_housing_legal_challenge"
                                         class="btn btn-sm btn-light-warning"
                                         onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
                                     @endhasanyrole
+                                    @endif
                                     <button type="button" class="btn btn-sm btn-light-primary"
                                         onclick="reloadBuildingUnitsTable()">
                                         <i class="ki-duotone ki-arrows-circle fs-6"><span class="path1"></span><span
@@ -996,6 +999,7 @@
 @section('script')
     <script>
         let isAreaManager = @json(auth()->user()->hasRole('Area Manager'));
+        let isAssessmentReadOnly = @json($isAssessmentReadOnly);
         let notesContext = null;
         let pendingStatus = null;
         let pendingAuditType = null;
@@ -1148,7 +1152,7 @@
                                                                                                                                                                                                 <div class="assessment-answer">${row.answer || '-'}</div>
                                                                                                                                                                                             </div>
 
-                                                                                                                                                                                          ${!isAreaManager ? `
+                                                                                                                                                                                          ${!isAreaManager && !isAssessmentReadOnly ? `
                                                                                 <div class="col-xl-4 col-lg-6">
                                                                                     <div class="text-muted fs-8 mb-1">تعديل الإجابة</div>
                                                                                     <div class="assessment-edit">${row.editAnswer || '-'}</div>
@@ -1736,7 +1740,7 @@
         }
 
         function renderHistoryNoteCell(item) {
-            let canEdit = !!item.can_edit && !!item.note_id;
+            let canEdit = !isAssessmentReadOnly && !!item.can_edit && !!item.note_id;
             let title = canEdit
                 ? 'انقر مرتين للتعديل'
                 : (item.has_final_approve ? 'لا يمكن التعديل بعد الاعتماد النهائي' : '');

@@ -12,6 +12,10 @@ class AssessmentInlineEditController extends Controller
 {
     public function update(Request $request, AssessmentEditService $assessmentEditService): JsonResponse
     {
+        if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
+            abort(403, 'هذا الاستبيان متاح للقراءة فقط.');
+        }
+
         $request->merge([
             'globalid' => $request->input('globalid', $request->input('global_id')),
         ]);

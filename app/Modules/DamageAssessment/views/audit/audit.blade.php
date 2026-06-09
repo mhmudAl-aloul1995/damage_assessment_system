@@ -1,6 +1,9 @@
 @extends('layouts.app')
-@section('title', __('ui.audit.title'))
-@section('pageName', __('ui.audit.title'))
+@php
+	$isFieldEngineerAudit = $isFieldEngineerAudit ?? false;
+@endphp
+@section('title', $isFieldEngineerAudit ? 'مباني المهندس الميداني' : __('ui.audit.title'))
+@section('pageName', $isFieldEngineerAudit ? 'مباني المهندس الميداني' : __('ui.audit.title'))
 
 
 @section('content')
@@ -225,6 +228,7 @@
 								placeholder="ObjectID" />
 						</div>
 
+						@if(! $isFieldEngineerAudit)
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.engineer') }}</label>
 							<select id="filter_engineer" class="form-select form-select-solid" data-control="select2"
@@ -246,6 +250,7 @@
 								@endforeach
 							</select>
 						</div>
+						@endif
 
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.engineering_status') }}</label>
@@ -272,6 +277,7 @@
 							</select>
 						</div>
 
+						@if(! $isFieldEngineerAudit)
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.final_approval') }}</label>
 							<select id="filter_final_status" class="form-select form-select-solid" data-control="select2"
@@ -282,12 +288,14 @@
 								<option value="rejected">Rejected</option>
 							</select>
 						</div>
+						@endif
 
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.area') }}</label>
 							<input type="text" id="filter_area" class="form-control form-control-solid"
 								placeholder="{{ __('ui.audit.area_placeholder') }}" />
 						</div>
+						@if(! $isFieldEngineerAudit)
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.field_engineer') }}</label>
 							<select id="filter_field_engineer" class="form-select form-select-solid" data-control="select2"
@@ -298,6 +306,7 @@
 								@endforeach
 							</select>
 						</div>
+						@endif
 
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.damage_status') }}</label>
@@ -349,10 +358,12 @@
 						</div>
 					</div>
 					<div class="card-toolbar gap-3 flex-wrap justify-content-end">
+						@if(! $isFieldEngineerAudit)
 						<button type="button" class="btn btn-light-success btn-sm" data-bs-toggle="modal"
 							data-bs-target="#auditExportModal">
 							تصدير Excel <i class="ki-duotone ki-file-down"></i>
 						</button>
+						@endif
 						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
 							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
 						</button>
@@ -362,10 +373,12 @@
 							إظهار الصفوف الخطرة
 							<i class="ki-duotone ki-information-5"></i>
 						</button>
+						@if(! $isFieldEngineerAudit)
 						<button type="button" id="toggle_select_column" class="btn btn-light-primary btn-sm"
 							data-select-visible="false">
 							إظهار التحديد <i class="ki-duotone ki-check-square"></i>
 						</button>
+						@endif
 						@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
 							<button id="btn_final_approve" class="btn btn-warning btn-sm">
 								{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
@@ -957,7 +970,7 @@
 				processing: true,
 				serverSide: true,
 				ajax: {
-					url: "{{ route('audit.index') }}",
+					url: "{{ $isFieldEngineerAudit ? route('audit.fieldEngineer') : route('audit.index') }}",
 					data: function (d) {
 						Object.assign(d, auditFilterPayload());
 					}

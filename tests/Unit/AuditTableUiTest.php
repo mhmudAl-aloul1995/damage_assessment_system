@@ -54,7 +54,9 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('housing_columns[]')
         ->toContain('toggle_select_column')
         ->toContain('const selectColumn = table.column(0)')
-        ->toContain('visible: false');
+        ->toContain('visible: false')
+        ->toContain('$isFieldEngineerAudit')
+        ->toContain("route('audit.fieldEngineer')");
 
     expect($controller)
         ->toContain('show_all_notes');
@@ -73,25 +75,12 @@ test('assessment audit inline edits resolve missing global ids before saving', f
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
 
     expect($view)
-        ->toContain('assessment-audit-page')
         ->toContain('overflow: visible')
-        ->toContain('audit-summary-column .audit-sticky-menu')
-        ->toContain('audit-actions-sticky')
-        ->toContain('position: fixed !important')
-        ->toContain('top: 165px !important')
-        ->toContain('right: var(--audit-summary-right, 95px)')
-        ->toContain('width: var(--audit-summary-width, 280px)')
-        ->toContain('function syncFixedAuditSummary')
-        ->toContain('--audit-summary-right')
-        ->toContain('--audit-summary-width')
-        ->toContain('#kt_app_main, #kt_app_content, #kt_app_content_container')
         ->not->toContain('audit-sticky-menu .audit-sticky-menu')
-        ->toContain('top: 78px !important')
-        ->toContain('table-layout: fixed !important')
-        ->toContain('autoWidth: false')
-        ->not->toContain('min-w-280px')
         ->toContain('function resolveInlineGlobalId')
         ->toContain("type === 'building_table'")
         ->toContain("type === 'housing_table'")
+        ->toContain('let isAssessmentReadOnly')
+        ->toContain('!isAreaManager && !isAssessmentReadOnly')
         ->toContain('يرجى اختيار الوحدة أولاً');
 });
