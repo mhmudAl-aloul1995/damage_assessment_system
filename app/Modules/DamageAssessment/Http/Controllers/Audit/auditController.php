@@ -4224,10 +4224,14 @@ COALESCE(
         $housingGlobalid = $request->housingGlobalid;
 
         $building = Building::where('globalid', $request->buildingGlobalid)->first();
+        $user = Auth::user();
+        $canEditAssessment = $this->canEditAssessmentForBuilding($user, $building);
+        $canViewFieldAssessment = $this->canViewFieldAssessmentForBuilding($user, $building);
 
         abort_if(
-            Auth::user()?->hasAnyRole(['Field Engineer', 'field Engineer'])
-            && strtolower(trim((string) $building?->assignedto)) !== strtolower(trim((string) Auth::user()?->username_arcgis)),
+            $user?->hasAnyRole(['Field Engineer', 'field Engineer'])
+            && ! $canEditAssessment
+            && ! $canViewFieldAssessment,
             403
         );
 
@@ -4249,7 +4253,9 @@ COALESCE(
             ->first()?->status?->name;
 
         $legalChallenges = self::LEGAL_CHALLENGES;
-        $isAssessmentReadOnly = Auth::user()?->hasAnyRole(['Field Engineer', 'field Engineer']);
+        $isAssessmentReadOnly = $user?->hasAnyRole(['Field Engineer', 'field Engineer'])
+            && ! $canEditAssessment
+            && $canViewFieldAssessment;
 
         return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly'));
     }
@@ -4340,7 +4346,62 @@ COALESCE(
 
     private function abortFieldEngineerWrite(): void
     {
-        abort_if(Auth::user()?->hasAnyRole(['Field Engineer', 'field Engineer']), 403, 'هذا الاستبيان متاح للقراءة فقط.');
+        abort_if($this->isReadOnlyFieldEngineer(Auth::user()), 403, 'هذا الاستبيان متاح للقراءة فقط.');
+    }
+
+    private function isReadOnlyFieldEngineer(?User $user): bool
+    {
+        if (! $user?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
+            return false;
+        }
+
+        return ! $user->hasAnyRole([
+            'QC/QA Engineer',
+            'Engineering Auditor',
+            'Legal Auditor',
+            'Database Officer',
+            'Auditing Supervisor',
+        ]);
+    }
+
+    private function canViewFieldAssessmentForBuilding(?User $user, ?Building $building): bool
+    {
+        if (! $user?->hasAnyRole(['Field Engineer', 'field Engineer']) || ! $building instanceof Building) {
+            return false;
+        }
+
+        return strtolower(trim((string) $building->assignedto)) === strtolower(trim((string) $user->username_arcgis));
+    }
+
+    private function canEditAssessmentForBuilding(?User $user, ?Building $building): bool
+    {
+        if (! $user instanceof User || ! $building instanceof Building) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+            return true;
+        }
+
+        $assignmentTypes = [];
+
+        if ($user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
+            $assignmentTypes[] = 'QC/QA Engineer';
+        }
+
+        if ($user->hasRole('Legal Auditor')) {
+            $assignmentTypes[] = 'Legal Auditor';
+        }
+
+        if ($assignmentTypes === []) {
+            return false;
+        }
+
+        return AssignedAssessmentUser::query()
+            ->where('building_id', $building->objectid)
+            ->where('user_id', $user->id)
+            ->whereIn('type', $assignmentTypes)
+            ->exists();
     }
 
     private function firstAndLastName(?string $name): string

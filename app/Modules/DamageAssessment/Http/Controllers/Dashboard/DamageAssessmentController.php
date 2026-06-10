@@ -4,6 +4,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
+use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\Filter;
@@ -1162,7 +1163,12 @@ class DamageAssessmentController extends Controller
 
         $edits = collect();
         $allEdits = collect();
-        $isAssessmentReadOnly = request()->user()?->hasAnyRole(['Field Engineer', 'field Engineer']) ?? false;
+        $user = request()->user();
+        $building = $model instanceof Building
+            ? $model
+            : Building::query()->where('globalid', $model?->parentglobalid)->first();
+        $isAssessmentReadOnly = ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) ?? false)
+            && ! $this->canEditAssessmentForBuilding($user, $building);
 
         if ($globalid) {
             $edits = EditAssessment::with('user')
@@ -1507,6 +1513,37 @@ class DamageAssessmentController extends Controller
             })
             ->rawColumns(['answer', 'question', 'editAnswer', 'rowClass'])
             ->make(true);
+    }
+
+    private function canEditAssessmentForBuilding($user, ?Building $building): bool
+    {
+        if (! $user instanceof \App\Models\User || ! $building instanceof Building) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+            return true;
+        }
+
+        $assignmentTypes = [];
+
+        if ($user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
+            $assignmentTypes[] = 'QC/QA Engineer';
+        }
+
+        if ($user->hasRole('Legal Auditor')) {
+            $assignmentTypes[] = 'Legal Auditor';
+        }
+
+        if ($assignmentTypes === []) {
+            return false;
+        }
+
+        return AssignedAssessmentUser::query()
+            ->where('building_id', $building->objectid)
+            ->where('user_id', $user->id)
+            ->whereIn('type', $assignmentTypes)
+            ->exists();
     }
 
     private function withSummaryAssessmentRows($assessmentRows, string $type, array $record, $allEdits, ?string $search)

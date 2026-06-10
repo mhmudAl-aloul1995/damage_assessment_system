@@ -4,6 +4,10 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Audit;
 
 use App\Http\Controllers\Controller;
 use App\Models\AssessmentEditHistory;
+use App\Models\AssignedAssessmentUser;
+use App\Models\Building;
+use App\Models\HousingUnit;
+use App\Models\User;
 use App\Services\AssessmentEditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,10 +16,6 @@ class AssessmentInlineEditController extends Controller
 {
     public function update(Request $request, AssessmentEditService $assessmentEditService): JsonResponse
     {
-        if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
-            abort(403, 'هذا الاستبيان متاح للقراءة فقط.');
-        }
-
         $request->merge([
             'globalid' => $request->input('globalid', $request->input('global_id')),
         ]);
@@ -26,6 +26,15 @@ class AssessmentInlineEditController extends Controller
             'field' => 'required|string',
             'value' => 'nullable',
         ]);
+
+        $building = $this->buildingForAssessmentEdit((string) $request->type, (string) $request->globalid);
+
+        if (
+            $request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])
+            && ! $this->canEditAssessmentForBuilding($request->user(), $building)
+        ) {
+            abort(403, 'هذا الاستبيان متاح للقراءة فقط.');
+        }
 
         $result = $assessmentEditService->save(
             (string) $request->type,
@@ -105,5 +114,51 @@ class AssessmentInlineEditController extends Controller
                 'return_request_id' => $history->return_request_id,
             ])
             ->all();
+    }
+
+    private function buildingForAssessmentEdit(string $type, string $globalid): ?Building
+    {
+        if ($type === 'building_table') {
+            return Building::query()->where('globalid', $globalid)->first();
+        }
+
+        $housingUnit = HousingUnit::query()->where('globalid', $globalid)->first();
+
+        if (! $housingUnit instanceof HousingUnit) {
+            return null;
+        }
+
+        return Building::query()->where('globalid', $housingUnit->parentglobalid)->first();
+    }
+
+    private function canEditAssessmentForBuilding(?User $user, ?Building $building): bool
+    {
+        if (! $user instanceof User || ! $building instanceof Building) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+            return true;
+        }
+
+        $assignmentTypes = [];
+
+        if ($user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
+            $assignmentTypes[] = 'QC/QA Engineer';
+        }
+
+        if ($user->hasRole('Legal Auditor')) {
+            $assignmentTypes[] = 'Legal Auditor';
+        }
+
+        if ($assignmentTypes === []) {
+            return false;
+        }
+
+        return AssignedAssessmentUser::query()
+            ->where('building_id', $building->objectid)
+            ->where('user_id', $user->id)
+            ->whereIn('type', $assignmentTypes)
+            ->exists();
     }
 }
