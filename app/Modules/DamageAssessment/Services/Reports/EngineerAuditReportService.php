@@ -49,7 +49,7 @@ class EngineerAuditReportService
 
         return [
             'filters' => [
-                'assignedto' => (string) ($filters['assignedto'] ?? ''),
+                'assignedto' => $this->firstFilterValue($filters['assignedto'] ?? null),
                 'start_date' => (string) ($filters['start_date'] ?? ''),
                 'end_date' => (string) ($filters['end_date'] ?? ''),
             ],
@@ -129,8 +129,15 @@ class EngineerAuditReportService
                 self::NEED_REVIEW_STATUS_NAMES,
             );
 
-        if (filled($filters['assignedto'] ?? null)) {
-            $query->whereRaw('TRIM(COALESCE(buildings.assignedto, \'\')) = ?', [(string) $filters['assignedto']]);
+        $assignedToValues = $this->filterValues($filters['assignedto'] ?? null);
+
+        if ($assignedToValues !== []) {
+            $assignedToPlaceholders = $this->placeholders($assignedToValues);
+
+            $query->whereRaw(
+                "TRIM(COALESCE(buildings.assignedto, '')) IN ({$assignedToPlaceholders})",
+                $assignedToValues,
+            );
         }
 
         $query
@@ -164,6 +171,28 @@ class EngineerAuditReportService
     private function normalizedEngineerExpression(): string
     {
         return "COALESCE(NULLIF(TRIM(buildings.assignedto), ''), 'غير محدد')";
+    }
+
+    private function firstFilterValue(mixed $value): string
+    {
+        return $this->filterValues($value)[0] ?? '';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function filterValues(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        return collect(is_array($value) ? $value : [$value])
+            ->map(fn (mixed $item): string => trim((string) $item))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

@@ -191,7 +191,18 @@ it('summarizes completed building audit statuses by field engineer and exports e
 
     $this
         ->actingAs($viewer)
-        ->get(route('reports.engineer-audit.export'))
+        ->get(route('reports.engineer-audit', ['assignedto' => 'Engineer One']))
+        ->assertOk()
+        ->assertViewHas('filters', fn (array $filters): bool => $filters['assignedto'] === 'Engineer One')
+        ->assertViewHas('rows', function ($rows): bool {
+            return $rows->count() === 1
+                && $rows->first()->field_engineer_name === 'Engineer One'
+                && $rows->first()->total_completed_count === 3;
+        });
+
+    $this
+        ->actingAs($viewer)
+        ->get(route('reports.engineer-audit.export', ['assignedto' => 'Engineer One']))
         ->assertOk()
         ->assertHeader('content-disposition');
 });
