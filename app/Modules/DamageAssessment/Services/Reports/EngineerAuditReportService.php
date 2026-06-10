@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace App\Modules\DamageAssessment\Services\Reports;
 
 use App\Models\Building;
+use App\Models\HousingUnit;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class EngineerAuditReportService
 {
+    public const REPORT_TYPE_BUILDINGS = 'buildings';
+
+    public const REPORT_TYPE_HOUSING_UNITS = 'housing_units';
+
     private const ENGINEER_AUDITOR_TYPE = 'QC/QA Engineer';
 
     private const COMPLETED_FIELD_STATUS = 'completed';
@@ -45,22 +51,40 @@ class EngineerAuditReportService
     public function build(array $filters): array
     {
         $filters = $this->resolveFilters($filters);
-        $rows = $this->rows($filters);
+        $activeReportType = $this->resolveReportType($filters['report_type'] ?? null);
+        $reports = [
+            self::REPORT_TYPE_BUILDINGS => $this->buildReport($this->buildingRows($filters)),
+            self::REPORT_TYPE_HOUSING_UNITS => $this->buildReport($this->housingUnitRows($filters)),
+        ];
+        $activeReport = $reports[$activeReportType];
 
         return [
             'filters' => [
                 'assignedto' => $this->firstFilterValue($filters['assignedto'] ?? null),
                 'start_date' => (string) ($filters['start_date'] ?? ''),
                 'end_date' => (string) ($filters['end_date'] ?? ''),
+                'report_type' => $activeReportType,
             ],
             'filter_options' => $this->filterOptions(),
-            'rows' => $rows,
-            'summary' => [
-                'accepted_count' => (int) $rows->sum('accepted_count'),
-                'rejected_count' => (int) $rows->sum('rejected_count'),
-                'need_review_count' => (int) $rows->sum('need_review_count'),
-                'total_completed_count' => (int) $rows->sum('total_completed_count'),
+            'active_report_type' => $activeReportType,
+            'report_tabs' => [
+                self::REPORT_TYPE_BUILDINGS => [
+                    'label' => 'المباني',
+                    'item_label' => 'المباني',
+                    'total_label' => 'عدد استمارات المباني الكلي',
+                    'summary' => $reports[self::REPORT_TYPE_BUILDINGS]['summary'],
+                ],
+                self::REPORT_TYPE_HOUSING_UNITS => [
+                    'label' => 'الوحدات',
+                    'item_label' => 'الوحدات',
+                    'total_label' => 'عدد الوحدات الكلي',
+                    'summary' => $reports[self::REPORT_TYPE_HOUSING_UNITS]['summary'],
+                ],
             ],
+            'item_label' => $activeReportType === self::REPORT_TYPE_HOUSING_UNITS ? 'الوحدات' : 'المباني',
+            'total_label' => $activeReportType === self::REPORT_TYPE_HOUSING_UNITS ? 'عدد الوحدات الكلي' : 'عدد استمارات المباني الكلي',
+            'rows' => $activeReport['rows'],
+            'summary' => $activeReport['summary'],
         ];
     }
 
@@ -80,10 +104,39 @@ class EngineerAuditReportService
     /**
      * @return Collection<int, object>
      */
-    private function rows(array $filters): Collection
+    private function buildingRows(array $filters): Collection
     {
-        return $this->baseQuery($filters)
-            ->groupByRaw($this->normalizedEngineerExpression())
+        return $this->rows($this->buildingBaseQuery($filters), $this->normalizedEngineerExpression());
+    }
+
+    private function housingUnitRows(array $filters): Collection
+    {
+        return $this->rows($this->housingUnitBaseQuery($filters), $this->normalizedEngineerExpression());
+    }
+
+    /**
+     * @return array{rows: Collection<int, object>, summary: array{accepted_count: int, rejected_count: int, need_review_count: int, total_completed_count: int}}
+     */
+    private function buildReport(Collection $rows): array
+    {
+        return [
+            'rows' => $rows,
+            'summary' => [
+                'accepted_count' => (int) $rows->sum('accepted_count'),
+                'rejected_count' => (int) $rows->sum('rejected_count'),
+                'need_review_count' => (int) $rows->sum('need_review_count'),
+                'total_completed_count' => (int) $rows->sum('total_completed_count'),
+            ],
+        ];
+    }
+
+    /**
+     * @return Collection<int, object>
+     */
+    private function rows(Builder $query, string $groupExpression): Collection
+    {
+        return $query
+            ->groupByRaw($groupExpression)
             ->orderByDesc('accepted_count')
             ->orderByDesc('total_completed_count')
             ->orderBy('field_engineer_name')
@@ -101,7 +154,7 @@ class EngineerAuditReportService
             });
     }
 
-    private function baseQuery(array $filters): Builder
+    private function buildingBaseQuery(array $filters): Builder
     {
         $acceptedPlaceholders = $this->placeholders(self::ACCEPTED_STATUS_NAMES);
         $rejectedPlaceholders = $this->placeholders(self::REJECTED_STATUS_NAMES);
@@ -129,22 +182,68 @@ class EngineerAuditReportService
                 self::NEED_REVIEW_STATUS_NAMES,
             );
 
-        $assignedToValues = $this->filterValues($filters['assignedto'] ?? null);
-
-        if ($assignedToValues !== []) {
-            $assignedToPlaceholders = $this->placeholders($assignedToValues);
-
-            $query->whereRaw(
-                "TRIM(COALESCE(buildings.assignedto, '')) IN ({$assignedToPlaceholders})",
-                $assignedToValues,
-            );
-        }
+        $this->applyAssignedToFilter($query, $filters);
 
         $query
             ->whereDate('buildings.'.self::SUBMISSION_DATE_FIELD, '>=', (string) $filters['start_date'])
             ->whereDate('buildings.'.self::SUBMISSION_DATE_FIELD, '<=', (string) $filters['end_date']);
 
         return $query;
+    }
+
+    private function housingUnitBaseQuery(array $filters): Builder
+    {
+        $acceptedPlaceholders = $this->placeholders(self::ACCEPTED_STATUS_NAMES);
+        $rejectedPlaceholders = $this->placeholders(self::REJECTED_STATUS_NAMES);
+        $needReviewPlaceholders = $this->placeholders(self::NEED_REVIEW_STATUS_NAMES);
+        $dateExpression = "COALESCE(NULLIF(housing_units.building_submit_date, ''), housing_units.creationdate)";
+
+        $query = HousingUnit::query()
+            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
+            ->leftJoin('housing_statuses', function ($join): void {
+                $join->on('housing_statuses.housing_id', '=', 'housing_units.objectid')
+                    ->where('housing_statuses.type', self::ENGINEER_AUDITOR_TYPE);
+            })
+            ->leftJoin('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->whereRaw('LOWER(TRIM(COALESCE(buildings.field_status, \'\'))) = ?', [self::COMPLETED_FIELD_STATUS])
+            ->selectRaw($this->normalizedEngineerExpression().' as field_engineer_name')
+            ->selectRaw('COUNT(housing_units.id) as total_completed_count')
+            ->selectRaw(
+                "SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_statuses.name, ''))) IN ({$acceptedPlaceholders}) THEN 1 ELSE 0 END) as accepted_count",
+                self::ACCEPTED_STATUS_NAMES,
+            )
+            ->selectRaw(
+                "SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_statuses.name, ''))) IN ({$rejectedPlaceholders}) THEN 1 ELSE 0 END) as rejected_count",
+                self::REJECTED_STATUS_NAMES,
+            )
+            ->selectRaw(
+                "SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_statuses.name, ''))) IN ({$needReviewPlaceholders}) THEN 1 ELSE 0 END) as need_review_count",
+                self::NEED_REVIEW_STATUS_NAMES,
+            );
+
+        $this->applyAssignedToFilter($query, $filters);
+
+        $query
+            ->whereDate(DB::raw($dateExpression), '>=', (string) $filters['start_date'])
+            ->whereDate(DB::raw($dateExpression), '<=', (string) $filters['end_date']);
+
+        return $query;
+    }
+
+    private function applyAssignedToFilter(Builder $query, array $filters): void
+    {
+        $assignedToValues = $this->filterValues($filters['assignedto'] ?? null);
+
+        if ($assignedToValues === []) {
+            return;
+        }
+
+        $assignedToPlaceholders = $this->placeholders($assignedToValues);
+
+        $query->whereRaw(
+            "TRIM(COALESCE(buildings.assignedto, '')) IN ({$assignedToPlaceholders})",
+            $assignedToValues,
+        );
     }
 
     private function resolveFilters(array $filters): array
@@ -171,6 +270,13 @@ class EngineerAuditReportService
     private function normalizedEngineerExpression(): string
     {
         return "COALESCE(NULLIF(TRIM(buildings.assignedto), ''), 'غير محدد')";
+    }
+
+    private function resolveReportType(mixed $reportType): string
+    {
+        return $reportType === self::REPORT_TYPE_HOUSING_UNITS
+            ? self::REPORT_TYPE_HOUSING_UNITS
+            : self::REPORT_TYPE_BUILDINGS;
     }
 
     private function firstFilterValue(mixed $value): string

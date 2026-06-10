@@ -41,6 +41,7 @@ class AreaProductivityReportFilterRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'from_date' => ['nullable', 'date'],
             'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+            'report_type' => ['nullable', 'string', 'in:buildings,housing_units'],
         ];
     }
 
