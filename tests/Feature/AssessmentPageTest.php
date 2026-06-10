@@ -733,6 +733,18 @@ it('shows all audit status button groups to database officers in the assessment 
         ->toContain("setHousingStatus('need_review', 'QC/QA Engineer')");
 });
 
+it('keeps audit attachment rows visible when regular filters are applied', function () {
+    $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
+
+    expect($view)
+        ->toContain('function keepAttachmentRowsVisible(rows, filteredRows)')
+        ->toContain("if (filter === 'missing') return keepAttachmentRowsVisible(rows, rows.filter(row => !isAnswered(row)))")
+        ->toContain("if (filter === 'edited') return keepAttachmentRowsVisible(rows, rows.filter(row => isEdited(row)))")
+        ->toContain("if (filter === 'answered') return keepAttachmentRowsVisible(rows, rows.filter(row => isAnswered(row)))")
+        ->toContain("if (filter === 'attachments') {")
+        ->toContain('return rows.filter(row => isAuditAttachmentRow(row));');
+});
+
 it('allows auditors to edit only their own matching note type', function () {
     $legalRole = Role::query()->create([
         'name' => 'Legal Auditor',

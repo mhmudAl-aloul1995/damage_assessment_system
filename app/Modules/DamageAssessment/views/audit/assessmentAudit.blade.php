@@ -1167,15 +1167,30 @@
             return html;
         }
 
+        function isAuditAttachmentRow(row) {
+            let name = normalizeSurveyName(row.name);
+            return name.includes('photo') || name.includes('image') || name.includes('attachment') || name.includes('comments');
+        }
+
+        function keepAttachmentRowsVisible(rows, filteredRows) {
+            let visibleRows = new Set(filteredRows);
+
+            rows.forEach(function (row) {
+                if (isAuditAttachmentRow(row) && !visibleRows.has(row)) {
+                    filteredRows.push(row);
+                    visibleRows.add(row);
+                }
+            });
+
+            return filteredRows;
+        }
+
         function applyAuditFilter(rows, filter) {
-            if (filter === 'missing') return rows.filter(row => !isAnswered(row));
-            if (filter === 'edited') return rows.filter(row => isEdited(row));
-            if (filter === 'answered') return rows.filter(row => isAnswered(row));
+            if (filter === 'missing') return keepAttachmentRowsVisible(rows, rows.filter(row => !isAnswered(row)));
+            if (filter === 'edited') return keepAttachmentRowsVisible(rows, rows.filter(row => isEdited(row)));
+            if (filter === 'answered') return keepAttachmentRowsVisible(rows, rows.filter(row => isAnswered(row)));
             if (filter === 'attachments') {
-                return rows.filter(row => {
-                    let name = normalizeSurveyName(row.name);
-                    return name.includes('photo') || name.includes('image') || name.includes('attachment') || name.includes('comments');
-                });
+                return rows.filter(row => isAuditAttachmentRow(row));
             }
             return rows;
         }
