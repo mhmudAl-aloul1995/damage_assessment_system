@@ -3,6 +3,8 @@
 use App\Models\AssessmentStatus;
 use App\Models\Building;
 use App\Models\BuildingStatus;
+use App\Models\HousingStatus;
+use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -149,6 +151,102 @@ it('summarizes completed building audit statuses by field engineer and exports e
         ],
     ]);
 
+    HousingUnit::query()->insert([
+        [
+            'objectid' => 801,
+            'globalid' => 'unit-801',
+            'parentglobalid' => 'building-701',
+            'building_submit_date' => '2026-05-01 10:00:00',
+            'creationdate' => '2026-05-01 10:00:00',
+        ],
+        [
+            'objectid' => 802,
+            'globalid' => 'unit-802',
+            'parentglobalid' => 'building-701',
+            'building_submit_date' => '2026-05-01 10:00:00',
+            'creationdate' => '2026-05-01 10:00:00',
+        ],
+        [
+            'objectid' => 803,
+            'globalid' => 'unit-803',
+            'parentglobalid' => 'building-702',
+            'building_submit_date' => '2026-05-02 10:00:00',
+            'creationdate' => '2026-05-02 10:00:00',
+        ],
+        [
+            'objectid' => 804,
+            'globalid' => 'unit-804',
+            'parentglobalid' => 'building-704',
+            'building_submit_date' => '2026-05-04 10:00:00',
+            'creationdate' => '2026-05-04 10:00:00',
+        ],
+        [
+            'objectid' => 805,
+            'globalid' => 'unit-805',
+            'parentglobalid' => 'building-705',
+            'building_submit_date' => '2026-05-05 10:00:00',
+            'creationdate' => '2026-05-05 10:00:00',
+        ],
+        [
+            'objectid' => 806,
+            'globalid' => 'unit-806',
+            'parentglobalid' => 'building-706',
+            'building_submit_date' => '2025-12-31 10:00:00',
+            'creationdate' => '2025-12-31 10:00:00',
+        ],
+    ]);
+
+    HousingStatus::query()->insert([
+        [
+            'housing_id' => 801,
+            'status_id' => $acceptedStatus->id,
+            'user_id' => $viewer->id,
+            'type' => 'QC/QA Engineer',
+            'created_at' => '2026-05-01 11:00:00',
+            'updated_at' => '2026-05-01 11:00:00',
+        ],
+        [
+            'housing_id' => 802,
+            'status_id' => $rejectedStatus->id,
+            'user_id' => $viewer->id,
+            'type' => 'QC/QA Engineer',
+            'created_at' => '2026-05-01 11:00:00',
+            'updated_at' => '2026-05-01 11:00:00',
+        ],
+        [
+            'housing_id' => 803,
+            'status_id' => $needReviewStatus->id,
+            'user_id' => $viewer->id,
+            'type' => 'QC/QA Engineer',
+            'created_at' => '2026-05-02 11:00:00',
+            'updated_at' => '2026-05-02 11:00:00',
+        ],
+        [
+            'housing_id' => 804,
+            'status_id' => $acceptedStatus->id,
+            'user_id' => $viewer->id,
+            'type' => 'QC/QA Engineer',
+            'created_at' => '2026-05-04 11:00:00',
+            'updated_at' => '2026-05-04 11:00:00',
+        ],
+        [
+            'housing_id' => 805,
+            'status_id' => $acceptedStatus->id,
+            'user_id' => $viewer->id,
+            'type' => 'QC/QA Engineer',
+            'created_at' => '2026-05-05 11:00:00',
+            'updated_at' => '2026-05-05 11:00:00',
+        ],
+        [
+            'housing_id' => 806,
+            'status_id' => $acceptedStatus->id,
+            'user_id' => $viewer->id,
+            'type' => 'QC/QA Engineer',
+            'created_at' => '2025-12-31 11:00:00',
+            'updated_at' => '2025-12-31 11:00:00',
+        ],
+    ]);
+
     $response = $this
         ->actingAs($viewer)
         ->get(route('reports.engineer-audit'));
@@ -202,7 +300,32 @@ it('summarizes completed building audit statuses by field engineer and exports e
 
     $this
         ->actingAs($viewer)
-        ->get(route('reports.engineer-audit.export', ['assignedto' => 'Engineer One']))
+        ->get(route('reports.engineer-audit', ['report_type' => 'housing_units']))
+        ->assertOk()
+        ->assertViewHas('active_report_type', 'housing_units')
+        ->assertViewHas('rows', function ($rows): bool {
+            $engineerOne = collect($rows)->firstWhere('field_engineer_name', 'Engineer One');
+            $engineerTwo = collect($rows)->firstWhere('field_engineer_name', 'Engineer Two');
+
+            return $engineerOne !== null
+                && $engineerTwo !== null
+                && $engineerOne->accepted_count === 1
+                && $engineerOne->rejected_count === 1
+                && $engineerOne->need_review_count === 1
+                && $engineerOne->total_completed_count === 3
+                && $engineerTwo->accepted_count === 1
+                && $engineerTwo->total_completed_count === 1;
+        })
+        ->assertViewHas('summary', function (array $summary): bool {
+            return $summary['accepted_count'] === 2
+                && $summary['rejected_count'] === 1
+                && $summary['need_review_count'] === 1
+                && $summary['total_completed_count'] === 4;
+        });
+
+    $this
+        ->actingAs($viewer)
+        ->get(route('reports.engineer-audit.export', ['assignedto' => 'Engineer One', 'report_type' => 'housing_units']))
         ->assertOk()
         ->assertHeader('content-disposition');
 });

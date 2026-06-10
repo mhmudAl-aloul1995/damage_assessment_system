@@ -17,7 +17,7 @@ class EngineerAuditReportController extends Controller
 {
     public function __construct()
     {
-        //$this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|QC/QA Engineer');
+        // $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|QC/QA Engineer');
     }
 
     public function index(AreaProductivityReportFilterRequest $request, EngineerAuditReportService $reportService): View
@@ -33,8 +33,11 @@ class EngineerAuditReportController extends Controller
             new EngineerAuditReportExport(
                 $report['rows'],
                 $report['summary'],
+                $report['total_label'],
             ),
-            'engineer-audit-report.xlsx',
+            $report['active_report_type'] === EngineerAuditReportService::REPORT_TYPE_HOUSING_UNITS
+                ? 'engineer-audit-housing-units-report.xlsx'
+                : 'engineer-audit-buildings-report.xlsx',
         );
     }
 }

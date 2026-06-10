@@ -22,6 +22,7 @@ class EngineerAuditReportExport implements FromCollection, ShouldAutoSize, WithE
     public function __construct(
         private readonly Collection $rows,
         private readonly array $summary,
+        private readonly string $totalHeading = 'عدد الاستمارات الكلي',
     ) {}
 
     public function collection(): Collection
@@ -46,7 +47,7 @@ class EngineerAuditReportExport implements FromCollection, ShouldAutoSize, WithE
             'عدد الوحدات المقبولة',
             'عدد الوحدات المرفوضة',
             'عدد الوحدات تحتاج مراجعة',
-            'عدد الاستمارات الكلي',
+            $this->totalHeading,
         ];
     }
 

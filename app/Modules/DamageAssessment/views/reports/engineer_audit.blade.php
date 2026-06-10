@@ -56,6 +56,7 @@
                     <form action="{{ route('reports.engineer-audit') }}" method="GET" id="filter_form" class="w-100">
                         <input type="hidden" name="start_date" id="start_date" value="{{ $filters['start_date'] }}">
                         <input type="hidden" name="end_date" id="end_date" value="{{ $filters['end_date'] }}">
+                        <input type="hidden" name="report_type" id="report_type" value="{{ $active_report_type }}">
 
                         <div class="engineer-audit-toolbar">
                             <div>
@@ -97,6 +98,23 @@
                 </div>
 
                 <div class="card-body py-4">
+                    @php
+                        $tabQuery = request()->query();
+                        unset($tabQuery['report_type']);
+                    @endphp
+
+                    <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bold mb-6">
+                        @foreach ($report_tabs as $reportType => $tab)
+                            <li class="nav-item">
+                                <a class="nav-link text-active-primary pb-4 {{ $active_report_type === $reportType ? 'active' : '' }}"
+                                    href="{{ route('reports.engineer-audit', array_merge($tabQuery, ['report_type' => $reportType])) }}">
+                                    {{ $tab['label'] }}
+                                    <span class="badge badge-light-primary ms-2">{{ $tab['summary']['total_completed_count'] }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+
                     <div class="row g-4 mb-6">
                         <div class="col-md-3">
                             <div class="border rounded p-4 bg-light-success">
@@ -118,7 +136,7 @@
                         </div>
                         <div class="col-md-3">
                             <div class="border rounded p-4 bg-light-primary">
-                                <div class="text-muted fw-bold">الاستمارات الكلي</div>
+                                <div class="text-muted fw-bold">{{ $total_label }}</div>
                                 <div class="fs-2 fw-bolder text-primary">{{ $summary['total_completed_count'] }}</div>
                             </div>
                         </div>
@@ -130,10 +148,10 @@
                             <tr class="fw-bolder fs-6 text-gray-800">
                                 <th>#</th>
                                 <th>اسم الباحث الميداني</th>
-                                <th>عدد الوحدات المقبولة</th>
-                                <th>عدد الوحدات المرفوضة</th>
-                                <th>عدد الوحدات تحتاج مراجعة</th>
-                                <th>عدد الاستمارات الكلي</th>
+                                <th>عدد {{ $item_label }} المقبولة</th>
+                                <th>عدد {{ $item_label }} المرفوضة</th>
+                                <th>عدد {{ $item_label }} تحتاج مراجعة</th>
+                                <th>{{ $total_label }}</th>
                             </tr>
                         </thead>
                         <tbody>
