@@ -4252,6 +4252,9 @@ COALESCE(
         $canViewStatusButtons = $canEditAssessment
             || $user?->hasRole('Team Leader')
             || ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) && $canViewFieldAssessment);
+        $isFieldEngineerStatusPreview = $user?->hasAnyRole(['Field Engineer', 'field Engineer'])
+            && $canViewFieldAssessment
+            && ! $canEditAssessment;
 
         abort_if(
             $user?->hasAnyRole(['Field Engineer', 'field Engineer'])
@@ -4282,7 +4285,7 @@ COALESCE(
             && ! $canEditAssessment
             && $canViewFieldAssessment;
 
-        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly', 'canEditAssessment', 'canViewStatusButtons'));
+        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly', 'canEditAssessment', 'canViewStatusButtons', 'isFieldEngineerStatusPreview'));
     }
 
     public function housingUnitAudit(Request $request)

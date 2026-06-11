@@ -8,6 +8,18 @@
     $housingGlobalid = $housingGlobalid ?? null;
     $showHousingTab = filled($housingGlobalid);
     $isAssessmentReadOnly = $isAssessmentReadOnly ?? false;
+    $isStatusPreviewOnly = ($canViewStatusButtons ?? false) && ! ($canEditAssessment ?? false);
+    $statusLabel = fn (?string $status): string => match ($status) {
+        'accepted_by_engineer' => 'مقبول هندسياً',
+        'rejected_by_engineer' => 'مرفوض هندسياً',
+        'need_review' => 'بحاجة لمراجعة',
+        'accepted_by_lawyer' => 'مقبول قانونياً',
+        'legal_notes' => 'ملاحظات قانونية',
+        'final_approval' => 'اعتماد نهائي',
+        'undp_final_approve' => 'UNDP Final Approve',
+        default => filled($status) ? str($status)->replace('_', ' ')->headline()->toString() : '-',
+    };
+    $statusBadgeClass = fn (?string $status): string => \App\Models\AssessmentStatus::badgeClassForName($status).' fw-bold px-4 py-3';
 @endphp
 
 @section('content')
@@ -578,7 +590,11 @@
                                                 </div>
                                             </div>
                                             
-                                            @if($canViewStatusButtons)
+                                            @if($isStatusPreviewOnly)
+                                                <span class="{{ $statusBadgeClass($buildingCurrentStatus) }}">
+                                                    آخر حالة: {{ $statusLabel($buildingCurrentStatus) }}
+                                                </span>
+                                            @elseif($canViewStatusButtons)
                                             @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
@@ -837,7 +853,11 @@
                                                 </div>
                                             </div>
                                            
-                                            @if($canViewStatusButtons)
+                                            @if($isStatusPreviewOnly)
+                                                <span class="badge badge-light-secondary fw-bold px-4 py-3">
+                                                    آخر حالة: <span id="housing_current_status_preview">-</span>
+                                                </span>
+                                            @elseif($canViewStatusButtons)
                                             @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
@@ -1072,6 +1092,24 @@
             if (statusName.includes('lawyer') || statusName.includes('legal_notes')) return 'Legal Auditor';
             if (statusName.includes('engineer') || statusName.includes('rejected') || statusName.includes('need_review')) return 'QC/QA Engineer';
             return null;
+        }
+
+        function statusPreviewLabel(statusName) {
+            const labels = {
+                accepted_by_engineer: 'مقبول هندسياً',
+                rejected_by_engineer: 'مرفوض هندسياً',
+                need_review: 'بحاجة لمراجعة',
+                accepted_by_lawyer: 'مقبول قانونياً',
+                legal_notes: 'ملاحظات قانونية',
+                final_approval: 'اعتماد نهائي',
+                undp_final_approve: 'UNDP Final Approve'
+            };
+
+            return labels[statusName] || (statusName ? String(statusName).replaceAll('_', ' ') : '-');
+        }
+
+        function updateHousingStatusPreview(statusName) {
+            $('#housing_current_status_preview').text(statusPreviewLabel(statusName));
         }
 
         const BUILDING_SUMMARY_FIELDS = [
@@ -2478,6 +2516,7 @@
 
                     $('[name="globalid"]').val(row.globalid).trigger('change');
                     currentHousingLegalChallenge = row.legal_challenge || null;
+                    updateHousingStatusPreview(row.current_status);
                     setActiveStatusButton('.housing-status-btn', normalizeStatus(row.current_status), normalizeAuditType(row.current_status));
                 });
             };

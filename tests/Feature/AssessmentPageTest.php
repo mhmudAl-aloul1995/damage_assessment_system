@@ -912,12 +912,12 @@ it('prevents team leaders from setting audit statuses without assignment', funct
         ])
         ->assertForbidden();
 
-    $this->assertDatabaseMissing('building_statuses', [
+    $this->assertDatabaseMissing('building_status_histories', [
         'building_id' => $building->objectid,
     ]);
 });
 
-it('shows disabled status buttons to assigned field engineers without allowing status changes', function () {
+it('shows only the latest status markup for read only users without allowing field engineer status changes', function () {
     $role = Role::query()->create([
         'name' => 'Field Engineer',
         'guard_name' => 'web',
@@ -928,7 +928,7 @@ it('shows disabled status buttons to assigned field engineers without allowing s
     ]);
     $user->assignRole($role);
 
-    AssessmentStatus::query()->create([
+    $status = AssessmentStatus::query()->create([
         'name' => 'accepted_by_engineer',
         'label_en' => 'Accepted By Engineer',
         'label_ar' => 'Accepted By Engineer',
@@ -943,11 +943,20 @@ it('shows disabled status buttons to assigned field engineers without allowing s
         'assignedto' => 'field.engineer',
     ]);
 
-    $this->actingAs($user)
-        ->get("damage-assessment/showAssessmentAudit/{$building->globalid}")
-        ->assertOk()
-        ->assertSee('building-status-btn', false)
-        ->assertSee('disabled', false);
+    BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
+
+    expect($view)
+        ->toContain('@if($isStatusPreviewOnly)')
+        ->toContain('آخر حالة')
+        ->toContain('housing_current_status_preview')
+        ->toContain('@elseif($canViewStatusButtons)');
 
     $this->actingAs($user)
         ->postJson(route('building.assessment.set.status'), [
@@ -956,7 +965,7 @@ it('shows disabled status buttons to assigned field engineers without allowing s
         ])
         ->assertForbidden();
 
-    $this->assertDatabaseMissing('building_statuses', [
+    $this->assertDatabaseMissing('building_status_histories', [
         'building_id' => $building->objectid,
     ]);
 });
@@ -1021,7 +1030,8 @@ it('shows all audit status button groups to database officers in the assessment 
     $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
 
     expect($view)
-        ->toContain('@if($canViewStatusButtons)')
+        ->toContain('@if($isStatusPreviewOnly)')
+        ->toContain('@elseif($canViewStatusButtons)')
         ->toContain('@disabled(! $canEditAssessment)')
         ->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')")
         ->toContain("@hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')")
