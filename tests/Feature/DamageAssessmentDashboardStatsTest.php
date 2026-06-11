@@ -9,6 +9,7 @@ use App\Services\ArcgisService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
@@ -77,6 +78,36 @@ it('shows eight summary statistics for public buildings and road facilities on t
         ->assertSee('data-period="day"', false)
         ->assertSee('data-period="all"', false)
         ->assertSee('Rimal');
+});
+
+it('prevents field engineers from viewing the main damage assessment dashboard', function () {
+    $role = Role::query()->create([
+        'name' => 'Field Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertForbidden();
+});
+
+it('keeps the main damage assessment dashboard visible to non field engineers', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk();
 });
 
 it('treats the dashboard yesterday shortcut as the previous day', function () {

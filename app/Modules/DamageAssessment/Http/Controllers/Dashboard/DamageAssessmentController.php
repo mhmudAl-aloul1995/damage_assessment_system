@@ -27,6 +27,8 @@ class DamageAssessmentController extends Controller
 {
     public function index(Request $request, $objectid = null)
     {
+        abort_if($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer']), 403);
+
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
 

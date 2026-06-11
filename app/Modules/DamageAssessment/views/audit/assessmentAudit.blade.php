@@ -578,33 +578,39 @@
                                                 </div>
                                             </div>
                                             
-                                            @if($canEditAssessment)
-                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
+                                            @if($canViewStatusButtons)
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                             <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
                                                 data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setBuildingStatus('legal_notes', 'Legal Auditor')">ملاحظات
                                                 قانونية</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor')
+                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader')
                                             <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                 data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setBuildingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setBuildingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                             <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
                                                 data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setBuildingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                 لمراجعة</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('Database Officer|Auditing Supervisor')
+                                            @hasanyrole('Database Officer|Auditing Supervisor|Team Leader')
                                             <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
                                                 data-status="undp_final_approve"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setBuildingStatus('undp_final_approve')">
                                                 UNDP Final Approve</button>
                                             @endhasanyrole
@@ -831,32 +837,37 @@
                                                 </div>
                                             </div>
                                            
-                                            @if($canEditAssessment)
-                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
+                                            @if($canViewStatusButtons)
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader')
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setHousingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                             <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
                                                 data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setHousingStatus('legal_notes', 'Legal Auditor')">بحاجة
                                                 لمراجعة</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor')
+                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader')
                                             <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
                                                 data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setHousingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                 data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setHousingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                             <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
                                                 data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                @disabled(! $canEditAssessment)
                                                 onclick="setHousingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                 لمراجعة</button>
                                             @endhasanyrole
                                             @endif
 
-                                            <!--    @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor')
+                                            <!--    @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader')
                                                         <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
                                                             data-status="undp_final_approve"
                                                             onclick="setHousingStatus('undp_final_approve')">

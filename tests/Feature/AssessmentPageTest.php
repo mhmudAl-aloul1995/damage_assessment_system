@@ -881,6 +881,42 @@ it('allows auditing supervisors to set audit statuses without assignment', funct
     ]);
 });
 
+it('prevents team leaders from setting audit statuses without assignment', function () {
+    $role = Role::query()->create([
+        'name' => 'Team Leader',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    AssessmentStatus::query()->create([
+        'name' => 'need_review',
+        'label_en' => 'Need Review',
+        'label_ar' => 'Need Review',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9546,
+        'globalid' => 'team-leader-status-building',
+        'building_name' => 'Team Leader Status Building',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'need_review',
+            'audit_type' => 'QC/QA Engineer',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('building_statuses', [
+        'building_id' => $building->objectid,
+    ]);
+});
+
 it('returns structured status history payload for rendering badges safely', function () {
     $user = User::factory()->create();
 
@@ -941,9 +977,10 @@ it('shows all audit status button groups to database officers in the assessment 
     $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
 
     expect($view)
-        ->toContain('@if($canEditAssessment)')
-        ->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')")
-        ->toContain("@hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor')")
+        ->toContain('@if($canViewStatusButtons)')
+        ->toContain('@disabled(! $canEditAssessment)')
+        ->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader')")
+        ->toContain("@hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader')")
         ->toContain("setBuildingStatus('accepted', 'Legal Auditor')")
         ->toContain("setBuildingStatus('accepted', 'QC/QA Engineer')")
         ->toContain("setHousingStatus('legal_notes', 'Legal Auditor')")

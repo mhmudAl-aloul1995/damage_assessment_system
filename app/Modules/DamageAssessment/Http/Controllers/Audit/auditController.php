@@ -4248,6 +4248,7 @@ COALESCE(
         $building = Building::where('globalid', $request->buildingGlobalid)->first();
         $user = Auth::user();
         $canEditAssessment = $this->canEditAssessmentForBuilding($user, $building);
+        $canViewStatusButtons = $canEditAssessment || $user?->hasRole('Team Leader');
         $canViewFieldAssessment = $this->canViewFieldAssessmentForBuilding($user, $building);
 
         abort_if(
@@ -4279,7 +4280,7 @@ COALESCE(
             && ! $canEditAssessment
             && $canViewFieldAssessment;
 
-        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly', 'canEditAssessment'));
+        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly', 'canEditAssessment', 'canViewStatusButtons'));
     }
 
     public function housingUnitAudit(Request $request)
