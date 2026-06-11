@@ -44,7 +44,7 @@ return [
                 'title' => 'menu.damage_assessment.building_survey_return_requests',
                 'url' => 'damage-assessment/field-engineer/building-survey-return-requests',
                 'pattern' => 'damage-assessment/field-engineer/building-survey-return-requests*',
-                'roles' => ['Database Officer', 'Field Engineer', 'Team Leader', 'Team Leader', 'Area Manager'],
+                'roles' => ['Database Officer', 'Team Leader', 'Team Leader', 'Area Manager'],
             ],
             [
                 'title' => 'menu.damage_assessment.buildings',
