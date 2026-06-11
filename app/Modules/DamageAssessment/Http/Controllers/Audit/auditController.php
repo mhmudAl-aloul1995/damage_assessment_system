@@ -4405,6 +4405,10 @@ COALESCE(
             return true;
         }
 
+        if ($this->hasTemporaryStatusAssignmentException($user)) {
+            return true;
+        }
+
         $assignmentTypes = [];
 
         if ($user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
@@ -4424,6 +4428,11 @@ COALESCE(
             ->where('user_id', $user->id)
             ->whereIn('type', $assignmentTypes)
             ->exists();
+    }
+
+    private function hasTemporaryStatusAssignmentException(User $user): bool
+    {
+        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true);
     }
 
     private function firstAndLastName(?string $name): string
