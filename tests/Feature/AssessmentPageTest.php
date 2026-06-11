@@ -7,6 +7,7 @@ use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
 use App\Models\EditAssessment;
+use App\Models\HousingStatus;
 use App\Models\HousingUnit;
 use App\Models\User;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
@@ -968,6 +969,52 @@ it('shows only the latest status markup for read only users without allowing fie
     $this->assertDatabaseMissing('building_status_histories', [
         'building_id' => $building->objectid,
     ]);
+});
+
+it('returns the latest housing status for read only field engineers', function () {
+    $role = Role::query()->create([
+        'name' => 'Field Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create([
+        'username_arcgis' => 'field.engineer',
+    ]);
+    $user->assignRole($role);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9548,
+        'globalid' => 'field-engineer-housing-status-building',
+        'building_name' => 'Field Engineer Housing Status Building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 9549,
+        'globalid' => 'field-engineer-housing-status-unit',
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Owner',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $housing->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('housing.units.by.building', ['globalid' => $building->globalid]))
+        ->assertOk()
+        ->assertJsonPath('data.0.current_status', 'accepted_by_engineer');
 });
 
 it('returns structured status history payload for rendering badges safely', function () {

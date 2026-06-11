@@ -3288,9 +3288,13 @@ COALESCE(
             })
 
             ->addColumn('current_status', function ($row) use ($type) {
-                return optional(
-                    $row->statusByType($type)?->first()?->assessment_status
-                )->name;
+                if (in_array($type, ['QC/QA Engineer', 'Legal Auditor'], true)) {
+                    return optional(
+                        $row->statusByType($type)?->first()?->assessment_status
+                    )->name;
+                }
+
+                return $this->latestHousingStatusName((int) $row->objectid);
             })
 
             /*
