@@ -3577,7 +3577,7 @@ COALESCE(
 
     public function undpFinalApproveSelected(Request $request)
     {
-        abort_unless(auth()->user()?->hasAnyRole(['Database Officer', 'undp-Project Manager']), 403);
+        abort_unless(auth()->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor']), 403);
 
         $request->validate([
             'building_ids' => ['required', 'array'],
@@ -3588,7 +3588,7 @@ COALESCE(
 
         try {
             $user = auth()->user();
-            $type = $user->hasRole('undp-Project Manager') ? 'undp-Project Manager' : 'Database Officer';
+            $type = $user->hasRole('Auditing Supervisor') ? 'Auditing Supervisor' : 'Database Officer';
 
             $undpStatus = AssessmentStatus::where('name', 'undp_final_approve')->first();
 
@@ -3704,10 +3704,21 @@ COALESCE(
             $building = Building::where('globalid', $request->globalid)->first();
 
             if (! $building) {
+                DB::rollBack();
+
                 return response()->json([
                     'status' => false,
                     'message' => 'المبنى غير موجود',
                 ], 404);
+            }
+
+            if (! $this->canEditAssessmentForBuilding($user, $building)) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You cannot set a status unless this assessment is assigned to you.',
+                ], 403);
             }
 
             $type = null;
@@ -3716,14 +3727,14 @@ COALESCE(
                 $type = 'QC/QA Engineer';
             } elseif ($user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
-            } elseif ($user->hasRole('Database Officer') && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
+            } elseif ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor']) && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
                 $type = $request->audit_type;
             } elseif (
                 $request->status === 'undp_final_approve'
-                && $user->hasAnyRole(['undp-Project Manager', 'Database Officer'])
+                && $user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])
             ) {
-                $type = $user->hasRole('undp-Project Manager')
-                    ? 'undp-Project Manager'
+                $type = $user->hasRole('Auditing Supervisor')
+                    ? 'Auditing Supervisor'
                     : 'Database Officer';
             } else {
                 return response()->json([
@@ -3835,10 +3846,23 @@ COALESCE(
             $housing = HousingUnit::where('globalid', $request->globalid)->first();
 
             if (! $housing) {
+                DB::rollBack();
+
                 return response()->json([
                     'status' => false,
                     'message' => 'الوحدة السكنية غير موجودة',
                 ], 404);
+            }
+
+            $building = Building::where('globalid', $housing->parentglobalid)->first();
+
+            if (! $this->canEditAssessmentForBuilding($user, $building)) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You cannot set a status unless this assessment is assigned to you.',
+                ], 403);
             }
 
             $type = null;
@@ -3847,14 +3871,14 @@ COALESCE(
                 $type = 'QC/QA Engineer';
             } elseif ($user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
-            } elseif ($user->hasRole('Database Officer') && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
+            } elseif ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor']) && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
                 $type = $request->audit_type;
             } elseif (
                 $request->status === 'undp_final_approve'
-                && $user->hasAnyRole(['undp-Project Manager', 'Database Officer'])
+                && $user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])
             ) {
-                $type = $user->hasRole('undp-Project Manager')
-                    ? 'undp-Project Manager'
+                $type = $user->hasRole('Auditing Supervisor')
+                    ? 'Auditing Supervisor'
                     : 'Database Officer';
             } else {
                 return response()->json([
@@ -3893,8 +3917,6 @@ COALESCE(
             }
 
             if ($assessmentStatus->name === 'undp_final_approve') {
-                $building = Building::where('globalid', $housing->parentglobalid)->first();
-
                 if (! $building || ! $this->buildingHasFinalApproval((int) $building->objectid)) {
                     DB::rollBack();
 
@@ -4257,7 +4279,7 @@ COALESCE(
             && ! $canEditAssessment
             && $canViewFieldAssessment;
 
-        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly'));
+        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly', 'canEditAssessment'));
     }
 
     public function housingUnitAudit(Request $request)

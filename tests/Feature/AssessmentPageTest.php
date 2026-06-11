@@ -2,6 +2,7 @@
 
 use App\Models\Assessment;
 use App\Models\AssessmentStatus;
+use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
@@ -388,6 +389,12 @@ it('requires building final approval before undp final approval status', functio
         'building_name' => 'UNDP Building',
     ]);
 
+    AssignedAssessmentUser::query()->create([
+        'building_id' => $building->objectid,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
     $this->actingAs($user)
         ->postJson(route('building.assessment.set.status'), [
             'globalid' => $building->globalid,
@@ -448,6 +455,12 @@ it('checks parent building final approval before housing undp final approval sta
         'objectid' => 9401,
         'globalid' => 'undp-parent-building',
         'building_name' => 'UNDP Parent Building',
+    ]);
+
+    AssignedAssessmentUser::query()->create([
+        'building_id' => $building->objectid,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
     ]);
 
     $housing = HousingUnit::query()->create([
@@ -665,6 +678,164 @@ it('allows database officers to set housing audit statuses for legal and enginee
     ]);
 });
 
+it('prevents unassigned auditors from setting building and housing statuses', function () {
+    $role = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9521,
+        'globalid' => 'unassigned-status-building',
+        'building_name' => 'Unassigned Status Building',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 9522,
+        'globalid' => 'unassigned-status-housing',
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Owner',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'accepted',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.set.status'), [
+            'globalid' => $housing->globalid,
+            'status' => 'accepted',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('building_statuses', [
+        'building_id' => $building->objectid,
+    ]);
+
+    $this->assertDatabaseMissing('housing_statuses', [
+        'housing_id' => $housing->objectid,
+    ]);
+});
+
+it('allows assigned auditors to set building and housing statuses', function () {
+    $role = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9531,
+        'globalid' => 'assigned-status-building',
+        'building_name' => 'Assigned Status Building',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 9532,
+        'globalid' => 'assigned-status-housing',
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Owner',
+    ]);
+
+    AssignedAssessmentUser::query()->create([
+        'building_id' => $building->objectid,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'accepted',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.status_name', 'accepted_by_engineer');
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.set.status'), [
+            'globalid' => $housing->globalid,
+            'status' => 'accepted',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.status_name', 'accepted_by_engineer');
+
+    $this->assertDatabaseHas('building_statuses', [
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    $this->assertDatabaseHas('housing_statuses', [
+        'housing_id' => $housing->objectid,
+        'status_id' => $status->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+});
+
+it('allows auditing supervisors to set audit statuses without assignment', function () {
+    $role = Role::query()->create([
+        'name' => 'Auditing Supervisor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_lawyer',
+        'label_en' => 'Accepted By Lawyer',
+        'label_ar' => 'Accepted By Lawyer',
+        'stage' => 'lawyer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9541,
+        'globalid' => 'supervisor-status-building',
+        'building_name' => 'Supervisor Status Building',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'accepted',
+            'audit_type' => 'Legal Auditor',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.type', 'Legal Auditor')
+        ->assertJsonPath('data.status_name', 'accepted_by_lawyer');
+
+    $this->assertDatabaseHas('building_statuses', [
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'type' => 'Legal Auditor',
+    ]);
+});
+
 it('returns structured status history payload for rendering badges safely', function () {
     $user = User::factory()->create();
 
@@ -725,8 +896,9 @@ it('shows all audit status button groups to database officers in the assessment 
     $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
 
     expect($view)
-        ->toContain("@hasanyrole('Legal Auditor|Database Officer')")
-        ->toContain("@hasanyrole('QC/QA Engineer|Database Officer')")
+        ->toContain('@if($canEditAssessment)')
+        ->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')")
+        ->toContain("@hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor')")
         ->toContain("setBuildingStatus('accepted', 'Legal Auditor')")
         ->toContain("setBuildingStatus('accepted', 'QC/QA Engineer')")
         ->toContain("setHousingStatus('legal_notes', 'Legal Auditor')")

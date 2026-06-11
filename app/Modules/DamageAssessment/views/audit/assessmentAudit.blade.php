@@ -578,7 +578,8 @@
                                                 </div>
                                             </div>
                                             
-                                            @hasanyrole('Legal Auditor')
+                                            @if($canEditAssessment)
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
                                                 onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
@@ -588,7 +589,7 @@
                                                 قانونية</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer')
+                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor')
                                             <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                 data-status="rejected" data-audit-type="QC/QA Engineer"
                                                 onclick="setBuildingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
@@ -601,12 +602,13 @@
                                                 لمراجعة</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('Database Officer|undp-Project Manager')
+                                            @hasanyrole('Database Officer|Auditing Supervisor')
                                             <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
                                                 data-status="undp_final_approve"
                                                 onclick="setBuildingStatus('undp_final_approve')">
                                                 UNDP Final Approve</button>
                                             @endhasanyrole
+                                            @endif
                                             @if (auth()->user()->hasAnyRole(['Auditing Supervisor', 'Database Officer']))
                                                 <button type="button" id="btn_show_assessment_final_approve"
                                                     class="btn btn-sm btn-light-warning"
@@ -829,7 +831,8 @@
                                                 </div>
                                             </div>
                                            
-                                            @hasanyrole('Legal Auditor')
+                                            @if($canEditAssessment)
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
                                                 onclick="setHousingStatus('accepted', 'Legal Auditor')">مقبول</button>
@@ -839,7 +842,7 @@
                                                 لمراجعة</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer')
+                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor')
                                             <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
                                                 data-status="rejected" data-audit-type="QC/QA Engineer"
                                                 onclick="setHousingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
@@ -851,8 +854,9 @@
                                                 onclick="setHousingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                 لمراجعة</button>
                                             @endhasanyrole
+                                            @endif
 
-                                            <!--    @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
+                                            <!--    @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor')
                                                         <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
                                                             data-status="undp_final_approve"
                                                             onclick="setHousingStatus('undp_final_approve')">
