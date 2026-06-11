@@ -5,6 +5,8 @@
 
 @php
     $buildingCurrentStatus = $buildingCurrentStatus ?? null;
+    $buildingEngineeringStatus = $buildingEngineeringStatus ?? null;
+    $buildingLegalStatus = $buildingLegalStatus ?? null;
     $housingGlobalid = $housingGlobalid ?? null;
     $showHousingTab = filled($housingGlobalid);
     $isAssessmentReadOnly = $isAssessmentReadOnly ?? false;
@@ -591,8 +593,14 @@
                                             </div>
                                             
                                             @if($isStatusPreviewOnly)
-                                                <span class="{{ $statusBadgeClass($buildingCurrentStatus) }}">
+                                                <span class="{{ $statusBadgeClass($buildingEngineeringStatus) }}">
+                                                    آخر حالة هندسية: {{ $statusLabel($buildingEngineeringStatus) }}
+                                                </span>
+                                                <span class="d-none {{ $statusBadgeClass($buildingEngineeringStatus) }}">
                                                     آخر حالة: {{ $statusLabel($buildingCurrentStatus) }}
+                                                </span>
+                                                <span class="{{ $statusBadgeClass($buildingLegalStatus) }}">
+                                                    آخر حالة قانونية: {{ $statusLabel($buildingLegalStatus) }}
                                                 </span>
                                             @elseif($canViewStatusButtons)
                                             @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
@@ -855,6 +863,12 @@
                                            
                                             @if($isStatusPreviewOnly)
                                                 <span class="badge badge-light-secondary fw-bold px-4 py-3">
+                                                    آخر حالة هندسية: <span id="housing_engineering_status_preview">-</span>
+                                                </span>
+                                                <span class="badge badge-light-secondary fw-bold px-4 py-3">
+                                                    آخر حالة قانونية: <span id="housing_legal_status_preview">-</span>
+                                                </span>
+                                                <span class="d-none badge badge-light-secondary fw-bold px-4 py-3">
                                                     آخر حالة: <span id="housing_current_status_preview">-</span>
                                                 </span>
                                             @elseif($canViewStatusButtons)
@@ -1110,6 +1124,12 @@
 
         function updateHousingStatusPreview(statusName) {
             $('#housing_current_status_preview').text(statusPreviewLabel(statusName));
+        }
+
+        function updateHousingAuditStatusPreviews(engineeringStatusName, legalStatusName) {
+            $('#housing_engineering_status_preview').text(statusPreviewLabel(engineeringStatusName));
+            $('#housing_legal_status_preview').text(statusPreviewLabel(legalStatusName));
+            updateHousingStatusPreview(engineeringStatusName || legalStatusName);
         }
 
         const BUILDING_SUMMARY_FIELDS = [
@@ -2516,7 +2536,7 @@
 
                     $('[name="globalid"]').val(row.globalid).trigger('change');
                     currentHousingLegalChallenge = row.legal_challenge || null;
-                    updateHousingStatusPreview(row.current_status);
+                    updateHousingAuditStatusPreviews(row.current_engineering_status, row.current_legal_status);
                     setActiveStatusButton('.housing-status-btn', normalizeStatus(row.current_status), normalizeAuditType(row.current_status));
                 });
             };

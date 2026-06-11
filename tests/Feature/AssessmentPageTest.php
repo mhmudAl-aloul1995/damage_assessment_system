@@ -956,7 +956,8 @@ it('shows only the latest status markup for read only users without allowing fie
     expect($view)
         ->toContain('@if($isStatusPreviewOnly)')
         ->toContain('آخر حالة')
-        ->toContain('housing_current_status_preview')
+        ->toContain('housing_engineering_status_preview')
+        ->toContain('housing_legal_status_preview')
         ->toContain('@elseif($canViewStatusButtons)');
 
     $this->actingAs($user)
@@ -982,12 +983,20 @@ it('returns the latest housing status for read only field engineers', function (
     ]);
     $user->assignRole($role);
 
-    $status = AssessmentStatus::query()->create([
+    $engineeringStatus = AssessmentStatus::query()->create([
         'name' => 'accepted_by_engineer',
         'label_en' => 'Accepted By Engineer',
         'label_ar' => 'Accepted By Engineer',
         'stage' => 'engineer',
         'order_step' => 1,
+    ]);
+
+    $legalStatus = AssessmentStatus::query()->create([
+        'name' => 'legal_notes',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'Legal Notes',
+        'stage' => 'lawyer',
+        'order_step' => 2,
     ]);
 
     $building = Building::query()->create([
@@ -1006,15 +1015,24 @@ it('returns the latest housing status for read only field engineers', function (
 
     HousingStatus::query()->create([
         'housing_id' => $housing->objectid,
-        'status_id' => $status->id,
+        'status_id' => $engineeringStatus->id,
         'user_id' => $user->id,
         'type' => 'QC/QA Engineer',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $housing->objectid,
+        'status_id' => $legalStatus->id,
+        'user_id' => $user->id,
+        'type' => 'Legal Auditor',
     ]);
 
     $this->actingAs($user)
         ->getJson(route('housing.units.by.building', ['globalid' => $building->globalid]))
         ->assertOk()
-        ->assertJsonPath('data.0.current_status', 'accepted_by_engineer');
+        ->assertJsonPath('data.0.current_status', 'legal_notes')
+        ->assertJsonPath('data.0.current_engineering_status', 'accepted_by_engineer')
+        ->assertJsonPath('data.0.current_legal_status', 'legal_notes');
 });
 
 it('returns structured status history payload for rendering badges safely', function () {

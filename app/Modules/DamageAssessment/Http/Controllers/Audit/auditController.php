@@ -3297,6 +3297,14 @@ COALESCE(
                 return $this->latestHousingStatusName((int) $row->objectid);
             })
 
+            ->addColumn('current_engineering_status', function ($row) {
+                return $row->engineerStatus?->assessment_status?->name;
+            })
+
+            ->addColumn('current_legal_status', function ($row) {
+                return $row->lawyerStatus?->assessment_status?->name;
+            })
+
             /*
             |--------------------------------------------------------------------------
             | Final Approval
@@ -4278,6 +4286,18 @@ COALESCE(
             ->latest()
             ->first()?->status?->name;
 
+        $buildingEngineeringStatus = BuildingStatus::with('status')
+            ->where('building_id', $buildingId)
+            ->where('type', 'QC/QA Engineer')
+            ->latest()
+            ->first()?->status?->name;
+
+        $buildingLegalStatus = BuildingStatus::with('status')
+            ->where('building_id', $buildingId)
+            ->where('type', 'Legal Auditor')
+            ->latest()
+            ->first()?->status?->name;
+
         $buildingFinalStatus = BuildingStatus::with('status')
             ->where('building_id', $buildingId)
             ->where('type', 'final')
@@ -4289,7 +4309,7 @@ COALESCE(
             && ! $canEditAssessment
             && $canViewFieldAssessment;
 
-        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly', 'canEditAssessment', 'canViewStatusButtons', 'isFieldEngineerStatusPreview'));
+        return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingEngineeringStatus', 'buildingLegalStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly', 'canEditAssessment', 'canViewStatusButtons', 'isFieldEngineerStatusPreview'));
     }
 
     public function housingUnitAudit(Request $request)
