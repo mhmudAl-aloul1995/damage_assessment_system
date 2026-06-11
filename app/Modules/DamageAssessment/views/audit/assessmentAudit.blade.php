@@ -579,7 +579,7 @@
                                             </div>
                                             
                                             @if($canViewStatusButtons)
-                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader')
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
                                                 @disabled(! $canEditAssessment)
@@ -591,7 +591,7 @@
                                                 قانونية</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader')
+                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                 data-status="rejected" data-audit-type="QC/QA Engineer"
                                                 @disabled(! $canEditAssessment)
@@ -607,7 +607,7 @@
                                                 لمراجعة</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('Database Officer|Auditing Supervisor|Team Leader')
+                                            @hasanyrole('Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
                                                 data-status="undp_final_approve"
                                                 @disabled(! $canEditAssessment)
@@ -838,7 +838,7 @@
                                             </div>
                                            
                                             @if($canViewStatusButtons)
-                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader')
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                 data-status="accepted" data-audit-type="Legal Auditor"
                                                 @disabled(! $canEditAssessment)
@@ -850,7 +850,7 @@
                                                 لمراجعة</button>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader')
+                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
                                                 data-status="rejected" data-audit-type="QC/QA Engineer"
                                                 @disabled(! $canEditAssessment)
@@ -867,7 +867,7 @@
                                             @endhasanyrole
                                             @endif
 
-                                            <!--    @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader')
+                                            <!--    @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                                         <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
                                                             data-status="undp_final_approve"
                                                             onclick="setHousingStatus('undp_final_approve')">

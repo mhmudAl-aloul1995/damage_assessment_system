@@ -4248,8 +4248,10 @@ COALESCE(
         $building = Building::where('globalid', $request->buildingGlobalid)->first();
         $user = Auth::user();
         $canEditAssessment = $this->canEditAssessmentForBuilding($user, $building);
-        $canViewStatusButtons = $canEditAssessment || $user?->hasRole('Team Leader');
         $canViewFieldAssessment = $this->canViewFieldAssessmentForBuilding($user, $building);
+        $canViewStatusButtons = $canEditAssessment
+            || $user?->hasRole('Team Leader')
+            || ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) && $canViewFieldAssessment);
 
         abort_if(
             $user?->hasAnyRole(['Field Engineer', 'field Engineer'])
