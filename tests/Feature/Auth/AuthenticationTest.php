@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     config(['app.url' => 'http://localhost']);
@@ -110,6 +111,20 @@ test('users can authenticate using the login screen', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect('/damage-assessment/damageAssessment');
+});
+
+test('field engineers are redirected to their audit page after login', function () {
+    $role = Role::findOrCreate('Field Engineer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => '123456',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect('/damage-assessment/field-engineer-audit');
 });
 
 test('login ignores stale localhost intended urls', function () {

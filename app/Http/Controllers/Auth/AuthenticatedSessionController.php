@@ -56,6 +56,10 @@ class AuthenticatedSessionController extends Controller
             return redirect()->to(app_route('audit.index'));
         }
 
+        if ($user->hasAnyRole(['Field Engineer', 'field Engineer'])) {
+            return redirect()->to(app_route('audit.fieldEngineer'));
+        }
+
         return redirect()->to(app_route('damageAssessment.index'));
     }
 
