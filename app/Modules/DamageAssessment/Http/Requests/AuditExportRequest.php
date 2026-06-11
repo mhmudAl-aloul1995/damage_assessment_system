@@ -44,6 +44,8 @@ class AuditExportRequest extends FormRequest
             'field_engineer.*' => ['nullable', 'string', 'max:255'],
             'damage_status' => ['nullable', 'array'],
             'damage_status.*' => ['nullable', 'string', 'max:255'],
+            'legal_challenge' => ['nullable', 'array'],
+            'legal_challenge.*' => ['nullable', 'string', 'max:255'],
         ];
     }
 

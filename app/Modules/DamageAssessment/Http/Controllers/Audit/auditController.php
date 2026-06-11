@@ -2964,10 +2964,11 @@ class auditController extends Controller
         $buildingExportColumns = $auditExportService->buildingColumns();
         $housingExportColumns = $auditExportService->housingColumns();
         $hideAuditManagementActions = $this->shouldHideAuditManagementActions(Auth::user());
+        $legalChallenges = self::LEGAL_CHALLENGES;
 
         return View::make(
             'damage-assessment::audit.audit',
-            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions')
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges')
         );
     }
 
@@ -3076,10 +3077,11 @@ class auditController extends Controller
         $housingExportColumns = $auditExportService->housingColumns();
         $hideAuditManagementActions = true;
         $isFieldEngineerAudit = true;
+        $legalChallenges = self::LEGAL_CHALLENGES;
 
         return View::make(
             'damage-assessment::audit.audit',
-            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'isFieldEngineerAudit')
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'isFieldEngineerAudit', 'legalChallenges')
         );
     }
 

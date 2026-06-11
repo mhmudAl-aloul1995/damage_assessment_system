@@ -182,6 +182,11 @@ class AuditExportService
             $query->whereIn('building_damage_status', $damageStatuses);
         }
 
+        $legalChallenges = $this->filterValues($request, 'legal_challenge');
+        if ($legalChallenges !== []) {
+            $query->whereIn('legal_challenge', $legalChallenges);
+        }
+
         $fieldEngineers = $this->filterValues($request, 'field_engineer');
         if ($fieldEngineers !== []) {
             $query->whereIn(DB::raw('LOWER(TRIM(assignedto))'), $fieldEngineers);

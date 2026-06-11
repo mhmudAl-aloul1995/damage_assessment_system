@@ -257,3 +257,60 @@ it('filters audit buildings by legal challenge', function () {
             'globalid' => $otherBuilding->globalid,
         ]);
 });
+
+it('filters the main audit table by legal challenge', function () {
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $matchingBuilding = Building::query()->create([
+        'objectid' => 9701,
+        'globalid' => 'main-audit-legal-challenge-filter-matching',
+        'building_name' => 'Main Audit Matching Legal Challenge',
+        'field_status' => 'COMPLETED',
+        'legal_challenge' => 'missing_legal_documents',
+    ]);
+
+    $otherBuilding = Building::query()->create([
+        'objectid' => 9702,
+        'globalid' => 'main-audit-legal-challenge-filter-other',
+        'building_name' => 'Main Audit Other Legal Challenge',
+        'field_status' => 'COMPLETED',
+        'legal_challenge' => 'disputes_with_parties',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk()
+        ->assertSee('id="filter_legal_challenge"', false);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'legal_challenge' => ['missing_legal_documents'],
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonMissingPath('error')
+        ->assertJsonFragment([
+            'globalid' => $matchingBuilding->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $otherBuilding->globalid,
+        ]);
+});
