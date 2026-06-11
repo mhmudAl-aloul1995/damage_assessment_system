@@ -96,6 +96,17 @@
                                 <option value="committee_review">Committee Review </option>
                             </select>
                         </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">التحديات القانونية</label>
+                            <select id="filter_legal_challenge" class="form-select form-select-solid" data-control="select2"
+                                data-allow-clear="true" data-close-on-select="false" multiple
+                                data-placeholder="اختر التحدي القانوني">
+                                @foreach($legalChallenges as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">{{ __('ui.audit.from_creation_date') }}</label>
                             <input type="date" id="filter_from_date" placeholder="{{ __('ui.audit.from_creation_date') }}"
@@ -233,6 +244,7 @@
                         d.area = $('#filter_area').val();
                         d.field_engineer = $('#filter_field_engineer').val();
                         d.damage_status = $('#filter_damage_status').val();
+                        d.legal_challenge = $('#filter_legal_challenge').val();
                         d.filter_from_date = $('#filter_from_date').val();
                         d.filter_to_date = $('#filter_to_date').val();
                     }
@@ -323,7 +335,7 @@
                 }, 350);
             };
 
-            $('#filter_eng_status, #filter_legal_status, #filter_field_engineer, #filter_damage_status')
+            $('#filter_eng_status, #filter_legal_status, #filter_field_engineer, #filter_damage_status, #filter_legal_challenge')
                 .on('change', scheduleFilterReload);
 
             $('#filter_building_name, #filter_objectid, #filter_area, #filter_from_date, #filter_to_date')

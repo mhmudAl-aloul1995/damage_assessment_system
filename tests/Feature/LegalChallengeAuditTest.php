@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -204,4 +205,55 @@ it('forbids auditing engineers from updating legal challenges directly', functio
         'objectid' => $building->objectid,
         'legal_challenge' => 'missing_legal_documents',
     ]);
+});
+
+it('filters audit buildings by legal challenge', function () {
+    $role = Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $legalAuditor = User::factory()->create();
+    $legalAuditor->assignRole($role);
+
+    $matchingBuilding = Building::query()->create([
+        'objectid' => 9601,
+        'globalid' => 'legal-challenge-filter-matching',
+        'building_name' => 'Matching Legal Challenge Building',
+        'legal_challenge' => 'missing_legal_documents',
+    ]);
+
+    $otherBuilding = Building::query()->create([
+        'objectid' => 9602,
+        'globalid' => 'legal-challenge-filter-other',
+        'building_name' => 'Other Legal Challenge Building',
+        'legal_challenge' => 'disputes_with_parties',
+    ]);
+
+    foreach ([$matchingBuilding, $otherBuilding] as $building) {
+        AssignedAssessmentUser::query()->create([
+            'manager_id' => $legalAuditor->id,
+            'user_id' => $legalAuditor->id,
+            'type' => 'Legal Auditor',
+            'building_id' => $building->objectid,
+        ]);
+    }
+
+    $this->actingAs($legalAuditor)
+        ->getJson(route('audit.auditBuilding', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'legal_challenge' => ['missing_legal_documents'],
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonMissingPath('error')
+        ->assertJsonFragment([
+            'globalid' => $matchingBuilding->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $otherBuilding->globalid,
+        ]);
 });
