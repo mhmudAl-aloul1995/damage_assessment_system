@@ -225,7 +225,11 @@ Route::get('/offline.html', function (): Response {
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
-Route::get('/dashboard', function () {
+Route::get('/dashboard', function (Request $request) {
+    if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
+        return redirect()->to(app_route('audit.fieldEngineer'));
+    }
+
     return redirect()->to(app_route('damageAssessment.index'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
