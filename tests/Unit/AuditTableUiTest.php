@@ -88,6 +88,24 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('housing_status_notes');
 });
 
+test('assessment status actions are limited to the matching audit role', function () {
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
+    $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');
+
+    expect($view)
+        ->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')")
+        ->toContain("@hasanyrole('QC/QA Engineer|Engineering Auditor|Database Officer|Auditing Supervisor')")
+        ->not->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')")
+        ->not->toContain("@hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')");
+
+    expect($controller)
+        ->toContain("\$request->audit_type === 'Legal Auditor' && \$user->hasRole('Legal Auditor')")
+        ->toContain("\$request->audit_type === 'QC/QA Engineer' && \$user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])")
+        ->toContain('private function auditTypeCanSetStatus(string $type, string $status): bool')
+        ->toContain("'Legal Auditor' => in_array(\$status, ['accepted', 'legal_notes'], true)")
+        ->toContain("'QC/QA Engineer' => in_array(\$status, ['accepted', 'rejected', 'need_review'], true)");
+});
+
 test('assessment audit inline edits resolve missing global ids before saving', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
 

@@ -3908,9 +3908,9 @@ COALESCE(
 
             $type = null;
 
-            if ($user->hasRole('QC/QA Engineer')) {
+            if ($request->audit_type === 'QC/QA Engineer' && $user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
                 $type = 'QC/QA Engineer';
-            } elseif ($user->hasRole('Legal Auditor')) {
+            } elseif ($request->audit_type === 'Legal Auditor' && $user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
             } elseif ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor']) && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
                 $type = $request->audit_type;
@@ -3925,6 +3925,15 @@ COALESCE(
                 return response()->json([
                     'status' => false,
                     'message' => 'ليس لديك صلاحية لتحديث حالة المبنى',
+                ], 403);
+            }
+
+            if (! $this->auditTypeCanSetStatus($type, $request->string('status')->toString())) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'This status is not allowed for your audit role.',
                 ], 403);
             }
 
@@ -4052,9 +4061,9 @@ COALESCE(
 
             $type = null;
 
-            if ($user->hasRole('QC/QA Engineer')) {
+            if ($request->audit_type === 'QC/QA Engineer' && $user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
                 $type = 'QC/QA Engineer';
-            } elseif ($user->hasRole('Legal Auditor')) {
+            } elseif ($request->audit_type === 'Legal Auditor' && $user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
             } elseif ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor']) && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
                 $type = $request->audit_type;
@@ -4069,6 +4078,15 @@ COALESCE(
                 return response()->json([
                     'status' => false,
                     'message' => 'ليس لديك صلاحية لتحديث حالة الوحدة',
+                ], 403);
+            }
+
+            if (! $this->auditTypeCanSetStatus($type, $request->string('status')->toString())) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'This status is not allowed for your audit role.',
                 ], 403);
             }
 
@@ -4572,6 +4590,16 @@ COALESCE(
     private function abortFieldEngineerWrite(): void
     {
         abort_if($this->isReadOnlyFieldEngineer(Auth::user()), 403, 'هذا الاستبيان متاح للقراءة فقط.');
+    }
+
+    private function auditTypeCanSetStatus(string $type, string $status): bool
+    {
+        return match ($type) {
+            'Legal Auditor' => in_array($status, ['accepted', 'legal_notes'], true),
+            'QC/QA Engineer' => in_array($status, ['accepted', 'rejected', 'need_review'], true),
+            'Database Officer', 'Auditing Supervisor' => $status === 'undp_final_approve',
+            default => false,
+        };
     }
 
     private function isReadOnlyFieldEngineer(?User $user): bool

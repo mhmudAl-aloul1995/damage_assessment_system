@@ -660,7 +660,7 @@
                                                     آخر حالة قانونية: {{ $statusLabel($buildingLegalStatus) }}
                                                 </span>
                                             @elseif($canViewStatusButtons)
-                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
@@ -677,7 +677,7 @@
                                             </div>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
+                                            @hasanyrole('QC/QA Engineer|Engineering Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
@@ -971,7 +971,7 @@
                                                     آخر حالة: <span id="housing_current_status_preview">-</span>
                                                 </span>
                                             @elseif($canViewStatusButtons)
-                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
@@ -988,7 +988,7 @@
                                             </div>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
+                                            @hasanyrole('QC/QA Engineer|Engineering Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
@@ -1010,7 +1010,7 @@
                                             @endhasanyrole
                                             @endif
 
-                                            <!--    @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
+                                            <!--    @hasanyrole('QC/QA Engineer|Engineering Auditor|Database Officer|Auditing Supervisor')
                                                         <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
                                                             data-status="undp_final_approve"
                                                             onclick="setHousingStatus('undp_final_approve')">

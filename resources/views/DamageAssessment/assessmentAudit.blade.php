@@ -623,7 +623,7 @@
                                                 </div>
                                             </div>
                                             
-                                            @hasanyrole('Legal Auditor|Database Officer')
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
@@ -638,7 +638,7 @@
                                             </div>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer')
+                                            @hasanyrole('QC/QA Engineer|Engineering Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
@@ -898,7 +898,7 @@
                                                 </div>
                                             </div>
                                             
-                                            @hasanyrole('Legal Auditor|Database Officer')
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
@@ -913,7 +913,7 @@
                                             </div>
                                             @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Database Officer')
+                                            @hasanyrole('QC/QA Engineer|Engineering Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
