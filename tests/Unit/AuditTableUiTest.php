@@ -93,14 +93,19 @@ test('assessment status actions are limited to the matching audit role', functio
     $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');
 
     expect($view)
-        ->toContain('$canSetLegalStatus')
-        ->toContain('$canSetEngineeringStatus')
-        ->toContain('@disabled(! $canSetLegalStatus)')
-        ->toContain('@disabled(! $canSetEngineeringStatus)')
         ->toContain('function setAssessmentActiveStatusButtons')
-        ->toContain('button.hasClass(\'is-active\') || !canEnableStatusButton(button)')
+        ->toContain("button.hasClass('is-active')")
         ->toContain("setAssessmentActiveStatusButtons('.building-status-btn', buildingEngineeringStatus, buildingLegalStatus, buildingCurrentStatus)")
         ->toContain("setAssessmentActiveStatusButtons('.housing-status-btn', row.current_engineering_status, row.current_legal_status, row.current_status)")
+        ->toContain('function keepAttachmentRowsVisible')
+        ->toContain('return pinnedAttachmentRows.concat(filteredRows.filter(row => !pinnedRows.has(row)))')
+        ->toContain('rows = keepAttachmentRowsVisible(lastBuildingRows, rows)')
+        ->toContain('rows = keepAttachmentRowsVisible(lastHousingRows, rows)')
+        ->not->toContain('$canSetLegalStatus')
+        ->not->toContain('$canSetEngineeringStatus')
+        ->not->toContain('@disabled(! $canSetLegalStatus)')
+        ->not->toContain('@disabled(! $canSetEngineeringStatus)')
+        ->not->toContain('canEnableStatusButton')
         ->not->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')")
         ->not->toContain("@hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')");
 

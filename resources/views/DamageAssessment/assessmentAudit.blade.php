@@ -7,10 +7,6 @@
     $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     $housingGlobalid = $housingGlobalid ?? null;
     $canEditAssessment = $canEditAssessment ?? true;
-    $authUser = auth()->user();
-    $canSetLegalStatus = $canEditAssessment && $authUser?->hasAnyRole(['Legal Auditor', 'Database Officer', 'Auditing Supervisor']);
-    $canSetEngineeringStatus = $canEditAssessment && $authUser?->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor', 'Database Officer', 'Auditing Supervisor']);
-    $canSetFinalStatus = $canEditAssessment && $authUser?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'undp-Project Manager']);
 @endphp
 
 @section('content')
@@ -640,11 +636,9 @@
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                         data-status="accepted" data-audit-type="Legal Auditor"
-                                                        @disabled(! $canSetLegalStatus)
                                                         onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
                                                         data-status="legal_notes" data-audit-type="Legal Auditor"
-                                                        @disabled(! $canSetLegalStatus)
                                                         onclick="setBuildingStatus('legal_notes', 'Legal Auditor')">ملاحظات
                                                         قانونية</button>
                                                 </div>
@@ -655,15 +649,12 @@
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                         data-status="rejected" data-audit-type="QC/QA Engineer"
-                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setBuildingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                                     <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                         data-status="accepted" data-audit-type="QC/QA Engineer"
-                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setBuildingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
                                                         data-status="need_review" data-audit-type="QC/QA Engineer"
-                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setBuildingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                         لمراجعة</button>
                                                 </div>
@@ -674,7 +665,6 @@
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
                                                         data-status="undp_final_approve"
-                                                        @disabled(! $canSetFinalStatus)
                                                         onclick="setBuildingStatus('undp_final_approve')">
                                                         UNDP Final Approve</button>
                                                 </div>
@@ -915,11 +905,9 @@
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                         data-status="accepted" data-audit-type="Legal Auditor"
-                                                        @disabled(! $canSetLegalStatus)
                                                         onclick="setHousingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
                                                         data-status="legal_notes" data-audit-type="Legal Auditor"
-                                                        @disabled(! $canSetLegalStatus)
                                                         onclick="setHousingStatus('legal_notes', 'Legal Auditor')">بحاجة
                                                         لمراجعة</button>
                                                 </div>
@@ -930,15 +918,12 @@
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
                                                         data-status="rejected" data-audit-type="QC/QA Engineer"
-                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setHousingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                                     <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                         data-status="accepted" data-audit-type="QC/QA Engineer"
-                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setHousingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
                                                         data-status="need_review" data-audit-type="QC/QA Engineer"
-                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setHousingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                         لمراجعة</button>
                                                 </div>
@@ -1065,9 +1050,6 @@
 @section('script')
     <script>
         let isAreaManager = @json(auth()->user()->hasRole('Area Manager'));
-        let canSetLegalStatus = @json($canSetLegalStatus);
-        let canSetEngineeringStatus = @json($canSetEngineeringStatus);
-        let canSetFinalStatus = @json($canSetFinalStatus);
         let notesContext = null;
         let pendingStatus = null;
         let pendingAuditType = null;
@@ -1243,17 +1225,33 @@
             return html;
         }
 
+        function isAuditAttachmentRow(row) {
+            let name = normalizeSurveyName(row.name);
+            return name.includes('photo') || name.includes('image') || name.includes('attachment') || name.includes('comments');
+        }
+
+        function keepAttachmentRowsVisible(rows, filteredRows) {
+            let pinnedAttachmentRows = [];
+            let pinnedRows = new Set();
+
+            rows.forEach(function (row) {
+                if (isAuditAttachmentRow(row) && !pinnedRows.has(row)) {
+                    pinnedAttachmentRows.push(row);
+                    pinnedRows.add(row);
+                }
+            });
+
+            return pinnedAttachmentRows.concat(filteredRows.filter(row => !pinnedRows.has(row)));
+        }
+
         function applyAuditFilter(rows, filter) {
-            if (filter === 'missing') return rows.filter(row => !isAnswered(row));
-            if (filter === 'edited') return rows.filter(row => isEdited(row));
-            if (filter === 'answered') return rows.filter(row => isAnswered(row));
+            if (filter === 'missing') return keepAttachmentRowsVisible(rows, rows.filter(row => !isAnswered(row)));
+            if (filter === 'edited') return keepAttachmentRowsVisible(rows, rows.filter(row => isEdited(row)));
+            if (filter === 'answered') return keepAttachmentRowsVisible(rows, rows.filter(row => isAnswered(row)));
             if (filter === 'attachments') {
-                return rows.filter(row => {
-                    let name = normalizeSurveyName(row.name);
-                    return name.includes('photo') || name.includes('image') || name.includes('attachment') || name.includes('comments');
-                });
+                return rows.filter(row => isAuditAttachmentRow(row));
             }
-            return rows;
+            return keepAttachmentRowsVisible(rows, rows);
         }
 
         function renderAccordion(target, rows, filter, prefix) {
@@ -1714,27 +1712,8 @@
         function refreshStatusButtonAvailability(selector) {
             $(selector).each(function () {
                 let button = $(this);
-                button.prop('disabled', button.hasClass('is-active') || !canEnableStatusButton(button));
+                button.prop('disabled', button.hasClass('is-active'));
             });
-        }
-
-        function canEnableStatusButton(button) {
-            let status = button.data('status');
-            let auditType = button.data('audit-type');
-
-            if (status === 'undp_final_approve') {
-                return canSetFinalStatus;
-            }
-
-            if (auditType === 'Legal Auditor') {
-                return canSetLegalStatus;
-            }
-
-            if (auditType === 'QC/QA Engineer') {
-                return canSetEngineeringStatus;
-            }
-
-            return false;
         }
 
         function getFirstHousingOptionValue() {
@@ -2364,6 +2343,8 @@
                         });
                     }
 
+                    rows = keepAttachmentRowsVisible(lastBuildingRows, rows);
+
                     renderAccordion('#building_assessment_accordion', rows, currentBuildingFilter, 'building');
                 });
             };
@@ -2508,6 +2489,8 @@
                                  return q.includes(keyword) || a.includes(keyword) || n.includes(keyword);
                              });
                          }
+
+                         rows = keepAttachmentRowsVisible(lastHousingRows, rows);
 
                          renderAccordion('#housing_assessment_accordion', rows, currentHousingFilter, 'housing');
                      });
