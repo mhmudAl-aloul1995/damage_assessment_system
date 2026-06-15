@@ -98,6 +98,8 @@ test('assessment status actions are limited to the matching audit role', functio
         ->toContain("setAssessmentActiveStatusButtons('.building-status-btn', buildingEngineeringStatus, buildingLegalStatus, buildingCurrentStatus)")
         ->toContain("setAssessmentActiveStatusButtons('.housing-status-btn', row.current_engineering_status, row.current_legal_status, row.current_status)")
         ->toContain('function keepAttachmentRowsVisible')
+        ->toContain("return name.includes('photo') || name.includes('image') || name.includes('attachment')")
+        ->not->toContain("name.includes('comments')")
         ->toContain('return pinnedAttachmentRows.concat(filteredRows.filter(row => !pinnedRows.has(row)))')
         ->toContain('rows = keepAttachmentRowsVisible(lastBuildingRows, rows)')
         ->toContain('rows = keepAttachmentRowsVisible(lastHousingRows, rows)')

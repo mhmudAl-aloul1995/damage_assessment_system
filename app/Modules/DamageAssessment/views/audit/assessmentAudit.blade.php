@@ -1359,7 +1359,7 @@
 
         function isAuditAttachmentRow(row) {
             let name = normalizeSurveyName(row.name);
-            return name.includes('photo') || name.includes('image') || name.includes('attachment') || name.includes('comments');
+            return name.includes('photo') || name.includes('image') || name.includes('attachment');
         }
 
         function keepAttachmentRowsVisible(rows, filteredRows) {
