@@ -1159,6 +1159,8 @@
         }
 
         const BUILDING_SUMMARY_FIELDS = [
+            'objectid',
+            'owner_name',
             'floor_nos',
             'ground_floor_area__m2',
             'floor_area_m2',
@@ -1168,6 +1170,8 @@
         ];
 
         const BUILDING_SUMMARY_LABELS = {
+            objectid: 'رقم المبنى',
+            owner_name: 'اسم المالك',
             floor_nos: 'عدد الطوابق',
             ground_floor_area__m2: 'مساحة الطابق الأرضي',
             floor_area_m2: 'مساحة الطابق المتكرر',
