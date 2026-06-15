@@ -723,7 +723,7 @@
                                                 <div class="audit-action-label">إجراءات</div>
                                                 <div class="audit-action-controls">
                                                     <div class="dropdown">
-                                                        <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                                        <button type="button" class="btn btn-sm btn-light dropdown-toggle"
                                                             data-bs-toggle="dropdown" aria-expanded="false">
                                                             إجراءات
                                                         </button>
@@ -772,7 +772,7 @@
                             <div class="card-toolbar">
                                 <div class="d-flex flex-wrap gap-2">
                                     <div class="dropdown">
-                                        <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                        <button type="button" class="btn btn-sm btn-light dropdown-toggle"
                                             data-bs-toggle="dropdown" aria-expanded="false">
                                             إجراءات
                                         </button>
@@ -957,13 +957,13 @@
                                             </div>
                                            
                                             @if($isStatusPreviewOnly)
-                                                <span class="badge badge-light-secondary fw-bold px-4 py-3">
+                                                <span class="badge badge-light fw-bold px-4 py-3">
                                                     آخر حالة هندسية: <span id="housing_engineering_status_preview">-</span>
                                                 </span>
-                                                <span class="badge badge-light-secondary fw-bold px-4 py-3">
+                                                <span class="badge badge-light fw-bold px-4 py-3">
                                                     آخر حالة قانونية: <span id="housing_legal_status_preview">-</span>
                                                 </span>
-                                                <span class="d-none badge badge-light-secondary fw-bold px-4 py-3">
+                                                <span class="d-none badge badge-light fw-bold px-4 py-3">
                                                     آخر حالة: <span id="housing_current_status_preview">-</span>
                                                 </span>
                                             @elseif($canViewStatusButtons)
@@ -1008,7 +1008,7 @@
                                                 <div class="audit-action-label">إجراءات</div>
                                                 <div class="audit-action-controls">
                                                     <div class="dropdown">
-                                                        <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                                        <button type="button" class="btn btn-sm btn-light dropdown-toggle"
                                                             data-bs-toggle="dropdown" aria-expanded="false">
                                                             إجراءات
                                                         </button>
@@ -2010,7 +2010,7 @@
 
         function renderStatusBadge(item) {
             let label = item.status_label ?? item.status_name ?? '-';
-            let badgeClass = item.status_badge_class ?? 'badge badge-light-secondary fw-bold';
+            let badgeClass = item.status_badge_class ?? 'badge badge-light fw-bold';
             badgeClass = String(badgeClass).replace(/[^a-zA-Z0-9 _-]/g, '').trim();
 
             return `<span class="${badgeClass}">${escapeHtml(label)}</span>`;
