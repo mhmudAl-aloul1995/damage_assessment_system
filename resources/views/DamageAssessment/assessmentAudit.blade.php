@@ -6,6 +6,11 @@
 @php
     $buildingCurrentStatus = $buildingCurrentStatus ?? null;
     $housingGlobalid = $housingGlobalid ?? null;
+    $canEditAssessment = $canEditAssessment ?? true;
+    $authUser = auth()->user();
+    $canSetLegalStatus = $canEditAssessment && $authUser?->hasAnyRole(['Legal Auditor', 'Database Officer', 'Auditing Supervisor']);
+    $canSetEngineeringStatus = $canEditAssessment && $authUser?->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor', 'Database Officer', 'Auditing Supervisor']);
+    $canSetFinalStatus = $canEditAssessment && $authUser?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'undp-Project Manager']);
 @endphp
 
 @section('content')
@@ -630,50 +635,50 @@
                                                 </div>
                                             </div>
                                             
-                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                         data-status="accepted" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canSetLegalStatus)
                                                         onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
                                                         data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canSetLegalStatus)
                                                         onclick="setBuildingStatus('legal_notes', 'Legal Auditor')">ملاحظات
                                                         قانونية</button>
                                                 </div>
                                             </div>
-                                            @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Engineering Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                         data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setBuildingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                                     <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                         data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setBuildingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
                                                         data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setBuildingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                         لمراجعة</button>
                                                 </div>
                                             </div>
-                                            @endhasanyrole
 
-                                            @hasanyrole('Database Officer|undp-Project Manager')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">الاعتماد النهائي</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
                                                         data-status="undp_final_approve"
+                                                        @disabled(! $canSetFinalStatus)
                                                         onclick="setBuildingStatus('undp_final_approve')">
                                                         UNDP Final Approve</button>
                                                 </div>
                                             </div>
-                                            @endhasanyrole
                                             @if (auth()->user()->hasAnyRole(['Auditing Supervisor', 'Database Officer']))
                                                 <div class="audit-action-group">
                                                     <div class="audit-action-label">اعتماد المشرف</div>
@@ -690,7 +695,7 @@
                                                 <div class="audit-action-label">إجراءات</div>
                                                 <div class="audit-action-controls">
                                                     <div class="dropdown">
-                                                        <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                                        <button type="button" class="btn btn-sm btn-light dropdown-toggle"
                                                             data-bs-toggle="dropdown" aria-expanded="false">
                                                             إجراءات
                                                         </button>
@@ -733,7 +738,7 @@
                             </div>
                             <div class="card-toolbar">
                                 <div class="dropdown">
-                                    <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                    <button type="button" class="btn btn-sm btn-light dropdown-toggle"
                                         data-bs-toggle="dropdown" aria-expanded="false">
                                         إجراءات
                                     </button>
@@ -905,38 +910,39 @@
                                                 </div>
                                             </div>
                                             
-                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                         data-status="accepted" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canSetLegalStatus)
                                                         onclick="setHousingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
                                                         data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canSetLegalStatus)
                                                         onclick="setHousingStatus('legal_notes', 'Legal Auditor')">بحاجة
                                                         لمراجعة</button>
                                                 </div>
                                             </div>
-                                            @endhasanyrole
 
-                                            @hasanyrole('QC/QA Engineer|Engineering Auditor|Database Officer|Auditing Supervisor')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
                                                         data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setHousingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                                     <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
                                                         data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setHousingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
                                                         data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canSetEngineeringStatus)
                                                         onclick="setHousingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                         لمراجعة</button>
                                                 </div>
                                             </div>
-                                            @endhasanyrole
 
                                             <!--    @hasanyrole('QC/QA Engineer|Database Officer|undp-Project Manager')
                                                         <button type="button" class="btn btn-sm btn-light-primary housing-status-btn"
@@ -949,7 +955,7 @@
                                                 <div class="audit-action-label">إجراءات</div>
                                                 <div class="audit-action-controls">
                                                     <div class="dropdown">
-                                                        <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                                        <button type="button" class="btn btn-sm btn-light dropdown-toggle"
                                                             data-bs-toggle="dropdown" aria-expanded="false">
                                                             إجراءات
                                                         </button>
@@ -1059,6 +1065,9 @@
 @section('script')
     <script>
         let isAreaManager = @json(auth()->user()->hasRole('Area Manager'));
+        let canSetLegalStatus = @json($canSetLegalStatus);
+        let canSetEngineeringStatus = @json($canSetEngineeringStatus);
+        let canSetFinalStatus = @json($canSetFinalStatus);
         let notesContext = null;
         let pendingStatus = null;
         let pendingAuditType = null;
@@ -1068,6 +1077,8 @@
         let currentApprovalLocked = false;
         let urlHousingGlobalId = @json($housingGlobalid ?? null);
         let buildingCurrentStatus = @json($buildingCurrentStatus);
+        let buildingEngineeringStatus = @json($buildingEngineeringStatus ?? null);
+        let buildingLegalStatus = @json($buildingLegalStatus ?? null);
         let buildingFinalStatus = @json($buildingFinalStatus ?? null);
         let buildingObjectId = @json($building?->objectid);
         let initialHousingSelectionDone = false;
@@ -1083,7 +1094,7 @@
             KTBuildingAssessmentList.init();
             KTBuildingUnitsList.init();
             KTHousingAssessmentList.init();
-            setActiveStatusButton('.building-status-btn', normalizeStatus(buildingCurrentStatus), normalizeAuditType(buildingCurrentStatus));
+            setAssessmentActiveStatusButtons('.building-status-btn', buildingEngineeringStatus, buildingLegalStatus, buildingCurrentStatus);
             syncFinalApproveButton();
             selectInitialHousingOption();
             
@@ -1661,7 +1672,35 @@
         }
 
         function setActiveStatusButton(selector, status, auditType = null) {
-            $(selector).removeClass('is-active').prop('disabled', false);
+            if (!status) {
+                refreshStatusButtonAvailability(selector);
+                return;
+            }
+
+            if (auditType) {
+                $(selector + '[data-audit-type="' + auditType + '"]').removeClass('is-active');
+            } else {
+                $(selector + '[data-status="' + status + '"]').removeClass('is-active');
+            }
+
+            markStatusButtonActive(selector, status, auditType);
+            refreshStatusButtonAvailability(selector);
+        }
+
+        function setAssessmentActiveStatusButtons(selector, engineeringStatus = null, legalStatus = null, currentStatus = null) {
+            $(selector).removeClass('is-active');
+
+            markStatusButtonActive(selector, normalizeStatus(engineeringStatus), 'QC/QA Engineer');
+            markStatusButtonActive(selector, normalizeStatus(legalStatus), 'Legal Auditor');
+
+            if (normalizeStatus(currentStatus) === 'undp_final_approve') {
+                markStatusButtonActive(selector, 'undp_final_approve');
+            }
+
+            refreshStatusButtonAvailability(selector);
+        }
+
+        function markStatusButtonActive(selector, status, auditType = null) {
             if (!status) return;
 
             let activeSelector = selector + '[data-status="' + status + '"]';
@@ -1669,7 +1708,33 @@
                 activeSelector += '[data-audit-type="' + auditType + '"]';
             }
 
-            $(activeSelector).addClass('is-active').prop('disabled', true);
+            $(activeSelector).addClass('is-active');
+        }
+
+        function refreshStatusButtonAvailability(selector) {
+            $(selector).each(function () {
+                let button = $(this);
+                button.prop('disabled', button.hasClass('is-active') || !canEnableStatusButton(button));
+            });
+        }
+
+        function canEnableStatusButton(button) {
+            let status = button.data('status');
+            let auditType = button.data('audit-type');
+
+            if (status === 'undp_final_approve') {
+                return canSetFinalStatus;
+            }
+
+            if (auditType === 'Legal Auditor') {
+                return canSetLegalStatus;
+            }
+
+            if (auditType === 'QC/QA Engineer') {
+                return canSetEngineeringStatus;
+            }
+
+            return false;
         }
 
         function getFirstHousingOptionValue() {
@@ -1811,7 +1876,7 @@
 
         function renderStatusBadge(item) {
             let label = item.status_label ?? item.status_name ?? '-';
-            let badgeClass = item.status_badge_class ?? 'badge badge-light-secondary fw-bold';
+            let badgeClass = item.status_badge_class ?? 'badge badge-light fw-bold';
             badgeClass = String(badgeClass).replace(/[^a-zA-Z0-9 _-]/g, '').trim();
 
             return `<span class="${badgeClass}">${escapeHtml(label)}</span>`;
@@ -2193,9 +2258,9 @@
                     $('#notesSaveBtn').prop('disabled', false);
 
                     if (isBuilding) {
-                        $('.building-status-btn').not('.is-active').prop('disabled', false);
+                        refreshStatusButtonAvailability('.building-status-btn');
                     } else {
-                        $('.housing-status-btn').not('.is-active').prop('disabled', false);
+                        refreshStatusButtonAvailability('.housing-status-btn');
                     }
                 }
             });
@@ -2367,7 +2432,7 @@
                     $(this).addClass('selected');
 
                     $('[name="globalid"]').val(row.globalid).trigger('change');
-                    setActiveStatusButton('.housing-status-btn', normalizeStatus(row.current_status), normalizeAuditType(row.current_status));
+                    setAssessmentActiveStatusButtons('.housing-status-btn', row.current_engineering_status, row.current_legal_status, row.current_status);
                 });
             };
 
