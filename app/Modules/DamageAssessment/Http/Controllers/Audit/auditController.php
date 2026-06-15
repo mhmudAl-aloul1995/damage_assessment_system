@@ -3027,6 +3027,61 @@ class auditController extends Controller
         }
     }
 
+    public function buildingHousingUnitAttachments(Building $building, ArcgisService $arcgis): JsonResponse
+    {
+        try {
+            $token = $arcgis->getToken();
+            $layerId = $arcgis->getLayerId(HousingUnit::class);
+
+            $units = HousingUnit::query()
+                ->where('parentglobalid', $building->globalid)
+                ->orderBy('floor_number')
+                ->orderBy('housing_unit_number')
+                ->get(['objectid', 'globalid', 'floor_number', 'housing_unit_number', 'unit_owner']);
+
+            $payload = $units
+                ->map(function (HousingUnit $unit) use ($arcgis, $layerId, $token): array {
+                    $attachments = [];
+
+                    if (filled($unit->objectid)) {
+                        $attachments = collect($arcgis->getAttachments($unit->objectid, $layerId, $token))
+                            ->map(fn (array $attachment): array => [
+                                'id' => $attachment['id'] ?? null,
+                                'name' => $attachment['name'] ?? 'Attachment',
+                                'content_type' => $attachment['contentType'] ?? '',
+                                'size' => $attachment['size'] ?? null,
+                                'url' => filled($attachment['id'] ?? null)
+                                    ? $arcgis->buildUrl($unit->objectid, $attachment['id'], $layerId, $token)
+                                    : null,
+                            ])
+                            ->filter(fn (array $attachment): bool => filled($attachment['id']) && filled($attachment['url']))
+                            ->values()
+                            ->all();
+                    }
+
+                    return [
+                        'objectid' => $unit->objectid,
+                        'globalid' => $unit->globalid,
+                        'title' => $this->housingUnitAttachmentTitle($unit),
+                        'attachments' => $attachments,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            return response()->json([
+                'units' => $payload,
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to load ArcGIS housing unit attachments.',
+                'units' => [],
+            ], 502);
+        }
+    }
+
     public function storeBuildingAttachment(StoreBuildingAttachmentRequest $request, Building $building, ArcgisService $arcgis): JsonResponse
     {
         if (! filled($building->objectid)) {
@@ -4726,6 +4781,18 @@ COALESCE(
         }
 
         return $parts[0].' '.$parts[array_key_last($parts)];
+    }
+
+    private function housingUnitAttachmentTitle(HousingUnit $unit): string
+    {
+        $parts = array_filter([
+            filled($unit->floor_number) ? 'Floor '.$unit->floor_number : null,
+            filled($unit->housing_unit_number) ? 'Unit '.$unit->housing_unit_number : null,
+            filled($unit->unit_owner) ? $unit->unit_owner : null,
+            filled($unit->objectid) ? 'ObjectID '.$unit->objectid : null,
+        ]);
+
+        return $parts === [] ? 'Housing Unit' : implode(' - ', $parts);
     }
 
     private function legalChallengeLabel(?string $value): string

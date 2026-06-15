@@ -242,6 +242,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/audit/dashboard', AuditDashboardController::class)->name('audit.dashboard');
     Route::get('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'buildingAttachments'])
         ->name('audit.building.attachments.index');
+    Route::get('/audit/buildings/{building:globalid}/housing-unit-attachments', [auditController::class, 'buildingHousingUnitAttachments'])
+        ->name('audit.building.housing-unit-attachments.index');
     Route::post('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'storeBuildingAttachment'])
         ->name('audit.building.attachments.store');
     Route::post('/audit/buildings/{building:globalid}/attachments/{attachmentId}/replace', [auditController::class, 'replaceBuildingAttachment'])
