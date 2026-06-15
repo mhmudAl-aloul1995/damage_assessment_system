@@ -250,6 +250,12 @@ Route::middleware('auth')->group(function () {
         ->name('audit.building.attachments.replace');
     Route::delete('/audit/buildings/{building:globalid}/attachments/{attachmentId}', [auditController::class, 'destroyBuildingAttachment'])
         ->name('audit.building.attachments.destroy');
+    Route::post('/audit/housing-units/{housingUnit:globalid}/attachments', [auditController::class, 'storeHousingUnitAttachment'])
+        ->name('audit.housing-unit.attachments.store');
+    Route::post('/audit/housing-units/{housingUnit:globalid}/attachments/{attachmentId}/replace', [auditController::class, 'replaceHousingUnitAttachment'])
+        ->name('audit.housing-unit.attachments.replace');
+    Route::delete('/audit/housing-units/{housingUnit:globalid}/attachments/{attachmentId}', [auditController::class, 'destroyHousingUnitAttachment'])
+        ->name('audit.housing-unit.attachments.destroy');
     Route::post('/assign', [auditController::class, 'assign'])->name('audit.assign');
     Route::get('/auditBuilding', [auditController::class, 'auditBuilding'])->name('audit.auditBuilding');
     Route::get('/engineer-table', [AuditController::class, 'engineerTable']);

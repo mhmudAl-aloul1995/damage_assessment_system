@@ -12,6 +12,8 @@ class ArcgisAttachmentBackup extends Model
         'auditable_type',
         'building_globalid',
         'building_objectid',
+        'housing_unit_globalid',
+        'housing_unit_objectid',
         'attachment_id',
         'attachment_name',
         'content_type',

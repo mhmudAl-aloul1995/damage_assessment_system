@@ -3198,6 +3198,122 @@ class auditController extends Controller
         }
     }
 
+    public function storeHousingUnitAttachment(StoreBuildingAttachmentRequest $request, HousingUnit $housingUnit, ArcgisService $arcgis): JsonResponse
+    {
+        if (! filled($housingUnit->objectid)) {
+            return response()->json([
+                'message' => 'This housing unit does not have an ArcGIS object id.',
+            ], 422);
+        }
+
+        try {
+            $result = $arcgis->addAttachment(
+                $housingUnit->objectid,
+                $arcgis->getLayerId(HousingUnit::class),
+                $request->file('attachment'),
+                $arcgis->getToken()
+            );
+
+            if (! ($result['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'ArcGIS did not accept the attachment.',
+                    'details' => $result['message'] ?? null,
+                ], 502);
+            }
+
+            return response()->json([
+                'message' => 'Attachment uploaded successfully.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to upload ArcGIS attachment.',
+            ], 502);
+        }
+    }
+
+    public function replaceHousingUnitAttachment(StoreBuildingAttachmentRequest $request, HousingUnit $housingUnit, int $attachmentId, ArcgisService $arcgis, ArcgisAttachmentBackupService $backupService): JsonResponse
+    {
+        if (! filled($housingUnit->objectid)) {
+            return response()->json([
+                'message' => 'This housing unit does not have an ArcGIS object id.',
+            ], 422);
+        }
+
+        try {
+            $token = $arcgis->getToken();
+            $layerId = $arcgis->getLayerId(HousingUnit::class);
+            $backupService->backupHousingUnitAttachment($housingUnit, $attachmentId, 'replace', $token);
+
+            $deleteResult = $arcgis->deleteAttachment($housingUnit->objectid, $layerId, $attachmentId, $token);
+
+            if (! ($deleteResult['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'ArcGIS did not delete the old attachment.',
+                    'details' => $deleteResult['message'] ?? null,
+                ], 502);
+            }
+
+            $uploadResult = $arcgis->addAttachment($housingUnit->objectid, $layerId, $request->file('attachment'), $token);
+
+            if (! ($uploadResult['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'The old attachment was deleted, but ArcGIS did not accept the replacement.',
+                    'details' => $uploadResult['message'] ?? null,
+                ], 502);
+            }
+
+            return response()->json([
+                'message' => 'Attachment replaced successfully.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to backup or replace ArcGIS attachment.',
+            ], 502);
+        }
+    }
+
+    public function destroyHousingUnitAttachment(HousingUnit $housingUnit, int $attachmentId, ArcgisService $arcgis, ArcgisAttachmentBackupService $backupService): JsonResponse
+    {
+        if (! filled($housingUnit->objectid)) {
+            return response()->json([
+                'message' => 'This housing unit does not have an ArcGIS object id.',
+            ], 422);
+        }
+
+        try {
+            $token = $arcgis->getToken();
+            $backupService->backupHousingUnitAttachment($housingUnit, $attachmentId, 'delete', $token);
+
+            $result = $arcgis->deleteAttachment(
+                $housingUnit->objectid,
+                $arcgis->getLayerId(HousingUnit::class),
+                $attachmentId,
+                $token
+            );
+
+            if (! ($result['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'ArcGIS did not delete the attachment.',
+                    'details' => $result['message'] ?? null,
+                ], 502);
+            }
+
+            return response()->json([
+                'message' => 'Attachment deleted successfully.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to backup or delete ArcGIS attachment.',
+            ], 502);
+        }
+    }
+
     public function fieldEngineerAudit(Request $request, AuditTableService $auditTableService)
     {
         $user = Auth::user();

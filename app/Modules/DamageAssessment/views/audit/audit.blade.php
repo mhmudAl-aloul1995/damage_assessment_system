@@ -616,6 +616,28 @@
 								</select>
 							</div>
 
+							<form id="housingUnitAttachmentForm" enctype="multipart/form-data" class="mb-7 d-none">
+								@csrf
+								<input type="hidden" id="housing_unit_attachment_replace_id">
+
+								<div class="row g-3 align-items-end">
+									<div class="col-md-8">
+										<label class="form-label required">ملف المرفق</label>
+										<input type="file" name="attachment" id="housing_unit_attachment_file"
+											class="form-control form-control-solid" required>
+									</div>
+									<div class="col-md-4 d-flex gap-2">
+										<button type="submit" class="btn btn-primary flex-grow-1" id="housingUnitAttachmentSubmit">
+											<span class="indicator-label" id="housingUnitAttachmentSubmitLabel">إضافة</span>
+											<span class="indicator-progress">يرجى الانتظار...
+												<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+											</span>
+										</button>
+										<button type="button" class="btn btn-light d-none" id="cancelHousingUnitAttachmentReplace">إلغاء</button>
+									</div>
+								</div>
+							</form>
+
 							<div class="table-responsive">
 								<table class="table table-row-bordered table-striped gy-4 gs-5">
 									<thead>
@@ -821,10 +843,23 @@
 				store: @json(route('audit.building.attachments.store', ['building' => '__BUILDING__'])),
 				replace: @json(route('audit.building.attachments.replace', ['building' => '__BUILDING__', 'attachmentId' => '__ATTACHMENT__'])),
 				destroy: @json(route('audit.building.attachments.destroy', ['building' => '__BUILDING__', 'attachmentId' => '__ATTACHMENT__'])),
+				housingStore: @json(route('audit.housing-unit.attachments.store', ['housingUnit' => '__HOUSING_UNIT__'])),
+				housingReplace: @json(route('audit.housing-unit.attachments.replace', ['housingUnit' => '__HOUSING_UNIT__', 'attachmentId' => '__ATTACHMENT__'])),
+				housingDestroy: @json(route('audit.housing-unit.attachments.destroy', ['housingUnit' => '__HOUSING_UNIT__', 'attachmentId' => '__ATTACHMENT__'])),
 			};
 
 			function buildingAttachmentUrl(routeName, buildingGlobalId, attachmentId = null) {
 				let url = buildingAttachmentRoutes[routeName].replace('__BUILDING__', encodeURIComponent(buildingGlobalId));
+
+				if (attachmentId !== null) {
+					url = url.replace('__ATTACHMENT__', encodeURIComponent(attachmentId));
+				}
+
+				return url;
+			}
+
+			function housingUnitAttachmentUrl(routeName, housingUnitGlobalId, attachmentId = null) {
+				let url = buildingAttachmentRoutes[routeName].replace('__HOUSING_UNIT__', encodeURIComponent(housingUnitGlobalId));
 
 				if (attachmentId !== null) {
 					url = url.replace('__ATTACHMENT__', encodeURIComponent(attachmentId));
@@ -896,6 +931,30 @@
 				$('#building_attachment_replace_id').val('');
 				$('#buildingAttachmentSubmitLabel').text('إضافة');
 				$('#cancelAttachmentReplace').addClass('d-none');
+			}
+
+			function selectedHousingUnitAttachmentUnit() {
+				const unitKey = $('#housing_unit_attachment_select').val();
+
+				if (!unitKey) {
+					return null;
+				}
+
+				return housingUnitAttachmentUnits.find(function (item) {
+					return String(item.globalid || item.objectid) === String(unitKey);
+				}) || null;
+			}
+
+			function resetHousingUnitAttachmentForm() {
+				const form = $('#housingUnitAttachmentForm')[0];
+
+				if (form) {
+					form.reset();
+				}
+
+				$('#housing_unit_attachment_replace_id').val('');
+				$('#housingUnitAttachmentSubmitLabel').text('إضافة');
+				$('#cancelHousingUnitAttachmentReplace').addClass('d-none');
 			}
 
 			function renderBuildingAttachments(attachments) {
@@ -984,6 +1043,8 @@
 
 			function renderSelectedHousingUnitAttachments(unitKey) {
 				if (!housingUnitAttachmentUnits || housingUnitAttachmentUnits.length === 0) {
+					$('#housingUnitAttachmentForm').addClass('d-none');
+					resetHousingUnitAttachmentForm();
 					$('#housingUnitAttachmentsTableBody').html(
 						'<tr><td colspan="5" class="text-center text-muted">لا توجد وحدات سكنية مرتبطة بهذا المبنى</td></tr>'
 					);
@@ -992,6 +1053,8 @@
 				}
 
 				if (!unitKey) {
+					$('#housingUnitAttachmentForm').addClass('d-none');
+					resetHousingUnitAttachmentForm();
 					$('#housingUnitAttachmentsTableBody').html(
 						'<tr><td colspan="5" class="text-center text-muted">اختر وحدة سكنية لعرض مرفقاتها</td></tr>'
 					);
@@ -1002,6 +1065,19 @@
 				const unit = housingUnitAttachmentUnits.find(function (item) {
 					return String(item.globalid || item.objectid) === String(unitKey);
 				});
+
+				resetHousingUnitAttachmentForm();
+
+				if (!unit || !unit.globalid) {
+					$('#housingUnitAttachmentForm').addClass('d-none');
+					$('#housingUnitAttachmentsTableBody').html(
+						'<tr><td colspan="5" class="text-center text-muted">لا يمكن إدارة مرفقات هذه الوحدة لعدم توفر GlobalID</td></tr>'
+					);
+
+					return;
+				}
+
+				$('#housingUnitAttachmentForm').removeClass('d-none');
 
 				if (!unit || !unit.attachments || unit.attachments.length === 0) {
 					$('#housingUnitAttachmentsTableBody').html(
@@ -1021,7 +1097,15 @@
 							<td>${escapeAuditCell(attachment.content_type || '-')}</td>
 							<td>${formatAttachmentSize(attachment.size)}</td>
 							<td class="text-end">
-								<a href="${attachment.url}" target="_blank" class="btn btn-sm btn-light-primary">فتح</a>
+								<a href="${attachment.url}" target="_blank" class="btn btn-sm btn-light-primary me-1">فتح</a>
+								<button type="button" class="btn btn-sm btn-light-warning me-1 btn-replace-housing-unit-attachment"
+									data-attachment-id="${attachment.id}">
+									تعديل
+								</button>
+								<button type="button" class="btn btn-sm btn-light-danger btn-delete-housing-unit-attachment"
+									data-attachment-id="${attachment.id}">
+									حذف
+								</button>
 							</td>
 						</tr>
 					`;
@@ -1030,7 +1114,7 @@
 				$('#housingUnitAttachmentsTableBody').html(rows);
 			}
 
-			function loadHousingUnitAttachments() {
+			function loadHousingUnitAttachments(selectedUnitKey = null) {
 				const buildingGlobalId = $('#building_attachment_globalid').val();
 
 				if (!buildingGlobalId) {
@@ -1046,7 +1130,11 @@
 					type: 'GET',
 					success: function (response) {
 						resetHousingUnitAttachmentSelect(response.units || []);
-						renderSelectedHousingUnitAttachments(null);
+						if (selectedUnitKey) {
+							$('#housing_unit_attachment_select').val(String(selectedUnitKey)).trigger('change');
+						} else {
+							renderSelectedHousingUnitAttachments(null);
+						}
 					},
 					error: function (xhr) {
 						resetHousingUnitAttachmentSelect([]);
@@ -1058,6 +1146,102 @@
 
 			$('#housing_unit_attachment_select').on('change', function () {
 				renderSelectedHousingUnitAttachments($(this).val());
+			});
+
+			$('#housingUnitAttachmentForm').on('submit', function (e) {
+				e.preventDefault();
+
+				const unit = selectedHousingUnitAttachmentUnit();
+				const attachmentId = $('#housing_unit_attachment_replace_id').val();
+				const formData = new FormData(this);
+				const button = $('#housingUnitAttachmentSubmit');
+
+				if (!unit || !unit.globalid) {
+					showBuildingAttachmentsAlert('warning', 'اختر وحدة سكنية أولاً.');
+
+					return;
+				}
+
+				formData.append('_token', @json(csrf_token()));
+
+				button.attr('data-kt-indicator', 'on').prop('disabled', true);
+				hideBuildingAttachmentsAlert();
+
+				$.ajax({
+					url: attachmentId
+						? housingUnitAttachmentUrl('housingReplace', unit.globalid, attachmentId)
+						: housingUnitAttachmentUrl('housingStore', unit.globalid),
+					type: 'POST',
+					data: formData,
+					processData: false,
+					contentType: false,
+					success: function (response) {
+						showBuildingAttachmentsAlert('success', response.message || 'تم حفظ المرفق.');
+						resetHousingUnitAttachmentForm();
+						loadHousingUnitAttachments(unit.globalid);
+					},
+					error: function (xhr) {
+						const errors = xhr.responseJSON?.errors;
+						const message = errors?.attachment?.[0] || xhr.responseJSON?.message || 'تعذر حفظ المرفق.';
+						showBuildingAttachmentsAlert('danger', message);
+					},
+					complete: function () {
+						button.removeAttr('data-kt-indicator').prop('disabled', false);
+					}
+				});
+			});
+
+			$(document).on('click', '.btn-replace-housing-unit-attachment', function () {
+				$('#housing_unit_attachment_replace_id').val($(this).data('attachment-id'));
+				$('#housingUnitAttachmentSubmitLabel').text('استبدال');
+				$('#cancelHousingUnitAttachmentReplace').removeClass('d-none');
+				$('#housing_unit_attachment_file').trigger('click');
+			});
+
+			$('#cancelHousingUnitAttachmentReplace').on('click', function () {
+				resetHousingUnitAttachmentForm();
+			});
+
+			$(document).on('click', '.btn-delete-housing-unit-attachment', function () {
+				const unit = selectedHousingUnitAttachmentUnit();
+				const attachmentId = $(this).data('attachment-id');
+
+				if (!unit || !unit.globalid) {
+					showBuildingAttachmentsAlert('warning', 'اختر وحدة سكنية أولاً.');
+
+					return;
+				}
+
+				Swal.fire({
+					text: 'هل تريد حذف هذا المرفق؟',
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonText: 'نعم',
+					cancelButtonText: 'إلغاء',
+				}).then(function (result) {
+					if (!result.isConfirmed) {
+						return;
+					}
+
+					hideBuildingAttachmentsAlert();
+
+					$.ajax({
+						url: housingUnitAttachmentUrl('housingDestroy', unit.globalid, attachmentId),
+						type: 'POST',
+						data: {
+							_token: @json(csrf_token()),
+							_method: 'DELETE',
+						},
+						success: function (response) {
+							showBuildingAttachmentsAlert('success', response.message || 'تم حذف المرفق.');
+							resetHousingUnitAttachmentForm();
+							loadHousingUnitAttachments(unit.globalid);
+						},
+						error: function (xhr) {
+							showBuildingAttachmentsAlert('danger', xhr.responseJSON?.message || 'تعذر حذف المرفق.');
+						}
+					});
+				});
 			});
 
 			$(document).on('click', '.btn-building-attachments', function () {
