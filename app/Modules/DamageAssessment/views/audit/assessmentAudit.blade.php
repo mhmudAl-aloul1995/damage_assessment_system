@@ -196,6 +196,13 @@
             word-break: break-word
         }
 
+        .summary-value-long {
+            font-size: .95rem;
+            font-weight: 700;
+            line-height: 1.55;
+            white-space: normal
+        }
+
         .audit-toolbar-sticky {
             position: sticky;
             top: 70px;
@@ -1256,7 +1263,8 @@
             'floor_area_m2',
             'building_roof_type',
             'concrete_area',
-            'aspestos_area'
+            'aspestos_area',
+            'comments_recommendations'
         ];
 
         const BUILDING_SUMMARY_LABELS = {
@@ -1267,7 +1275,8 @@
             floor_area_m2: 'مساحة الطابق المتكرر',
             building_roof_type: 'نوع سطح المبنى',
             concrete_area: 'مساحة الباطون',
-            aspestos_area: 'مساحة الصاج'
+            aspestos_area: 'مساحة الصاج',
+            comments_recommendations: 'التوصيات'
         };
 
         function isAnswered(row) {
@@ -2852,11 +2861,13 @@
                 if (!value) value = '-';
 
                 let color = colors[index % colors.length];
+                const isLongValue = field === 'comments_recommendations';
+
                 html += `
-                                        <div class="col-6 col-lg-12">
+                                        <div class="${isLongValue ? 'col-12' : 'col-6 col-lg-12'}">
                                             <div class="summary-box bg-light-${color}">
                                                 <div class="summary-title">${escapeHtml(BUILDING_SUMMARY_LABELS[field] || field)}</div>
-                                                <div class="summary-value text-${color}">${escapeHtml(value)}</div>
+                                                <div class="summary-value ${isLongValue ? 'summary-value-long' : ''} text-${color}">${escapeHtml(value)}</div>
                                             </div>
                                         </div>`;
             });

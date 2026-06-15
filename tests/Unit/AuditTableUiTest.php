@@ -117,5 +117,8 @@ test('assessment audit inline edits resolve missing global ids before saving', f
         ->toContain("type === 'housing_table'")
         ->toContain('let isAssessmentReadOnly')
         ->toContain('!isAreaManager && !isAssessmentReadOnly')
+        ->toContain("'comments_recommendations'")
+        ->toContain('comments_recommendations: \'التوصيات\'')
+        ->toContain('summary-value-long')
         ->toContain('يرجى اختيار الوحدة أولاً');
 });
