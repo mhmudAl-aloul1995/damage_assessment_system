@@ -607,11 +607,19 @@
 						</div>
 
 						<div class="tab-pane fade" id="housing_unit_attachments_tab_pane" role="tabpanel">
+							<div class="mb-5">
+								<label class="form-label fw-semibold">اختر الوحدة السكنية</label>
+								<select id="housing_unit_attachment_select" class="form-select form-select-solid"
+									data-control="select2" data-dropdown-parent="#buildingAttachmentsModal"
+									data-placeholder="اختر الوحدة">
+									<option></option>
+								</select>
+							</div>
+
 							<div class="table-responsive">
 								<table class="table table-row-bordered table-striped gy-4 gs-5">
 									<thead>
 										<tr class="fw-bold fs-6 text-gray-800">
-											<th>الوحدة السكنية</th>
 											<th>معاينة</th>
 											<th>الاسم</th>
 											<th>النوع</th>
@@ -621,7 +629,7 @@
 									</thead>
 									<tbody id="housingUnitAttachmentsTableBody">
 										<tr>
-											<td colspan="6" class="text-center text-muted">لا توجد مرفقات للوحدات السكنية</td>
+											<td colspan="5" class="text-center text-muted">اختر وحدة سكنية لعرض مرفقاتها</td>
 										</tr>
 									</tbody>
 								</table>
@@ -806,6 +814,7 @@
 
 
 			let showOnlyDangerRows = false;
+			let housingUnitAttachmentUnits = [];
 			const buildingAttachmentRoutes = {
 				index: @json(route('audit.building.attachments.index', ['building' => '__BUILDING__'])),
 				housingIndex: @json(route('audit.building.housing-unit-attachments.index', ['building' => '__BUILDING__'])),
@@ -950,10 +959,53 @@
 				});
 			}
 
-			function renderHousingUnitAttachments(units) {
-				if (!units || units.length === 0) {
+			function resetHousingUnitAttachmentSelect(units) {
+				housingUnitAttachmentUnits = units || [];
+				const select = $('#housing_unit_attachment_select');
+
+				select.empty().append(new Option('', '', true, false));
+
+				housingUnitAttachmentUnits.forEach(function (unit) {
+					select.append(new Option(unit.title || '-', unit.globalid || unit.objectid, false, false));
+				});
+
+				if (select.data('select2')) {
+					select.trigger('change.select2');
+				} else {
+					select.select2({
+						dropdownParent: $('#buildingAttachmentsModal'),
+						placeholder: select.data('placeholder') || 'اختر الوحدة',
+						allowClear: true,
+					});
+				}
+
+				select.val(null).trigger('change');
+			}
+
+			function renderSelectedHousingUnitAttachments(unitKey) {
+				if (!housingUnitAttachmentUnits || housingUnitAttachmentUnits.length === 0) {
 					$('#housingUnitAttachmentsTableBody').html(
-						'<tr><td colspan="6" class="text-center text-muted">لا توجد وحدات سكنية مرتبطة بهذا المبنى</td></tr>'
+						'<tr><td colspan="5" class="text-center text-muted">لا توجد وحدات سكنية مرتبطة بهذا المبنى</td></tr>'
+					);
+
+					return;
+				}
+
+				if (!unitKey) {
+					$('#housingUnitAttachmentsTableBody').html(
+						'<tr><td colspan="5" class="text-center text-muted">اختر وحدة سكنية لعرض مرفقاتها</td></tr>'
+					);
+
+					return;
+				}
+
+				const unit = housingUnitAttachmentUnits.find(function (item) {
+					return String(item.globalid || item.objectid) === String(unitKey);
+				});
+
+				if (!unit || !unit.attachments || unit.attachments.length === 0) {
+					$('#housingUnitAttachmentsTableBody').html(
+						'<tr><td colspan="5" class="text-center text-muted">لا توجد مرفقات لهذه الوحدة</td></tr>'
 					);
 
 					return;
@@ -961,37 +1013,21 @@
 
 				let rows = '';
 
-				units.forEach(function (unit) {
-					const attachments = unit.attachments || [];
-
-					if (attachments.length === 0) {
-						rows += `
-							<tr>
-								<td>${escapeAuditCell(unit.title || '-')}</td>
-								<td colspan="5" class="text-center text-muted">لا توجد مرفقات لهذه الوحدة</td>
-							</tr>
-						`;
-
-						return;
-					}
-
-					attachments.forEach(function (attachment, index) {
-						rows += `
-							<tr>
-								<td>${index === 0 ? escapeAuditCell(unit.title || '-') : ''}</td>
-								<td>${renderAttachmentPreview(attachment)}</td>
-								<td>${escapeAuditCell(attachment.name || '-')}</td>
-								<td>${escapeAuditCell(attachment.content_type || '-')}</td>
-								<td>${formatAttachmentSize(attachment.size)}</td>
-								<td class="text-end">
-									<a href="${attachment.url}" target="_blank" class="btn btn-sm btn-light-primary">فتح</a>
-								</td>
-							</tr>
-						`;
-					});
+				unit.attachments.forEach(function (attachment) {
+					rows += `
+						<tr>
+							<td>${renderAttachmentPreview(attachment)}</td>
+							<td>${escapeAuditCell(attachment.name || '-')}</td>
+							<td>${escapeAuditCell(attachment.content_type || '-')}</td>
+							<td>${formatAttachmentSize(attachment.size)}</td>
+							<td class="text-end">
+								<a href="${attachment.url}" target="_blank" class="btn btn-sm btn-light-primary">فتح</a>
+							</td>
+						</tr>
+					`;
 				});
 
-				$('#housingUnitAttachmentsTableBody').html(rows || '<tr><td colspan="6" class="text-center text-muted">لا توجد مرفقات للوحدات السكنية</td></tr>');
+				$('#housingUnitAttachmentsTableBody').html(rows);
 			}
 
 			function loadHousingUnitAttachments() {
@@ -1009,14 +1045,20 @@
 					url: buildingAttachmentUrl('housingIndex', buildingGlobalId),
 					type: 'GET',
 					success: function (response) {
-						renderHousingUnitAttachments(response.units || []);
+						resetHousingUnitAttachmentSelect(response.units || []);
+						renderSelectedHousingUnitAttachments(null);
 					},
 					error: function (xhr) {
-						renderHousingUnitAttachments([]);
+						resetHousingUnitAttachmentSelect([]);
+						renderSelectedHousingUnitAttachments(null);
 						showBuildingAttachmentsAlert('danger', xhr.responseJSON?.message || 'تعذر تحميل مرفقات الوحدات السكنية من ArcGIS.');
 					}
 				});
 			}
+
+			$('#housing_unit_attachment_select').on('change', function () {
+				renderSelectedHousingUnitAttachments($(this).val());
+			});
 
 			$(document).on('click', '.btn-building-attachments', function () {
 				const buildingGlobalId = $(this).data('building-globalid');
