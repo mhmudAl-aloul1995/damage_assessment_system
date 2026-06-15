@@ -240,6 +240,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/field-engineer-audit', [auditController::class, 'fieldEngineerAudit'])->name('audit.fieldEngineer');
     Route::get('/audit/export', AuditExportController::class)->name('audit.export');
     Route::get('/audit/dashboard', AuditDashboardController::class)->name('audit.dashboard');
+    Route::get('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'buildingAttachments'])
+        ->name('audit.building.attachments.index');
+    Route::post('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'storeBuildingAttachment'])
+        ->name('audit.building.attachments.store');
+    Route::post('/audit/buildings/{building:globalid}/attachments/{attachmentId}/replace', [auditController::class, 'replaceBuildingAttachment'])
+        ->name('audit.building.attachments.replace');
+    Route::delete('/audit/buildings/{building:globalid}/attachments/{attachmentId}', [auditController::class, 'destroyBuildingAttachment'])
+        ->name('audit.building.attachments.destroy');
     Route::post('/assign', [auditController::class, 'assign'])->name('audit.assign');
     Route::get('/auditBuilding', [auditController::class, 'auditBuilding'])->name('audit.auditBuilding');
     Route::get('/engineer-table', [AuditController::class, 'engineerTable']);

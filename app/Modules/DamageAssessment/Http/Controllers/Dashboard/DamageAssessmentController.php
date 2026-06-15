@@ -1149,19 +1149,9 @@ class DamageAssessmentController extends Controller
 
         $fillable = (new $modelClass)->getFillable();
 
-        $assessments = Assessment::query()->whereIn('name', $fillable);
-
         $allEdits = collect();
 
         $search = request()->input('search.value');
-
-        if (! empty($search)) {
-
-            $assessments->where(function ($query) use ($search) {
-                $query->where('label', 'like', "%{$search}%")
-                    ->orWhere('hint', 'like', "%{$search}%");
-            });
-        }
 
         $edits = collect();
         $allEdits = collect();
@@ -1200,9 +1190,12 @@ class DamageAssessmentController extends Controller
                 $arcgis->getAttachments($model->objectid, $layerId, $token)
             );
         }
-        $filtersMap = Filter::pluck('label', 'name');
+        $filtersByList = Filter::query()
+            ->get(['list_name', 'name', 'label'])
+            ->groupBy('list_name')
+            ->map(fn (Collection $filters): Collection => $filters->pluck('label', 'name'));
         $assessmentRows = $this->withSummaryAssessmentRows(
-            $assessments->get(),
+            $this->assessmentRowsForDisplay($type, $fillable, $search),
             $type,
             $record,
             $allEdits,
@@ -1295,7 +1288,7 @@ class DamageAssessmentController extends Controller
             ->addColumn('question', function ($row) {
                 return $row->label.'<br>'.$row->hint;
             })
-            ->addColumn('summaryValue', function ($row) use ($record, $allEdits, $filtersMap) {
+            ->addColumn('summaryValue', function ($row) use ($record, $allEdits, $filtersByList) {
                 if ($row->name === 'attachments') {
                     return null;
                 }
@@ -1311,9 +1304,11 @@ class DamageAssessmentController extends Controller
                     return null;
                 }
 
-                return $this->updateValue($filtersMap[$rawValue] ?? $rawValue);
+                return $this->updateValue(
+                    $this->filterLabelForAssessmentValue($filtersByList, $row->name, $rawValue)
+                );
             })
-            ->addColumn('answer', function ($row) use ($record, $allEdits, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersMap) {
+            ->addColumn('answer', function ($row) use ($record, $allEdits, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList) {
                 if ($row->name === 'attachments') {
                     if (! $model || ! $model->objectid || ! $token || $attachments->isEmpty()) {
                         return '<span class="text-muted">'.e(__('ui.damage_common.no_attachments')).'</span>';
@@ -1353,8 +1348,8 @@ class DamageAssessmentController extends Controller
                 $originalRawValue = $record[$row->name] ?? null;
                 $editedRawValue = $lastEdit?->field_value;
 
-                $originalValue = $filtersMap[$originalRawValue] ?? $originalRawValue;
-                $editedValue = $filtersMap[$editedRawValue] ?? $editedRawValue;
+                $originalValue = $this->filterLabelForAssessmentValue($filtersByList, $row->name, $originalRawValue);
+                $editedValue = $this->filterLabelForAssessmentValue($filtersByList, $row->name, $editedRawValue);
                 $originalValue = $this->updateValue($originalValue);
                 $editedValue = $this->updateValue($editedValue);
                 $editedBy = $lastEdit?->user?->name;
@@ -1381,7 +1376,7 @@ class DamageAssessmentController extends Controller
                 $collapseId = 'history_'.md5($type.'_'.$globalid.'_'.$row->name);
 
                 foreach ($fieldEdits as $edit) {
-                    $historyValue = $filtersMap[$edit->field_value] ?? $edit->field_value;
+                    $historyValue = $this->filterLabelForAssessmentValue($filtersByList, $row->name, $edit->field_value);
 
                     $historyHtml .= '
                 <div class="border rounded p-2 mb-2 bg-light-info">
@@ -1517,6 +1512,81 @@ class DamageAssessmentController extends Controller
             ->make(true);
     }
 
+    private function sortAssessmentsByFillableOrder($assessmentRows, array $fillable)
+    {
+        $order = array_flip($fillable);
+
+        return collect($assessmentRows)
+            ->sortBy(fn (Assessment $assessment): int => $order[$assessment->name] ?? PHP_INT_MAX)
+            ->values();
+    }
+
+    private function assessmentRowsForDisplay(string $type, array $fillable, ?string $search): Collection
+    {
+        $fillableLookup = array_flip($fillable);
+        $rows = $this->scopeAssessmentRowsForDisplay(
+            Assessment::query()->orderBy('id')->get(),
+            $type
+        );
+        $currentSection = 'عام';
+        $displayRows = collect();
+
+        foreach ($rows as $row) {
+            if ($this->isAssessmentSectionRow($row, $fillableLookup)) {
+                $currentSection = trim((string) $row->label) !== '' ? (string) $row->label : $currentSection;
+
+                continue;
+            }
+
+            if (! $this->isDisplayAssessmentRow($row, $fillableLookup)) {
+                continue;
+            }
+
+            $row->setAttribute('section', $row->name === 'attachments' ? 'المرفقات' : $currentSection);
+            $displayRows->push($row);
+        }
+
+        if (! empty($search)) {
+            $needle = strtolower($search);
+
+            $displayRows = $displayRows
+                ->filter(fn (Assessment $row): bool => str_contains(strtolower((string) $row->name.' '.$row->label.' '.$row->hint.' '.$row->getAttribute('section')), $needle))
+                ->values();
+        }
+
+        return $displayRows;
+    }
+
+    private function scopeAssessmentRowsForDisplay(Collection $rows, string $type): Collection
+    {
+        if ($type === 'housing_table') {
+            $housingStartId = $rows->firstWhere('name', 'housing_unit_group')?->id;
+
+            return $rows
+                ->filter(fn (Assessment $row): bool => $row->name === 'attachments'
+                    || ($housingStartId !== null && $row->id >= $housingStartId))
+                ->values();
+        }
+
+        $housingStartId = $rows->firstWhere('name', 'housing_unit')?->id
+            ?? $rows->firstWhere('name', 'housing_unit_group')?->id;
+
+        return $rows
+            ->filter(fn (Assessment $row): bool => $housingStartId === null || $row->id < $housingStartId)
+            ->values();
+    }
+
+    private function isDisplayAssessmentRow(Assessment $row, array $fillableLookup): bool
+    {
+        return $row->name === 'attachments' || isset($fillableLookup[$row->name]);
+    }
+
+    private function isAssessmentSectionRow(Assessment $row, array $fillableLookup): bool
+    {
+        return ! $this->isDisplayAssessmentRow($row, $fillableLookup)
+            && trim((string) $row->label) !== '';
+    }
+
     private function canEditAssessmentForBuilding($user, ?Building $building): bool
     {
         if (! $user instanceof \App\Models\User || ! $building instanceof Building) {
@@ -1617,6 +1687,32 @@ class DamageAssessmentController extends Controller
             'external_finishing_of_the_unit' => 'تشطيب الوحدة من الخارج',
             'internal_finishing_of_the_unit' => 'تشطيب الوحدة من الداخل',
         ];
+    }
+
+    private function filterLabelForAssessmentValue(Collection $filtersByList, string $fieldName, mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        $filters = $filtersByList->get($fieldName);
+
+        if (! $filters instanceof Collection || $filters->isEmpty()) {
+            return $value;
+        }
+
+        $values = array_values(array_filter(
+            array_map('trim', explode(',', (string) $value)),
+            fn (string $item): bool => $item !== ''
+        ));
+
+        if ($values === []) {
+            return $value;
+        }
+
+        return collect($values)
+            ->map(fn (string $item): string => (string) ($filters->get($item) ?? $item))
+            ->implode(', ');
     }
 
     private function updateValue($value)

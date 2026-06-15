@@ -533,6 +533,68 @@
 			</div>
 		</div>
 	</div>
+	<div class="modal fade" id="buildingAttachmentsModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered mw-900px">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="fw-bold" id="buildingAttachmentsModalTitle">المرفقات</h2>
+					<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+						<i class="ki-duotone ki-cross fs-1"></i>
+					</div>
+				</div>
+
+				<div class="modal-body">
+					<div id="buildingAttachmentsAlert" class="alert d-none"></div>
+
+					<form id="buildingAttachmentForm" enctype="multipart/form-data" class="mb-7">
+						@csrf
+						<input type="hidden" id="building_attachment_globalid">
+						<input type="hidden" id="building_attachment_replace_id">
+
+						<div class="row g-3 align-items-end">
+							<div class="col-md-8">
+								<label class="form-label required">ملف المرفق</label>
+								<input type="file" name="attachment" id="building_attachment_file"
+									class="form-control form-control-solid" required>
+							</div>
+							<div class="col-md-4 d-flex gap-2">
+								<button type="submit" class="btn btn-primary flex-grow-1" id="buildingAttachmentSubmit">
+									<span class="indicator-label" id="buildingAttachmentSubmitLabel">إضافة</span>
+									<span class="indicator-progress">يرجى الانتظار...
+										<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+									</span>
+								</button>
+								<button type="button" class="btn btn-light d-none" id="cancelAttachmentReplace">إلغاء</button>
+							</div>
+						</div>
+					</form>
+
+					<div class="table-responsive">
+						<table class="table table-row-bordered table-striped gy-4 gs-5">
+							<thead>
+								<tr class="fw-bold fs-6 text-gray-800">
+									<th>معاينة</th>
+									<th>الاسم</th>
+									<th>النوع</th>
+									<th>الحجم</th>
+									<th class="text-end">الإجراءات</th>
+								</tr>
+							</thead>
+							<tbody id="buildingAttachmentsTableBody">
+								<tr>
+									<td colspan="5" class="text-center text-muted">لا توجد مرفقات</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('ui.audit.close') }}</button>
+				</div>
+			</div>
+		</div>
+	</div>
 	<div class="modal fade" id="importFinalApproveModal" tabindex="-1" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered mw-650px">
 			<div class="modal-content">
@@ -704,6 +766,244 @@
 
 
 			let showOnlyDangerRows = false;
+			const buildingAttachmentRoutes = {
+				index: @json(route('audit.building.attachments.index', ['building' => '__BUILDING__'])),
+				store: @json(route('audit.building.attachments.store', ['building' => '__BUILDING__'])),
+				replace: @json(route('audit.building.attachments.replace', ['building' => '__BUILDING__', 'attachmentId' => '__ATTACHMENT__'])),
+				destroy: @json(route('audit.building.attachments.destroy', ['building' => '__BUILDING__', 'attachmentId' => '__ATTACHMENT__'])),
+			};
+
+			function buildingAttachmentUrl(routeName, buildingGlobalId, attachmentId = null) {
+				let url = buildingAttachmentRoutes[routeName].replace('__BUILDING__', encodeURIComponent(buildingGlobalId));
+
+				if (attachmentId !== null) {
+					url = url.replace('__ATTACHMENT__', encodeURIComponent(attachmentId));
+				}
+
+				return url;
+			}
+
+			function showBuildingAttachmentsAlert(type, message) {
+				$('#buildingAttachmentsAlert')
+					.removeClass('d-none alert-success alert-danger alert-warning alert-info')
+					.addClass('alert-' + type)
+					.text(message);
+			}
+
+			function hideBuildingAttachmentsAlert() {
+				$('#buildingAttachmentsAlert')
+					.addClass('d-none')
+					.removeClass('alert-success alert-danger alert-warning alert-info')
+					.text('');
+			}
+
+			function formatAttachmentSize(size) {
+				const bytes = Number(size || 0);
+
+				if (!bytes) {
+					return '-';
+				}
+
+				if (bytes < 1024) {
+					return bytes + ' B';
+				}
+
+				if (bytes < 1024 * 1024) {
+					return (bytes / 1024).toFixed(1) + ' KB';
+				}
+
+				return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+			}
+
+			function isImageAttachment(attachment) {
+				const contentType = String(attachment.content_type || '').toLowerCase();
+				const name = String(attachment.name || '').toLowerCase();
+
+				return contentType.startsWith('image/')
+					|| /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(name);
+			}
+
+			function renderAttachmentPreview(attachment) {
+				if (!attachment.url) {
+					return '<span class="text-muted">-</span>';
+				}
+
+				if (!isImageAttachment(attachment)) {
+					return `<a href="${attachment.url}" target="_blank" class="btn btn-sm btn-light">فتح</a>`;
+				}
+
+				return `
+					<a href="${attachment.url}" target="_blank" class="d-inline-block">
+						<img src="${attachment.url}" alt="${escapeAuditCell(attachment.name || 'Attachment')}"
+							class="rounded border object-fit-cover"
+							style="width: 72px; height: 56px;">
+					</a>
+				`;
+			}
+
+			function resetBuildingAttachmentForm() {
+				$('#buildingAttachmentForm')[0].reset();
+				$('#building_attachment_replace_id').val('');
+				$('#buildingAttachmentSubmitLabel').text('إضافة');
+				$('#cancelAttachmentReplace').addClass('d-none');
+			}
+
+			function renderBuildingAttachments(attachments) {
+				if (!attachments || attachments.length === 0) {
+					$('#buildingAttachmentsTableBody').html(
+						'<tr><td colspan="5" class="text-center text-muted">لا توجد مرفقات</td></tr>'
+					);
+
+					return;
+				}
+
+				let rows = '';
+
+				attachments.forEach(function (attachment) {
+					rows += `
+						<tr>
+							<td>${renderAttachmentPreview(attachment)}</td>
+							<td>${escapeAuditCell(attachment.name || '-')}</td>
+							<td>${escapeAuditCell(attachment.content_type || '-')}</td>
+							<td>${formatAttachmentSize(attachment.size)}</td>
+							<td class="text-end">
+								<a href="${attachment.url}" target="_blank" class="btn btn-sm btn-light-primary me-1">فتح</a>
+								<button type="button" class="btn btn-sm btn-light-warning me-1 btn-replace-building-attachment"
+									data-attachment-id="${attachment.id}">
+									تعديل
+								</button>
+								<button type="button" class="btn btn-sm btn-light-danger btn-delete-building-attachment"
+									data-attachment-id="${attachment.id}">
+									حذف
+								</button>
+							</td>
+						</tr>
+					`;
+				});
+
+				$('#buildingAttachmentsTableBody').html(rows);
+			}
+
+			function loadBuildingAttachments() {
+				const buildingGlobalId = $('#building_attachment_globalid').val();
+
+				if (!buildingGlobalId) {
+					return;
+				}
+
+				hideBuildingAttachmentsAlert();
+				$('#buildingAttachmentsTableBody').html(
+					'<tr><td colspan="5" class="text-center text-muted">جاري تحميل المرفقات...</td></tr>'
+				);
+
+				$.ajax({
+					url: buildingAttachmentUrl('index', buildingGlobalId),
+					type: 'GET',
+					success: function (response) {
+						renderBuildingAttachments(response.attachments || []);
+					},
+					error: function (xhr) {
+						renderBuildingAttachments([]);
+						showBuildingAttachmentsAlert('danger', xhr.responseJSON?.message || 'تعذر تحميل المرفقات من ArcGIS.');
+					}
+				});
+			}
+
+			$(document).on('click', '.btn-building-attachments', function () {
+				const buildingGlobalId = $(this).data('building-globalid');
+				const buildingName = $(this).data('building-name') || '-';
+
+				$('#building_attachment_globalid').val(buildingGlobalId);
+				$('#buildingAttachmentsModalTitle').text('المرفقات - ' + buildingName);
+				resetBuildingAttachmentForm();
+				hideBuildingAttachmentsAlert();
+				bootstrap.Modal.getOrCreateInstance(document.getElementById('buildingAttachmentsModal')).show();
+				loadBuildingAttachments();
+			});
+
+			$('#buildingAttachmentForm').on('submit', function (e) {
+				e.preventDefault();
+
+				const buildingGlobalId = $('#building_attachment_globalid').val();
+				const attachmentId = $('#building_attachment_replace_id').val();
+				const formData = new FormData(this);
+				const button = $('#buildingAttachmentSubmit');
+
+				formData.append('_token', @json(csrf_token()));
+
+				button.attr('data-kt-indicator', 'on').prop('disabled', true);
+				hideBuildingAttachmentsAlert();
+
+				$.ajax({
+					url: attachmentId
+						? buildingAttachmentUrl('replace', buildingGlobalId, attachmentId)
+						: buildingAttachmentUrl('store', buildingGlobalId),
+					type: 'POST',
+					data: formData,
+					processData: false,
+					contentType: false,
+					success: function (response) {
+						showBuildingAttachmentsAlert('success', response.message || 'تم حفظ المرفق.');
+						resetBuildingAttachmentForm();
+						loadBuildingAttachments();
+					},
+					error: function (xhr) {
+						const errors = xhr.responseJSON?.errors;
+						const message = errors?.attachment?.[0] || xhr.responseJSON?.message || 'تعذر حفظ المرفق.';
+						showBuildingAttachmentsAlert('danger', message);
+					},
+					complete: function () {
+						button.removeAttr('data-kt-indicator').prop('disabled', false);
+					}
+				});
+			});
+
+			$(document).on('click', '.btn-replace-building-attachment', function () {
+				$('#building_attachment_replace_id').val($(this).data('attachment-id'));
+				$('#buildingAttachmentSubmitLabel').text('استبدال');
+				$('#cancelAttachmentReplace').removeClass('d-none');
+				$('#building_attachment_file').trigger('click');
+			});
+
+			$('#cancelAttachmentReplace').on('click', function () {
+				resetBuildingAttachmentForm();
+			});
+
+			$(document).on('click', '.btn-delete-building-attachment', function () {
+				const buildingGlobalId = $('#building_attachment_globalid').val();
+				const attachmentId = $(this).data('attachment-id');
+
+				Swal.fire({
+					text: 'هل تريد حذف هذا المرفق؟',
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonText: 'نعم',
+					cancelButtonText: 'إلغاء',
+				}).then(function (result) {
+					if (!result.isConfirmed) {
+						return;
+					}
+
+					hideBuildingAttachmentsAlert();
+
+					$.ajax({
+						url: buildingAttachmentUrl('destroy', buildingGlobalId, attachmentId),
+						type: 'POST',
+						data: {
+							_token: @json(csrf_token()),
+							_method: 'DELETE',
+						},
+						success: function (response) {
+							showBuildingAttachmentsAlert('success', response.message || 'تم حذف المرفق.');
+							loadBuildingAttachments();
+						},
+						error: function (xhr) {
+							showBuildingAttachmentsAlert('danger', xhr.responseJSON?.message || 'تعذر حذف المرفق.');
+						}
+					});
+				});
+			});
+
 			$('#btn_import_final_approve').on('click', function () {
 				$('#importFinalApproveForm')[0].reset();
 				$('#importFinalApproveModal').modal('show');

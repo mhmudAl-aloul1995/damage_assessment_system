@@ -3,6 +3,7 @@
 namespace App\Modules\DamageAssessment\Http\Controllers\Audit;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Audit\StoreBuildingAttachmentRequest;
 use App\Http\Requests\UpdateBuildingLegalChallengeRequest;
 use App\Http\Requests\UpdateHousingLegalChallengeRequest;
 use App\Models\Assessment;
@@ -18,12 +19,16 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use App\Modules\DamageAssessment\Services\Audit\AuditExportService;
 use App\Modules\DamageAssessment\Services\Audit\AuditTableService;
+use App\services\ArcgisAttachmentBackupService;
+use App\services\ArcgisService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
+use Throwable;
 use Yajra\Datatables\Datatables;
 
 class auditController extends Controller
@@ -2905,6 +2910,8 @@ class auditController extends Controller
                 ->addColumn('actions', function ($row) {
 
                     $assessmentUrl = url("/damage-assessment/showAssessmentAudit/{$row->globalid}");
+                    $buildingName = e((string) ($row->building_name ?? '-'));
+                    $buildingGlobalId = e((string) $row->globalid);
 
                     return '
     <div class="d-flex justify-content-end audit-actions-wrapper">
@@ -2930,9 +2937,18 @@ class auditController extends Controller
 
             <div class="menu-item px-3">
                 <a href="javascript:void(0)"
+                    class="menu-link px-3 btn-building-attachments"
+                    data-building-globalid="'.$buildingGlobalId.'"
+                    data-building-name="'.$buildingName.'">
+                    المرفقات
+                </a>
+            </div>
+
+            <div class="menu-item px-3">
+                <a href="javascript:void(0)"
                     class="menu-link px-3 btn-show-history"
                     data-globalid="'.$row->globalid.'"
-                    data-building-name="'.e($row->building_name).'">
+                    data-building-name="'.$buildingName.'">
                     '.e(__('ui.audit.show_all_notes')).'
                 </a>
             </div>
@@ -2970,6 +2986,161 @@ class auditController extends Controller
             'damage-assessment::audit.audit',
             compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges')
         );
+    }
+
+    public function buildingAttachments(Building $building, ArcgisService $arcgis): JsonResponse
+    {
+        if (! filled($building->objectid)) {
+            return response()->json([
+                'message' => 'This building does not have an ArcGIS object id.',
+                'attachments' => [],
+            ], 422);
+        }
+
+        try {
+            $token = $arcgis->getToken();
+            $layerId = $arcgis->getLayerId(Building::class);
+            $attachments = collect($arcgis->getAttachments($building->objectid, $layerId, $token))
+                ->map(fn (array $attachment): array => [
+                    'id' => $attachment['id'] ?? null,
+                    'name' => $attachment['name'] ?? 'Attachment',
+                    'content_type' => $attachment['contentType'] ?? '',
+                    'size' => $attachment['size'] ?? null,
+                    'url' => filled($attachment['id'] ?? null)
+                        ? $arcgis->buildUrl($building->objectid, $attachment['id'], $layerId, $token)
+                        : null,
+                ])
+                ->filter(fn (array $attachment): bool => filled($attachment['id']) && filled($attachment['url']))
+                ->values()
+                ->all();
+
+            return response()->json([
+                'attachments' => $attachments,
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to load ArcGIS attachments.',
+                'attachments' => [],
+            ], 502);
+        }
+    }
+
+    public function storeBuildingAttachment(StoreBuildingAttachmentRequest $request, Building $building, ArcgisService $arcgis): JsonResponse
+    {
+        if (! filled($building->objectid)) {
+            return response()->json([
+                'message' => 'This building does not have an ArcGIS object id.',
+            ], 422);
+        }
+
+        try {
+            $result = $arcgis->addAttachment(
+                $building->objectid,
+                $arcgis->getLayerId(Building::class),
+                $request->file('attachment'),
+                $arcgis->getToken()
+            );
+
+            if (! ($result['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'ArcGIS did not accept the attachment.',
+                    'details' => $result['message'] ?? null,
+                ], 502);
+            }
+
+            return response()->json([
+                'message' => 'Attachment uploaded successfully.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to upload ArcGIS attachment.',
+            ], 502);
+        }
+    }
+
+    public function replaceBuildingAttachment(StoreBuildingAttachmentRequest $request, Building $building, int $attachmentId, ArcgisService $arcgis, ArcgisAttachmentBackupService $backupService): JsonResponse
+    {
+        if (! filled($building->objectid)) {
+            return response()->json([
+                'message' => 'This building does not have an ArcGIS object id.',
+            ], 422);
+        }
+
+        try {
+            $token = $arcgis->getToken();
+            $layerId = $arcgis->getLayerId(Building::class);
+            $backupService->backupBuildingAttachment($building, $attachmentId, 'replace', $token);
+
+            $deleteResult = $arcgis->deleteAttachment($building->objectid, $layerId, $attachmentId, $token);
+
+            if (! ($deleteResult['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'ArcGIS did not delete the old attachment.',
+                    'details' => $deleteResult['message'] ?? null,
+                ], 502);
+            }
+
+            $uploadResult = $arcgis->addAttachment($building->objectid, $layerId, $request->file('attachment'), $token);
+
+            if (! ($uploadResult['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'The old attachment was deleted, but ArcGIS did not accept the replacement.',
+                    'details' => $uploadResult['message'] ?? null,
+                ], 502);
+            }
+
+            return response()->json([
+                'message' => 'Attachment replaced successfully.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to backup or replace ArcGIS attachment.',
+            ], 502);
+        }
+    }
+
+    public function destroyBuildingAttachment(Building $building, int $attachmentId, ArcgisService $arcgis, ArcgisAttachmentBackupService $backupService): JsonResponse
+    {
+        if (! filled($building->objectid)) {
+            return response()->json([
+                'message' => 'This building does not have an ArcGIS object id.',
+            ], 422);
+        }
+
+        try {
+            $token = $arcgis->getToken();
+            $backupService->backupBuildingAttachment($building, $attachmentId, 'delete', $token);
+
+            $result = $arcgis->deleteAttachment(
+                $building->objectid,
+                $arcgis->getLayerId(Building::class),
+                $attachmentId,
+                $token
+            );
+
+            if (! ($result['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'ArcGIS did not delete the attachment.',
+                    'details' => $result['message'] ?? null,
+                ], 502);
+            }
+
+            return response()->json([
+                'message' => 'Attachment deleted successfully.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Unable to backup or delete ArcGIS attachment.',
+            ], 502);
+        }
     }
 
     public function fieldEngineerAudit(Request $request, AuditTableService $auditTableService)

@@ -2,6 +2,7 @@
 
 namespace App\services;
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -86,6 +87,101 @@ class ArcgisService
         }
 
         return $response->json('attachmentInfos') ?? [];
+    }
+
+    public function addAttachment(int|string $objectId, int|string $layerId, UploadedFile $file, string $token): array
+    {
+        if (! filled($objectId)) {
+            return [
+                'success' => false,
+                'message' => 'Missing ArcGIS object id.',
+            ];
+        }
+
+        $response = Http::withoutVerifying()
+            ->asMultipart()
+            ->post("{$this->baseUrl}/{$layerId}/{$objectId}/addAttachment", [
+                [
+                    'name' => 'f',
+                    'contents' => 'json',
+                ],
+                [
+                    'name' => 'token',
+                    'contents' => $token,
+                ],
+                [
+                    'name' => 'attachment',
+                    'contents' => $file->getContent(),
+                    'filename' => $file->getClientOriginalName(),
+                ],
+            ]);
+
+        $body = $response->json();
+        $success = $response->successful() && (bool) data_get($body, 'addAttachmentResult.success', false);
+
+        return [
+            'success' => $success,
+            'message' => $success ? 'Attachment uploaded.' : $response->body(),
+            'attachment_id' => data_get($body, 'addAttachmentResult.objectId'),
+            'response' => $body,
+        ];
+    }
+
+    public function deleteAttachment(int|string $objectId, int|string $layerId, int|string $attachmentId, string $token): array
+    {
+        if (! filled($objectId) || ! filled($attachmentId)) {
+            return [
+                'success' => false,
+                'message' => 'Missing ArcGIS object id or attachment id.',
+            ];
+        }
+
+        $response = Http::asForm()
+            ->withoutVerifying()
+            ->post("{$this->baseUrl}/{$layerId}/{$objectId}/deleteAttachments", [
+                'f' => 'json',
+                'token' => $token,
+                'attachmentIds' => $attachmentId,
+            ]);
+
+        $body = $response->json();
+        $success = $response->successful() && (bool) data_get($body, 'deleteAttachmentResults.0.success', false);
+
+        return [
+            'success' => $success,
+            'message' => $success ? 'Attachment deleted.' : $response->body(),
+            'response' => $body,
+        ];
+    }
+
+    public function downloadAttachment(int|string $objectId, int|string $layerId, int|string $attachmentId, string $token): array
+    {
+        if (! filled($objectId) || ! filled($attachmentId)) {
+            return [
+                'success' => false,
+                'message' => 'Missing ArcGIS object id or attachment id.',
+                'body' => null,
+            ];
+        }
+
+        $response = Http::withoutVerifying()
+            ->get("{$this->baseUrl}/{$layerId}/{$objectId}/attachments/{$attachmentId}", [
+                'token' => $token,
+            ]);
+
+        if (! $response->successful()) {
+            return [
+                'success' => false,
+                'message' => $response->body(),
+                'body' => null,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Attachment downloaded.',
+            'body' => $response->body(),
+        ];
     }
 
     // =========================

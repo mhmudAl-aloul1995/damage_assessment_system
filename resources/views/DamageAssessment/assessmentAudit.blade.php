@@ -222,6 +222,32 @@
             border-radius: .7rem
         }
 
+        .collapse-indicator {
+            width: 1.8rem;
+            height: 1.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #fff;
+            color: #009ef7;
+            border: 1px solid rgba(0, 158, 247, .18);
+            font-size: .8rem;
+            font-weight: 800;
+            flex: 0 0 auto
+        }
+
+        .assessment-section-header .collapse-indicator-closed,
+        .assessment-section-header.collapsed .collapse-indicator-open,
+        .assessment-section-header .collapse-state-badge {
+            display: none
+        }
+
+        .assessment-section-header.collapsed .collapse-indicator-closed,
+        .assessment-section-header.collapsed .collapse-state-badge {
+            display: inline-flex
+        }
+
         .assessment-section-header:after {
             content: "";
             position: absolute;
@@ -1048,11 +1074,17 @@
 
             let html = `
                                                                                                                                                                                 <div class="assessment-section mb-4">
-                                                                                                                                                                                    <div class="assessment-section-header d-flex justify-content-between align-items-center flex-wrap gap-3"
+                                                                                                                                                                                    <div class="assessment-section-header ${opened ? '' : 'collapsed'} d-flex justify-content-between align-items-center flex-wrap gap-3"
                                                                                                                                                                                          data-bs-toggle="collapse"
-                                                                                                                                                                                         data-bs-target="#${sectionId}">
+                                                                                                                                                                                         data-bs-target="#${sectionId}"
+                                                                                                                                                                                         aria-expanded="${opened ? 'true' : 'false'}">
                                                                                                                                                                                         <div>
-                                                                                                                                                                                            <div class="fw-bold fs-5 text-gray-800">${section}</div>
+                                                                                                                                                                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                                                                                                                                                <span class="collapse-indicator collapse-indicator-open">▲</span>
+                                                                                                                                                                                                <span class="collapse-indicator collapse-indicator-closed">▼</span>
+                                                                                                                                                                                                <div class="fw-bold fs-5 text-gray-800">${section}</div>
+                                                                                                                                                                                                <span class="badge badge-light-warning collapse-state-badge">مغلق</span>
+                                                                                                                                                                                            </div>
                                                                                                                                                                                             <div class="section-progress-bar mt-2">
                                                                                                                                                                                                 <div class="section-progress-fill" style="width:${percent}%"></div>
                                                                                                                                                                                             </div>
@@ -1113,18 +1145,9 @@
         function renderAccordion(target, rows, filter, prefix) {
             rows = applyAuditFilter(rows, filter);
 
-            let groups = {};
-            rows.forEach(function (row) {
-                let section = row.section || 'غير مصنف';
-                if (!groups[section]) groups[section] = [];
-                groups[section].push(row);
-            });
-
             let html = '';
-            Object.keys(groups).sort(function (a, b) {
-                return sectionSortWeight(a, prefix) - sectionSortWeight(b, prefix);
-            }).forEach(function (section, index) {
-                html += sectionHtml(section, groups[section], index, prefix, true);
+            orderedSectionGroups(rows).forEach(function (group, index) {
+                html += sectionHtml(group.section, group.rows, index, prefix, group.section !== 'عام');
             });
 
             $(target).html(html || `
@@ -1137,6 +1160,27 @@
                 initInlineEditors();
                 if (typeof KTMenu !== 'undefined') KTMenu.createInstances();
             }, 100);
+        }
+
+        function orderedSectionGroups(rows) {
+            let groups = [];
+            let groupsBySection = {};
+
+            rows.forEach(function (row) {
+                let section = row.section || 'عام';
+
+                if (!groupsBySection[section]) {
+                    groupsBySection[section] = {
+                        section: section,
+                        rows: []
+                    };
+                    groups.push(groupsBySection[section]);
+                }
+
+                groupsBySection[section].rows.push(row);
+            });
+
+            return groups;
         }
 
         function sectionSortWeight(section, prefix) {
@@ -1165,81 +1209,87 @@
         });
 
         const BUILDING_SURVEY_MAP = {
-            attachments: ['0. Introduction', 0],
-            objectid: ['0. Introduction', 1],
-            weather: ['0. Introduction', 2],
-            security_situation: ['0. Introduction', 3],
-            security_info: ['0. Introduction', 4],
-            obstacle_type: ['0. Introduction', 5],
-            building_name: ['0. Introduction', 6],
-            comments_recommendations: ['0. Introduction', 7],
+            attachments: ['Introduction', 0],
+            objectid: ['Introduction', 1],
+            weather: ['Introduction', 2],
+            security_situation: ['Introduction', 3],
+            security_info: ['Introduction', 4],
+            assessment_obstacle: ['Introduction', 4.5],
+            obstacle_type: ['Introduction', 5],
+            assessment_obstacle_info: ['Introduction', 5.5],
+            building_name: ['Introduction', 6],
+            comments_recommendations: ['6. Engineer Comments', 7],
 
-            building_damage_status: ['1. Building Information', 100],
-            building_type: ['1. Building Information', 101],
-            building_type_other: ['1. Building Information', 102],
-            building_use: ['1. Building Information', 103],
-            building_name: ['1. Building Information', 104],
-            date_of_damage: ['1. Building Information', 105],
-            building_material: ['1. Building Information', 106],
-            other_material: ['1. Building Information', 107],
-            building_age: ['1. Building Information', 108],
-            land_area: ['1. Building Information', 109],
-            floor_nos: ['1. Building Information', 110],
-            ground_floor_area__m2: ['1. Building Information', 111],
-            floor_area_m2: ['1. Building Information', 112],
-            units_nos: ['1. Building Information', 112],
-            damaged_units_nos: ['1. Building Information', 113],
-            occupied_units_nos: ['1. Building Information', 114],
-            vacant_units_nos: ['1. Building Information', 115],
-            is_damaged_before: ['1. Building Information', 116],
-            if_damaged: ['1. Building Information', 117],
-            building_debris_exist: ['1. Building Information', 118],
-            building_debris_qty: ['1. Building Information', 119],
-            building_debris_blocking: ['1. Building Information', 120],
-            uxo_present: ['1. Building Information', 121],
-            bodies_present: ['1. Building Information', 122],
-            estimated_number_of_bodies: ['1. Building Information', 123],
-            building_status_visit: ['1. Building Information', 124],
-            building_roof_type: ['1.18 Building Status at the Time of Visit', 180],
-            clay_tile_area: ['1.18 Building Status at the Time of Visit', 181],
-            concrete_area: ['1.18 Building Status at the Time of Visit', 182],
-            aspestos_area: ['1.18 Building Status at the Time of Visit', 183],
-            scorite_area: ['1.18 Building Status at the Time of Visit', 184],
-            other_roof: ['1.18 Building Status at the Time of Visit', 185],
-            other_roof_area: ['1.18 Building Status at the Time of Visit', 186],
+            building_damage_status: ['Current Damage Status', 100],
+            owner_name_1: ['Current Damage Status', 101],
+            owner_mobile_1: ['Current Damage Status', 102],
+            floor_nos_1: ['Current Damage Status', 103],
+            building_address: ['Current Damage Status', 104],
+            building_type: ['1. Introduction', 101],
+            building_type_other: ['1. Introduction', 102],
+            building_use: ['1. Introduction', 103],
+            building_name: ['Introduction', 104],
+            date_of_damage: ['1. Introduction', 105],
+            building_material: ['1. Introduction', 106],
+            other_material: ['1. Introduction', 107],
+            building_age: ['1. Introduction', 108],
+            land_area: ['1. Introduction', 109],
+            floor_nos: ['1. Introduction', 110],
+            ground_floor_area__m2: ['1. Introduction', 111],
+            floor_area_m2: ['1. Introduction', 112],
+            units_nos: ['1. Introduction', 112],
+            damaged_units_nos: ['1. Introduction', 113],
+            occupied_units_nos: ['1. Introduction', 114],
+            vacant_units_nos: ['1. Introduction', 115],
+            is_damaged_before: ['1. Introduction', 116],
+            if_damaged: ['1. Introduction', 117],
+            building_debris_exist: ['1. Introduction', 118],
+            building_debris_qty: ['1. Introduction', 119],
+            building_debris_blocking: ['1. Introduction', 120],
+            uxo_present: ['1. Introduction', 121],
+            bodies_present: ['1. Introduction', 122],
+            estimated_number_of_bodies: ['1. Introduction', 123],
+            building_status_visit: ['1. Introduction', 124],
+            building_roof_type: ['1. Introduction', 180],
+            clay_tile_area: ['1. Introduction', 181],
+            concrete_area: ['1. Introduction', 182],
+            aspestos_area: ['1. Introduction', 183],
+            scorite_area: ['1. Introduction', 184],
+            other_roof: ['1. Introduction', 185],
+            other_roof_area: ['1. Introduction', 186],
 
-            building_ownership: ['2. Ownership Information', 200],
-            owner_status: ['2. Ownership Information', 201],
-            building_responsible: ['2. Ownership Information', 202],
-            building_authorization: ['2. Ownership Information', 203],
-            land_fully_owned: ['2. Ownership Information', 204],
-            owner_name: ['2. Ownership Information', 205],
-            owner_id: ['2. Ownership Information', 206],
-            owner_mobile: ['2. Ownership Information', 207],
-            board1_name: ['2. Ownership Information', 208],
-            board1_id: ['2. Ownership Information', 209],
-            board1_number: ['2. Ownership Information', 210],
-            board2_name: ['2. Ownership Information', 211],
-            board2_id: ['2. Ownership Information', 212],
-            board2_number: ['2. Ownership Information', 213],
-            has_authorization_if_not_owner: ['2. Ownership Information', 214],
-            authorization_details: ['2. Ownership Information', 215],
-            is_rented: ['2. Ownership Information', 216],
-            tenant_names: ['2. Ownership Information', 217],
-            agreement_type: ['2. Ownership Information', 218],
-            agreement_duration: ['2. Ownership Information', 219],
+            building_ownership: ['2.1 Introduction', 200],
+            owner_status: ['2.1 Introduction', 201],
+            building_responsible: ['2.1 Introduction', 202],
+            building_authorization: ['2.1 Introduction', 203],
+            land_fully_owned: ['2.1 Introduction', 204],
+            owner_name: ['2.1 Introduction', 205],
+            owner_id: ['2.1 Introduction', 206],
+            owner_mobile: ['2.1 Introduction', 207],
+            board1_name: ['2.1 Introduction', 208],
+            board1_id: ['2.1 Introduction', 209],
+            board1_number: ['2.1 Introduction', 210],
+            board2_name: ['2.1 Introduction', 211],
+            board2_id: ['2.1 Introduction', 212],
+            board2_number: ['2.1 Introduction', 213],
+            has_authorization_if_not_owner: ['2.1 Introduction', 214],
+            authorization_details: ['2.1 Introduction', 215],
+            is_rented: ['2.1 Introduction', 216],
+            tenant_names: ['2.1 Introduction', 217],
+            agreement_type: ['2.1 Introduction', 218],
+            agreement_duration: ['2.1 Introduction', 219],
 
-            has_documents: ['4. مستندات المبنى', 400],
-            doc_types_available: ['4. مستندات المبنى', 401],
-            doc_types_other: ['4. مستندات المبنى', 402],
-            no_documents_reason: ['4. مستندات المبنى', 403],
-            need_renew_docs: ['4. مستندات المبنى', 404],
-            doc_challenges: ['4. مستندات المبنى', 405],
-            doc_challenges_other: ['4. مستندات المبنى', 406],
-            id_number_photo: ['4. مستندات المبنى', 407],
-            land_ownership_photo: ['4. مستندات المبنى', 408],
-            municipal_permit_photo: ['4. مستندات المبنى', 409],
-            other_documents_photo: ['4. مستندات المبنى', 410],
+            has_documents: ['2.2 documents', 400],
+            doc_types_available: ['2.2 documents', 401],
+            doc_types_other: ['2.2 documents', 402],
+            no_documents_reason: ['2.2 documents', 403],
+            need_renew_docs: ['2.2 documents', 404],
+            doc_challenges: ['2.2 documents', 405],
+            doc_challenges_other: ['2.2 documents', 406],
+            id_number_photo: ['3. Building Attachments', 407],
+            land_ownership_photo: ['3. Building Attachments', 408],
+            municipal_permit_photo: ['3. Building Attachments', 409],
+            other_documents_photo: ['3. Building Attachments', 410],
 
             has_elevator: ['4. Building Services', 400],
             elevator_number: ['4. Building Services', 401],
@@ -1291,31 +1341,39 @@
             housing_unit_group: ['7. Unit Introduction', 701],
             housing_unit_type: ['7. Unit Introduction', 702],
             unit_damage_status: ['7. Unit Introduction', 703],
-            final_comments: ['7. Unit Introduction', 704],
+            final_comments: ['Photos & Final Comments', 704],
             page8: ['8. Unit Information', 800],
             floor_number: ['8. Unit Information', 801],
             housing_unit_number: ['8. Unit Information', 802],
             unit_direction: ['8. Unit Information', 803],
             damaged_area_m2: ['8. Unit Information', 804],
-            infra_type2: ['8. Unit Information', 805],
-            house_unit_ownership: ['8. Unit Information', 806],
-            other_ownership: ['8. Unit Information', 807],
-            occupied: ['8. Unit Information', 808],
-            number_of_rooms: ['8. Unit Information', 809],
+            unit_roof_type: ['8. Unit Information', 805],
+            unit_clay_tile_area: ['8. Unit Information', 806],
+            unit_concrete_area: ['8. Unit Information', 807],
+            unit_aspestos_area: ['8. Unit Information', 808],
+            unit_scorite_area: ['8. Unit Information', 809],
+            unit_other_roof: ['8. Unit Information', 810],
+            unit_other_roof_area: ['8. Unit Information', 811],
+            infra_type2: ['8. Unit Information', 812],
+            house_unit_ownership: ['8. Unit Information', 813],
+            other_ownership: ['8. Unit Information', 814],
+            occupied: ['8. Unit Information', 815],
+            number_of_rooms: ['8. Unit Information', 816],
+            number_of_bathrooms: ['8. Unit Information', 817],
 
             page9: ['9. Household and Unit Information', 900],
             identity_type1: ['9. Household and Unit Information', 901],
             id_number1: ['9. Household and Unit Information', 902],
             passport1: ['9. Household and Unit Information', 903],
             other_id1: ['9. Household and Unit Information', 904],
-            unit_owner: ['9. Household and Unit Information', 905],
+            unit_owner: ['7. Unit Introduction', 905],
             q_9_3_1_first_name: ['9. Household and Unit Information', 906],
             q_9_3_2_second_name__father: ['9. Household and Unit Information', 907],
             q_9_3_3_third_name__grandfather: ['9. Household and Unit Information', 908],
             q_9_3_4_last_name: ['9. Household and Unit Information', 909],
             sex: ['9. Household and Unit Information', 910],
-            mobile_number: ['9. Household and Unit Information', 911],
-            additional_mobile: ['9. Household and Unit Information', 912],
+            mobile_number: ['7. Unit Introduction', 911],
+            additional_mobile: ['7. Unit Introduction', 912],
             owner_job: ['9. Household and Unit Information', 913],
             other_job: ['9. Household and Unit Information', 914],
             age: ['9. Household and Unit Information', 915],
@@ -1389,8 +1447,8 @@
             fire_locations: ['14. Unit Finishing and Internal Damaged', 1410],
             fire_rooms_count: ['14. Unit Finishing and Internal Damaged', 1411],
             fire_area: ['14. Unit Finishing and Internal Damaged', 1412],
-            furniture_ownership: ['14. Unit Finishing and Internal Damaged', 1413],
-            percentage_of_damaged_furniture: ['14. Unit Finishing and Internal Damaged', 1414],
+            furniture_ownership: ['12. Current Residence and Refugee Status', 1413],
+            percentage_of_damaged_furniture: ['12. Current Residence and Refugee Status', 1414],
             unit_stripping: ['14. Unit Finishing and Internal Damaged', 1415],
             unit_stripping_details: ['14. Unit Finishing and Internal Damaged', 1416],
             stripping_area: ['14. Unit Finishing and Internal Damaged', 1417],
@@ -1422,25 +1480,24 @@
             additional_comments: ['16. Community Needs and Preferences Survey', 1612],
 
             techncial_boq: ['17. Techncial-BOQ', 1700],
-            tech_boq: ['17. Techncial-BOQ', 1701],
+            tech_boq: ['Techncial-BOQ', 1701],
             // final_comments: ['3. ملاحظات الوحدة', 301],
 
         };
 
         const BOQ_GROUPS = [
-            ['dm', '17. Techncial-BOQ / Demolishing Works', 1710],
-            ['bl', '17. Techncial-BOQ / Blocks Works', 1730],
-            ['co', '17. Techncial-BOQ / Concrete Works', 1740],
-            ['fn', '17. Techncial-BOQ / Finishing Works', 1750],
-            ['al', '17. Techncial-BOQ / Aluminum Works', 1810],
-            ['wd', '17. Techncial-BOQ / Wood Works', 1830],
-            ['mt', '17. Techncial-BOQ / Metal Works', 1850],
-            ['cm', '17. Techncial-BOQ / Combined', 1870],
-            ['pm', '17. Techncial-BOQ / Plumbing Works', 1890],
-            ['el', '17. Techncial-BOQ / Electrical Works', 1930],
-            ['pv', '17. Techncial-BOQ / PV System Works', 1970],
-            ['item', '17. Techncial-BOQ / Miscellaneous Works', 1990],
-            ['quant', '17. Techncial-BOQ / Miscellaneous Works', 1995],
+            ['dm', 'Demolishing Works', 1710],
+            ['bl', 'Blocks Works', 1730],
+            ['co', 'Concrete Works', 1740],
+            ['al', 'Aluminum Works', 1810],
+            ['wd', 'Wood Works', 1830],
+            ['mt', 'Metal Works', 1850],
+            ['cm', 'Combined', 1870],
+            ['pm', 'Plumping Works', 1890],
+            ['el', 'Electrical Works', 1930],
+            ['pv', 'PV System Works', 1970],
+            ['item', 'Miscellaneous Works', 1990],
+            ['quant', 'Miscellaneous Works', 1995],
         ];
 
         function getDynamicBoqMap(name) {
@@ -1448,18 +1505,29 @@
             let pMatch = name.match(/^p(\d+)/);
             if (pMatch) {
                 let p = Number(pMatch[1]);
-                if (p === 11) return ['17. Techncial-BOQ / Demolishing Works', 1710];
-                if (p === 12) return ['17. Techncial-BOQ / Blocks Works', 1730];
-                if (p === 13) return ['17. Techncial-BOQ / Concrete Works', 1740];
-                if (p === 14) return ['17. Techncial-BOQ / Finishing Works', 1750];
-                if (p === 15) return ['17. Techncial-BOQ / Aluminum Works', 1810];
-                if (p === 16) return ['17. Techncial-BOQ / Wood Works', 1830];
-                if (p === 17) return ['17. Techncial-BOQ / Metal Works', 1850];
-                if (p === 18) return ['17. Techncial-BOQ / Combined', 1870];
-                if (p === 19) return ['17. Techncial-BOQ / Plumbing Works', 1890];
-                if (p === 20) return ['17. Techncial-BOQ / Electrical Works', 1930];
-                if (p === 21) return ['17. Techncial-BOQ / PV System Works', 1970];
-                if (p === 22) return ['17. Techncial-BOQ / Miscellaneous Works', 1990];
+                if (p === 11) return ['Demolishing Works', 1710];
+                if (p === 12) return ['Blocks Works', 1730];
+                if (p === 13) return ['Concrete Works', 1740];
+                if (p === 14) return ['Internal Finishings Works', 1750];
+                if (p === 15) return ['Aluminum Works', 1810];
+                if (p === 16) return ['Wood Works', 1830];
+                if (p === 17) return ['Metal Works', 1850];
+                if (p === 18) return ['Combined', 1870];
+                if (p === 19) return ['Plumping Works', 1890];
+                if (p === 20) return ['Electrical Works', 1930];
+                if (p === 21) return ['PV System Works', 1970];
+                if (p === 22) return ['Miscellaneous Works', 1990];
+            }
+
+            let fnMatch = name.match(/^fn(\d+)/);
+            if (fnMatch) {
+                let fn = Number(fnMatch[1]);
+
+                if (fn >= 1 && fn <= 3) return ['Painting Works', 1750 + fn];
+                if ([5, 6, 7, 8, 10].includes(fn)) return ['Tiling Works', 1760 + fn];
+                if (fn === 4 || (fn >= 11 && fn <= 15)) return ['Marble Works', 1770 + fn];
+                if (fn >= 16 && fn <= 26) return ['Plastering Works (Gypsum / Plaster)', 1780 + fn];
+                if (fn >= 27 && fn <= 31) return ['External Finishings Works', 1790 + fn];
             }
 
             for (let i = 0; i < BOQ_GROUPS.length; i++) {
@@ -2079,16 +2147,6 @@
             var table = document.getElementById('kt_table_building_assessment');
             var datatable;
 
-            function getBuildingSection(row) {
-                let map = getBuildingMap(row);
-                return map ? map[0] : '1. Building Information';
-            }
-
-            function getBuildingSort(row) {
-                let map = getBuildingMap(row);
-                return map ? map[1] : 99;
-            }
-
             var initBuildingTable = function () {
                 datatable = $(table).DataTable({
                     serverSide: true,
@@ -2103,11 +2161,8 @@
                             let rows = json.data || [];
 
                             rows.forEach(function (row) {
-                                row.section = getBuildingSection(row);
-                                row.sort_order = getBuildingSort(row);
+                                row.section = row.section || 'عام';
                             });
-
-                            rows.sort((a, b) => a.sort_order - b.sort_order);
 
                             lastBuildingRows = rows;
                             renderBuildingSummaryItems(rows);
@@ -2225,16 +2280,6 @@
             var table = document.getElementById('kt_table_housing_assessment');
             var datatable;
 
-            function getHousingSection(row) {
-                let map = getHousingMap(row);
-                return map ? map[0] : '7. Unit Introduction';
-            }
-
-            function getHousingSort(row) {
-                let map = getHousingMap(row);
-                return map ? map[1] : 704;
-            }
-
             var initHousingTable = function () {
                 datatable = $(table).DataTable({
                     serverSide: true,
@@ -2256,12 +2301,9 @@
                                 rowClass: r.rowClass
                             })));
                             rows.forEach(function (row) {
-                                row.section = getHousingSection(row);
-                                row.sort_order = getHousingSort(row);
+                                row.section = row.section || 'عام';
                                 row.rowClass = row.rowClass || '';
                             });
-
-                            rows.sort((a, b) => a.sort_order - b.sort_order);
 
                             lastHousingRows = rows;
                             renderAccordion('#housing_assessment_accordion', rows, currentHousingFilter, 'housing');

@@ -50,6 +50,16 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('no_notes_history')
         ->toContain('notesHistory')
         ->toContain('escapeAuditCell(item.notes)')
+        ->toContain('btn-building-attachments')
+        ->toContain('buildingAttachmentsModal')
+        ->toContain('معاينة')
+        ->toContain('renderAttachmentPreview')
+        ->toContain('isImageAttachment')
+        ->toContain('object-fit-cover')
+        ->toContain("route('audit.building.attachments.index'")
+        ->toContain("route('audit.building.attachments.store'")
+        ->toContain("route('audit.building.attachments.replace'")
+        ->toContain("route('audit.building.attachments.destroy'")
         ->toContain('building_columns[]')
         ->toContain('housing_columns[]')
         ->toContain('toggle_select_column')
@@ -59,7 +69,14 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain("route('audit.fieldEngineer')");
 
     expect($controller)
-        ->toContain('show_all_notes');
+        ->toContain('show_all_notes')
+        ->toContain('buildingAttachments')
+        ->toContain('storeBuildingAttachment')
+        ->toContain('replaceBuildingAttachment')
+        ->toContain('destroyBuildingAttachment')
+        ->toContain('ArcgisAttachmentBackupService')
+        ->toContain('backupBuildingAttachment($building, $attachmentId, \'replace\'')
+        ->toContain('backupBuildingAttachment($building, $attachmentId, \'delete\'');
 
     expect($exportService)
         ->toContain('public function buildingColumns(): array')

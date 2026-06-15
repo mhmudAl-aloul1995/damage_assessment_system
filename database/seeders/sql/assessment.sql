@@ -1,2258 +1,544 @@
 DROP TABLE IF EXISTS `assessments`;
 
-CREATE TABLE
-    `assessments` (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        `name` VARCHAR(512),
-        `label` VARCHAR(512),
-        `hint` VARCHAR(512)
-    );
+CREATE TABLE `assessments` (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    `name` VARCHAR(512),
+    `label` VARCHAR(512),
+    `hint` VARCHAR(512),
+    `criteria` VARCHAR(512) NULL,
+    `type` VARCHAR(512) NULL
+);
 
 INSERT INTO
-    `assessments` (`name`, `label`, `hint`)
+    `assessments` (`name`, `label`, `hint`, `criteria`, `type`)
 VALUES
-    ('location', ' حدود المبنى', ' '),
-    ('field_status', 'Assessment Status', 'حالة الإستبيان'),
-    (
-        'building_committee_status',
-       'حالة لجنة المبنى',
-        'حالة لجنة المبنى'
-    ),
-    (
-        'unit_committee_status',
-        'حالة لجنة الوحدة السكانية',
-        'حالة لجنة الوحدة السكانية'
-    ),
-    (
-        'unit_committee_count',
-         'عدد الوحدات السكانية',
-        'عدد الوحدات السكانية'
-    ),
-    ('parcel_no1', 'رقم القسيمة', ' '),
-    ('block_no1', 'رقم القطعة', ' '),
-    ('owner_na', 'القطعة/ قسيمة', ' '),
-    ('units_count', 'عدد الوحدات', ' '),
-    ('assignedto', 'اسم الباحث', ' '),
-    ('groupnumber', 'رقم المجموعة', ' '),
-    ('zone_code', 'رقم الزون', ' '),
-    ('objectid', 'objectid', 'رقم المبنى'),
-    ('start', 'start', ' '),
-    ('end', 'end', ' '),
-    ('today', 'today', ' '),
-    ('username', 'username', ' '),
-    ('simserial', 'simserial', ' '),
-    ('subscriberid', 'subscriberid', ' '),
-    ('deviceid', 'deviceid', ' '),
-    ('phonenumber', 'phonenumber', ' '),
-    ('audit', 'audit', ' '),
-    ('instructions', 'التعليمات', ' '),
-    (
-        'note01',
-        'عزيزي المهندس: برجاء قراءة التعليمات التالية بعناية والتقيد بها.',
-        ' '
-    ),
-    (
-        'note02',
-        '1) الاستمارة الواحدة تمثل بيانات مبنى واحد متضرر جزئيا مع بيانات وحداته السكنية والغير سكنية.',
-        ' '
-    ),
-    (
-        'note03',
-        '2) في حال كان المبنى يحتوي على عدد كبير من الوحدات مثل الأبراج، ينصح بفتح استمارة جديدة لتكملة الوحدات المتبقية.',
-        ' '
-    ),
-    (
-        'note04',
-        '3) في حال فتحت استمارة جديدة لتكملة الوحدات المتبقية لنفس المبنى، يجب عليك استخدام **نفس رقم المبنى واسم المبنى** كما في الاستمارات السابقة، حتى يكون من السهل الربط بين الاستمارتين.',
-        ' '
-    ),
-    (
-        'note05',
-        '4) يجب التأكد أن دقة gps أقل أو يساوي 7 م، وإلا يجب استخدام المرئية الفضائية لتعليم الإحداثيات عليها يدويا.',
-        ' '
-    ),
-    (
-        'note06',
-        '5) يجب التقاط صور معبرة توضح الأضرار أو أي معلومات أخرى.',
-        ' '
-    ),
-    (
-        'note07',
-        '6) ينصح استخدام انترنت سريع لإرسال الاستمارات، كونها تحتوي على صور، وبالتالي ربما تأخذ بعض الوقت للإرسال.',
-        ' '
-    ),
-    (
-        'note08',
-        '7) يوصى بإرسال استمارة واحدة في المرة الواحدة. ',
-        ' '
-    ),
-    (
-        'note09',
-        '8) إدخال البيانات يجب أن يكون باللغة العربية',
-        ' '
-    ),
-    ('g0', 'introduction', ' '),
-    ('weather', 'weather', 'حال الطقس '),
-    (
-        'security_situation',
-        'security situation',
-        'هل يوجد عائق يمنع عملية الحصر  '
-    ),
-    (
-        'security_info',
-        'security information',
-        'ما هو العائق '
-    ),
-    ('g1', 'current damage status', ' '),
-    (
-        'building_damage_status',
-        'what is the current damage status of the building?',
-        'ما هي حالة الضرر الحالية للمبنى؟ '
-    ),
-    (
-        'building_information',
-        'building information',
-        'معلومات المبنى '
-    ),
-    (
-        'bldng_introduction',
-        '1. introduction',
-        '1. مقدمة '
-    ),
-    (
-        'building_type',
-        '1.1 building type',
-        'نوع المبنى '
-    ),
-    (
-        'building_type_other',
-        '1.1.1  building type',
-        'اكتب نوع المبنى '
-    ),
-    (
-        'building_use',
-        '1.2 building use',
-        'نوع استخدام المبنى '
-    ),
-    (
-        'building_name',
-        '1.3 building name',
-        'اسم المبنى. مثال: برج فلسطين '
-    ),
-    (
-        'date_of_damage',
-        '1.4 date of damage',
-        'تاريخ القصف/الضرر '
-    ),
-    (
-        'building_material',
-        '1.5 type/material of building',
-        'نوع مادة المبنى '
-    ),
-    (
-        'other_material',
-        '1.5.1 if other, specify:',
-        'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة '
-    ),
-    (
-        'building_age',
-        '1.6 how old is  the building?',
-        'كم هو عمر المبنى؟ '
-    ),
-    (
-        'floor_nos',
-        '1.7 number of floors',
-        'عدد الطوابق '
-    ),
-    (
-        'ground_floor_area__m2',
-        '1.8 ground floor area (m2)',
-        'مساحة الطابق الأرضي (م2)  '
-    ),
-    (
-        'floor_area_m2',
-        '1.9 floor area (m2)',
-        'مساحة الطابق المتكرر '
-    ),
-    (
-        'units_nos',
-        '1.10 number of units',
-        'عدد الوحدات '
-    ),
-    (
-        'damaged_units_nos',
-        '1.11 number of targeted damaged units',
-        'عدد الوحدات المتضررة '
-    ),
-    (
-        'occupied_units_nos',
-        '1.12 number of occupied units',
-        'عدد الوحدات المأهولة '
-    ),
-    (
-        'vacant_units_nos',
-        '1.13 number of vacant units',
-        'عدد الوحدات الفارغة '
-    ),
-    (
-        'is_damaged_before',
-        '1.14 prior to the event, did the building have some damage due to previous conflicts or other reasons?',
-        'هل تضرر المبنى قبل الأحداث الحالية بسبب صراع آخر أو أسباب أخرى؟ '
-    ),
-    (
-        'if_damaged',
-        '1.14.1 if yes, specify when and how?',
-        'إذا تضرر المبنى قبل ذلك، حدد متى وكيف؟ '
-    ),
-    (
-        'building_debris_exist',
-        '1.15 is there debris generated at the building level?',
-        'هل يوجد ركام ناتج عن الضرر في المبنى؟ '
-    ),
-    (
-        'building_debris_qty',
-        '1.15.1 estimated amount of debris at building level',
-        'تقدير كمية الركام في المبنى '
-    ),
-    (
-        'building_debris_blocking',
-        '1.15.2 does debris obstruct access or use of the building?',
-        'هل الركام يعيق الوصول أو الاستخدام؟ '
-    ),
-    (
-        'uxo_present',
-        '1.16 are there any uxo present?',
-        'هل يوجد مخلفات حربية / ذخائر غير منفجرة داخل المبنى؟ '
-    ),
-    (
-        'bodies_present',
-        '1.17 are there any bodies in the building?',
-        'هل يوجد جثث داخل المبنى؟ '
-    ),
-    (
-        'estimated_number_of_bodies',
-        '1.17.1 estimated number of bodies',
-        'عدد الجثث (تقديري) '
-    ),
-    (
-        'building_status_visit',
-        '1.18 building status at the time of visit',
-        'حالة المبنى وقت المعاينة '
-    ),
-    (
-        'building_roof_type',
-        '1.19 building roof type',
-        'نوع سطح المبنى '
-    ),
-    (
-        'clay_tile_area',
-        '1.19.1 clay tile roof area (m2)',
-        'مساحة القرميد (م2) '
-    ),
-    (
-        'concrete_area',
-        '1.19.2 concrete roof area (m2)',
-        'مساحة الباطون (م2) '
-    ),
-    (
-        'aspestos_area',
-        '1.19.3 aspestos roof area (m2)',
-        'مساحة الاسبست (م2) '
-    ),
-    (
-        'scorite_area',
-        '1.19.4 scorite roof area (m2)',
-        'مساحة الصاج (م2) '
-    ),
-    (
-        'other_roof',
-        '1.19.5 if other, specify roof type',
-        'في حال أخرى، حدد نوع السقف '
-    ),
-    (
-        'other_roof_area',
-        '1.19.6 specify other roof area (m2)',
-        'في حال أخرى،  حدد المساحة (م2) '
-    ),
-    ('', '', ' '),
-    (
-        'ownweship_information',
-        '2. ownership information',
-        ' 2. معلومات عن الملكية '
-    ),
-    (
-        'ownweshipbldng_introduction',
-        '2.1 introduction',
-        '2.1 معلومات عن ملكية المبنى '
-    ),
-    (
-        'building_ownership',
-        '2.1.1 building ownership',
-        'اختر نوع الملكية '
-    ),
-    (
-        'owner_status',
-        '2.1.2 what is the status of the property owner?',
-        'ما هو وضع مالك العقار؟ '
-    ),
-    (
-        'building_responsible',
-        '2.1.3 who is responsible for the building?',
-        'من المسؤول عن البناية؟ '
-    ),
-    (
-        'building_authorization',
-        '2.1.4 do you have authorization/delegation to manage the building and request compensation (e.g., power of attorney)?',
-        'هل لديك تفويض بإدارة المبنى وطلب التعويضات؟ '
-    ),
-    (
-        'land_fully_owned',
-        '2.1.5 is the land fully owned?',
-        'هل الأرض مملوكة بالكامل؟ '
-    ),
-    (
-        'owner_name',
-        '2.1.6 owner full name ',
-        'اسم المالك '
-    ),
-    (
-        'owner_id',
-        '2.1.7 owner id number',
-        'رقم هوية المالك '
-    ),
-    (
-        'owner_mobile',
-        '2.1.8 owner mobile number',
-        'رقم جوال المالك  '
-    ),
-    (
-        'board1_name',
-        '2.1.9 board member 1 full name  ',
-        'إسم رئيس مجلس الإادارة  '
-    ),
-    (
-        'board1_id',
-        '2.1.10 board member 1 id number',
-        'رقم الهاتف المحمول '
-    ),
-    (
-        'board1_number',
-        '2.1.11 board member 2 id number',
-        'رقم الهوية '
-    ),
-    (
-        'board2_name',
-        '2.1.12 board member 2 full name  ',
-        'إسم نائب مجلس الإادارة  '
-    ),
-    (
-        'board2_id',
-        '2.1.13 board member 2 id number',
-        'رقم الهاتف المحمول '
-    ),
-    (
-        'board2_number',
-        '2.1.14 board member 2 id number',
-        'رقم الهوية '
-    ),
-    (
-        'has_authorization_if_not_owner',
-        '2.1.15 if not fully owned, do you have authorization/delegation to manage the property (e.g., power of attorney)?',
-        'إذا لم تكن الملكية كاملة، هل لديك تفويض/وكالة لإدارة العقار؟ '
-    ),
-    (
-        'authorization_details',
-        '2.1.16 please specify the authorization (optional)',
-        'يرجى توضيح نوع التفويض (اختياري) '
-    ),
-    (
-        'is_rented',
-        '2.1.17 is the property rented?',
-        'هل العقار مستأجر بالكامل؟ '
-    ),
-    (
-        'tenant_names',
-        '2.1.18 tenant names (optional)',
-        'أسماء المستأجرين (اختياري) '
-    ),
-    (
-        'agreement_type',
-        '2.1.19 type of agreement',
-        'نوع الاتفاق '
-    ),
-    (
-        'agreement_duration',
-        '2.1.20 agreement duration',
-        'مدة الاتفاق '
-    ),
-    ('documents', '2.2 documents', '2.2 الوثائق '),
-    (
-        'has_documents',
-        '2.2.1 are ownership documents available?',
-        'هل تتوفر مستندات تثبت الملكية؟ '
-    ),
-    (
-        'doc_types_available',
-        '2.2.2 which documents are available?',
-        'ما هي المستندات المتوفرة؟ '
-    ),
-    (
-        'doc_types_other',
-        '2.2.3 please specify other documents',
-        'يرجى تحديد مستندات أخرى '
-    ),
-    (
-        'no_documents_reason',
-        '2.2.4 if no, briefly explain why (optional)',
-        'إذا لا، وضّح السبب (اختياري) '
-    ),
-    (
-        'need_renew_docs',
-        '2.2.5 do you need to renew or obtain documents?',
-        'هل تحتاج إلى تجديد أو استخراج مستندات؟ '
-    ),
-    (
-        'doc_challenges',
-        '2.2.6 main challenges (if any)',
-        'التحديات الرئيسية (إن وجدت) '
-    ),
-    (
-        'doc_challenges_other',
-        '2.2.7 please specify (other)',
-        'يرجى التحديد (أخرى) '
-    ),
-    ('disputes', '2.3 disputes', '2.3 النزاعات '),
-    (
-        'has_dispute',
-        '2.3.1 are there any known disputes?',
-        'هل توجد نزاعات معروفة على العقار أو الأرض؟ '
-    ),
-    (
-        'dispute_types',
-        '2.3.2 type of dispute',
-        'نوع النزاع '
-    ),
-    (
-        'dispute_other',
-        '2.3.3 please specify other dispute',
-        'يرجى تحديد نزاع آخر '
-    ),
-    (
-        'building_attachment',
-        '3. building attachments',
-        '3. مرفقات المبنى '
-    ),
-    (
-        'attach_one_photo_for_each_of_the_following_documents',
-        '410',
-        'یرفق ما أمكن صورة عن كل من المستندات التالیة '
-    ),
-    (
-        'select_document',
-        '3.3 select one or more of the following documents to be attached',
-        'اختر المستندات المرفقة '
-    ),
-    (
-        'id_number_photo',
-        '3.4 id number',
-        'صورة الهوية '
-    ),
-    (
-        'land_ownership_photo',
-        '3.5 land ownership',
-        'صورة إثبات ملكية الأرض  '
-    ),
-    (
-        'municipal_permit_photo',
-        '3.6 municipal permit',
-        'صورة رخصة البلدية '
-    ),
-    (
-        'other_documents_photo',
-        '3.7 other documents',
-        'صورة مستندات أخرى '
-    ),
-    (
-        'building_services',
-        '4. building services',
-        '4. خدمات العمارة '
-    ),
-    (
-        'has_elevator',
-        '4.1 is there an elevator?',
-        'هل يوجد مصعد في العمارة/ البناية؟ '
-    ),
-    (
-        'elevator_number',
-        '4.2 number of elevators',
-        'عدد المصاعد '
-    ),
-    (
-        'elevator_status',
-        '4.2.1 elevator condition',
-        'حالة المصعد '
-    ),
-    (
-        'elevator_box',
-        '4.2.2 cabin condition',
-        'حالة الكابينة '
-    ),
-    (
-        'elevator_motor',
-        '4.2.3 motor condition',
-        'حالة الماتور '
-    ),
-    (
-        'has_solar',
-        '4.3 is there a solar energy system?',
-        'هل يوجد نظام طاقة شمسية في البناية؟ '
-    ),
-    (
-        'solar_damage_status',
-        '4.3.1 solar system condition',
-        'حالة نظام الطاقة الشمسية '
-    ),
-    (
-        'has_well',
-        '4.4 is there a well and submersible pump system?',
-        'هل يوجد بئر مياه ونظام غاطس؟ '
-    ),
-    (
-        'well_damage_status',
-        '4.4.1 well system condition',
-        'حالة نظام البئر/الغاطس '
-    ),
-    (
-        'has_fence',
-        '4.5 is there a building fence?',
-        'هل يوجد سور للبناية؟ '
-    ),
-    (
-        'fence_damage_status',
-        '4.5.1 fence condition',
-        'حالة السور '
-    ),
-    (
-        'fence_length',
-        '4.5.2 fence length',
-        'طول السور (متر) '
-    ),
-    (
-        'has_electric_room',
-        '4.6 is there an electrical room?',
-        'هل توجد غرفة كهرباء؟ '
-    ),
-    (
-        'electric_room_damage_status',
-        '4.6.1 electrical room condition',
-        'حالة غرفة الكهرباء '
-    ),
-    (
-        'has_sewage',
-        '4.7 is there a sewage system?',
-        'هل يوجد نظام صرف صحي؟ '
-    ),
-    (
-        'sewage_damage_status',
-        '4.7.1 sewage system condition',
-        'حالة الصرف الصحي '
-    ),
-    (
-        'service_ownership',
-        '4.8 service ownership',
-        'اختر ملكية الخدامات '
-    ),
-    (
-        'service_ownership_name',
-        '4.8.1 service ownership name',
-        'ما اسم مالك الخدمات '
-    ),
-    (
-        'has_other_service',
-        '4.9 other building service?',
-        'خدمة أخرى خاصة بالعمارة؟ '
-    ),
-    (
-        'other_service_details',
-        '4.9.1 specify the service and damage (if any)',
-        'حدّد المرفق ونوع الضرر إن وجد '
-    ),
-    (
-        'building_services_notes',
-        '4.10 comments on building services',
-        'ملاحظات حول خدمات العمارة '
-    ),
-    (
-        'bldng_accessories',
-        '5. building accessories',
-        '5. ملحقات المبنى '
-    ),
-    (
-        'staircase_status',
-        '5.1 staircase condition',
-        'حالة الدرج '
-    ),
-    (
-        'staircase_widt',
-        '5.1.1 staircase width (meters)',
-        'عرض الدرج (متر) '
-    ),
-    (
-        'has_parking',
-        '5.2 is there a garage/parking?',
-        'هل يوجد كراج؟ '
-    ),
-    (
-        'parking_status',
-        '5.2.1 garage condition',
-        'حالة الكراج '
-    ),
-    (
-        'garage_area',
-        '5.2.2 garage area (m²)',
-        'مساحة الكراج (م²) '
-    ),
-    ('garage_type', '5.2.3 garage type', 'نوع الكراج '),
-    (
-        'has_canopy',
-        '5.3 is there a canopy?',
-        'هل توجد مظلة؟ '
-    ),
-    (
-        'canopy_status',
-        '5.3.1 canopy condition',
-        'حالة المظلة '
-    ),
-    (
-        'carport_length',
-        '5.3.2 canopy length (m)',
-        'طول المظلة (م) '
-    ),
-    (
-        'carport_width',
-        '5.3.3 canopy width (m)',
-        'عرض المظلة (م) '
-    ),
-    (
-        'carport_height',
-        '5.3.4 canopy height (m)',
-        'ارتفاع المظلة (م) '
-    ),
-    (
-        'has_basement',
-        '5.4 is there a basement?',
-        'هل يوجد بدروم؟ '
-    ),
-    (
-        'basement_status',
-        '5.4.1 basement condition',
-        'حالة البدروم '
-    ),
-    (
-        'basement_area',
-        '5.4.2 basement area (m²)',
-        'مساحة البدروم (م²) '
-    ),
-    (
-        'has_mezzanine',
-        '5.5 is there a mezzanine?',
-        'هل توجد سدة؟ '
-    ),
-    (
-        'mezzanine_status',
-        '5.5.1 mezzanine condition',
-        'حالة السدة '
-    ),
-    (
-        'roof_terrace_area',
-        '5.5.2 roof terrace area (m²)',
-        'مساحة السدة (م²) '
-    ),
-    (
-        'bldng_engineer_comments',
-        '6. engineer comments',
-        '6. ملاحظات المهندس '
-    ),
-    (
-        'comments_recommendations',
-        '6.1  comments & recommendations',
-        'اشرح بشكل عام مواصفات المبنى وسجل أي ملاحظات أخرى '
-    ),
-    (
-        'building_image',
-        '6.2  take picture for the whole building',
-        'خذ صورة عامة لكل المبنى '
-    ),
-    (
-        'building_image2',
-        '6.3  take picture for the whole building',
-        'خذ صورة عامة أخرى لكل المبنى '
-    ),
-    (
-        'break01_note',
-        'the following page will ask you if you want to add a damaged unit. please click "add" to add information for a new damaged unit in this building.',
-        'تنويه: في الخانة التالية، قم بتعبئة بيانات الوحدات المتضررة في هذا المبنى. عندما تنتهي من إضافة بيانات الوحدة ، قم بالضغط على إشارة +  لإضافة وحدة سكنية. كرر العملية عند اللزوم وذلك حسب عدد الوحدات المتضررة في المبنى. '
-    ),
-    ('housing_unit', 'housing unit وحدة سكنية', ' '),
-    (
-        'housing_unit_group',
-        '7. unit introduction',
-        '7. الوحدة السكنية '
-    ),
-    (
-        'housing_unit_type',
-        '7.1 housing unit type',
-        'نوع الوحدة السكنية '
-    ),
-    (
-        'unit_damage_status',
-        '7.2 unit damage status',
-        'حالة الضرر '
-    ),
-    (
-        'page8',
-        '8. unit information',
-        '8. معلومات الوحدة السكنية '
-    ),
-    (
-        'floor_number',
-        '8.1  floor number',
-        'حدد رقم الطابق الذي يوجد فيها الوحدة المتضررة '
-    ),
-    (
-        'housing_unit_number',
-        '8.2 housing unit number',
-        ' رقم الوحدة السكنية '
-    ),
-    (
-        'unit_direction',
-        '8.3 specify the direction of the damaged unit',
-        ' حدد اتجاه الوحدة المتضررة '
-    ),
-    (
-        'damaged_area_m2',
-        '8.4 damaged unit area - m2',
-        'مساحة الوحدة المتضررة  '
-    ),
-    (
-        'infra_type2',
-        '8.5 unit use',
-        'نوع استخدام الوحدة المتضررة '
-    ),
-    (
-        'house_unit_ownership',
-        '8.6  house unit ownership',
-        'نوع ملكية الوحدة المتضررة '
-    ),
-    (
-        'other_ownership',
-        '8.7  if other, specify:',
-        'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة '
-    ),
-    (
-        'occupied',
-        '8.8  occupied before conflict?',
-        'هل كانت الوحدة المتضررة مشغولة قبل الحدث/القصف؟ '
-    ),
-    (
-        'number_of_rooms',
-        '8.9 number of rooms',
-        ' عدد الغرف '
-    ),
-    (
-        'page9',
-        '9. household and unit information',
-        '9. معلومات  الأسرة والوحدة السكنية '
-    ),
-    (
-        'identity_type1',
-        '9.0 identity type',
-        'نوع الوثيقة '
-    ),
-    ('id_number1', '9.1 id number', 'رقم الهوية '),
-    ('passport1', '9.2 passport number', 'رقم الجواز '),
-    (
-        'other_id1',
-        '9.2.1 if other, specify',
-        'في حال اخترت أخرى، حدد نوع الوثيقة ورقمها '
-    ),
-    (
-        'unit_owner',
-        '9.3 unit owner',
-        'اسم مالك الوحدة '
-    ),
-    (
-        'q_9_3_1_first_name',
-        '9.3.1 first name',
-        'الاسم الأول '
-    ),
-    (
-        'q_9_3_2_second_name__father',
-        '9.3.2 second name (father)',
-        'اسم الأب '
-    ),
-    (
-        'q_9_3_3_third_name__grandfather',
-        '9.3.3 third name (grandfather)',
-        'اسم الجد '
-    ),
-    (
-        'q_9_3_4_last_name',
-        '9.3.4 last name',
-        'اسم العائلة '
-    ),
-    ('sex', '9.4 gender', 'جنس المالك '),
-    (
-        'mobile_number',
-        '9.5  mobile number',
-        'رقم الموبايل. اكتب رقم الموبايل بالشكل التالي: 0592797072 '
-    ),
-    (
-        'additional_mobile',
-        '9.5.1 additional mobile number',
-        'رقم موبايل اضافي. اكتب رقم الموبايل بالشكل التالي: 0592797073 '
-    ),
-    ('owner_job', '9.6 job', 'وظيفة المالك '),
-    (
-        'other_job',
-        '9.6.1 if other, specify',
-        'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة '
-    ),
-    ('age', '9.7  age', 'عمر المالك '),
-    (
-        'marital_status',
-        '9.8 marital status',
-        'الحالة الاجتماعية للمالك '
-    ),
-    (
-        'ownership_image',
-        '9.9 take picture for the id and other documents',
-        'خذ صورة للهوية وإثبات الملكية '
-    ),
-    (
-        'page10',
-        '10. spouses and disability information',
-        '10. معلومات الأزواج وذوي الإعاقة '
-    ),
-    (
-        'no_spouses',
-        '10.1 number of spouses',
-        'عدد الزوجات '
-    ),
-    (
-        'spouse1',
-        '10.2 spouse name',
-        ' اسم الزوج/الزوجة '
-    ),
-    (
-        'spouse1_id',
-        '10.3 spouse id',
-        'رقم هوية الزوج/الزوجة '
-    ),
-    (
-        'spouse2',
-        '10.4 second spouse name',
-        ' الزوجة الثانية '
-    ),
-    (
-        'spouse2_id',
-        '10.5 second spouse id',
-        'رقم هوية الزوجة الثانية '
-    ),
-    (
-        'spouse3',
-        '10.6 third spouse name',
-        'الزوجة الثالثة '
-    ),
-    (
-        'spouse3_id',
-        '10.7 third spouse id',
-        'رقم هوية الزوجة الثالثة '
-    ),
-    (
-        'spouse4',
-        '10.8 fourth spouse name',
-        'الزوجة الرابعة '
-    ),
-    (
-        'spouse4_id',
-        '10.9 fourth spouse id',
-        'رقم هوية الزوجة الرابعة '
-    ),
-    (
-        'are_there_people_with_disability',
-        '10.10 are there people with disability?',
-        'هل يوجد أحدا من ذوي الإعاقة؟ '
-    ),
-    (
-        'number_of_people_with_disability',
-        '10.11 number of people with disability',
-        'عدد الأشخاص من ذوي الإعاقة '
-    ),
-    (
-        'handicapped_type',
-        '10.12 type of disability',
-        'نوع الإعاقة '
-    ),
-    (
-        'other_handicapped',
-        '10.13 if other, specify:',
-        'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة '
-    ),
-    (
-        'is_refugee',
-        '10.14 is the family registered as refugee?',
-        'العائلة مسجلة كلاجئة مع الأونروا '
-    ),
-    (
-        'unrwa_registration_number',
-        '10.15  write the unrwa registration number',
-        'رقم بطاقة الاونروا الجدید/القدیم '
-    ),
-    (
-        'page11',
-        '11. family size',
-        '11.عدد أفراد الأسرة '
-    ),
-    (
-        'number_of_nuclear_families',
-        '11.1 number of nuclear families',
-        'عدد الأسر النووية '
-    ),
-    (
-        'mchildren_001',
-        '11.2 no. males (<18 years old)',
-        'عدد الذكور ممن هم أقل من 18 عاما. '
-    ),
-    (
-        'myoung',
-        '11.3 no. males (>=18 and < 60 years old)',
-        'عدد الذكور ممن هم 18 عاما أو أكبر وأقل من 60 عاما. '
-    ),
-    (
-        'melderly',
-        '11.4 no. males (>=60 years old)',
-        'عدد الذكور ممن هم أكبر من 60 عاما. '
-    ),
-    (
-        'fchildren',
-        '11.5 no. females (<18 years old)',
-        'عدد الإناث ممن هم أقل من 18 عاما. '
-    ),
-    (
-        'fyoung_001',
-        '11.6 no. females (>=18 and < 60 years old)',
-        'عدد الإناث ممن هم 18 عاما أو أكبر وأقل من 60 عاما. '
-    ),
-    (
-        'felderly',
-        '11.7 no. females (>=60 years old)',
-        'عدد الإناث ممن هم أكبر من 60 عاما. '
-    ),
-    (
-        'pregnant',
-        '11.8 no. pregnant women',
-        'عدد النساء الحوامل '
-    ),
-    (
-        'lactating',
-        '11.9 no. lactating women',
-        'عدد النساء المرضعات '
-    ),
-    (
-        'page12',
-        '12. current residence and refugee status',
-        '12. مكان الإقامة الحالي وحالة اللجوء '
-    ),
-    (
-        'the_unit_resident',
-        '12.0 the unit resident at the time of damage is',
-        ' المقیم في المنزل وقت الضرر '
-    ),
-    (
-        'current_address',
-        '12.1 is the current address as same as the original address?',
-        'هل العنوان الحالي هو نفس العنوان الأصلي (عنوان الهدم) '
-    ),
-    (
-        'current_residence',
-        '12.2 current place of residence',
-        'مكان الإقامة الحالية '
-    ),
-    (
-        'current_residence_other',
-        '12.2.1 please specify (other)',
-        'يرجى التحديد (أخرى) '
-    ),
-    (
-        'shelter_name',
-        '12.3 shelter name',
-        'اسم مركز الإيواء '
-    ),
-    (
-        'shelter_type',
-        '12.4 shelter type',
-        'نوع مركز الإيواء '
-    ),
-    (
-        'shelter_type_other',
-        '12.4.1 please specify (other)',
-        'يرجى التحديد (أخرى) '
-    ),
-    ('governorate', '12.5 governorate', 'المحافظة '),
-    ('locality', '12.6 locality', 'البلدية '),
-    ('neighborhood', '12.7 neighborhood', 'الحي '),
-    ('street', '12.8 street', 'اسم الشارع '),
-    (
-        'closest_facility2',
-        '12.9 closest facility',
-        'أقرب مرفق '
-    ),
-    (
-        'page13',
-        '13. household and rentee',
-        '13. معلومات المستأجر '
-    ),
-    (
-        'identity_type2',
-        '13.1 identity type',
-        'نوع الوثيقة '
-    ),
-    (
-        'rentee_id_passport_number',
-        '13.2 rentee id/passport number',
-        'رقم هوية المستأجر/جواز السفر '
-    ),
-    (
-        'rentee_resident_full_name',
-        '13.3 rentee/resident full name',
-        'اسم المستأجر/المقيم '
-    ),
-    (
-        'q_13_3_1_first_name',
-        '13.3.1 first name',
-        'الاسم الأول '
-    ),
-    (
-        'q_13_3_2_second_name__father',
-        '13.3.2 second name (father)',
-        'اسم الأب '
-    ),
-    (
-        'q_13_3_3_third_name__grandfather',
-        '13.3.3 third name (grandfather)',
-        'اسم الجد '
-    ),
-    (
-        'q_13_3_4_last_name__family',
-        '13.3.4 last name (family)',
-        'اسم العائلة '
-    ),
-    (
-        'rentee_mobile_number',
-        '13.4 rentee mobile number',
-        'رقم جوال/هاتف المستأجر '
-    ),
-    ('work_type', '13.5 work type', 'طبيعة العمل '),
-    (
-        'other_work',
-        '13.5.1 if other, specify',
-        'في حال أخرى، حدد طبيعة العمل الآخر '
-    ),
-    ('', '', ' '),
-    (
-        'page14',
-        '14. unit finishing and internal damaged',
-        '14. تقييم تشطيب الوحدة والأضرار الداخلية '
-    ),
-    (
-        'external_finishing_of_the_unit',
-        '14.1 external finishing of the unit',
-        'تشطيب الوحدة من الخارج '
-    ),
-    (
-        'other_external_finishing',
-        '14.1.1 if other, specify',
-        'في حال أخرى، حدد نوع التشطيب الآخر '
-    ),
-    (
-        'is_finished',
-        '14.2 is the apartment finished?',
-        'هل الشقة مشطبة؟ '
-    ),
-    (
-        'finishing_extent',
-        '14.2.2 is the finishing total or partial?',
-        'هل التشطيب كلي أم جزئي؟ '
-    ),
-    (
-        'internal_finishing_of_the_unit',
-        '14.2.1 internal finishing of the unit',
-        'تشطيب الوحدة من الداخل '
-    ),
-    (
-        'finishing_partial_types',
-        '14.2.4 partial finishing types',
-        'نوع التشطيب الجزئي '
-    ),
-    (
-        'has_fire',
-        '14.3 is there a fire in the housing unit?',
-        'هل يوجد حريق في الوحدة؟ '
-    ),
-    (
-        'fire_extent',
-        '14.3.1 is the fire total or partial?',
-        'هل الحريق كلي أم جزئي؟ '
-    ),
-    (
-        'fire_severity',
-        '14.3.2 fire severity level',
-        'ما هي درجة الحريق '
-    ),
-    (
-        'fire_locations',
-        '14.3.3 areas affected by fire',
-        'الأماكن التي تعرضت للحريق '
-    ),
-    (
-        'fire_rooms_count',
-        '14.3.4 number of rooms affected by fire',
-        'عدد الغرف التي تعرضت للحريق '
-    ),
-    (
-        'fire_area',
-        '14.3.5 fire affected area (m²)',
-        'مساحة الحريق (م²) '
-    ),
-    (
-        'furniture_ownership',
-        '14.4 who owns the furniture?',
-        'ملكية الأثاث تعود إلى من؟ '
-    ),
-    (
-        'percentage_of_damaged_furniture',
-        '14.4.1 percentage of damaged furniture',
-        'نسبة تدمير الآثاث (%) '
-    ),
-    (
-        'unit_stripping',
-        '14.5 was there stripping inside the housing unit?',
-        'هل تم التفريغ في الوحدة السكنية؟ '
-    ),
-    (
-        'unit_stripping_details',
-        '14.5.1 stripping: total or partial?',
-        'التفريغ: كلي أم جزئي؟ '
-    ),
-    (
-        'stripping_area',
-        '14.5.2 stripping area (m²)',
-        'مساحة التفريغ (م²) '
-    ),
-    (
-        'stripping_locations',
-        '14.5.3 areas affected by stripping',
-        'حدد الأماكن التي تم التفريغ فيها '
-    ),
-    (
-        'rubble_removal_is_needed',
-        '9.3  debris removal is needed?',
-        'هل هناك حاجة لإزالة الركام؟ '
-    ),
-    (
-        'activation_of_uxo_ha_d_material_clearance',
-        '9.4  activation of uxo/hazard material clearance?',
-        'هل هناك حاجة لفحص وتنظيف المواد الخطرة/المتفجرة؟ '
-    ),
-    (
-        'unit_support_needed',
-        '9.6 housing unit shoring / structural support needed',
-        'هل تحتاج الوحدة السكنية إلى تدعيم؟ '
-    ),
-    (
-        'is_the_housing_unit_or_living_habitable',
-        '9.7 is the damaged unit suitable for living (habitable)/work?',
-        'هل الوحدة المتضررة ملائمة للسكن/العمل؟ '
-    ),
-    (
-        'mhpss',
-        '15. mental health and psychosocial support (mhpss)',
-        'القسم (5): الصحة النفسية والدعم النفسي الاجتماعي '
-    ),
-    (
-        'mhpss_experinced',
-        '15.1 since the war, have you or any family members experienced increased stress, anxiety, emotional challenges, and/or mental and psychological issues? if so',
-        'منذ بداية الحرب، هل واجهت أنت أو أي من أفراد عائلتك زيادة في التوتر، أو القلق، أو التحديات العاطفية، أو المشاكل العقلية والنفسية، أو الارق او أي مشاكل نفسية أخرى؟ إذا كان الأمر كذلك (نعم)، رجاء حدد؟ '
-    ),
-    (
-        'other_mhpss_exp',
-        '15.1.1 if other, specify:',
-        'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة '
-    ),
-    (
-        'mhpss_support',
-        '15.2 what kind of support do you think would help you cope better (e.g., individual counseling, group therapy, family support, or community activities)?',
-        'ما نوع الدعم الذي تعتقد أنه سيساعدك على التكيف مع الوضع الحالي بشكل أفضل (مثل، الاستشارة الفردية، أو العلاج الجماعي، أو الدعم الأسري، أو الأنشطة المجتمعية، او غيرها)؟ '
-    ),
-    (
-        'other_mhpss_support',
-        '15.2.1 if other, specify:',
-        'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة '
-    ),
-    (
-        'community_participation',
-        '15.3 would you be interested in participating in community-based interventions aimed at enhancing resilience and coping mechanisms?',
-        'هل أنت مهتم بالمشاركة في أية تدخلات مجتمعية و/أو نفسية تهدف إلى تعزيز المرونة والصمود وآليات التكيف؟ '
-    ),
-    ('', '', ' '),
-    (
-        'ce',
-        '16. community needs and preferences survey',
-        '16. استطلاع احتياجات المجتمع '
-    ),
-    (
-        'ce1',
-        '16.1 prefab housing needs',
-        'احتياجات المنازل الجاهزة '
-    ),
-    (
-        'prefab_moving',
-        '16.1.1 would you be interested in moving to a prefab house as a temporary solution?',
-        'هل ستكون مهتماً بالانتقال إلى منزل جاهز كحل مؤقت؟ '
-    ),
-    (
-        'prefab_moving_maybe',
-        '16.1.2 if maybe, please specify:',
-        'إذا تم اختيار ربما في السؤال السابق، وضح الإجابة '
-    ),
-    (
-        'prefab_types',
-        '16.1.3 what features are most important to you in a prefab house?',
-        'ما هي الميزات الأكثر أهمية بالنسبة لك في المنزل الجاهز؟ '
-    ),
-    (
-        'other_prefab_types',
-        '16.1.4 if other, specify:',
-        'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة '
-    ),
-    (
-        'prefab_pref',
-        '16.1.5 do you have any specific preferences or requirements for the prefab house? (please describe)',
-        'هل لديك أي تفضيلات أو متطلبات محددة للمنزل الجاهز (يرجى التوضيح) ؟ '
-    ),
-    (
-        'ce2',
-        '16.2 rehabilitation needs',
-        'احتياجات إعادة التأهيل '
-    ),
-    (
-        'reh_kitchen',
-        '16.2.1 do you require rehabilitation of your kitchen?',
-        'هل يحتاج إلى إعادة تأهيل المطبخ؟ '
-    ),
-    (
-        'reh_bathroom',
-        '16.2.2 do you require rehabilitation of your bathroom?',
-        'هل يحتاج إلى إعادة تأهيل الحمام؟ '
-    ),
-    (
-        'reh_type',
-        '16.2.3 what type of rehabilitation is needed for your kitchen or bathroom? (please describe)',
-        'ما نوع إعادة التأهيل المطلوبة للمطبخ أو الحمام (يرجى الوصف)؟ '
-    ),
-    (
-        'ce3',
-        '16.3 additional comments',
-        'تعليقات إضافية '
-    ),
-    (
-        'additional_comments',
-        '16.3.1 do you have any additional comments or concerns regarding temporary shelter?',
-        'هل لديك أي تعليقات أو مخاوف إضافية بشأن الإسكان المؤقت؟ '
-    ),
-    ('techncial_boq', '17. techncial-boq', ' '),
-    ('tech_boq', 'techncial-boq', ' '),
-    ('p11', 'demolishing works', ' '),
-    ('dm1', 'dm1-demolish walls ', 'إزالة حوائط (m2) '),
-    (
-        'dm2',
-        'dm2-remove concrete from slabs',
-        'أزالة أسقف (m2) '
-    ),
-    (
-        'dm3',
-        'dm3-remove concrete from existing damaged columns',
-        'إزالة أعمدة (no.) '
-    ),
-    (
-        'dm4',
-        'dm4-carefully remove concrete from stair cases ',
-        'إزالة درج (item) '
-    ),
-    (
-        'dm5',
-        'dm5-clean the site including removing debris out of site to approved damping areas.',
-        'تنظيف الموقع و إزالة الركام  من الموقع (item) '
-    ),
-    (
-        'dm6',
-        'dm6-demolish concrete ground slabs',
-        'إزالة مدة أرضية (m2) '
-    ),
-    (
-        'dm7',
-        'dm7-demolish concrete beams or foundation including removing debris out of site to approved damping areas.',
-        'إزالة حزامات أو قواعد وإزالة ركامها من الموقع (m3) '
-    ),
-    (
-        'dm8',
-        'dm8-carfully remove the terazzo floor tiles',
-        'إزالة بلاط (m2) '
-    ),
-    (
-        'dm9',
-        'dm9-carefully dismantle & refix existing aluminum or wooden window/door, repair, fix new fittings in place of missing parts where needed & any other needed.',
-        'فك وإعادة تركيب أبواب أو شبابيك ألمنيوم أو خشب شاملاً الصيانة والقطع الجديدة (no.) '
-    ),
-    (
-        'dm10',
-        'dm10-remove marble worktop',
-        'إزالة المجلى كاملا ( الوجه والأرفف ... إلخ) (rm) '
-    ),
-    (
-        'dm11',
-        'dm11-hacking and remove old plaster including removing debris out of site to approved damping areas.',
-        'إزالة قصارة قديمة شاملاً تنظيف الموقع (m2) '
-    ),
-    (
-        'dm12',
-        'dm12-backfilling with clean sand',
-        'ردم باستخدام رمل نظيف (m3) '
-    ),
-    ('p12', 'blocks works', ' '),
-    (
-        'bl2',
-        'bl2-hollow block walling 10 - 12cm thick ',
-        'بلوك 12 - 10 سم (m2) '
-    ),
-    (
-        'bl3',
-        'bl3-hollow block walling 15cm thick',
-        'بلوك 15 سم (m2) '
-    ),
-    (
-        'bl4',
-        'bl4-hollow block walling 20cm thick',
-        'بلوك 20 سم (m2) '
-    ),
-    (
-        'bl5',
-        'bl5-solid block walling 20cm thick ',
-        'بلوك بلدي 20 سم (m2) '
-    ),
-    ('p13', 'concrete works', ' '),
-    (
-        'co2',
-        'co2-supply and cast reinforced concrete (b250/20) for ground slab with [10cm] thick, ',
-        'توريد وصب خرسانة مسلحة بقوة (b250/20) لأعمال مدة أرضية بسماكة 10سم (m2) '
-    ),
-    (
-        'co3',
-        'co3-supply and cast reinforced concrete (b250/20) in door jambs, canopies, secondary tie columns,secondary beams, lintel, sills, infil and topping to walls ',
-        'توريد وصب خرسانة مسلحة بقوة (b250/20) لأعمال الجلسات والكشفات والحزامات (m3) '
-    ),
-    (
-        'co4',
-        'co4-supply and cast reinforced concrete (b250/20) for ground beams or foundation',
-        'توريد وصب خرسانة مسلحة بقوة (b250/20) لأعمال الأحزمة الأرضية والقواعد (m3) '
-    ),
-    (
-        'co5',
-        'co5-supply and cast reinforced concrete (b300/20) for new columns ',
-        'توريد وصب خرسانة مسلحة بقوة (b300/20) لأعمال الأعمدة الجديدة (m3) '
-    ),
-    (
-        'co6',
-        'co6-supply and cast reinforced concrete (b300/20) as protective sleeve cover around existing damaged columns. ',
-        'توريد وصب خرسانة مسلحة بقوة (b300/20) لأعمال غطاء خرساني (قمصان) حول الأعمدة المتضررة (m3) '
-    ),
-    (
-        'co7',
-        'co7-supply and cast reinforced concrete (b250/20) for solid slab [12cm] average thick',
-        'توريد وصب خرسانة مسلحة بقوة (b250/20) لأعمال السقف المصمت بسماكة 12سم  (m2) '
-    ),
-    (
-        'co8',
-        'co8-supply and cast reinforced concrete (b250/20) for suspended hollow block slab [25cm average thick]',
-        'توريد وصب خرسانة مسلحة بقوة (b250/20) لأعمال الأسقف باستخدام بلوك مفرغ (ريبس) بسماكة 30 - 35 سم  (m2) '
-    ),
-    (
-        'co9',
-        'co9-supply & cast reinforced concrete (b250/20) for stair case (landing, flights, steps & beams)',
-        'توريد وصب خرسانة مسلحة بقوة (b250/20) لأعمال الدرج (الشواحط والدرجات والأحزمة) (m3) '
-    ),
-    (
-        'co10',
-        'co10-provide wooden shuttering and steel support for existing roof slab or any structural element as directed by supervising engineer.',
-        'تدعيم بدعائم خشبية ومعدنية لسقف أو أي عنصر إنشائي يحتاج لتدعيم (m2) '
-    ),
-    (
-        'p14_1',
-        'internal finishings works',
-        'أعمال التشطيبات الداخلية '
-    ),
-    ('p14_1_1', 'painting works', 'أعمال الدهان '),
-    (
-        'fn1',
-        'fn1-priming and painting with at least two coats of high quality acrylic emulsion paint (supercryle) for walls and ceiling surfaces. ',
-        'تأسيس ودهان على الأقل طبقتين (سوبركريل) للحوائط والاسقف (m2) '
-    ),
-    (
-        'fn2',
-        'fn2-priming and painting with at least two coats of high quality oil paint for walls. ',
-        'تأسيس ودهان على الأقل طبقتين (دهان زيت) للحوائط (m2) '
-    ),
-    ('p14_1_2', 'tiling works', 'أعمال البلاط '),
-    (
-        'fn3',
-        'fn3-supply and install precast terrazzo sills',
-        'توريد وتركيب جلسات كسر رخام (rm) '
-    ),
-    (
-        'fn4',
-        'fn9-supply and install precast terrazzo for stair case or marble',
-        'توريد وتركيب درج (كسر رخام) أو رخام  (rm) '
-    ),
-    (
-        'fn5',
-        'fn4-supply and install terrazzo with marble chips floor tiles and skirting (7cm high) ',
-        'توريد وتركيب بلاط كسر رخام شاملاً بلاط البانيل بسمك 7 سم (m2) '
-    ),
-    (
-        'fn6',
-        'fn6-supply and install white glazed ceramic wall tiles ',
-        'توريد وتركيب بلاط حوائط سراميك (m2) '
-    ),
-    (
-        'fn7',
-        'fn7-supply and install unglazed ceramic floor tiles ',
-        'توريد وتركيب بلاط أرضي سراميك  (m2) '
-    ),
-    (
-        'fn8',
-        'fn8-supply and install multi-purpose marble (m2.)',
-        'توريد وتركيب  بلاط خشب بركيه '
-    ),
-    (
-        'fn10',
-        'fn10-supply and installation of granolithic finish for floors or walls',
-        'توريد وتركيب جرانيوليت للأرضيات أو الحوائط (m2) '
-    ),
-    ('p14_1_3', 'marble works', 'أعمال الرخام '),
-    (
-        'fn11',
-        'fn11-supply and install marble sills (local khalily type) 250mm wide',
-        'تويد وتركيب جلسات رخام خليلي أو كسر رخام بعرض 25 سم (rm) '
-    ),
-    (
-        'fn12',
-        'fn12-marble worktop  ( complete including top, shelves, walls, … etc)',
-        'توريد وتركيب رخام مجلى (كامل يشمل الوجه والرفوف والضلفات ... إلخ) (rm) '
-    ),
-    (
-        'fn13',
-        'fn13-supply and fix granite marble only',
-        'توريد وتركيب وجه جرانيت (m2) '
-    ),
-    (
-        'fn14',
-        'fn14-maintenance of kitchen marble',
-        'صيانة رخام مطبخ (rm) '
-    ),
-    (
-        'fn15',
-        'fn15- supply and install multi-purpose marble (m2.)',
-        'توريد و تريكيب رخام متعدد الإستخدامات (m2) '
-    ),
-    (
-        'p14_1_4',
-        'plastering works (gypsum / plaster)',
-        'أعمال القصارة (لياسة / جبس) '
-    ),
-    (
-        'fn22',
-        'fn22-supply & fix gypsum decorated panel (wide) include material & workmanship',
-        'توريد وتركيب جبس للديكور الداخلي (عريض) شاملاً المواد والعمالة (rm) '
-    ),
-    (
-        'fn23',
-        'fn23-supply & fix gypsum decorated panel (thin) include material & workmanship',
-        'توريد وتركيب جبس للديكور الداخلي (كرانيش) شاملاً المواد والعمالة (rm) '
-    ),
-    (
-        'fn24',
-        'fn24-supply & fix gypsum decorated panel  include material & workmanship',
-        'توريد وتركيب جبس (ألواح) للديكور الداخلي شاملاً المواد والعمالة (m2) '
-    ),
-    (
-        'fn25',
-        'fn25-supply and install gypsum board walls, including all materials and workmanship',
-        'توريد وتركيب حوائط جبس بورد، شاملاً المواد والعمالة (m2) '
-    ),
-    (
-        'fn26',
-        'fn26-supply and installation of false ceiling (gypsum board), including all materials and workmanship.',
-        'توريد وتركيب سقف مستعار (جبس بورد) شاملاً المواد والعمالة (m2) '
-    ),
-    (
-        'fn16',
-        'fn16-internal plastering, 13mm thick to walls and ceilings.',
-        'قصارة داخلية بسماكة 13 مم للحوائط والسقف (m2) '
-    ),
-    (
-        'fn17',
-        'fn17-external rendering, 15mm thick with approved dampproof admixture to walls.',
-        'قصارة خارجية بسماكة 15 مم (m2) '
-    ),
-    (
-        'fn18',
-        'fn18-ditto but lime free external rendering.',
-        'قصارة خارجية بدون استخدام الشيد (m2) '
-    ),
-    (
-        'fn19',
-        'fn19-external tyrolean finish with white cement ad fine sand (kfars) mix (1:3) to walls.',
-        'رشقة خارجية باستخدام رمل ناعم و أسمنت أبيض بنسبة (1/3) (m2) '
-    ),
-    (
-        'fn20',
-        'fn20-external italian plaster finish.',
-        'شلختة إيطالية (m2) '
-    ),
-    (
-        'fn21',
-        'fn21-plastering, rendering and repairing cracks',
-        'قصارة ومعالجة وإصلاح الشقوق (rm) '
-    ),
-    ('', '', ' '),
-    ('', '', ' '),
-    (
-        'p14_2',
-        'external finishings works',
-        'أعمال التشطيبات الخارجية '
-    ),
-    (
-        'fn27',
-        'fn27-supply and install exterior natural stone. ',
-        'توريد وتركيب حجر قدسي (m2) '
-    ),
-    (
-        'fn28',
-        'fn28-supply, install  and fix  clay roof tiles (karmeed قرميد) complete with all needed items, materials  and works',
-        'توريك وتركيب كرميد شاملا كل ما يحتاجه من مواد وأعمال (m2) '
-    ),
-    (
-        'fn29',
-        'fn29-supply and installation of interlock tiles, 6 cm thick',
-        'توريد وتركيب بلاط إنترلوك سماكة 6 سم '
-    ),
-    (
-        'fn30',
-        'fn30-supply and install interlocking paving tiles, 8 cm thickness',
-        'توريد وتركيب بلاط إنترلوك سماكة8 سم '
-    ),
-    (
-        'fn31',
-        'fn31-external italian plaster finish.',
-        'شلختة إيطالية (m2) '
-    ),
-    ('', '', ' '),
-    ('p15', 'aluminum works', ' '),
-    (
-        'al1',
-        'al1-supply and fix aluminum window of 4-6mm thick waved glazed sliding leaves ',
-        'توريد وتركيب نوافذ ألمنيوم كاملة بسماكة 4-6 مم (منزلقة) (m2) '
-    ),
-    (
-        'al2',
-        'al2-supply and fix aluminum window of 4-6mm thick waved glazed moving leaves ',
-        'توريد وتركيب نوافذ ألمنيوم كاملة بسماكة 4-6 مم (متحركة) (m2) '
-    ),
-    (
-        'al3',
-        'al3-supply and fix aluminum window of 4-6mm thick waved glazed fixed leaves ',
-        'توريد وتركيب نوافذ ألمنيوم كاملة بسماكة 4-6 مم (ثابتة) (m2) '
-    ),
-    (
-        'al4',
-        'al4-supply and fix aluminum window of plastic panel louvered sliding leaves.',
-        'توريد وتركيب نوافذ ألومنيوم قلّاب (لوفر) بلاستيك (منزلقة) (m2) '
-    ),
-    (
-        'al5',
-        'al5-supply and fix aluminum window of plastic panel louvered moving leaves. ',
-        'توريد وتركيب نوافذ ألومنيوم قلّاب (لوفر) بلاستيك (متحركة) (m2) '
-    ),
-    (
-        'al6',
-        'al6-supply and fix aluminum window of plastic panel louvered fixed leaves. ',
-        'توريد وتركيب نوافذ ألومنيوم قلّاب (لوفر) بلاستيك (ثابتة) (m2) '
-    ),
-    (
-        'al7',
-        'al7-supply and install leaves for aluminum window or door to match the existing ',
-        'توريد وتركيب ضلفات لشبابيك أو أبواب ألمنيوم (m2) '
-    ),
-    (
-        'al8',
-        'al8-supply and install  aluminum frame ',
-        'توريد وتركيب إطار ألمنيوم (rm) '
-    ),
-    (
-        'al9',
-        'al9-maintenance of aluminum window or door ( excluding glass).',
-        'صيانة شبابيك أو أبواب ألمنيوم (m2) '
-    ),
-    (
-        'al10',
-        'al10-supply and install curtain wall system',
-        'توريد وتركيب كيرتن وول (متر مربع) (m2) '
-    ),
-    ('', '', ' '),
-    ('p16', 'wood works', ' '),
-    (
-        'wd1',
-        'wd1-type d1, v-jointed, size (90-80x220x4.5)cm ',
-        'توريد وتركيب أبواب خشبية يشمل الحلق، حجم (80-90 *220*4.5) سم (no.) '
-    ),
-    (
-        'wd3',
-        'wd3-maintenance of wooden window or door',
-        'صيانة أبواب أو نوافذ خشبية شامل الحلق (no.) '
-    ),
-    (
-        'wd4',
-        'wd4-supply and fix wooden window.',
-        'توريد وتركيب نوافذ خشبية (no.) '
-    ),
-    (
-        'wd5',
-        'wd5-supply and install timber leaves for wooden window or door.',
-        'توريد وتركيب ضلفة باب أو نافذة خشبية (no.) (80-90 *220*4.5) سم '
-    ),
-    (
-        'wd6',
-        'supply and install wooden door frame (no.) 15 cm',
-        'توريد وتركيب حلق باب خشب (no.) 15 سم '
-    ),
-    (
-        'wd7',
-        'wd–supply and install wooden door frame, 18 cm (no.)',
-        'توريد وتركيب حلق باب خشب (no.) 18 سم '
-    ),
-    (
-        'wd8',
-        'wd6-supply and install timber frame for wooden window or door to match the existing. ',
-        'توريد وتركيب حلق باب خشب (no.) 23 سم '
-    ),
-    (
-        'wd9',
-        'supply and install wooden staircase (mr.)',
-        'توريد وتركيب  درج خشبي (mr.)  '
-    ),
-    (
-        'wd10',
-        'supply and install wooden mezzanine (m2.)',
-        'توريد وتركيب   (m2.) سدة خشبية '
-    ),
-    (
-        'wd11',
-        'supply and install wooden cabinet (mr.)',
-        'توريد وتركيب   خزانة خشب mr '
-    ),
-    (
-        'wd12',
-        'cm8-supply and install hardware with switch (wally type).',
-        'توريد وتركيب زرفيل باب  (no.) '
-    ),
-    ('p17', 'metal works', ' '),
-    (
-        'mt1',
-        'mt1-supply and install galvanized steel  sheets (type skourit) 0.5mm thick .',
-        'توريد وتركيب ألواح زينجو (سكوريت) بسماكة 0.5 مم (m2) '
-    ),
-    (
-        'mt2',
-        'mt2-supply and install eternite sheets fixed to steel pipes or purlings.',
-        'توريد وتركيب ألواح   (m2) '
-    ),
-    (
-        'mt3',
-        'mt3-dismantle and refix steel pipes and eternite sheets or skourit .',
-        'إعادة تركيب وإصلاح ألواح زينجو (سكوريت) (m2) '
-    ),
-    (
-        'mt4',
-        'mt4-supply and install 4\'\' mild steel pipes 2.25mm thick.',
-        'توريد وتركيب مواسير حديد بسماكة 2.25 مم  وقطر 4 إنش (rm) '
-    ),
-    (
-        'mt5',
-        'mt5-supply and install open steel profile 80x40 mm.',
-        'توريد وتركيب بروفيل معدني 8*4 سم (rm) '
-    ),
-    (
-        'mt6',
-        'mt6-supply and install steel door size [120x220]cm.',
-        'توريد وتركيب أبواب حديد (120*220) سم (no.) '
-    ),
-    (
-        'mt7',
-        'mt7-maintenance of steel door size [120x220]cm.',
-        'صيانة أبواب معدنية (120*220) سم (no.) '
-    ),
-    (
-        'mt8',
-        'mt8-supply and install steel door size [220x400]cm.',
-        'توريد وتركيب أبواب معدنية (أبواب حواصل) (m2) '
-    ),
-    (
-        'mt9',
-        'mt9-maintenance of steel door size [220x400]cm.',
-        'صيانة أبواب معدنية (أبواب حواصل) (400*220) سم (no.) '
-    ),
-    (
-        'mt10',
-        'mt10-supply and fix steel balustrade for stair case.',
-        'توريد وتركيب دربزين معدني للدرج (rm) '
-    ),
-    (
-        'mt11',
-        'mt11-supply and fix security protective screen. ',
-        'توريد وتركيب حديد حماية للنوافذ (m2) '
-    ),
-    (
-        'mt12',
-        'mt12-supply and install steel stand, average size of 100x100x200cm mild steel.  سيبة حمام شمسي',
-        'توريد وتركيب سيبة حمام شمسي 200 * 100* 100 سم (no.) '
-    ),
-    (
-        'mt13',
-        'mt13-new mul-t-lock door with frame',
-        'باب ملتيلوك جديد مع حلق للباب (no.) '
-    ),
-    (
-        'mt14',
-        'mt14-new mul-t-lock door without frame',
-        'باب ملتيلوك جديد بدون حلق للباب (no.) '
-    ),
-    (
-        'mt15',
-        'mt15-pvc coating',
-        'جلد باب ملتي لوك (no.) '
-    ),
-    (
-        'mt16',
-        'mt16-new door lock',
-        'قفل باب جديد (no.) '
-    ),
-    (
-        'mt17',
-        'mt17-complete maintenace',
-        'صيانة كاملة لباب ملتيلوك (no.) '
-    ),
-    (
-        'mt19',
-        'mt19-supply and install steel emergency escape staircase (linear meter)',
-        'توريد وتركيب درج هروب حديدي (متر طولي) '
-    ),
-    ('', '', ' '),
-    ('p18', 'combined', ' '),
-    (
-        'cm1',
-        'cm1-replacement of broken glass 4mm thick for any defected parts.',
-        'إستبدال زجاج مكسور بسمك 4 مم (m2) '
-    ),
-    (
-        'cm2',
-        'cm2-replacement of broken glass 6mm thick for any defected parts.',
-        'إستبدال زجاج مكسور بسمك 6 مم (m2) '
-    ),
-    (
-        'cm3',
-        'cm3-replacement of broken glass colored 4mm thick (reflector) for any defected parts.',
-        'إستبدال زجاج مكسور بسمك 4 مم عاكس (m2) '
-    ),
-    (
-        'cm4',
-        'cm4-replacement of broken glass colored 6mm thick (reflector) for any defected parts.',
-        'إستبدال زجاج مكسور بسمك 6 مم عاكس (m2) '
-    ),
-    (
-        'cm5',
-        'cm5-replacement of broken reinforced glass  6mm thick  for any defected parts.',
-        'إستبدال زجاج بشبك معدني (مسلح) بسمك 6 مم (m2) '
-    ),
-    (
-        'cm6',
-        'cm6-replacement of broken panels for louver leaves with all needed accessories',
-        'إستبدال زجاج لوفر مكسور (m2) '
-    ),
-    (
-        'cm7',
-        'cm7-supply and install fly screen for leaves with all needed acessories.',
-        'توريد وتركيب شبك للنوافذ (m2) '
-    ),
-    (
-        'cm8',
-        'cm8-supply and install securit glass, 10 cm thickness',
-        'تركيب و توريد زجاج 10سم سوكوريت '
-    ),
-    (
-        'cm9',
-        'cm9-supply and installation of kitchen cabinets (aluminum or wood).',
-        'توريد وتركيب خزائن مطبخ (ألمنيوم) (rm) '
-    ),
-    (
-        'cm10',
-        'cm10-supply and installation of pvc cladding',
-        'توريد وتركيب معرش جلد (m2) (pvc) '
-    ),
-    (
-        'cm11',
-        'cm11-elevator (total damage / maintenance / motor / cabin / number of doors)',
-        'مصعد (ضرر كلي / صيانة / ماتور / كابينة / عدد الأبواب) (item) '
-    ),
-    ('', '', ' '),
-    ('p19', 'plumping works', ' '),
-    (
-        'pm1',
-        'pm1-complete solar heating system',
-        'حمام شمسي كامل (item) '
-    ),
-    (
-        'pm2',
-        'pm2-solar heater cylinder 150 liter.',
-        'سخان شمسي بسعة 150 لتر (item) '
-    ),
-    (
-        'pm101',
-        'mt12-supply and install steel stand, average size of 100x100x200cm mild steel.  سيبة حمام شمسي',
-        'توريد وتركيب سيبة حمام شمسي 200 * 100* 100 سم (no.) '
-    ),
-    (
-        'pm18',
-        'pm18-complete single mirror size 190x90cm for solar system best quality.',
-        'مرآة حمام شمسي  190*90 سم (no.) '
-    ),
-    (
-        'pm19',
-        'pm19-2mm clear glass sheet for solar system mirrors best quality, ',
-        'زجاج مرآة حمام شمسي (m2) '
-    ),
-    (
-        'pm3',
-        'pm3-ditto but 0.5m3 capacity.',
-        'خزان مياه بسعة 500 لتر (item) '
-    ),
-    (
-        'pm4',
-        'pm4-1.0m3 capacity plastic water tank',
-        'خزان مياه بسعة 1000 لتر (item) '
-    ),
-    (
-        'pm5',
-        'pm5-ditto but 1.5m3 capacity.',
-        'خزان مياه بسعة 1500 لتر (item) '
-    ),
-    (
-        'pm6',
-        'pm6-ditto but 2.m3 capacity.',
-        'خزان مياه بسعة 2000 لتر (item) '
-    ),
-    (
-        'pm7',
-        'pm7-maintenance of water tank ',
-        'صيانة خزان مياه (no.) '
-    ),
-    (
-        'pm8',
-        'pm8-maintenance of water network',
-        'صيانة شبكة مياه  (no.) '
-    ),
-    (
-        'pm9',
-        'pm9-dismantle and refix solar heating system.',
-        'فك وإعادة تركيب سخان شمسي كاملاً (item) '
-    ),
-    (
-        'pm10',
-        'pm10-upvc drainage pipes 4" internal diameter',
-        'أنابيب (مواسير) upvc قطر 4 إنش (mr) '
-    ),
-    (
-        'pm11',
-        'pm11-upvc drainage pipes 6" internal diameter.',
-        'أنابيب (مواسير) upvc قطر 6 إنش (mr) '
-    ),
-    (
-        'pm12',
-        'pm12-upvc drainage pipes 2" or 3" .',
-        'أنابيب (مواسير) upvc قطر 2 أو 3 إنش (mr) '
-    ),
-    (
-        'pm13',
-        'pm13-galavanized steel pipes [3/4"]',
-        'أنابيب (مواسير) معدنية مجلفنة قطر 3/4 انش (mr) '
-    ),
-    (
-        'pm14',
-        'pm14-20 mm pressure pvc water pipes [gulanee] with sleeves 25 mm',
-        'أنابيب (مواسير) جولاني شاملاً أنابيب (مواسير) شنشوري قطر 25 مم (mr) '
-    ),
-    (
-        'pm15',
-        'pm15-1/2" galavanized steel pipes with all fittings including priming & painting.',
-        'أنابيب (مواسير) حديد مجلفن شاملاً الوصلات والتأسيس والدهان (mr) '
-    ),
-    (
-        'pm16',
-        'pm16-trapped floor gully 4" diameter ',
-        'مصفاة أرضية 4 إنش (no.) '
-    ),
-    (
-        'pm20',
-        'pm20-flushing cistern box ',
-        'صندوق طرد/تصريف مياه (نيجارة) (no.) '
-    ),
-    (
-        'pm21',
-        'pm21-0.5" tibisa type chromium water mixer ',
-        'خلاط مياه 0.5 إنش (no.) '
-    ),
-    (
-        'pm22',
-        'pm22-0.5" tibisa type chromium water tap ',
-        'صنبور مياه 0.5 إنش (no.) '
-    ),
-    (
-        'pm23',
-        'pm23-white glazed hand wash basin size 52x40cm',
-        'مغلسة حمام (no.) '
-    ),
-    (
-        'pm24',
-        'pm24-shower tray 700 x700mm (ariston type or equivelent).',
-        'حوض إستحمام (أريستون) (no.) '
-    ),
-    (
-        'pm25',
-        'pm25-white glazed fireclay sink size 610x405mm',
-        'حوض ستانليس للمجلى (no.) '
-    ),
-    (
-        'pm26',
-        'pm26-white glazed fireclay squatting w.c [european/arabic] ',
-        'كرسي حمام (افرنجي أو عربي) (no.) '
-    ),
-    (
-        'pm27',
-        'pm27-one layer bituminous membrane with chippings 4mm thick of high ductility (polybeed)',
-        'عزل بطبقة بولوبيد بسمك 4 مم (m2) '
-    ),
-    (
-        'pm28',
-        'pm28-manhole 40cm internal diameter ',
-        'منهل قطر 40 سم (no.) '
-    ),
-    (
-        'pm29',
-        'pm29-manhole 50cm internal diameter ',
-        'منهل قطر 50 سم (no.) '
-    ),
-    (
-        'pm30',
-        'pm29-water pump 0.5 hp including all acessories',
-        'مضخة مياه نص حصان مع كافة لوازمها (item) '
-    ),
-    (
-        'pm31',
-        'pm31-water pump 0.5 hp including all acessories',
-        'مضخة مياه 3/4 حصان مع كافة لوازمها (item) '
-    ),
-    (
-        'pm32',
-        'pm32-ditto but 1.0 hp',
-        'مضخة مياه  حصان مع كافة لوازمها (item) '
-    ),
-    (
-        'pm33',
-        'pm33-septic tank size 165x90x140cm ',
-        'بئر مياه صرف صحي  (item) '
-    ),
-    (
-        'pm34',
-        'pm34-percolation pit size 240cm internal dimeter and 400cm high',
-        'حفرة ترشيح إمتصاصية (item) '
-    ),
-    (
-        'pm35',
-        'pm35-submersible water well',
-        'بئر مياه غاطس (item) '
-    ),
-    (
-        'pm36',
-        'pm36-underground water tank (capacity 5 m3)',
-        'خزان مياه أرضي سعة 5 م3 (item) '
-    ),
-    (
-        'pm37',
-        'pm37-water lifting pump (capacity in hp)',
-        'ماتور رفع مياه (القدرة بالحصان 3 حصان فأكثر) (item) '
-    ),
-    (
-        'pm38',
-        'pm38-manhole 60cm internal diameter',
-        'منهل صرف صحي قطر 60 سم (no.) '
-    ),
-    (
-        'pm39',
-        'pm39-manhole 80cm internal diameter',
-        'منهل صرف صحي قطر 80 سم (no.) '
-    ),
-    ('', '', ' '),
-    ('p20', 'electrical works', ' '),
-    (
-        'el1',
-        'el1-three pins 16a socket outlet',
-        'إبريز 16 أمبير (no.) '
-    ),
-    (
-        'el2',
-        'el2-three pins 16a socket outlet(waterproove)',
-        'إبريز 16 أمبير ضد المياه (no.) '
-    ),
-    (
-        'el3',
-        'el3-three pins 16a socket outlet  with 3x2.5mm2 wire and conduits from sbd to the points.',
-        'إبريز 16 أمبير شاملاً سلك 1.5 مم2 وتوصيله إلى علبة التجميع (no.) '
-    ),
-    (
-        'el4',
-        'el4-one gang one way switch (waterproove)',
-        'مفتاح مفرد ضد المياه (no.) '
-    ),
-    (
-        'el5',
-        'el5-one gang one way switch',
-        'مفتاح مفرد  (no.) '
-    ),
-    (
-        'el6',
-        'el6-one gang one way switch  with 1.5mm2 wire and conduits from sdb to the point.',
-        'مفتاح مفرد شاملاً سلك التوصيل 1.5مم2 إلى علبة التجميع (no.) '
-    ),
-    (
-        'el7',
-        'el7-two gang one way switch  inculding all connections.',
-        'مفتاح مزوج مع كل التوصيلات (no.) '
-    ),
-    (
-        'el8',
-        'el8-tow gang one way switch with 1.5mm2 wire and conduits from sdb to the point.',
-        'مفتاح مزوج مع سلك 1.5 مم2 والتوصيل إلى علبة التجميع (no.) '
-    ),
-    (
-        'el9',
-        'el9-flourescent lighting fixture 1x40w with lamp and 3x1.5mm2  wire and conduit',
-        'نيون مفرد كامل شاملا توصيلاته واللمبة  (no.) '
-    ),
-    (
-        'el10',
-        'el10-circular glob 60w with 3x1.5mm2 wire and conduits',
-        'كلوب 60 ولت مع السلك وما يلزم (no.) '
-    ),
-    (
-        'el11',
-        'el11-ceiling lighting point with 60watt tungesten lamp and wires, conduits',
-        'دواية 60 وات مع لمبة وتوصيلاتها (no.) '
-    ),
-    (
-        'el12',
-        'el12-supply and install 2x10 mm2xlpe cable with stay wire from mdb toi the main electrical network including isolator porcelain cup',
-        'توريد وتركيب كابل 2*10 مم2 من عمود الكهرباء إلى علبة تجميع الكهرباء المنزلية (rm) '
-    ),
-    (
-        'el13',
-        'el13-supply and install 2" galvanized steel console 3 meter long',
-        'كنزولة قطر 2" وطول 3متر من الحديد المجلفن (item) '
-    ),
-    (
-        'el14',
-        'el14-supply and install 1-phase kwhm , abb type with 1x40 a circuit breaker  inside 30x40cm ci box.',
-        'عداد كهرباء (no.) '
-    ),
-    (
-        'el15',
-        'el15-pvc sdb, 24 way type is siemens or equal approved comprising:- one 1x40a c.b - one 2x40a/0.03 elcb - four 1x10a c.b - six 1x16 a c.b - earth & nutral bus bars.',
-        'علبة كهرباء كاملة شاملة أمانات (1*40 أمبير،4*10 أمبير، 6*16 أمبير،وتوصيلات الإيرث وتوصيلات العلبة) (item) '
-    ),
-    (
-        'el16',
-        'el16-10-20 rearrange the existing wires using pvc pipe and repair all defects or fault in the internal network',
-        'إعادة ترتيب وصيانة شبكة الكهرباء الداخلية (item) '
-    ),
-    (
-        'el17',
-        'el17-10-21 supply and install pvc cover for electrical point (circular or rectangular junction boxes)',
-        'غطاء علبة تجميع الكهرباء (طبلون) (no.) '
-    ),
-    (
-        'el18',
-        'el18-10-22 relocate kwhm to the new location with all necessary needed, cable, conduit and connection.',
-        'تغيير مكان علبة تجميع الكهرباء (item) '
-    ),
-    (
-        'el19',
-        'el19-10-23 earthing system consists of 150cm cu electrode with 6mm2 stranded wire from sdb to the electrode with concrete manhole 40cm internal diameter and cover r≤5 ohms',
-        'نظام الإيرث شاملاً إليكترود 150 سم مع توصيلاته إلى علبة تجميع الكهرباء (item) '
-    ),
-    (
-        'el20',
-        'el20-10-24 circuit breaker 1x10a',
-        'قاطع كهربائي  1*10 أمبير (no) '
-    ),
-    (
-        'el21',
-        'el21-10-25 circuit breaker 1x16a',
-        'قاطع كهربائي  1*16 أمبير (no) '
-    ),
-    (
-        'el22',
-        'el22-10-26 circuit breaker 1x20a',
-        'قاطع كهربائي  1*20 أمبير (no) '
-    ),
-    (
-        'el23',
-        'el23-10-27 2x40a/0.03 elcb',
-        'أمان الحياة 2/40 أمبير (no) '
-    ),
-    (
-        'el24',
-        'el24-flourescent lighting fixture 2x40w with lamp and 3x1.5mm2  wire and conduit',
-        'نيون مزدوج كامل شاملا توصيلاته واللمبة  (no.) '
-    ),
-    (
-        'el25',
-        'el25-circular water proof glob 60w with 3x1.5mm2 wire and conduits',
-        'دواية 60 وات مع لمبة وتوصيلاتها ضد المياه (no.) '
-    ),
-    (
-        'el26',
-        'el26-supply and installation of ceiling fan',
-        'توريد وتركيب مروحة سقف (no.) '
-    ),
-    (
-        'el27',
-        'el27-supply and installation of lighting spotlights',
-        'توريد وتركيب سبوتات إنارة (no.) '
-    ),
-    (
-        'el28',
-        'el28-main distribution board (mdb) - main electrical panel (amperage connection)',
-        'طبلون كهرباء رئيسي (لوحة توزيع رئيسية) (الاشتراك بالأمبير) (item) '
-    ),
-    (
-        'el29',
-        'el29-cctv system (surveillance cameras)',
-        'نظام مراقبة (كاميرات) (item) '
-    ),
-    (
-        'el30',
-        'el30-generator (capacity in kw) (total damage / maintenance)',
-        'مولد (القدرة بالكيلو وات) (ضرر كلي / صيانة) (item) '
-    ),
-    ('p21', 'pv system works', ' '),
-    (
-        'pv_note',
-        'منظومة الخلايا الشمسية',
-        'قدرة المنظومة بالكامل بالوط '
-    ),
-    (
-        'pv1',
-        'pv1- total solar system capacity (w)',
-        'القدرة الإجمالية للنظام الشمسي (واط) '
-    ),
-    (
-        'pv2',
-        'pv2- inverter (1k)',
-        'عدد الانفيرتر1 كيلو '
-    ),
-    (
-        'pv3',
-        'pv2- inverter (2k)',
-        'عدد الانفيرتر2 كيلو '
-    ),
-    (
-        'pv4',
-        'pv2- inverter (3k)',
-        'عدد الانفيرتر3 كيلو '
-    ),
-    (
-        'pv5',
-        'pv3- inverter (5k)',
-        'عدد الانفيرتر 5 كيلو '
-    ),
-    (
-        'pv6',
-        'pv4- inverter (> 5k)',
-        'عدد الانفيرتر أكبر من 7 كيلو '
-    ),
-    (
-        'pv7',
-        'batteries 100',
-        'عدد البطاريات 100 أميبر '
-    ),
-    (
-        'pv8',
-        'batteries 200',
-        'عدد البطاريات 200 أميبر '
-    ),
-    ('pv9', 'batteries 2v', 'عدد البطاريات 2 فولت '),
-    (
-        'pv10',
-        'batteries 3k',
-        'عدد البطاريات الليثوم 3 كيلو '
-    ),
-    (
-        'pv11',
-        'batteries 5k ',
-        'عدد البطاريات الليثوم 5 كيلو '
-    ),
-    (
-        'pv12',
-        'pv5- distribution board',
-        'طبلون المنطومة '
-    ),
-    ('p22', 'miscellaneous works', ' '),
-    ('item1', 'item 1', 'وصف البند مع إضافة الوحدة '),
-    ('quant1', 'quantity', 'الكمية '),
-    ('item2', 'item 2', 'وصف البند مع إضافة الوحدة '),
-    ('quant2', 'quantity', 'الكمية '),
-    ('item3', 'item 3', 'وصف البند مع إضافة الوحدة '),
-    ('quant3', 'quantity', 'الكمية '),
-    ('item4', 'item 4', 'وصف البند مع إضافة الوحدة '),
-    ('quant4', 'quantity', 'الكمية '),
-    ('item5', 'item 5', 'وصف البند مع إضافة الوحدة '),
-    ('quant5', 'quantity', 'الكمية '),
-    (
-        'photos_final_comments_unilt',
-        'photos & final comments',
-        ' '
-    ),
-    (
-        'damge_photo_1',
-        'take a photo for the damaged unit',
-        'خذ صورة للوحدة المتضررة '
-    );
+    ('attachments', 'Attachments', 'المرفقات', NULL, '0'),
+    ('location', ' حدود المبنى', '', NULL, '0'),
+    ('field_status', 'Field_status', '', NULL, '0'),
+    ('building_committee_status', 'Building_Committee_Status', '', NULL, '0'),
+    ('unit_committee_status', 'Unit_Committee_Status', '', NULL, '0'),
+    ('unit_committee_count', 'Unit_Committee_Count', '', NULL, '0'),
+    ('parcel_no1', 'رقم القطعة', '', NULL, '0'),
+    ('block_no1', 'رقم القسيمة', '', NULL, '0'),
+    ('owner_na', 'نوع مليكة الأرض', '', NULL, '0'),
+    ('units_count', 'عدد الوحدات', '', NULL, '0'),
+    ('assignedto', 'اسم الباحث', '', NULL, '0'),
+    ('groupnumber', 'رقم المجموعة', '', NULL, '0'),
+    ('zone_code', 'رقم الزون', '', NULL, '0'),
+    ('objectid', 'objectid', '', NULL, '0'),
+    ('governorate', 'المحافظة', '', NULL, '0'),
+    ('municipalitie', 'البلدية', '', NULL, '0'),
+    ('neighborhood', 'الحي', '', NULL, '0'),
+    ('start', 'start', '', NULL, '0'),
+    ('today', 'today', '', NULL, '0'),
+    ('username', 'username', '', NULL, '0'),
+    ('simserial', 'simserial', '', NULL, '0'),
+    ('subscriberid', 'subscriberid', '', NULL, '0'),
+    ('deviceid', 'deviceid', '', NULL, '0'),
+    ('phonenumber', 'phonenumber', '', NULL, '0'),
+    ('audit', 'audit', '', NULL, '0'),
+    ('submission_date', 'submission_date', '', NULL, '0'),
+    ('longitude', 'longitude', '', NULL, '0'),
+    ('latitude', 'latitude', '', NULL, '0'),
+    ('g0', 'Introduction', '', NULL, '0'),
+    ('weather', 'Weather', 'حالة الطقس', NULL, '0'),
+    ('security_situation', 'Security Situation', 'ما هي الحالة الأمنية ', NULL, '0'),
+    ('security_info', 'security information', 'وصف الحالة الامنية', NULL, '0'),
+    ('assessment_obstacle', 'Is the site accessible for assessment? ', 'هل يوجد عائق يمنع عملية الحصر ', NULL, '0'),
+    ('obstacle_type', 'Obstacle type', 'ما هو نوع العائق', NULL, '0'),
+    ('assessment_obstacle_info', 'Assessment obstacle information', 'وصف العائق', NULL, '0'),
+    ('building_name', ' Building Name', 'اسم المبنى. مثال: برج فلسطين', NULL, '0'),
+    ('g1', 'Current Damage Status', '', NULL, '0'),
+    ('building_damage_status', 'What is the current damage status of the building?', 'ما هي حالة الضرر الحالية للمبنى؟', NULL, '0'),
+    ('owner_name_1', 'Owner full name ', 'اسم المالك', NULL, '0'),
+    ('owner_mobile_1', 'Owner mobile number', 'رقم جوال المالك ', NULL, '0'),
+    ('floor_nos_1', 'Number of floors', 'عدد الطوابق', NULL, '0'),
+    ('building_address', 'Building adress', 'عنوان المبنى بالتفصيل ( اسم الشارع مع وصف أقرب معلم)', NULL, '0'),
+    ('building_information', 'Building Information', 'معلومات المبنى', NULL, '0'),
+    ('bldng_introduction', '1. Introduction', '1. مقدمة', NULL, '0'),
+    ('building_type', '1.1 Building Type', 'نوع المبنى', NULL, '0'),
+    ('building_type_other', '1.1.1  Building Type', 'اكتب نوع المبنى', NULL, '0'),
+    ('building_use', '1.2 Building Use', 'نوع استخدام المبنى', NULL, '0'),
+    ('date_of_damage', '1.3 Date of damage', 'تاريخ القصف/الضرر', NULL, '0'),
+    ('building_material', '1.4 Type/Material of Building', 'نوع مادة المبنى', NULL, '0'),
+    ('other_material', '1.5 If Other, specify:', 'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة', NULL, '0'),
+    ('building_age', '1.6 How old is  the building?', 'كم هو عمر المبنى؟', NULL, '0'),
+    ('floor_nos', 'Number of floors', 'عدد الطوابق', NULL, '0'),
+    ('land_area', '  1.7 Land Area', 'ما هي مساحة الأرض  ؟', NULL, '0'),
+    ('ground_floor_area__m2', '1.9 Ground Floor Area (m2)', 'مساحة الطابق الأرضي (م2) ', NULL, '0'),
+    ('floor_area_m2', '1.9 Floor Area (m2)', 'مساحة الطابق المتكرر', NULL, '0'),
+    ('units_nos', '1.10 Number of units', 'عدد الوحدات', NULL, '0'),
+    ('damaged_units_nos', '1.11 Number of targeted damaged units', 'عدد الوحدات المتضررة', NULL, '0'),
+    ('occupied_units_nos', '1.12 Number of occupied units', 'عدد الوحدات المأهولة', NULL, '0'),
+    ('vacant_units_nos', '1.13 Number of vacant units', 'عدد الوحدات الفارغة', NULL, '0'),
+    ('is_damaged_before', '1.14 Prior to the event, did the building have some damage due to previous conflicts or other reasons?', 'هل تضرر المبنى قبل الأحداث الحالية بسبب صراع آخر أو أسباب أخرى؟', NULL, '0'),
+    ('if_damaged', '1.14.1 If Yes, specify when and how?', 'إذا تضرر المبنى قبل ذلك، حدد متى وكيف؟', NULL, '0'),
+    ('building_debris_exist', '1.15 Is there debris generated at the building level?', 'هل يوجد ركام ناتج عن الضرر في المبنى؟', NULL, '0'),
+    ('building_debris_qty', '1.15.1 Estimated amount of debris at building level', 'تقدير كمية الركام في المبنى', NULL, '0'),
+    ('building_debris_blocking', '1.15.2 Does debris obstruct access or use of the building?', 'هل الركام يعيق الوصول أو الاستخدام؟', NULL, '0'),
+    ('is_risk_parts', '1.15.3 Are there any suspended concrete parts that pose a risk and need to be removed?', 'هل يوجد كتل خرسانية معلقة تشكل خطر و يتوجب ازالتها ؟', NULL, '0'),
+    ('uxo_present', '1.16 Are there any UXO present?', 'هل يوجد مخلفات حربية / ذخائر غير منفجرة داخل المبنى؟', NULL, '0'),
+    ('bodies_present', '1.17 Are there any bodies in the building?', 'هل يوجد جثث داخل المبنى؟', NULL, '0'),
+    ('estimated_number_of_bodies', '1.17.1 Estimated number of bodies', 'عدد الجثث (تقديري)', NULL, '0'),
+    ('building_status_visit', '1.18 Building Status at the Time of Visit', 'حالة المبنى وقت المعاينة', NULL, '0'),
+    ('building_roof_type', '1.19 Building Roof Type', 'نوع سطح المبنى', NULL, '0'),
+    ('clay_tile_area', '1.19.1 Clay Tile Roof Area (m2)', 'مساحة القرميد (م2)', NULL, '0'),
+    ('concrete_area', '1.19.2 Concrete Roof Area (m2)', 'مساحة الباطون (م2)', NULL, '0'),
+    ('aspestos_area', '1.19.3 Aspestos Roof Area (m2)', 'مساحة الاسبست (م2)', NULL, '0'),
+    ('scorite_area', '1.19.4 Scorite Roof Area (m2)', 'مساحة الصاج (م2)', NULL, '0'),
+    ('other_roof', '1.19.5 If Other, Specify Roof Type', 'في حال أخرى، حدد نوع السقف', NULL, '0'),
+    ('other_roof_area', '1.19.6 Specify Other Roof Area (m2)', 'في حال أخرى،  حدد المساحة (م2)', NULL, '0'),
+    ('ownweship_information', '2. Ownership Information', ' 2. معلومات عن الملكية', NULL, '0'),
+    ('ownweshipbldng_introduction', '2.1 Introduction', '2.1 معلومات عن ملكية المبنى', NULL, '0'),
+    ('building_ownership', '2.1.1 Building Ownership', 'اختر نوع الملكية', NULL, '0'),
+    ('owner_status', '2.1.2 What is the status of the property owner?', 'ما هو وضع مالك العقار؟', NULL, '0'),
+    ('building_responsible', '2.1.3 Who is responsible for the building?', 'من المسؤول عن البناية؟', NULL, '0'),
+    ('building_authorization', '2.1.4 Do you have authorization/delegation to manage the building and request compensation (e.g., power of attorney)?', 'هل لديك تفويض بإدارة المبنى وطلب التعويضات؟', NULL, '0'),
+    ('land_fully_owned', '2.1.5 Is the land fully owned?', 'هل الأرض مملوكة بالكامل؟', NULL, '0'),
+    ('land_ownership', '2.1.6 Land Ownership belong to', 'ملكية الأرض تعود لمن؟', NULL, '0'),
+    ('owner_name', '2.1.7 Owner full name ', 'اسم المالك', NULL, '0'),
+    ('owner_id', '2.1.8 Owner ID number', 'رقم هوية المالك', NULL, '0'),
+    ('owner_mobile', '2.1.9 Owner mobile number', 'رقم جوال المالك ', NULL, '0'),
+    ('board1_name', '2.1.10 Board member 1 full name  ', 'إسم رئيس مجلس الإادارة ', NULL, '0'),
+    ('board1_id', '2.1.11 Board member 1 ID number', 'رقم الهوية ', NULL, '0'),
+    ('board1_number', '2.1.12 Board member 1 Phone Number', 'رقم الهاتف المحمول', NULL, '0'),
+    ('board2_name', '2.1.13 Board member 2 full name  ', 'إسم نائب مجلس الإادارة ', NULL, '0'),
+    ('board2_id', '2.1.14 Board member 2 ID number', 'رقم الهوية ', NULL, '0'),
+    ('board2_number', '2.1.15 Board member 2 Phone Number', 'رقم الهاتف المحمول', NULL, '0'),
+    ('has_authorization_if_not_owner', '2.1.16 If not fully owned, do you have authorization/delegation to manage the property (e.g., power of attorney)?', 'إذا لم تكن الملكية كاملة، هل لديك تفويض/وكالة لإدارة العقار؟', NULL, '0'),
+    ('authorization_details', '2.1.17 Please specify the authorization (optional)', 'يرجى توضيح نوع التفويض (اختياري)', NULL, '0'),
+    ('is_rented', '2.1.18 Is the property rented?', 'هل العقار مستأجر بالكامل؟', NULL, '0'),
+    ('tenant_names', '2.1.19 Tenant names (optional)', 'أسماء المستأجرين (اختياري)', NULL, '0'),
+    ('agreement_type', '2.1.20 Type of agreement', 'نوع الاتفاق', NULL, '0'),
+    ('agreement_duration', '2.1.21 Agreement duration', 'مدة الاتفاق', NULL, '0'),
+    ('documents', '2.2 documents', '2.2 الوثائق', NULL, '0'),
+    ('has_documents', '2.2.1 Are ownership documents available?', 'هل تتوفر مستندات تثبت الملكية؟', NULL, '0'),
+    ('doc_types_available', '2.2.2 Which documents are available?', 'ما هي المستندات المتوفرة؟', NULL, '0'),
+    ('doc_types_other', '2.2.3 Please specify other documents', 'يرجى تحديد مستندات أخرى', NULL, '0'),
+    ('no_documents_reason', '2.2.4 If no, briefly explain why (optional)', 'إذا لا، وضّح السبب (اختياري)', NULL, '0'),
+    ('need_renew_docs', '2.2.5 Do you need to renew or obtain documents?', 'هل تحتاج إلى تجديد أو استخراج مستندات؟', NULL, '0'),
+    ('doc_challenges', '2.2.6 Main challenges (if any)', 'التحديات الرئيسية (إن وجدت)', NULL, '0'),
+    ('doc_challenges_other', '2.2.7 Please specify (Other)', 'يرجى التحديد (أخرى)', NULL, '0'),
+    ('disputes', '2.3 Disputes', '2.3 النزاعات', NULL, '0'),
+    ('has_dispute', '2.3.1 Are there any known disputes?', 'هل توجد نزاعات معروفة على العقار أو الأرض؟', NULL, '0'),
+    ('dispute_types', '2.3.2 Type of dispute', 'نوع النزاع', NULL, '0'),
+    ('dispute_other', '2.3.3 Please specify other dispute', 'يرجى تحديد نزاع آخر', NULL, '0'),
+    ('building_attachment', '3. Building Attachments', '3. مرفقات المبنى', NULL, '0'),
+    ('attach_one_photo_for_each_of_the_following_documents', '3', 'یرفق ما أمكن صورة عن كل من المستندات التالیة', NULL, '0'),
+    ('select_document', '3.3 Select one or more of the following documents to be attached', 'اختر المستندات المرفقة', NULL, '0'),
+    ('id_number_photo', '3.4 ID Number', 'صورة الهوية', NULL, '0'),
+    ('land_ownership_photo', '3.5 Land Ownership', 'صورة إثبات ملكية الأرض ', NULL, '0'),
+    ('municipal_permit_photo', '3.6 Municipal Permit', 'صورة رخصة البلدية', NULL, '0'),
+    ('other_documents_photo', '3.7 Other Documents', 'صورة مستندات أخرى', NULL, '0'),
+    ('building_services', '4. Building Services', '4. خدمات العمارة', NULL, '0'),
+    ('has_elevator', '4.1 Is there an elevator?', 'هل يوجد مصعد في العمارة/ البناية؟', NULL, '0'),
+    ('elevator_number', '4.2 Number of elevators', 'عدد المصاعد', NULL, '0'),
+    ('elevator_status', '4.2.1 Elevator condition', 'حالة المصعد', NULL, '0'),
+    ('elevator_box', '4.2.2 Cabin Condition', 'حالة الكابينة', NULL, '0'),
+    ('elevator_motor', '4.2.3 Motor Condition', 'حالة الماتور', NULL, '0'),
+    ('elevator_damaged_doors', '4.3 Number of elevator damaged doors ? ', 'عدد أبواب المصعد المتضررة ؟', NULL, '0'),
+    ('has_solar', '4.3 Is there a solar energy system?', 'هل يوجد نظام طاقة شمسية في البناية؟', NULL, '0'),
+    ('solar_damage_status', '4.3.1 Solar system condition', 'حالة نظام الطاقة الشمسية', NULL, '0'),
+    ('has_well', '4.4 Is there a well and submersible pump system?', 'هل يوجد بئر مياه ونظام غاطس؟', NULL, '0'),
+    ('well_damage_status', '4.4.1 Well system condition', 'حالة نظام البئر/الغاطس', NULL, '0'),
+    ('has_fence', '4.5 Is there a building fence?', 'هل يوجد سور للبناية؟', NULL, '0'),
+    ('fence_damage_status', '4.5.1 Fence condition', 'حالة السور', NULL, '0'),
+    ('fence_length', '4.5.2 Fence length', 'طول السور المتضرر (متر)', NULL, '0'),
+    ('has_electric_room', '4.6 Is there an electrical room?', 'هل توجد غرفة كهرباء؟', NULL, '0'),
+    ('electric_room_damage_status', '4.6.1 Electrical room condition', 'حالة غرفة الكهرباء', NULL, '0'),
+    ('has_sewage', '4.7 Is there a sewage system?', 'هل يوجد نظام صرف صحي؟', NULL, '0'),
+    ('sewage_damage_status', '4.7.1 Sewage system condition', 'حالة الصرف الصحي', NULL, '0'),
+    ('service_ownership', '4.8 Service Ownership', 'اختر ملكية الخدامات', NULL, '0'),
+    ('service_ownership_name', '4.8.1 Service Ownership Name', 'ما اسم مالك الخدمات', NULL, '0'),
+    ('has_other_service', '4.9 Other building service?', 'خدمة أخرى خاصة بالعمارة؟', NULL, '0'),
+    ('other_service_details', '4.9.1 Specify the service and damage (if any)', 'حدّد المرفق ونوع الضرر إن وجد', NULL, '0'),
+    ('building_services_notes', '4.10 Comments on building services', 'ملاحظات حول خدمات العمارة', NULL, '0'),
+    ('bldng_accessories', '5. Building Accessories', '5. ملحقات المبنى', NULL, '0'),
+    ('staircase_status', '5.1 Staircase condition', 'حالة الدرج', NULL, '0'),
+    ('staircase_widt', '5.1.1 Staircase width (meters)', 'عرض الدرج (متر)', NULL, '0'),
+    ('has_parking', '5.2 Is there a garage/parking?', 'هل يوجد كراج؟', NULL, '0'),
+    ('parking_status', '5.2.1 Garage condition', 'حالة الكراج', NULL, '0'),
+    ('garage_area', '5.2.2 Garage area (m²)', 'مساحة الكراج (م²)', NULL, '0'),
+    ('garage_type', '5.2.3 Garage Type', 'نوع الكراج', NULL, '0'),
+    ('has_canopy', '5.3 Is there a canopy?', 'هل توجد مظلة؟', NULL, '0'),
+    ('canopy_status', '5.3.1 Canopy condition', 'حالة المظلة', NULL, '0'),
+    ('carport_length', '5.3.2 Canopy length (m)', 'طول المظلة (م)', NULL, '0'),
+    ('carport_width', '5.3.3 Canopy width (m)', 'عرض المظلة (م)', NULL, '0'),
+    ('carport_height', '5.3.4 Canopy height (m)', 'ارتفاع المظلة (م)', NULL, '0'),
+    ('has_basement', '5.4 Is there a basement?', 'هل يوجد بدروم؟', NULL, '0'),
+    ('basement_status', '5.4.1 Basement condition', 'حالة البدروم', NULL, '0'),
+    ('basement_area', '5.4.2 Basement area (m²)', 'مساحة البدروم (م²)', NULL, '0'),
+    ('has_mezzanine', '5.5 Is there a mezzanine?', 'هل توجد سدة؟', NULL, '0'),
+    ('mezzanine_status', '5.5.1 Mezzanine condition', 'حالة السدة', NULL, '0'),
+    ('roof_terrace_area', '5.5.2 Roof terrace area (m²)', 'مساحة السدة (م²)', NULL, '0'),
+    ('is_non_residential_rooftop', '6 Is there a non-residential rooftop structure?', 'هل يوجد ملحق على السطح غير سكني ', NULL, '0'),
+    ('non_residential_rooftop_area', '6.1 non residential rooftop area', ' مساحة الملحق ', NULL, '0'),
+    ('expl_non_residential_rooftop', '6.2 Describe the attached part ( using  nature, ... etc )', ' طبيعة الملحق و استخدامه', NULL, '0'),
+    ('bldng_engineer_comments', '6. Engineer Comments', '6. ملاحظات المهندس', NULL, '0'),
+    ('comments_recommendations', '6.1  Comments & Recommendations', 'اشرح بشكل عام مواصفات المبنى وسجل أي ملاحظات أخرى', NULL, '0'),
+    ('building_image', '6.2  Take Picture for the whole building', 'خذ صورة عامة لكل المبنى', NULL, '0'),
+    ('building_image2', '6.3  Take Picture for the whole building', 'خذ صورة عامة أخرى لكل المبنى', NULL, '0'),
+    ('break01_note', 'The following page will ask you if you want to add a damaged unit. Please click "ADD" to add information for a new damaged unit in this building.', 'تنويه: في الخانة التالية، قم بتعبئة بيانات الوحدات المتضررة في هذا المبنى. عندما تنتهي من إضافة بيانات الوحدة ، قم بالضغط على إشارة +  لإضافة وحدة سكنية. كرر العملية عند اللزوم وذلك حسب عدد الوحدات المتضررة في المبنى.', NULL, '0'),
+    ('housing_unit', 'Housing Unit وحدة سكنية', '', NULL, '0'),
+    ('housing_unit_group', '7. Unit Introduction', '7. الوحدة السكنية', NULL, '0'),
+    ('housing_unit_type', '7.1 Housing Unit Type', 'نوع الوحدة السكنية', NULL, '0'),
+    ('security_situation_unit', '7.2 Security Situation unit', 'هل يوجد عائق يمنع عملية الحصر ', NULL, '0'),
+    ('security_unit_info', '7.3.1 security information', 'ما هو العائق', NULL, '0'),
+    ('unit_owner', '7.4 Unit Owner', 'اسم مالك الوحدة', NULL, '0'),
+    ('mobile_number', '7.5 Mobile number', 'رقم الموبايل. اكتب رقم الموبايل بالشكل التالي: 0592797072', NULL, '0'),
+    ('additional_mobile', '7.6 Additional mobile number', 'رقم موبايل اضافي. اكتب رقم الموبايل بالشكل التالي: 0592797073', NULL, '0'),
+    ('unit_damage_status', '7.7 Unit Damage Status', 'حالة الضرر', NULL, '0'),
+    ('note_fully_damaged_unit', '7.8 Unit Damage Status has been automatically set to: Total Damage', 'تم ضبط نوع الضرر للوحدة تلقائيًا: كلي', NULL, '0'),
+    ('page8', '8. Unit Information', '8. معلومات الوحدة السكنية', NULL, '0'),
+    ('floor_number', '8.1  Floor Number', 'حدد رقم الطابق الذي يوجد فيها الوحدة المتضررة', NULL, '0'),
+    ('housing_unit_number', '8.2 Housing Unit Number', ' رقم الوحدة السكنية', NULL, '0'),
+    ('unit_direction', '8.3 Specify the direction of the damaged unit', ' حدد اتجاه الوحدة المتضررة', NULL, '0'),
+    ('damaged_area_m2', '8.4 Damaged Unit Area - m2', 'مساحة الوحدة المتضررة ', NULL, '0'),
+    ('unit_roof_type', '8.5 Unit Roof Type', 'نوع سقف الوحدة', NULL, '0'),
+    ('unit_clay_tile_area', '8.5.1 Clay Tile Roof Area (m2)', 'مساحة القرميد (م2)', NULL, '0'),
+    ('unit_concrete_area', '8.5.2 Concrete Roof Area (m2)', 'مساحة الباطون (م2)', NULL, '0'),
+    ('unit_aspestos_area', '8.5.3 Aspestos Roof Area (m2)', 'مساحة الاسبست (م2)', NULL, '0'),
+    ('unit_scorite_area', '8.5.4 Scorite Roof Area (m2)', 'مساحة الصاج (م2)', NULL, '0'),
+    ('unit_other_roof', '8.5.5 If Other, Specify Roof Type', 'في حال أخرى، حدد نوع السقف', NULL, '0'),
+    ('unit_other_roof_area', '8.5.6 Specify Other Roof Area (m2)', 'في حال أخرى،  حدد المساحة (م2)', NULL, '0'),
+    ('infra_type2', '8.6 Unit Use', 'نوع استخدام الوحدة المتضررة', NULL, '0'),
+    ('house_unit_ownership', '8.7 House unit ownership', 'نوع ملكية الوحدة المتضررة', NULL, '0'),
+    ('other_ownership', '8.8 If Other, specify:', 'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة', NULL, '0'),
+    ('occupied', '8.9 Occupied before conflict?', 'هل كانت الوحدة المتضررة مشغولة قبل الحدث/القصف؟', NULL, '0'),
+    ('number_of_rooms', '8.10 Number of rooms', ' عدد الغرف', NULL, '0'),
+    ('number_of_bathrooms', '8.11 Number of Bathrooms ', 'عدد الحمامات بالوحدة ', NULL, '0'),
+    ('page9', '9. Household and Unit Information', '9. معلومات  الأسرة والوحدة السكنية', NULL, '0'),
+    ('identity_type1', '9.0 Identity type', 'نوع الوثيقة', NULL, '0'),
+    ('id_number1', '9.1 ID Number', 'رقم الهوية', NULL, '0'),
+    ('passport1', '9.2 Passport Number', 'رقم الجواز', NULL, '0'),
+    ('other_id1', '9.2.1 If Other, Specify', 'في حال اخترت أخرى، حدد نوع الوثيقة ورقمها', NULL, '0'),
+    ('q_9_3_1_first_name', '9.3.1 First Name', 'الاسم الأول', NULL, '0'),
+    ('q_9_3_2_second_name__father', '9.3.2 Second Name (Father)', 'اسم الأب', NULL, '0'),
+    ('q_9_3_3_third_name__grandfather', '9.3.3 Third Name (Grandfather)', 'اسم الجد', NULL, '0'),
+    ('q_9_3_4_last_name', '9.3.4 Last Name', 'اسم العائلة', NULL, '0'),
+    ('sex', '9.4 Gender', 'جنس المالك', NULL, '0'),
+    ('owner_job', '9.5 Job', 'وظيفة المالك', NULL, '0'),
+    ('other_job', '9.5.1 If Other, specify', 'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة', NULL, '0'),
+    ('age', '9.6  Age', 'عمر المالك', NULL, '0'),
+    ('marital_status', '9.7 Marital status', 'الحالة الاجتماعية للمالك', NULL, '0'),
+    ('ownership_image', '9.8 Take Picture for the ID and other documents', 'خذ صورة للهوية وإثبات الملكية', NULL, '0'),
+    ('page10', '10. Spouses and Disability Information', '10. معلومات الأزواج وذوي الإعاقة', NULL, '0'),
+    ('no_spouses', '10.1 Number of spouses', 'عدد الزوجات', NULL, '0'),
+    ('spouse1', '10.2 Spouse name', ' اسم الزوج/الزوجة', NULL, '0'),
+    ('spouse1_id', '10.3 Spouse ID', 'رقم هوية الزوج/الزوجة', NULL, '0'),
+    ('spouse2', '10.4 Second spouse name', 'اسم الزوجة الثانية', NULL, '0'),
+    ('spouse2_id', '10.5 Second spouse ID', 'رقم هوية الزوجة الثانية', NULL, '0'),
+    ('spouse3', '10.6 Third spouse name', 'اسم الزوجة الثالثة', NULL, '0'),
+    ('spouse3_id', '10.7 Third spouse ID', 'رقم هوية الزوجة الثالثة', NULL, '0'),
+    ('spouse4', '10.8 Fourth spouse name', 'اسم الزوجة الرابعة', NULL, '0'),
+    ('spouse4_id', '10.9 Fourth spouse ID', 'رقم هوية الزوجة الرابعة', NULL, '0'),
+    ('are_there_people_with_disability', '10.10 Are there people with disability?', 'هل يوجد أحدا من ذوي الإعاقة؟', NULL, '0'),
+    ('number_of_people_with_disability', '10.11 Number of people with disability', 'عدد الأشخاص من ذوي الإعاقة', NULL, '0'),
+    ('handicapped_type', '10.12 Type of disability', 'نوع الإعاقة', NULL, '0'),
+    ('other_handicapped', '10.13 If Other, specify:', 'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة', NULL, '0'),
+    ('is_refugee', '10.14 Is the family registered as refugee?', 'العائلة مسجلة كلاجئة مع الأونروا', NULL, '0'),
+    ('unrwa_registration_number', '10.15  Write the UNRWA Registration Number', 'رقم بطاقة الاونروا الجدید/القدیم', NULL, '0'),
+    ('page11', '11. Family Size', '11.عدد أفراد الأسرة', NULL, '0'),
+    ('number_of_nuclear_families', '11.1 Number of Nuclear Families', 'عدد الأسر النووية', NULL, '0'),
+    ('mchildren_001', '11.2 No. males (<18 years old)', 'عدد الذكور ممن هم أقل من 18 عاما.', NULL, '0'),
+    ('myoung', '11.3 No. males (>=18 and < 60 years old)', 'عدد الذكور ممن هم 18 عاما أو أكبر وأقل من 60 عاما.', NULL, '0'),
+    ('melderly', '11.4 No. males (>=60 years old)', 'عدد الذكور ممن هم أكبر من 60 عاما.', NULL, '0'),
+    ('fchildren', '11.5 No. females (<18 years old)', 'عدد الإناث ممن هم أقل من 18 عاما.', NULL, '0'),
+    ('fyoung_001', '11.6 No. females (>=18 and < 60 years old)', 'عدد الإناث ممن هم 18 عاما أو أكبر وأقل من 60 عاما.', NULL, '0'),
+    ('felderly', '11.7 No. females (>=60 years old)', 'عدد الإناث ممن هم أكبر من 60 عاما.', NULL, '0'),
+    ('pregnant', '11.8 No. pregnant women', 'عدد النساء الحوامل', NULL, '0'),
+    ('lactating', '11.9 No. lactating women', 'عدد النساء المرضعات', NULL, '0'),
+    ('page12', '12. Current Residence and Refugee Status', '12. مكان الإقامة الحالي وحالة اللجوء', NULL, '0'),
+    ('the_unit_resident', '12.0 The unit resident at the time of damage is', ' المقیم في المنزل وقت الضرر', NULL, '0'),
+    ('current_address', '12.1 Is the current address as same as the original address?', 'هل العنوان الحالي هو نفس العنوان الأصلي (عنوان الهدم)', NULL, '0'),
+    ('tenant_name', ' 12.3 Tenant Name ', 'اسم المستاجر ', NULL, '0'),
+    ('furniture_ownership', '12.4 Who owns the furniture?', 'ملكية الأثاث تعود إلى من؟', NULL, '0'),
+    ('percentage_of_damaged_furniture', '12.4.1 Percentage of Damaged Furniture', 'نسبة تدمير الآثاث (%)', NULL, '0'),
+    ('current_residence', '12.6 Current place of residence', 'مكان الإقامة الحالية', NULL, '0'),
+    ('current_residence_other', '12.6.1 Please specify (Other)', 'يرجى التحديد (أخرى)', NULL, '0'),
+    ('shelter_name', '12.6 Shelter name', 'اسم مركز الإيواء', NULL, '0'),
+    ('shelter_type', '12.6 Shelter type', 'نوع مركز الإيواء', NULL, '0'),
+    ('shelter_type_other', '12.6.1 Please specify (Other)', 'يرجى التحديد (أخرى)', NULL, '0'),
+    ('locality', '12.8 Locality', 'البلدية', NULL, '0'),
+    ('street', '12.10 Street', 'اسم الشارع', NULL, '0'),
+    ('closest_facility2', '12.11 Closest Facility', 'أقرب مرفق', NULL, '0'),
+    ('page13', '13. Household and Rentee', '13. معلومات المستأجر', NULL, '0'),
+    ('identity_type2', '13.1 Identity type', 'نوع الوثيقة', NULL, '0'),
+    ('rentee_id_passport_number', '13.2 Rentee ID/Passport Number', 'رقم هوية المستأجر/جواز السفر', NULL, '0'),
+    ('rentee_resident_full_name', '13.3 Rentee/Resident Full Name', 'اسم المستأجر/المقيم', NULL, '0'),
+    ('q_13_3_1_first_name', '13.3.1 First Name', 'الاسم الأول', NULL, '0'),
+    ('q_13_3_2_second_name__father', '13.3.2 Second Name (Father)', 'اسم الأب', NULL, '0'),
+    ('q_13_3_3_third_name__grandfather', '13.3.3 Third Name (Grandfather)', 'اسم الجد', NULL, '0'),
+    ('q_13_3_4_last_name__family', '13.3.4 Last Name (Family)', 'اسم العائلة', NULL, '0'),
+    ('rentee_mobile_number', '13.4 Rentee Mobile Number', 'رقم جوال/هاتف المستأجر', NULL, '0'),
+    ('work_type', '13.5 Work type', 'طبيعة العمل', NULL, '0'),
+    ('other_work', '13.5.1 If Other, Specify', 'في حال أخرى، حدد طبيعة العمل الآخر', NULL, '0'),
+    ('page14', '14. Unit Finishing and Internal Damaged', '14. تقييم تشطيب الوحدة والأضرار الداخلية', NULL, '0'),
+    ('external_finishing_of_the_unit', '14.1 External Finishing of the Unit', 'تشطيب الوحدة من الخارج', NULL, '0'),
+    ('other_external_finishing', '14.1.1 If Other, Specify', 'في حال أخرى، حدد نوع التشطيب الآخر', NULL, '0'),
+    ('is_finished', '14.2 Is the apartment finished?', 'هل الوحدة مشطبة؟', NULL, '0'),
+    ('finishing_extent', '14.2.2 Is the finishing total or partial?', 'هل التشطيب كلي أم جزئي؟', NULL, '0'),
+    ('internal_finishing_of_the_unit', '14.2.1 Internal Finishing of the Unit', 'تشطيب الوحدة من الداخل', NULL, '0'),
+    ('finishing_partial_types', '14.2.4 Partial finishing types', 'نوع التشطيب الجزئي', NULL, '0'),
+    ('has_fire', '14.3 Is there a fire in the housing unit?', 'هل يوجد حريق في الوحدة؟', NULL, '0'),
+    ('fire_extent', '14.3.1 Is the fire total or partial?', 'هل الحريق كلي أم جزئي؟', NULL, '0'),
+    ('fire_severity', '14.3.2 Fire severity level', 'ما هي درجة الحريق', NULL, '0'),
+    ('fire_locations', '14.3.3 Areas affected by fire', 'الأماكن التي تعرضت للحريق', NULL, '0'),
+    ('fire_rooms_count', '14.3.4 Number of rooms affected by fire', 'عدد الغرف التي تعرضت للحريق', NULL, '0'),
+    ('fire_area', '14.3.5 Fire affected area (m²)', 'مساحة الحريق (م²)', NULL, '0'),
+    ('unit_stripping', '14.5 Was there stripping inside the housing unit?', 'هل تم التفريغ في الوحدة السكنية؟', NULL, '0'),
+    ('unit_stripping_details', '14.5.1 stripping: Total or Partial?', 'التفريغ: كلي أم جزئي؟', NULL, '0'),
+    ('stripping_area', '14.5.2 Stripping area (m²)', 'مساحة التفريغ (م²)', NULL, '0'),
+    ('stripping_locations', '14.5.3 Areas affected by stripping', 'حدد الأماكن التي تم التفريغ فيها', NULL, '0'),
+    ('rubble_removal_is_needed', '14.15  Debris removal is needed?', 'هل هناك حاجة لإزالة الركام؟', NULL, '0'),
+    ('activation_of_uxo_ha_d_material_clearance', '14.16  Activation of UXO/Hazard material clearance?', 'هل هناك حاجة لفحص وتنظيف المواد الخطرة/المتفجرة؟', NULL, '0'),
+    ('unit_support_needed', '14.17 Housing unit shoring / structural support needed', 'هل تحتاج الوحدة السكنية إلى تدعيم؟', NULL, '0'),
+    ('is_the_housing_unit_or_living_habitable', '14.18 Is the damaged Unit Suitable for Living (habitable)/work?', 'هل الوحدة المتضررة ملائمة للسكن/العمل؟', NULL, '0'),
+    ('mhpss', '15. Mental Health and Psychosocial Support (MHPSS)', 'القسم (5): الصحة النفسية والدعم النفسي الاجتماعي', NULL, '0'),
+    ('mhpss_experinced', '15.1 Since the war, have you or any family members experienced increased stress, anxiety, emotional challenges, and/or mental and psychological issues? If so', 'منذ بداية الحرب، هل واجهت أنت أو أي من أفراد عائلتك زيادة في التوتر، أو القلق، أو التحديات العاطفية، أو المشاكل العقلية والنفسية، أو الارق او أي مشاكل نفسية أخرى؟ إذا كان الأمر كذلك (نعم)، رجاء حدد؟', NULL, '0'),
+    ('other_mhpss_exp', '15.1.1 If Other, specify:', 'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة', NULL, '0'),
+    ('mhpss_support', '15.2 what kind of support do you think would help you cope better (e.g., individual counseling, group therapy, family support, or community activities)?', 'ما نوع الدعم الذي تعتقد أنه سيساعدك على التكيف مع الوضع الحالي بشكل أفضل (مثل، الاستشارة الفردية، أو العلاج الجماعي، أو الدعم الأسري، أو الأنشطة المجتمعية، او غيرها)؟', NULL, '0'),
+    ('other_mhpss_support', '15.2.1 If Other, specify:', 'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة', NULL, '0'),
+    ('community_participation', '15.3 Would you be interested in participating in community-based interventions aimed at enhancing resilience and coping mechanisms?', 'هل أنت مهتم بالمشاركة في أية تدخلات مجتمعية و/أو نفسية تهدف إلى تعزيز المرونة والصمود وآليات التكيف؟', NULL, '0'),
+    ('ce', '16. Community Needs and Preferences Survey', '16. استطلاع احتياجات المجتمع', NULL, '0'),
+    ('ce1', '16.1 Prefab Housing Needs', 'احتياجات المنازل الجاهزة', NULL, '0'),
+    ('prefab_moving', '16.1.1 Would you be interested in moving to a prefab house as a temporary solution?', 'هل ستكون مهتماً بالانتقال إلى منزل جاهز كحل مؤقت؟', NULL, '0'),
+    ('empty_land_rhu', '16.1.2 Is there suitable land space available that can be used to install a temporary housing unit?', 'هل تتوفر مساحة أرض مناسبة يمكن استخدامها لتركيب وحدة سكنية مؤقتة؟', NULL, '0'),
+    ('land_location_details', 'provide the full land address in detail', 'اذكر عنوان الأرض بالتفصيل؟', NULL, '0'),
+    ('prefab_moving_maybe', '16.1.3 If maybe, please specify:', 'إذا تم اختيار ربما في السؤال السابق، وضح الإجابة', NULL, '0'),
+    ('prefab_types', '16.1.4 What features are most important to you in a prefab house?', 'ما هي الميزات الأكثر أهمية بالنسبة لك في المنزل الجاهز؟', NULL, '0'),
+    ('other_prefab_types', '16.1.5 If Other, specify:', 'إذا تم اختيار آخر/أخرى في السؤال السابق، وضح الإجابة', NULL, '0'),
+    ('prefab_pref', '16.1.6 Do you have any specific preferences or requirements for the prefab house? (Please describe)', 'هل لديك أي تفضيلات أو متطلبات محددة للمنزل الجاهز (يرجى التوضيح) ؟', NULL, '0'),
+    ('ce2', '16.2 rehabilitation Needs', 'احتياجات إعادة التأهيل', NULL, '0'),
+    ('reh_kitchen', '16.2.1 Do you require rehabilitation of your kitchen?', 'هل يحتاج إلى إعادة تأهيل المطبخ؟', NULL, '0'),
+    ('reh_bathroom', '16.2.2 Do you require rehabilitation of your bathroom?', 'هل يحتاج إلى إعادة تأهيل الحمام؟', NULL, '0'),
+    ('reh_type', '16.2.3 What type of rehabilitation is needed for your kitchen or bathroom? (Please describe)', 'ما نوع إعادة التأهيل المطلوبة للمطبخ أو الحمام (يرجى الوصف)؟', NULL, '0'),
+    ('ce3', '16.3 Additional Comments', 'تعليقات إضافية', NULL, '0'),
+    ('additional_comments', '16.3.1 Do you have any additional comments or concerns regarding temporary shelter?', 'هل لديك أي تعليقات أو مخاوف إضافية بشأن الإسكان المؤقت؟', NULL, '0'),
+    ('techncial_boq', '17. Techncial-BOQ', '', NULL, '0'),
+    ('tech_boq', 'Techncial-BOQ', '', NULL, '0'),
+    ('p11', 'Demolishing Works', '', NULL, '0'),
+    ('dm1', 'DM1-Demolish walls ', 'إزالة حوائط شاملا المعدات والمصنعية والترحيل لأقرب مكب (M2)', '120', '1'),
+    ('dm2', 'DM2-Remove concrete from slabs', 'إزالة أسقف شاملا المعدات والمصنعية وقص الحديد والترحيل لأقرب مكب (M2)', '40', '1'),
+    ('dm3', 'DM3-Remove concrete from existing damaged columns', 'إزالة أعمدة شاملا المعدات والمصنعية وقص الحديد والترحيل لأقرب مكب (No.)', '3', '1'),
+    ('dm4', 'DM4-Carefully remove concrete from stair cases ', 'إزالة درج شاملا المعدات والمصنعية وقص الحديد والترحيل لأقرب مكب (RM)', '3', '1'),
+    ('dm5', 'DM5-Removing debris out of site to approved damping areas.', 'إزالة الركام الموجود في الموقع وترحيله لأقرب مكب (M3)', '15', '1'),
+    ('dm6', 'DM6-Demolish concrete ground slabs', 'إزالة مدة أرضية شاملا المعدات والمصنعية وقص الحديد والترحيل لأقرب مكب (M2)', '80', '1'),
+    ('dm7', 'DM7-Demolish concrete beams or foundation including removing debris out of site to approved damping areas.', 'إزالة حزامات أو قواعد شاملا المعدات والمصنعية وقص الحديد والترحيل لأقرب مكب (M3)', '1', '1'),
+    ('dm8', 'DM8-Carfully remove tiles', 'إزالة بلاط أرضي أو جدران شاملا المعدات والمصنعية والترحيل لأقرب مكب (M2)', '80', '1'),
+    ('dm10', 'DM9-Remove marble worktop', 'إزالة المجلى كاملا ( الوجه والأرفف ... إلخ) شاملا المعدات والمصنعية والترحيل (RM)', '5', '1'),
+    ('dm11', 'DM10-Hacking and remove old plaster including removing debris out of site to approved damping areas.', 'إزالة قصارة متضررة شاملا المعدات والمصنعية والترحيل لأقرب مكب (M2)', '100', '1'),
+    ('dm12', 'DM11-Backfilling with clean sand', 'ردم باستخدام رمل نظيف لزوم الحفر حول المبنى (M3)', '1', '1'),
+    ('p12', 'Blocks Works', '', '', '0'),
+    ('bl2', 'BL1-Hollow block walling 10 - 12cm thick ', 'توريد وبناء بلوك 12 - 10 سم شاملا المواد والمصنعية (M2)', '120', '3'),
+    ('bl3', 'BL2-Hollow block walling 15cm thick', 'توريد وبناء بلوك 15 سم شاملا المواد والمصنعية  (M2)', '120', '3'),
+    ('bl4', 'BL3-Hollow block walling 20cm thick', 'توريد وبناء بلوك 20 سم شاملا المواد والمصنعية  (M2)', '120', '3'),
+    ('bl5', 'BL4-Solid block walling 20cm thick ', 'توريد وبناء بلوك بلدي 20 سم شاملا المواد والمصنعية  (M2)', '120', '3'),
+    ('p13', 'Concrete Works', '', '', '0'),
+    ('co2', 'CO1-Supply and cast reinforced concrete (B250/20) for ground slab with [ave.10cm] thick, ', 'توريد وصب خرسانة مسلحة لأعمال مدة أرضية متوسط سمك 10سم (M2)', '80', '1'),
+    ('co3', 'CO2-Supply and cast reinforced concrete (B250/20) in door jambs, canopies, secondary tie columns,secondary beams, lintel, sills, infil and topping to walls ', 'توريد وصب خرسانة مسلحة لأعمال الجلسات والكشفات والشرابات وجوانب الأبواب والكانوبي والحبسات  (M3)', '1.5', '1'),
+    ('co4', 'CO3-Supply and cast reinforced concrete (B250/20) for ground beams or foundation', 'توريد وصب خرسانة مسلحة لأعمال الأحزمة الأرضية والقواعد (M3)', '1', '1'),
+    ('co5', 'CO4-Supply and cast reinforced concrete (B300/20) for new columns ', 'توريد وصب خرسانة مسلحة لأعمال الأعمدة الجديدة (M3)', '1', '1'),
+    ('co6', 'CO5-Supply and cast reinforced concrete (B300/20) as protective sleeve cover around existing damaged columns. ', 'توريد وصب خرسانة مسلحة لأعمال غطاء خرساني (قمصان) حول الأعمدة المتضررة (No)', '5', '1'),
+    ('co7', 'CO6-Supply and cast reinforced concrete (B250/20) for solid slabs', 'توريد وصب خرسانة مسلحة لأعمال السقف المصمت بسماكة 10 - 20سم  (M2)', '40', '4'),
+    ('co8', 'CO7-Supply and cast reinforced concrete (B250/20) for suspended hollow block slab [25cm average thick]', 'توريد وصب خرسانة مسلحة لأعمال الأسقف باستخدام بلوك مفرغ (ريبس) بسماكة  متوسط 25  سم  (M2)', '40', '4'),
+    ('co9', 'CO8-Supply & cast reinforced concrete (B250/20) for stair case (landing, flights, steps & beams)', 'توريد وصب خرسانة مسلحة لأعمال الدرج (الشواحط والدرجات والأحزمة) (M3)', '1', '2'),
+    ('co10', 'CO9-Provide wooden shuttering and steel support for existing roof slab or any structural element as directed by supervising engineer.', 'تدعيم بدعائم خشبية أومعدنية لسقف أو أي عنصر إنشائي يحتاج لتدعيم (M2)', '40', '1'),
+    ('p14_1', 'Internal Finishings Works', 'أعمال التشطيبات الداخلية', '', '0'),
+    ('p14_1_1', 'Painting Works', 'أعمال الدهان', '', '0'),
+    ('fn1', 'FN1-Priming and painting with at least two coats of high quality acrylic emulsion paint (Supercryle) for walls and ceiling surfaces. ', 'تأسيس ودهان على الأقل طبقتين (سوبركريل) للحوائط أوالاسقف شاملاً المواد والمصنعية (M2)', '300', '5'),
+    ('fn2', 'FN2-Priming and painting with at least two coats of high quality oil or Silk paint for walls. ', 'تأسيس ودهان على الأقل طبقتين وحتى الوصول للتغطية (دهان زيت أو سلك) للحوائط  شاملاً البندرول والملتينة والسوبركريل والمصنعية (M2)', '300', '5'),
+    ('fn3', 'FN3-Priming and painting with at least two coats of high quality  exterior acrylic emulsion paint (Supercryle) for walls and ceiling surfaces. ', 'تأسيس ودهان على الأقل طبقتين وحتى الوصول للتغطية سوبر كريل خارجي للواجهات الخارجية شاملاً المواد والمصنعية والسقالات (M2)', NULL, '0'),
+    ('p14_1_2', 'Tiling Works', 'أعمال البلاط', '', '0'),
+    ('fn5', 'FN4-Supply and install terrazzo with marble chips floor tiles and skirting (7cm high) ', 'توريد وتركيب بلاط كسر رخام شاملاً البانيل والمواد والمصنعية والترويب والبولش(M2)', '80', '6'),
+    ('fn6', 'FN5-Supply and install glazed ceramic wall tiles', 'توريد وتركيب بلاط حوائط سيراميك شاملاً المواد والمصنعية والترويب والبولش (M2)', '80', '1'),
+    ('fn7', 'FN6-Supply and install ceramic floor tiles', 'توريد وتركيب بلاط أرضي سيراميك شاملاً المواد والمصنعية والترويب والبولش (M2)', '80', '6'),
+    ('fn8', 'FN7-Supply and install Porcelain or multi-purpose marble (M2.)', 'توريد وتركيب  بلاط بورسولان أو خشب باركيه شاملاً المواد والمصنعية والترويب والبولش(M2)', '80', '6'),
+    ('fn10', 'FN8-Supply and installation of granolithic finish for floors or walls', 'توريد وتركيب جرانيوليت للأرضيات أو الحوائط أو الواجهات شاملاً المواد والمصنعية والجلي وسقالات الواجهات (M2)', '1', '1'),
+    ('p14_1_3', 'Marble Works', 'أعمال الرخام', '', '0'),
+    ('fn11', 'FN9-Supply and install marble sills (RM.)', 'تويد وتركيب جلسات رخام خليلي أو كسر رخام شاملاُ المواد والمصنعية (RM)', '10', '1'),
+    ('fn12', 'FN10-Marble worktop  ( Complete including top, shelves, walls, … etc)', 'توريد وتركيب رخام مجلى (كامل يشمل الوجه والرفوف والقواطع ... إلخ) والمواد والمصنعية (RM)', '5', '7'),
+    ('fn13', 'FN11-Supply and fix Granite marble only', 'توريد وتركيب وجه جرانيت (M2) شاملاُ المواد والمصنعية (بدون قواطع أورفوف)', '3', '1'),
+    ('fn14', 'FN12-Maintenance of Kitchen marble', 'صيانة رخام مطبخ شاملاً استبدال الأجزاء المتضررة في الوجه أو القواطع أو الرفوف (RM)', '5', '7'),
+    ('fn15', 'FN13-Supply and install multi-purpose marble (M2.)', 'توريد و تركيب رخام متعدد الإستخدامات (خزانة رخام) شاملاً الجوانب والقواطع والرفوف(M2)', '2', '1'),
+    ('fn4', 'FN14-Supply and install precast terrazzo, marble or granit for stair case or Marble', 'توريد وتركيب درج (كسر رخام) أو رخام أو جرانيت شاملاً الدعسة والرايزر والبانيل والمواد والمصنعية والبولش  (RM)', '10', '2'),
+    ('p14_1_4', 'Plastering Works (Gypsum / Plaster)', 'أعمال القصارة (لياسة / جبس)', '', '0'),
+    ('fn22', 'FN15-Supply & fix gypsum decorated panel (wide) include material & workmanship', 'توريد وتركيب جبس عريض بارز (ساقط) صب موقع شاملاً المواد والمصنعية والدهان (RM)', '60', '8'),
+    ('fn23', 'FN16-Supply & fix gypsum decorated panel (Thin) include material & workmanship', 'توريد وتركيب جبس كرانيش(عند التقاء الجدار بالسقف) شاملاً المواد والمصنعية والدهان (RM)', '60', '8'),
+    ('fn24', 'FN17-Supply & fix gypsum decorated panel  include material & workmanship', 'توريد وتركيب جبس (ألواح) شاملا الهيكل المعدني (الصاج) والمواد والمصنعية والدهان (M2)', '60', '1'),
+    ('fn25', 'FN18-Supply and install gypsum board walls, including all materials and workmanship', 'توريد وتركيب حوائط جبس بورد، شاملاً الوجهين والقوائم الحديدية والمواد والمصنعية والدهان (M2)', '20', '1'),
+    ('fn26', 'FN19-Supply and installation of false ceiling (gypsum board), including all materials and workmanship.', 'توريد وتركيب سقف مستعار  شاملاً الشبكة والبلاطات والمواد والمصنعية (M2)', '60', '1'),
+    ('fn16', 'FN20-Internal plastering, 13mm thick to walls and ceilings.', 'قصارة داخلية بسماكة 13مم للحوائط والسقف شاملاً المواد والمصنعية (M2)', '100', '1'),
+    ('fn17', 'FN21-External rendering, 15mm thick with approved dampproof admixture to walls.', 'قصارة خارجية بسماكة 15مم (وجه باطون- رشقة مسمار-وجه ظهارة)شاملاً المواد والمصنعية والسقالات (M2)', '100', '9'),
+    ('fn18', 'FN22-Ditto but external nail rendering.', 'قصارة خارجية وجه واحد مراحاة باطون فقط شاملاً المواد والمصنعية والسقالات (M2)', '100', '9'),
+    ('fn19', 'FN23-External tyrolean finish with white cement ad fine sand (kfars) mix (1:3) to walls.', 'رشقة خارجية باستخدام أسمنت أبيض وكوارتس بنسبة (1/3) "تيلورين" شاملاً المواد والمصنعية والسقالات (M2)', '80', '10'),
+    ('fn21', 'FN24-Plastering, rendering and repairing cracks', 'قصارة ومعالجة وإصلاح الشقوق شاملاُ فتح وتنظيف الشقوق ووضع اليوتا والسيكا ثم قصارة بعرض لايقل عن 10سم (البند لايشمل الدهان) (RM)', '50', '1'),
+    ('p14_2', 'External Finishings Works', 'أعمال التشطيبات الخارجية', '', '0'),
+    ('fn27', 'FN25-Supply and install exterior natural stone. ', 'توريد وتركيب حجر قدسي شاملاً المواد والمصنعية والتكحيل والتنظيف والسقالات(M2)', '80', '10'),
+    ('fn28', 'FN26-Supply and install Karmeed roofs (M2.)', 'توريد وتركيب كرميد شاملا المواد (خشب الجبالونات والنتفيدر والكرميد) والمصنعية والدهان (الكيل بالمتر المسطح) (M2)', '80', '1'),
+    ('fn29', 'FN27-Supply and installation of interlock tiles, 6 cm thick', 'توريد وتركيب بلاط إنترلوك سماكة 6 سم شاملاً المواد وطبقة رمل 5سم والمصنعية (M2)', '20', '1'),
+    ('fn30', 'FN28-Supply and install interlocking paving tiles, 8 cm thickness', 'توريد وتركيب بلاط إنترلوك سماكة8 سم شاملاً المواد وطبقة رمل 5سم والمصنعية (M2)', '3', '1'),
+    ('fn31', 'FN29-External Italian Plaster finish or Marmareena.', 'شلختة إيطالية أو مرمرينا شاملاً السقالات " البند لايشمل طبقات القصارة الخارجية" (M2)', '80', '10'),
+    ('p15', 'Aluminum Works', '', '', '0'),
+    ('al1', 'AL1-Supply and fix complete aluminum window of 4-6mm thick waved glazed sliding leaves', 'توريد وتركيب نوافذ ألمنيوم كاملة بسماكة 4-6 مم (سحاب - منزلقة) شاملاً الزجاج والمواد والمصنعية (M2)', '15', '11'),
+    ('al2', 'AL2-Supply and fix complete aluminum window of 4-6mm thick waved glazed moving leaves', 'توريد وتركيب نوافذ ألمنيوم كاملة بسماكة 4-6 مم (قلاب) شاملاُ الزجاج والمواد والمصنعية (M2)', '15', '11'),
+    ('al3', 'AL3-Supply and fix complete aluminum window of 4-6mm thick waved glazed fixed leaves', 'توريد وتركيب نوافذ ألمنيوم كاملة بسماكة 4-6 مم (ثابتة)شاملاُ الزجاج والمواد والمصنعية (M2)', '15', '11'),
+    ('al4', 'AL4-Supply and fix aluminum window of plastic panel louvered sliding leaves.', 'توريد وتركيب نوافذ ألومنيوم (لوفر) بلاستيك ( سحاب - منزلقة)شاملاً المواد والمصنعية (M2)', '15', '11'),
+    ('al5', 'AL5-Supply and fix aluminum window of plastic panel louvered moving leaves. ', 'توريد وتركيب نوافذ ألومنيوم  (لوفر) بلاستيك (قلاب) شاملاً المواد والمصنعية (M2)', '15', '11'),
+    ('al6', 'AL6-Supply and fix aluminum window of plastic panel louvered fixed leaves. ', 'توريد وتركيب نوافذ ألومنيوم  (لوفر) بلاستيك (ثابتة) شاملاً المواد والمصنعية (M2)', '15', '11'),
+    ('al7', 'AL7-Supply and install leaves for aluminum window or door to match the existing ', 'توريد وتركيب ضلفات لشبابيك الالمنيوم شاملاً الزجاج والمواد والمصنعية(M2)', '15', '11'),
+    ('al8', 'AL8-Supply and install  aluminum frame ', 'توريد وتركيب حلق ألمنيوم بدون زجاج شاملاً المواد والمصنعية (RM)', '13', '1'),
+    ('al9', 'AL9-Maintenance of aluminum window or door ( Excluding glass).', 'صيانة شبابيك أو أبواب ألمنيوم بدون زجاج شاملاً المواد والمصنعية (M2)', '15', '1'),
+    ('al10', 'AL10-Supply and install curtain wall system', 'توريد وتركيب كيرتن وول شاملاً الزجاج والمواد والمصنعية والسقالات (M2)', '1', '1'),
+    ('al11', 'AL-11 Supply and install Aluminum Door (NO)', 'توريد وتركيب أبواب ألمنيوم والسعر يشمل الايدين والزرافيل والرزات والمواد والمصنعية(No)', '3', '1'),
+    ('p16', 'Wood Works', '', '', '0'),
+    ('wd1', 'WD1-Supply and install wooden door Type D1, V-jointed, wide (90cm ave.)', 'توريد وتركيب أبواب خشبية كاملة شامل الحلق والإيدين والزرفيل والرزات والدهان والمواد والمصنعية، عرض (متوسط 90سم) (No.)', '7', '12'),
+    ('wd3', 'WD2-Maintenance of wooden window or door include frame', 'صيانة أبواب أو نوافذ خشبية شامل استبدال الأجزاء المتضررة في الحلق والضلفة والايدين و الزرفيل والرزات وكذلك الدهان والمصنعية (No.)', '7', '12'),
+    ('wd4', 'WD3-Supply and fix wooden window.', 'توريد وتركيب نوافذ خشبية شاملة الحلق والإيدين والسحابات والرزات والدهان والمواد والمصنعية (M2.)', '', '0'),
+    ('wd5', 'WD4-Supply and install timber leaves for wooden window or door.', 'توريد وتركيب ضلفة باب أو نافذة خشبية شاملة الإيدين والسحابات والرزات وزرفيل الباب والدهان والمصنعية (No.) ', '7', '12'),
+    ('wd6', 'WD5 -Supply and install wooden door frame15 cm (No.)', 'توريد وتركيب حلق باب خشب15سم شامل الدهان والمواد والمصنعية(No.)', '7', '13'),
+    ('wd7', 'WD6–Supply and install wooden door frame, 18 cm (No.)', 'توريد وتركيب حلق باب خشب 18سم شامل الدهان والمواد والمصنعية(No.)', '7', '13'),
+    ('wd8', 'WD7-Supply and install wooden door frame, 23 cm (No.)', 'توريد وتركيب حلق باب خشب 23سم شامل الدهان والمواد والمصنعية(No.)', '7', '13'),
+    ('wd9', 'WD8-Supply and install wooden staircase (Mr.)', 'توريد وتركيب  درج خشبي شاملاً الدرجات والبسطات والدرابزين والدهان والمواد والمصنعية(Mr.) ', '3', '1'),
+    ('wd10', 'WD9-Supply and install wooden mezzanine (M2.)', 'توريد وتركيب سدة خشبية شاملاً التثبيت والدهان والمواد والمصنعية (M2.)', '40', '1'),
+    ('wd11', 'WD11-Supply and install wooden cabinet (Mr.)', 'توريد وتركيب خزانة خشب (Mr)', NULL, '0'),
+    ('wd12', 'WD10-Supply and install hardware with switch or door hands.', 'توريد وتركيب زرفيل  أو يدين باب فقط  (No.)', '7', '1'),
+    ('p17', 'Metal Works', '', '', '0'),
+    ('mt1', 'MT1-Supply and install galvanized steel sheets (type skourit) 0.5mm thick .', 'توريد وتركيب ألواح زينجو (سكوريت) بسماكة 0.5 مم شاملاً المواد والمصنعية (M2)', '80', '1'),
+    ('mt2', 'MT2-Supply and install eternite sheets fixed to steel pipes or purlins.', 'توريد وتركيب ألواح اسبست شاملاً المواد والمصنعية(M2)', '80', '1'),
+    ('mt3', 'MT3-Dismantle and refix steel pipes and eternite sheets or skourit .', 'إعادة تركيب وإصلاح مواسير أو بروفيل أو ألواح زينجو (سكوريت) أو اسبست شاملاً المواد والمصنعية(M2)', '80', '1'),
+    ('mt4', 'MT4-Supply and install 4'''' mild steel pipes.', 'توريد وتركيب مواسير حديد قطر 4 إنش لزوم تثبيت الزينجو شاملاً المواد والمصنعية (RM)', '70', '1'),
+    ('mt5', 'MT5-Supply and install open steel profile 80x40 mm.', 'توريد وتركيب بروفيل معدني 8*4 سم أو مايعادله لزوم تثبيت الزينجو شاملاً المواد والمصنعية (RM)', '70', '1'),
+    ('mt6', 'MT6-Supply and install steel door size [100-120x220]cm.', 'توريد وتركيب أبواب حديد (100-120)سم *220سم شاملاً الحلق والزرفيل والإيدين والرزات والدهان والمصنعية(No.)', '2', '15'),
+    ('mt7', 'MT7-Maintenance of steel door size [100 to120x220]cm.', 'صيانة أبواب معدنية (100-120)سم *220 شاملاً استبدال الأجزاء المتضررة من الحلق والضلفة والايدين والزرفيل والرزات وكذلك الدهان والمصنعية(No.)', '2', '15'),
+    ('mt8', 'MT8-Supply and install steel door for stores', 'توريد وتركيب أبواب معدنية (أبواب حواصل) والسعر يشمل السحابات والدهان والمواد والمصنعية(No)', '2', '1'),
+    ('mt9', 'MT9-Maintenance of stores steel door ', 'صيانة أبواب معدنية (أبواب حواصل) شاملاً استبدال الأجزاء المتضررة من الضلف والرزات والملحقات وكذلك الدهان والمصنعية (No.)', '2', '1'),
+    ('mt10', 'MT10-Supply and fix steel balustrade for stair case.', 'توريد وتركيب دربزين معدني للدرج أو البلكون شاملاً المواد والمصنعية والدهان (RM)', '3', '1'),
+    ('mt11', 'MT11-Supply steel security protective screen.', 'توريد وتركيب حديد حماية  للنوافذ والمناور والسعر يشمل المواد والمصنعية والدهان(M2)', '8', '1'),
+    ('mt12', 'MT12-Supply and install steel stand, average size of 100x100x200cm mild steel', 'توريد وتركيب سيبة حمام شمسي 200 * 100* 100 سم (No.)', NULL, '0'),
+    ('mt13', 'MT12-New Mul-T-lock Door with frame', 'توريد وتركيب باب ملتيلوك جديد مع حلق للباب شامل جميع الاكسسوارات والزرفيل والايدين والرزات والدهان والمصنعية (No.)', '2', '16'),
+    ('mt14', 'MT13-New Mul-T-lock Door without frame', 'توريد وتركيب باب ملتيلوك جديد بدون حلق للباب شامل جميع الاكسسوارات والزرفيل والايدين والرزات والمصنعية(No.)', '2', '16'),
+    ('mt15', 'MT14-PVC coating', 'توريد وتركيب جلد باب ملتي لوك على الوجهين (No.)', '2', '16'),
+    ('mt16', 'MT15-New steel or multilock door lock', 'توريد وتركيب قفل باب حديد أو ملتي لوك أو إيدين فقط (No.)', '2', '16'),
+    ('mt17', 'MT16-Complete maintenace for Mul-T-lock Door', 'صيانة كاملة لباب ملتيلوك تشمل صيانة جميع الأجزاء المتضررة في الضلفة أو الحلق أو الايدين والزرفيل والرزات(No.)', '2', '16'),
+    ('mt19', 'MT17-Supply and install steel emergency escape staircase (linear meter)', 'توريد وتركيب درج هروب حديدي والسعر يشمل الدرجات والبسطات والدربزين والدهان والمواد والمصنعية (متر طولي)', '1', '1'),
+    ('p18', 'Combined', '', '', '0'),
+    ('cm1', 'CM1-Replacement of broken glass 4mm thick for any defected parts.', 'إستبدال زجاج مكسور بسمك 4 مم شاملاً المواد والمصنعية (M2)', '15', '14'),
+    ('cm2', 'CM2-Replacement of broken glass 6mm thick for any defected parts.', 'إستبدال زجاج مكسور بسمك 6 مم شاملاً المواد والمصنعية(M2)', '15', '14'),
+    ('cm3', 'CM3-Replacement of broken glass colored 4mm thick (Reflector) for any defected parts.', 'إستبدال زجاج مكسور بسمك 4 مم عاكس شاملاً المواد والمصنعية(M2)', '15', '14'),
+    ('cm4', 'CM4-Replacement of broken glass colored 6mm thick (Reflector) for any defected parts.', 'إستبدال زجاج مكسور بسمك 6 مم عاكس شاملاً المواد والمصنعية(M2)', '15', '14'),
+    ('cm5', 'CM5-Replacement of broken (reinforced) glass 6mm thick  for any defected parts.', 'إستبدال زجاج بشبك معدني (مسلح) بسمك 6 مم شاملاً المواد والمصنعية(M2)', '15', '14'),
+    ('cm6', 'CM6-Replacement of broken panels for louver leaves with all needed accessories', 'إستبدال زجاج لوفر مكسور شاملاً المواد والمصنعية(M2)', '15', '14'),
+    ('cm7', 'CM7-Supply and install fly screen leaves with all needed acessories.', 'توريد وتركيب شبك للنوافذ شاملاً الإطار والشبك النملي والمواد والمصنعية (M2)', '7', '1'),
+    ('cm8', 'CM8-Supply and install securit glass', 'توريد وتركيب زجاج سيكوريت شاملاً المواد والمصنعية(M2)', '10', '1'),
+    ('cm9', 'CM9-Supply and installation of lower kitchen cabinets (aluminum).', 'توريد وتركيب خزائن مطبخ سفلي (ألمنيوم ) شاملاً المواد والمصنعية (RM)', '7', '1'),
+    ('cm12', 'CM10-Supply and installation of kitchen cabinets (aluminum ).', 'توريد وتركيب خزائن مطبخ علوي (ألمنيوم ) شاملاً المواد والمصنعية (RM)', '7', '1'),
+    ('cm13', 'CM11-Maintenance kitchen cabinets (aluminum ).', 'صيانة خزائن مطبخ (ألمنيوم ) شاملاً استبدال الأجزاء المتضررة وكل مايلزم (RM)', '7', '1'),
+    ('cm14', 'CM12-Supply and installation of lower kitchen cabinets (Wood).', 'توريد وتركيب خزائن مطبخ سفلي (خشب ) شاملاً المواد والمصنعية (RM)', '7', '1'),
+    ('cm15', 'CM13-Supply and installation of kitchen cabinets (Wood ).', 'توريد وتركيب خزائن مطبخ علوي (خشب ) شاملاً المواد والمصنعية (RM)', '7', '1'),
+    ('cm16', 'CM14-Maintenance kitchen cabinets (Wood ).', 'صيانة خزائن مطبخ (خشب ) شاملاً استبدال الأجزاء المتضررة وكل مايلزم (RM)', '7', '1'),
+    ('cm10', 'CM15-Supply and installation of PVC cladding pergola', 'توريد وتركيب معرش جلد شاملاً الهيكل المعدني والجلد (M2) ', '6', '1'),
+    ('cm11', 'CM13-Elevator (total damage / maintenance / motor / cabin / number of doors)', 'مصعد (ضرر كلي / صيانة / ماتور / كابينة / عدد الأبواب) (Item)', NULL, '0'),
+    ('p19', 'Plumping Works', '', '', '0'),
+    ('pm1', 'PM1-Complete solar heating system', 'حمام شمسي كامل يشمل السيبة المعدينة وخزان 500لتر وسخان والمرايا والتوصيلات وجميع مايلزم للتشغيل (Item)', '1', '2'),
+    ('pm2', 'PM2-Solar heater cylinder 150 liter.', 'سخان شمسي بسعة 150 لتر فأكثر شاملاً التوصيلات والمصنعية(Item)', '1', '2'),
+    ('pm101', 'PM3-Supply and install solar heating system steel stand, average size of 100x100x200cm mild steel', 'سيبة حمام شمسي 200 * 100* 100 سم (No.)', '2', '2'),
+    ('pm18', 'PM4-Complete single mirror size 190x90cm for solar system best quality.', 'مرآة حمام شمسي  190*90 سم (No.)', '3', '2'),
+    ('pm19', 'PM5-2mm clear glass sheet for solar system mirrors best quality, ', 'زجاج مرآة حمام شمسي (M2)', '6', '1'),
+    ('pm3', 'PM6-0.5M3 capacity plastic water tank.', 'خزان مياه بسعة 500 لتر شاملاً التوصيلات والمواد والمصنعية (Item)', '2', '17'),
+    ('pm4', 'PM7-1.0M3 capacity plastic water tank', 'خزان مياه بسعة 1000 لتر شاملاً التوصيلات والمواد والمصنعية (Item)', '2', '17'),
+    ('pm5', 'PM8-1.5M3 capacity plastic water tank', 'خزان مياه بسعة 1500 لتر شاملاً التوصيلات والمواد والمصنعية (Item)', '2', '17'),
+    ('pm6', 'PM9-2.0M3 capacity plastic water tank', 'خزان مياه بسعة 2000 لتر شاملاً التوصيلات والمواد والمصنعية (Item)', '2', '17'),
+    ('pm7', 'PM10-Maintenance of Water tank ', 'صيانة خزان مياه والسعر يشمل صيانة الأجزاء والتوصيلات المتضررة وجميع مايلزم (No.)', '2', '1'),
+    ('pm8', 'PM11-Maintenance of Water network', 'صيانة شبكة مياه وتشمل استبدال المواسير التالفة وتغيير الوصلات والمحابس وإصلاح التسريبات وخطوط التغذية أو نقاط المياه واختبار الشبكة (البند لايشمل الإزالة والتكسير والبلاط" (No.)', '1', '2'),
+    ('pm9', 'PM12-One layer Hot bituminous with fiber under toilets and Kitchens', 'عزل بالبيتومين الساخن أرضيات الحمامات والمطابخ شاملاً المواد والمصنعية (لايشمل البلاط) (M2)', '1', '2'),
+    ('pm10', 'PM13-UPVC drainage pipes 4" internal diameter', 'أنابيب (مواسير) UPVC قطر 4 إنش لزوم الصرف والتغذية شاملاً المواد والمصنعية وجميع مايلزم (MR)', '8', '2'),
+    ('pm11', 'PM14-UPVC drainage pipes 6" internal diameter.', 'أنابيب (مواسير) UPVC قطر 6 إنش  لزوم الصرف والتغذية شاملاً المواد والمصنعية وجميع مايلزم  (MR)', '5', '2'),
+    ('pm12', 'PM15-UPVC drainage pipes 2" or 3" .', 'أنابيب (مواسير) UPVC قطر 2 أو 3 إنش  لزوم الصرف والتغذية شاملاً المواد والمصنعية وجميع مايلزم (MR)', '8', '2'),
+    ('pm13', 'PM16-Galavanized steel pipes [3/4"]', 'أنابيب (مواسير) معدنية مجلفنة قطر 3/4 انش شاملاً التأسيس والدهان والمواد والمصنعية (MR)', '3', '2'),
+    ('pm14', 'PM17-20mm PVC water pipes [Gulanee] with sleeves 25 mm', 'برابيش جولاني 20مم شاملاً برابيش شرشوري قطر 25 مم أو أكثر (MR)', '25', '1'),
+    ('pm40', 'PM18-Rehabilitate Water Distribution Box (W.D.B.)', 'إعادة تأهيل طبلون المياه شاملاً صيانة واستبدال الأجزاء المتضررة كالمحابس والقطع النحاس والبرابيش والطبلون الخشب أو الرخام وغطاء الطبلون وكل ما يلزم للتشغيل (NO)', '1', '2'),
+    ('pm15', 'PM19-1/2"Galavanized steel pipes with all fittings including priming & painting.', 'أنابيب 1/2" (مواسير) حديد مجلفن شاملاً الوصلات والتأسيس والدهان والمواد والمصنعية (MR)', '3', '2'),
+    ('pm16', 'PM20-Trapped floor gully 4" diameter ', 'مصفاة أرضية 4 إنش والسعر يشمل فك واستبدال علبة التجميع البلاستيكية والS والتوصيلات ال2" وغطاء ستانلس ستيل والتوصيل لماسورة الصرف والمصنعية (No.)', '3', '1'),
+    ('pm20', 'PM21-Flushing cistern box ', 'صندوق طرد/تصريف مياه (نيجارة فقط بدون كرسي) أو كرسي مع غطاء وشطاف بدون نيجارة شاملاً التوصيلات والمصنعية(No.)', '2', '1'),
+    ('pm21', 'PM22-Chromium water mixer ', 'خلاط مياه لزوم المغاسل أو المجلى أو البانيو شاملاً الملحقات والتوصيلات والمصنعية (No.)', '5', '2'),
+    ('pm22', 'PM23-Chromium water tap ', 'صنبور مياه لزوم المياه الحلوة أو المالحة أو الغسالة شاملاً التوصيلات والمصنعية(No.)', '2', '2'),
+    ('pm23', 'PM24-White glazed hand wash basin ', 'مغلسة حمام (بدون خلاط) شاملاً التوصيلات والمواد والمصنعية (No.)', '3', '2'),
+    ('pm24', 'PM25-Shower Tray or Basin', 'حوض إستحمام أو شاور شاملاً التوصيلات والمواد والمصنعية (No.)', '1', '2'),
+    ('pm25', 'PM26-Stainless sink for kitchen', 'حوض ستانليس للمجلى (بدون خلاط) شاملاً التوصيلات والمواد والمصنعية (No.)', '1', '2'),
+    ('pm26', 'PM27-White glazed fireclay squatting W.C', 'كرسي حمام كامل (افرنجي أو عربي) شامل الكرسي والنيجارة والغطاء والشطاف ومحابس الزاوية والتوصيلات والمواد والمصنعية (No.)', '2', '2'),
+    ('pm27', 'PM28-One layer bituminous membrane with chippings 4mm thick of high ductility (polybeed)', 'عزل بطبقة بولوبيد سمك 4 مم لزوم السقف النهائي (السطح الأخير فقط )شاملاً المواد والمصنعية(M2)', '80', '1'),
+    ('pm28', 'PM29-Manhole 40cm internal diameter ', 'منهل قطر 40 سم شاملاُ المواد والمصنعية (No.)', '1', '2'),
+    ('pm29', 'PM30-Manhole 50cm internal diameter ', 'منهل قطر 50 سم شاملاُ المواد والمصنعية(No.)', '1', '2'),
+    ('pm30', 'PM31-Water pump 0.5 HP including all acessories', 'مضخة مياه نص حصان مع كافة لوازمها لزوم رفع المياه أو تقويتها من خط البلدية أو الخزانات الأرضية إلى الخزانات العلوية شاملاً المصنعية (Item)', '1', '18'),
+    ('pm31', 'PM32-Water pump 3/4 HP including all acessories', 'مضخة مياه 3/4 حصان مع كافة لوازمها لزوم رفع المياه أو تقويتها من خط البلدية أو الخزانات الأرضية إلى الخزانات العلوية شاملاً المصنعية (Item)', '1', '18'),
+    ('pm32', 'PM33-Ditto but 1.0 HP', 'مضخة مياه 1حصان مع كافة لوازمها لزوم رفع المياه أو تقويتها من خط البلدية أو الخزانات الأرضية إلى الخزانات العلوية شاملاً المصنعية(Item)', '1', '18'),
+    ('pm33', 'PM34-Septic tank average size 165X90X140cm ', 'حفر وإنشاء بئر مياه صرف صحي في المناطق حيث لايوجد شبكة صرف صحي (Item)', '1', '1'),
+    ('pm34', 'PM35-Percolation Pit average size 240cm internal dimeter and 400cm high', 'إنشاء حفرة ترشيح إمتصاصية للمياه العادمة المصفّاة الناتجة عن بئر الصرف الصحي Septic tank شاملاً المواد والمصنعية (Item)', '1', '2'),
+    ('pm35', 'PM36-Submersible water well', 'بئر مياه غاطس لزوم استخراج المياه شاملاً الحفر والمواسير البلاستيك ومضخة الغاطس وبربيش2" وكابل كهرباء 3*6 وطبلون كهرباء والحبل والتوصيلات وجميع مايلزم للتشغيل(متر طولي)', '1', '2'),
+    ('pm36', 'PM37-Underground water tank (capacity 5 m3)', 'خزان مياه أرضي سعة 5 م3 شاملاً القاعدة والتوصيلات والمواد والمصنعية(Item)', '1', '2'),
+    ('pm37', 'PM38-Water lifting pump (capacity in HP)', 'ماتور رفع مياه (القدرة بالحصان 3 حصان فأكثر) شاملاً التوصيلات والمصنعية ولوازم التشغيل (Item)', '1', '2'),
+    ('pm38', 'PM39-Manhole 60cm internal diameter', 'منهل صرف صحي قطر 60 سم شاملاُ المواد والمصنعية(No.)', '1', '2'),
+    ('pm39', 'PM40-Manhole 80cm internal diameter', 'منهل صرف صحي قطر 80 سم شاملاُ المواد والمصنعية(No.)', '1', '2'),
+    ('p20', 'Electrical Works', '', '', '0'),
+    ('el1', 'EL1-Three pins 16A socket outlet', 'إبريز 16 أمبير (قاعدة وعلبة ووجه فقط) بدون سلك (No.)', '15', '19'),
+    ('el2', 'EL2-Three pins 16A socket outlet(waterproove)', 'إبريز 16 أمبير ضد الماء شاملاً قاعدة وعلبة وغطاء وبربيش وسلك 2.5مم والتوصيل لأقرب علبة والمصنعية (No.)', '15', '19'),
+    ('el3', 'EL3-Three pins 16A socket outlet  with 3X2.5mm2 wire and conduits from SBD to the points.', 'إبريز 16 أمبير كامل شاملاً سلك 2.5 مم2 وتوصيله إلى علبة التجميع والمواد والمصنعية (No.)', '15', '19'),
+    ('el4', 'EL4-One gang one way switch (waterproove)', 'مفتاح مفرد ضد المياه شاملاً قاعدة وعلبة وغطاء وبربيش وسلك 1.5مم والتوصيل لأقرب علبة والمصنعية (No.)', '4', '1'),
+    ('el5', 'EL5-One gang one way switch', 'مفتاح مفرد مع الوجه بدون سلك  (No.)', '6', '20'),
+    ('el6', 'EL6-One gang one way switch  with 1.5mm2 wire and conduits from SDB to the point.', 'مفتاح مفرد شاملاً سلك التوصيل 1.5مم2 إلى علبة التجميع والمواد والمصنعية (No.)', '6', '20'),
+    ('el7', 'EL7-Two gang one way switch  inculding all connections.', 'مفتاح مزوج أو ثلاثي  (قاعدة وعلبة ووجه فقط) بدون سلك (No.)', '6', '21'),
+    ('el8', 'EL8-Tow gang one way switch with 1.5mm2 wire and conduits from SDB to the point.', 'مفتاح مزوج أو ثلاثي مع سلك 1.5 مم2 والتوصيل إلى علبة التجميع والمواد والمصنعية (No.)', '6', '21'),
+    ('el9', 'EL9-Flourescent lighting fixture 1x40w with lamp and 3X1.5mm2  wire and conduit', 'نيون مفرد كامل شاملا توصيلاته واللمبة  (No.)', '10', '23'),
+    ('el24', 'EL10-Flourescent lighting fixture 2x40w with lamp and 3X1.5mm2  wire and conduit', 'نيون مزدوج كامل شاملا توصيلاته واللمبة والمصنعية  (No.)', '10', '23'),
+    ('el10', 'EL11-Circular glob 60w with 3X1.5mm2 wire and conduits', 'كلوب 60 وات مع السلك والمواد والمصنعية لزوم الحمامات أو الممرات وحيثما يلزم (No.)', '5', '1'),
+    ('el11', 'EL12-Ceiling lighting point with 60watt tungesten lamp and wires, conduits', 'دواية 60 وات مع لمبة وتوصيلاتها "قاعدة بلاستيك أو عضم مع لمبة" شاملا المصنعية(No.)', '4', '1'),
+    ('el25', 'EL13-Circular water proof glob 60w with 3X1.5mm2 wire and conduits', 'دواية 60 وات مع لمبة وتوصيلاتها ضد المياه "خارجية أو في المناطق المعرضة للعوامل الجوية"(No.)', '3', '1'),
+    ('el27', 'EL14-Supply and installation of lighting spotlights', 'توريد وتركيب سبوتات إنارة في الجبس أو حيثما يلزم شاملاً المواد والمصنعية(No.)', '60', '1'),
+    ('el26', 'EL15-Supply and Installation of Ceiling Fan', 'توريد وتركيب مروحة سقف شاملاً علبة التحكم والتوصيلات والمواد والمصنعية (No.)', '5', '1'),
+    ('el12', 'EL16-Supply and install 2X10 mm2XLPE cable with stay wire from MDB to the main electrical network including isolator porcelain cup', 'توريد وتركيب كابل 2*10 مم2 للشقة من الطبلون الرئيسي للمبنى إلى طبلون الشقة شاملاً المواد والمصنعية(RM)', '23', '1'),
+    ('el13', 'EL13-Supply and install 2" Galvanized steel console 3meter long', 'كنزولة قطر 2" وطول 3متر من الحديد المجلفن (Item)', '1', '2'),
+    ('el14', 'EL17-Supply and install 1-phase KWHM , ABB type with 1X40 A circuit breaker  inside 30X40cm CI box.', 'عداد كهرباء 1فاز للشقة مع الملحقات والتوصيلات والمصنعية (No.)', '1', '2'),
+    ('el15', 'EL18-PVC SDB, 24 way type is Siemens or equal approved comprising:- One 1x40A C.B - One 2x40A/0.03 ELCB - Four 1x10A C.B - Six 1x16 A C.B - Earth & nutral bus bars.', 'علبة كهرباء كاملة "طبلون الشقة" شاملة أمانات (1*40 أمبير،4*10 أمبير، 6*16 أمبير،وتوصيلات الإيرث وتوصيلات العلبة) (Item)', '1', '2'),
+    ('el16', 'EL19-Rearrange the existing wires using PVC pipe and repair all defects or fault in the internal network', 'إعادة ترتيب وصيانة شبكة الكهرباء الداخلية من خلال إعادة ترتيب الاسلاك والكوابل وتجميعها في مواسير بلاستيك PVC واستبدال التالف منها شاملاً المواد والمصنعية(Item)', '1', '2'),
+    ('el17', 'EL17-Supply and install PVC cover for electrical point (circular or rectangular junction boxes)', 'غطاء علبة تجميع الكهرباء (طبلون) (No.)', '1', '2'),
+    ('el18', 'EL18-Relocate KWHM to the new location with all necessary needed, cable, conduit and connection.', 'تغيير مكان علبة تجميع الكهرباء (Item)', '1', '2'),
+    ('el19', 'EL20-Earthing system consists of 150cm CU electrode with 6mm2 stranded wire from SDB to the electrode with concrete manhole 40cm internal diameter', 'صيانة نظام الإيرث المتضرر للمبنى شاملاً إليكترود 150 سم مع توصيلاته إلى الطبلون الرئيسي للمبنى (Item)', '1', '2'),
+    ('el20', 'EL21-Circuit breaker 1x10A', 'قاطع كهربائي  1*10 أمبير (No)', '15', '22'),
+    ('el21', 'EL22-Circuit breaker 1x16A', 'قاطع كهربائي  1*16 أمبير (No)', '15', '22'),
+    ('el22', 'EL23-Circuit breaker 1x20A', 'قاطع كهربائي  1*20 أمبير (No)', '15', '22'),
+    ('el23', 'EL24-2x40A/0.03 ELCB', 'أمان الحياة 2/40 أمبير (No)', '1', '2'),
+    ('el28', 'EL25-Main Distribution Board (MDB) - main electrical panel (amperage connection)', 'طبلون كهرباء رئيسي (لوحة توزيع رئيسية) (الاشتراك بالأمبير) (32،40،63،80،100،160)', '', ''),
+    ('el29', 'EL26-CCTV system (surveillance cameras)', 'نظام مراقبة (كاميرات) (Item)', '1', '2'),
+    ('el30', 'EL27-Generator (capacity in kW) (total damage / maintenance)', 'مولد (القدرة بالكيلو وات) (ضرر كلي / صيانة) (KW)', NULL, '0'),
+    ('p21', 'PV System Works', '', NULL, '0'),
+    ('pv_note', 'منظومة الخلايا الشمسية', 'قدرة المنظومة بالكامل بالوط', '3000', '2'),
+    ('pv1', 'PV1- Total Solar System Capacity (W)', 'القدرة الإجمالية للنظام الشمسي (واط)', NULL, '0'),
+    ('pv2', 'PV2- Inverter (1K)', 'عدد الانفيرتر1 كيلو', NULL, '0'),
+    ('pv3', 'PV2- Inverter (2K)', 'عدد الانفيرتر2 كيلو', NULL, '0'),
+    ('pv4', 'PV2- Inverter (3K)', 'عدد الانفيرتر3 كيلو', NULL, '0'),
+    ('pv5', 'PV3- Inverter (5K)', 'عدد الانفيرتر 5 كيلو', NULL, '0'),
+    ('pv6', 'PV4- Inverter (> 5k)', 'عدد الانفيرتر أكبر من 7 كيلو', NULL, '0'),
+    ('pv7', 'Batteries 100', 'عدد البطاريات 100 أميبر', '4', '24'),
+    ('pv8', 'Batteries 200', 'عدد البطاريات 200 أميبر', '4', '24'),
+    ('pv9', 'Batteries 2V', 'عدد البطاريات 2 فولت', NULL, '0'),
+    ('pv10', 'Batteries 3k', 'عدد البطاريات الليثوم 3 كيلو', '2', '25'),
+    ('pv11', 'Batteries 5k ', 'عدد البطاريات الليثوم 5 كيلو', '2', '25'),
+    ('pv12', 'PV5- Distribution Board', 'طبلون المنطومة', NULL, '0'),
+    ('p22', 'Miscellaneous Works', '', NULL, '0'),
+    ('item1', 'Item 1', 'وصف البند مع إضافة الوحدة', NULL, '0'),
+    ('quant1', 'Quantity', 'الكمية', NULL, '0'),
+    ('item2', 'Item 2', 'وصف البند مع إضافة الوحدة', NULL, '0'),
+    ('quant2', 'Quantity', 'الكمية', NULL, '0'),
+    ('item3', 'Item 3', 'وصف البند مع إضافة الوحدة', NULL, '0'),
+    ('quant3', 'Quantity', 'الكمية', NULL, '0'),
+    ('item4', 'Item 4', 'وصف البند مع إضافة الوحدة', NULL, '0'),
+    ('quant4', 'Quantity', 'الكمية', NULL, '0'),
+    ('item5', 'Item 5', 'وصف البند مع إضافة الوحدة', NULL, '0'),
+    ('quant5', 'Quantity', 'الكمية', NULL, '0'),
+    ('photos_final_comments_unilt', 'Photos & Final Comments', '', NULL, '0'),
+    ('damge_photo_1', 'Take a photo for the damaged unit', 'خذ صورة للوحدة المتضررة', NULL, '0'),
+    ('damge_photo_2', 'Take another photo for the damaged unit', 'خذ صورة أخرى', NULL, '0'),
+    ('damge_photo_3', 'Take a third photo for the damaged unit', 'خذ صورة ثالثة', NULL, '0'),
+    ('damge_photo_4', 'Take a fourth photo for the damaged unit', 'خذ صورة رابعة', NULL, '0'),
+    ('final_comments', 'Final Comments and Recommendations', 'الملاحظات والتوصيات النهائية من قبل الماسح', NULL, '0');
