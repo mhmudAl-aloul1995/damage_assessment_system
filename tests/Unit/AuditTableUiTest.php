@@ -110,6 +110,7 @@ test('assessment status actions are limited to the matching audit role', functio
         ->not->toContain('$canSetEngineeringStatus')
         ->not->toContain('@disabled(! $canSetLegalStatus)')
         ->not->toContain('@disabled(! $canSetEngineeringStatus)')
+        ->not->toContain('@elseif($canViewStatusButtons)')
         ->not->toContain('canEnableStatusButton')
         ->not->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')")
         ->not->toContain("@hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')");
@@ -118,6 +119,9 @@ test('assessment status actions are limited to the matching audit role', functio
         ->toContain("\$request->audit_type === 'Legal Auditor' && \$user->hasRole('Legal Auditor')")
         ->toContain("\$request->audit_type === 'QC/QA Engineer' && \$user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])")
         ->toContain('private function auditTypeCanSetStatus(string $type, string $status): bool')
+        ->toContain('private function canSetAssessmentStatusForBuilding(?User $user, ?Building $building, string $type): bool')
+        ->toContain('You cannot set this status unless this assessment type is assigned to you.')
+        ->toContain("->where('type', \$type)")
         ->toContain("'Legal Auditor' => in_array(\$status, ['accepted', 'legal_notes'], true)")
         ->toContain("'QC/QA Engineer' => in_array(\$status, ['accepted', 'rejected', 'need_review'], true)");
 });

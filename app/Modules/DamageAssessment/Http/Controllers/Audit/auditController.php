@@ -3937,6 +3937,15 @@ COALESCE(
                 ], 403);
             }
 
+            if (! $this->canSetAssessmentStatusForBuilding($user, $building, $type)) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You cannot set this status unless this assessment type is assigned to you.',
+                ], 403);
+            }
+
             $roleType = $type === 'QC/QA Engineer' ? 'engineer' : 'lawyer';
 
             $statusMap = [
@@ -4087,6 +4096,15 @@ COALESCE(
                 return response()->json([
                     'status' => false,
                     'message' => 'This status is not allowed for your audit role.',
+                ], 403);
+            }
+
+            if (! $this->canSetAssessmentStatusForBuilding($user, $building, $type)) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You cannot set this status unless this assessment type is assigned to you.',
                 ], 403);
             }
 
@@ -4658,6 +4676,31 @@ COALESCE(
             ->where('building_id', $building->objectid)
             ->where('user_id', $user->id)
             ->whereIn('type', $assignmentTypes)
+            ->exists();
+    }
+
+    private function canSetAssessmentStatusForBuilding(?User $user, ?Building $building, string $type): bool
+    {
+        if (! $user instanceof User || ! $building instanceof Building) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+            return true;
+        }
+
+        if ($this->hasTemporaryStatusAssignmentException($user)) {
+            return true;
+        }
+
+        if (! in_array($type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
+            return false;
+        }
+
+        return AssignedAssessmentUser::query()
+            ->where('building_id', $building->objectid)
+            ->where('user_id', $user->id)
+            ->where('type', $type)
             ->exists();
     }
 

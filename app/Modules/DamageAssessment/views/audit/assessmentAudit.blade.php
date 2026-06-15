@@ -667,7 +667,7 @@
                                                 <span class="{{ $statusBadgeClass($buildingLegalStatus) }}">
                                                     آخر حالة قانونية: {{ $statusLabel($buildingLegalStatus) }}
                                                 </span>
-                                            @elseif($canViewStatusButtons)
+                                            @else
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
@@ -966,7 +966,7 @@
                                                 <span class="d-none badge badge-light fw-bold px-4 py-3">
                                                     آخر حالة: <span id="housing_current_status_preview">-</span>
                                                 </span>
-                                            @elseif($canViewStatusButtons)
+                                            @else
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
