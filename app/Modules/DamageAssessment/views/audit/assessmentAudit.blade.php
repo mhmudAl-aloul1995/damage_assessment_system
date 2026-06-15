@@ -210,6 +210,32 @@
             color: #fff !important
         }
 
+        .audit-action-group {
+            display: inline-flex;
+            flex-direction: column;
+            gap: .35rem;
+            padding: .5rem .6rem;
+            border: 1px solid #eef2f7;
+            border-radius: .65rem;
+            background: #fff;
+            min-width: max-content
+        }
+
+        .audit-action-label {
+            font-size: .72rem;
+            font-weight: 800;
+            color: #7e8aa0;
+            line-height: 1;
+            white-space: nowrap
+        }
+
+        .audit-action-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            flex-wrap: wrap
+        }
+
         .assessment-section {
             border: 1px solid #edf1f5;
             border-radius: 1rem;
@@ -597,24 +623,29 @@
                                 <div class="col-12 col-lg-9 col-xl-10">
                                     <div class="audit-toolbar-sticky mb-4">
                                         <div class="d-flex flex-wrap gap-2">
-                                            <div class="dropdown">
-                                                <button type="button" class="btn btn-sm btn-light-primary dropdown-toggle"
-                                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                                    فلتر: <span id="building_filter_label">الكل</span>
-                                                </button>
-                                                <div class="dropdown-menu">
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn building-filter-btn is-active"
-                                                        data-filter="all" data-filter-label="الكل">الكل</button>
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn building-filter-btn"
-                                                        data-filter="missing" data-filter-label="الفارغ فقط">الفارغ فقط</button>
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn building-filter-btn"
-                                                        data-filter="edited" data-filter-label="المعدّل فقط">المعدّل فقط</button>
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn building-filter-btn"
-                                                        data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">فلترة العرض</div>
+                                                <div class="audit-action-controls">
+                                                    <div class="dropdown">
+                                                        <button type="button" class="btn btn-sm btn-light-primary dropdown-toggle"
+                                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                                            فلتر: <span id="building_filter_label">الكل</span>
+                                                        </button>
+                                                        <div class="dropdown-menu">
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn building-filter-btn is-active"
+                                                                data-filter="all" data-filter-label="الكل">الكل</button>
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn building-filter-btn"
+                                                                data-filter="missing" data-filter-label="الفارغ فقط">الفارغ فقط</button>
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn building-filter-btn"
+                                                                data-filter="edited" data-filter-label="المعدّل فقط">المعدّل فقط</button>
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn building-filter-btn"
+                                                                data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
@@ -630,57 +661,90 @@
                                                 </span>
                                             @elseif($canViewStatusButtons)
                                             @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
-                                            <button type="button" class="btn btn-sm btn-light-success building-status-btn"
-                                                data-status="accepted" data-audit-type="Legal Auditor"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
-                                            <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
-                                                data-status="legal_notes" data-audit-type="Legal Auditor"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setBuildingStatus('legal_notes', 'Legal Auditor')">ملاحظات
-                                                قانونية</button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">التدقيق القانوني</div>
+                                                <div class="audit-action-controls">
+                                                    <button type="button" class="btn btn-sm btn-light-success building-status-btn"
+                                                        data-status="accepted" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
+                                                    <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
+                                                        data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setBuildingStatus('legal_notes', 'Legal Auditor')">ملاحظات
+                                                        قانونية</button>
+                                                </div>
+                                            </div>
                                             @endhasanyrole
 
                                             @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
-                                            <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
-                                                data-status="rejected" data-audit-type="QC/QA Engineer"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setBuildingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
-                                            <button type="button" class="btn btn-sm btn-light-success building-status-btn"
-                                                data-status="accepted" data-audit-type="QC/QA Engineer"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setBuildingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
-                                            <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
-                                                data-status="need_review" data-audit-type="QC/QA Engineer"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setBuildingStatus('need_review', 'QC/QA Engineer')">بحاجة
-                                                لمراجعة</button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">التدقيق الهندسي</div>
+                                                <div class="audit-action-controls">
+                                                    <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
+                                                        data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setBuildingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
+                                                    <button type="button" class="btn btn-sm btn-light-success building-status-btn"
+                                                        data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setBuildingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
+                                                    <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
+                                                        data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setBuildingStatus('need_review', 'QC/QA Engineer')">بحاجة
+                                                        لمراجعة</button>
+                                                </div>
+                                            </div>
                                             @endhasanyrole
 
                                             @hasanyrole('Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
-                                            <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
-                                                data-status="undp_final_approve"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setBuildingStatus('undp_final_approve')">
-                                                UNDP Final Approve</button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">الاعتماد النهائي</div>
+                                                <div class="audit-action-controls">
+                                                    <button type="button" class="btn btn-sm btn-light-primary building-status-btn"
+                                                        data-status="undp_final_approve"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setBuildingStatus('undp_final_approve')">
+                                                        UNDP Final Approve</button>
+                                                </div>
+                                            </div>
                                             @endhasanyrole
                                             @endif
                                             @if (auth()->user()->hasAnyRole(['Auditing Supervisor', 'Database Officer']))
-                                                <button type="button" id="btn_show_assessment_final_approve"
-                                                    class="btn btn-sm btn-light-warning"
-                                                    onclick="finalApproveCurrentBuilding()">
-                                                    Final Approve
-                                                </button>
+                                                <div class="audit-action-group">
+                                                    <div class="audit-action-label">اعتماد المشرف</div>
+                                                    <div class="audit-action-controls">
+                                                        <button type="button" id="btn_show_assessment_final_approve"
+                                                            class="btn btn-sm btn-light-warning"
+                                                            onclick="finalApproveCurrentBuilding()">
+                                                            Final Approve
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             @endif
-                                            @unless($isAssessmentReadOnly || auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
-                                                <button type="button" id="btn_building_legal_challenge"
-                                                    class="btn btn-sm btn-light-warning"
-                                                    onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
-                                            @endunless
-                                            <button type="button" class="btn btn-sm btn-light-dark"
-                                                onclick="openNotesModal('building','history')">ملاحظات</button>
-                                            <button type="button" class="btn btn-sm btn-light-primary ms-3"
-                                                onclick="reloadBuildingAssessmentTable()">تحديث</button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">إجراءات</div>
+                                                <div class="audit-action-controls">
+                                                    <div class="dropdown">
+                                                        <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                                            إجراءات
+                                                        </button>
+                                                        <div class="dropdown-menu">
+                                                            @unless($isAssessmentReadOnly || auth()->user()->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor']))
+                                                                <button type="button" id="btn_building_legal_challenge"
+                                                                    class="dropdown-item"
+                                                                    onclick="openLegalChallengeModal('building')">التحديات القانونية</button>
+                                                            @endunless
+                                                            <button type="button" class="dropdown-item"
+                                                                onclick="openNotesModal('building','history')">ملاحظات</button>
+                                                            <button type="button" class="dropdown-item"
+                                                                onclick="reloadBuildingAssessmentTable()">تحديث</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
 
                                         </div>
                                     </div>
@@ -711,19 +775,23 @@
                             </div>
                             <div class="card-toolbar">
                                 <div class="d-flex flex-wrap gap-2">
-                                    @if(! $isAssessmentReadOnly)
-                                    @hasanyrole('Legal Auditor|Database Officer')
-                                    <button type="button" id="btn_housing_legal_challenge"
-                                        class="btn btn-sm btn-light-warning"
-                                        onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
-                                    @endhasanyrole
-                                    @endif
-                                    <button type="button" class="btn btn-sm btn-light-primary"
-                                        onclick="reloadBuildingUnitsTable()">
-                                        <i class="ki-duotone ki-arrows-circle fs-6"><span class="path1"></span><span
-                                                class="path2"></span></i>
-                                        تحديث
-                                    </button>
+                                    <div class="dropdown">
+                                        <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                            إجراءات
+                                        </button>
+                                        <div class="dropdown-menu">
+                                            @if(! $isAssessmentReadOnly)
+                                            @hasanyrole('Legal Auditor|Database Officer')
+                                            <button type="button" id="btn_housing_legal_challenge"
+                                                class="dropdown-item"
+                                                onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
+                                            @endhasanyrole
+                                            @endif
+                                            <button type="button" class="dropdown-item"
+                                                onclick="reloadBuildingUnitsTable()">تحديث</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -863,27 +931,32 @@
                                 <div class="card-body pt-0 pb-4">
                                     <div class="audit-toolbar-sticky mb-4">
                                         <div class="d-flex flex-wrap gap-2">
-                                            <div class="dropdown">
-                                                <button type="button" class="btn btn-sm btn-light-primary dropdown-toggle"
-                                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                                    فلتر: <span id="housing_filter_label">الكل</span>
-                                                </button>
-                                                <div class="dropdown-menu">
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn housing-filter-btn is-active"
-                                                        data-filter="all" data-filter-label="الكل">الكل</button>
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn housing-filter-btn"
-                                                        data-filter="missing" data-filter-label="الفارغ فقط">الفارغ فقط</button>
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn housing-filter-btn"
-                                                        data-filter="edited" data-filter-label="المعدّل فقط">المعدّل فقط</button>
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn housing-filter-btn"
-                                                        data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
-                                                    <button type="button"
-                                                        class="dropdown-item audit-filter-btn housing-filter-btn"
-                                                        data-filter="attachments" data-filter-label="المرفقات">المرفقات</button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">فلترة العرض</div>
+                                                <div class="audit-action-controls">
+                                                    <div class="dropdown">
+                                                        <button type="button" class="btn btn-sm btn-light-primary dropdown-toggle"
+                                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                                            فلتر: <span id="housing_filter_label">الكل</span>
+                                                        </button>
+                                                        <div class="dropdown-menu">
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn housing-filter-btn is-active"
+                                                                data-filter="all" data-filter-label="الكل">الكل</button>
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn housing-filter-btn"
+                                                                data-filter="missing" data-filter-label="الفارغ فقط">الفارغ فقط</button>
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn housing-filter-btn"
+                                                                data-filter="edited" data-filter-label="المعدّل فقط">المعدّل فقط</button>
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn housing-filter-btn"
+                                                                data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
+                                                            <button type="button"
+                                                                class="dropdown-item audit-filter-btn housing-filter-btn"
+                                                                data-filter="attachments" data-filter-label="المرفقات">المرفقات</button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                            
@@ -899,31 +972,41 @@
                                                 </span>
                                             @elseif($canViewStatusButtons)
                                             @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
-                                            <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                                data-status="accepted" data-audit-type="Legal Auditor"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setHousingStatus('accepted', 'Legal Auditor')">مقبول</button>
-                                            <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                                data-status="legal_notes" data-audit-type="Legal Auditor"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setHousingStatus('legal_notes', 'Legal Auditor')">بحاجة
-                                                لمراجعة</button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">التدقيق القانوني</div>
+                                                <div class="audit-action-controls">
+                                                    <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
+                                                        data-status="accepted" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setHousingStatus('accepted', 'Legal Auditor')">مقبول</button>
+                                                    <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
+                                                        data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setHousingStatus('legal_notes', 'Legal Auditor')">بحاجة
+                                                        لمراجعة</button>
+                                                </div>
+                                            </div>
                                             @endhasanyrole
 
                                             @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
-                                            <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
-                                                data-status="rejected" data-audit-type="QC/QA Engineer"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setHousingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
-                                            <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
-                                                data-status="accepted" data-audit-type="QC/QA Engineer"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setHousingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
-                                            <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
-                                                data-status="need_review" data-audit-type="QC/QA Engineer"
-                                                @disabled(! $canEditAssessment)
-                                                onclick="setHousingStatus('need_review', 'QC/QA Engineer')">بحاجة
-                                                لمراجعة</button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">التدقيق الهندسي</div>
+                                                <div class="audit-action-controls">
+                                                    <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
+                                                        data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setHousingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
+                                                    <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
+                                                        data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setHousingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
+                                                    <button type="button" class="btn btn-sm btn-light-warning housing-status-btn"
+                                                        data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
+                                                        onclick="setHousingStatus('need_review', 'QC/QA Engineer')">بحاجة
+                                                        لمراجعة</button>
+                                                </div>
+                                            </div>
                                             @endhasanyrole
                                             @endif
 
@@ -934,16 +1017,23 @@
                                                             UNDP Final Approve</button>
                                                         @endhasanyrole -->
 
-                                            <button type="button" class="btn btn-sm btn-light-dark"
-                                                onclick="openNotesModal('housing','history')">ملاحظات</button>
-                                            <button type="button" class="btn btn-sm btn-light-primary"
-                                                onclick="reloadHousingAssessmentTable();">
-                                                <i class="ki-duotone ki-arrows-circle fs-6">
-                                                    <span class="path1"></span>
-                                                    <span class="path2"></span>
-                                                </i>
-                                                تحديث
-                                            </button>
+                                            <div class="audit-action-group">
+                                                <div class="audit-action-label">إجراءات</div>
+                                                <div class="audit-action-controls">
+                                                    <div class="dropdown">
+                                                        <button type="button" class="btn btn-sm btn-light-secondary dropdown-toggle"
+                                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                                            إجراءات
+                                                        </button>
+                                                        <div class="dropdown-menu">
+                                                            <button type="button" class="dropdown-item"
+                                                                onclick="openNotesModal('housing','history')">ملاحظات</button>
+                                                            <button type="button" class="dropdown-item"
+                                                                onclick="reloadHousingAssessmentTable();">تحديث</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
