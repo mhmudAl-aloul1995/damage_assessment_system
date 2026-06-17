@@ -2558,20 +2558,30 @@
             let globalid = $('[name="globalid"]').val();
 
             if (!globalid) {
-                renderHousingSummaryItems([]);
+                renderHousingSummaryItems([], null);
                 return;
             }
 
             $.get("{{ route('housing.summary') }}", { globalid: globalid }, function (res) {
-                renderHousingSummaryItems(res.summary_items || []);
+                renderHousingSummaryItems(res.summary_items || [], res.summary_mode || null);
             }).fail(function () {
-                renderHousingSummaryItems([]);
+                renderHousingSummaryItems([], null);
             });
         }
 
-        function renderHousingSummaryItems(items) {
+        function renderHousingSummaryItems(items, summaryMode = null) {
             const colors = ['info', 'primary', 'warning', 'success', 'danger'];
             let html = '';
+            let title = housingSummaryTitle(summaryMode);
+
+            if ((items || []).length) {
+                html += `
+                                    <div class="col-12">
+                                        <div class="summary-box bg-light">
+                                            <div class="summary-title">${escapeHtml(title)}</div>
+                                        </div>
+                                    </div>`;
+            }
 
             (items || []).forEach(function (item, index) {
                 let color = colors[index % colors.length];
@@ -2591,6 +2601,18 @@
                                             <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
                                         </div>
                                     </div>`);
+        }
+
+        function housingSummaryTitle(summaryMode) {
+            if (summaryMode === 'totally') {
+                return 'ملخص الوحدة في حالة نوع الضرر Totally';
+            }
+
+            if (summaryMode === 'partial') {
+                return 'ملخص الوحدة في حالة نوع الضرر Partially';
+            }
+
+            return 'ملخص الوحدة';
         }
 
         function renderBuildingSummaryItems(rows) {

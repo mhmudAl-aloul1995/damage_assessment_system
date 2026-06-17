@@ -175,6 +175,10 @@ test('assessment audit inline edits resolve missing global ids before saving', f
         ->toContain("'scorite_area'")
         ->toContain("'comments_recommendations'")
         ->toContain("comments_recommendations: 'ملاحظات المهندس'")
+        ->toContain('renderHousingSummaryItems(res.summary_items || [], res.summary_mode || null)')
+        ->toContain('function housingSummaryTitle(summaryMode)')
+        ->toContain('ملخص الوحدة في حالة نوع الضرر Partially')
+        ->toContain('ملخص الوحدة في حالة نوع الضرر Totally')
         ->toContain('summary-value-long')
         ->toContain('يرجى اختيار الوحدة أولاً');
 });
