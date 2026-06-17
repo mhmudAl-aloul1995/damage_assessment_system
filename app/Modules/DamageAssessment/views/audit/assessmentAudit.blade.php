@@ -17,7 +17,7 @@
         'building_roof_type' => $building?->building_roof_type,
         'concrete_area' => $building?->concrete_area,
         'scorite_area' => $building?->scorite_area,
-        'comments_recommendations_v1' => $building?->comments_recommendations_v1,
+        'comments_recommendations' => $building?->comments_recommendations,
     ];
     $showHousingTab = filled($housingGlobalid);
     $isAssessmentReadOnly = $isAssessmentReadOnly ?? false;
@@ -1257,7 +1257,7 @@
             'building_roof_type',
             'concrete_area',
             'scorite_area',
-            'comments_recommendations_v1'
+            'comments_recommendations'
         ];
 
         const BUILDING_SUMMARY_LABELS = {
@@ -1281,7 +1281,7 @@
             building_roof_type: 'نوع سطح المبنى',
             concrete_area: 'مساحة الباطون',
             scorite_area: 'مساحة الصاج',
-            comments_recommendations_v1: 'ملاحظات المهندس'
+            comments_recommendations: 'ملاحظات المهندس'
         };
         const BUILDING_SUMMARY_VALUES = @json($buildingSummaryValues);
 
@@ -2908,7 +2908,7 @@
                 if (!value) value = '-';
 
                 let color = colors[index % colors.length];
-                const isLongValue = field === 'comments_recommendations_v1';
+                const isLongValue = field === 'comments_recommendations';
 
                 html += `
                                         <div class="${isLongValue ? 'col-12' : 'col-6 col-lg-12'}">

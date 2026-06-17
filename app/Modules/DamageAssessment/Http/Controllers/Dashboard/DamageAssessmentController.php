@@ -1663,7 +1663,7 @@ class DamageAssessmentController extends Controller
                 'building_roof_type' => 'نوع سطح المبنى',
                 'concrete_area' => 'مساحة الباطون',
                 'scorite_area' => 'مساحة الصاج',
-                'comments_recommendations_v1' => 'ملاحظات المهندس',
+                'comments_recommendations' => 'ملاحظات المهندس',
             ];
         }
 

@@ -108,7 +108,7 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain("\$record['submition_date'] = \$model->end")
         ->toContain("'building_name' => 'اسم المبنى'")
         ->toContain("'scorite_area' => 'مساحة الصاج'")
-        ->toContain("'comments_recommendations_v1' => 'ملاحظات المهندس'");
+        ->toContain("'comments_recommendations' => 'ملاحظات المهندس'");
 
     expect($exportService)
         ->toContain('public function buildingColumns(): array')
@@ -173,8 +173,8 @@ test('assessment audit inline edits resolve missing global ids before saving', f
         ->toContain('!isAreaManager && !isAssessmentReadOnly')
         ->toContain("'building_name'")
         ->toContain("'scorite_area'")
-        ->toContain("'comments_recommendations_v1'")
-        ->toContain("comments_recommendations_v1: 'ملاحظات المهندس'")
+        ->toContain("'comments_recommendations'")
+        ->toContain("comments_recommendations: 'ملاحظات المهندس'")
         ->toContain('summary-value-long')
         ->toContain('يرجى اختيار الوحدة أولاً');
 });
