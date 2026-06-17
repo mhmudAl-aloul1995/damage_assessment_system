@@ -12,9 +12,6 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use RuntimeException;
 
 class TemporaryTechnicalCommitteeDecisionImportService
 {
@@ -23,83 +20,53 @@ class TemporaryTechnicalCommitteeDecisionImportService
     private const UNIT_COMMITTEE_STATUSES = ['committee_review', 'commite_review', 'committee_review2'];
 
     /**
-     * @param  list<array{path: string, municipality: string, member_id_numbers: list<string>}>  $files
+     * @param  list<array{
+     *     record_type: string,
+     *     municipality: string,
+     *     sheet: string,
+     *     row: int,
+     *     objectid: string|int,
+     *     globalid: string|null,
+     *     decision_type: string,
+     *     decision_text: string,
+     *     action_text: string|null,
+     *     member_id_numbers: list<string>
+     * }>  $records
      * @return array<string, mixed>
      */
-    public function importFiles(array $files): array
+    public function importRecords(array $records): array
     {
         $summary = $this->emptySummary();
+        $memberCache = [];
 
-        foreach ($files as $file) {
-            $path = $file['path'];
+        foreach ($records as $record) {
+            $summary['rows']++;
 
-            if (! is_file($path)) {
-                throw new RuntimeException("Temporary committee decision workbook was not found: {$path}");
-            }
-
-            $members = $this->resolveCommitteeMembers($file['member_id_numbers'], $summary);
+            $membersKey = implode('|', $record['member_id_numbers']);
+            $members = $memberCache[$membersKey] ??= $this->resolveCommitteeMembers($record['member_id_numbers'], $summary);
 
             if ($members === []) {
+                $summary['skipped_rows']++;
                 $summary['issues'][] = [
-                    'file' => $path,
+                    'sheet' => $record['sheet'],
+                    'row' => $record['row'],
                     'reason' => 'No configured committee users were found by id_no.',
                 ];
 
                 continue;
             }
 
-            $reader = IOFactory::createReaderForFile($path);
-            $reader->setReadDataOnly(true);
-            $spreadsheet = $reader->load($path);
-
-            foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
-                $this->importSheet($sheet, $file['municipality'], $members, $summary);
-            }
-        }
-
-        $summary['missing_users'] = array_values(array_unique($summary['missing_users']));
-
-        return $summary;
-    }
-
-    /**
-     * @param  list<CommitteeMember>  $members
-     * @param  array<string, mixed>  $summary
-     */
-    private function importSheet(Worksheet $sheet, string $municipality, array $members, array &$summary): void
-    {
-        $recordType = str_contains($sheet->getTitle(), 'وحدات') ? 'housing-unit' : 'building';
-        $headers = $this->headers($sheet);
-        $highestRow = $sheet->getHighestRow();
-
-        for ($row = 2; $row <= $highestRow; $row++) {
-            if ($this->isBlankRow($sheet, $row)) {
-                continue;
-            }
-
-            $summary['rows']++;
-
-            $record = $this->rowPayload($sheet, $headers, $row, $recordType);
-            $decisionType = $this->resolveDecisionType($record['decision']);
-
-            if ($decisionType === null) {
-                $summary['skipped_rows']++;
-                $summary['issues'][] = [
-                    'sheet' => $sheet->getTitle(),
-                    'row' => $row,
-                    'reason' => 'Decision text is not classified as fully or partially damaged.',
-                ];
-
-                continue;
-            }
-
-            $decisionable = $this->resolveDecisionable($recordType, $record['objectid'], $record['globalid']);
+            $decisionable = $this->resolveDecisionable(
+                $record['record_type'],
+                (string) $record['objectid'],
+                (string) ($record['globalid'] ?? ''),
+            );
 
             if (! $decisionable instanceof Model) {
                 $summary['skipped_rows']++;
                 $summary['issues'][] = [
-                    'sheet' => $sheet->getTitle(),
-                    'row' => $row,
+                    'sheet' => $record['sheet'],
+                    'row' => $record['row'],
                     'reason' => 'No matching building or housing unit was found.',
                 ];
 
@@ -109,17 +76,28 @@ class TemporaryTechnicalCommitteeDecisionImportService
             if (! $this->isCommitteeReviewRecord($decisionable)) {
                 $summary['skipped_rows']++;
                 $summary['issues'][] = [
-                    'sheet' => $sheet->getTitle(),
-                    'row' => $row,
+                    'sheet' => $record['sheet'],
+                    'row' => $record['row'],
                     'reason' => 'The matched record is not currently in committee review damage status.',
                 ];
 
                 continue;
             }
 
-            $this->completeDecision($decisionable, $decisionType, $record['decision'], $record['action'], $municipality, $members);
+            $this->completeDecision(
+                $decisionable,
+                $record['decision_type'],
+                $record['decision_text'],
+                $record['action_text'],
+                $record['municipality'],
+                $members,
+            );
             $summary['decisions_completed']++;
         }
+
+        $summary['missing_users'] = array_values(array_unique($summary['missing_users']));
+
+        return $summary;
     }
 
     /**
@@ -176,7 +154,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 'decision_type' => $decisionType,
                 'decision_text' => $decisionText,
                 'action_text' => $actionText,
-                'notes' => trim('Temporary technical committee Excel seed: '.$municipality),
+                'notes' => trim('Temporary technical committee seed: '.$municipality),
                 'decision_date' => $signedAt->toDateString(),
                 'status' => CommitteeDecision::STATUS_COMPLETED,
                 'committee_manager_id' => $managerUserId,
@@ -310,114 +288,6 @@ class TemporaryTechnicalCommitteeDecisionImportService
         }
 
         return false;
-    }
-
-    private function resolveDecisionType(string $decisionText): ?string
-    {
-        if (str_contains($decisionText, 'كلي')) {
-            return 'fully_damaged';
-        }
-
-        if (str_contains($decisionText, 'جزئي')) {
-            return 'partially_damaged';
-        }
-
-        return null;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function headers(Worksheet $sheet): array
-    {
-        $headers = [];
-        $highestColumn = $sheet->getHighestColumn();
-
-        foreach ($sheet->rangeToArray("A1:{$highestColumn}1", null, true, true, true)[1] as $column => $value) {
-            $header = $this->text($value);
-
-            if ($header !== '') {
-                $headers[$header] = $column;
-            }
-        }
-
-        return $headers;
-    }
-
-    /**
-     * @param  array<string, string>  $headers
-     * @return array{objectid: string, globalid: string, decision: string, action: string|null}
-     */
-    private function rowPayload(Worksheet $sheet, array $headers, int $row, string $recordType): array
-    {
-        $title = $sheet->getTitle();
-        $isLargeVisitedSheet = $title === 'تم زيارتها';
-        $isGazaSheet = $title === 'غزة';
-        $isNuseiratVisitedSheet = $title === 'النصيرات تم زيارته';
-
-        $decisionFallback = match (true) {
-            $isGazaSheet => 'V',
-            $isLargeVisitedSheet => 'EU',
-            $recordType === 'housing-unit' => 'T',
-            $isNuseiratVisitedSheet => 'K',
-            $title === 'زيارة 19.4' => 'R',
-            default => 'Q',
-        };
-
-        $actionFallback = match (true) {
-            $isGazaSheet => 'W',
-            $isLargeVisitedSheet => 'EV',
-            $recordType === 'housing-unit' => 'M',
-            $isNuseiratVisitedSheet => 'L',
-            default => 'L',
-        };
-
-        return [
-            'objectid' => $this->cell($sheet, $this->headerColumn($headers, ['ObjectID']) ?? 'A', $row),
-            'globalid' => $this->cell($sheet, $this->headerColumn($headers, ['GlobalID']) ?? ($recordType === 'housing-unit' ? 'C' : 'B'), $row),
-            'decision' => $this->cell($sheet, $this->headerColumn($headers, ['قرار اللجنة']) ?? $decisionFallback, $row),
-            'action' => $this->cell($sheet, $actionFallback, $row) ?: null,
-        ];
-    }
-
-    /**
-     * @param  array<string, string>  $headers
-     * @param  list<string>  $candidates
-     */
-    private function headerColumn(array $headers, array $candidates): ?string
-    {
-        foreach ($candidates as $candidate) {
-            if (isset($headers[$candidate])) {
-                return $headers[$candidate];
-            }
-        }
-
-        return null;
-    }
-
-    private function isBlankRow(Worksheet $sheet, int $row): bool
-    {
-        foreach ($sheet->rangeToArray("A{$row}:{$sheet->getHighestColumn()}{$row}", null, true, true, true)[$row] as $value) {
-            if ($this->text($value) !== '') {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private function cell(Worksheet $sheet, string $column, int $row): string
-    {
-        return $this->text($sheet->getCell("{$column}{$row}")->getValue());
-    }
-
-    private function text(mixed $value): string
-    {
-        if ($value === null) {
-            return '';
-        }
-
-        return trim((string) $value);
     }
 
     private function normalizeStatus(?string $status): string

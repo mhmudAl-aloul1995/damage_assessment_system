@@ -8,10 +8,8 @@ use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\Models\User;
 use App\services\TemporaryTechnicalCommitteeDecisionImportService;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-it('temporarily completes building committee decisions from excel when the building is in committee review', function () {
+it('temporarily completes building committee decisions from static seed records when the building is in committee review', function () {
     temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667']);
 
     $building = Building::query()->create([
@@ -30,16 +28,32 @@ it('temporarily completes building committee decisions from excel when the build
         'field_status' => 'COMPLETED',
     ]);
 
-    $path = temporaryCommitteeWorkbook('غزة', [
-        ['A' => 3293, 'B' => $building->globalid, 'V' => 'هدم كلي', 'W' => 'اعادة المبنى للمهندس لحصره'],
-        ['A' => 3294, 'B' => 'building-globalid-3294', 'V' => 'هدم كلي', 'W' => 'اعادة المبنى للمهندس لحصره'],
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importRecords([
+        [
+            'record_type' => 'building',
+            'municipality' => 'غزة',
+            'sheet' => 'غزة',
+            'row' => 2,
+            'objectid' => 3293,
+            'globalid' => $building->globalid,
+            'decision_type' => 'fully_damaged',
+            'decision_text' => 'هدم كلي',
+            'action_text' => 'اعادة المبنى للمهندس لحصره',
+            'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667'],
+        ],
+        [
+            'record_type' => 'building',
+            'municipality' => 'غزة',
+            'sheet' => 'غزة',
+            'row' => 3,
+            'objectid' => 3294,
+            'globalid' => 'building-globalid-3294',
+            'decision_type' => 'fully_damaged',
+            'decision_text' => 'هدم كلي',
+            'action_text' => 'اعادة المبنى للمهندس لحصره',
+            'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667'],
+        ],
     ]);
-
-    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importFiles([[
-        'path' => $path,
-        'municipality' => 'غزة',
-        'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667'],
-    ]]);
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
 
@@ -59,7 +73,7 @@ it('temporarily completes building committee decisions from excel when the build
         ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $decision->id)->where('building_objectid', 3293)->exists())->toBeTrue();
 });
 
-it('temporarily completes housing unit committee decisions from unit sheets and updates the parent building field status', function () {
+it('temporarily completes housing unit committee decisions from static unit sheet records and updates the parent building field status', function () {
     temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044']);
 
     $building = Building::query()->create([
@@ -78,19 +92,16 @@ it('temporarily completes housing unit committee decisions from unit sheets and 
         'unit_damage_status' => 'committee_review2',
     ]);
 
-    $path = temporaryCommitteeWorkbook('لجان - وحدات خانيونس', [
-        ['A' => 1082, 'B' => 598, 'C' => $unit->globalid, 'M' => 'اعادة المبنى للمهندس لحصره', 'T' => 'هدم جزئي'],
-    ], [
-        'A' => 'ObjectID',
-        'B' => 'رقم المبنى',
-        'C' => 'GlobalID',
-        'M' => 'الإجراء',
-        'T' => 'قرار اللجنة',
-    ]);
-
-    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importFiles([[
-        'path' => $path,
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importRecords([[
+        'record_type' => 'housing-unit',
         'municipality' => 'خانيونس',
+        'sheet' => 'لجان - وحدات خانيونس',
+        'row' => 2,
+        'objectid' => 1082,
+        'globalid' => $unit->globalid,
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'هدم جزئي',
+        'action_text' => 'اعادة المبنى للمهندس لحصره',
         'member_id_numbers' => ['801933490', '800282667', '800846958', '804475044'],
     ]]);
 
@@ -125,39 +136,4 @@ function temporaryCommitteeUsers(array $idNumbers): void
             'phone' => '05900000'.$index,
         ]);
     }
-}
-
-/**
- * @param  list<array<string, mixed>>  $rows
- * @param  array<string, string>  $headers
- */
-function temporaryCommitteeWorkbook(string $sheetName, array $rows, array $headers = []): string
-{
-    $spreadsheet = new Spreadsheet;
-    $sheet = $spreadsheet->getActiveSheet();
-    $sheet->setTitle($sheetName);
-
-    $headers = $headers ?: [
-        'A' => 'ObjectID',
-        'B' => 'GlobalID',
-        'V' => 'قرار اللجنة',
-        'W' => 'الإجراء',
-    ];
-
-    foreach ($headers as $column => $label) {
-        $sheet->setCellValue("{$column}1", $label);
-    }
-
-    foreach ($rows as $index => $values) {
-        $row = $index + 2;
-
-        foreach ($values as $column => $value) {
-            $sheet->setCellValue("{$column}{$row}", $value);
-        }
-    }
-
-    $path = tempnam(sys_get_temp_dir(), 'temporary-committee-decisions-').'.xlsx';
-    (new Xlsx($spreadsheet))->save($path);
-
-    return $path;
 }
