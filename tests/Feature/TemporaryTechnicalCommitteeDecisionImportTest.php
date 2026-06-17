@@ -59,6 +59,8 @@ it('temporarily completes building committee decisions from static seed records 
 
     expect($summary['decisions_completed'])->toBe(1)
         ->and($summary['skipped_rows'])->toBe(1)
+        ->and($summary['skip_reasons']['not_committee_review'])->toBe(1)
+        ->and($summary['issues'][0]['current_status'])->toBe('partially_damaged')
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($decision->decision_type)->toBe('fully_damaged')
         ->and($decision->action_text)->toBe('اعادة المبنى للمهندس لحصره')
@@ -122,6 +124,55 @@ it('temporarily completes housing unit committee decisions from static unit shee
             ->where('building_objectid', 598)
             ->where('housing_unit_objectid', 1082)
             ->exists())->toBeTrue();
+});
+
+it('syncs configured municipality signatures onto existing committee review decisions not included in seed records', function () {
+    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044']);
+    $oldSigner = User::factory()->create(['id_no' => '700000001']);
+    $oldMember = CommitteeMember::query()->create([
+        'user_id' => $oldSigner->id,
+        'name' => 'Old Signer',
+        'is_active' => true,
+        'is_required' => false,
+        'sort_order' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 21048,
+        'globalid' => 'existing-review-building',
+        'building_name' => 'Existing Review Building',
+        'building_damage_status' => 'committee_review',
+        'municipalitie' => 'Nuseirat',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'status' => CommitteeDecision::STATUS_PENDING_SIGNATURES,
+    ]);
+
+    CommitteeDecisionSignature::query()->create([
+        'committee_decision_id' => $decision->id,
+        'committee_member_id' => $oldMember->id,
+        'is_required' => false,
+        'sort_order' => 1,
+        'status' => 'pending',
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)
+        ->syncExistingCommitteeReviewDecisionSignatures();
+
+    $decision->refresh()->load('signatures.committeeMember.user');
+
+    expect($summary['decisions_synced'])->toBe(1)
+        ->and($decision->signatures)->toHaveCount(4)
+        ->and($decision->signatures->every(fn ($signature): bool => $signature->is_required))->toBeTrue()
+        ->and($decision->signatures->pluck('committeeMember.user.id_no')->all())->toBe([
+            '801933490',
+            '800282667',
+            '800846958',
+            '804475044',
+        ]);
 });
 
 /**

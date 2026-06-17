@@ -46,12 +46,13 @@ class TemporaryTechnicalCommitteeDecisionImportService
             $members = $memberCache[$membersKey] ??= $this->resolveCommitteeMembers($record['member_id_numbers'], $summary);
 
             if ($members === []) {
-                $summary['skipped_rows']++;
-                $summary['issues'][] = [
+                $this->recordSkip($summary, 'missing_committee_users', [
                     'sheet' => $record['sheet'],
                     'row' => $record['row'],
+                    'objectid' => $record['objectid'],
+                    'record_type' => $record['record_type'],
                     'reason' => 'No configured committee users were found by id_no.',
-                ];
+                ]);
 
                 continue;
             }
@@ -63,23 +64,26 @@ class TemporaryTechnicalCommitteeDecisionImportService
             );
 
             if (! $decisionable instanceof Model) {
-                $summary['skipped_rows']++;
-                $summary['issues'][] = [
+                $this->recordSkip($summary, 'record_not_found', [
                     'sheet' => $record['sheet'],
                     'row' => $record['row'],
+                    'objectid' => $record['objectid'],
+                    'record_type' => $record['record_type'],
                     'reason' => 'No matching building or housing unit was found.',
-                ];
+                ]);
 
                 continue;
             }
 
             if (! $this->isCommitteeReviewRecord($decisionable)) {
-                $summary['skipped_rows']++;
-                $summary['issues'][] = [
+                $this->recordSkip($summary, 'not_committee_review', [
                     'sheet' => $record['sheet'],
                     'row' => $record['row'],
+                    'objectid' => $record['objectid'],
+                    'record_type' => $record['record_type'],
+                    'current_status' => $this->currentDamageStatus($decisionable),
                     'reason' => 'The matched record is not currently in committee review damage status.',
-                ];
+                ]);
 
                 continue;
             }
@@ -94,6 +98,39 @@ class TemporaryTechnicalCommitteeDecisionImportService
             );
             $summary['decisions_completed']++;
         }
+
+        $summary['missing_users'] = array_values(array_unique($summary['missing_users']));
+
+        return $summary;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function syncExistingCommitteeReviewDecisionSignatures(): array
+    {
+        $summary = [
+            'decisions_synced' => 0,
+            'skipped_without_municipality' => 0,
+            'missing_users' => [],
+        ];
+        $memberCache = [];
+
+        Building::query()
+            ->whereIn('building_damage_status', self::BUILDING_COMMITTEE_STATUSES)
+            ->whereHas('committeeDecision')
+            ->with('committeeDecision.signatures')
+            ->each(function (Building $building) use (&$summary, &$memberCache): void {
+                $this->syncDecisionSignaturesForReviewRecord($building, $summary, $memberCache);
+            });
+
+        HousingUnit::query()
+            ->whereIn('unit_damage_status', self::UNIT_COMMITTEE_STATUSES)
+            ->whereHas('committeeDecision')
+            ->with(['committeeDecision.signatures', 'building'])
+            ->each(function (HousingUnit $housingUnit) use (&$summary, &$memberCache): void {
+                $this->syncDecisionSignaturesForReviewRecord($housingUnit, $summary, $memberCache);
+            });
 
         $summary['missing_users'] = array_values(array_unique($summary['missing_users']));
 
@@ -133,6 +170,94 @@ class TemporaryTechnicalCommitteeDecisionImportService
         }
 
         return $members;
+    }
+
+    /**
+     * @param  array<string, mixed>  $summary
+     * @param  array<string, list<CommitteeMember>>  $memberCache
+     */
+    private function syncDecisionSignaturesForReviewRecord(Building|HousingUnit $decisionable, array &$summary, array &$memberCache): void
+    {
+        $idNumbers = $this->memberIdNumbersForDecisionable($decisionable);
+
+        if ($idNumbers === []) {
+            $summary['skipped_without_municipality']++;
+
+            return;
+        }
+
+        $membersKey = implode('|', $idNumbers);
+        $members = $memberCache[$membersKey] ??= $this->resolveCommitteeMembers($idNumbers, $summary);
+
+        if ($members === []) {
+            return;
+        }
+
+        /** @var CommitteeDecision|null $decision */
+        $decision = $decisionable->committeeDecision;
+
+        if (! $decision instanceof CommitteeDecision) {
+            return;
+        }
+
+        $this->syncConfiguredSignatures($decision, $members);
+        $summary['decisions_synced']++;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function memberIdNumbersForDecisionable(Building|HousingUnit $decisionable): array
+    {
+        $municipality = $this->normalizeMunicipality(
+            $decisionable instanceof HousingUnit
+                ? ($decisionable->municipalitie ?: $decisionable->building?->municipalitie)
+                : $decisionable->municipalitie,
+        );
+
+        if (str_contains($municipality, 'gaza') || str_contains($municipality, 'غزة')) {
+            return ['934863572', '900277229', '801933490', '800282667'];
+        }
+
+        if (
+            str_contains($municipality, 'khan')
+            || str_contains($municipality, 'خانيونس')
+            || str_contains($municipality, 'خان_يونس')
+            || str_contains($municipality, 'nuseirat')
+            || str_contains($municipality, 'نصيرات')
+        ) {
+            return ['801933490', '800282667', '800846958', '804475044'];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  list<CommitteeMember>  $members
+     */
+    private function syncConfiguredSignatures(CommitteeDecision $decision, array $members): void
+    {
+        $existingSignatures = $decision->signatures->keyBy('committee_member_id');
+
+        CommitteeDecisionSignature::query()
+            ->where('committee_decision_id', $decision->id)
+            ->delete();
+
+        foreach ($members as $index => $member) {
+            /** @var CommitteeDecisionSignature|null $existingSignature */
+            $existingSignature = $existingSignatures->get($member->id);
+
+            CommitteeDecisionSignature::query()->create([
+                'committee_decision_id' => $decision->id,
+                'committee_member_id' => $member->id,
+                'is_required' => true,
+                'sort_order' => $index + 1,
+                'status' => $existingSignature?->status ?? 'pending',
+                'notes' => $existingSignature?->notes,
+                'signed_at' => $existingSignature?->signed_at,
+                'signed_by_user_id' => $existingSignature?->signed_by_user_id,
+            ]);
+        }
     }
 
     /**
@@ -290,11 +415,47 @@ class TemporaryTechnicalCommitteeDecisionImportService
         return false;
     }
 
+    /**
+     * @param  array<string, mixed>  $summary
+     * @param  array<string, mixed>  $issue
+     */
+    private function recordSkip(array &$summary, string $reasonKey, array $issue): void
+    {
+        $summary['skipped_rows']++;
+        $summary['skip_reasons'][$reasonKey] = ($summary['skip_reasons'][$reasonKey] ?? 0) + 1;
+        $summary['issues'][] = [
+            'reason_key' => $reasonKey,
+            ...$issue,
+        ];
+    }
+
+    private function currentDamageStatus(Model $decisionable): ?string
+    {
+        if ($decisionable instanceof Building) {
+            return $decisionable->building_damage_status;
+        }
+
+        if ($decisionable instanceof HousingUnit) {
+            return $decisionable->unit_damage_status;
+        }
+
+        return null;
+    }
+
     private function normalizeStatus(?string $status): string
     {
         return str($status ?? '')
             ->lower()
             ->replace(' ', '_')
+            ->trim()
+            ->toString();
+    }
+
+    private function normalizeMunicipality(?string $municipality): string
+    {
+        return str($municipality ?? '')
+            ->lower()
+            ->replace([' ', '-', 'ـ'], '_')
             ->trim()
             ->toString();
     }
@@ -308,6 +469,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
             'rows' => 0,
             'decisions_completed' => 0,
             'skipped_rows' => 0,
+            'skip_reasons' => [],
             'missing_users' => [],
             'issues' => [],
         ];
