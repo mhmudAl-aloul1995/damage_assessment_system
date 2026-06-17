@@ -25,6 +25,12 @@ class SaveCommitteeDecisionRequest extends FormRequest
             'action_text' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
             'decision_date' => ['required', 'date'],
+            'committee_members' => ['required', 'array', 'min:1'],
+            'committee_members.*' => ['integer', Rule::exists('committee_members', 'id')],
+            'member_required' => ['nullable', 'array'],
+            'member_required.*' => ['nullable', 'boolean'],
+            'member_sort_order' => ['nullable', 'array'],
+            'member_sort_order.*' => ['nullable', 'integer', 'min:0'],
             'status' => ['nullable', 'string', Rule::in([
                 'draft',
                 'pending_signatures',

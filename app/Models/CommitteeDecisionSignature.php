@@ -15,6 +15,8 @@ class CommitteeDecisionSignature extends Model
     protected $fillable = [
         'committee_decision_id',
         'committee_member_id',
+        'is_required',
+        'sort_order',
         'status',
         'notes',
         'signed_at',
@@ -26,6 +28,8 @@ class CommitteeDecisionSignature extends Model
         return [
             'committee_decision_id' => 'integer',
             'committee_member_id' => 'integer',
+            'is_required' => 'boolean',
+            'sort_order' => 'integer',
             'signed_by_user_id' => 'integer',
             'signed_at' => 'datetime',
             'created_at' => 'datetime',

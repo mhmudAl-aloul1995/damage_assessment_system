@@ -162,6 +162,14 @@ class CommitteeDecisionController extends Controller
             'decisionable' => $decisionable,
             'building' => $building,
             'recordType' => $recordType,
+            'committeeMembers' => CommitteeMember::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(),
+            'suggestedCommitteeMembers' => $decision->signatures->isEmpty()
+                ? $this->workflowService->latestSignatureTemplate($decision)
+                : [],
             'canManageContent' => auth()->user()->can('manage committee decision content'),
             'canSign' => auth()->user()->can('sign committee decisions'),
             'canRetryArcgis' => auth()->user()->can('sync committee decision arcgis'),
@@ -185,7 +193,7 @@ class CommitteeDecisionController extends Controller
             return '<span class="badge badge-light-secondary">0 / 0</span>';
         }
 
-        $required = $decision->signatures->filter(fn ($signature): bool => $signature->committeeMember?->is_active && $signature->committeeMember?->is_required);
+        $required = $decision->signatures->filter(fn ($signature): bool => $signature->committeeMember?->is_active && $signature->is_required);
         $approvedCount = $required->where('status', 'approved')->count();
 
         return sprintf(

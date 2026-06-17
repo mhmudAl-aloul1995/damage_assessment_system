@@ -174,7 +174,11 @@ class CommitteeDecisionExcelImportService
                         'committee_member_id' => $member->id,
                     ]);
                     $signatureWasRecentlyCreated = ! $signature->exists;
-                    $signature->fill(['status' => 'pending'])->save();
+                    $signature->fill([
+                        'is_required' => true,
+                        'sort_order' => $member->sort_order ?? 0,
+                        'status' => 'pending',
+                    ])->save();
 
                     if ($signatureWasRecentlyCreated) {
                         $summary['signatures_created']++;

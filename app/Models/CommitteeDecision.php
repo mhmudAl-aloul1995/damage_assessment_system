@@ -88,7 +88,7 @@ class CommitteeDecision extends Model
     public function requiredPendingSignaturesCount(): int
     {
         return $this->signatures
-            ->filter(fn (CommitteeDecisionSignature $signature): bool => $signature->committeeMember?->is_active && $signature->committeeMember?->is_required)
+            ->filter(fn (CommitteeDecisionSignature $signature): bool => $signature->committeeMember?->is_active && $signature->is_required)
             ->filter(fn (CommitteeDecisionSignature $signature): bool => $signature->status !== 'approved')
             ->count();
     }

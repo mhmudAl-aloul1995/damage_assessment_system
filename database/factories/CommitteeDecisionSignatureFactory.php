@@ -19,6 +19,8 @@ class CommitteeDecisionSignatureFactory extends Factory
         return [
             'committee_decision_id' => CommitteeDecision::factory(),
             'committee_member_id' => CommitteeMember::factory(),
+            'is_required' => true,
+            'sort_order' => 0,
             'status' => 'pending',
             'notes' => null,
             'signed_at' => null,

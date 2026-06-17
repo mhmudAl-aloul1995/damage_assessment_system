@@ -3,6 +3,7 @@
 use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
 use App\Models\CommitteeDecision;
+use App\Models\CommitteeDecisionSignature;
 use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -66,6 +67,82 @@ it('shows committee decision pages and datatable data for buildings and housing 
         ->assertSee('Decision Summary');
 });
 
+it('suggests the latest committee members for a new decision and saves only selected members', function () {
+    $manager = User::factory()->create();
+    $manager->givePermissionTo([
+        'view committee decisions',
+        'manage committee decision content',
+        'edit committee decisions',
+    ]);
+
+    $suggestedMember = CommitteeMember::factory()->create([
+        'name' => 'Latest Suggested Member',
+        'is_required' => true,
+        'sort_order' => 4,
+    ]);
+    $otherMember = CommitteeMember::factory()->create([
+        'name' => 'Other Available Member',
+        'is_required' => true,
+        'sort_order' => 8,
+    ]);
+
+    $previousBuilding = Building::query()->create([
+        'objectid' => 9200,
+        'globalid' => 'previous-building-guid',
+        'building_name' => 'Previous Building',
+        'building_damage_status' => 'committee_review',
+    ]);
+    $newBuilding = Building::query()->create([
+        'objectid' => 9201,
+        'globalid' => 'new-building-guid',
+        'building_name' => 'New Building',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $previousDecision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $previousBuilding->id,
+        'status' => CommitteeDecision::STATUS_PENDING_SIGNATURES,
+        'updated_by' => $manager->id,
+    ]);
+
+    CommitteeDecisionSignature::query()->create([
+        'committee_decision_id' => $previousDecision->id,
+        'committee_member_id' => $suggestedMember->id,
+        'is_required' => false,
+        'sort_order' => 4,
+        'status' => 'pending',
+    ]);
+
+    $this->actingAs($manager)
+        ->get(route('committee-decisions.buildings.show', $newBuilding))
+        ->assertOk()
+        ->assertSee('Latest Suggested Member')
+        ->assertSee('Other Available Member')
+        ->assertSee('name="committee_members[]" value="'.$suggestedMember->id.'" checked', false);
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $newBuilding)->firstOrFail();
+
+    $this->actingAs($manager)->put(route('committee-decisions.update', $decision), [
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Committee selected only one member for this decision.',
+        'decision_date' => '2026-06-17',
+        'committee_members' => [$otherMember->id],
+        'member_required' => [
+            $otherMember->id => true,
+        ],
+        'member_sort_order' => [
+            $otherMember->id => 1,
+        ],
+    ])->assertRedirect();
+
+    $decision->refresh()->load('signatures');
+
+    expect($decision->signatures)->toHaveCount(1)
+        ->and($decision->signatures->first()->committee_member_id)->toBe($otherMember->id)
+        ->and($decision->signatures->first()->is_required)->toBeTrue();
+});
+
 it('completes the committee workflow, archives the object, and syncs arcgis after required signatures', function () {
     config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
     config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
@@ -127,6 +204,15 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
         'action_text' => 'Run field action',
         'notes' => 'Reviewed',
         'decision_date' => '2026-04-21',
+        'committee_members' => [$memberOne->id, $memberTwo->id],
+        'member_required' => [
+            $memberOne->id => true,
+            $memberTwo->id => true,
+        ],
+        'member_sort_order' => [
+            $memberOne->id => 1,
+            $memberTwo->id => 2,
+        ],
     ])->assertRedirect();
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
@@ -224,6 +310,13 @@ it('syncs housing unit committee decisions to the unit damage status and archive
         'action_text' => 'Run unit field action',
         'notes' => 'Unit reviewed',
         'decision_date' => '2026-04-22',
+        'committee_members' => [$member->id],
+        'member_required' => [
+            $member->id => true,
+        ],
+        'member_sort_order' => [
+            $member->id => 1,
+        ],
     ])->assertRedirect();
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $unit)->firstOrFail();

@@ -34,8 +34,6 @@ class CommitteeDecisionWorkflowService
             ],
         );
 
-        $this->ensureSignatureSlots($decision);
-
         return $decision->load([
             'decisionable',
             'committeeManager',
@@ -53,6 +51,13 @@ class CommitteeDecisionWorkflowService
                 abort(403, 'لا يمكن تعديل القرار بعد اكتماله.');
             }
 
+            $this->syncDecisionMembers(
+                $decision,
+                $data['committee_members'] ?? [],
+                $data['member_required'] ?? [],
+                $data['member_sort_order'] ?? [],
+            );
+
             $decision->fill([
                 'decision_type' => $data['decision_type'],
                 'decision_text' => $data['decision_text'],
@@ -64,7 +69,6 @@ class CommitteeDecisionWorkflowService
                 'updated_by' => $user->id,
             ])->save();
 
-            $this->ensureSignatureSlots($decision);
             $this->refreshDecisionStatus($decision, $user);
 
             return $decision->load([
@@ -84,15 +88,13 @@ class CommitteeDecisionWorkflowService
             }
 
             $this->ensureSignerCanSign($member, $user);
-            $this->ensureSignatureSlots($decision);
-
             /** @var CommitteeDecisionSignature $signature */
-            $signature = CommitteeDecisionSignature::query()->firstOrCreate([
+            $signature = CommitteeDecisionSignature::query()->where([
                 'committee_decision_id' => $decision->id,
                 'committee_member_id' => $member->id,
-            ]);
+            ])->firstOrFail();
 
-            if ($signature->exists && $signature->status !== 'pending' && $data['status'] !== 'pending') {
+            if ($signature->status !== 'pending' && $data['status'] !== 'pending') {
                 abort(422, 'تم تسجيل توقيع هذا العضو مسبقًا.');
             }
 
@@ -109,19 +111,73 @@ class CommitteeDecisionWorkflowService
         });
     }
 
-    public function ensureSignatureSlots(CommitteeDecision $decision): void
+    public function syncDecisionMembers(CommitteeDecision $decision, array $memberIds, array $requiredByMember, array $sortOrderByMember): void
     {
-        CommitteeMember::query()
+        $selectedMemberIds = collect($memberIds)
+            ->map(fn (mixed $memberId): int => (int) $memberId)
+            ->filter(fn (int $memberId): bool => $memberId > 0)
+            ->unique()
+            ->values();
+
+        $members = CommitteeMember::query()
+            ->whereIn('id', $selectedMemberIds)
             ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->each(function (CommitteeMember $member) use ($decision): void {
-                CommitteeDecisionSignature::query()->firstOrCreate([
-                    'committee_decision_id' => $decision->id,
-                    'committee_member_id' => $member->id,
-                ], [
-                    'status' => 'pending',
-                ]);
-            });
+            ->get()
+            ->keyBy('id');
+
+        foreach ($selectedMemberIds as $memberId) {
+            $member = $members->get($memberId);
+
+            if (! $member instanceof CommitteeMember) {
+                continue;
+            }
+
+            $signature = CommitteeDecisionSignature::query()->firstOrNew([
+                'committee_decision_id' => $decision->id,
+                'committee_member_id' => $member->id,
+            ]);
+
+            if (! $signature->exists) {
+                $signature->status = 'pending';
+            }
+
+            $signature->forceFill([
+                'is_required' => (bool) ($requiredByMember[$member->id] ?? false),
+                'sort_order' => (int) ($sortOrderByMember[$member->id] ?? $member->sort_order),
+            ])->save();
+        }
+
+        CommitteeDecisionSignature::query()
+            ->where('committee_decision_id', $decision->id)
+            ->whereNotIn('committee_member_id', $selectedMemberIds)
+            ->where('status', 'pending')
+            ->delete();
+    }
+
+    public function latestSignatureTemplate(?CommitteeDecision $currentDecision = null): array
+    {
+        $latestDecision = CommitteeDecision::query()
+            ->when($currentDecision?->exists, fn ($query) => $query->whereKeyNot($currentDecision->id))
+            ->whereHas('signatures')
+            ->with(['signatures.committeeMember'])
+            ->latest('updated_at')
+            ->latest('id')
+            ->first();
+
+        if (! $latestDecision instanceof CommitteeDecision) {
+            return [];
+        }
+
+        return $latestDecision->signatures
+            ->filter(fn (CommitteeDecisionSignature $signature): bool => (bool) $signature->committeeMember?->is_active)
+            ->sortBy('sort_order')
+            ->mapWithKeys(fn (CommitteeDecisionSignature $signature): array => [
+                $signature->committee_member_id => [
+                    'is_required' => $signature->is_required,
+                    'sort_order' => $signature->sort_order,
+                ],
+            ])
+            ->all();
     }
 
     public function refreshDecisionStatus(CommitteeDecision $decision, ?User $archiver = null): CommitteeDecision
@@ -137,7 +193,7 @@ class CommitteeDecisionWorkflowService
             return $decision;
         }
 
-        $requiredSignatures = $decision->signatures->filter(fn (CommitteeDecisionSignature $signature): bool => $signature->committeeMember?->is_active && $signature->committeeMember?->is_required);
+        $requiredSignatures = $decision->signatures->filter(fn (CommitteeDecisionSignature $signature): bool => $signature->committeeMember?->is_active && $signature->is_required);
 
         if ($requiredSignatures->contains(fn (CommitteeDecisionSignature $signature): bool => $signature->status === 'rejected')) {
             $decision->forceFill([

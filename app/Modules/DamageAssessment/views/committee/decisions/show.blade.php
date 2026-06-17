@@ -4,6 +4,18 @@
     $recordName = $recordType === 'housing-unit'
         ? ($decisionable->housing_unit_number ?: $decisionable->full_name ?: $decisionable->objectid)
         : ($decisionable->building_name ?: $decisionable->objectid);
+
+    $savedCommitteeSettings = $decision->signatures->mapWithKeys(fn ($signature) => [
+        $signature->committee_member_id => [
+            'is_required' => $signature->is_required,
+            'sort_order' => $signature->sort_order,
+        ],
+    ]);
+    $defaultCommitteeSettings = $savedCommitteeSettings->isNotEmpty()
+        ? $savedCommitteeSettings->all()
+        : $suggestedCommitteeMembers;
+    $selectedCommitteeIds = collect(old('committee_members', array_keys($defaultCommitteeSettings)))
+        ->map(fn ($memberId) => (int) $memberId);
 @endphp
 
 @section('title', __('multilingual.committee_decision_show.title'))
@@ -56,9 +68,9 @@
                     <div class="mb-4">
                         <div class="text-muted fs-7">{{ __('multilingual.committee_decision_show.required_signatures') }}</div>
                         <div class="fw-bold">
-                            {{ $decision->signatures->filter(fn ($signature) => $signature->committeeMember?->is_required && $signature->committeeMember?->is_active)->where('status', 'approved')->count() }}
+                            {{ $decision->signatures->filter(fn ($signature) => $signature->is_required && $signature->committeeMember?->is_active)->where('status', 'approved')->count() }}
                             /
-                            {{ $decision->signatures->filter(fn ($signature) => $signature->committeeMember?->is_required && $signature->committeeMember?->is_active)->count() }}
+                            {{ $decision->signatures->filter(fn ($signature) => $signature->is_required && $signature->committeeMember?->is_active)->count() }}
                         </div>
                     </div>
                     <div class="mb-4">
@@ -115,6 +127,50 @@
                                 <textarea name="notes" rows="3" class="form-control form-control-solid" {{ $canManageContent ? '' : 'disabled' }}>{{ old('notes', $decision->notes) }}</textarea>
                             </div>
                             @if ($canManageContent)
+                                <div class="col-12">
+                                    <label class="form-label required">{{ __('multilingual.committee_decision_show.committee_members') }}</label>
+                                    <div class="table-responsive border rounded">
+                                        <table class="table table-row-bordered align-middle gs-0 gy-3 mb-0">
+                                            <thead>
+                                                <tr class="fw-bold text-muted bg-light">
+                                                    <th>{{ __('multilingual.committee_decision_show.columns.choose') }}</th>
+                                                    <th>{{ __('multilingual.committee_decision_show.columns.member') }}</th>
+                                                    <th>{{ __('multilingual.committee_decision_show.columns.title') }}</th>
+                                                    <th>{{ __('multilingual.committee_decision_show.columns.required') }}</th>
+                                                    <th>{{ __('multilingual.committee_decision_show.columns.order') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($committeeMembers as $member)
+                                                    @php
+                                                        $isSelected = $selectedCommitteeIds->contains($member->id);
+                                                        $isRequired = (bool) old('member_required.'.$member->id, data_get($defaultCommitteeSettings, $member->id.'.is_required', $member->is_required));
+                                                        $sortOrder = old('member_sort_order.'.$member->id, data_get($defaultCommitteeSettings, $member->id.'.sort_order', $member->sort_order));
+                                                    @endphp
+                                                    <tr>
+                                                        <td>
+                                                            <input class="form-check-input" type="checkbox" name="committee_members[]" value="{{ $member->id }}" @checked($isSelected)>
+                                                        </td>
+                                                        <td>{{ $member->name }}</td>
+                                                        <td>{{ $member->title ?: '-' }}</td>
+                                                        <td>
+                                                            <input type="hidden" name="member_required[{{ $member->id }}]" value="0">
+                                                            <input class="form-check-input" type="checkbox" name="member_required[{{ $member->id }}]" value="1" @checked($isRequired)>
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" min="0" name="member_sort_order[{{ $member->id }}]" value="{{ $sortOrder }}" class="form-control form-control-sm form-control-solid w-100px">
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    @error('committee_members')
+                                        <div class="text-danger mt-2">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            @endif
+                            @if ($canManageContent)
                                 <div class="col-12 text-end">
                                     <button type="submit" class="btn btn-primary">{{ __('multilingual.committee_decision_show.save_decision') }}</button>
                                 </div>
@@ -144,7 +200,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($decision->signatures->sortBy(fn ($signature) => $signature->committeeMember->sort_order ?? 0) as $signature)
+                                @foreach ($decision->signatures->sortBy(fn ($signature) => $signature->sort_order) as $signature)
                                     @php
                                         $isLinkedToCurrentUser = ! $signature->committeeMember?->user_id || $signature->committeeMember?->user_id === auth()->id();
                                         $signatureLocked = $decision->isCompleted();
@@ -164,8 +220,8 @@
                                         <td>{{ $signature->committeeMember?->name }}</td>
                                         <td>{{ $signature->committeeMember?->title ?: '-' }}</td>
                                         <td>
-                                            <span class="badge badge-light-{{ $signature->committeeMember?->is_required ? 'primary' : 'secondary' }}">
-                                                {{ $signature->committeeMember?->is_required ? __('multilingual.committee_decision_show.required_badge') : __('multilingual.committee_decision_show.optional_badge') }}
+                                            <span class="badge badge-light-{{ $signature->is_required ? 'primary' : 'secondary' }}">
+                                                {{ $signature->is_required ? __('multilingual.committee_decision_show.required_badge') : __('multilingual.committee_decision_show.optional_badge') }}
                                             </span>
                                         </td>
                                         <td>
