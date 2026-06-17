@@ -430,6 +430,10 @@ class Building extends Model
 
     public function getAttribute($key)
     {
+        if (in_array($key, ['submission_date', 'submition_date'], true)) {
+            return parent::getAttribute('end');
+        }
+
         $value = parent::getAttribute($key);
 
         if (! is_string($key) || ! array_key_exists($key, $this->attributes)) {

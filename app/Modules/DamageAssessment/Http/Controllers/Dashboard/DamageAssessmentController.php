@@ -1146,6 +1146,10 @@ class DamageAssessmentController extends Controller
 
         $model = $modelClass::where('globalid', $globalid)->first();
         $record = $model?->toArray() ?? [];
+        if ($model instanceof Building) {
+            $record['submission_date'] = $model->end;
+            $record['submition_date'] = $model->end;
+        }
 
         $fillable = (new $modelClass)->getFillable();
 

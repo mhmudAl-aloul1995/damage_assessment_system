@@ -3,6 +3,7 @@
 test('audit table keeps all columns with responsive text cells', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/audit.blade.php');
     $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');
+    $dashboardController = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Dashboard/DamageAssessmentController.php');
     $exportService = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Services/Audit/AuditExportService.php');
 
     expect($view)
@@ -101,6 +102,10 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('backupBuildingAttachment($building, $attachmentId, \'delete\'')
         ->toContain('backupHousingUnitAttachment($housingUnit, $attachmentId, \'replace\'')
         ->toContain('backupHousingUnitAttachment($housingUnit, $attachmentId, \'delete\'');
+
+    expect($dashboardController)
+        ->toContain("\$record['submission_date'] = \$model->end")
+        ->toContain("\$record['submition_date'] = \$model->end");
 
     expect($exportService)
         ->toContain('public function buildingColumns(): array')
