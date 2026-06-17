@@ -4979,20 +4979,22 @@ COALESCE(
         $partialFields = [
             'unit_owner',
             'damaged_area_m2',
+            'floor_number',
+            'housing_unit_number',
+            'external_finishing_of_the_unit',
+            'internal_finishing_of_the_unit',
             'reh_kitchen',
             'reh_bathroom',
             'is_the_housing_unit_or_living_habitable',
-            'external_finishing_of_the_unit',
-            'internal_finishing_of_the_unit',
         ];
 
         $totalFields = [
             'unit_owner',
             'damaged_area_m2',
-            'external_finishing_of_the_unit',
-            'internal_finishing_of_the_unit',
             'floor_number',
             'housing_unit_number',
+            'external_finishing_of_the_unit',
+            'internal_finishing_of_the_unit',
         ];
 
         $allFields = array_values(array_unique(array_merge($partialFields, $totalFields, ['unit_damage_status'])));
@@ -5045,12 +5047,24 @@ COALESCE(
             'housing_unit_number' => 'رقم الوحدة',
         ];
 
+        $summaryLabels = [
+            'unit_owner' => 'اسم مالك الوحدة',
+            'damaged_area_m2' => 'مساحة الوحدة',
+            'floor_number' => 'رقم الطابق',
+            'housing_unit_number' => 'رقم الوحدة',
+            'external_finishing_of_the_unit' => 'التشطيب الخارجي',
+            'internal_finishing_of_the_unit' => 'التشطيب الداخلي',
+            'reh_kitchen' => 'تأهيل مطبخ',
+            'reh_bathroom' => 'تأهيل حمام',
+            'is_the_housing_unit_or_living_habitable' => 'هل الوحدة مناسبة للسكن',
+        ];
+
         $filters = Filter::whereIn('list_name', $fields)
             ->get()
             ->groupBy('list_name');
 
         $summaryItems = collect($fields)
-            ->map(function (string $field) use ($edited, $fallbackLabels, $filters, $labels, $normalizeYesNo, $unit) {
+            ->map(function (string $field) use ($edited, $fallbackLabels, $filters, $labels, $normalizeYesNo, $summaryLabels, $unit) {
                 $value = $edited[$field] ?? $unit->{$field} ?? null;
 
                 if (blank($value) || trim((string) $value, "\"' ") === '') {
@@ -5073,7 +5087,7 @@ COALESCE(
 
                 return [
                     'field' => $field,
-                    'label' => $labels[$field] ?? $fallbackLabels[$field] ?? str($field)->replace('_', ' ')->title()->toString(),
+                    'label' => $summaryLabels[$field] ?? $labels[$field] ?? $fallbackLabels[$field] ?? str($field)->replace('_', ' ')->title()->toString(),
                     'value' => $displayValue,
                 ];
             })

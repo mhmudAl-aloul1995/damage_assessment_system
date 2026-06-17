@@ -1655,6 +1655,48 @@ class DamageAssessmentController extends Controller
     {
         if ($type === 'building_table') {
             return [
+                'objectid' => 'رقم المبنى',
+                'building_name' => 'اسم المبنى',
+                'floor_nos' => 'عدد الطوابق',
+                'ground_floor_area__m2' => 'مساحة الطابق الارضي',
+                'floor_area_m2' => 'مساحة الطابق المتكرر',
+                'building_roof_type' => 'نوع سطح المبنى',
+                'concrete_area' => 'مساحة الباطون',
+                'scorite_area' => 'مساحة الصاج',
+                'comments_recommendations_v1' => 'ملاحظات المهندس',
+            ];
+        }
+
+        if ($type === 'housing_table') {
+            $damageEdit = collect($allEdits->get('unit_damage_status', collect()))->first();
+            $damageStatus = strtolower(trim((string) ($damageEdit?->field_value ?? $record['unit_damage_status'] ?? '')));
+
+            if (str_contains($damageStatus, 'total')) {
+                return [
+                    'unit_owner' => 'اسم مالك الوحدة',
+                    'damaged_area_m2' => 'مساحة الوحدة',
+                    'floor_number' => 'رقم الطابق',
+                    'housing_unit_number' => 'رقم الوحدة',
+                    'external_finishing_of_the_unit' => 'التشطيب الخارجي',
+                    'internal_finishing_of_the_unit' => 'التشطيب الداخلي',
+                ];
+            }
+
+            return [
+                'unit_owner' => 'اسم مالك الوحدة',
+                'damaged_area_m2' => 'مساحة الوحدة',
+                'floor_number' => 'رقم الطابق',
+                'housing_unit_number' => 'رقم الوحدة',
+                'external_finishing_of_the_unit' => 'التشطيب الخارجي',
+                'internal_finishing_of_the_unit' => 'التشطيب الداخلي',
+                'reh_kitchen' => 'تأهيل مطبخ',
+                'reh_bathroom' => 'تأهيل حمام',
+                'is_the_housing_unit_or_living_habitable' => 'هل الوحدة مناسبة للسكن',
+            ];
+        }
+
+        if ($type === 'building_table') {
+            return [
                 'floor_nos' => 'عدد الطوابق',
                 'ground_floor_area__m2' => 'مساحة الطابق الأرضي',
                 'floor_area_m2' => 'مساحة الطابق المتكرر',

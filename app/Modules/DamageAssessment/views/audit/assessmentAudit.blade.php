@@ -8,6 +8,17 @@
     $buildingEngineeringStatus = $buildingEngineeringStatus ?? null;
     $buildingLegalStatus = $buildingLegalStatus ?? null;
     $housingGlobalid = $housingGlobalid ?? null;
+    $buildingSummaryValues = [
+        'objectid' => $building?->objectid,
+        'building_name' => $building?->building_name,
+        'floor_nos' => $building?->floor_nos,
+        'ground_floor_area__m2' => $building?->ground_floor_area__m2,
+        'floor_area_m2' => $building?->floor_area_m2,
+        'building_roof_type' => $building?->building_roof_type,
+        'concrete_area' => $building?->concrete_area,
+        'scorite_area' => $building?->scorite_area,
+        'comments_recommendations_v1' => $building?->comments_recommendations_v1,
+    ];
     $showHousingTab = filled($housingGlobalid);
     $isAssessmentReadOnly = $isAssessmentReadOnly ?? false;
     $canEditAssessment = $canEditAssessment ?? false;
@@ -1239,14 +1250,14 @@
 
         const BUILDING_SUMMARY_FIELDS = [
             'objectid',
-            'owner_name',
+            'building_name',
             'floor_nos',
             'ground_floor_area__m2',
             'floor_area_m2',
             'building_roof_type',
             'concrete_area',
-            'aspestos_area',
-            'comments_recommendations'
+            'scorite_area',
+            'comments_recommendations_v1'
         ];
 
         const BUILDING_SUMMARY_LABELS = {
@@ -1260,6 +1271,19 @@
             aspestos_area: 'مساحة الصاج',
             comments_recommendations: 'التوصيات'
         };
+
+        const BUILDING_SUMMARY_LABEL_OVERRIDES = {
+            objectid: 'رقم المبنى',
+            building_name: 'اسم المبنى',
+            floor_nos: 'عدد الطوابق',
+            ground_floor_area__m2: 'مساحة الطابق الارضي',
+            floor_area_m2: 'مساحة الطابق المتكرر',
+            building_roof_type: 'نوع سطح المبنى',
+            concrete_area: 'مساحة الباطون',
+            scorite_area: 'مساحة الصاج',
+            comments_recommendations_v1: 'ملاحظات المهندس'
+        };
+        const BUILDING_SUMMARY_VALUES = @json($buildingSummaryValues);
 
         function isAnswered(row) {
             let text = $('<div>').html(row.answer || '').text().trim();
@@ -2880,16 +2904,16 @@
                     return normalizeSurveyName(item.name) === field;
                 });
 
-                let value = row ? cleanAuditText(row.summaryValue || $('<div>').html(row.answer || '').text()) : '-';
+                let value = row ? cleanAuditText(row.summaryValue || $('<div>').html(row.answer || '').text()) : cleanAuditText(BUILDING_SUMMARY_VALUES[field] || '-');
                 if (!value) value = '-';
 
                 let color = colors[index % colors.length];
-                const isLongValue = field === 'comments_recommendations';
+                const isLongValue = field === 'comments_recommendations_v1';
 
                 html += `
                                         <div class="${isLongValue ? 'col-12' : 'col-6 col-lg-12'}">
                                             <div class="summary-box bg-light-${color}">
-                                                <div class="summary-title">${escapeHtml(BUILDING_SUMMARY_LABELS[field] || field)}</div>
+                                                <div class="summary-title">${escapeHtml(BUILDING_SUMMARY_LABEL_OVERRIDES[field] || BUILDING_SUMMARY_LABELS[field] || field)}</div>
                                                 <div class="summary-value ${isLongValue ? 'summary-value-long' : ''} text-${color}">${escapeHtml(value)}</div>
                                             </div>
                                         </div>`;

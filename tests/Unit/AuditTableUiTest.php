@@ -105,7 +105,10 @@ test('audit table keeps all columns with responsive text cells', function () {
 
     expect($dashboardController)
         ->toContain("\$record['submission_date'] = \$model->end")
-        ->toContain("\$record['submition_date'] = \$model->end");
+        ->toContain("\$record['submition_date'] = \$model->end")
+        ->toContain("'building_name' => 'اسم المبنى'")
+        ->toContain("'scorite_area' => 'مساحة الصاج'")
+        ->toContain("'comments_recommendations_v1' => 'ملاحظات المهندس'");
 
     expect($exportService)
         ->toContain('public function buildingColumns(): array')
@@ -151,6 +154,8 @@ test('assessment status actions are limited to the matching audit role', functio
         ->toContain('private function canSetAssessmentStatusForBuilding(?User $user, ?Building $building, string $type): bool')
         ->toContain('You cannot set this status unless this assessment type is assigned to you.')
         ->toContain("->where('type', \$type)")
+        ->toContain("'floor_number',\n            'housing_unit_number',\n            'external_finishing_of_the_unit'")
+        ->toContain("'is_the_housing_unit_or_living_habitable' => 'هل الوحدة مناسبة للسكن'")
         ->toContain("'Legal Auditor' => in_array(\$status, ['accepted', 'legal_notes'], true)")
         ->toContain("'QC/QA Engineer' => in_array(\$status, ['accepted', 'rejected', 'need_review'], true)");
 });
@@ -166,8 +171,10 @@ test('assessment audit inline edits resolve missing global ids before saving', f
         ->toContain("type === 'housing_table'")
         ->toContain('let isAssessmentReadOnly')
         ->toContain('!isAreaManager && !isAssessmentReadOnly')
-        ->toContain("'comments_recommendations'")
-        ->toContain('comments_recommendations: \'التوصيات\'')
+        ->toContain("'building_name'")
+        ->toContain("'scorite_area'")
+        ->toContain("'comments_recommendations_v1'")
+        ->toContain("comments_recommendations_v1: 'ملاحظات المهندس'")
         ->toContain('summary-value-long')
         ->toContain('يرجى اختيار الوحدة أولاً');
 });
