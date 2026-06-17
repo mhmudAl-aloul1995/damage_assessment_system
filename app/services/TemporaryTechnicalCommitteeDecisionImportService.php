@@ -111,7 +111,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
     {
         $summary = [
             'decisions_synced' => 0,
+            'decisions_completed' => 0,
             'skipped_without_municipality' => 0,
+            'skipped_without_decision_type' => 0,
             'missing_users' => [],
         ];
         $memberCache = [];
@@ -202,6 +204,15 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
         $this->syncConfiguredSignatures($decision, $members);
         $summary['decisions_synced']++;
+
+        if (! $this->canCompleteExistingDecision($decision)) {
+            $summary['skipped_without_decision_type']++;
+
+            return;
+        }
+
+        $this->completeExistingReviewDecision($decisionable, $decision, $members);
+        $summary['decisions_completed']++;
     }
 
     /**
@@ -237,27 +248,54 @@ class TemporaryTechnicalCommitteeDecisionImportService
      */
     private function syncConfiguredSignatures(CommitteeDecision $decision, array $members): void
     {
-        $existingSignatures = $decision->signatures->keyBy('committee_member_id');
-
         CommitteeDecisionSignature::query()
             ->where('committee_decision_id', $decision->id)
             ->delete();
 
-        foreach ($members as $index => $member) {
-            /** @var CommitteeDecisionSignature|null $existingSignature */
-            $existingSignature = $existingSignatures->get($member->id);
+        $signedAt = Carbon::now();
 
+        foreach ($members as $index => $member) {
             CommitteeDecisionSignature::query()->create([
                 'committee_decision_id' => $decision->id,
                 'committee_member_id' => $member->id,
                 'is_required' => true,
                 'sort_order' => $index + 1,
-                'status' => $existingSignature?->status ?? 'pending',
-                'notes' => $existingSignature?->notes,
-                'signed_at' => $existingSignature?->signed_at,
-                'signed_by_user_id' => $existingSignature?->signed_by_user_id,
+                'status' => 'approved',
+                'signed_at' => $signedAt,
+                'signed_by_user_id' => $member->user_id,
             ]);
         }
+    }
+
+    private function canCompleteExistingDecision(CommitteeDecision $decision): bool
+    {
+        return in_array($decision->decision_type, ['fully_damaged', 'partially_damaged'], true);
+    }
+
+    /**
+     * @param  list<CommitteeMember>  $members
+     */
+    private function completeExistingReviewDecision(Building|HousingUnit $decisionable, CommitteeDecision $decision, array $members): void
+    {
+        DB::transaction(function () use ($decisionable, $decision, $members): void {
+            $completedAt = Carbon::now();
+            $managerUserId = $members[0]->user_id;
+
+            $decision->forceFill([
+                'status' => CommitteeDecision::STATUS_COMPLETED,
+                'decision_date' => $decision->decision_date ?? $completedAt->toDateString(),
+                'committee_manager_id' => $decision->committee_manager_id ?? $managerUserId,
+                'created_by' => $decision->created_by ?? $managerUserId,
+                'updated_by' => $managerUserId,
+                'completed_at' => $decision->completed_at ?? $completedAt,
+                'arcgis_sync_status' => 'skipped',
+                'arcgis_last_attempt_at' => $completedAt,
+                'arcgis_last_response' => 'Temporary seed completed existing committee review decision and updated local status fields only.',
+            ])->save();
+
+            $this->updateLocalDecisionableStatus($decisionable, (string) $decision->decision_type);
+            $this->archiveDecisionObject($decision, $decisionable, $managerUserId, $completedAt);
+        });
     }
 
     /**

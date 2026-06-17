@@ -22,9 +22,11 @@ class TemporaryTechnicalCommitteeDecisionExcelSeeder extends Seeder
             $summary['skipped_rows'],
         ));
         $this->command?->info(sprintf(
-            'Committee review decision signatures synced: %d existing decisions, %d skipped without recognized municipality.',
+            'Committee review decisions synced: %d signed, %d completed, %d skipped without recognized municipality, %d skipped without decision type.',
             $signatureSummary['decisions_synced'],
+            $signatureSummary['decisions_completed'],
             $signatureSummary['skipped_without_municipality'],
+            $signatureSummary['skipped_without_decision_type'],
         ));
 
         $missingUsers = array_values(array_unique([

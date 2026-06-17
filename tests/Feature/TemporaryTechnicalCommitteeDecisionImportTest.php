@@ -148,6 +148,8 @@ it('syncs configured municipality signatures onto existing committee review deci
     $decision = CommitteeDecision::query()->create([
         'decisionable_type' => Building::class,
         'decisionable_id' => $building->id,
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Partial technical committee decision',
         'status' => CommitteeDecision::STATUS_PENDING_SIGNATURES,
     ]);
 
@@ -163,10 +165,20 @@ it('syncs configured municipality signatures onto existing committee review deci
         ->syncExistingCommitteeReviewDecisionSignatures();
 
     $decision->refresh()->load('signatures.committeeMember.user');
+    $building->refresh();
 
     expect($summary['decisions_synced'])->toBe(1)
+        ->and($summary['decisions_completed'])->toBe(1)
+        ->and($summary['skipped_without_decision_type'])->toBe(0)
+        ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($building->building_damage_status)->toBe('partially_damaged')
+        ->and($building->field_status)->toBe('Not_Completed')
+        ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $decision->id)->exists())->toBeTrue()
         ->and($decision->signatures)->toHaveCount(4)
         ->and($decision->signatures->every(fn ($signature): bool => $signature->is_required))->toBeTrue()
+        ->and($decision->signatures->every(fn ($signature): bool => $signature->status === 'approved'))->toBeTrue()
+        ->and($decision->signatures->every(fn ($signature): bool => $signature->signed_at !== null))->toBeTrue()
         ->and($decision->signatures->pluck('committeeMember.user.id_no')->all())->toBe([
             '801933490',
             '800282667',
