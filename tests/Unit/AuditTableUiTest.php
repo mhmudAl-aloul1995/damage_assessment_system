@@ -154,6 +154,7 @@ test('assessment status actions are limited to the matching audit role', functio
         ->toContain('private function canSetAssessmentStatusForBuilding(?User $user, ?Building $building, string $type): bool')
         ->toContain('You cannot set this status unless this assessment type is assigned to you.')
         ->toContain("->where('type', \$type)")
+        ->toContain("'fully_damaged2'")
         ->toContain("'floor_number',\n            'housing_unit_number',\n            'external_finishing_of_the_unit'")
         ->toContain("'is_the_housing_unit_or_living_habitable' => 'هل الوحدة مناسبة للسكن'")
         ->toContain("'Legal Auditor' => in_array(\$status, ['accepted', 'legal_notes'], true)")
@@ -175,10 +176,10 @@ test('assessment audit inline edits resolve missing global ids before saving', f
         ->toContain("'scorite_area'")
         ->toContain("'comments_recommendations'")
         ->toContain("comments_recommendations: 'ملاحظات المهندس'")
-        ->toContain('renderHousingSummaryItems(res.summary_items || [], res.summary_mode || null)')
-        ->toContain('function housingSummaryTitle(summaryMode)')
-        ->toContain('ملخص الوحدة في حالة نوع الضرر Partially')
-        ->toContain('ملخص الوحدة في حالة نوع الضرر Totally')
+        ->toContain('renderHousingSummaryItems(res.summary_items || [])')
+        ->not->toContain('function housingSummaryTitle(summaryMode)')
+        ->not->toContain('ملخص الوحدة في حالة نوع الضرر Partially')
+        ->not->toContain('ملخص الوحدة في حالة نوع الضرر Totally')
         ->toContain('summary-value-long')
         ->toContain('يرجى اختيار الوحدة أولاً');
 });

@@ -1671,7 +1671,10 @@ class DamageAssessmentController extends Controller
             $damageEdit = collect($allEdits->get('unit_damage_status', collect()))->first();
             $damageStatus = strtolower(trim((string) ($damageEdit?->field_value ?? $record['unit_damage_status'] ?? '')));
 
-            if (str_contains($damageStatus, 'total')) {
+            $normalizedDamageStatus = str($damageStatus)->replace(['-', ' '], '_')->squish()->toString();
+            if (in_array($normalizedDamageStatus, ['totally', 'total', 'totally_damaged', 'total_damage', 'fully_damaged', 'fully_damaged2'], true)
+                || str_contains($normalizedDamageStatus, 'totally')
+                || str_contains($normalizedDamageStatus, 'fully')) {
                 return [
                     'unit_owner' => 'اسم مالك الوحدة',
                     'damaged_area_m2' => 'مساحة الوحدة',

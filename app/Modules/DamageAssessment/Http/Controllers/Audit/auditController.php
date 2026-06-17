@@ -5028,8 +5028,9 @@ COALESCE(
 
         $damageStatus = strtolower(trim((string) ($edited['unit_damage_status'] ?? $unit->unit_damage_status ?? '')));
         $normalizedDamageStatus = str($damageStatus)->replace(['-', ' '], '_')->squish()->toString();
-        $isTotallyDamaged = in_array($normalizedDamageStatus, ['totally', 'total', 'totally_damaged', 'total_damage'], true)
-            || str_contains($normalizedDamageStatus, 'totally');
+        $isTotallyDamaged = in_array($normalizedDamageStatus, ['totally', 'total', 'totally_damaged', 'total_damage', 'fully_damaged', 'fully_damaged2'], true)
+            || str_contains($normalizedDamageStatus, 'totally')
+            || str_contains($normalizedDamageStatus, 'fully');
         $fields = $isTotallyDamaged ? $totalFields : $partialFields;
 
         $labels = Assessment::whereIn('name', $fields)
