@@ -1078,12 +1078,23 @@
         let pendingHousingGlobalId = null;
         let inlineSaveLocks = new Set();
 
-        let currentHousingFilter = 'all';
-        let currentBuildingFilter = 'all';
+        let currentHousingFilter = 'answered';
+        let currentBuildingFilter = 'answered';
         let lastHousingRows = [];
         let lastBuildingRows = [];
 
+        function syncDefaultAuditFilters() {
+            $('#building_filter_label').text('المجاب فقط');
+            $('#housing_filter_label').text('المجاب فقط');
+            $('.building-filter-btn').removeClass('is-active');
+            $('.building-filter-btn[data-filter="answered"]').addClass('is-active');
+            $('.housing-filter-btn').removeClass('is-active');
+            $('.housing-filter-btn[data-filter="answered"]').addClass('is-active');
+        }
+
         $(function () {
+            syncDefaultAuditFilters();
+
             KTBuildingAssessmentList.init();
             KTBuildingUnitsList.init();
             KTHousingAssessmentList.init();

@@ -126,6 +126,11 @@ test('assessment status actions are limited to the matching audit role', functio
 
     expect($view)
         ->toContain('function setAssessmentActiveStatusButtons')
+        ->toContain("let currentHousingFilter = 'answered';")
+        ->toContain("let currentBuildingFilter = 'answered';")
+        ->toContain('function syncDefaultAuditFilters')
+        ->toContain("\$('.building-filter-btn[data-filter=\"answered\"]').addClass('is-active')")
+        ->toContain("\$('.housing-filter-btn[data-filter=\"answered\"]').addClass('is-active')")
         ->toContain("button.hasClass('is-active')")
         ->toContain("setAssessmentActiveStatusButtons('.building-status-btn', buildingEngineeringStatus, buildingLegalStatus, buildingCurrentStatus)")
         ->toContain("setAssessmentActiveStatusButtons('.housing-status-btn', row.current_engineering_status, row.current_legal_status, row.current_status)")
