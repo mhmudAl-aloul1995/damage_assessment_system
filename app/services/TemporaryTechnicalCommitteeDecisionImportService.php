@@ -205,13 +205,15 @@ class TemporaryTechnicalCommitteeDecisionImportService
         $this->syncConfiguredSignatures($decision, $members);
         $summary['decisions_synced']++;
 
-        if (! $this->canCompleteExistingDecision($decision)) {
+        $decisionType = $this->decisionTypeForExistingDecision($decision);
+
+        if ($decisionType === null) {
             $summary['skipped_without_decision_type']++;
 
             return;
         }
 
-        $this->completeExistingReviewDecision($decisionable, $decision, $members);
+        $this->completeExistingReviewDecision($decisionable, $decision, $decisionType, $members);
         $summary['decisions_completed']++;
     }
 
@@ -220,11 +222,23 @@ class TemporaryTechnicalCommitteeDecisionImportService
      */
     private function memberIdNumbersForDecisionable(Building|HousingUnit $decisionable): array
     {
-        $municipality = $this->normalizeMunicipality(
+        $municipality = $this->normalizeMunicipality(implode(' ', array_filter(
             $decisionable instanceof HousingUnit
-                ? ($decisionable->municipalitie ?: $decisionable->building?->municipalitie)
-                : $decisionable->municipalitie,
-        );
+                ? [
+                    $decisionable->governorate,
+                    $decisionable->municipalitie,
+                    $decisionable->locality,
+                    $decisionable->neighborhood,
+                    $decisionable->building?->governorate,
+                    $decisionable->building?->municipalitie,
+                    $decisionable->building?->neighborhood,
+                ]
+                : [
+                    $decisionable->governorate,
+                    $decisionable->municipalitie,
+                    $decisionable->neighborhood,
+                ],
+        )));
 
         if (str_contains($municipality, 'gaza') || str_contains($municipality, 'غزة')) {
             return ['934863572', '900277229', '801933490', '800282667'];
@@ -267,21 +281,48 @@ class TemporaryTechnicalCommitteeDecisionImportService
         }
     }
 
-    private function canCompleteExistingDecision(CommitteeDecision $decision): bool
+    private function decisionTypeForExistingDecision(CommitteeDecision $decision): ?string
     {
-        return in_array($decision->decision_type, ['fully_damaged', 'partially_damaged'], true);
+        if (in_array($decision->decision_type, ['fully_damaged', 'partially_damaged'], true)) {
+            return $decision->decision_type;
+        }
+
+        $decisionText = str(implode(' ', array_filter([
+            $decision->decision_text,
+            $decision->action_text,
+            $decision->notes,
+        ])))->lower()->toString();
+
+        if (
+            str_contains($decisionText, 'كلي')
+            || str_contains($decisionText, 'ظƒظ„ظٹ')
+            || str_contains($decisionText, 'fully')
+        ) {
+            return 'fully_damaged';
+        }
+
+        if (
+            str_contains($decisionText, 'جزئي')
+            || str_contains($decisionText, 'ط¬ط²ط¦ظٹ')
+            || str_contains($decisionText, 'partial')
+        ) {
+            return 'partially_damaged';
+        }
+
+        return null;
     }
 
     /**
      * @param  list<CommitteeMember>  $members
      */
-    private function completeExistingReviewDecision(Building|HousingUnit $decisionable, CommitteeDecision $decision, array $members): void
+    private function completeExistingReviewDecision(Building|HousingUnit $decisionable, CommitteeDecision $decision, string $decisionType, array $members): void
     {
-        DB::transaction(function () use ($decisionable, $decision, $members): void {
+        DB::transaction(function () use ($decisionable, $decision, $decisionType, $members): void {
             $completedAt = Carbon::now();
             $managerUserId = $members[0]->user_id;
 
             $decision->forceFill([
+                'decision_type' => $decisionType,
                 'status' => CommitteeDecision::STATUS_COMPLETED,
                 'decision_date' => $decision->decision_date ?? $completedAt->toDateString(),
                 'committee_manager_id' => $decision->committee_manager_id ?? $managerUserId,
@@ -293,7 +334,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 'arcgis_last_response' => 'Temporary seed completed existing committee review decision and updated local status fields only.',
             ])->save();
 
-            $this->updateLocalDecisionableStatus($decisionable, (string) $decision->decision_type);
+            $this->updateLocalDecisionableStatus($decisionable, $decisionType);
             $this->archiveDecisionObject($decision, $decisionable, $managerUserId, $completedAt);
         });
     }

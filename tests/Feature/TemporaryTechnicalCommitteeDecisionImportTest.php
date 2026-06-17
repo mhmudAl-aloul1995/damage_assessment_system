@@ -142,14 +142,16 @@ it('syncs configured municipality signatures onto existing committee review deci
         'globalid' => 'existing-review-building',
         'building_name' => 'Existing Review Building',
         'building_damage_status' => 'committee_review',
-        'municipalitie' => 'Nuseirat',
+        'governorate' => 'Middle Area',
+        'municipalitie' => null,
+        'neighborhood' => 'Khan Younis Ref-Camp',
     ]);
 
     $decision = CommitteeDecision::query()->create([
         'decisionable_type' => Building::class,
         'decisionable_id' => $building->id,
-        'decision_type' => 'partially_damaged',
-        'decision_text' => 'Partial technical committee decision',
+        'decision_type' => null,
+        'decision_text' => 'قرار اللجنة: هدم جزئي',
         'status' => CommitteeDecision::STATUS_PENDING_SIGNATURES,
     ]);
 
@@ -171,6 +173,7 @@ it('syncs configured municipality signatures onto existing committee review deci
         ->and($summary['decisions_completed'])->toBe(1)
         ->and($summary['skipped_without_decision_type'])->toBe(0)
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->decision_type)->toBe('partially_damaged')
         ->and($decision->arcgis_sync_status)->toBe('skipped')
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
