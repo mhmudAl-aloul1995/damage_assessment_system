@@ -122,7 +122,6 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
         Building::query()
             ->whereIn('building_damage_status', self::BUILDING_COMMITTEE_STATUSES)
-            ->whereHas('committeeDecision')
             ->with('committeeDecision.signatures')
             ->each(function (Building $building) use (&$summary, &$memberCache): void {
                 $this->syncDecisionSignaturesForReviewRecord($building, $summary, $memberCache);
@@ -130,7 +129,6 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
         HousingUnit::query()
             ->whereIn('unit_damage_status', self::UNIT_COMMITTEE_STATUSES)
-            ->whereHas('committeeDecision')
             ->with(['committeeDecision.signatures', 'building'])
             ->each(function (HousingUnit $housingUnit) use (&$summary, &$memberCache): void {
                 $this->syncDecisionSignaturesForReviewRecord($housingUnit, $summary, $memberCache);
@@ -197,12 +195,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
             return;
         }
 
-        /** @var CommitteeDecision|null $decision */
-        $decision = $decisionable->committeeDecision;
-
-        if (! $decision instanceof CommitteeDecision) {
-            return;
-        }
+        $decision = $this->decisionForReviewRecord($decisionable, $members[0]->user_id);
 
         $this->syncConfiguredSignatures($decision, $members);
         $summary['decisions_synced']++;
@@ -217,6 +210,30 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
         $this->completeExistingReviewDecision($decisionable, $decision, $decisionType, $members);
         $summary['decisions_completed']++;
+    }
+
+    private function decisionForReviewRecord(Building|HousingUnit $decisionable, int $userId): CommitteeDecision
+    {
+        /** @var CommitteeDecision|null $decision */
+        $decision = $decisionable->committeeDecision;
+
+        if ($decision instanceof CommitteeDecision) {
+            return $decision;
+        }
+
+        /** @var CommitteeDecision $decision */
+        $decision = CommitteeDecision::query()->create([
+            'decisionable_type' => $decisionable::class,
+            'decisionable_id' => $decisionable->getKey(),
+            'decision_type' => self::DEFAULT_EXISTING_DECISION_TYPE,
+            'decision_text' => 'Temporary technical committee seed default decision.',
+            'status' => CommitteeDecision::STATUS_PENDING_SIGNATURES,
+            'created_by' => $userId,
+            'updated_by' => $userId,
+            'committee_manager_id' => $userId,
+        ]);
+
+        return $decision;
     }
 
     /**

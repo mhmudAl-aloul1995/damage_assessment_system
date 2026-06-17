@@ -231,6 +231,40 @@ it('temporarily completes existing committee review decisions with a default par
         ]);
 });
 
+it('creates and completes missing committee decisions for review records that show no decision yet', function () {
+    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044']);
+
+    $building = Building::query()->create([
+        'objectid' => 18362,
+        'globalid' => 'missing-decision-review-building',
+        'building_name' => 'Missing Decision Building',
+        'building_damage_status' => 'committee_review',
+        'neighborhood' => 'Khan Younis Ref-Camp',
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)
+        ->syncExistingCommitteeReviewDecisionSignatures();
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
+    $decision->load('signatures.committeeMember.user');
+    $building->refresh();
+
+    expect($summary['decisions_synced'])->toBe(1)
+        ->and($summary['decisions_completed'])->toBe(1)
+        ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->decision_type)->toBe('partially_damaged')
+        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($building->building_damage_status)->toBe('partially_damaged')
+        ->and($building->field_status)->toBe('Not_Completed')
+        ->and($decision->signatures)->toHaveCount(4)
+        ->and($decision->signatures->pluck('committeeMember.user.id_no')->all())->toBe([
+            '801933490',
+            '800282667',
+            '800846958',
+            '804475044',
+        ]);
+});
+
 /**
  * @param  list<string>  $idNumbers
  */
