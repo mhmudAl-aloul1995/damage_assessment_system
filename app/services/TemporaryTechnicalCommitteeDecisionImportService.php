@@ -19,6 +19,8 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private const UNIT_COMMITTEE_STATUSES = ['committee_review', 'commite_review', 'committee_review2'];
 
+    private const DEFAULT_EXISTING_DECISION_TYPE = 'partially_damaged';
+
     /**
      * @param  list<array{
      *     record_type: string,
@@ -240,6 +242,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 ],
         )));
 
+        if (str_contains($municipality, 'sarsour')) {
+            return ['934863572', '900277229', '801933490', '800282667'];
+        }
+
         if (str_contains($municipality, 'gaza') || str_contains($municipality, 'غزة')) {
             return ['934863572', '900277229', '801933490', '800282667'];
         }
@@ -309,7 +315,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
             return 'partially_damaged';
         }
 
-        return null;
+        return self::DEFAULT_EXISTING_DECISION_TYPE;
     }
 
     /**

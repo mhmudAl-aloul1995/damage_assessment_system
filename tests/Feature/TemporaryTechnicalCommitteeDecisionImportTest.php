@@ -190,6 +190,47 @@ it('syncs configured municipality signatures onto existing committee review deci
         ]);
 });
 
+it('temporarily completes existing committee review decisions with a default partial decision type when the decision has no type text', function () {
+    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667']);
+
+    $building = Building::query()->create([
+        'objectid' => 21048,
+        'globalid' => 'sarsour-review-building',
+        'building_name' => 'Sarsour Review Building',
+        'building_damage_status' => 'committee_review',
+        'neighborhood' => 'Sarsour',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => null,
+        'decision_text' => null,
+        'status' => CommitteeDecision::STATUS_PENDING_SIGNATURES,
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)
+        ->syncExistingCommitteeReviewDecisionSignatures();
+
+    $decision->refresh()->load('signatures.committeeMember.user');
+    $building->refresh();
+
+    expect($summary['decisions_synced'])->toBe(1)
+        ->and($summary['decisions_completed'])->toBe(1)
+        ->and($summary['skipped_without_decision_type'])->toBe(0)
+        ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->decision_type)->toBe('partially_damaged')
+        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($building->building_damage_status)->toBe('partially_damaged')
+        ->and($building->field_status)->toBe('Not_Completed')
+        ->and($decision->signatures->pluck('committeeMember.user.id_no')->all())->toBe([
+            '934863572',
+            '900277229',
+            '801933490',
+            '800282667',
+        ]);
+});
+
 /**
  * @param  list<string>  $idNumbers
  */
