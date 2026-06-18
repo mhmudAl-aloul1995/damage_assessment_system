@@ -209,6 +209,7 @@ class CommitteeDecisionWorkflowService
                 ])->save();
 
                 $this->archiveDecisionObject($decision, $archiver);
+                $this->applyLocalDecisionStatus($decision);
                 $this->markArcGisResult(
                     $decision,
                     $this->arcGisStatusUpdaterService->syncDecisionStatus($decision),
@@ -223,6 +224,43 @@ class CommitteeDecisionWorkflowService
         ])->save();
 
         return $decision;
+    }
+
+    private function applyLocalDecisionStatus(CommitteeDecision $decision): void
+    {
+        $decision->loadMissing('decisionable');
+
+        $decisionable = $decision->decisionable;
+        $fieldStatus = (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed');
+
+        if ($decisionable instanceof Building) {
+            $decisionable->forceFill([
+                'building_damage_status' => $decision->decision_type === 'fully_damaged'
+                    ? 'fully_damaged'
+                    : 'partially_damaged',
+                'field_status' => $fieldStatus,
+            ])->save();
+
+            return;
+        }
+
+        if (! $decisionable instanceof HousingUnit) {
+            return;
+        }
+
+        $decisionable->forceFill([
+            'unit_damage_status' => $decision->decision_type === 'fully_damaged'
+                ? 'fully_damaged2'
+                : 'partially_damaged2',
+        ])->save();
+
+        if (blank($decisionable->parentglobalid)) {
+            return;
+        }
+
+        Building::query()
+            ->where('globalid', $decisionable->parentglobalid)
+            ->update(['field_status' => $fieldStatus]);
     }
 
     public function resolveAssignedEngineer(?CommitteeDecision $decision): ?User

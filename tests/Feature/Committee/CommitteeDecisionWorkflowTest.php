@@ -248,6 +248,8 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
     expect($decision->status)->toBe('completed');
     expect($decision->completed_at)->not->toBeNull();
     expect($decision->arcgis_sync_status)->toBe('synced');
+    expect($building->refresh()->building_damage_status)->toBe('fully_damaged')
+        ->and($building->field_status)->toBe('Not_Completed');
 
     $this->actingAs($manager)
         ->get(route('committee-decisions.buildings.show', $building))
@@ -419,6 +421,8 @@ it('syncs housing unit committee decisions to the unit damage status and archive
 
     expect($decision->status)->toBe('completed');
     expect($decision->arcgis_sync_status)->toBe('synced');
+    expect($unit->refresh()->unit_damage_status)->toBe('partially_damaged2')
+        ->and($building->refresh()->field_status)->toBe('Not_Completed');
     expect(BuildingSurveyArchiveObject::query()
         ->where('source_type', 'committee_decision')
         ->where('committee_decision_id', $decision->id)
