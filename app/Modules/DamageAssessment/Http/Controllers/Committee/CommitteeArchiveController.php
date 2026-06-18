@@ -100,12 +100,22 @@ class CommitteeArchiveController extends Controller
     /**
      * @param  array<string, mixed>|null  $oldRecord
      * @param  array<string, mixed>|null  $currentRecord
-     * @param  array<string, string>  $fields
+     * @param  array<string, string>  $priorityFields
      * @return list<array{label: string, old: mixed, current: mixed, changed: bool}>
      */
-    private function comparisonRows(?array $oldRecord, ?array $currentRecord, array $fields): array
+    private function comparisonRows(?array $oldRecord, ?array $currentRecord, array $priorityFields): array
     {
         $rows = [];
+        $allFields = collect(array_keys($oldRecord ?? []))
+            ->merge(array_keys($currentRecord ?? []))
+            ->unique()
+            ->values();
+
+        $fields = collect($priorityFields)
+            ->merge($allFields
+                ->reject(fn (string $field): bool => array_key_exists($field, $priorityFields))
+                ->sort()
+                ->mapWithKeys(fn (string $field): array => [$field => $field]));
 
         foreach ($fields as $field => $label) {
             $oldValue = $oldRecord[$field] ?? null;

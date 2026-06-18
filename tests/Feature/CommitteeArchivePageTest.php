@@ -26,6 +26,7 @@ it('shows archived committee records and compares snapshot values with current v
         'assignedto' => 'Current Engineer',
         'building_damage_status' => 'partially_damaged',
         'field_status' => 'Not_Completed',
+        'general_notes' => 'Current full record note',
     ]);
 
     $decision = CommitteeDecision::query()->create([
@@ -52,6 +53,7 @@ it('shows archived committee records and compares snapshot values with current v
             'assignedto' => 'Old Engineer',
             'building_damage_status' => 'committee_review',
             'field_status' => 'COMPLETED',
+            'general_notes' => 'Old full record note',
         ],
         'committee_decision_snapshot' => [
             'decision_type' => 'partially_damaged',
@@ -73,6 +75,9 @@ it('shows archived committee records and compares snapshot values with current v
         ->assertSee('مقارنة القديم والحالي')
         ->assertSee('Old Building Name')
         ->assertSee('Current Building Name')
+        ->assertSee('general_notes')
+        ->assertSee('Old full record note')
+        ->assertSee('Current full record note')
         ->assertSee('committee_review')
         ->assertSee('partially_damaged');
 });
