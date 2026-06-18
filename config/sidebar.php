@@ -297,7 +297,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.committee.title',
         'icon' => 'ki-shield-search',
-        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor'],
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor','Area Manager'],
         'active_patterns' => [
             'damage-assessment/committee-decisions*',
             'damage-assessment/committee-members*',
