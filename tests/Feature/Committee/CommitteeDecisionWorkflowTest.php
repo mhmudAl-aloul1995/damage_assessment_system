@@ -234,11 +234,14 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
     expect($decision->status)->toBe('completed');
     expect($decision->completed_at)->not->toBeNull();
     expect($decision->arcgis_sync_status)->toBe('synced');
-    expect(BuildingSurveyArchiveObject::query()
+    $archiveObject = BuildingSurveyArchiveObject::query()
         ->where('source_type', 'committee_decision')
         ->where('committee_decision_id', $decision->id)
         ->where('building_objectid', $building->objectid)
-        ->exists())->toBeTrue();
+        ->firstOrFail();
+
+    expect($archiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
+        ->and($archiveObject->committee_decision_snapshot['decision_type'])->toBe('fully_damaged');
 
     Http::assertSent(function ($request): bool {
         $features = json_decode((string) data_get($request->data(), 'features'), true);

@@ -140,6 +140,73 @@ class TemporaryTechnicalCommitteeDecisionImportService
     }
 
     /**
+     * @param  list<array{
+     *     record_type: string,
+     *     municipality: string,
+     *     sheet: string,
+     *     row: int,
+     *     objectid: string|int,
+     *     globalid: string|null,
+     *     decision_type: string,
+     *     decision_text: string,
+     *     action_text: string|null,
+     *     member_id_numbers: list<string>
+     * }>  $records
+     * @return array<string, mixed>
+     */
+    public function archiveSeedRecords(array $records): array
+    {
+        $summary = [
+            'rows' => 0,
+            'archived' => 0,
+            'skipped_rows' => 0,
+            'skip_reasons' => [],
+            'issues' => [],
+        ];
+
+        foreach ($records as $record) {
+            $summary['rows']++;
+
+            $decisionable = $this->resolveDecisionable(
+                $record['record_type'],
+                (string) $record['objectid'],
+                (string) ($record['globalid'] ?? ''),
+            );
+
+            if (! $decisionable instanceof Model) {
+                $this->recordSkip($summary, 'record_not_found', [
+                    'sheet' => $record['sheet'],
+                    'row' => $record['row'],
+                    'objectid' => $record['objectid'],
+                    'record_type' => $record['record_type'],
+                    'reason' => 'No matching building or housing unit was found for exceptional archive.',
+                ]);
+
+                continue;
+            }
+
+            $userId = $this->archiveUserIdForRecord($record);
+
+            if ($userId === null) {
+                $this->recordSkip($summary, 'missing_archive_user', [
+                    'sheet' => $record['sheet'],
+                    'row' => $record['row'],
+                    'objectid' => $record['objectid'],
+                    'record_type' => $record['record_type'],
+                    'reason' => 'No user was available to own the exceptional archive row.',
+                ]);
+
+                continue;
+            }
+
+            $this->archiveSeedRecord($decisionable, $record, $userId);
+            $summary['archived']++;
+        }
+
+        return $summary;
+    }
+
+    /**
      * @param  list<string>  $idNumbers
      * @param  array<string, mixed>  $summary
      * @return list<CommitteeMember>
@@ -237,6 +304,77 @@ class TemporaryTechnicalCommitteeDecisionImportService
     }
 
     /**
+     * @param  array{member_id_numbers: list<string>}  $record
+     */
+    private function archiveUserIdForRecord(array $record): ?int
+    {
+        $userId = User::query()
+            ->whereIn('id_no', $record['member_id_numbers'])
+            ->orderBy('id')
+            ->value('id');
+
+        if ($userId !== null) {
+            return (int) $userId;
+        }
+
+        $fallbackUserId = User::query()
+            ->orderBy('id')
+            ->value('id');
+
+        return $fallbackUserId === null ? null : (int) $fallbackUserId;
+    }
+
+    /**
+     * @param  array{
+     *     record_type: string,
+     *     municipality: string,
+     *     sheet: string,
+     *     row: int,
+     *     objectid: string|int,
+     *     globalid: string|null,
+     *     decision_type: string,
+     *     decision_text: string,
+     *     action_text: string|null,
+     *     member_id_numbers: list<string>
+     * }  $record
+     */
+    private function archiveSeedRecord(Model $decisionable, array $record, int $userId): void
+    {
+        $building = $decisionable instanceof HousingUnit ? $decisionable->building : $decisionable;
+
+        if (! $building instanceof Building) {
+            return;
+        }
+
+        /** @var CommitteeDecision|null $decision */
+        $decision = $decisionable->committeeDecision;
+        $housingUnit = $decisionable instanceof HousingUnit ? $decisionable : null;
+        $archivedAt = Carbon::now();
+
+        BuildingSurveyArchiveObject::query()->updateOrCreate([
+            'source_type' => 'temporary_committee_excel_archive',
+            'building_objectid' => $building->objectid,
+            'housing_unit_objectid' => $housingUnit?->objectid,
+        ], [
+            'building_globalid' => $building->globalid,
+            'housing_unit_globalid' => $housingUnit?->globalid,
+            'return_request_id' => null,
+            'committee_decision_id' => $decision?->id,
+            'archived_by' => $userId,
+            'archived_at' => $archivedAt,
+            'notes' => sprintf(
+                'Exceptional archive from temporary committee Excel seed. sheet=%s row=%s decision_type=%s',
+                $record['sheet'],
+                $record['row'],
+                $record['decision_type'],
+            ),
+            'building_snapshot' => $building->attributesToArray(),
+            'housing_unit_snapshot' => $housingUnit?->attributesToArray(),
+            'committee_decision_snapshot' => $decision?->attributesToArray(),
+        ]);
+    }
+
+    /**
      * @return list<string>
      */
     private function memberIdNumbersForDecisionable(Building|HousingUnit $decisionable): array
@@ -259,7 +397,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 ],
         )));
 
-        if (str_contains($municipality, 'sarsour')) {
+        if (str_contains($municipality, 'sarsour') || str_contains($municipality, 'block_f')) {
             return ['934863572', '900277229', '801933490', '800282667'];
         }
 
@@ -357,8 +495,8 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 'arcgis_last_response' => 'Temporary seed completed existing committee review decision and updated local status fields only.',
             ])->save();
 
-            $this->updateLocalDecisionableStatus($decisionable, $decisionType);
             $this->archiveDecisionObject($decision, $decisionable, $managerUserId, $completedAt);
+            $this->updateLocalDecisionableStatus($decisionable, $decisionType);
         });
     }
 
@@ -409,8 +547,8 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 ]);
             }
 
-            $this->updateLocalDecisionableStatus($decisionable, $decisionType);
             $this->archiveDecisionObject($decision, $decisionable, $managerUserId, $signedAt);
+            $this->updateLocalDecisionableStatus($decisionable, $decisionType);
         });
     }
 
@@ -462,6 +600,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
             'archived_by' => $userId,
             'archived_at' => $archivedAt,
             'notes' => $decision->notes,
+            'building_snapshot' => $building->attributesToArray(),
+            'housing_unit_snapshot' => $decisionable instanceof HousingUnit ? $decisionable->attributesToArray() : null,
+            'committee_decision_snapshot' => $decision->attributesToArray(),
         ]);
     }
 

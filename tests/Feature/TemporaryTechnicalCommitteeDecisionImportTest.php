@@ -56,6 +56,10 @@ it('temporarily completes building committee decisions from static seed records 
     ]);
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
+    $archiveObject = BuildingSurveyArchiveObject::query()
+        ->where('committee_decision_id', $decision->id)
+        ->where('building_objectid', 3293)
+        ->firstOrFail();
 
     expect($summary['decisions_completed'])->toBe(1)
         ->and($summary['skipped_rows'])->toBe(1)
@@ -72,7 +76,9 @@ it('temporarily completes building committee decisions from static seed records 
         ->and($building->field_status)->toBe('Not_Completed')
         ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $decision->id)->where('status', 'approved')->count())->toBe(4)
         ->and(CommitteeMember::query()->count())->toBe(4)
-        ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $decision->id)->where('building_objectid', 3293)->exists())->toBeTrue();
+        ->and($archiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
+        ->and($archiveObject->building_snapshot['field_status'])->toBe('COMPLETED')
+        ->and($archiveObject->committee_decision_snapshot['decision_type'])->toBe('fully_damaged');
 });
 
 it('temporarily completes housing unit committee decisions from static unit sheet records and updates the parent building field status', function () {
@@ -263,6 +269,77 @@ it('creates and completes missing committee decisions for review records that sh
             '800846958',
             '804475044',
         ]);
+});
+
+it('creates and completes missing block f committee decisions with the gaza committee', function () {
+    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667']);
+
+    $building = Building::query()->create([
+        'objectid' => 17363,
+        'globalid' => 'block-f-review-building',
+        'building_name' => 'Block F Review Building',
+        'building_damage_status' => 'committee_review',
+        'neighborhood' => 'Block_F',
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)
+        ->syncExistingCommitteeReviewDecisionSignatures();
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
+    $decision->load('signatures.committeeMember.user');
+    $building->refresh();
+
+    expect($summary['decisions_synced'])->toBe(1)
+        ->and($summary['decisions_completed'])->toBe(1)
+        ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->decision_type)->toBe('partially_damaged')
+        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($building->building_damage_status)->toBe('partially_damaged')
+        ->and($building->field_status)->toBe('Not_Completed')
+        ->and($decision->signatures)->toHaveCount(4)
+        ->and($decision->signatures->pluck('committeeMember.user.id_no')->all())->toBe([
+            '934863572',
+            '900277229',
+            '801933490',
+            '800282667',
+        ]);
+});
+
+it('exceptionally archives full current records for static excel seed rows even after they left committee review', function () {
+    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667']);
+
+    $building = Building::query()->create([
+        'objectid' => 3293,
+        'globalid' => 'already-completed-building-globalid',
+        'building_name' => 'Already Completed From Excel',
+        'building_damage_status' => 'fully_damaged',
+        'field_status' => 'Not_Completed',
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->archiveSeedRecords([[
+        'record_type' => 'building',
+        'municipality' => 'Gaza',
+        'sheet' => 'Gaza buildings',
+        'row' => 2,
+        'objectid' => 3293,
+        'globalid' => $building->globalid,
+        'decision_type' => 'fully_damaged',
+        'decision_text' => 'Full demolition',
+        'action_text' => null,
+        'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667'],
+    ]]);
+
+    $archiveObject = BuildingSurveyArchiveObject::query()
+        ->where('source_type', 'temporary_committee_excel_archive')
+        ->where('building_objectid', 3293)
+        ->firstOrFail();
+
+    expect($summary['rows'])->toBe(1)
+        ->and($summary['archived'])->toBe(1)
+        ->and($summary['skipped_rows'])->toBe(0)
+        ->and($archiveObject->building_snapshot['building_name'])->toBe('Already Completed From Excel')
+        ->and($archiveObject->building_snapshot['building_damage_status'])->toBe('fully_damaged')
+        ->and($archiveObject->notes)->toContain('sheet=Gaza buildings row=2 decision_type=fully_damaged');
 });
 
 /**

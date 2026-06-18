@@ -14,6 +14,7 @@ class TemporaryTechnicalCommitteeDecisionExcelSeeder extends Seeder
     {
         $summary = $importer->importRecords($this->records());
         $signatureSummary = $importer->syncExistingCommitteeReviewDecisionSignatures();
+        $archiveSummary = $importer->archiveSeedRecords($this->records());
 
         $this->command?->info(sprintf(
             'Temporary technical committee seed completed: %d rows, %d completed, %d skipped.',
@@ -27,6 +28,12 @@ class TemporaryTechnicalCommitteeDecisionExcelSeeder extends Seeder
             $signatureSummary['decisions_completed'],
             $signatureSummary['skipped_without_municipality'],
             $signatureSummary['skipped_without_decision_type'],
+        ));
+        $this->command?->info(sprintf(
+            'Temporary technical committee exceptional archive completed: %d rows, %d archived, %d skipped.',
+            $archiveSummary['rows'],
+            $archiveSummary['archived'],
+            $archiveSummary['skipped_rows'],
         ));
 
         $missingUsers = array_values(array_unique([
@@ -42,6 +49,12 @@ class TemporaryTechnicalCommitteeDecisionExcelSeeder extends Seeder
             $this->command?->warn(sprintf('Temporary technical committee seed reported %d row issues.', count($summary['issues'])));
             $this->printSkipReasonSummary($summary['skip_reasons']);
             $this->printIssueSamples($summary['issues']);
+        }
+
+        if ($archiveSummary['issues'] !== []) {
+            $this->command?->warn(sprintf('Temporary technical committee exceptional archive reported %d row issues.', count($archiveSummary['issues'])));
+            $this->printSkipReasonSummary($archiveSummary['skip_reasons']);
+            $this->printIssueSamples($archiveSummary['issues']);
         }
     }
 
@@ -89,6 +102,7 @@ class TemporaryTechnicalCommitteeDecisionExcelSeeder extends Seeder
     {
         return match ($reason) {
             'missing_committee_users' => 'committee users not found by id_no',
+            'missing_archive_user' => 'no user available for archive ownership',
             'record_not_found' => 'record not found in database',
             'not_committee_review' => 'record exists but damage status is not committee review',
             default => $reason,

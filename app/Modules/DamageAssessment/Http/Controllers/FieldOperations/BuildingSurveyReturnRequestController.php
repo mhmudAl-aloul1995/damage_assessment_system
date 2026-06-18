@@ -222,6 +222,7 @@ class BuildingSurveyReturnRequestController extends Controller
                 'archived_by' => auth()->id(),
                 'archived_at' => now(),
                 'notes' => $validated['notes'] ?? null,
+                'building_snapshot' => $returnRequest->building?->attributesToArray(),
             ]);
 
             $this->log($returnRequest, 'approved', 'area_manager', $validated['notes'] ?? null);

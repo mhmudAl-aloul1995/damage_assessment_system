@@ -18,12 +18,18 @@ class BuildingSurveyArchiveObject extends Model
         'archived_by',
         'archived_at',
         'notes',
+        'building_snapshot',
+        'housing_unit_snapshot',
+        'committee_decision_snapshot',
     ];
 
     protected function casts(): array
     {
         return [
             'archived_at' => 'datetime',
+            'building_snapshot' => 'array',
+            'housing_unit_snapshot' => 'array',
+            'committee_decision_snapshot' => 'array',
         ];
     }
 

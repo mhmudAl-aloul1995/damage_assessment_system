@@ -25,13 +25,13 @@ beforeEach(function () {
     Cache::forget('arcgis_token');
 
     foreach (['Team Leader', 'Field Engineer', 'Area Manager'] as $role) {
-        Role::query()->create([
+        Role::query()->firstOrCreate([
             'name' => $role,
             'guard_name' => 'web',
         ]);
     }
 
-    Role::query()->create([
+    Role::query()->firstOrCreate([
         'name' => 'Team Leader',
         'guard_name' => 'web',
     ]);
@@ -68,7 +68,7 @@ it('links a team leader with a field engineer and prevents duplicates', function
         ->assertJsonValidationErrors('field_engineer_id');
 });
 
-it('runs the building survey return workflow and archives only the object id', function () {
+it('runs the building survey return workflow and archives the full building snapshot', function () {
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
             'token' => 'fake-arcgis-token',
@@ -145,7 +145,10 @@ it('runs the building survey return workflow and archives only the object id', f
         'archived_by' => $areaManager->id,
     ]);
 
+    $archiveObject = BuildingSurveyArchiveObject::query()->firstOrFail();
+
     expect(BuildingSurveyArchiveObject::query()->count())->toBe(1);
+    expect($archiveObject->building_snapshot['building_name'])->toBe('Return Building');
     expect(Building::query()->where('objectid', $building->objectid)->value('building_name'))->toBe('Return Building');
 
     Http::assertSent(function ($request) use ($building) {

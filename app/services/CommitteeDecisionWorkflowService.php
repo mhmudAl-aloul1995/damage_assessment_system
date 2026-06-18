@@ -308,6 +308,9 @@ class CommitteeDecisionWorkflowService
             'archived_by' => $archiver?->id ?? $decision->committee_manager_id ?? $decision->updated_by ?? $decision->created_by,
             'archived_at' => now(),
             'notes' => $decision->notes,
+            'building_snapshot' => $building->attributesToArray(),
+            'housing_unit_snapshot' => $decisionable instanceof HousingUnit ? $decisionable->attributesToArray() : null,
+            'committee_decision_snapshot' => $decision->attributesToArray(),
         ]);
     }
 }
