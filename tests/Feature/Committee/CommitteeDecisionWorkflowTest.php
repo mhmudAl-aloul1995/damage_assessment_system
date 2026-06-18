@@ -27,8 +27,18 @@ it('shows committee decision pages and datatable data for buildings and housing 
         'objectid' => 9001,
         'globalid' => 'building-guid-1',
         'building_name' => 'Hope Tower',
+        'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'assignedto' => 'Engineer Field',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 9002,
+        'globalid' => 'building-guid-filtered-out',
+        'building_name' => 'Filtered Out Tower',
+        'municipalitie' => 'Nuseirat',
+        'neighborhood' => 'Middle Area',
         'building_damage_status' => 'committee_review',
     ]);
 
@@ -37,6 +47,7 @@ it('shows committee decision pages and datatable data for buildings and housing 
         'globalid' => 'housing-guid-1',
         'parentglobalid' => 'building-guid-1',
         'housing_unit_number' => 'A-12',
+        'municipalitie' => 'Gaza',
         'q_9_3_1_first_name' => 'Ahmad',
         'q_9_3_2_second_name__father' => 'Mohammad',
         'q_9_3_4_last_name' => 'Haddad',
@@ -52,12 +63,26 @@ it('shows committee decision pages and datatable data for buildings and housing 
         ->assertSee('Housing Units');
 
     $this->actingAs($user)
-        ->get(route('committee-decisions.buildings.data', ['draw' => 1, 'start' => 0, 'length' => 10]))
+        ->get(route('committee-decisions.buildings.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'municipality' => 'Gaza',
+            'current_damage_status' => 'committee_review',
+            'has_decision' => 'no',
+        ]))
         ->assertOk()
-        ->assertJsonFragment(['building_name' => 'Hope Tower']);
+        ->assertJsonFragment(['building_name' => 'Hope Tower'])
+        ->assertJsonMissing(['building_name' => 'Filtered Out Tower']);
 
     $this->actingAs($user)
-        ->get(route('committee-decisions.housing-units.data', ['draw' => 1, 'start' => 0, 'length' => 10]))
+        ->get(route('committee-decisions.housing-units.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'municipality' => 'Gaza',
+            'current_damage_status' => 'committee_review2',
+        ]))
         ->assertOk()
         ->assertSee('A-12');
 

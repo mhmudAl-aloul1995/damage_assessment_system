@@ -17,6 +17,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
 
 class CommitteeDecisionController extends Controller
@@ -31,12 +32,13 @@ class CommitteeDecisionController extends Controller
         return view('damage-assessment::committee.decisions.index', [
             'buildingCount' => $this->buildingQuery()->count(),
             'housingCount' => $this->housingUnitQuery()->count(),
+            'municipalities' => $this->municipalityOptions(),
         ]);
     }
 
-    public function buildingsData(): JsonResponse
+    public function buildingsData(Request $request): JsonResponse
     {
-        return DataTables::eloquent($this->buildingQuery())
+        return DataTables::eloquent($this->applyBuildingFilters($this->buildingQuery(), $request))
             ->addColumn('has_decision', fn (Building $building): string => $building->committeeDecision !== null
                 ? '<span class="badge badge-light-success">يوجد</span>'
                 : '<span class="badge badge-light-warning">لا يوجد</span>')
@@ -47,9 +49,9 @@ class CommitteeDecisionController extends Controller
             ->toJson();
     }
 
-    public function housingUnitsData(): JsonResponse
+    public function housingUnitsData(Request $request): JsonResponse
     {
-        return DataTables::eloquent($this->housingUnitQuery())
+        return DataTables::eloquent($this->applyHousingUnitFilters($this->housingUnitQuery(), $request))
             ->addColumn('building_name', fn (HousingUnit $unit): string => e($unit->building?->building_name ?? '-'))
             ->addColumn('assignedto', fn (HousingUnit $unit): string => e($unit->building?->assignedto ?? '-'))
             ->addColumn('has_decision', fn (HousingUnit $unit): string => $unit->committeeDecision !== null
@@ -121,7 +123,7 @@ class CommitteeDecisionController extends Controller
     {
         return Building::query()
             ->with(['committeeDecision.signatures.committeeMember'])
-            ->select(['id', 'objectid', 'globalid', 'building_name', 'neighborhood', 'assignedto', 'building_damage_status'])
+            ->select(['id', 'objectid', 'globalid', 'building_name', 'municipalitie', 'neighborhood', 'assignedto', 'building_damage_status', 'field_status'])
             ->whereIn('building_damage_status', ['commite_review', 'committee_review']);
     }
 
@@ -135,6 +137,7 @@ class CommitteeDecisionController extends Controller
                 'globalid',
                 'parentglobalid',
                 'housing_unit_number',
+                'municipalitie',
                 'unit_owner',
                 'q_9_3_1_first_name',
                 'q_9_3_2_second_name__father',
@@ -143,6 +146,57 @@ class CommitteeDecisionController extends Controller
                 'unit_damage_status',
             ])
             ->whereIn('unit_damage_status', ['commite_review', 'committee_review', 'committee_review2']);
+    }
+
+    private function applyBuildingFilters(Builder $query, Request $request): Builder
+    {
+        return $query
+            ->when($request->filled('objectid'), fn (Builder $query) => $query->where('objectid', $request->string('objectid')->toString()))
+            ->when($request->filled('municipality'), fn (Builder $query) => $query->where('municipalitie', $request->string('municipality')->toString()))
+            ->when($request->filled('current_damage_status'), fn (Builder $query) => $query->where('building_damage_status', $request->string('current_damage_status')->toString()))
+            ->when($request->filled('field_status'), fn (Builder $query) => $query->where('field_status', $request->string('field_status')->toString()))
+            ->when($request->filled('has_decision'), function (Builder $query) use ($request): void {
+                $request->string('has_decision')->toString() === 'yes'
+                    ? $query->whereHas('committeeDecision')
+                    : $query->whereDoesntHave('committeeDecision');
+            })
+            ->when($request->filled('decision_type'), fn (Builder $query) => $query->whereHas('committeeDecision', fn (Builder $query) => $query->where('decision_type', $request->string('decision_type')->toString())))
+            ->when($request->filled('decision_status'), fn (Builder $query) => $query->whereHas('committeeDecision', fn (Builder $query) => $query->where('status', $request->string('decision_status')->toString())))
+            ->when($request->filled('arcgis_status'), fn (Builder $query) => $this->filterArcgisStatus($query, $request->string('arcgis_status')->toString()));
+    }
+
+    private function applyHousingUnitFilters(Builder $query, Request $request): Builder
+    {
+        return $query
+            ->when($request->filled('objectid'), fn (Builder $query) => $query->where('objectid', $request->string('objectid')->toString()))
+            ->when($request->filled('municipality'), function (Builder $query) use ($request): void {
+                $municipality = $request->string('municipality')->toString();
+
+                $query->where(function (Builder $query) use ($municipality): void {
+                    $query
+                        ->where('municipalitie', $municipality)
+                        ->orWhereHas('building', fn (Builder $query) => $query->where('municipalitie', $municipality));
+                });
+            })
+            ->when($request->filled('current_damage_status'), fn (Builder $query) => $query->where('unit_damage_status', $request->string('current_damage_status')->toString()))
+            ->when($request->filled('field_status'), fn (Builder $query) => $query->whereHas('building', fn (Builder $query) => $query->where('field_status', $request->string('field_status')->toString())))
+            ->when($request->filled('has_decision'), function (Builder $query) use ($request): void {
+                $request->string('has_decision')->toString() === 'yes'
+                    ? $query->whereHas('committeeDecision')
+                    : $query->whereDoesntHave('committeeDecision');
+            })
+            ->when($request->filled('decision_type'), fn (Builder $query) => $query->whereHas('committeeDecision', fn (Builder $query) => $query->where('decision_type', $request->string('decision_type')->toString())))
+            ->when($request->filled('decision_status'), fn (Builder $query) => $query->whereHas('committeeDecision', fn (Builder $query) => $query->where('status', $request->string('decision_status')->toString())))
+            ->when($request->filled('arcgis_status'), fn (Builder $query) => $this->filterArcgisStatus($query, $request->string('arcgis_status')->toString()));
+    }
+
+    private function filterArcgisStatus(Builder $query, string $status): Builder
+    {
+        return $query->whereHas('committeeDecision', function (Builder $query) use ($status): void {
+            $status === 'pending'
+                ? $query->whereNull('arcgis_sync_status')
+                : $query->where('arcgis_sync_status', $status);
+        });
     }
 
     private function decisionView(CommitteeDecision $decision, string $recordType): View
@@ -239,5 +293,27 @@ class CommitteeDecisionController extends Controller
         $text = $status ? str($status)->replace('_', ' ')->title() : 'Pending';
 
         return '<span class="badge badge-light-'.$color.'">'.$label.': '.e((string) $text).'</span>';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function municipalityOptions(): array
+    {
+        return collect()
+            ->merge(Building::query()
+                ->whereNotNull('municipalitie')
+                ->distinct()
+                ->orderBy('municipalitie')
+                ->pluck('municipalitie'))
+            ->merge(HousingUnit::query()
+                ->whereNotNull('municipalitie')
+                ->distinct()
+                ->orderBy('municipalitie')
+                ->pluck('municipalitie'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 }
