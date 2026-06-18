@@ -266,6 +266,65 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
     });
 });
 
+it('allows a linked committee member to sign their own signature without global sign permission', function () {
+    $manager = User::factory()->create();
+    $manager->givePermissionTo([
+        'view committee decisions',
+        'manage committee decision content',
+        'edit committee decisions',
+    ]);
+
+    $signerUser = User::factory()->create(['name' => 'Tareq Al Saloot']);
+    $signerUser->givePermissionTo('view committee decisions');
+
+    $member = CommitteeMember::factory()->linkedUser($signerUser)->create([
+        'name' => 'Tareq Al Saloot',
+        'sort_order' => 1,
+        'is_required' => true,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9351,
+        'globalid' => 'building-guid-linked-signer',
+        'building_name' => 'Linked Signer Building',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $decision = CommitteeDecision::query()->firstOrCreate([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+    ], [
+        'created_by' => $manager->id,
+        'updated_by' => $manager->id,
+    ]);
+
+    $this->actingAs($manager)->put(route('committee-decisions.update', $decision), [
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'The linked signer should be able to approve this decision.',
+        'decision_date' => '2026-06-18',
+        'committee_members' => [$member->id],
+    ])->assertRedirect();
+
+    $decision->refresh();
+
+    $this->actingAs($signerUser)
+        ->get(route('committee-decisions.buildings.show', $building))
+        ->assertOk()
+        ->assertSee('name="committee_member_id" value="'.$member->id.'"', false)
+        ->assertDontSee('You do not have permission to sign.');
+
+    $this->actingAs($signerUser)->post(route('committee-decisions.sign', $decision), [
+        'committee_member_id' => $member->id,
+        'status' => 'approved',
+        'notes' => 'Approved by linked member',
+    ])->assertRedirect();
+
+    expect(CommitteeDecisionSignature::query()
+        ->where('committee_decision_id', $decision->id)
+        ->where('committee_member_id', $member->id)
+        ->value('status'))->toBe('approved');
+});
+
 it('syncs housing unit committee decisions to the unit damage status and archives the unit object', function () {
     config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
     config()->set('services.committee_decisions.arcgis.housing_unit_layer_id', 1);

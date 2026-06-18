@@ -189,18 +189,18 @@
                             <tbody>
                                 @foreach ($decision->signatures->sortBy(fn ($signature) => $signature->sort_order) as $signature)
                                     @php
-                                        $isLinkedToCurrentUser = ! $signature->committeeMember?->user_id || $signature->committeeMember?->user_id === auth()->id();
+                                        $linkedUserId = $signature->committeeMember?->user_id;
                                         $signatureLocked = $decision->isCompleted();
                                         $signatureReason = null;
 
-                                        if (! $canSign) {
-                                            $signatureReason = __('multilingual.committee_decision_show.reasons.no_permission');
-                                        } elseif (! $signature->committeeMember?->is_active) {
+                                        if (! $signature->committeeMember?->is_active) {
                                             $signatureReason = __('multilingual.committee_decision_show.reasons.member_inactive');
-                                        } elseif (! $isLinkedToCurrentUser) {
-                                            $signatureReason = __('multilingual.committee_decision_show.reasons.linked_to_other_user');
                                         } elseif ($signatureLocked) {
                                             $signatureReason = __('multilingual.committee_decision_show.reasons.decision_completed');
+                                        } elseif ($linkedUserId !== null && $linkedUserId !== auth()->id() && ! $canSign) {
+                                            $signatureReason = __('multilingual.committee_decision_show.reasons.linked_to_other_user');
+                                        } elseif ($linkedUserId === null && ! $canSign) {
+                                            $signatureReason = __('multilingual.committee_decision_show.reasons.no_permission');
                                         }
                                     @endphp
                                     <tr>
