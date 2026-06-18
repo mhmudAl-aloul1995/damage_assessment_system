@@ -11,13 +11,28 @@
             </div>
         @endif
 
+        <div class="row g-5 mb-6">
+            <div class="col-lg-6">
+                <div class="border border-gray-200 rounded p-4 h-100">
+                    <div class="fw-bold mb-3">السجل السابق</div>
+                    <pre class="bg-light p-4 rounded text-break mb-0" style="white-space: pre-wrap; max-height: 360px; overflow: auto;">{{ $previousRecord ?? '-' }}</pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="border border-gray-200 rounded p-4 h-100">
+                    <div class="fw-bold mb-3">السجل الحالي</div>
+                    <pre class="bg-light p-4 rounded text-break mb-0" style="white-space: pre-wrap; max-height: 360px; overflow: auto;">{{ $currentRecord ?? '-' }}</pre>
+                </div>
+            </div>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3">
                 <thead>
                     <tr class="fw-bold text-muted bg-light">
                         <th style="width: 22%">الحقل</th>
-                        <th style="width: 34%">وقت الأرشفة</th>
-                        <th style="width: 34%">الحالي</th>
+                        <th style="width: 34%">السجل السابق</th>
+                        <th style="width: 34%">السجل الحالي</th>
                         <th style="width: 10%">الفرق</th>
                     </tr>
                 </thead>

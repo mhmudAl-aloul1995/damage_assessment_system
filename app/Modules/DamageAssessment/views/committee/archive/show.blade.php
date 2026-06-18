@@ -17,6 +17,14 @@
 
         return (string) $value;
     };
+
+    $formatRecord = function (?array $record): string {
+        if (! $record) {
+            return '-';
+        }
+
+        return json_encode($record, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '-';
+    };
 @endphp
 
 @section('title', 'مقارنة سجل اللجنة الفنية')
@@ -76,6 +84,8 @@
         'title' => 'بيانات المبنى',
         'rows' => $buildingRows,
         'formatValue' => $formatValue,
+        'previousRecord' => $formatRecord($archiveObject->building_snapshot),
+        'currentRecord' => $formatRecord($currentBuilding?->attributesToArray()),
         'missingCurrent' => $currentBuilding === null,
     ])
 
@@ -84,6 +94,8 @@
             'title' => 'بيانات الوحدة السكنية',
             'rows' => $housingRows,
             'formatValue' => $formatValue,
+            'previousRecord' => $formatRecord($archiveObject->housing_unit_snapshot),
+            'currentRecord' => $formatRecord($currentHousingUnit?->attributesToArray()),
             'missingCurrent' => $currentHousingUnit === null,
         ])
     @endif
@@ -92,6 +104,8 @@
         'title' => 'بيانات قرار اللجنة',
         'rows' => $decisionRows,
         'formatValue' => $formatValue,
+        'previousRecord' => $formatRecord($archiveObject->committee_decision_snapshot),
+        'currentRecord' => $formatRecord($archiveObject->committeeDecision?->attributesToArray()),
         'missingCurrent' => $archiveObject->committeeDecision === null,
     ])
 @endsection

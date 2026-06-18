@@ -73,6 +73,8 @@ it('shows archived committee records and compares snapshot values with current v
         ->get(route('committee-archive.show', $archive))
         ->assertOk()
         ->assertSee('مقارنة القديم والحالي')
+        ->assertSee('السجل السابق')
+        ->assertSee('السجل الحالي')
         ->assertSee('Old Building Name')
         ->assertSee('Current Building Name')
         ->assertSee('general_notes')
