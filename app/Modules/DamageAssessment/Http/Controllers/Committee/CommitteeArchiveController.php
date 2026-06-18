@@ -14,7 +14,7 @@ class CommitteeArchiveController extends Controller
     public function index(Request $request): View
     {
         $archives = BuildingSurveyArchiveObject::query()
-            ->with('committeeDecision')
+            ->with(['building', 'committeeDecision'])
             ->whereIn('source_type', ['committee_decision', 'temporary_committee_excel_archive'])
             ->when($request->filled('source_type'), fn ($query) => $query->where('source_type', $request->string('source_type')))
             ->when($request->filled('record_type'), function ($query) use ($request): void {
@@ -48,6 +48,56 @@ class CommitteeArchiveController extends Controller
                     $query->whereNotNull('building_snapshot');
                 }
             })
+            ->when($request->filled('municipality'), function ($query) use ($request): void {
+                $municipality = $request->string('municipality')->toString();
+
+                $query->where(function ($query) use ($municipality): void {
+                    $query
+                        ->where('building_snapshot->municipalitie', $municipality)
+                        ->orWhere('housing_unit_snapshot->municipalitie', $municipality)
+                        ->orWhereHas('building', fn ($query) => $query->where('municipalitie', $municipality))
+                        ->orWhereExists(
+                            HousingUnit::query()
+                                ->selectRaw('1')
+                                ->whereColumn('housing_units.objectid', 'building_survey_archive_objects.housing_unit_objectid')
+                                ->where('municipalitie', $municipality)
+                        );
+                });
+            })
+            ->when($request->filled('old_damage_status'), function ($query) use ($request): void {
+                $status = $request->string('old_damage_status')->toString();
+
+                $query->where(function ($query) use ($status): void {
+                    $query
+                        ->where('building_snapshot->building_damage_status', $status)
+                        ->orWhere('housing_unit_snapshot->unit_damage_status', $status);
+                });
+            })
+            ->when($request->filled('current_damage_status'), function ($query) use ($request): void {
+                $status = $request->string('current_damage_status')->toString();
+
+                $query->where(function ($query) use ($status): void {
+                    $query
+                        ->whereHas('building', fn ($query) => $query->where('building_damage_status', $status))
+                        ->orWhereExists(
+                            HousingUnit::query()
+                                ->selectRaw('1')
+                                ->whereColumn('housing_units.objectid', 'building_survey_archive_objects.housing_unit_objectid')
+                                ->where('unit_damage_status', $status)
+                        );
+                });
+            })
+            ->when($request->filled('field_status'), function ($query) use ($request): void {
+                $fieldStatus = $request->string('field_status')->toString();
+
+                $query->where(function ($query) use ($fieldStatus): void {
+                    $query
+                        ->where('building_snapshot->field_status', $fieldStatus)
+                        ->orWhereHas('building', fn ($query) => $query->where('field_status', $fieldStatus));
+                });
+            })
+            ->when($request->filled('archived_from'), fn ($query) => $query->whereDate('archived_at', '>=', $request->date('archived_from')))
+            ->when($request->filled('archived_to'), fn ($query) => $query->whereDate('archived_at', '<=', $request->date('archived_to')))
             ->latest('archived_at')
             ->latest('id')
             ->paginate(25)
@@ -55,7 +105,19 @@ class CommitteeArchiveController extends Controller
 
         return view('damage-assessment::committee.archive.index', [
             'archives' => $archives,
-            'filters' => $request->only(['source_type', 'record_type', 'objectid', 'snapshot']),
+            'filters' => $request->only([
+                'source_type',
+                'record_type',
+                'objectid',
+                'snapshot',
+                'municipality',
+                'old_damage_status',
+                'current_damage_status',
+                'field_status',
+                'archived_from',
+                'archived_to',
+            ]),
+            'municipalities' => $this->municipalityOptions(),
         ]);
     }
 
@@ -179,5 +241,27 @@ class CommitteeArchiveController extends Controller
             'completed_at' => 'تاريخ الاكتمال',
             'arcgis_sync_status' => 'حالة ArcGIS',
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function municipalityOptions(): array
+    {
+        return collect()
+            ->merge(Building::query()
+                ->whereNotNull('municipalitie')
+                ->distinct()
+                ->orderBy('municipalitie')
+                ->pluck('municipalitie'))
+            ->merge(HousingUnit::query()
+                ->whereNotNull('municipalitie')
+                ->distinct()
+                ->orderBy('municipalitie')
+                ->pluck('municipalitie'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 }

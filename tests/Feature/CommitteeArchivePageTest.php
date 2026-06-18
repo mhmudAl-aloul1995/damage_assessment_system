@@ -23,6 +23,7 @@ it('shows archived committee records and compares snapshot values with current v
         'globalid' => 'archive-building-globalid',
         'building_name' => 'Current Building Name',
         'neighborhood' => 'Rimal',
+        'municipalitie' => 'Gaza',
         'assignedto' => 'Current Engineer',
         'building_damage_status' => 'partially_damaged',
         'field_status' => 'Not_Completed',
@@ -50,6 +51,7 @@ it('shows archived committee records and compares snapshot values with current v
             'globalid' => 'archive-building-globalid',
             'building_name' => 'Old Building Name',
             'neighborhood' => 'Rimal',
+            'municipalitie' => 'Gaza',
             'assignedto' => 'Old Engineer',
             'building_damage_status' => 'committee_review',
             'field_status' => 'COMPLETED',
@@ -68,6 +70,18 @@ it('shows archived committee records and compares snapshot values with current v
         ->assertSee('أرشيف قرارات اللجنة الفنية')
         ->assertSee('8801')
         ->assertSee('Excel استثنائي');
+
+    $this->actingAs($user)
+        ->get(route('committee-archive.index', [
+            'municipality' => 'Gaza',
+            'old_damage_status' => 'committee_review',
+            'current_damage_status' => 'partially_damaged',
+            'field_status' => 'Not_Completed',
+        ]))
+        ->assertOk()
+        ->assertSee('8801')
+        ->assertSee('Gaza')
+        ->assertDontSee('لا توجد سجلات مطابقة.');
 
     $this->actingAs($user)
         ->get(route('committee-archive.show', $archive))

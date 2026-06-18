@@ -12,11 +12,12 @@
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('committee-archive.index') }}" class="row g-4 align-items-end mb-6">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">ObjectID</label>
                     <input type="text" name="objectid" value="{{ $filters['objectid'] ?? '' }}" class="form-control form-control-solid">
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-md-2">
                     <label class="form-label">نوع السجل</label>
                     <select name="record_type" class="form-select form-select-solid">
                         <option value="">الكل</option>
@@ -24,7 +25,18 @@
                         <option value="housing-unit" @selected(($filters['record_type'] ?? '') === 'housing-unit')>وحدات سكنية</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-md-2">
+                    <label class="form-label">البلدية</label>
+                    <select name="municipality" class="form-select form-select-solid">
+                        <option value="">الكل</option>
+                        @foreach ($municipalities as $municipality)
+                            <option value="{{ $municipality }}" @selected(($filters['municipality'] ?? '') === $municipality)>{{ $municipality }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-2">
                     <label class="form-label">مصدر الأرشفة</label>
                     <select name="source_type" class="form-select form-select-solid">
                         <option value="">الكل</option>
@@ -32,6 +44,7 @@
                         <option value="temporary_committee_excel_archive" @selected(($filters['source_type'] ?? '') === 'temporary_committee_excel_archive')>أرشفة Excel الاستثنائية</option>
                     </select>
                 </div>
+
                 <div class="col-md-2">
                     <label class="form-label">النسخة القديمة</label>
                     <select name="snapshot" class="form-select form-select-solid">
@@ -40,8 +53,50 @@
                         <option value="missing" @selected(($filters['snapshot'] ?? '') === 'missing')>غير موجودة</option>
                     </select>
                 </div>
-                <div class="col-md-1 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100">بحث</button>
+
+                <div class="col-md-2">
+                    <label class="form-label">حالة الضرر القديمة</label>
+                    <select name="old_damage_status" class="form-select form-select-solid">
+                        <option value="">الكل</option>
+                        @foreach (['committee_review', 'committee_review2', 'fully_damaged', 'fully_damaged2', 'partially_damaged', 'partially_damaged2'] as $status)
+                            <option value="{{ $status }}" @selected(($filters['old_damage_status'] ?? '') === $status)>{{ $status }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">حالة الضرر الحالية</label>
+                    <select name="current_damage_status" class="form-select form-select-solid">
+                        <option value="">الكل</option>
+                        @foreach (['committee_review', 'committee_review2', 'fully_damaged', 'fully_damaged2', 'partially_damaged', 'partially_damaged2'] as $status)
+                            <option value="{{ $status }}" @selected(($filters['current_damage_status'] ?? '') === $status)>{{ $status }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">field_status</label>
+                    <select name="field_status" class="form-select form-select-solid">
+                        <option value="">الكل</option>
+                        @foreach (['COMPLETED', 'Not_Completed'] as $status)
+                            <option value="{{ $status }}" @selected(($filters['field_status'] ?? '') === $status)>{{ $status }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">من تاريخ</label>
+                    <input type="date" name="archived_from" value="{{ $filters['archived_from'] ?? '' }}" class="form-control form-control-solid">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">إلى تاريخ</label>
+                    <input type="date" name="archived_to" value="{{ $filters['archived_to'] ?? '' }}" class="form-control form-control-solid">
+                </div>
+
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">بحث</button>
+                    <a href="{{ route('committee-archive.index') }}" class="btn btn-light">تصفير</a>
                 </div>
             </form>
 
@@ -51,7 +106,8 @@
                         <tr class="fw-bold text-muted bg-light">
                             <th>النوع</th>
                             <th>ObjectID</th>
-                            <th>المصدر</th>
+                            <th>البلدية</th>
+                            <th>مصدر الأرشفة</th>
                             <th>تاريخ الأرشفة</th>
                             <th>القرار</th>
                             <th>النسخة القديمة</th>
@@ -65,6 +121,10 @@
                                 $sourceLabel = $archive->source_type === 'temporary_committee_excel_archive'
                                     ? 'Excel استثنائي'
                                     : 'قرار لجنة';
+                                $municipality = $isHousing
+                                    ? data_get($archive->housing_unit_snapshot, 'municipalitie')
+                                    : data_get($archive->building_snapshot, 'municipalitie');
+                                $municipality = $municipality ?: $archive->building?->municipalitie;
                             @endphp
                             <tr>
                                 <td>{{ $isHousing ? 'وحدة سكنية' : 'مبنى' }}</td>
@@ -74,6 +134,7 @@
                                         <div class="text-muted fs-7">مبنى: {{ $archive->building_objectid }}</div>
                                     @endif
                                 </td>
+                                <td>{{ $municipality ?: '-' }}</td>
                                 <td><span class="badge badge-light-info">{{ $sourceLabel }}</span></td>
                                 <td>{{ optional($archive->archived_at)->format('Y-m-d H:i') ?? '-' }}</td>
                                 <td>{{ $archive->committeeDecision?->decision_type ?? '-' }}</td>
@@ -90,7 +151,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-10">لا توجد سجلات مطابقة.</td>
+                                <td colspan="8" class="text-center text-muted py-10">لا توجد سجلات مطابقة.</td>
                             </tr>
                         @endforelse
                     </tbody>
