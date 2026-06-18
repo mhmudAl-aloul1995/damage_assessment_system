@@ -313,10 +313,16 @@ it('allows a linked committee member to sign their own signature without global 
 
     $signerUser = User::factory()->create(['name' => 'Tareq Al Saloot']);
     $signerUser->givePermissionTo('view committee decisions');
+    $secondSignerUser = User::factory()->create();
 
     $member = CommitteeMember::factory()->linkedUser($signerUser)->create([
         'name' => 'Tareq Al Saloot',
         'sort_order' => 1,
+        'is_required' => true,
+    ]);
+    $secondMember = CommitteeMember::factory()->linkedUser($secondSignerUser)->create([
+        'name' => 'Second Signer',
+        'sort_order' => 2,
         'is_required' => true,
     ]);
 
@@ -339,7 +345,7 @@ it('allows a linked committee member to sign their own signature without global 
         'decision_type' => 'partially_damaged',
         'decision_text' => 'The linked signer should be able to approve this decision.',
         'decision_date' => '2026-06-18',
-        'committee_members' => [$member->id],
+        'committee_members' => [$member->id, $secondMember->id],
     ])->assertRedirect();
 
     $decision->refresh();
@@ -355,6 +361,18 @@ it('allows a linked committee member to sign their own signature without global 
         'status' => 'approved',
         'notes' => 'Approved by linked member',
     ])->assertRedirect();
+
+    $this->actingAs($signerUser)->post(route('committee-decisions.sign', $decision), [
+        'committee_member_id' => $member->id,
+        'status' => 'approved',
+        'notes' => 'Duplicate approval attempt',
+    ])->assertSessionHasErrors('committee_member_id');
+
+    $this->actingAs($signerUser)
+        ->get(route('committee-decisions.buildings.show', $building))
+        ->assertOk()
+        ->assertSee('تم تسجيل هذا التوقيع مسبقًا.')
+        ->assertDontSee('name="committee_member_id" value="'.$member->id.'"', false);
 
     expect(CommitteeDecisionSignature::query()
         ->where('committee_decision_id', $decision->id)

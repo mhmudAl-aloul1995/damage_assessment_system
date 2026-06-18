@@ -24,6 +24,9 @@
     @if (session('success'))
         <div class="alert alert-success mb-5">{{ session('success') }}</div>
     @endif
+    @if ($errors->any())
+        <div class="alert alert-danger mb-5">{{ $errors->first() }}</div>
+    @endif
 
     <div class="row g-5 mb-5">
         <div class="col-lg-4">
@@ -197,6 +200,8 @@
                                             $signatureReason = __('multilingual.committee_decision_show.reasons.member_inactive');
                                         } elseif ($signatureLocked) {
                                             $signatureReason = __('multilingual.committee_decision_show.reasons.decision_completed');
+                                        } elseif ($signature->status !== 'pending') {
+                                            $signatureReason = 'تم تسجيل هذا التوقيع مسبقًا.';
                                         } elseif ($linkedUserId !== null && $linkedUserId !== auth()->id() && ! $canSign) {
                                             $signatureReason = __('multilingual.committee_decision_show.reasons.linked_to_other_user');
                                         } elseif ($linkedUserId === null && ! $canSign) {

@@ -15,6 +15,7 @@ use App\Notifications\CommitteeDecisionSignatureRequested;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CommitteeDecisionWorkflowService
 {
@@ -95,7 +96,9 @@ class CommitteeDecisionWorkflowService
             ])->firstOrFail();
 
             if ($signature->status !== 'pending' && $data['status'] !== 'pending') {
-                abort(422, 'تم تسجيل توقيع هذا العضو مسبقًا.');
+                throw ValidationException::withMessages([
+                    'committee_member_id' => 'تم تسجيل توقيع هذا العضو مسبقًا.',
+                ]);
             }
 
             $signature->fill([
