@@ -8,6 +8,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditDashboardController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditExportController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditStatusHistoryController;
+use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeArchiveController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeDecisionController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeMemberController;
 use App\Modules\DamageAssessment\Http\Controllers\Dashboard\DamageAssessmentController;
@@ -109,6 +110,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [CommitteeMemberController::class, 'store'])->name('store');
         Route::put('/{committeeMember}', [CommitteeMemberController::class, 'update'])->name('update');
         Route::delete('/{committeeMember}', [CommitteeMemberController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('committee-archive')->name('committee-archive.')->group(function () {
+        Route::get('/', [CommitteeArchiveController::class, 'index'])->name('index');
+        Route::get('/{archiveObject}', [CommitteeArchiveController::class, 'show'])->name('show');
     });
 
     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);

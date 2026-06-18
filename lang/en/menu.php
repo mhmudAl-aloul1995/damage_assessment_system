@@ -71,6 +71,7 @@ return [
         'title' => 'Committee Decisions',
         'decisions' => 'Committee Decisions',
         'members' => 'Committee Members',
+        'archive' => 'Committee Archive',
     ],
     'user_management' => [
         'title' => 'User Management',

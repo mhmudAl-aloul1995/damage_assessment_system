@@ -301,6 +301,7 @@ return [
         'active_patterns' => [
             'damage-assessment/committee-decisions*',
             'damage-assessment/committee-members*',
+            'damage-assessment/committee-archive*',
         ],
         'items' => [
             [
@@ -314,6 +315,12 @@ return [
                 'url' => 'damage-assessment/committee-members',
                 'pattern' => 'damage-assessment/committee-members*',
                 'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor'],
+            ],
+            [
+                'title' => 'menu.committee.archive',
+                'url' => 'damage-assessment/committee-archive',
+                'pattern' => 'damage-assessment/committee-archive*',
+                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor'],
             ],
         ],
     ],

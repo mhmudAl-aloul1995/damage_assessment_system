@@ -69,6 +69,7 @@ return [
         'report' => 'التقرير',
     ],
     'committee' => [
+        'archive' => 'أرشيف اللجنة',
         'title' => 'قرارات اللجنة',
         'decisions' => 'قرارات اللجنة',
         'members' => 'أعضاء اللجنة',
