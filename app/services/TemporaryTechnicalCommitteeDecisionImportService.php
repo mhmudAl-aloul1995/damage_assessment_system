@@ -21,6 +21,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private const DEFAULT_EXISTING_DECISION_TYPE = 'partially_damaged';
 
+    private const GAZA_MEMBER_ID_NUMBERS = ['934863572', '900277229', '801933490', '800282667', '956242622'];
+
+    private const KHAN_YOUNIS_NUSEIRAT_MEMBER_ID_NUMBERS = ['801933490', '800282667', '800846958', '804475044', '801113747'];
+
     /**
      * @param  list<array{
      *     record_type: string,
@@ -44,8 +48,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
         foreach ($records as $record) {
             $summary['rows']++;
 
-            $membersKey = implode('|', $record['member_id_numbers']);
-            $members = $memberCache[$membersKey] ??= $this->resolveCommitteeMembers($record['member_id_numbers'], $summary);
+            $memberIdNumbers = $this->memberIdNumbersForSeedRecord($record);
+            $membersKey = implode('|', $memberIdNumbers);
+            $members = $memberCache[$membersKey] ??= $this->resolveCommitteeMembers($memberIdNumbers, $summary);
 
             if ($members === []) {
                 $this->recordSkip($summary, 'missing_committee_users', [
@@ -375,6 +380,25 @@ class TemporaryTechnicalCommitteeDecisionImportService
     }
 
     /**
+     * @param  array{municipality: string, member_id_numbers: list<string>}  $record
+     * @return list<string>
+     */
+    private function memberIdNumbersForSeedRecord(array $record): array
+    {
+        $municipality = $this->normalizeMunicipality($record['municipality']);
+
+        if ($this->isGazaMunicipality($municipality)) {
+            return self::GAZA_MEMBER_ID_NUMBERS;
+        }
+
+        if ($this->isKhanYounisOrNuseiratMunicipality($municipality)) {
+            return self::KHAN_YOUNIS_NUSEIRAT_MEMBER_ID_NUMBERS;
+        }
+
+        return $record['member_id_numbers'];
+    }
+
+    /**
      * @return list<string>
      */
     private function memberIdNumbersForDecisionable(Building|HousingUnit $decisionable): array
@@ -398,11 +422,11 @@ class TemporaryTechnicalCommitteeDecisionImportService
         )));
 
         if (str_contains($municipality, 'sarsour') || str_contains($municipality, 'block_f')) {
-            return ['934863572', '900277229', '801933490', '800282667'];
+            return self::GAZA_MEMBER_ID_NUMBERS;
         }
 
         if (str_contains($municipality, 'gaza') || str_contains($municipality, 'غزة')) {
-            return ['934863572', '900277229', '801933490', '800282667'];
+            return self::GAZA_MEMBER_ID_NUMBERS;
         }
 
         if (
@@ -412,10 +436,29 @@ class TemporaryTechnicalCommitteeDecisionImportService
             || str_contains($municipality, 'nuseirat')
             || str_contains($municipality, 'نصيرات')
         ) {
-            return ['801933490', '800282667', '800846958', '804475044'];
+            return self::KHAN_YOUNIS_NUSEIRAT_MEMBER_ID_NUMBERS;
         }
 
         return [];
+    }
+
+    private function isGazaMunicipality(string $municipality): bool
+    {
+        return str_contains($municipality, 'gaza')
+            || str_contains($municipality, 'غزة')
+            || str_contains($municipality, 'ط؛ط²ط©');
+    }
+
+    private function isKhanYounisOrNuseiratMunicipality(string $municipality): bool
+    {
+        return str_contains($municipality, 'khan')
+            || str_contains($municipality, 'خانيونس')
+            || str_contains($municipality, 'خان_يونس')
+            || str_contains($municipality, 'ط®ط§ظ†ظٹظˆظ†ط³')
+            || str_contains($municipality, 'ط®ط§ظ†_ظٹظˆظ†ط³')
+            || str_contains($municipality, 'nuseirat')
+            || str_contains($municipality, 'نصيرات')
+            || str_contains($municipality, 'ظ†طµظٹط±ط§طھ');
     }
 
     /**

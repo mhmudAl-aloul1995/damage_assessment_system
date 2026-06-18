@@ -10,7 +10,7 @@ use App\Models\User;
 use App\services\TemporaryTechnicalCommitteeDecisionImportService;
 
 it('temporarily completes building committee decisions from static seed records when the building is in committee review', function () {
-    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667']);
+    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667', '956242622']);
 
     $building = Building::query()->create([
         'objectid' => 3293,
@@ -39,7 +39,7 @@ it('temporarily completes building committee decisions from static seed records 
             'decision_type' => 'fully_damaged',
             'decision_text' => 'هدم كلي',
             'action_text' => 'اعادة المبنى للمهندس لحصره',
-            'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667'],
+            'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667', '956242622'],
         ],
         [
             'record_type' => 'building',
@@ -51,7 +51,7 @@ it('temporarily completes building committee decisions from static seed records 
             'decision_type' => 'fully_damaged',
             'decision_text' => 'هدم كلي',
             'action_text' => 'اعادة المبنى للمهندس لحصره',
-            'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667'],
+            'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667', '956242622'],
         ],
     ]);
 
@@ -74,15 +74,15 @@ it('temporarily completes building committee decisions from static seed records 
 
     expect($building->building_damage_status)->toBe('fully_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
-        ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $decision->id)->where('status', 'approved')->count())->toBe(4)
-        ->and(CommitteeMember::query()->count())->toBe(4)
+        ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $decision->id)->where('status', 'approved')->count())->toBe(5)
+        ->and(CommitteeMember::query()->count())->toBe(5)
         ->and($archiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
         ->and($archiveObject->building_snapshot['field_status'])->toBe('COMPLETED')
         ->and($archiveObject->committee_decision_snapshot['decision_type'])->toBe('fully_damaged');
 });
 
 it('temporarily completes housing unit committee decisions from static unit sheet records and updates the parent building field status', function () {
-    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044']);
+    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
 
     $building = Building::query()->create([
         'objectid' => 598,
@@ -110,7 +110,7 @@ it('temporarily completes housing unit committee decisions from static unit shee
         'decision_type' => 'partially_damaged',
         'decision_text' => 'هدم جزئي',
         'action_text' => 'اعادة المبنى للمهندس لحصره',
-        'member_id_numbers' => ['801933490', '800282667', '800846958', '804475044'],
+        'member_id_numbers' => ['801933490', '800282667', '800846958', '804475044', '801113747'],
     ]]);
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $unit)->firstOrFail();
@@ -118,7 +118,7 @@ it('temporarily completes housing unit committee decisions from static unit shee
     expect($summary['decisions_completed'])->toBe(1)
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($decision->decision_type)->toBe('partially_damaged')
-        ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $decision->id)->where('status', 'approved')->count())->toBe(4);
+        ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $decision->id)->where('status', 'approved')->count())->toBe(5);
 
     $unit->refresh();
     $building->refresh();
@@ -133,7 +133,7 @@ it('temporarily completes housing unit committee decisions from static unit shee
 });
 
 it('syncs configured municipality signatures onto existing committee review decisions not included in seed records', function () {
-    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044']);
+    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
     $oldSigner = User::factory()->create(['id_no' => '700000001']);
     $oldMember = CommitteeMember::query()->create([
         'user_id' => $oldSigner->id,
@@ -184,7 +184,7 @@ it('syncs configured municipality signatures onto existing committee review deci
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
         ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $decision->id)->exists())->toBeTrue()
-        ->and($decision->signatures)->toHaveCount(4)
+        ->and($decision->signatures)->toHaveCount(5)
         ->and($decision->signatures->every(fn ($signature): bool => $signature->is_required))->toBeTrue()
         ->and($decision->signatures->every(fn ($signature): bool => $signature->status === 'approved'))->toBeTrue()
         ->and($decision->signatures->every(fn ($signature): bool => $signature->signed_at !== null))->toBeTrue()
@@ -193,11 +193,12 @@ it('syncs configured municipality signatures onto existing committee review deci
             '800282667',
             '800846958',
             '804475044',
+            '801113747',
         ]);
 });
 
 it('temporarily completes existing committee review decisions with a default partial decision type when the decision has no type text', function () {
-    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667']);
+    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667', '956242622']);
 
     $building = Building::query()->create([
         'objectid' => 21048,
@@ -234,11 +235,12 @@ it('temporarily completes existing committee review decisions with a default par
             '900277229',
             '801933490',
             '800282667',
+            '956242622',
         ]);
 });
 
 it('creates and completes missing committee decisions for review records that show no decision yet', function () {
-    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044']);
+    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
 
     $building = Building::query()->create([
         'objectid' => 18362,
@@ -262,17 +264,18 @@ it('creates and completes missing committee decisions for review records that sh
         ->and($decision->arcgis_sync_status)->toBe('skipped')
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
-        ->and($decision->signatures)->toHaveCount(4)
+        ->and($decision->signatures)->toHaveCount(5)
         ->and($decision->signatures->pluck('committeeMember.user.id_no')->all())->toBe([
             '801933490',
             '800282667',
             '800846958',
             '804475044',
+            '801113747',
         ]);
 });
 
 it('creates and completes missing block f committee decisions with the gaza committee', function () {
-    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667']);
+    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667', '956242622']);
 
     $building = Building::query()->create([
         'objectid' => 17363,
@@ -296,17 +299,18 @@ it('creates and completes missing block f committee decisions with the gaza comm
         ->and($decision->arcgis_sync_status)->toBe('skipped')
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
-        ->and($decision->signatures)->toHaveCount(4)
+        ->and($decision->signatures)->toHaveCount(5)
         ->and($decision->signatures->pluck('committeeMember.user.id_no')->all())->toBe([
             '934863572',
             '900277229',
             '801933490',
             '800282667',
+            '956242622',
         ]);
 });
 
 it('exceptionally archives full current records for static excel seed rows even after they left committee review', function () {
-    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667']);
+    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667', '956242622']);
 
     $building = Building::query()->create([
         'objectid' => 3293,
@@ -326,7 +330,7 @@ it('exceptionally archives full current records for static excel seed rows even 
         'decision_type' => 'fully_damaged',
         'decision_text' => 'Full demolition',
         'action_text' => null,
-        'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667'],
+        'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667', '956242622'],
     ]]);
 
     $archiveObject = BuildingSurveyArchiveObject::query()

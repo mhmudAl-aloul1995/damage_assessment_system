@@ -54,8 +54,6 @@ class CommitteeDecisionWorkflowService
             $this->syncDecisionMembers(
                 $decision,
                 $data['committee_members'] ?? [],
-                $data['member_required'] ?? [],
-                $data['member_sort_order'] ?? [],
             );
 
             $decision->fill([
@@ -111,7 +109,7 @@ class CommitteeDecisionWorkflowService
         });
     }
 
-    public function syncDecisionMembers(CommitteeDecision $decision, array $memberIds, array $requiredByMember, array $sortOrderByMember): void
+    public function syncDecisionMembers(CommitteeDecision $decision, array $memberIds): void
     {
         $selectedMemberIds = collect($memberIds)
             ->map(fn (mixed $memberId): int => (int) $memberId)
@@ -142,8 +140,8 @@ class CommitteeDecisionWorkflowService
             }
 
             $signature->forceFill([
-                'is_required' => (bool) ($requiredByMember[$member->id] ?? false),
-                'sort_order' => (int) ($sortOrderByMember[$member->id] ?? $member->sort_order),
+                'is_required' => true,
+                'sort_order' => $member->sort_order,
             ])->save();
         }
 

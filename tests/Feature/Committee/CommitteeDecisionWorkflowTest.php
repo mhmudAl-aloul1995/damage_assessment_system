@@ -144,7 +144,9 @@ it('suggests the latest committee members for a new decision and saves only sele
         ->assertOk()
         ->assertSee('Latest Suggested Member')
         ->assertSee('Other Available Member')
-        ->assertSee('name="committee_members[]" value="'.$suggestedMember->id.'" checked', false);
+        ->assertSee('name="committee_members[]" value="'.$suggestedMember->id.'" checked', false)
+        ->assertDontSee('name="member_required', false)
+        ->assertDontSee('name="member_sort_order', false);
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $newBuilding)->firstOrFail();
 
@@ -153,19 +155,14 @@ it('suggests the latest committee members for a new decision and saves only sele
         'decision_text' => 'Committee selected only one member for this decision.',
         'decision_date' => '2026-06-17',
         'committee_members' => [$otherMember->id],
-        'member_required' => [
-            $otherMember->id => true,
-        ],
-        'member_sort_order' => [
-            $otherMember->id => 1,
-        ],
     ])->assertRedirect();
 
     $decision->refresh()->load('signatures');
 
     expect($decision->signatures)->toHaveCount(1)
         ->and($decision->signatures->first()->committee_member_id)->toBe($otherMember->id)
-        ->and($decision->signatures->first()->is_required)->toBeTrue();
+        ->and($decision->signatures->first()->is_required)->toBeTrue()
+        ->and($decision->signatures->first()->sort_order)->toBe($otherMember->sort_order);
 });
 
 it('completes the committee workflow, archives the object, and syncs arcgis after required signatures', function () {
@@ -230,14 +227,6 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
         'notes' => 'Reviewed',
         'decision_date' => '2026-04-21',
         'committee_members' => [$memberOne->id, $memberTwo->id],
-        'member_required' => [
-            $memberOne->id => true,
-            $memberTwo->id => true,
-        ],
-        'member_sort_order' => [
-            $memberOne->id => 1,
-            $memberTwo->id => 2,
-        ],
     ])->assertRedirect();
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
@@ -339,12 +328,6 @@ it('syncs housing unit committee decisions to the unit damage status and archive
         'notes' => 'Unit reviewed',
         'decision_date' => '2026-04-22',
         'committee_members' => [$member->id],
-        'member_required' => [
-            $member->id => true,
-        ],
-        'member_sort_order' => [
-            $member->id => 1,
-        ],
     ])->assertRedirect();
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $unit)->firstOrFail();
