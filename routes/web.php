@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\LocalDatabaseImportController;
 use App\Http\Controllers\Admin\TeamLeaderFieldEngineerController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginLogController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SystemLogController;
 use App\Http\Controllers\UserActivityLogController;
@@ -234,6 +235,8 @@ Route::get('/dashboard', function (Request $request) {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/notifications/{notification}/open', [NotificationController::class, 'open'])
+        ->name('notifications.open');
 
     Route::get('/system-logs', [SystemLogController::class, 'index'])
         ->middleware('role_or_permission:Database Officer|system-logs.view')

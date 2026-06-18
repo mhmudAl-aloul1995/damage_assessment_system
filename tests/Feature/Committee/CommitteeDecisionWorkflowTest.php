@@ -362,6 +362,44 @@ it('allows a linked committee member to sign their own signature without global 
         ->value('status'))->toBe('approved');
 });
 
+it('opens a committee signature notification and marks it as read', function () {
+    $user = User::factory()->create();
+    $user->givePermissionTo('view committee decisions');
+
+    $member = CommitteeMember::factory()->linkedUser($user)->create();
+    $building = Building::query()->create([
+        'objectid' => 9361,
+        'globalid' => 'building-guid-notification',
+        'building_name' => 'Notification Building',
+        'building_damage_status' => 'committee_review',
+    ]);
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Notification decision.',
+        'decision_date' => '2026-06-18',
+        'status' => CommitteeDecision::STATUS_PENDING_SIGNATURES,
+        'committee_manager_id' => $user->id,
+        'created_by' => $user->id,
+        'updated_by' => $user->id,
+    ]);
+    $signature = CommitteeDecisionSignature::factory()->create([
+        'committee_decision_id' => $decision->id,
+        'committee_member_id' => $member->id,
+    ]);
+
+    $user->notify(new CommitteeDecisionSignatureRequested($signature));
+
+    $notification = $user->unreadNotifications()->firstOrFail();
+
+    $this->actingAs($user)
+        ->get(route('notifications.open', $notification))
+        ->assertRedirect(data_get($notification->data, 'action_url'));
+
+    expect($notification->fresh()->read_at)->not->toBeNull();
+});
+
 it('syncs housing unit committee decisions to the unit damage status and archives the unit object', function () {
     config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
     config()->set('services.committee_decisions.arcgis.housing_unit_layer_id', 1);

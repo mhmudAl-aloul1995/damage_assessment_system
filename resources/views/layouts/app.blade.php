@@ -48,6 +48,16 @@
 	];
 	$user = auth()->user();
 	$sidebarModules = \App\Support\Navigation\Sidebar::forUser($user);
+	$headerNotifications = collect();
+	$headerUnreadNotificationsCount = 0;
+
+	if ($user && \Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+		$headerUnreadNotificationsCount = $user->unreadNotifications()->count();
+		$headerNotifications = $user->unreadNotifications()
+			->latest()
+			->limit(8)
+			->get();
+	}
 @endphp
 <!DOCTYPE html>
 
@@ -1075,6 +1085,71 @@
 								<!--end::Menu-->
 							</div>
 							<!--end::Search-->
+						</div>
+
+						<div class="app-navbar-item ms-1 ms-md-4">
+							<div class="position-relative">
+								<button type="button"
+									class="btn btn-icon btn-custom btn-icon-muted btn-active-light btn-active-color-primary w-35px h-35px"
+									data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+									data-kt-menu-attach="parent"
+									data-kt-menu-placement="bottom-end"
+									title="التنبيهات">
+									<i class="ki-duotone ki-notification-bing fs-2">
+										<span class="path1"></span>
+										<span class="path2"></span>
+										<span class="path3"></span>
+									</i>
+									@if($headerUnreadNotificationsCount > 0)
+										<span class="position-absolute top-0 start-100 translate-middle badge badge-circle badge-danger">
+											{{ $headerUnreadNotificationsCount > 99 ? '99+' : $headerUnreadNotificationsCount }}
+										</span>
+									@endif
+								</button>
+
+								<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-350px"
+									data-kt-menu="true" dir="{{ $direction }}">
+									<div class="menu-item px-5">
+										<div class="d-flex align-items-center justify-content-between">
+											<span class="fw-bold fs-5">التنبيهات</span>
+											<span class="badge badge-light-primary">{{ $headerUnreadNotificationsCount }}</span>
+										</div>
+									</div>
+									<div class="separator my-3"></div>
+
+									@if($headerNotifications->isEmpty())
+										<div class="menu-item px-5 py-5">
+											<div class="text-muted text-center">لا توجد تنبيهات جديدة</div>
+										</div>
+									@else
+										@foreach($headerNotifications as $notification)
+											@php
+												$notificationTitle = data_get($notification->data, 'title', 'تنبيه جديد');
+												$notificationMessage = data_get($notification->data, 'message', '');
+											@endphp
+											<div class="menu-item px-5">
+												<a href="{{ route('notifications.open', $notification) }}"
+													class="menu-link px-0 py-3 d-flex align-items-start gap-3">
+													<span class="symbol symbol-35px flex-shrink-0">
+														<span class="symbol-label bg-light-primary">
+															<i class="ki-duotone ki-message-text-2 fs-3 text-primary">
+																<span class="path1"></span>
+																<span class="path2"></span>
+																<span class="path3"></span>
+															</i>
+														</span>
+													</span>
+													<span class="d-flex flex-column">
+														<span class="fw-bold text-gray-900">{{ $notificationTitle }}</span>
+														<span class="text-muted fs-7">{{ $notificationMessage }}</span>
+														<span class="text-muted fs-8 mt-1">{{ $notification->created_at?->diffForHumans() }}</span>
+													</span>
+												</a>
+											</div>
+										@endforeach
+									@endif
+								</div>
+							</div>
 						</div>
 
 						<div class="app-navbar-item ms-1 ms-md-4">
