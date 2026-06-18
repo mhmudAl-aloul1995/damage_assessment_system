@@ -224,7 +224,7 @@ class CommitteeDecisionController extends Controller
             'suggestedCommitteeMembers' => $decision->signatures->isEmpty()
                 ? $this->workflowService->latestSignatureTemplate($decision)
                 : [],
-            'canManageContent' => auth()->user()->can('manage committee decision content'),
+            'canManageContent' => ! $decision->isCompleted() && auth()->user()->can('manage committee decision content'),
             'canSign' => auth()->user()->can('sign committee decisions'),
             'canRetryArcgis' => auth()->user()->can('sync committee decision arcgis'),
             'decisionTypes' => [

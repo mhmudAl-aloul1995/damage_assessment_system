@@ -248,6 +248,24 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
     expect($decision->status)->toBe('completed');
     expect($decision->completed_at)->not->toBeNull();
     expect($decision->arcgis_sync_status)->toBe('synced');
+
+    $this->actingAs($manager)
+        ->get(route('committee-decisions.buildings.show', $building))
+        ->assertOk()
+        ->assertDontSee('Save Decision')
+        ->assertDontSee('name="committee_members[]"', false);
+
+    $this->actingAs($manager)->put(route('committee-decisions.update', $decision), [
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'This edit should not be saved after completion.',
+        'decision_date' => '2026-06-18',
+        'committee_members' => [$memberOne->id, $memberTwo->id],
+    ])->assertForbidden();
+
+    $decision->refresh();
+
+    expect($decision->decision_text)->toBe('The final decision for the building was approved.');
+
     $archiveObject = BuildingSurveyArchiveObject::query()
         ->where('source_type', 'committee_decision')
         ->where('committee_decision_id', $decision->id)

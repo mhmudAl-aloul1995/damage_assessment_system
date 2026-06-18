@@ -47,7 +47,7 @@ class CommitteeDecisionWorkflowService
     public function saveDecisionContent(CommitteeDecision $decision, array $data, User $user): CommitteeDecision
     {
         return DB::transaction(function () use ($decision, $data, $user): CommitteeDecision {
-            if ($decision->isCompleted() && ! $user->can('manage committee decision content')) {
+            if ($decision->isCompleted()) {
                 abort(403, 'لا يمكن تعديل القرار بعد اكتماله.');
             }
 
