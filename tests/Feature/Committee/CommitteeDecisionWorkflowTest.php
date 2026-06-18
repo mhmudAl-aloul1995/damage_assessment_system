@@ -7,10 +7,12 @@ use App\Models\CommitteeDecisionSignature;
 use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\Models\User;
+use App\Notifications\CommitteeDecisionSignatureRequested;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 
 beforeEach(function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
@@ -149,6 +151,10 @@ it('suggests the latest committee members for a new decision and saves only sele
         ->assertDontSee('name="member_sort_order', false);
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $newBuilding)->firstOrFail();
+    $linkedUser = User::factory()->create();
+    $otherMember->update(['user_id' => $linkedUser->id]);
+
+    Notification::fake();
 
     $this->actingAs($manager)->put(route('committee-decisions.update', $decision), [
         'decision_type' => 'partially_damaged',
@@ -157,12 +163,23 @@ it('suggests the latest committee members for a new decision and saves only sele
         'committee_members' => [$otherMember->id],
     ])->assertRedirect();
 
+    Notification::assertSentTo($linkedUser, CommitteeDecisionSignatureRequested::class);
+
     $decision->refresh()->load('signatures');
 
     expect($decision->signatures)->toHaveCount(1)
         ->and($decision->signatures->first()->committee_member_id)->toBe($otherMember->id)
         ->and($decision->signatures->first()->is_required)->toBeTrue()
         ->and($decision->signatures->first()->sort_order)->toBe($otherMember->sort_order);
+
+    $this->actingAs($manager)->put(route('committee-decisions.update', $decision), [
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Committee selected only one member for this decision.',
+        'decision_date' => '2026-06-17',
+        'committee_members' => [$otherMember->id],
+    ])->assertRedirect();
+
+    Notification::assertSentToTimes($linkedUser, CommitteeDecisionSignatureRequested::class, 1);
 });
 
 it('completes the committee workflow, archives the object, and syncs arcgis after required signatures', function () {

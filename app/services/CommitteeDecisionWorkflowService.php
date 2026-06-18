@@ -11,6 +11,7 @@ use App\Models\CommitteeDecisionSignature;
 use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\Models\User;
+use App\Notifications\CommitteeDecisionSignatureRequested;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,7 @@ class CommitteeDecisionWorkflowService
                 abort(403, 'لا يمكن تعديل القرار بعد اكتماله.');
             }
 
-            $this->syncDecisionMembers(
+            $newSignatures = $this->syncDecisionMembers(
                 $decision,
                 $data['committee_members'] ?? [],
             );
@@ -67,6 +68,7 @@ class CommitteeDecisionWorkflowService
                 'updated_by' => $user->id,
             ])->save();
 
+            $this->notifyCommitteeMembersForSignatures($newSignatures);
             $this->refreshDecisionStatus($decision, $user);
 
             return $decision->load([
@@ -109,7 +111,7 @@ class CommitteeDecisionWorkflowService
         });
     }
 
-    public function syncDecisionMembers(CommitteeDecision $decision, array $memberIds): void
+    public function syncDecisionMembers(CommitteeDecision $decision, array $memberIds): array
     {
         $selectedMemberIds = collect($memberIds)
             ->map(fn (mixed $memberId): int => (int) $memberId)
@@ -122,6 +124,8 @@ class CommitteeDecisionWorkflowService
             ->where('is_active', true)
             ->get()
             ->keyBy('id');
+
+        $newSignatures = [];
 
         foreach ($selectedMemberIds as $memberId) {
             $member = $members->get($memberId);
@@ -143,6 +147,12 @@ class CommitteeDecisionWorkflowService
                 'is_required' => true,
                 'sort_order' => $member->sort_order,
             ])->save();
+
+            if (! $signature->wasRecentlyCreated) {
+                continue;
+            }
+
+            $newSignatures[] = $signature->load('committeeMember.user');
         }
 
         CommitteeDecisionSignature::query()
@@ -150,6 +160,8 @@ class CommitteeDecisionWorkflowService
             ->whereNotIn('committee_member_id', $selectedMemberIds)
             ->where('status', 'pending')
             ->delete();
+
+        return $newSignatures;
     }
 
     public function latestSignatureTemplate(?CommitteeDecision $currentDecision = null): array
@@ -261,6 +273,22 @@ class CommitteeDecisionWorkflowService
         Building::query()
             ->where('globalid', $decisionable->parentglobalid)
             ->update(['field_status' => $fieldStatus]);
+    }
+
+    /**
+     * @param  list<CommitteeDecisionSignature>  $signatures
+     */
+    private function notifyCommitteeMembersForSignatures(array $signatures): void
+    {
+        foreach ($signatures as $signature) {
+            $user = $signature->committeeMember?->user;
+
+            if (! $user instanceof User) {
+                continue;
+            }
+
+            $user->notify(new CommitteeDecisionSignatureRequested($signature));
+        }
     }
 
     public function resolveAssignedEngineer(?CommitteeDecision $decision): ?User
