@@ -380,6 +380,66 @@ it('allows a linked committee member to sign their own signature without global 
         ->value('status'))->toBe('approved');
 });
 
+it('prevents users from signing for another committee member', function () {
+    $manager = User::factory()->create();
+    $manager->givePermissionTo([
+        'view committee decisions',
+        'manage committee decision content',
+        'edit committee decisions',
+    ]);
+
+    $linkedMemberUser = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $otherUser->givePermissionTo([
+        'view committee decisions',
+        'sign committee decisions',
+    ]);
+
+    $member = CommitteeMember::factory()->linkedUser($linkedMemberUser)->create([
+        'name' => 'Linked Committee Member',
+        'sort_order' => 1,
+        'is_required' => true,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9352,
+        'globalid' => 'building-guid-no-proxy-signing',
+        'building_name' => 'No Proxy Signing Building',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $decision = CommitteeDecision::query()->firstOrCreate([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+    ], [
+        'created_by' => $manager->id,
+        'updated_by' => $manager->id,
+    ]);
+
+    $this->actingAs($manager)->put(route('committee-decisions.update', $decision), [
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Only the linked member account can sign.',
+        'decision_date' => '2026-06-19',
+        'committee_members' => [$member->id],
+    ])->assertRedirect();
+
+    $this->actingAs($otherUser)
+        ->get(route('committee-decisions.buildings.show', $building))
+        ->assertOk()
+        ->assertDontSee('name="committee_member_id" value="'.$member->id.'"', false);
+
+    $this->actingAs($otherUser)->post(route('committee-decisions.sign', $decision), [
+        'committee_member_id' => $member->id,
+        'status' => 'approved',
+        'notes' => 'Trying to sign for someone else',
+    ])->assertSessionHasErrors('committee_member_id');
+
+    expect(CommitteeDecisionSignature::query()
+        ->where('committee_decision_id', $decision->id)
+        ->where('committee_member_id', $member->id)
+        ->value('status'))->toBe('pending');
+});
+
 it('opens a committee signature notification and marks it as read', function () {
     $user = User::factory()->create();
     $user->givePermissionTo('view committee decisions');

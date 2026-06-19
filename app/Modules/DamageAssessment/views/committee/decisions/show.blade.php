@@ -202,9 +202,9 @@
                                             $signatureReason = __('multilingual.committee_decision_show.reasons.decision_completed');
                                         } elseif ($signature->status !== 'pending') {
                                             $signatureReason = 'تم تسجيل هذا التوقيع مسبقًا.';
-                                        } elseif ($linkedUserId !== null && $linkedUserId !== auth()->id() && ! $canSign) {
+                                        } elseif ($linkedUserId !== null && $linkedUserId !== auth()->id()) {
                                             $signatureReason = __('multilingual.committee_decision_show.reasons.linked_to_other_user');
-                                        } elseif ($linkedUserId === null && ! $canSign) {
+                                        } elseif ($linkedUserId === null) {
                                             $signatureReason = __('multilingual.committee_decision_show.reasons.no_permission');
                                         }
                                     @endphp

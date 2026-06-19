@@ -343,12 +343,10 @@ class CommitteeDecisionWorkflowService
 
         $linkedUserId = $member->user_id;
 
-        if ($linkedUserId !== null && $linkedUserId !== $user->id && ! $user->can('sign committee decisions')) {
-            abort(403, 'هذا المستخدم غير مخول بالتوقيع نيابة عن عضو اللجنة.');
-        }
-
-        if ($linkedUserId === null && ! $user->can('sign committee decisions')) {
-            abort(403, 'المستخدم الحالي لا يملك صلاحية التوقيع.');
+        if ($linkedUserId !== $user->id) {
+            throw ValidationException::withMessages([
+                'committee_member_id' => 'لا يمكن تسجيل التوقيع إلا من حساب عضو اللجنة نفسه.',
+            ]);
         }
     }
 
