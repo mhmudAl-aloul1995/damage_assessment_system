@@ -185,7 +185,7 @@ class BorrowerSurveyController extends Controller
             ->filter(fn (array $item): bool => $item['quantity'] > 0)
             ->values();
 
-        DB::transaction(function () use ($borrower, $items): void {
+        DB::transaction(function () use ($borrower, $exchangeRate, $items): void {
             $seenKeys = [];
 
             foreach ($items as $item) {
