@@ -4,12 +4,17 @@ namespace App\Modules\DamageAssessmentBorrowers\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\ImportBorrowerSpreadsheetRequest;
+use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateBorrowerPricingRequest;
 use App\Modules\DamageAssessmentBorrowers\Http\Requests\StoreBorrowerSurveyRequest;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
@@ -135,6 +140,73 @@ class BorrowerSurveyController extends Controller
         ]);
     }
 
+    public function pricing(DamageAssessmentBorrower $borrower): View
+    {
+        $this->authorizePricingAccess();
+
+        $borrower->load(['boqItems' => fn ($query) => $query->orderBy('sort_order')]);
+        $catalogItems = BorrowerBoqCatalogItem::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        return view('damage-assessment-borrowers::pricing', [
+            'borrower' => $borrower,
+            'pricingRows' => $this->pricingRows($borrower, $catalogItems),
+        ]);
+    }
+
+    public function updatePricing(UpdateBorrowerPricingRequest $request, DamageAssessmentBorrower $borrower): RedirectResponse
+    {
+        $validated = $request->validated();
+        $items = collect($validated['items'] ?? [])
+            ->map(function (array $item): array {
+                $quantity = (float) ($item['quantity'] ?? 0);
+                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                $sourceColumn = (string) $item['source_column'];
+
+                return [
+                    'catalog_item_id' => filled($item['catalog_item_id'] ?? null) ? (int) $item['catalog_item_id'] : null,
+                    'source_column' => $sourceColumn,
+                    'source_key' => ($item['source_key'] ?? '') ?: sha1($sourceColumn),
+                    'item_code' => $item['item_code'] ?? null,
+                    'description' => (string) $item['description'],
+                    'unit' => $item['unit'] ?? null,
+                    'unit_price' => $unitPrice,
+                    'quantity' => $quantity,
+                    'total_price' => round($quantity * $unitPrice, 2),
+                    'sort_order' => (int) ($item['sort_order'] ?? 0),
+                ];
+            })
+            ->filter(fn (array $item): bool => $item['quantity'] > 0 || $item['unit_price'] > 0)
+            ->values();
+
+        DB::transaction(function () use ($borrower, $items): void {
+            $seenKeys = [];
+
+            foreach ($items as $item) {
+                $seenKeys[] = $item['source_key'];
+                $borrower->boqItems()->updateOrCreate(
+                    ['source_key' => $item['source_key']],
+                    $item
+                );
+            }
+
+            $borrower->boqItems()
+                ->when($seenKeys !== [], fn ($query) => $query->whereNotIn('source_key', $seenKeys))
+                ->when($seenKeys === [], fn ($query) => $query)
+                ->delete();
+
+            $borrower->forceFill([
+                'boq_total_usd' => $items->sum('total_price'),
+            ])->save();
+        });
+
+        return redirect()
+            ->route('damage-assessment-borrowers.pricing', $borrower)
+            ->with('success', 'تم حفظ تسعير المستفيد بنجاح.');
+    }
+
     /**
      * @return array<string, int>
      */
@@ -175,6 +247,7 @@ class BorrowerSurveyController extends Controller
             'risk_reasons' => $borrower->risk_reasons ?? [],
             'submitted_by' => $borrower->submitter?->name ?? $borrower->submitted_by_name,
             'created_at' => $borrower->created_at?->format('Y-m-d H:i'),
+            'pricing_url' => route('damage-assessment-borrowers.pricing', $borrower),
         ];
     }
 
@@ -189,6 +262,64 @@ class BorrowerSurveyController extends Controller
             'Team Leader -INF',
             'Auditing Supervisor',
         ]), 403);
+    }
+
+    private function authorizePricingAccess(): void
+    {
+        abort_unless(auth()->user()?->hasAnyRole([
+            'Database Officer',
+            'Project Officer',
+            'Area Manager',
+            'Team Leader',
+            'Team Leader -INF',
+            'Auditing Supervisor',
+        ]), 403);
+    }
+
+    /**
+     * @param  Collection<int, BorrowerBoqCatalogItem>  $catalogItems
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function pricingRows(DamageAssessmentBorrower $borrower, Collection $catalogItems): Collection
+    {
+        $existingItems = $borrower->boqItems->keyBy('source_key');
+        $rows = $catalogItems
+            ->map(function (BorrowerBoqCatalogItem $catalogItem) use ($existingItems): array {
+                $sourceColumn = $catalogItem->source_column ?: $catalogItem->description;
+                $sourceKey = $catalogItem->source_key ?: sha1($sourceColumn);
+                $existingItem = $existingItems->get($sourceKey);
+
+                return [
+                    'catalog_item_id' => $catalogItem->id,
+                    'source_column' => $sourceColumn,
+                    'source_key' => $sourceKey,
+                    'item_code' => $catalogItem->item_code,
+                    'description' => $catalogItem->description,
+                    'unit' => $catalogItem->unit,
+                    'unit_price' => $existingItem?->unit_price ?? $catalogItem->unit_price,
+                    'quantity' => $existingItem?->quantity ?? 0,
+                    'total_price' => $existingItem?->total_price ?? 0,
+                    'sort_order' => $catalogItem->sort_order,
+                ];
+            });
+
+        $catalogKeys = $rows->pluck('source_key')->all();
+        $orphanRows = $borrower->boqItems
+            ->reject(fn ($item): bool => in_array($item->source_key, $catalogKeys, true))
+            ->map(fn ($item): array => [
+                'catalog_item_id' => $item->catalog_item_id,
+                'source_column' => $item->source_column,
+                'source_key' => $item->source_key,
+                'item_code' => $item->item_code,
+                'description' => $item->description,
+                'unit' => $item->unit,
+                'unit_price' => $item->unit_price,
+                'quantity' => $item->quantity,
+                'total_price' => $item->total_price,
+                'sort_order' => $item->sort_order,
+            ]);
+
+        return $rows->merge($orphanRows)->values();
     }
 
     private function riskLabel(?string $riskLevel): string

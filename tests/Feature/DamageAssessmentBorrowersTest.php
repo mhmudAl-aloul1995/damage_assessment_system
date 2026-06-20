@@ -178,6 +178,79 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('data.0.borrower_name', 'Mona Borrower');
 });
 
+it('opens borrower pricing page for database officers', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Pricing Borrower',
+        'borrower_id_number' => '810000001',
+        'is_borrower_alive' => true,
+    ]);
+
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => 'P1',
+        'source_column' => 'Paint item',
+        'source_key' => sha1('Paint item'),
+        'description' => 'Paint item',
+        'normalized_description' => 'paint item',
+        'unit' => 'M2',
+        'unit_price' => 7,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.pricing', $borrower))
+        ->assertOk()
+        ->assertSee('borrowerPricingForm', false)
+        ->assertSee('Paint item');
+});
+
+it('updates borrower pricing items and recalculates total', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Manual Pricing Borrower',
+        'borrower_id_number' => '810000002',
+        'is_borrower_alive' => true,
+    ]);
+    $catalogItem = BorrowerBoqCatalogItem::query()->create([
+        'item_code' => 'P2',
+        'source_column' => 'Door item',
+        'source_key' => sha1('Door item'),
+        'description' => 'Door item',
+        'normalized_description' => 'door item',
+        'unit' => 'عدد',
+        'unit_price' => 50,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('damage-assessment-borrowers.pricing.update', $borrower), [
+            'items' => [
+                [
+                    'catalog_item_id' => $catalogItem->id,
+                    'source_column' => 'Door item',
+                    'source_key' => sha1('Door item'),
+                    'item_code' => 'P2',
+                    'description' => 'Door item',
+                    'unit' => 'عدد',
+                    'unit_price' => 55,
+                    'quantity' => 2,
+                    'sort_order' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('damage-assessment-borrowers.pricing', $borrower));
+
+    $borrower->refresh();
+
+    expect((float) $borrower->boq_total_usd)->toBe(110.0)
+        ->and($borrower->boqItems()->count())->toBe(1)
+        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(110.0);
+});
+
 it('adds borrowers to the sidebar for database officers', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
