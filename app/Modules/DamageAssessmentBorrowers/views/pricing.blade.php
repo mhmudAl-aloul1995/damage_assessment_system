@@ -7,8 +7,9 @@
     <style>
         .borrower-pricing-page .pricing-number {
             direction: ltr;
-            text-align: end;
+            text-align: right;
             font-variant-numeric: tabular-nums;
+            unicode-bidi: plaintext;
         }
     </style>
 
@@ -80,7 +81,7 @@
                 <div class="row g-5 mb-5">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">سعر صرف الدولار / شيكل</label>
-                        <input type="number" step="0.0001" min="0.0001" name="exchange_rate" value="{{ old('exchange_rate', $borrower->exchange_rate ?: 3.2) }}" class="form-control pricing-number" id="exchangeRateInput" dir="ltr">
+                        <input type="text" inputmode="decimal" name="exchange_rate" value="{{ old('exchange_rate', $borrower->exchange_rate ?: 3.2) }}" class="form-control pricing-number" id="exchangeRateInput" dir="ltr">
                     </div>
                 </div>
 
@@ -116,13 +117,13 @@
                                         <input type="text" name="items[{{ $index }}][unit]" value="{{ $row['unit'] }}" class="form-control form-control-sm form-control-solid">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][unit_price]" value="{{ $row['unit_price'] }}" class="form-control form-control-sm pricing-number" data-unit-price dir="ltr">
+                                        <input type="text" inputmode="decimal" name="items[{{ $index }}][unit_price]" value="{{ $row['unit_price'] }}" class="form-control form-control-sm pricing-number" data-unit-price dir="ltr">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][unit_price_ils]" value="{{ $row['unit_price_ils'] }}" class="form-control form-control-sm pricing-number form-control-solid" data-unit-price-ils readonly dir="ltr">
+                                        <input type="text" inputmode="decimal" name="items[{{ $index }}][unit_price_ils]" value="{{ $row['unit_price_ils'] }}" class="form-control form-control-sm pricing-number form-control-solid" data-unit-price-ils readonly dir="ltr">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][quantity]" value="{{ $row['quantity'] }}" class="form-control form-control-sm pricing-number" data-quantity dir="ltr">
+                                        <input type="text" inputmode="decimal" name="items[{{ $index }}][quantity]" value="{{ $row['quantity'] }}" class="form-control form-control-sm pricing-number" data-quantity dir="ltr">
                                     </td>
                                     <td class="fw-bold pricing-number" data-row-total>{{ number_format((float) $row['total_price'], 2) }}</td>
                                     <td class="fw-bold pricing-number text-success" data-row-total-ils>{{ number_format((float) $row['total_price_ils'], 2) }}</td>
