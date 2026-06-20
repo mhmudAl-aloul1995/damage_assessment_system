@@ -10,6 +10,7 @@ class ImportDamageAssessmentBorrowers extends Command
 {
     protected $signature = 'borrowers:import
         {file : Absolute path to the beneficiary XLSX workbook or normalized JSON file}
+        {--boq-catalog= : Optional absolute path to the BOQ price XLSX workbook}
         {--dry-run : Analyze the workbook without saving records}
         {--include-duplicate-identities : Include submissions whose borrower identity number occurs more than once in the workbook}';
 
@@ -24,6 +25,13 @@ class ImportDamageAssessmentBorrowers extends Command
     {
         try {
             $path = (string) $this->argument('file');
+            $boqCatalogPath = (string) $this->option('boq-catalog');
+
+            if ($boqCatalogPath !== '' && ! (bool) $this->option('dry-run')) {
+                $catalogSummary = $this->importer->importPriceCatalog($boqCatalogPath);
+                $this->info("BOQ catalog imported: {$catalogSummary['imported']} items, skipped {$catalogSummary['skipped']}.");
+            }
+
             $summary = strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'xlsx'
                 ? $this->importer->importWorkbook(
                     $path,

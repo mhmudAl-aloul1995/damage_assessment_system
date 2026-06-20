@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
@@ -199,6 +200,52 @@ it('calculates borrower risk levels', function () {
     ]);
 
     expect($analysis['risk_level'])->toBe('low');
+});
+
+it('imports borrower boq items attachments and resident households', function () {
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '1.1',
+        'description' => 'Repair concrete item',
+        'normalized_description' => 'repair concrete item',
+        'unit' => 'M2',
+        'unit_price' => 10,
+        'sort_order' => 1,
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-import-related-').'.json';
+    file_put_contents($path, json_encode([
+        'records' => [
+            [
+                'row_number' => 2,
+                'source_uuid' => 'uuid-related',
+                'borrower_name' => 'Related Borrower',
+                'borrower_id_number' => '9911',
+                'attachments' => [
+                    ['filename' => 'damage.jpg', 'url' => 'https://example.test/damage.jpg', 'source_index' => 1],
+                ],
+                'resident_households' => [
+                    ['head_name' => 'Tenant Family', 'id_number' => '5001', 'members_count' => 3, 'phone' => '0590000000', 'employment_status' => 'not_working', 'source_index' => 1],
+                ],
+                'boq_quantities' => [
+                    ['source_column' => 'Repair concrete item (M2)', 'quantity' => 2, 'sort_order' => 1],
+                ],
+            ],
+        ],
+    ], JSON_THROW_ON_ERROR));
+
+    try {
+        $summary = app(BorrowerSpreadsheetImportService::class)->import($path);
+        $borrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid-related')->sole();
+
+        expect($summary['created'])->toBe(1)
+            ->and($borrower->attachments()->count())->toBe(1)
+            ->and($borrower->residentHouseholds()->count())->toBe(1)
+            ->and($borrower->boqItems()->count())->toBe(1)
+            ->and((float) $borrower->refresh()->boq_total_usd)->toBe(20.0)
+            ->and($borrower->attachments_count)->toBe(1);
+    } finally {
+        @unlink($path);
+    }
 });
 
 it('imports borrower records idempotently while skipping invalid and duplicate identities', function () {

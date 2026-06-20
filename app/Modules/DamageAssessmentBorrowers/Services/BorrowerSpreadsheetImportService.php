@@ -2,8 +2,10 @@
 
 namespace App\Modules\DamageAssessmentBorrowers\Services;
 
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use JsonException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
@@ -84,6 +86,70 @@ class BorrowerSpreadsheetImportService
     public function __construct(private readonly BorrowerRiskAnalysisService $riskAnalysis) {}
 
     /**
+     * @return array{total: int, imported: int, skipped: int}
+     */
+    public function importPriceCatalog(string $path): array
+    {
+        if (! is_file($path)) {
+            throw new RuntimeException('BOQ price source file was not found.');
+        }
+
+        $spreadsheet = IOFactory::load($path);
+        $sheet = $spreadsheet->getSheetByName('ورقة1') ?? $spreadsheet->getSheet(0);
+        $rows = $sheet->toArray(null, true, true, false);
+        array_shift($rows);
+
+        $summary = [
+            'total' => 0,
+            'imported' => 0,
+            'skipped' => 0,
+        ];
+        $category = null;
+
+        foreach ($rows as $index => $row) {
+            $code = $this->text($row[0] ?? null);
+            $description = $this->text($row[1] ?? null);
+            $unit = $this->text($row[2] ?? null);
+            $unitPrice = $this->decimal($this->text($row[3] ?? null)) ?? 0.0;
+
+            if ($code !== '' && ! is_numeric(str_replace('.', '', $code))) {
+                $category = $code;
+
+                continue;
+            }
+
+            if ($description === '' || $unit === '' || ! is_numeric(str_replace('.', '', $code))) {
+                continue;
+            }
+
+            $summary['total']++;
+
+            if ($unitPrice <= 0) {
+                $summary['skipped']++;
+
+                continue;
+            }
+
+            BorrowerBoqCatalogItem::query()->updateOrCreate(
+                ['item_code' => $code],
+                [
+                    'description' => $description,
+                    'normalized_description' => $this->normalizeDescription($description),
+                    'source_key' => sha1($description),
+                    'unit' => $unit,
+                    'unit_price' => $unitPrice,
+                    'category' => $category,
+                    'source_sheet' => $sheet->getTitle(),
+                    'sort_order' => $index + 1,
+                ]
+            );
+            $summary['imported']++;
+        }
+
+        return $summary;
+    }
+
+    /**
      * @return array{
      *     total: int,
      *     ready: int,
@@ -135,11 +201,13 @@ class BorrowerSpreadsheetImportService
         }
 
         $spreadsheet = IOFactory::load($path);
-        $affectedGuarantors = $this->repeatedNamesByUuid($spreadsheet->getSheet(1));
-        $deceasedGuarantors = $this->repeatedNamesByUuid($spreadsheet->getSheet(2));
+        $deceasedGuarantors = $this->repeatedNamesByUuid($spreadsheet->getSheetByName('group_oy4mv92') ?? $spreadsheet->getSheet(1));
+        $affectedGuarantors = $this->repeatedNamesByUuid($spreadsheet->getSheetByName('group_ax0jk91') ?? $spreadsheet->getSheet(2));
+        $attachments = $this->attachmentsByUuid($spreadsheet->getSheetByName('group_zp2bk31'));
+        $residentHouseholds = $this->residentHouseholdsByUuid($spreadsheet->getSheetByName('group_fl9zq19'));
         $rows = $spreadsheet->getSheet(0)->toArray(null, true, true, false);
         $headers = $this->headers(array_shift($rows) ?? []);
-        $sourceRows = collect($this->sourceRowsFromWorksheet($rows, $headers, $affectedGuarantors, $deceasedGuarantors))
+        $sourceRows = collect($this->sourceRowsFromWorksheet($rows, $headers, $affectedGuarantors, $deceasedGuarantors, $attachments, $residentHouseholds))
             ->map(fn (array $sourceRow): array => $this->sourceRow($sourceRow))
             ->all();
 
@@ -223,10 +291,18 @@ class BorrowerSpreadsheetImportService
         if (! $dryRun) {
             DB::transaction(function () use ($readyRows, &$summary): void {
                 foreach ($readyRows as $data) {
+                    $boqItems = $data['boq_items'] ?? [];
+                    $attachments = $data['attachments'] ?? [];
+                    $residentHouseholds = $data['resident_households'] ?? [];
+                    unset($data['boq_items'], $data['attachments']);
+
                     $borrower = DamageAssessmentBorrower::query()->updateOrCreate(
                         ['source_uuid' => $data['source_uuid']],
                         $data
                     );
+                    $this->syncBoqItems($borrower, $boqItems);
+                    $this->syncAttachments($borrower, $attachments);
+                    $this->syncResidentHouseholds($borrower, $residentHouseholds);
 
                     if ($borrower->wasRecentlyCreated) {
                         $summary['created']++;
@@ -264,9 +340,11 @@ class BorrowerSpreadsheetImportService
      * @param  array<string, array<int, int>>  $headers
      * @param  array<string, array<int, string>>  $affectedGuarantors
      * @param  array<string, array<int, string>>  $deceasedGuarantors
+     * @param  array<string, array<int, array{filename: ?string, url: ?string, source_index: ?int}>>  $attachments
+     * @param  array<string, array<int, array{head_name: string, id_number: ?string, members_count: ?int, phone: ?string, employment_status: ?string, source_index: ?int}>>  $residentHouseholds
      * @return array<int, array<string, mixed>>
      */
-    private function sourceRowsFromWorksheet(array $rows, array $headers, array $affectedGuarantors, array $deceasedGuarantors): array
+    private function sourceRowsFromWorksheet(array $rows, array $headers, array $affectedGuarantors, array $deceasedGuarantors, array $attachments = [], array $residentHouseholds = []): array
     {
         $sourceRows = [];
 
@@ -282,6 +360,10 @@ class BorrowerSpreadsheetImportService
                 'source_submission_id' => $this->value($row, $headers, '_id'),
                 'submitted_by_name' => $this->value($row, $headers, 'اسم الموظف/ة'),
                 'surveyed_at' => $this->value($row, $headers, 'التاريخ والوقت'),
+                'location_latitude' => $this->value($row, $headers, '_الاحداثيات_latitude'),
+                'location_longitude' => $this->value($row, $headers, '_الاحداثيات_longitude'),
+                'location_altitude' => $this->value($row, $headers, '_الاحداثيات_altitude'),
+                'location_precision' => $this->value($row, $headers, '_الاحداثيات_precision'),
                 'form_number' => $this->value($row, $headers, 'رقم الاستمارة'),
                 'borrower_name' => $this->value($row, $headers, 'اسم المقترض/ة رباعي:'),
                 'borrower_id_number' => $this->value($row, $headers, 'رقم هوية المقترض/ة:'),
@@ -307,6 +389,8 @@ class BorrowerSpreadsheetImportService
                 ]),
                 'affected_guarantor_names' => $affectedGuarantors[$uuid] ?? [],
                 'deceased_guarantor_names' => $deceasedGuarantors[$uuid] ?? [],
+                'attachments' => $attachments[$uuid] ?? [],
+                'resident_households' => $residentHouseholds[$uuid] ?? [],
                 'displacement_status_label' => $this->value($row, $headers, 'حالة النزوح الحالية (تستهدف حالة المستفيد وعائلته ولا علاقة له بالوحدة السكنية المستهدفة بالقرض)'),
                 'displaced_to_governorate_label' => $this->value($row, $headers, 'المحافظة النازح اليها (المستفيد)'),
                 'current_residence_address' => $this->value($row, $headers, 'عنوان السكن الحالي للمقترض او النازح اليه'),
@@ -319,6 +403,7 @@ class BorrowerSpreadsheetImportService
                 'loan_unit_occupancy_label' => $this->value($row, $headers, 'وضع  الاشخاص الذين يعيشون داخل الشقة المستهدفة بالقرض'),
                 'loan_unit_damage_label' => $this->value($row, $headers, 'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض'),
                 'notes' => $this->values($row, $headers, 'اضافة ملاحظات'),
+                'boq_quantities' => $this->boqQuantities($row, $headers),
             ];
         }
 
@@ -337,6 +422,10 @@ class BorrowerSpreadsheetImportService
             'source_submission_id' => $this->integer($this->text($sourceRow['source_submission_id'] ?? null)),
             'submitted_by_name' => $this->text($sourceRow['submitted_by_name'] ?? null),
             'surveyed_at' => $this->dateValue($this->text($sourceRow['surveyed_at'] ?? null)),
+            'location_latitude' => $this->decimal($this->text($sourceRow['location_latitude'] ?? null)),
+            'location_longitude' => $this->decimal($this->text($sourceRow['location_longitude'] ?? null)),
+            'location_altitude' => $this->decimal($this->text($sourceRow['location_altitude'] ?? null)),
+            'location_precision' => $this->decimal($this->text($sourceRow['location_precision'] ?? null)),
             'form_number' => $this->text($sourceRow['form_number'] ?? null),
             'borrower_name' => $this->text($sourceRow['borrower_name'] ?? null),
             'borrower_id_number' => $this->text($sourceRow['borrower_id_number'] ?? null),
@@ -352,6 +441,8 @@ class BorrowerSpreadsheetImportService
             'guarantors_employment_statuses' => array_values(array_filter((array) ($sourceRow['guarantors_employment_statuses'] ?? []), 'is_string')),
             'affected_guarantor_names' => array_values(array_filter((array) ($sourceRow['affected_guarantor_names'] ?? []), 'is_string')),
             'deceased_guarantor_names' => array_values(array_filter((array) ($sourceRow['deceased_guarantor_names'] ?? []), 'is_string')),
+            'attachments' => array_values(array_filter((array) ($sourceRow['attachments'] ?? []), 'is_array')),
+            'resident_households' => array_values(array_filter((array) ($sourceRow['resident_households'] ?? []), 'is_array')),
             'displacement_status_label' => $this->text($sourceRow['displacement_status_label'] ?? null),
             'displaced_to_governorate_label' => $this->text($sourceRow['displaced_to_governorate_label'] ?? null),
             'current_residence_address' => $this->text($sourceRow['current_residence_address'] ?? null),
@@ -364,6 +455,7 @@ class BorrowerSpreadsheetImportService
             'loan_unit_occupancy_label' => $this->text($sourceRow['loan_unit_occupancy_label'] ?? null),
             'loan_unit_damage_label' => $this->text($sourceRow['loan_unit_damage_label'] ?? null),
             'notes' => array_values(array_filter((array) ($sourceRow['notes'] ?? []), 'is_string')),
+            'boq_quantities' => array_values(array_filter((array) ($sourceRow['boq_quantities'] ?? []), 'is_array')),
         ];
     }
 
@@ -426,12 +518,18 @@ class BorrowerSpreadsheetImportService
         $affectedStatus = count($sourceRow['guarantors_employment_statuses']) === 1
             ? $sourceRow['guarantors_employment_statuses'][0]
             : null;
+        $boqItems = $this->mappedBoqItems($sourceRow['boq_quantities']);
+        $boqTotalUsd = collect($boqItems)->sum('total_price');
 
         return [
             'submitted_by_name' => $sourceRow['submitted_by_name'] ?: null,
             'source_uuid' => $sourceRow['source_uuid'],
             'source_submission_id' => $sourceRow['source_submission_id'],
             'surveyed_at' => $sourceRow['surveyed_at'],
+            'location_latitude' => $sourceRow['location_latitude'],
+            'location_longitude' => $sourceRow['location_longitude'],
+            'location_altitude' => $sourceRow['location_altitude'],
+            'location_precision' => $sourceRow['location_precision'],
             'form_number' => $sourceRow['form_number'] ?: null,
             'borrower_name' => $sourceRow['borrower_name'],
             'borrower_id_number' => $sourceRow['borrower_id_number'],
@@ -459,7 +557,126 @@ class BorrowerSpreadsheetImportService
             'loan_unit_occupancy_status' => self::OCCUPANCY_MAP[$sourceRow['loan_unit_occupancy_label']] ?? null,
             'loan_unit_damage_status' => self::DAMAGE_MAP[$sourceRow['loan_unit_damage_label']] ?? null,
             'notes' => collect($sourceRow['notes'])->filter()->unique()->implode("\n") ?: null,
+            'resident_households' => $sourceRow['resident_households'],
+            'attachments' => $sourceRow['attachments'],
+            'boq_items' => $boqItems,
+            'boq_total_usd' => $boqTotalUsd,
+            'attachments_count' => count($sourceRow['attachments']),
         ];
+    }
+
+    /**
+     * @param  array<int, array{source_column: string, quantity: float, sort_order: int}>  $quantities
+     * @return array<int, array<string, mixed>>
+     */
+    private function mappedBoqItems(array $quantities): array
+    {
+        if ($quantities === []) {
+            return [];
+        }
+
+        $catalogItems = Schema::hasTable('damage_assessment_borrower_boq_catalog_items')
+            ? BorrowerBoqCatalogItem::query()->orderBy('sort_order')->get()
+            : collect();
+
+        return collect($quantities)
+            ->map(function (array $quantity) use ($catalogItems): array {
+                $description = $quantity['source_column'];
+                $normalizedDescription = $this->normalizeDescription($description);
+                $catalogItem = $catalogItems->first(function (BorrowerBoqCatalogItem $catalogItem) use ($normalizedDescription): bool {
+                    $catalogDescription = (string) $catalogItem->normalized_description;
+
+                    return $catalogDescription !== ''
+                        && (str_contains($normalizedDescription, $catalogDescription)
+                            || str_contains($catalogDescription, mb_substr($normalizedDescription, 0, 120)));
+                });
+                $unitPrice = (float) ($catalogItem?->unit_price ?? 0);
+                $itemQuantity = (float) $quantity['quantity'];
+
+                return [
+                    'catalog_item_id' => $catalogItem?->id,
+                    'source_column' => $description,
+                    'source_key' => sha1($description),
+                    'item_code' => $catalogItem?->item_code,
+                    'description' => $catalogItem?->description ?? $description,
+                    'unit' => $catalogItem?->unit ?? $this->unitFromDescription($description),
+                    'unit_price' => $unitPrice,
+                    'quantity' => $itemQuantity,
+                    'total_price' => round($itemQuantity * $unitPrice, 2),
+                    'sort_order' => $quantity['sort_order'],
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $boqItems
+     */
+    private function syncBoqItems(DamageAssessmentBorrower $borrower, array $boqItems): void
+    {
+        $seenKeys = [];
+
+        foreach ($boqItems as $boqItem) {
+            $seenKeys[] = $boqItem['source_key'];
+            $borrower->boqItems()->updateOrCreate(
+                ['source_key' => $boqItem['source_key']],
+                $boqItem
+            );
+        }
+
+        $borrower->boqItems()
+            ->when($seenKeys !== [], fn ($query) => $query->whereNotIn('source_key', $seenKeys))
+            ->when($seenKeys === [], fn ($query) => $query)
+            ->delete();
+    }
+
+    /**
+     * @param  array<int, array{filename: ?string, url: ?string, source_index: ?int}>  $attachments
+     */
+    private function syncAttachments(DamageAssessmentBorrower $borrower, array $attachments): void
+    {
+        $seenIndexes = [];
+
+        foreach ($attachments as $attachment) {
+            $sourceIndex = $attachment['source_index'] ?? count($seenIndexes) + 1;
+            $seenIndexes[] = $sourceIndex;
+            $borrower->attachments()->updateOrCreate(
+                ['source_index' => $sourceIndex],
+                [
+                    'filename' => $attachment['filename'] ?? null,
+                    'url' => $attachment['url'] ?? null,
+                    'source_index' => $sourceIndex,
+                ]
+            );
+        }
+
+        $borrower->attachments()
+            ->when($seenIndexes !== [], fn ($query) => $query->whereNotIn('source_index', $seenIndexes))
+            ->when($seenIndexes === [], fn ($query) => $query)
+            ->delete();
+    }
+
+    /**
+     * @param  array<int, array{head_name: string, id_number: ?string, members_count: ?int, phone: ?string, employment_status: ?string, source_index: ?int}>  $households
+     */
+    private function syncResidentHouseholds(DamageAssessmentBorrower $borrower, array $households): void
+    {
+        $seenIndexes = [];
+
+        foreach ($households as $household) {
+            $sourceIndex = $household['source_index'] ?? count($seenIndexes) + 1;
+            $seenIndexes[] = $sourceIndex;
+            $borrower->residentHouseholds()->updateOrCreate(
+                ['source_index' => $sourceIndex],
+                array_merge($household, ['source_index' => $sourceIndex])
+            );
+        }
+
+        $borrower->residentHouseholds()
+            ->when($seenIndexes !== [], fn ($query) => $query->whereNotIn('source_index', $seenIndexes))
+            ->when($seenIndexes === [], fn ($query) => $query)
+            ->delete();
     }
 
     /**
@@ -483,6 +700,73 @@ class BorrowerSpreadsheetImportService
         }
 
         return $namesByUuid;
+    }
+
+    /**
+     * @return array<string, array<int, array{filename: ?string, url: ?string, source_index: ?int}>>
+     */
+    private function attachmentsByUuid(?Worksheet $sheet): array
+    {
+        if (! $sheet instanceof Worksheet) {
+            return [];
+        }
+
+        $rows = $sheet->toArray(null, true, true, false);
+        $headers = $this->headers(array_shift($rows) ?? []);
+        $attachmentsByUuid = [];
+
+        foreach ($rows as $row) {
+            $uuid = $this->value($row, $headers, '_submission__uuid');
+            $filename = $this->text($row[0] ?? null);
+            $url = $this->text($row[1] ?? null);
+
+            if ($uuid === '' || ($filename === '' && $url === '')) {
+                continue;
+            }
+
+            $attachmentsByUuid[$uuid][] = [
+                'filename' => $filename ?: null,
+                'url' => $url ?: null,
+                'source_index' => $this->integer($this->value($row, $headers, '_index')),
+            ];
+        }
+
+        return $attachmentsByUuid;
+    }
+
+    /**
+     * @return array<string, array<int, array{head_name: string, id_number: ?string, members_count: ?int, phone: ?string, employment_status: ?string, source_index: ?int}>>
+     */
+    private function residentHouseholdsByUuid(?Worksheet $sheet): array
+    {
+        if (! $sheet instanceof Worksheet) {
+            return [];
+        }
+
+        $rows = $sheet->toArray(null, true, true, false);
+        $headers = $this->headers(array_shift($rows) ?? []);
+        $householdsByUuid = [];
+
+        foreach ($rows as $row) {
+            $uuid = $this->value($row, $headers, '_submission__uuid');
+            $headName = $this->text($row[0] ?? null);
+
+            if ($uuid === '' || $headName === '') {
+                continue;
+            }
+
+            $employmentLabel = $this->text($row[4] ?? null);
+            $householdsByUuid[$uuid][] = [
+                'head_name' => $headName,
+                'id_number' => $this->text($row[1] ?? null) ?: null,
+                'members_count' => $this->integer($this->text($row[2] ?? null)),
+                'phone' => $this->text($row[3] ?? null) ?: null,
+                'employment_status' => self::EMPLOYMENT_MAP[$employmentLabel] ?? $employmentLabel ?: null,
+                'source_index' => $this->integer($this->value($row, $headers, '_index')),
+            ];
+        }
+
+        return $householdsByUuid;
     }
 
     /**
@@ -539,6 +823,73 @@ class BorrowerSpreadsheetImportService
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @param  array<string, array<int, int>>  $headers
+     * @return array<int, array{source_column: string, quantity: float, sort_order: int}>
+     */
+    private function boqQuantities(array $row, array $headers): array
+    {
+        $quantities = [];
+
+        foreach ($headers as $header => $indexes) {
+            if (! $this->looksLikeBoqHeader($header)) {
+                continue;
+            }
+
+            foreach ($indexes as $index) {
+                $quantity = $this->decimal($this->text($row[$index] ?? null));
+
+                if ($quantity === null || $quantity <= 0) {
+                    continue;
+                }
+
+                $quantities[] = [
+                    'source_column' => $header,
+                    'quantity' => $quantity,
+                    'sort_order' => $index + 1,
+                ];
+            }
+        }
+
+        return $quantities;
+    }
+
+    private function looksLikeBoqHeader(string $header): bool
+    {
+        if (str_starts_with($header, '_') || mb_strlen($header) < 30) {
+            return false;
+        }
+
+        foreach (['م2', 'م3', 'عدد', 'م.ط', 'مقطوعية'] as $unit) {
+            if (str_contains($header, $unit)) {
+                return true;
+            }
+        }
+
+        return str_contains($header, 'شبكة كهرباء');
+    }
+
+    private function normalizeDescription(string $description): string
+    {
+        $description = mb_strtolower($description);
+        $description = preg_replace('/\([^)]*\)/u', ' ', $description) ?? $description;
+        $description = preg_replace('/[^\p{Arabic}\p{L}\p{N}]+/u', ' ', $description) ?? $description;
+
+        return mb_substr(trim(preg_replace('/\s+/u', ' ', $description) ?? $description), 0, 255);
+    }
+
+    private function unitFromDescription(string $description): ?string
+    {
+        foreach (['م2', 'م3', 'عدد', 'م.ط', 'مقطوعية'] as $unit) {
+            if (str_contains($description, $unit)) {
+                return $unit;
+            }
+        }
+
+        return null;
     }
 
     private function truthy(string $value): bool

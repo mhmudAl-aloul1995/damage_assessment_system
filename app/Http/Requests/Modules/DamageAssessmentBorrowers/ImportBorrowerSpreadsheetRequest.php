@@ -27,6 +27,7 @@ class ImportBorrowerSpreadsheetRequest extends FormRequest
     {
         return [
             'borrowers_file' => ['required', 'file', 'mimes:xlsx', 'max:20480'],
+            'boq_file' => ['nullable', 'file', 'mimes:xlsx', 'max:20480'],
         ];
     }
 

@@ -684,12 +684,14 @@
                                     <th>المقترض</th>
                                     <th>النزوح</th>
                                     <th>الوحدة</th>
+                                    <th>BOQ</th>
+                                    <th>صور</th>
                                     <th>الخطورة</th>
                                 </tr>
                             </thead>
                             <tbody id="borrowersTableBody">
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">جاري التحميل...</td>
+                                    <td colspan="6" class="text-center text-muted">جاري التحميل...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -733,6 +735,9 @@
                                     <span class="fs-7 text-gray-600 mt-1 borrowers-import-file-name" id="borrowersImportFileName">صيغة XLSX فقط، حتى 20 ميغابايت.</span>
                                 </span>
                             </label>
+                            <label class="fw-semibold fs-6 mb-2 d-block" for="boqFile">ملف أسعار BOQ (اختياري)</label>
+                            <input type="file" name="boq_file" id="boqFile" class="form-control form-control-solid mb-3" accept=".xlsx">
+                            <div class="form-text mb-5">ارفع ملف BOQ-Analysis Price عند الحاجة لحساب إجمالي البنود تلقائيًا.</div>
                             <div class="form-text">سيتم تجاوز الصفوف المكررة أو غير المكتملة تلقائيًا، ثم تحديث الإحصائيات بعد الاستيراد.</div>
                             <div class="invalid-feedback d-block mt-3" id="borrowersImportError" style="display: none;"></div>
                         </div>
@@ -919,7 +924,7 @@
             const allRows = [...pendingRows(), ...(rows || [])];
 
             if (!allRows.length) {
-                body.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
+                body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
                 mobileList.innerHTML = '<div class="text-center text-muted py-4">لا توجد بيانات بعد</div>';
                 return;
             }
@@ -933,6 +938,8 @@
                     </td>
                     <td>${row.displacement_label || '-'}</td>
                     <td>${row.damage_label || '-'}</td>
+                    <td>${Number(row.boq_total_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${row.attachments_count || 0}</td>
                     <td><span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span></td>
                 </tr>`;
             }).join('');
@@ -956,6 +963,14 @@
                         <div class="borrower-mobile-meta-item">
                             <span>الوحدة</span>
                             <span>${row.damage_label || '-'}</span>
+                        </div>
+                        <div class="borrower-mobile-meta-item boq">
+                            <span>BOQ</span>
+                            <span>${Number(row.boq_total_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div class="borrower-mobile-meta-item">
+                            <span>صور</span>
+                            <span>${row.attachments_count || 0}</span>
                         </div>
                     </div>
                 </article>`;

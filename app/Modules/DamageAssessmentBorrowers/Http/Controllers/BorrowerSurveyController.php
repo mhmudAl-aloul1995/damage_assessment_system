@@ -77,7 +77,12 @@ class BorrowerSurveyController extends Controller
             'submitted_by_name' => $request->user()->name,
         ]));
 
-        $borrower->load('submitter:id,name');
+        $borrower->load([
+            'attachments',
+            'boqItems' => fn ($query) => $query->orderBy('sort_order'),
+            'residentHouseholds',
+            'submitter:id,name',
+        ]);
 
         return response()->json([
             'status' => true,
@@ -91,6 +96,10 @@ class BorrowerSurveyController extends Controller
     public function import(ImportBorrowerSpreadsheetRequest $request, BorrowerSpreadsheetImportService $importer): JsonResponse
     {
         try {
+            if ($request->hasFile('boq_file')) {
+                $importer->importPriceCatalog($request->file('boq_file')->getRealPath());
+            }
+
             $summary = $importer->importWorkbook($request->file('borrowers_file')->getRealPath());
         } catch (RuntimeException $exception) {
             return response()->json([
@@ -158,6 +167,8 @@ class BorrowerSurveyController extends Controller
             'governorate' => $borrower->displaced_to_governorate,
             'loan_unit_damage_status' => $borrower->loan_unit_damage_status,
             'damage_label' => $this->optionLabel($borrower->loan_unit_damage_status),
+            'boq_total_usd' => (float) $borrower->boq_total_usd,
+            'attachments_count' => $borrower->attachments_count,
             'risk_level' => $borrower->risk_level,
             'risk_label' => $this->riskLabel($borrower->risk_level),
             'risk_score' => $borrower->risk_score,
