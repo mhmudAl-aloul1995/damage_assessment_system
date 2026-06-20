@@ -4,6 +4,19 @@
 @section('pageName', 'تسعير المستفيد')
 
 @section('content')
+    <style>
+        .borrower-pricing-page .pricing-number {
+            direction: ltr;
+            text-align: end;
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+
+    @php
+        $savedItemsCount = $borrower->boqItems->filter(fn ($item) => (float) $item->quantity > 0)->count();
+    @endphp
+
+    <div class="borrower-pricing-page">
     <div class="card card-flush">
         <div class="card-header align-items-center gap-3">
             <div class="card-title">
@@ -47,14 +60,14 @@
                 <div class="col-md-4">
                     <div class="border rounded p-5 h-100">
                         <div class="text-muted fs-7 mb-1">عدد البنود المحفوظة</div>
-                        <div class="fs-2 fw-bold">{{ $borrower->boqItems->count() }}</div>
+                        <div class="fs-2 fw-bold">{{ $savedItemsCount }}</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="border rounded p-5 h-100">
                         <div class="text-muted fs-7 mb-1">الإجمالي بالشيكل</div>
                         <div class="fs-2 fw-bold text-success" id="pricingGrandTotalIls">
-                            {{ number_format((float) $borrower->boq_total_ils, 2) }} ₪
+                            {{ number_format((float) $borrower->boq_total_ils, 2) }} ILS
                         </div>
                     </div>
                 </div>
@@ -67,7 +80,7 @@
                 <div class="row g-5 mb-5">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">سعر صرف الدولار / شيكل</label>
-                        <input type="number" step="0.0001" min="0.0001" name="exchange_rate" value="{{ old('exchange_rate', $borrower->exchange_rate ?: 3.2) }}" class="form-control" id="exchangeRateInput">
+                        <input type="number" step="0.0001" min="0.0001" name="exchange_rate" value="{{ old('exchange_rate', $borrower->exchange_rate ?: 3.2) }}" class="form-control pricing-number" id="exchangeRateInput" dir="ltr">
                     </div>
                 </div>
 
@@ -79,10 +92,10 @@
                                 <th class="min-w-350px">البند</th>
                                 <th class="min-w-90px">الوحدة</th>
                                 <th class="min-w-140px">سعر الوحدة $</th>
-                                <th class="min-w-140px">سعر الوحدة ₪</th>
+                                <th class="min-w-140px">سعر الوحدة ILS</th>
                                 <th class="min-w-120px">الكمية</th>
                                 <th class="min-w-140px">الإجمالي $</th>
-                                <th class="min-w-140px">الإجمالي ₪</th>
+                                <th class="min-w-140px">الإجمالي ILS</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -103,16 +116,16 @@
                                         <input type="text" name="items[{{ $index }}][unit]" value="{{ $row['unit'] }}" class="form-control form-control-sm form-control-solid">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][unit_price]" value="{{ $row['unit_price'] }}" class="form-control form-control-sm" data-unit-price>
+                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][unit_price]" value="{{ $row['unit_price'] }}" class="form-control form-control-sm pricing-number" data-unit-price dir="ltr">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][unit_price_ils]" value="{{ $row['unit_price_ils'] }}" class="form-control form-control-sm form-control-solid" data-unit-price-ils readonly>
+                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][unit_price_ils]" value="{{ $row['unit_price_ils'] }}" class="form-control form-control-sm pricing-number form-control-solid" data-unit-price-ils readonly dir="ltr">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][quantity]" value="{{ $row['quantity'] }}" class="form-control form-control-sm" data-quantity>
+                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][quantity]" value="{{ $row['quantity'] }}" class="form-control form-control-sm pricing-number" data-quantity dir="ltr">
                                     </td>
-                                    <td class="fw-bold" data-row-total>{{ number_format((float) $row['total_price'], 2) }}</td>
-                                    <td class="fw-bold text-success" data-row-total-ils>{{ number_format((float) $row['total_price_ils'], 2) }}</td>
+                                    <td class="fw-bold pricing-number" data-row-total>{{ number_format((float) $row['total_price'], 2) }}</td>
+                                    <td class="fw-bold pricing-number text-success" data-row-total-ils>{{ number_format((float) $row['total_price_ils'], 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -126,6 +139,7 @@
                 </div>
             </form>
         </div>
+    </div>
     </div>
 @endsection
 
@@ -158,7 +172,7 @@
                     row.querySelector('[data-row-total-ils]').textContent = formatter.format(rowTotalIls);
                 });
                 grandTotal.textContent = `${formatter.format(total)} $`;
-                grandTotalIls.textContent = `${formatter.format(totalIls)} ₪`;
+                grandTotalIls.textContent = `${formatter.format(totalIls)} ILS`;
             }
 
             table?.addEventListener('input', (event) => {

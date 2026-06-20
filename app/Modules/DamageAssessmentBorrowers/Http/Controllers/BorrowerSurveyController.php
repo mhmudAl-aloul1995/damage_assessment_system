@@ -182,7 +182,7 @@ class BorrowerSurveyController extends Controller
                     'sort_order' => (int) ($item['sort_order'] ?? 0),
                 ];
             })
-            ->filter(fn (array $item): bool => $item['quantity'] > 0 || $item['unit_price'] > 0)
+            ->filter(fn (array $item): bool => $item['quantity'] > 0)
             ->values();
 
         DB::transaction(function () use ($borrower, $items): void {
@@ -203,7 +203,7 @@ class BorrowerSurveyController extends Controller
 
             $borrower->forceFill([
                 'boq_total_usd' => $items->sum('total_price'),
-                'exchange_rate' => $items->first()['exchange_rate'] ?? 3.2,
+                'exchange_rate' => $items->first()['exchange_rate'] ?? $exchangeRate,
                 'boq_total_ils' => $items->sum('total_price_ils'),
             ])->save();
         });
