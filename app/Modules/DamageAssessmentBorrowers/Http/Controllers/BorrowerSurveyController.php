@@ -159,8 +159,9 @@ class BorrowerSurveyController extends Controller
     public function updatePricing(UpdateBorrowerPricingRequest $request, DamageAssessmentBorrower $borrower): RedirectResponse
     {
         $validated = $request->validated();
+        $exchangeRate = (float) $validated['exchange_rate'];
         $items = collect($validated['items'] ?? [])
-            ->map(function (array $item): array {
+            ->map(function (array $item) use ($exchangeRate): array {
                 $quantity = (float) ($item['quantity'] ?? 0);
                 $unitPrice = (float) ($item['unit_price'] ?? 0);
                 $sourceColumn = (string) $item['source_column'];
@@ -173,8 +174,11 @@ class BorrowerSurveyController extends Controller
                     'description' => (string) $item['description'],
                     'unit' => $item['unit'] ?? null,
                     'unit_price' => $unitPrice,
+                    'exchange_rate' => $exchangeRate,
+                    'unit_price_ils' => round($unitPrice * $exchangeRate, 2),
                     'quantity' => $quantity,
                     'total_price' => round($quantity * $unitPrice, 2),
+                    'total_price_ils' => round($quantity * $unitPrice * $exchangeRate, 2),
                     'sort_order' => (int) ($item['sort_order'] ?? 0),
                 ];
             })
@@ -199,6 +203,8 @@ class BorrowerSurveyController extends Controller
 
             $borrower->forceFill([
                 'boq_total_usd' => $items->sum('total_price'),
+                'exchange_rate' => $items->first()['exchange_rate'] ?? 3.2,
+                'boq_total_ils' => $items->sum('total_price_ils'),
             ])->save();
         });
 
@@ -240,6 +246,8 @@ class BorrowerSurveyController extends Controller
             'loan_unit_damage_status' => $borrower->loan_unit_damage_status,
             'damage_label' => $this->optionLabel($borrower->loan_unit_damage_status),
             'boq_total_usd' => (float) $borrower->boq_total_usd,
+            'exchange_rate' => (float) $borrower->exchange_rate,
+            'boq_total_ils' => (float) $borrower->boq_total_ils,
             'attachments_count' => $borrower->attachments_count,
             'risk_level' => $borrower->risk_level,
             'risk_label' => $this->riskLabel($borrower->risk_level),
@@ -297,8 +305,10 @@ class BorrowerSurveyController extends Controller
                     'description' => $catalogItem->description,
                     'unit' => $catalogItem->unit,
                     'unit_price' => $existingItem?->unit_price ?? $catalogItem->unit_price,
+                    'unit_price_ils' => $existingItem?->unit_price_ils ?? $catalogItem->unit_price_ils,
                     'quantity' => $existingItem?->quantity ?? 0,
                     'total_price' => $existingItem?->total_price ?? 0,
+                    'total_price_ils' => $existingItem?->total_price_ils ?? 0,
                     'sort_order' => $catalogItem->sort_order,
                 ];
             });
@@ -314,8 +324,10 @@ class BorrowerSurveyController extends Controller
                 'description' => $item->description,
                 'unit' => $item->unit,
                 'unit_price' => $item->unit_price,
+                'unit_price_ils' => $item->unit_price_ils,
                 'quantity' => $item->quantity,
                 'total_price' => $item->total_price,
+                'total_price_ils' => $item->total_price_ils,
                 'sort_order' => $item->sort_order,
             ]);
 

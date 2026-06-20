@@ -228,6 +228,7 @@ it('updates borrower pricing items and recalculates total', function () {
 
     $this->actingAs($user)
         ->put(route('damage-assessment-borrowers.pricing.update', $borrower), [
+            'exchange_rate' => 3.5,
             'items' => [
                 [
                     'catalog_item_id' => $catalogItem->id,
@@ -247,8 +248,11 @@ it('updates borrower pricing items and recalculates total', function () {
     $borrower->refresh();
 
     expect((float) $borrower->boq_total_usd)->toBe(110.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(385.0)
+        ->and((float) $borrower->exchange_rate)->toBe(3.5)
         ->and($borrower->boqItems()->count())->toBe(1)
-        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(110.0);
+        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(110.0)
+        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(385.0);
 });
 
 it('adds borrowers to the sidebar for database officers', function () {
@@ -315,6 +319,7 @@ it('imports borrower boq items attachments and resident households', function ()
             ->and($borrower->residentHouseholds()->count())->toBe(1)
             ->and($borrower->boqItems()->count())->toBe(1)
             ->and((float) $borrower->refresh()->boq_total_usd)->toBe(20.0)
+            ->and((float) $borrower->boq_total_ils)->toBe(64.0)
             ->and($borrower->attachments_count)->toBe(1);
     } finally {
         @unlink($path);

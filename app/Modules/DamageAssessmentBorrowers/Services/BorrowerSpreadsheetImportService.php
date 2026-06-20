@@ -86,7 +86,7 @@ class BorrowerSpreadsheetImportService
     public function __construct(private readonly BorrowerRiskAnalysisService $riskAnalysis) {}
 
     /**
-     * @return array{total: int, imported: int, skipped: int}
+     * @return array{total: int, imported: int, skipped: int, exchange_rate: float}
      */
     public function importPriceCatalog(string $path): array
     {
@@ -96,6 +96,7 @@ class BorrowerSpreadsheetImportService
 
         $spreadsheet = IOFactory::load($path);
         $sheet = $spreadsheet->getSheetByName('ورقة1') ?? $spreadsheet->getSheet(0);
+        $exchangeRate = $this->exchangeRateFromWorksheet($sheet);
         $rows = $sheet->toArray(null, true, true, false);
         array_shift($rows);
 
@@ -103,6 +104,7 @@ class BorrowerSpreadsheetImportService
             'total' => 0,
             'imported' => 0,
             'skipped' => 0,
+            'exchange_rate' => $exchangeRate,
         ];
         $category = null;
 
@@ -138,6 +140,7 @@ class BorrowerSpreadsheetImportService
                     'source_key' => sha1($description),
                     'unit' => $unit,
                     'unit_price' => $unitPrice,
+                    'unit_price_ils' => round($unitPrice * $exchangeRate, 2),
                     'category' => $category,
                     'source_sheet' => $sheet->getTitle(),
                     'sort_order' => $index + 1,
@@ -520,6 +523,7 @@ class BorrowerSpreadsheetImportService
             : null;
         $boqItems = $this->mappedBoqItems($sourceRow['boq_quantities']);
         $boqTotalUsd = collect($boqItems)->sum('total_price');
+        $exchangeRate = $this->currentExchangeRate();
 
         return [
             'submitted_by_name' => $sourceRow['submitted_by_name'] ?: null,
@@ -561,6 +565,8 @@ class BorrowerSpreadsheetImportService
             'attachments' => $sourceRow['attachments'],
             'boq_items' => $boqItems,
             'boq_total_usd' => $boqTotalUsd,
+            'exchange_rate' => $exchangeRate,
+            'boq_total_ils' => round($boqTotalUsd * $exchangeRate, 2),
             'attachments_count' => count($sourceRow['attachments']),
         ];
     }
@@ -591,6 +597,7 @@ class BorrowerSpreadsheetImportService
                             || str_contains($catalogDescription, mb_substr($normalizedDescription, 0, 120)));
                 });
                 $unitPrice = (float) ($catalogItem?->unit_price ?? 0);
+                $exchangeRate = $this->currentExchangeRate();
                 $itemQuantity = (float) $quantity['quantity'];
 
                 return [
@@ -601,8 +608,11 @@ class BorrowerSpreadsheetImportService
                     'description' => $catalogItem?->description ?? $description,
                     'unit' => $catalogItem?->unit ?? $this->unitFromDescription($description),
                     'unit_price' => $unitPrice,
+                    'exchange_rate' => $exchangeRate,
+                    'unit_price_ils' => round($unitPrice * $exchangeRate, 2),
                     'quantity' => $itemQuantity,
                     'total_price' => round($itemQuantity * $unitPrice, 2),
+                    'total_price_ils' => round($itemQuantity * $unitPrice * $exchangeRate, 2),
                     'sort_order' => $quantity['sort_order'],
                 ];
             })
@@ -890,6 +900,39 @@ class BorrowerSpreadsheetImportService
         }
 
         return null;
+    }
+
+    private function exchangeRateFromWorksheet(Worksheet $sheet): float
+    {
+        foreach ($sheet->toArray(null, true, true, false) as $row) {
+            foreach ($row as $value) {
+                $text = $this->text($value);
+
+                if ($text !== '' && str_contains($text, 'سعر صرف') && preg_match('/([0-9]+(?:[.,][0-9]+)?)/', $text, $matches) === 1) {
+                    return (float) str_replace(',', '.', $matches[1]);
+                }
+            }
+        }
+
+        return 3.2;
+    }
+
+    private function currentExchangeRate(): float
+    {
+        if (! Schema::hasColumn('damage_assessment_borrower_boq_catalog_items', 'unit_price_ils')) {
+            return 3.2;
+        }
+
+        $catalogItem = BorrowerBoqCatalogItem::query()
+            ->where('unit_price', '>', 0)
+            ->where('unit_price_ils', '>', 0)
+            ->first();
+
+        if (! $catalogItem instanceof BorrowerBoqCatalogItem) {
+            return 3.2;
+        }
+
+        return round((float) $catalogItem->unit_price_ils / (float) $catalogItem->unit_price, 4);
     }
 
     private function truthy(string $value): bool

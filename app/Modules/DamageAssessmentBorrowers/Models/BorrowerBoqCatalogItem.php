@@ -17,6 +17,7 @@ class BorrowerBoqCatalogItem extends Model
         'normalized_description',
         'unit',
         'unit_price',
+        'unit_price_ils',
         'category',
         'source_sheet',
         'sort_order',
@@ -31,6 +32,7 @@ class BorrowerBoqCatalogItem extends Model
     {
         return [
             'unit_price' => 'decimal:2',
+            'unit_price_ils' => 'decimal:2',
             'sort_order' => 'integer',
         ];
     }

@@ -29,6 +29,7 @@ class UpdateBorrowerPricingRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'exchange_rate' => ['required', 'numeric', 'min:0.0001', 'max:9999.9999'],
             'items' => ['nullable', 'array'],
             'items.*.catalog_item_id' => ['nullable', 'integer', 'exists:damage_assessment_borrower_boq_catalog_items,id'],
             'items.*.source_column' => ['required', 'string'],
@@ -37,6 +38,7 @@ class UpdateBorrowerPricingRequest extends FormRequest
             'items.*.description' => ['required', 'string'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],
+            'items.*.unit_price_ils' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],
             'items.*.quantity' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],
             'items.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ];

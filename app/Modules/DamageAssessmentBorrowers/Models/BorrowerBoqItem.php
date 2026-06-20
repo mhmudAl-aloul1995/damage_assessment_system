@@ -18,8 +18,11 @@ class BorrowerBoqItem extends Model
         'description',
         'unit',
         'unit_price',
+        'exchange_rate',
+        'unit_price_ils',
         'quantity',
         'total_price',
+        'total_price_ils',
         'sort_order',
     ];
 
@@ -37,8 +40,11 @@ class BorrowerBoqItem extends Model
     {
         return [
             'unit_price' => 'decimal:2',
+            'exchange_rate' => 'decimal:4',
+            'unit_price_ils' => 'decimal:2',
             'quantity' => 'decimal:2',
             'total_price' => 'decimal:2',
+            'total_price_ils' => 'decimal:2',
             'sort_order' => 'integer',
         ];
     }

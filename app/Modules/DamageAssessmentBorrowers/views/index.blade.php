@@ -939,7 +939,7 @@
                     </td>
                     <td>${row.displacement_label || '-'}</td>
                     <td>${row.damage_label || '-'}</td>
-                    <td>${Number(row.boq_total_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td><div>${Number(row.boq_total_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} $</div><div class="text-success small">${Number(row.boq_total_ils || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₪</div></td>
                     <td>${row.attachments_count || 0}</td>
                     <td><span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span></td>
                 </tr>`;
@@ -968,7 +968,7 @@
                         </div>
                         <div class="borrower-mobile-meta-item boq">
                             <span>BOQ</span>
-                            <span>${Number(row.boq_total_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span>${Number(row.boq_total_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} $ / ${Number(row.boq_total_ils || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₪</span>
                         </div>
                         <div class="borrower-mobile-meta-item">
                             <span>صور</span>

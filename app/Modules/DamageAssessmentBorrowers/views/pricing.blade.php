@@ -38,7 +38,7 @@
             <div class="row g-5 mb-8">
                 <div class="col-md-4">
                     <div class="border rounded p-5 h-100">
-                        <div class="text-muted fs-7 mb-1">إجمالي التسعير الحالي</div>
+                        <div class="text-muted fs-7 mb-1">الإجمالي بالدولار</div>
                         <div class="fs-2 fw-bold text-primary" id="pricingGrandTotal">
                             {{ number_format((float) $borrower->boq_total_usd, 2) }} $
                         </div>
@@ -52,8 +52,10 @@
                 </div>
                 <div class="col-md-4">
                     <div class="border rounded p-5 h-100">
-                        <div class="text-muted fs-7 mb-1">حالة الضرر</div>
-                        <div class="fs-5 fw-bold">{{ $borrower->loan_unit_damage_status ?: '-' }}</div>
+                        <div class="text-muted fs-7 mb-1">الإجمالي بالشيكل</div>
+                        <div class="fs-2 fw-bold text-success" id="pricingGrandTotalIls">
+                            {{ number_format((float) $borrower->boq_total_ils, 2) }} ₪
+                        </div>
                     </div>
                 </div>
             </div>
@@ -61,6 +63,13 @@
             <form method="POST" action="{{ route('damage-assessment-borrowers.pricing.update', $borrower) }}" id="borrowerPricingForm">
                 @csrf
                 @method('PUT')
+
+                <div class="row g-5 mb-5">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">سعر صرف الدولار / شيكل</label>
+                        <input type="number" step="0.0001" min="0.0001" name="exchange_rate" value="{{ old('exchange_rate', $borrower->exchange_rate ?: 3.2) }}" class="form-control" id="exchangeRateInput">
+                    </div>
+                </div>
 
                 <div class="table-responsive">
                     <table class="table table-row-dashed align-middle" id="pricingTable">
@@ -70,8 +79,10 @@
                                 <th class="min-w-350px">البند</th>
                                 <th class="min-w-90px">الوحدة</th>
                                 <th class="min-w-140px">سعر الوحدة $</th>
+                                <th class="min-w-140px">سعر الوحدة ₪</th>
                                 <th class="min-w-120px">الكمية</th>
                                 <th class="min-w-140px">الإجمالي $</th>
+                                <th class="min-w-140px">الإجمالي ₪</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -95,13 +106,17 @@
                                         <input type="number" step="0.01" min="0" name="items[{{ $index }}][unit_price]" value="{{ $row['unit_price'] }}" class="form-control form-control-sm" data-unit-price>
                                     </td>
                                     <td>
+                                        <input type="number" step="0.01" min="0" name="items[{{ $index }}][unit_price_ils]" value="{{ $row['unit_price_ils'] }}" class="form-control form-control-sm form-control-solid" data-unit-price-ils readonly>
+                                    </td>
+                                    <td>
                                         <input type="number" step="0.01" min="0" name="items[{{ $index }}][quantity]" value="{{ $row['quantity'] }}" class="form-control form-control-sm" data-quantity>
                                     </td>
                                     <td class="fw-bold" data-row-total>{{ number_format((float) $row['total_price'], 2) }}</td>
+                                    <td class="fw-bold text-success" data-row-total-ils>{{ number_format((float) $row['total_price_ils'], 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-10">
+                                    <td colspan="8" class="text-center text-muted py-10">
                                         لا توجد بنود BOQ بعد. ارفع ملف أسعار BOQ من شاشة الاستيراد أولًا.
                                     </td>
                                 </tr>
@@ -123,17 +138,27 @@
             });
             const table = document.getElementById('pricingTable');
             const grandTotal = document.getElementById('pricingGrandTotal');
+            const grandTotalIls = document.getElementById('pricingGrandTotalIls');
+            const exchangeRateInput = document.getElementById('exchangeRateInput');
 
             function recalculate() {
                 let total = 0;
+                let totalIls = 0;
+                const exchangeRate = Number(exchangeRateInput?.value || 0);
                 document.querySelectorAll('[data-pricing-row]').forEach((row) => {
                     const unitPrice = Number(row.querySelector('[data-unit-price]')?.value || 0);
                     const quantity = Number(row.querySelector('[data-quantity]')?.value || 0);
+                    const unitPriceIls = unitPrice * exchangeRate;
                     const rowTotal = unitPrice * quantity;
+                    const rowTotalIls = unitPriceIls * quantity;
                     total += rowTotal;
+                    totalIls += rowTotalIls;
+                    row.querySelector('[data-unit-price-ils]').value = formatter.format(unitPriceIls).replace(/,/g, '');
                     row.querySelector('[data-row-total]').textContent = formatter.format(rowTotal);
+                    row.querySelector('[data-row-total-ils]').textContent = formatter.format(rowTotalIls);
                 });
                 grandTotal.textContent = `${formatter.format(total)} $`;
+                grandTotalIls.textContent = `${formatter.format(totalIls)} ₪`;
             }
 
             table?.addEventListener('input', (event) => {
@@ -141,6 +166,7 @@
                     recalculate();
                 }
             });
+            exchangeRateInput?.addEventListener('input', recalculate);
 
             recalculate();
         })();

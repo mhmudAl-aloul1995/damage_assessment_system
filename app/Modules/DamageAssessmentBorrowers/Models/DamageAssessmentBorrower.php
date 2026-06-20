@@ -56,6 +56,8 @@ class DamageAssessmentBorrower extends Model
         'risk_score',
         'risk_reasons',
         'boq_total_usd',
+        'exchange_rate',
+        'boq_total_ils',
         'attachments_count',
     ];
 
@@ -101,6 +103,8 @@ class DamageAssessmentBorrower extends Model
             'risk_score' => 'integer',
             'risk_reasons' => 'array',
             'boq_total_usd' => 'decimal:2',
+            'exchange_rate' => 'decimal:4',
+            'boq_total_ils' => 'decimal:2',
             'attachments_count' => 'integer',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
