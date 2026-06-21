@@ -178,7 +178,9 @@ class BorrowerSurveyController extends Controller
             ->accept('*/*');
 
         if ($isKoboApiUrl) {
-            $request = $request->withToken($token);
+            $request = $request->withHeaders([
+                'Authorization' => 'Token '.$token,
+            ]);
         }
 
         $response = $request->get((string) $attachment->url);

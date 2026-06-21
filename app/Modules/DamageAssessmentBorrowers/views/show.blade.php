@@ -46,8 +46,8 @@
         $hasCoordinates = filled($borrower->location_latitude) && filled($borrower->location_longitude);
         $latitude = $hasCoordinates ? (float) $borrower->location_latitude : null;
         $longitude = $hasCoordinates ? (float) $borrower->location_longitude : null;
-        $mapImageUrl = $hasCoordinates
-            ? 'https://staticmap.openstreetmap.de/staticmap.php?center='.$latitude.','.$longitude.'&zoom=17&size=1200x420&markers='.$latitude.','.$longitude.',red-pushpin'
+        $mapEmbedUrl = $hasCoordinates
+            ? 'https://www.openstreetmap.org/export/embed.html?bbox='.($longitude - 0.004).'%2C'.($latitude - 0.004).'%2C'.($longitude + 0.004).'%2C'.($latitude + 0.004).'&layer=mapnik&marker='.$latitude.'%2C'.$longitude
             : null;
         $googleMapsUrl = $hasCoordinates ? 'https://www.google.com/maps?q='.$latitude.','.$longitude : null;
     @endphp
@@ -100,13 +100,12 @@
             text-align: center;
         }
 
-        .borrower-show-page .borrower-map-image {
+        .borrower-show-page .borrower-map-frame {
             aspect-ratio: 20 / 7;
             background: var(--bs-gray-100);
             border: 1px solid var(--bs-gray-200);
             border-radius: 0.5rem;
             display: block;
-            object-fit: cover;
             width: 100%;
         }
 
@@ -372,7 +371,7 @@
                 <div class="card card-flush">
                     <div class="card-header align-items-center gap-3">
                         <div class="card-title">
-                            <h4 class="fw-bold mb-0">موقع الزيارة على الخريطة</h4>
+                            <h4 class="fw-bold mb-0">خريطة موقع المستفيد</h4>
                         </div>
                         @if ($hasCoordinates)
                             <div class="card-toolbar">
@@ -384,9 +383,13 @@
                     </div>
                     <div class="card-body">
                         @if ($hasCoordinates)
-                            <a href="{{ $googleMapsUrl }}" target="_blank" rel="noopener">
-                                <img src="{{ $mapImageUrl }}" alt="خريطة موقع المستفيد" class="borrower-map-image">
-                            </a>
+                            <iframe
+                                src="{{ $mapEmbedUrl }}"
+                                title="خريطة موقع المستفيد"
+                                class="borrower-map-frame"
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade">
+                            </iframe>
                             <div class="d-flex flex-wrap gap-3 mt-4 text-muted fs-7">
                                 <span>Latitude: {{ $borrower->location_latitude }}</span>
                                 <span>Longitude: {{ $borrower->location_longitude }}</span>

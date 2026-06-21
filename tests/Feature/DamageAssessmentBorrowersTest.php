@@ -234,7 +234,7 @@ it('opens borrower details page with survey data attachments and boq items', fun
         ->assertSee('IDB-DETAIL')
         ->assertSee('damage.jpg')
         ->assertSee(route('damage-assessment-borrowers.attachments.show', [$borrower, $attachment]))
-        ->assertSee('staticmap.openstreetmap.de', false)
+        ->assertSee('www.openstreetmap.org/export/embed.html', false)
         ->assertSee('https://www.google.com/maps?q=31.5012345,34.4667891', false)
         ->assertSee('Repair item')
         ->assertSee('Resident Household')
@@ -269,7 +269,7 @@ it('streams borrower attachments through the application with a kobo token', fun
         ->assertHeader('Content-Type', 'image/jpeg')
         ->assertSee('image-binary');
 
-    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer secret-token'));
+    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Token secret-token'));
 });
 
 it('opens borrower pricing page for database officers', function () {
