@@ -13,7 +13,7 @@
         }
 
         .borrower-pricing-page .pricing-table {
-            min-width: 1080px;
+            min-width: 1120px;
             table-layout: fixed;
         }
 
@@ -27,7 +27,7 @@
         }
 
         .borrower-pricing-page .pricing-col-item {
-            width: 34%;
+            width: 42%;
         }
 
         .borrower-pricing-page .pricing-col-unit {
@@ -35,11 +35,11 @@
         }
 
         .borrower-pricing-page .pricing-col-money {
-            width: 112px;
+            width: 104px;
         }
 
         .borrower-pricing-page .pricing-col-quantity {
-            width: 96px;
+            width: 88px;
         }
 
         .borrower-pricing-page .pricing-item-description {
