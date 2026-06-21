@@ -935,7 +935,10 @@
                     <td>
                         <div class="fw-bold">${row.borrower_name}</div>
                         <div class="text-muted small">${row.borrower_id_number || '-'}</div>
-                        <a href="${row.pricing_url}" class="btn btn-sm btn-light-primary mt-2">تسعير</a>
+                        <div class="d-flex gap-2 mt-2">
+                            ${row.show_url ? `<a href="${row.show_url}" class="btn btn-sm btn-light">عرض</a>` : ''}
+                            ${row.pricing_url ? `<a href="${row.pricing_url}" class="btn btn-sm btn-light-primary">تسعير</a>` : ''}
+                        </div>
                     </td>
                     <td>${row.displacement_label || '-'}</td>
                     <td>${row.damage_label || '-'}</td>
@@ -953,7 +956,10 @@
                         <div>
                             <div class="fw-bold">${row.borrower_name}</div>
                             <div class="text-muted small">${row.borrower_id_number || '-'}</div>
-                                <a href="${row.pricing_url}" class="btn btn-sm btn-light-primary mt-2">تسعير</a>
+                            <div class="d-flex gap-2 mt-2">
+                                ${row.show_url ? `<a href="${row.show_url}" class="btn btn-sm btn-light">عرض</a>` : ''}
+                                ${row.pricing_url ? `<a href="${row.pricing_url}" class="btn btn-sm btn-light-primary">تسعير</a>` : ''}
+                            </div>
                         </div>
                         <span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span>
                     </div>

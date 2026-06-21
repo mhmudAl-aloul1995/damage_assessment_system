@@ -175,7 +175,64 @@ it('lists borrower surveys as json rows', function () {
         ->getJson(route('damage-assessment-borrowers.data', ['q' => 'Mona']))
         ->assertOk()
         ->assertJsonPath('status', true)
-        ->assertJsonPath('data.0.borrower_name', 'Mona Borrower');
+        ->assertJsonPath('data.0.borrower_name', 'Mona Borrower')
+        ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
+});
+
+it('opens borrower details page with survey data attachments and boq items', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Details Borrower',
+        'borrower_id_number' => '810000009',
+        'form_number' => 'IDB-DETAIL',
+        'phone_primary' => '0599000000',
+        'is_borrower_alive' => true,
+        'loan_unit_damage_status' => 'destroyed',
+        'boq_total_usd' => 45,
+        'boq_total_ils' => 144,
+        'risk_level' => 'high',
+        'risk_score' => 65,
+        'risk_reasons' => ['High risk reason'],
+    ]);
+    $borrower->attachments()->create([
+        'filename' => 'damage.jpg',
+        'url' => 'https://example.test/damage.jpg',
+        'source_index' => 1,
+    ]);
+    $borrower->boqItems()->create([
+        'source_column' => 'Repair item',
+        'source_key' => sha1('Repair item'),
+        'description' => 'Repair item',
+        'unit' => 'M2',
+        'unit_price' => 15,
+        'exchange_rate' => 3.2,
+        'unit_price_ils' => 48,
+        'quantity' => 3,
+        'total_price' => 45,
+        'total_price_ils' => 144,
+        'sort_order' => 1,
+    ]);
+    $borrower->residentHouseholds()->create([
+        'head_name' => 'Resident Household',
+        'id_number' => '5005',
+        'members_count' => 4,
+        'phone' => '0599111111',
+        'employment_status' => 'not_working',
+        'source_index' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.show', $borrower))
+        ->assertOk()
+        ->assertSee('Details Borrower')
+        ->assertSee('IDB-DETAIL')
+        ->assertSee('damage.jpg')
+        ->assertSee('https://example.test/damage.jpg')
+        ->assertSee('Repair item')
+        ->assertSee('Resident Household')
+        ->assertSee('High risk reason');
 });
 
 it('opens borrower pricing page for database officers', function () {

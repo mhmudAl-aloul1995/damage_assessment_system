@@ -126,17 +126,20 @@ class BorrowerSurveyController extends Controller
         ]);
     }
 
-    public function show(DamageAssessmentBorrower $borrower): JsonResponse
+    public function show(DamageAssessmentBorrower $borrower): View
     {
         $this->authorizeAccess();
-        $borrower->load('submitter:id,name');
 
-        return response()->json([
-            'status' => true,
-            'borrower' => array_merge($borrower->toArray(), [
-                'risk_label' => $this->riskLabel($borrower->risk_level),
-                'submitted_by_display' => $borrower->submitter?->name ?? $borrower->submitted_by_name,
-            ]),
+        $borrower->load([
+            'attachments' => fn ($query) => $query->orderBy('source_index'),
+            'boqItems' => fn ($query) => $query->orderBy('sort_order')->orderBy('id'),
+            'residentHouseholds' => fn ($query) => $query->orderBy('source_index'),
+            'submitter:id,name',
+        ]);
+
+        return view('damage-assessment-borrowers::show', [
+            'borrower' => $borrower,
+            'labels' => $this->borrowerDisplayLabels($borrower),
         ]);
     }
 
@@ -255,7 +258,26 @@ class BorrowerSurveyController extends Controller
             'risk_reasons' => $borrower->risk_reasons ?? [],
             'submitted_by' => $borrower->submitter?->name ?? $borrower->submitted_by_name,
             'created_at' => $borrower->created_at?->format('Y-m-d H:i'),
+            'show_url' => route('damage-assessment-borrowers.show', $borrower),
             'pricing_url' => route('damage-assessment-borrowers.pricing', $borrower),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function borrowerDisplayLabels(DamageAssessmentBorrower $borrower): array
+    {
+        return [
+            'marital_status' => $this->optionLabel($borrower->marital_status),
+            'employment_status' => $this->optionLabel($borrower->employment_status),
+            'guarantors_alive_status' => $this->optionLabel($borrower->guarantors_alive_status),
+            'displacement_status' => $this->optionLabel($borrower->displacement_status),
+            'displaced_to_governorate' => $this->optionLabel($borrower->displaced_to_governorate),
+            'loan_unit_occupancy_status' => $this->optionLabel($borrower->loan_unit_occupancy_status),
+            'loan_unit_damage_status' => $this->optionLabel($borrower->loan_unit_damage_status),
+            'risk_level' => $this->riskLabel($borrower->risk_level),
+            'submitted_by' => $borrower->submitter?->name ?? $borrower->submitted_by_name ?? '-',
         ];
     }
 
@@ -355,9 +377,17 @@ class BorrowerSurveyController extends Controller
             'working' => 'على رأس عمله',
             'retired' => 'متقاعد',
             'not_working' => 'لا يعمل',
+            'yes' => 'نعم',
+            'no' => 'لا',
+            'none' => 'لا يوجد',
             'displaced' => 'نازح',
             'returned' => 'عائد إلى منزله',
             'resident' => 'مقيم',
+            'north' => 'محافظة الشمال',
+            'gaza' => 'محافظة غزة',
+            'middle' => 'محافظة الوسطى',
+            'khan_younis' => 'محافظة خانيونس',
+            'rafah' => 'محافظة رفح',
             'owner_borrower' => 'المقترض نفسه',
             'tenants' => 'مستأجرين',
             'displaced_hosted' => 'نازحين أو مستضافين',
