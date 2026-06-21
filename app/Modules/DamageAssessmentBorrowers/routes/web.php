@@ -18,6 +18,8 @@ Route::middleware('auth')->group(function () {
         ->name('damage-assessment-borrowers.pricing');
     Route::put('/{borrower}/pricing', [BorrowerSurveyController::class, 'updatePricing'])
         ->name('damage-assessment-borrowers.pricing.update');
+    Route::get('/{borrower}/attachments/{attachment}', [BorrowerSurveyController::class, 'attachment'])
+        ->name('damage-assessment-borrowers.attachments.show');
     Route::get('/{borrower}', [BorrowerSurveyController::class, 'show'])
         ->name('damage-assessment-borrowers.show');
 });

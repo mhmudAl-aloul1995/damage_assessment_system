@@ -42,6 +42,10 @@ return [
     'damage_assessment_pdf' => [
         'engine' => env('DAMAGE_ASSESSMENT_PDF_ENGINE', 'mpdf'),
     ],
+    'kobotoolbox' => [
+        'token' => env('KOBOTOOLBOX_TOKEN'),
+        'timeout' => env('KOBOTOOLBOX_TIMEOUT', 60),
+    ],
     'arcgis' => [
         'username' => env('ARCGIS_USERNAME'),
         'password' => env('ARCGIS_PASSWORD'),

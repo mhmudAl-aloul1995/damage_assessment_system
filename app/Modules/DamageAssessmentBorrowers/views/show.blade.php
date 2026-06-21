@@ -15,25 +15,41 @@
 
         $value = static fn (mixed $item): string => filled($item) ? (string) $item : '-';
         $money = static fn (mixed $item): string => number_format((float) $item, 2);
-        $isImageUrl = static function (?string $url): bool {
-            if (! filled($url)) {
-                return false;
-            }
+        $isImageAttachment = static function ($attachment): bool {
+            $target = (string) ($attachment->filename ?: $attachment->url);
 
-            return preg_match('/\.(jpe?g|png|webp|gif)(\?.*)?$/i', $url) === 1;
+            return preg_match('/\.(jpe?g|png|webp|gif)(\?.*)?$/i', $target) === 1;
         };
-        $attachmentHref = static function ($attachment): ?string {
+        $attachmentHref = static function ($borrower, $attachment): ?string {
             if (filled($attachment->url)) {
-                return $attachment->url;
+                return route('damage-assessment-borrowers.attachments.show', [$borrower, $attachment]);
             }
 
             return null;
+        };
+        $canProxyAttachment = static function ($attachment): bool {
+            if (! filled($attachment->url)) {
+                return false;
+            }
+
+            if (! str_contains((string) $attachment->url, 'kobotoolbox.org/api/')) {
+                return true;
+            }
+
+            return filled(config('services.kobotoolbox.token'));
         };
         $displayList = static fn (?array $items): array => collect($items ?? [])
             ->map(fn ($item) => is_array($item) ? ($item['name'] ?? implode(' - ', array_filter($item))) : $item)
             ->filter()
             ->values()
             ->all();
+        $hasCoordinates = filled($borrower->location_latitude) && filled($borrower->location_longitude);
+        $latitude = $hasCoordinates ? (float) $borrower->location_latitude : null;
+        $longitude = $hasCoordinates ? (float) $borrower->location_longitude : null;
+        $mapImageUrl = $hasCoordinates
+            ? 'https://staticmap.openstreetmap.de/staticmap.php?center='.$latitude.','.$longitude.'&zoom=17&size=1200x420&markers='.$latitude.','.$longitude.',red-pushpin'
+            : null;
+        $googleMapsUrl = $hasCoordinates ? 'https://www.google.com/maps?q='.$latitude.','.$longitude : null;
     @endphp
 
     <style>
@@ -82,6 +98,16 @@
             display: flex;
             justify-content: center;
             text-align: center;
+        }
+
+        .borrower-show-page .borrower-map-image {
+            aspect-ratio: 20 / 7;
+            background: var(--bs-gray-100);
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.5rem;
+            display: block;
+            object-fit: cover;
+            width: 100%;
         }
 
         @media (max-width: 991.98px) {
@@ -344,6 +370,39 @@
 
             <div class="col-12">
                 <div class="card card-flush">
+                    <div class="card-header align-items-center gap-3">
+                        <div class="card-title">
+                            <h4 class="fw-bold mb-0">موقع الزيارة على الخريطة</h4>
+                        </div>
+                        @if ($hasCoordinates)
+                            <div class="card-toolbar">
+                                <a href="{{ $googleMapsUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-light-primary">
+                                    فتح في Google Maps
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="card-body">
+                        @if ($hasCoordinates)
+                            <a href="{{ $googleMapsUrl }}" target="_blank" rel="noopener">
+                                <img src="{{ $mapImageUrl }}" alt="خريطة موقع المستفيد" class="borrower-map-image">
+                            </a>
+                            <div class="d-flex flex-wrap gap-3 mt-4 text-muted fs-7">
+                                <span>Latitude: {{ $borrower->location_latitude }}</span>
+                                <span>Longitude: {{ $borrower->location_longitude }}</span>
+                                @if (filled($borrower->location_precision))
+                                    <span>Precision: {{ $borrower->location_precision }}</span>
+                                @endif
+                            </div>
+                        @else
+                            <div class="text-muted">لا توجد إحداثيات محفوظة لهذا المستفيد.</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card card-flush">
                     <div class="card-header">
                         <div class="card-title"><h4 class="fw-bold mb-0">صور المستفيد</h4></div>
                     </div>
@@ -352,22 +411,31 @@
                             <div class="row g-5">
                                 @foreach ($borrower->attachments as $attachment)
                                     @php
-                                        $href = $attachmentHref($attachment);
+                                        $href = $attachmentHref($borrower, $attachment);
+                                        $canOpenAttachment = $canProxyAttachment($attachment);
                                     @endphp
                                     <div class="col-xl-3 col-md-4 col-sm-6">
                                         <div class="border rounded p-3 h-100">
-                                            @if ($href && $isImageUrl($href))
+                                            @if ($href && $canOpenAttachment && $isImageAttachment($attachment))
                                                 <a href="{{ $href }}" target="_blank" rel="noopener">
                                                     <img src="{{ $href }}" alt="{{ $attachment->filename ?: 'صورة مستفيد' }}" class="borrower-attachment-preview">
                                                 </a>
                                             @else
-                                                <div class="borrower-attachment-fallback">لا يمكن عرض معاينة مباشرة</div>
+                                                <div class="borrower-attachment-fallback">
+                                                    @if (! $canOpenAttachment && filled($attachment->url))
+                                                        يحتاج Kobo token لعرض الصورة
+                                                    @else
+                                                        لا يمكن عرض معاينة مباشرة
+                                                    @endif
+                                                </div>
                                             @endif
                                             <div class="fw-semibold mt-3 text-truncate" title="{{ $attachment->filename ?: $href }}">
                                                 {{ $attachment->filename ?: 'مرفق رقم '.$attachment->source_index }}
                                             </div>
-                                            @if ($href)
+                                            @if ($href && $canOpenAttachment)
                                                 <a href="{{ $href }}" target="_blank" rel="noopener" class="btn btn-sm btn-light-primary mt-3 w-100">فتح المرفق</a>
+                                            @elseif (filled($attachment->url))
+                                                <div class="text-muted fs-7 mt-3">الرابط من Kobo خاص. أضف KOBOTOOLBOX_TOKEN في ملف البيئة لعرضه داخل النظام.</div>
                                             @else
                                                 <div class="text-muted fs-7 mt-3">لا يوجد رابط محفوظ، الاسم فقط متوفر.</div>
                                             @endif

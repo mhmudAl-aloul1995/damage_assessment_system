@@ -7,6 +7,7 @@ use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Mockery\MockInterface;
 use Spatie\Permission\Models\Role;
 
@@ -189,6 +190,9 @@ it('opens borrower details page with survey data attachments and boq items', fun
         'form_number' => 'IDB-DETAIL',
         'phone_primary' => '0599000000',
         'is_borrower_alive' => true,
+        'location_latitude' => 31.5012345,
+        'location_longitude' => 34.4667891,
+        'location_precision' => 4.5,
         'loan_unit_damage_status' => 'destroyed',
         'boq_total_usd' => 45,
         'boq_total_ils' => 144,
@@ -196,7 +200,7 @@ it('opens borrower details page with survey data attachments and boq items', fun
         'risk_score' => 65,
         'risk_reasons' => ['High risk reason'],
     ]);
-    $borrower->attachments()->create([
+    $attachment = $borrower->attachments()->create([
         'filename' => 'damage.jpg',
         'url' => 'https://example.test/damage.jpg',
         'source_index' => 1,
@@ -229,10 +233,43 @@ it('opens borrower details page with survey data attachments and boq items', fun
         ->assertSee('Details Borrower')
         ->assertSee('IDB-DETAIL')
         ->assertSee('damage.jpg')
-        ->assertSee('https://example.test/damage.jpg')
+        ->assertSee(route('damage-assessment-borrowers.attachments.show', [$borrower, $attachment]))
+        ->assertSee('staticmap.openstreetmap.de', false)
+        ->assertSee('https://www.google.com/maps?q=31.5012345,34.4667891', false)
         ->assertSee('Repair item')
         ->assertSee('Resident Household')
         ->assertSee('High risk reason');
+});
+
+it('streams borrower attachments through the application with a kobo token', function () {
+    config(['services.kobotoolbox.token' => 'secret-token']);
+    Http::fake([
+        'https://kf.kobotoolbox.org/api/v2/assets/example/data/1/attachments/att1/' => Http::response('image-binary', 200, [
+            'Content-Type' => 'image/jpeg',
+        ]),
+    ]);
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Attachment Borrower',
+        'borrower_id_number' => '810000019',
+        'is_borrower_alive' => true,
+    ]);
+    $attachment = $borrower->attachments()->create([
+        'filename' => 'damage.jpg',
+        'url' => 'https://kf.kobotoolbox.org/api/v2/assets/example/data/1/attachments/att1/',
+        'source_index' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.attachments.show', [$borrower, $attachment]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/jpeg')
+        ->assertSee('image-binary');
+
+    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer secret-token'));
 });
 
 it('opens borrower pricing page for database officers', function () {

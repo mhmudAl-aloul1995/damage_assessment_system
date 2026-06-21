@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\ImportBorrowerSpreadsheetRequest;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateBorrowerPricingRequest;
 use App\Modules\DamageAssessmentBorrowers\Http\Requests\StoreBorrowerSurveyRequest;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerAttachment;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
@@ -13,10 +14,13 @@ use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportServ
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class BorrowerSurveyController extends Controller
@@ -159,6 +163,38 @@ class BorrowerSurveyController extends Controller
         ]);
     }
 
+    public function attachment(DamageAssessmentBorrower $borrower, BorrowerAttachment $attachment): Response
+    {
+        $this->authorizeAccess();
+        abort_unless((int) $attachment->damage_assessment_borrower_id === $borrower->id, SymfonyResponse::HTTP_NOT_FOUND);
+        abort_unless(filled($attachment->url), SymfonyResponse::HTTP_NOT_FOUND, 'Attachment URL is not available.');
+
+        $token = (string) config('services.kobotoolbox.token', '');
+        $isKoboApiUrl = str_contains((string) $attachment->url, 'kobotoolbox.org/api/');
+
+        abort_if($isKoboApiUrl && $token === '', SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY, 'KoboToolbox token is not configured.');
+
+        $request = Http::timeout((int) config('services.kobotoolbox.timeout', 60))
+            ->accept('*/*');
+
+        if ($isKoboApiUrl) {
+            $request = $request->withToken($token);
+        }
+
+        $response = $request->get((string) $attachment->url);
+
+        abort_unless($response->successful(), SymfonyResponse::HTTP_NOT_FOUND, 'Attachment could not be downloaded.');
+
+        $contentType = $response->header('Content-Type') ?: 'application/octet-stream';
+        abort_if(str_contains($contentType, 'application/json'), SymfonyResponse::HTTP_NOT_FOUND, 'Attachment response is not a file.');
+
+        return response($response->body(), SymfonyResponse::HTTP_OK, [
+            'Cache-Control' => 'private, max-age=3600',
+            'Content-Disposition' => 'inline; filename="'.$this->attachmentFilename($attachment).'"',
+            'Content-Type' => $contentType,
+        ]);
+    }
+
     public function updatePricing(UpdateBorrowerPricingRequest $request, DamageAssessmentBorrower $borrower): RedirectResponse
     {
         $validated = $request->validated();
@@ -279,6 +315,13 @@ class BorrowerSurveyController extends Controller
             'risk_level' => $this->riskLabel($borrower->risk_level),
             'submitted_by' => $borrower->submitter?->name ?? $borrower->submitted_by_name ?? '-',
         ];
+    }
+
+    private function attachmentFilename(BorrowerAttachment $attachment): string
+    {
+        $filename = (string) ($attachment->filename ?: 'borrower-attachment-'.$attachment->id);
+
+        return str_replace(['"', "\r", "\n"], '', $filename);
     }
 
     private function authorizeAccess(): void
