@@ -330,7 +330,7 @@ return [
         'icon' => 'ki-profile-user',
         'url' => 'damage-assessment-borrowers',
         'pattern' => 'damage-assessment-borrowers*',
-        'roles' => ['Database Officer'],
+        'roles' => ['Database Officer','Project Officer - Borrowers'],
         'active_patterns' => [
             'damage-assessment-borrowers*',
         ],
@@ -339,7 +339,7 @@ return [
         'module' => 'administration',
         'title' => 'menu.user_management.title',
         'icon' => 'ki-user',
-        'roles' => ['Database Officer','Project Officer - Borrowers'],
+        'roles' => ['Database Officer'],
         'active_patterns' => [
             'user*',
             'admin/team-leader-field-engineers*',
