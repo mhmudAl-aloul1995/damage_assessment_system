@@ -14,6 +14,7 @@ class UpdateBorrowerPricingRequest extends FormRequest
         return $this->user()?->hasAnyRole([
             'Database Officer',
             'Project Officer',
+            'Project Officer - Borrowers',
             'Area Manager',
             'Team Leader',
             'Team Leader -INF',

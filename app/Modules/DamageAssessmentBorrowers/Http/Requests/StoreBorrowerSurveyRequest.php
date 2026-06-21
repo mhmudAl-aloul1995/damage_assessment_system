@@ -12,6 +12,7 @@ class StoreBorrowerSurveyRequest extends FormRequest
             'Field Engineer',
             'Database Officer',
             'Project Officer',
+            'Project Officer - Borrowers',
             'Area Manager',
             'Team Leader',
             'Team Leader -INF',

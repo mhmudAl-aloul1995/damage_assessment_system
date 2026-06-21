@@ -362,6 +362,21 @@ it('adds borrowers to the sidebar for database officers', function () {
         ->and($module['sections']->first()['url'])->toBe('damage-assessment-borrowers');
 });
 
+it('adds borrowers to the sidebar for borrower project officers', function () {
+    $role = Role::findOrCreate('Project Officer - Borrowers', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $module = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment_borrowers');
+
+    expect($module)->not->toBeNull()
+        ->and($module['sections']->first()['url'])->toBe('damage-assessment-borrowers');
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.index'))
+        ->assertOk();
+});
+
 it('calculates borrower risk levels', function () {
     $analysis = app(BorrowerRiskAnalysisService::class)->analyze([
         'is_borrower_alive' => true,

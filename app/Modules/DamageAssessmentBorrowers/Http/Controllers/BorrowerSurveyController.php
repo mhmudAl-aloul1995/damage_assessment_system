@@ -332,6 +332,7 @@ class BorrowerSurveyController extends Controller
             'Field Engineer',
             'Database Officer',
             'Project Officer',
+            'Project Officer - Borrowers',
             'Area Manager',
             'Team Leader',
             'Team Leader -INF',
@@ -344,6 +345,7 @@ class BorrowerSurveyController extends Controller
         abort_unless(auth()->user()?->hasAnyRole([
             'Database Officer',
             'Project Officer',
+            'Project Officer - Borrowers',
             'Area Manager',
             'Team Leader',
             'Team Leader -INF',
