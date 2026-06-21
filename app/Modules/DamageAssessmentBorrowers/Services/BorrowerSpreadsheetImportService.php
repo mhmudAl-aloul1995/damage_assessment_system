@@ -3,6 +3,7 @@
 namespace App\Modules\DamageAssessmentBorrowers\Services;
 
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -96,7 +97,7 @@ class BorrowerSpreadsheetImportService
 
         $spreadsheet = IOFactory::load($path);
         $sheet = $spreadsheet->getSheetByName('ورقة1') ?? $spreadsheet->getSheet(0);
-        $exchangeRate = $this->exchangeRateFromWorksheet($sheet);
+        $exchangeRate = $this->currentExchangeRate();
         $rows = $sheet->toArray(null, true, true, false);
         array_shift($rows);
 
@@ -898,23 +899,16 @@ class BorrowerSpreadsheetImportService
         return null;
     }
 
-    private function exchangeRateFromWorksheet(Worksheet $sheet): float
+    private function currentExchangeRate(): float
     {
-        foreach ($sheet->toArray(null, true, true, false) as $row) {
-            foreach ($row as $value) {
-                $text = $this->text($value);
+        if (Schema::hasTable('damage_assessment_borrower_pricing_settings')) {
+            $exchangeRate = BorrowerPricingSetting::query()->value('exchange_rate');
 
-                if ($text !== '' && str_contains($text, 'سعر صرف') && preg_match('/([0-9]+(?:[.,][0-9]+)?)/', $text, $matches) === 1) {
-                    return (float) str_replace(',', '.', $matches[1]);
-                }
+            if ($exchangeRate !== null) {
+                return (float) $exchangeRate;
             }
         }
 
-        return 3.2;
-    }
-
-    private function currentExchangeRate(): float
-    {
         if (! Schema::hasColumn('damage_assessment_borrower_boq_catalog_items', 'unit_price_ils')) {
             return 3.2;
         }

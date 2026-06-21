@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
@@ -381,6 +382,64 @@ it('updates borrower pricing items and recalculates total', function () {
         ->and((float) $otherBorrower->boq_total_ils)->toBe(140.0)
         ->and((float) $otherBorrower->boqItems()->first()->unit_price_ils)->toBe(70.0)
         ->and((float) $otherBorrower->boqItems()->first()->total_price_ils)->toBe(140.0);
+});
+
+it('updates the global borrower exchange rate from the main screen', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Global Rate Borrower',
+        'borrower_id_number' => '810000004',
+        'is_borrower_alive' => true,
+        'boq_total_usd' => 40,
+        'exchange_rate' => 3.2,
+        'boq_total_ils' => 128,
+    ]);
+    $catalogItem = BorrowerBoqCatalogItem::query()->create([
+        'item_code' => 'P3',
+        'source_column' => 'Global rate item',
+        'source_key' => sha1('Global rate item'),
+        'description' => 'Global rate item',
+        'normalized_description' => 'global rate item',
+        'unit' => 'M2',
+        'unit_price' => 20,
+        'unit_price_ils' => 64,
+        'sort_order' => 1,
+    ]);
+    $borrower->boqItems()->create([
+        'catalog_item_id' => $catalogItem->id,
+        'source_column' => 'Global rate item',
+        'source_key' => sha1('Global rate item'),
+        'description' => 'Global rate item',
+        'unit' => 'M2',
+        'unit_price' => 20,
+        'exchange_rate' => 3.2,
+        'unit_price_ils' => 64,
+        'quantity' => 2,
+        'total_price' => 40,
+        'total_price_ils' => 128,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.index'))
+        ->assertOk()
+        ->assertSee('globalExchangeRateModal', false)
+        ->assertSee('سعر الصرف الموحد');
+
+    $this->actingAs($user)
+        ->put(route('damage-assessment-borrowers.exchange-rate.update'), [
+            'exchange_rate' => 3.7,
+        ])
+        ->assertRedirect(route('damage-assessment-borrowers.index'));
+
+    expect((float) BorrowerPricingSetting::query()->sole()->exchange_rate)->toBe(3.7)
+        ->and((float) $borrower->refresh()->exchange_rate)->toBe(3.7)
+        ->and((float) $borrower->boq_total_ils)->toBe(148.0)
+        ->and((float) $borrower->boqItems()->first()->unit_price_ils)->toBe(74.0)
+        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(148.0)
+        ->and((float) $catalogItem->refresh()->unit_price_ils)->toBe(74.0);
 });
 
 it('adds borrowers to the sidebar for database officers', function () {

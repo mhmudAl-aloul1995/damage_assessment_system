@@ -12,6 +12,8 @@
             'medium' => 'primary',
             'low' => 'success',
         ];
+        $globalExchangeRate = $globalExchangeRate ?? 3.2;
+        $canManagePricing = $canManagePricing ?? false;
     @endphp
 
     <style>
@@ -409,12 +411,27 @@
     </div>
     @endif
 
-    <div class="d-flex justify-content-end gap-3 mb-6">
+    @if (! $isFormPage && session('success'))
+        <div class="alert alert-success d-flex align-items-center gap-3 mb-6">
+            <i class="ki-duotone ki-check-circle fs-2x text-success">
+                <span class="path1"></span>
+                <span class="path2"></span>
+            </i>
+            <span>{{ session('success') }}</span>
+        </div>
+    @endif
+
+    <div class="d-flex flex-wrap justify-content-end gap-3 mb-6">
         @if ($isFormPage)
             <a href="{{ route('damage-assessment-borrowers.index') }}" class="btn btn-light-primary">
                 العودة إلى الاستبيانات
             </a>
         @else
+            @if ($canManagePricing)
+                <button type="button" class="btn btn-light-success" data-bs-toggle="modal" data-bs-target="#globalExchangeRateModal">
+                    سعر الصرف الموحد: {{ number_format((float) $globalExchangeRate, 4) }}
+                </button>
+            @endif
             <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#borrowersImportModal">
                 استيراد من Excel
             </button>
@@ -782,6 +799,37 @@
                 </div>
             </div>
         </div>
+
+        @if ($canManagePricing)
+            <div class="modal fade" id="globalExchangeRateModal" tabindex="-1" aria-labelledby="globalExchangeRateModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <form method="POST" action="{{ route('damage-assessment-borrowers.exchange-rate.update') }}">
+                            @csrf
+                            @method('PUT')
+                            <div class="modal-header">
+                                <h2 class="fw-bold mb-0" id="globalExchangeRateModalLabel">سعر الصرف الموحد</h2>
+                                <button type="button" class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="إغلاق">
+                                    <i class="ki-duotone ki-cross fs-1">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <label class="form-label fw-semibold" for="globalExchangeRateInput">الدولار / شيكل</label>
+                                <input type="text" inputmode="decimal" name="exchange_rate" id="globalExchangeRateInput" value="{{ old('exchange_rate', $globalExchangeRate) }}" class="form-control form-control-lg" dir="ltr" required>
+                                <div class="form-text mt-3">سيعاد احتساب إجماليات الشيكل وأسعار الوحدة بالشيكل لكل استبيانات المقترضين. قيم الدولار لا تتغير.</div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                                <button type="submit" class="btn btn-success">تطبيق السعر الموحد</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endif
     @endif
 @endsection
 
@@ -801,6 +849,7 @@
         };
         const borrowersOfflineRowsKey = 'phc.damageAssessmentBorrowers.rows';
         const borrowersPendingRowsKey = 'phc.damageAssessmentBorrowers.pendingRows';
+        const canManageBorrowerPricing = @json($canManagePricing);
 
         function csrfToken() {
             return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -971,7 +1020,7 @@
                         <span><span class="text-muted">USD</span><strong>${formatMoney(usd)} $</strong></span>
                         <span><span class="text-muted">ILS</span><strong class="text-success">${formatMoney(ils)} ₪</strong></span>
                     </div>
-                    ${row.pricing_url ? `<a href="${row.pricing_url}" class="btn btn-sm btn-light-primary borrower-pricing-action">${actionText}</a>` : ''}
+                    ${canManageBorrowerPricing && row.pricing_url ? `<a href="${row.pricing_url}" class="btn btn-sm btn-light-primary borrower-pricing-action">${actionText}</a>` : ''}
                 </div>
             `;
         }

@@ -5,10 +5,12 @@ namespace App\Modules\DamageAssessmentBorrowers\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\ImportBorrowerSpreadsheetRequest;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateBorrowerPricingRequest;
+use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateGlobalBorrowerExchangeRateRequest;
 use App\Modules\DamageAssessmentBorrowers\Http\Requests\StoreBorrowerSurveyRequest;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerAttachment;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqItem;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
@@ -19,6 +21,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -32,6 +35,8 @@ class BorrowerSurveyController extends Controller
 
         return view('damage-assessment-borrowers::index', [
             'stats' => $this->stats(),
+            'globalExchangeRate' => $this->globalExchangeRate(),
+            'canManagePricing' => $this->canManagePricing(),
             'isFormPage' => false,
         ]);
     }
@@ -249,12 +254,53 @@ class BorrowerSurveyController extends Controller
                 'boq_total_ils' => $items->sum('total_price_ils'),
             ])->save();
 
+            $this->saveGlobalExchangeRate($exchangeRate);
             $this->applyExchangeRateToAllBorrowers($exchangeRate);
         });
 
         return redirect()
             ->route('damage-assessment-borrowers.pricing', $borrower)
             ->with('success', 'تم حفظ تسعير المستفيد بنجاح.');
+    }
+
+    public function updateGlobalExchangeRate(UpdateGlobalBorrowerExchangeRateRequest $request): RedirectResponse
+    {
+        $this->authorizePricingAccess();
+        $exchangeRate = (float) $request->validated('exchange_rate');
+
+        DB::transaction(function () use ($exchangeRate): void {
+            $this->saveGlobalExchangeRate($exchangeRate);
+            $this->applyExchangeRateToAllBorrowers($exchangeRate);
+        });
+
+        return redirect()
+            ->route('damage-assessment-borrowers.index')
+            ->with('success', 'تم توحيد سعر الصرف لكل استبيانات المقترضين بنجاح.');
+    }
+
+    private function saveGlobalExchangeRate(float $exchangeRate): void
+    {
+        if (! Schema::hasTable('damage_assessment_borrower_pricing_settings')) {
+            return;
+        }
+
+        BorrowerPricingSetting::query()->updateOrCreate(
+            ['id' => 1],
+            ['exchange_rate' => $exchangeRate]
+        );
+    }
+
+    private function globalExchangeRate(): float
+    {
+        if (Schema::hasTable('damage_assessment_borrower_pricing_settings')) {
+            $exchangeRate = BorrowerPricingSetting::query()->value('exchange_rate');
+
+            if ($exchangeRate !== null) {
+                return (float) $exchangeRate;
+            }
+        }
+
+        return (float) (DamageAssessmentBorrower::query()->latest('updated_at')->value('exchange_rate') ?: 3.2);
     }
 
     private function applyExchangeRateToAllBorrowers(float $exchangeRate): void
@@ -374,7 +420,12 @@ class BorrowerSurveyController extends Controller
 
     private function authorizePricingAccess(): void
     {
-        abort_unless(auth()->user()?->hasAnyRole([
+        abort_unless($this->canManagePricing(), 403);
+    }
+
+    private function canManagePricing(): bool
+    {
+        return auth()->user()?->hasAnyRole([
             'Database Officer',
             'Project Officer',
             'Project Officer - Borrowers',
@@ -382,7 +433,7 @@ class BorrowerSurveyController extends Controller
             'Team Leader',
             'Team Leader -INF',
             'Auditing Supervisor',
-        ]), 403);
+        ]) ?? false;
     }
 
     /**
