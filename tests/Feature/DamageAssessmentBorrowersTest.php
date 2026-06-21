@@ -297,6 +297,8 @@ it('opens borrower pricing page for database officers', function () {
         ->get(route('damage-assessment-borrowers.pricing', $borrower))
         ->assertOk()
         ->assertSee('borrowerPricingForm', false)
+        ->assertSee('pricing-table', false)
+        ->assertSee('pricing-col-item', false)
         ->assertSee('Paint item');
 });
 

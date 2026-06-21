@@ -11,6 +11,42 @@
             font-variant-numeric: tabular-nums;
             unicode-bidi: plaintext;
         }
+
+        .borrower-pricing-page .pricing-table {
+            min-width: 1080px;
+            table-layout: fixed;
+        }
+
+        .borrower-pricing-page .pricing-table th,
+        .borrower-pricing-page .pricing-table td {
+            min-width: 0 !important;
+        }
+
+        .borrower-pricing-page .pricing-col-code {
+            width: 86px;
+        }
+
+        .borrower-pricing-page .pricing-col-item {
+            width: 34%;
+        }
+
+        .borrower-pricing-page .pricing-col-unit {
+            width: 88px;
+        }
+
+        .borrower-pricing-page .pricing-col-money {
+            width: 112px;
+        }
+
+        .borrower-pricing-page .pricing-col-quantity {
+            width: 96px;
+        }
+
+        .borrower-pricing-page .pricing-item-description {
+            line-height: 1.55;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+        }
     </style>
 
     @php
@@ -86,7 +122,17 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-row-dashed align-middle" id="pricingTable">
+                    <table class="table table-row-dashed align-middle pricing-table" id="pricingTable">
+                        <colgroup>
+                            <col class="pricing-col-code">
+                            <col class="pricing-col-item">
+                            <col class="pricing-col-unit">
+                            <col class="pricing-col-money">
+                            <col class="pricing-col-money">
+                            <col class="pricing-col-quantity">
+                            <col class="pricing-col-money">
+                            <col class="pricing-col-money">
+                        </colgroup>
                         <thead>
                             <tr class="fw-bold text-muted">
                                 <th class="min-w-90px">الكود</th>
@@ -111,7 +157,7 @@
                                         <input type="text" name="items[{{ $index }}][item_code]" value="{{ $row['item_code'] }}" class="form-control form-control-sm form-control-solid">
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">{{ $row['description'] }}</div>
+                                        <div class="fw-semibold pricing-item-description">{{ $row['description'] }}</div>
                                     </td>
                                     <td>
                                         <input type="text" name="items[{{ $index }}][unit]" value="{{ $row['unit'] }}" class="form-control form-control-sm form-control-solid">
