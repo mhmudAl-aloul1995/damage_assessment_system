@@ -7,6 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
+use Illuminate\Contracts\View\View as ViewContract;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -17,12 +20,7 @@ use Yajra\Datatables\Datatables;
 
 class BuildingController extends Controller
 {
-    public function __construct()
-    {
-        // $this->middleware('role:Database Officer|Project Officer');
-    }
-
-    public function index()
+    public function index(): ViewContract
     {
         $filterColumns = ['id', 'list_name', 'name', 'label'];
 
@@ -40,6 +38,8 @@ class BuildingController extends Controller
             : $filters->pluck('list_name', 'list_name');
 
         return View::make('damage-assessment::surveys.buildings.buildings', [
+            'buildingFilterSections' => $this->buildingFilterSections($filters->groupBy('list_name')),
+            'buildingSummary' => $this->buildingSummary(),
             'engineers' => Building::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
             'owners' => Building::query()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
             'municip' => Building::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
@@ -51,29 +51,61 @@ class BuildingController extends Controller
         ]);
     }
 
-    public function show(Request $request)
+    public function show(Request $request): JsonResponse
     {
         $isHomepage = $request->input('hompage_building') == 1;
         $select = $isHomepage
             ? ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'zone_code', 'neighborhood']
-            : ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'zone_code', 'units_count', 'editdate', 'field_status', 'units_nos', 'damaged_units_nos', 'neighborhood', 'municipalitie'];
+            : ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'owner_id', 'zone_code', 'units_count', 'editdate', 'field_status', 'building_damage_status', 'units_nos', 'damaged_units_nos', 'floor_nos', 'building_debris_exist', 'uxo_present', 'bodies_present', 'neighborhood', 'municipalitie'];
 
         $query = Building::query()->select($select)->where('assignedto', '!=', '');
 
-        $excludeKeys = ['order', '_', 'columns', 'draw', 'start', 'length', 'search', 'hompage_building'];
-        $filters = $request->except($excludeKeys);
+        $filters = $request->input('filters', []);
 
-        foreach ($filters as $key => $value) {
-            if (! is_null($value) && $value !== '') {
-                $query->where($key, $value);
-            }
+        if (! is_array($filters)) {
+            $filters = [];
         }
+
+        $this->applyBuildingFilters($query, $filters);
 
         return Datatables::of($query)
             ->editColumn('id', function ($ctr) {
                 return '<div class="form-check form-check-sm form-check-custom form-check-solid">
                         <input class="form-check-input" type="checkbox" value="'.$ctr->id.'" />
                     </div>';
+            })
+            ->editColumn('field_status', function ($ctr) {
+                return $this->statusBadge($ctr->field_status, [
+                    'completed' => 'success',
+                    'not_completed' => 'warning',
+                    'not completed' => 'warning',
+                ]);
+            })
+            ->editColumn('building_damage_status', function ($ctr) {
+                return $this->statusBadge($ctr->building_damage_status, [
+                    'fully_damaged' => 'danger',
+                    'partially_damaged' => 'warning',
+                    'committee_review' => 'primary',
+                ], [
+                    'fully_damaged' => 'Totally Damaged',
+                    'partially_damaged' => 'Partially Damaged',
+                    'committee_review' => 'Committee Review',
+                ]);
+            })
+            ->addColumn('risk_summary', function ($ctr) {
+                $risks = collect([
+                    $ctr->building_debris_exist === 'yes' ? __('ui.buildings_page.debris') : null,
+                    in_array($ctr->uxo_present, ['yes', 'yes3'], true) ? __('ui.buildings_page.uxo') : null,
+                    in_array($ctr->bodies_present, ['yes', 'yes3'], true) ? __('ui.buildings_page.bodies') : null,
+                ])->filter();
+
+                if ($risks->isEmpty()) {
+                    return '<span class="text-muted">-</span>';
+                }
+
+                return $risks
+                    ->map(fn (string $risk): string => '<span class="badge badge-light-danger me-1 mb-1">'.e($risk).'</span>')
+                    ->implode('');
             })
             ->editColumn('action', function ($ctr) {
                 $housingUrl = url("/damage-assessment/showHousing/{$ctr->globalid}");
@@ -92,8 +124,199 @@ class BuildingController extends Controller
                 </div>';
             })
             ->setRowId('globalid')
-            ->rawColumns(['action', 'id'])
+            ->rawColumns(['action', 'id', 'field_status', 'building_damage_status', 'risk_summary'])
             ->make(true);
+    }
+
+    /**
+     * @return array<int, array{title: string, filters: array<int, array{field: string, label: string, options: mixed}>}>
+     */
+    private function buildingFilterSections($groupedFilters): array
+    {
+        $sections = [
+            [
+                'title' => __('ui.buildings_page.filter_section_damage'),
+                'filters' => [
+                    ['field' => 'building_damage_status', 'label' => __('ui.buildings_page.damage_status')],
+                    ['field' => 'building_status_visit', 'label' => __('ui.buildings_page.visit_status')],
+                    ['field' => 'building_debris_exist', 'label' => __('ui.buildings_page.debris_exists')],
+                    ['field' => 'building_debris_qty', 'label' => __('ui.buildings_page.debris_quantity')],
+                    ['field' => 'building_debris_blocking', 'label' => __('ui.buildings_page.debris_blocking')],
+                    ['field' => 'uxo_present', 'label' => __('ui.buildings_page.uxo_present')],
+                    ['field' => 'bodies_present', 'label' => __('ui.buildings_page.bodies_present')],
+                ],
+            ],
+            [
+                'title' => __('ui.buildings_page.filter_section_building'),
+                'filters' => [
+                    ['field' => 'building_type', 'label' => __('ui.buildings_page.building_type')],
+                    ['field' => 'building_use', 'label' => __('ui.buildings_page.building_use')],
+                    ['field' => 'building_material', 'label' => __('ui.buildings_page.building_material')],
+                    ['field' => 'building_age', 'label' => __('ui.buildings_page.building_age')],
+                    ['field' => 'building_roof_type', 'label' => __('ui.buildings_page.roof_type')],
+                ],
+            ],
+            [
+                'title' => __('ui.buildings_page.filter_section_ownership'),
+                'filters' => [
+                    ['field' => 'building_ownership', 'label' => __('ui.buildings_page.building_ownership')],
+                    ['field' => 'owner_status', 'label' => __('ui.buildings_page.owner_status')],
+                    ['field' => 'building_responsible', 'label' => __('ui.buildings_page.building_responsible')],
+                    ['field' => 'building_authorization', 'label' => __('ui.buildings_page.building_authorization')],
+                ],
+            ],
+            [
+                'title' => __('ui.buildings_page.filter_section_services'),
+                'filters' => [
+                    ['field' => 'has_elevator', 'label' => __('ui.buildings_page.has_elevator')],
+                    ['field' => 'elevator_status', 'label' => __('ui.buildings_page.elevator_status')],
+                    ['field' => 'has_solar', 'label' => __('ui.buildings_page.has_solar')],
+                    ['field' => 'solar_damage_status', 'label' => __('ui.buildings_page.solar_damage_status')],
+                    ['field' => 'has_well', 'label' => __('ui.buildings_page.has_well')],
+                    ['field' => 'well_damage_status', 'label' => __('ui.buildings_page.well_damage_status')],
+                    ['field' => 'has_fence', 'label' => __('ui.buildings_page.has_fence')],
+                    ['field' => 'fence_damage_status', 'label' => __('ui.buildings_page.fence_damage_status')],
+                    ['field' => 'has_parking', 'label' => __('ui.buildings_page.has_parking')],
+                    ['field' => 'parking_status', 'label' => __('ui.buildings_page.parking_status')],
+                ],
+            ],
+        ];
+
+        return collect($sections)
+            ->map(function (array $section) use ($groupedFilters): array {
+                $section['filters'] = collect($section['filters'])
+                    ->filter(fn (array $filter): bool => Schema::hasColumn('buildings', $filter['field']))
+                    ->map(function (array $filter) use ($groupedFilters): array {
+                        $filter['options'] = $groupedFilters[$filter['field']] ?? collect();
+
+                        return $filter;
+                    })
+                    ->filter(fn (array $filter): bool => $filter['options']->isNotEmpty())
+                    ->values()
+                    ->all();
+
+                return $section;
+            })
+            ->filter(fn (array $section): bool => ! empty($section['filters']))
+            ->values()
+            ->all();
+    }
+
+    private function applyBuildingFilters(Builder $query, array $filters): void
+    {
+        $selectFilters = [
+            'assignedto',
+            'municipalitie',
+            'neighborhood',
+            'field_status',
+            'building_damage_status',
+            'building_status_visit',
+            'building_debris_exist',
+            'building_debris_qty',
+            'building_debris_blocking',
+            'uxo_present',
+            'bodies_present',
+            'building_type',
+            'building_use',
+            'building_material',
+            'building_age',
+            'building_roof_type',
+            'building_ownership',
+            'owner_status',
+            'building_responsible',
+            'building_authorization',
+            'has_elevator',
+            'elevator_status',
+            'has_solar',
+            'solar_damage_status',
+            'has_well',
+            'well_damage_status',
+            'has_fence',
+            'fence_damage_status',
+            'has_parking',
+            'parking_status',
+        ];
+
+        foreach ($selectFilters as $field) {
+            if (! Schema::hasColumn('buildings', $field)) {
+                continue;
+            }
+
+            $value = $filters[$field] ?? null;
+
+            if (is_array($value)) {
+                $value = array_values(array_filter($value, fn ($item): bool => $item !== null && $item !== ''));
+            }
+
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
+            is_array($value)
+                ? $query->whereIn($field, $value)
+                : $query->where($field, $value);
+        }
+
+        foreach (['building_name', 'owner_name', 'owner_id', 'objectid'] as $field) {
+            if (! Schema::hasColumn('buildings', $field)) {
+                continue;
+            }
+
+            $value = $filters[$field] ?? null;
+
+            if ($value !== null && $value !== '') {
+                $query->where($field, 'like', '%'.$value.'%');
+            }
+        }
+
+        foreach (['floor_nos', 'units_nos', 'damaged_units_nos'] as $field) {
+            if (! Schema::hasColumn('buildings', $field)) {
+                continue;
+            }
+
+            $from = $filters[$field.'_from'] ?? null;
+            $to = $filters[$field.'_to'] ?? null;
+
+            if ($from !== null && $from !== '') {
+                $query->where($field, '>=', $from);
+            }
+
+            if ($to !== null && $to !== '') {
+                $query->where($field, '<=', $to);
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, string>  $colors
+     */
+    private function statusBadge(?string $value, array $colors, array $labels = []): string
+    {
+        if ($value === null || trim($value) === '') {
+            return '<span class="text-muted">-</span>';
+        }
+
+        $normalized = strtolower(trim($value));
+        $color = $colors[$normalized] ?? 'secondary';
+
+        $label = $labels[$normalized] ?? str($value)->replace('_', ' ')->title();
+
+        return '<span class="badge badge-light-'.$color.'">'.e($label).'</span>';
+    }
+
+    /**
+     * @return array{total: int, fully_damaged: int, partially_damaged: int, committee_review: int}
+     */
+    private function buildingSummary(): array
+    {
+        $baseQuery = Building::query()->where('assignedto', '!=', '');
+
+        return [
+            'total' => (clone $baseQuery)->count(),
+            'fully_damaged' => (clone $baseQuery)->where('building_damage_status', 'fully_damaged')->count(),
+            'partially_damaged' => (clone $baseQuery)->where('building_damage_status', 'partially_damaged')->count(),
+            'committee_review' => (clone $baseQuery)->where('building_damage_status', 'committee_review')->count(),
+        ];
     }
 
     public function edit(Request $request, $id)
@@ -111,14 +334,23 @@ class BuildingController extends Controller
 
     public function export_building(Request $request)
     {
-        $data = $request->except(['_method', '_token', 'building_columns', 'format']);
         $format = $request->input('format');
         $buildingColumns = $request->input('building_columns');
+        $filters = $request->input('filters', []);
 
-        $filters = array_filter($data, fn ($value) => ! is_null($value) && $value !== '');
-        $buildingColumns = array_filter($buildingColumns, fn ($value) => ! is_null($value) && $value !== '');
+        if (! is_array($filters)) {
+            $filters = [];
+        }
 
-        $building = Building::select($buildingColumns)->where($filters)->get();
+        $buildingColumns = array_filter($buildingColumns ?? [], fn ($value) => ! is_null($value) && $value !== '');
+
+        if ($buildingColumns === []) {
+            $buildingColumns = ['objectid', 'building_name', 'owner_name', 'building_damage_status', 'municipalitie', 'neighborhood', 'units_nos', 'damaged_units_nos'];
+        }
+
+        $buildingQuery = Building::query()->select($buildingColumns);
+        $this->applyBuildingFilters($buildingQuery, $filters);
+        $building = $buildingQuery->get();
 
         $assessmentHints = Assessment::whereIn('name', $buildingColumns)
             ->get(['name', 'hint', 'label'])
