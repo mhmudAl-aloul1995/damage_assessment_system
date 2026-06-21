@@ -24,14 +24,10 @@ class ArcgisAttachmentBackupService
         $attachment = collect($this->arcgis->getAttachments($building->objectid, $layerId, $token))
             ->first(fn (array $item): bool => (int) ($item['id'] ?? 0) === $attachmentId);
 
-        if (! is_array($attachment)) {
-            throw new RuntimeException('The ArcGIS attachment was not found.');
-        }
-
         $download = $this->arcgis->downloadAttachment($building->objectid, $layerId, $attachmentId, $token);
 
         if (! ($download['success'] ?? false) || ! is_string($download['body'])) {
-            throw new RuntimeException('Unable to download the ArcGIS attachment for backup.');
+            throw new RuntimeException('Unable to download the ArcGIS attachment for backup: '.($download['message'] ?? 'Unknown ArcGIS error.'));
         }
 
         $disk = 'local';
@@ -64,14 +60,10 @@ class ArcgisAttachmentBackupService
         $attachment = collect($this->arcgis->getAttachments($housingUnit->objectid, $layerId, $token))
             ->first(fn (array $item): bool => (int) ($item['id'] ?? 0) === $attachmentId);
 
-        if (! is_array($attachment)) {
-            throw new RuntimeException('The ArcGIS attachment was not found.');
-        }
-
         $download = $this->arcgis->downloadAttachment($housingUnit->objectid, $layerId, $attachmentId, $token);
 
         if (! ($download['success'] ?? false) || ! is_string($download['body'])) {
-            throw new RuntimeException('Unable to download the ArcGIS attachment for backup.');
+            throw new RuntimeException('Unable to download the ArcGIS attachment for backup: '.($download['message'] ?? 'Unknown ArcGIS error.'));
         }
 
         $disk = 'local';

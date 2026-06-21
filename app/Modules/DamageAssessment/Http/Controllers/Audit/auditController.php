@@ -3158,6 +3158,7 @@ class auditController extends Controller
 
             return response()->json([
                 'message' => 'Unable to backup or replace ArcGIS attachment.',
+                'details' => $exception->getMessage(),
             ], 502);
         }
     }
@@ -3196,6 +3197,7 @@ class auditController extends Controller
 
             return response()->json([
                 'message' => 'Unable to backup or delete ArcGIS attachment.',
+                'details' => $exception->getMessage(),
             ], 502);
         }
     }
@@ -3274,6 +3276,7 @@ class auditController extends Controller
 
             return response()->json([
                 'message' => 'Unable to backup or replace ArcGIS attachment.',
+                'details' => $exception->getMessage(),
             ], 502);
         }
     }
@@ -3312,6 +3315,7 @@ class auditController extends Controller
 
             return response()->json([
                 'message' => 'Unable to backup or delete ArcGIS attachment.',
+                'details' => $exception->getMessage(),
             ], 502);
         }
     }

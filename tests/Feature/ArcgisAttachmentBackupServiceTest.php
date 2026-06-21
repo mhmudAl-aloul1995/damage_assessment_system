@@ -87,3 +87,30 @@ it('backs up an arcgis housing unit attachment before destructive changes', func
     Storage::disk('local')->assertExists($backup->path);
     expect(Storage::disk('local')->get($backup->path))->toBe('unit-backup-binary');
 });
+
+it('backs up a housing unit attachment by id when arcgis attachment info is unavailable', function (): void {
+    Storage::fake('local');
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 35010,
+        'globalid' => 'housing-unit-global-id-without-info',
+        'parentglobalid' => 'building-global-id',
+    ]);
+
+    Http::fake([
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/35010/attachments' => Http::response([
+            'attachmentInfos' => [],
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/35010/attachments/765*' => Http::response('fallback-unit-backup-binary'),
+    ]);
+
+    $backup = app(ArcgisAttachmentBackupService::class)
+        ->backupHousingUnitAttachment($housingUnit, 765, 'delete', 'arcgis-token');
+
+    expect($backup->attachment_id)->toBe(765)
+        ->and($backup->attachment_name)->toBeNull()
+        ->and($backup->housing_unit_objectid)->toBe(35010);
+
+    Storage::disk('local')->assertExists($backup->path);
+    expect(Storage::disk('local')->get($backup->path))->toBe('fallback-unit-backup-binary');
+});

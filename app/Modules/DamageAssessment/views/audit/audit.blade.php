@@ -1182,7 +1182,8 @@
 					},
 					error: function (xhr) {
 						const errors = xhr.responseJSON?.errors;
-						const message = errors?.attachment?.[0] || xhr.responseJSON?.message || 'تعذر حفظ المرفق.';
+						const detail = xhr.responseJSON?.details ? ` ${xhr.responseJSON.details}` : '';
+						const message = errors?.attachment?.[0] || ((xhr.responseJSON?.message || 'تعذر حفظ المرفق.') + detail);
 						showBuildingAttachmentsAlert('danger', message);
 					},
 					complete: function () {
@@ -1238,7 +1239,8 @@
 							loadHousingUnitAttachments(unit.globalid);
 						},
 						error: function (xhr) {
-							showBuildingAttachmentsAlert('danger', xhr.responseJSON?.message || 'تعذر حذف المرفق.');
+							const detail = xhr.responseJSON?.details ? ` ${xhr.responseJSON.details}` : '';
+							showBuildingAttachmentsAlert('danger', (xhr.responseJSON?.message || 'تعذر حذف المرفق.') + detail);
 						}
 					});
 				});
@@ -1286,7 +1288,8 @@
 					},
 					error: function (xhr) {
 						const errors = xhr.responseJSON?.errors;
-						const message = errors?.attachment?.[0] || xhr.responseJSON?.message || 'تعذر حفظ المرفق.';
+						const detail = xhr.responseJSON?.details ? ` ${xhr.responseJSON.details}` : '';
+						const message = errors?.attachment?.[0] || ((xhr.responseJSON?.message || 'تعذر حفظ المرفق.') + detail);
 						showBuildingAttachmentsAlert('danger', message);
 					},
 					complete: function () {
@@ -1335,7 +1338,8 @@
 							loadBuildingAttachments();
 						},
 						error: function (xhr) {
-							showBuildingAttachmentsAlert('danger', xhr.responseJSON?.message || 'تعذر حذف المرفق.');
+							const detail = xhr.responseJSON?.details ? ` ${xhr.responseJSON.details}` : '';
+							showBuildingAttachmentsAlert('danger', (xhr.responseJSON?.message || 'تعذر حذف المرفق.') + detail);
 						}
 					});
 				});
