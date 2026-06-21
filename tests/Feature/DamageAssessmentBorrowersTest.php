@@ -66,7 +66,9 @@ it('wires borrowers surveys into pwa offline caching and sync', function () {
         ->and($view)->toContain('window.phcOfflineSync?.registerSync?.()')
         ->and($view)->toContain('damage-assessment-borrowers-page')
         ->and($view)->toContain('borrowersMobileList')
-        ->and($view)->toContain('borrower-mobile-card');
+        ->and($view)->toContain('borrower-mobile-card')
+        ->and($view)->toContain('borrower-pricing-cell')
+        ->and($view)->toContain('pricingSummary(row)');
 });
 
 it('serves pwa resources within the configured deployment path', function () {
@@ -299,6 +301,10 @@ it('opens borrower pricing page for database officers', function () {
         ->assertSee('borrowerPricingForm', false)
         ->assertSee('pricing-table', false)
         ->assertSee('pricing-col-item', false)
+        ->assertSee('pricing-page-header', false)
+        ->assertSee('pricingSearchInput', false)
+        ->assertSee('pricingActiveOnlyToggle', false)
+        ->assertSee('تغيير سعر الصرف هنا يعيد احتساب قيمة الشيكل لكل استبيانات المقترضين')
         ->assertSee('Paint item');
 });
 
@@ -311,6 +317,14 @@ it('updates borrower pricing items and recalculates total', function () {
         'borrower_id_number' => '810000002',
         'is_borrower_alive' => true,
     ]);
+    $otherBorrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Other Pricing Borrower',
+        'borrower_id_number' => '810000003',
+        'is_borrower_alive' => true,
+        'boq_total_usd' => 40,
+        'exchange_rate' => 3.2,
+        'boq_total_ils' => 128,
+    ]);
     $catalogItem = BorrowerBoqCatalogItem::query()->create([
         'item_code' => 'P2',
         'source_column' => 'Door item',
@@ -319,6 +333,19 @@ it('updates borrower pricing items and recalculates total', function () {
         'normalized_description' => 'door item',
         'unit' => 'عدد',
         'unit_price' => 50,
+        'sort_order' => 1,
+    ]);
+    $otherBorrower->boqItems()->create([
+        'source_column' => 'Window item',
+        'source_key' => sha1('Window item'),
+        'description' => 'Window item',
+        'unit' => 'M2',
+        'unit_price' => 20,
+        'exchange_rate' => 3.2,
+        'unit_price_ils' => 64,
+        'quantity' => 2,
+        'total_price' => 40,
+        'total_price_ils' => 128,
         'sort_order' => 1,
     ]);
 
@@ -342,13 +369,18 @@ it('updates borrower pricing items and recalculates total', function () {
         ->assertRedirect(route('damage-assessment-borrowers.pricing', $borrower));
 
     $borrower->refresh();
+    $otherBorrower->refresh();
 
     expect((float) $borrower->boq_total_usd)->toBe(110.0)
         ->and((float) $borrower->boq_total_ils)->toBe(385.0)
         ->and((float) $borrower->exchange_rate)->toBe(3.5)
         ->and($borrower->boqItems()->count())->toBe(1)
         ->and((float) $borrower->boqItems()->first()->total_price)->toBe(110.0)
-        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(385.0);
+        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(385.0)
+        ->and((float) $otherBorrower->exchange_rate)->toBe(3.5)
+        ->and((float) $otherBorrower->boq_total_ils)->toBe(140.0)
+        ->and((float) $otherBorrower->boqItems()->first()->unit_price_ils)->toBe(70.0)
+        ->and((float) $otherBorrower->boqItems()->first()->total_price_ils)->toBe(140.0);
 });
 
 it('adds borrowers to the sidebar for database officers', function () {

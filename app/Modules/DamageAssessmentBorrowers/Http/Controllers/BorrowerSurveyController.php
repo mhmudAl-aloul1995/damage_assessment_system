@@ -8,6 +8,7 @@ use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateBorrowerPricingReq
 use App\Modules\DamageAssessmentBorrowers\Http\Requests\StoreBorrowerSurveyRequest;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerAttachment;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqItem;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
@@ -247,11 +248,42 @@ class BorrowerSurveyController extends Controller
                 'exchange_rate' => $items->first()['exchange_rate'] ?? $exchangeRate,
                 'boq_total_ils' => $items->sum('total_price_ils'),
             ])->save();
+
+            $this->applyExchangeRateToAllBorrowers($exchangeRate);
         });
 
         return redirect()
             ->route('damage-assessment-borrowers.pricing', $borrower)
             ->with('success', 'تم حفظ تسعير المستفيد بنجاح.');
+    }
+
+    private function applyExchangeRateToAllBorrowers(float $exchangeRate): void
+    {
+        BorrowerBoqCatalogItem::query()
+            ->where('unit_price', '>=', 0)
+            ->each(function (BorrowerBoqCatalogItem $item) use ($exchangeRate): void {
+                $item->forceFill([
+                    'unit_price_ils' => round((float) $item->unit_price * $exchangeRate, 2),
+                ])->save();
+            });
+
+        BorrowerBoqItem::query()
+            ->where('unit_price', '>=', 0)
+            ->each(function (BorrowerBoqItem $item) use ($exchangeRate): void {
+                $item->forceFill([
+                    'exchange_rate' => $exchangeRate,
+                    'unit_price_ils' => round((float) $item->unit_price * $exchangeRate, 2),
+                    'total_price_ils' => round((float) $item->total_price * $exchangeRate, 2),
+                ])->save();
+            });
+
+        DamageAssessmentBorrower::query()
+            ->each(function (DamageAssessmentBorrower $borrower) use ($exchangeRate): void {
+                $borrower->forceFill([
+                    'exchange_rate' => $exchangeRate,
+                    'boq_total_ils' => round((float) $borrower->boq_total_usd * $exchangeRate, 2),
+                ])->save();
+            });
     }
 
     /**

@@ -27,6 +27,30 @@
             display: none;
         }
 
+        .damage-assessment-borrowers-page .borrower-pricing-cell {
+            background: var(--bs-gray-100);
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.65rem;
+            min-width: 13rem;
+            padding: 0.75rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-pricing-amounts {
+            display: grid;
+            gap: 0.35rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-pricing-amounts > span {
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-pricing-action {
+            width: 100%;
+        }
+
         .damage-assessment-borrowers-page .borrowers-import-dropzone {
             border: 1px dashed var(--bs-primary);
             border-radius: 0.95rem;
@@ -323,6 +347,10 @@
                 color: #181c32;
                 font-weight: 600;
                 text-align: end;
+            }
+
+            .damage-assessment-borrowers-page .borrower-pricing-cell {
+                min-width: 0;
             }
         }
     </style>
@@ -918,6 +946,36 @@
             };
         }
 
+        function formatMoney(value) {
+            return Number(value || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function pricingSummary(row) {
+            const usd = Number(row.boq_total_usd || 0);
+            const ils = Number(row.boq_total_ils || 0);
+            const isPriced = usd > 0 || ils > 0;
+            const badgeColor = isPriced ? 'success' : 'secondary';
+            const badgeText = isPriced ? 'مسعّر' : 'غير مسعّر';
+            const actionText = isPriced ? 'تعديل التسعير' : 'إضافة تسعير';
+
+            return `
+                <div class="borrower-pricing-cell">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                        <span class="badge badge-light-${badgeColor}">${badgeText}</span>
+                        ${row.exchange_rate ? `<span class="text-muted small">صرف ${Number(row.exchange_rate).toFixed(4)}</span>` : ''}
+                    </div>
+                    <div class="borrower-pricing-amounts mb-3">
+                        <span><span class="text-muted">USD</span><strong>${formatMoney(usd)} $</strong></span>
+                        <span><span class="text-muted">ILS</span><strong class="text-success">${formatMoney(ils)} ₪</strong></span>
+                    </div>
+                    ${row.pricing_url ? `<a href="${row.pricing_url}" class="btn btn-sm btn-light-primary borrower-pricing-action">${actionText}</a>` : ''}
+                </div>
+            `;
+        }
+
         function renderRows(rows) {
             const body = document.getElementById('borrowersTableBody');
             const mobileList = document.getElementById('borrowersMobileList');
@@ -937,12 +995,11 @@
                         <div class="text-muted small">${row.borrower_id_number || '-'}</div>
                         <div class="d-flex gap-2 mt-2">
                             ${row.show_url ? `<a href="${row.show_url}" class="btn btn-sm btn-light">عرض</a>` : ''}
-                            ${row.pricing_url ? `<a href="${row.pricing_url}" class="btn btn-sm btn-light-primary">تسعير</a>` : ''}
                         </div>
                     </td>
                     <td>${row.displacement_label || '-'}</td>
                     <td>${row.damage_label || '-'}</td>
-                    <td><div>${Number(row.boq_total_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} $</div><div class="text-success small">${Number(row.boq_total_ils || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₪</div></td>
+                    <td>${pricingSummary(row)}</td>
                     <td>${row.attachments_count || 0}</td>
                     <td><span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span></td>
                 </tr>`;
@@ -958,7 +1015,6 @@
                             <div class="text-muted small">${row.borrower_id_number || '-'}</div>
                             <div class="d-flex gap-2 mt-2">
                                 ${row.show_url ? `<a href="${row.show_url}" class="btn btn-sm btn-light">عرض</a>` : ''}
-                                ${row.pricing_url ? `<a href="${row.pricing_url}" class="btn btn-sm btn-light-primary">تسعير</a>` : ''}
                             </div>
                         </div>
                         <span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span>
@@ -974,13 +1030,14 @@
                         </div>
                         <div class="borrower-mobile-meta-item boq">
                             <span>BOQ</span>
-                            <span>${Number(row.boq_total_usd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} $ / ${Number(row.boq_total_ils || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₪</span>
+                            <span>${formatMoney(row.boq_total_usd)} $ / ${formatMoney(row.boq_total_ils)} ₪</span>
                         </div>
                         <div class="borrower-mobile-meta-item">
                             <span>صور</span>
                             <span>${row.attachments_count || 0}</span>
                         </div>
                     </div>
+                    <div class="mt-3">${pricingSummary(row)}</div>
                 </article>`;
             }).join('');
         }
