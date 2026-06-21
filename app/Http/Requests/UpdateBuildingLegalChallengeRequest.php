@@ -45,6 +45,8 @@ class UpdateBuildingLegalChallengeRequest extends FormRequest
             'free_housing_with_father',
             'unregistered_real_estate',
             'disputes_with_parties',
+            'amicable_partition_deed',
+            'utility_bill',
             'other',
         ];
     }

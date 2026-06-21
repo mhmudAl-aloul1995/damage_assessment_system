@@ -108,6 +108,61 @@ it('updates selected housing units with the same legal challenge', function () {
     ]);
 });
 
+it('shows and accepts the additional legal challenge options', function () {
+    $user = User::factory()->create();
+
+    $building = Building::query()->create([
+        'objectid' => 9251,
+        'globalid' => 'legal-challenge-additional-options-building',
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 9252,
+        'globalid' => 'legal-challenge-additional-options-housing',
+        'parentglobalid' => $building->globalid,
+    ]);
+
+    $this->actingAs($user)
+        ->get("damage-assessment/showAssessmentAudit/{$building->globalid}")
+        ->assertOk()
+        ->assertSee('سند قسمة رضائية')
+        ->assertSee('فاتورة خدمات');
+
+    $this->actingAs($user)
+        ->postJson(route('audit.building.legalChallenge'), [
+            'building_ids' => [$building->objectid],
+            'legal_challenge' => 'amicable_partition_deed',
+        ])
+        ->assertOk()
+        ->assertJson([
+            'status' => true,
+            'legal_challenge' => 'amicable_partition_deed',
+            'legal_challenge_label' => 'سند قسمة رضائية',
+        ]);
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.legalChallenge'), [
+            'globalid' => $housingUnit->globalid,
+            'legal_challenge' => 'utility_bill',
+        ])
+        ->assertOk()
+        ->assertJson([
+            'status' => true,
+            'legal_challenge' => 'utility_bill',
+            'legal_challenge_label' => 'فاتورة خدمات',
+        ]);
+
+    $this->assertDatabaseHas('buildings', [
+        'objectid' => $building->objectid,
+        'legal_challenge' => 'amicable_partition_deed',
+    ]);
+
+    $this->assertDatabaseHas('housing_units', [
+        'globalid' => $housingUnit->globalid,
+        'legal_challenge' => 'utility_bill',
+    ]);
+});
+
 it('rejects unknown legal challenge values', function () {
     $user = User::factory()->create();
 

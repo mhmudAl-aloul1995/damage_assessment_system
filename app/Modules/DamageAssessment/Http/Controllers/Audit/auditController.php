@@ -49,6 +49,8 @@ class auditController extends Controller
         'free_housing_with_father' => 'السكن بدون مقابل (مع الأب)',
         'unregistered_real_estate' => 'العقارات الغير مسجلة',
         'disputes_with_parties' => 'نزاعات مع أطراف',
+        'amicable_partition_deed' => 'سند قسمة رضائية',
+        'utility_bill' => 'فاتورة خدمات',
         'other' => 'أخرى، حدد',
     ];
 
