@@ -404,3 +404,46 @@ it('imports borrower records idempotently while skipping invalid and duplicate i
         @unlink($path);
     }
 });
+
+it('updates an existing borrower by identity instead of skipping it', function () {
+    DamageAssessmentBorrower::query()->create([
+        'source_uuid' => 'old-uuid',
+        'borrower_name' => 'Old Borrower Name',
+        'borrower_id_number' => '7771',
+        'is_borrower_alive' => true,
+        'risk_level' => 'low',
+        'risk_score' => 0,
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-import-existing-').'.json';
+    file_put_contents($path, json_encode([
+        'records' => [
+            [
+                'row_number' => 2,
+                'source_uuid' => 'new-uuid',
+                'source_submission_id' => 10,
+                'borrower_name' => 'Updated Borrower Name',
+                'borrower_id_number' => '7771',
+                'employment_status_label' => 'متقاعد',
+                'alive_label' => 'نعم',
+            ],
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+
+    try {
+        $summary = app(BorrowerSpreadsheetImportService::class)->import($path);
+        $borrower = DamageAssessmentBorrower::query()->where('borrower_id_number', '7771')->sole();
+
+        expect($summary['ready'])->toBe(1)
+            ->and($summary['created'])->toBe(0)
+            ->and($summary['updated'])->toBe(1)
+            ->and($summary['skipped'])->toBe(0)
+            ->and($borrower->borrower_name)->toBe('Updated Borrower Name')
+            ->and($borrower->source_uuid)->toBe('new-uuid')
+            ->and($borrower->source_submission_id)->toBe(10)
+            ->and($borrower->employment_status)->toBe('retired')
+            ->and(DamageAssessmentBorrower::query()->where('borrower_id_number', '7771')->count())->toBe(1);
+    } finally {
+        @unlink($path);
+    }
+});

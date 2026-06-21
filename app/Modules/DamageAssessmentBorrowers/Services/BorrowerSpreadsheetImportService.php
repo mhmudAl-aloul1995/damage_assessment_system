@@ -270,10 +270,6 @@ class BorrowerSpreadsheetImportService
                 $reasons[] = 'رقم هوية المقترض مكرر داخل ملف المصدر.';
             }
 
-            if ($this->conflictsWithExistingIdentity($sourceRow)) {
-                $reasons[] = 'رقم هوية المقترض موجود مسبقاً في النظام لسجل آخر.';
-            }
-
             if ($reasons !== []) {
                 $summary['issues'][] = [
                     'row' => $sourceRow['row_number'],
@@ -299,10 +295,7 @@ class BorrowerSpreadsheetImportService
                     $residentHouseholds = $data['resident_households'] ?? [];
                     unset($data['boq_items'], $data['attachments']);
 
-                    $borrower = DamageAssessmentBorrower::query()->updateOrCreate(
-                        ['source_uuid' => $data['source_uuid']],
-                        $data
-                    );
+                    $borrower = $this->saveImportedBorrower($data);
                     $this->syncBoqItems($borrower, $boqItems);
                     $this->syncAttachments($borrower, $attachments);
                     $this->syncResidentHouseholds($borrower, $residentHouseholds);
@@ -496,24 +489,6 @@ class BorrowerSpreadsheetImportService
 
     /**
      * @param  array<string, mixed>  $sourceRow
-     */
-    private function conflictsWithExistingIdentity(array $sourceRow): bool
-    {
-        if ($sourceRow['borrower_id_number'] === '' || $sourceRow['source_uuid'] === '') {
-            return false;
-        }
-
-        return DamageAssessmentBorrower::query()
-            ->where('borrower_id_number', $sourceRow['borrower_id_number'])
-            ->where(function ($query) use ($sourceRow): void {
-                $query->whereNull('source_uuid')
-                    ->orWhere('source_uuid', '!=', $sourceRow['source_uuid']);
-            })
-            ->exists();
-    }
-
-    /**
-     * @param  array<string, mixed>  $sourceRow
      * @return array<string, mixed>
      */
     private function mappedData(array $sourceRow): array
@@ -569,6 +544,27 @@ class BorrowerSpreadsheetImportService
             'boq_total_ils' => round($boqTotalUsd * $exchangeRate, 2),
             'attachments_count' => count($sourceRow['attachments']),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function saveImportedBorrower(array $data): DamageAssessmentBorrower
+    {
+        $borrower = DamageAssessmentBorrower::query()
+            ->where('borrower_id_number', $data['borrower_id_number'])
+            ->first();
+
+        if (! $borrower instanceof DamageAssessmentBorrower) {
+            $borrower = DamageAssessmentBorrower::query()
+                ->where('source_uuid', $data['source_uuid'])
+                ->firstOrNew();
+        }
+
+        $borrower->fill($data);
+        $borrower->save();
+
+        return $borrower;
     }
 
     /**
