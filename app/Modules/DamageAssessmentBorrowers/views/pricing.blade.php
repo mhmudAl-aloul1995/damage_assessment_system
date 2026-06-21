@@ -27,7 +27,7 @@
         }
 
         .borrower-pricing-page .pricing-col-item {
-            width: 39%;
+            width: 37%;
         }
 
         .borrower-pricing-page .pricing-col-unit {
