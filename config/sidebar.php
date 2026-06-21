@@ -339,7 +339,7 @@ return [
         'module' => 'administration',
         'title' => 'menu.user_management.title',
         'icon' => 'ki-user',
-        'roles' => ['Database Officer'],
+        'roles' => ['Database Officer','Project Officer - borrowers'],
         'active_patterns' => [
             'user*',
             'admin/team-leader-field-engineers*',
