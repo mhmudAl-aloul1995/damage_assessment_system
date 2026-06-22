@@ -260,7 +260,7 @@ return [
                 'title' => 'مباني المهندس الميداني',
                 'url' => 'damage-assessment/field-engineer-audit',
                 'pattern' => 'damage-assessment/field-engineer-audit',
-                'roles' => ['Field Engineer'],
+                'roles' => ['Field Engineer','Database Officer'],
             ],
             [
                 'title' => 'menu.audit.area_manager_review',
