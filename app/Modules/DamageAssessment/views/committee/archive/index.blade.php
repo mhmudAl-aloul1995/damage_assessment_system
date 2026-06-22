@@ -175,7 +175,7 @@
             </div>
 
             <div class="mt-5">
-                {{ $archives->links() }}
+                {{ $archives->links('pagination::bootstrap-5') }}
             </div>
         </div>
     </div>

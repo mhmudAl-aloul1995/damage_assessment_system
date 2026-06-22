@@ -109,3 +109,22 @@ it('shows archived committee records and compares snapshot values with current v
         ->assertSee('committee_review')
         ->assertSee('partially_damaged');
 });
+
+it('uses Bootstrap pagination so navigation arrows keep their intended size', function () {
+    $user = User::factory()->create();
+
+    foreach (range(1, 26) as $index) {
+        BuildingSurveyArchiveObject::query()->create([
+            'building_objectid' => 8900 + $index,
+            'source_type' => 'committee_decision',
+            'archived_by' => $user->id,
+            'archived_at' => now()->subMinutes($index),
+        ]);
+    }
+
+    $this->actingAs($user)
+        ->get(route('committee-archive.index'))
+        ->assertOk()
+        ->assertSee('class="pagination"', false)
+        ->assertDontSee('w-5 h-5', false);
+});
