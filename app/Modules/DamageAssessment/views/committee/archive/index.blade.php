@@ -110,6 +110,7 @@
                             <th>مصدر الأرشفة</th>
                             <th>تاريخ الأرشفة</th>
                             <th>القرار</th>
+                            <th>أعضاء اللجنة</th>
                             <th>النسخة القديمة</th>
                             <th class="text-end">الإجراء</th>
                         </tr>
@@ -125,6 +126,14 @@
                                     ? data_get($archive->housing_unit_snapshot, 'municipalitie')
                                     : data_get($archive->building_snapshot, 'municipalitie');
                                 $municipality = $municipality ?: $archive->building?->municipalitie;
+                                $committeeMembers = collect(data_get($archive->committee_decision_snapshot, 'committee_members', []));
+
+                                if ($committeeMembers->isEmpty()) {
+                                    $committeeMembers = $archive->committeeDecision?->signatures
+                                        ->sortBy('sort_order')
+                                        ->map(fn ($signature) => ['name' => $signature->committeeMember?->name])
+                                        ->values() ?? collect();
+                                }
                             @endphp
                             <tr>
                                 <td>{{ $isHousing ? 'وحدة سكنية' : 'مبنى' }}</td>
@@ -139,6 +148,13 @@
                                 <td>{{ optional($archive->archived_at)->format('Y-m-d H:i') ?? '-' }}</td>
                                 <td>{{ $archive->committeeDecision?->decision_type ?? '-' }}</td>
                                 <td>
+                                    @forelse ($committeeMembers as $committeeMember)
+                                        <span class="badge badge-light-primary mb-1">{{ data_get($committeeMember, 'name') ?: '-' }}</span>
+                                    @empty
+                                        <span class="text-muted">-</span>
+                                    @endforelse
+                                </td>
+                                <td>
                                     @if ($archive->building_snapshot)
                                         <span class="badge badge-light-success">موجودة</span>
                                     @else
@@ -151,7 +167,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-10">لا توجد سجلات مطابقة.</td>
+                                <td colspan="9" class="text-center text-muted py-10">لا توجد سجلات مطابقة.</td>
                             </tr>
                         @endforelse
                     </tbody>

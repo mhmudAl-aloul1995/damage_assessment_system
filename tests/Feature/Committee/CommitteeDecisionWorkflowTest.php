@@ -292,7 +292,9 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
         ->firstOrFail();
 
     expect($archiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
-        ->and($archiveObject->committee_decision_snapshot['decision_type'])->toBe('fully_damaged');
+        ->and($archiveObject->committee_decision_snapshot['decision_type'])->toBe('fully_damaged')
+        ->and(data_get($archiveObject->committee_decision_snapshot, 'committee_members.0.name'))->toBe('Signer One')
+        ->and(data_get($archiveObject->committee_decision_snapshot, 'committee_members.0.status'))->toBe('approved');
 
     Http::assertSent(function ($request): bool {
         $features = json_decode((string) data_get($request->data(), 'features'), true);

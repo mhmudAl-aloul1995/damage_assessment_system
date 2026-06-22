@@ -14,7 +14,7 @@ class CommitteeArchiveController extends Controller
     public function index(Request $request): View
     {
         $archives = BuildingSurveyArchiveObject::query()
-            ->with(['building', 'committeeDecision'])
+            ->with(['building', 'committeeDecision.signatures.committeeMember'])
             ->whereIn('source_type', ['committee_decision', 'temporary_committee_excel_archive'])
             ->when($request->filled('source_type'), fn ($query) => $query->where('source_type', $request->string('source_type')))
             ->when($request->filled('record_type'), function ($query) use ($request): void {
@@ -125,7 +125,10 @@ class CommitteeArchiveController extends Controller
     {
         abort_unless(in_array($archiveObject->source_type, ['committee_decision', 'temporary_committee_excel_archive'], true), 404);
 
-        $archiveObject->loadMissing('committeeDecision');
+        $archiveObject->loadMissing([
+            'committeeDecision.signatures.committeeMember',
+            'committeeDecision.signatures.signedByUser',
+        ]);
 
         $currentBuilding = Building::query()
             ->where('objectid', $archiveObject->building_objectid)
@@ -136,6 +139,11 @@ class CommitteeArchiveController extends Controller
             : HousingUnit::query()
                 ->where('objectid', $archiveObject->housing_unit_objectid)
                 ->first();
+        $decisionSnapshot = $archiveObject->committee_decision_snapshot;
+
+        if (is_array($decisionSnapshot)) {
+            unset($decisionSnapshot['committee_members']);
+        }
 
         return view('damage-assessment::committee.archive.show', [
             'archiveObject' => $archiveObject,
@@ -152,11 +160,37 @@ class CommitteeArchiveController extends Controller
                 $this->housingUnitFields(),
             ),
             'decisionRows' => $this->comparisonRows(
-                $archiveObject->committee_decision_snapshot,
+                $decisionSnapshot,
                 $archiveObject->committeeDecision?->attributesToArray(),
                 $this->decisionFields(),
             ),
+            'committeeMembers' => $this->committeeMembers($archiveObject),
         ]);
+    }
+
+    /**
+     * @return list<array{name: string|null, title: string|null, status: string|null, notes: string|null, signed_at: string|null, signed_by: string|null}>
+     */
+    private function committeeMembers(BuildingSurveyArchiveObject $archiveObject): array
+    {
+        $archivedMembers = data_get($archiveObject->committee_decision_snapshot, 'committee_members');
+
+        if (is_array($archivedMembers)) {
+            return $archivedMembers;
+        }
+
+        return $archiveObject->committeeDecision?->signatures
+            ->sortBy('sort_order')
+            ->map(fn ($signature): array => [
+                'name' => $signature->committeeMember?->name,
+                'title' => $signature->committeeMember?->title,
+                'status' => $signature->status,
+                'notes' => $signature->notes,
+                'signed_at' => $signature->signed_at?->toDateTimeString(),
+                'signed_by' => $signature->signedByUser?->name,
+            ])
+            ->values()
+            ->all() ?? [];
     }
 
     /**

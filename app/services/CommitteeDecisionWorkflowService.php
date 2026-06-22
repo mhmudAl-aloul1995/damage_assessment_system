@@ -352,7 +352,7 @@ class CommitteeDecisionWorkflowService
 
     private function archiveDecisionObject(CommitteeDecision $decision, ?User $archiver): void
     {
-        $decision->loadMissing('decisionable');
+        $decision->loadMissing(['decisionable', 'signatures.committeeMember', 'signatures.signedByUser']);
 
         $decisionable = $decision->decisionable;
         $building = $decisionable instanceof HousingUnit ? $decisionable->building : $decisionable;
@@ -375,7 +375,21 @@ class CommitteeDecisionWorkflowService
             'notes' => $decision->notes,
             'building_snapshot' => $building->attributesToArray(),
             'housing_unit_snapshot' => $decisionable instanceof HousingUnit ? $decisionable->attributesToArray() : null,
-            'committee_decision_snapshot' => $decision->attributesToArray(),
+            'committee_decision_snapshot' => [
+                ...$decision->attributesToArray(),
+                'committee_members' => $decision->signatures
+                    ->sortBy('sort_order')
+                    ->map(fn (CommitteeDecisionSignature $signature): array => [
+                        'name' => $signature->committeeMember?->name,
+                        'title' => $signature->committeeMember?->title,
+                        'status' => $signature->status,
+                        'notes' => $signature->notes,
+                        'signed_at' => $signature->signed_at?->toDateTimeString(),
+                        'signed_by' => $signature->signedByUser?->name,
+                    ])
+                    ->values()
+                    ->all(),
+            ],
         ]);
     }
 }

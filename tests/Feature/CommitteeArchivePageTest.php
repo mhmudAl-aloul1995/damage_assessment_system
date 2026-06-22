@@ -61,6 +61,14 @@ it('shows archived committee records and compares snapshot values with current v
             'decision_type' => 'partially_damaged',
             'status' => 'completed',
             'arcgis_sync_status' => 'skipped',
+            'committee_members' => [[
+                'name' => 'Archived Committee Member',
+                'title' => 'Engineer',
+                'status' => 'approved',
+                'notes' => 'Approved in the archived decision.',
+                'signed_at' => '2026-06-20 10:30:00',
+                'signed_by' => 'Archived Committee User',
+            ]],
         ],
     ]);
 
@@ -69,6 +77,7 @@ it('shows archived committee records and compares snapshot values with current v
         ->assertOk()
         ->assertSee('أرشيف قرارات اللجنة الفنية')
         ->assertSee('8801')
+        ->assertSee('Archived Committee Member')
         ->assertSee('Excel استثنائي');
 
     $this->actingAs($user)
@@ -94,6 +103,9 @@ it('shows archived committee records and compares snapshot values with current v
         ->assertSee('general_notes')
         ->assertSee('Old full record note')
         ->assertSee('Current full record note')
+        ->assertSee('Archived Committee Member')
+        ->assertSee('Archived Committee User')
+        ->assertSee('Approved in the archived decision.')
         ->assertSee('committee_review')
         ->assertSee('partially_damaged');
 });
