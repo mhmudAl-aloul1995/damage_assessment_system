@@ -15,19 +15,23 @@ use App\Modules\DamageAssessment\Http\Requests\HudBuildingUnitsRequest;
 use App\Services\ArcgisService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\View;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View as ViewResponse;
 use Yajra\Datatables\Datatables;
 
 class DamageAssessmentController extends Controller
 {
-    public function index(Request $request, $objectid = null)
+    public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse
     {
-        abort_if($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer']), 403);
+        if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
+            return redirect()->to(app_route('audit.fieldEngineer'));
+        }
 
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();

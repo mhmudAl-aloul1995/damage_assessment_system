@@ -137,6 +137,16 @@ test('dashboard redirects field engineers to their audit page', function () {
         ->assertRedirect('/damage-assessment/field-engineer-audit');
 });
 
+test('damage assessment dashboard redirects field engineers to their audit page', function () {
+    $role = Role::findOrCreate('Field Engineer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get('/damage-assessment/damageAssessment')
+        ->assertRedirect('/damage-assessment/field-engineer-audit');
+});
+
 test('login ignores stale localhost intended urls', function () {
     $user = User::factory()->create();
 
