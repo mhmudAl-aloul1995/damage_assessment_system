@@ -120,6 +120,10 @@
                 </div>
             </div>
 
+            <div class="mb-6 text-end">
+                <button type="button" id="committee_export" class="btn btn-light-success">تصدير Excel</button>
+            </div>
+
             <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x fs-6 fw-semibold mb-5">
                 <li class="nav-item">
                     <a class="nav-link active" data-bs-toggle="tab" href="#committee_buildings_tab">{{ __('multilingual.committee_decisions.tabs.buildings') }}</a>
@@ -256,6 +260,13 @@
                 $('#filter_objectid').val('');
                 $('#filter_municipality, #filter_current_damage_status, #filter_field_status, #filter_has_decision, #filter_decision_type, #filter_decision_status, #filter_arcgis_status').val('');
                 reloadCommitteeTables();
+            });
+
+            $('#committee_export').on('click', function () {
+                const type = $('#committee_units_tab').hasClass('active') ? 'housing-units' : 'buildings';
+                const parameters = new URLSearchParams({ ...committeeFilters(), type });
+
+                window.location.href = '{{ route('committee-decisions.export') }}?' + parameters.toString();
             });
         });
     </script>

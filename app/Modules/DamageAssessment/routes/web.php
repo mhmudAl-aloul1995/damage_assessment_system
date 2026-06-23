@@ -95,6 +95,7 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('committee-decisions')->name('committee-decisions.')->group(function () {
         Route::get('/', [CommitteeDecisionController::class, 'index'])->name('index');
+        Route::get('/export', [CommitteeDecisionController::class, 'export'])->name('export');
         Route::get('/buildings/data', [CommitteeDecisionController::class, 'buildingsData'])->name('buildings.data');
         Route::get('/housing-units/data', [CommitteeDecisionController::class, 'housingUnitsData'])->name('housing-units.data');
         Route::get('/buildings/{building}', [CommitteeDecisionController::class, 'showBuilding'])->name('buildings.show');

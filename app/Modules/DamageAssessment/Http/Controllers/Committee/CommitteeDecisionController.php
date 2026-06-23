@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\DamageAssessment\Http\Controllers\Committee;
 
+use App\Exports\CommitteeDecisionsExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Committee\SaveCommitteeDecisionRequest;
 use App\Http\Requests\Committee\SignCommitteeDecisionRequest;
@@ -18,6 +19,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Yajra\DataTables\Facades\DataTables;
 
 class CommitteeDecisionController extends Controller
@@ -62,6 +66,22 @@ class CommitteeDecisionController extends Controller
             ->addColumn('actions', fn (HousingUnit $unit): string => $this->actionButtons($unit))
             ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'actions'])
             ->toJson();
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        $type = $request->string('type', 'buildings')->toString();
+
+        abort_unless(in_array($type, ['buildings', 'housing-units'], true), 404);
+
+        [$headings, $rows, $filename] = $type === 'buildings'
+            ? $this->buildingExportData($request)
+            : $this->housingUnitExportData($request);
+
+        return Excel::download(
+            new CommitteeDecisionsExport($rows, $headings),
+            $filename,
+        );
     }
 
     public function showBuilding(Building $building): View
@@ -197,6 +217,83 @@ class CommitteeDecisionController extends Controller
                 ? $query->whereNull('arcgis_sync_status')
                 : $query->where('arcgis_sync_status', $status);
         });
+    }
+
+    /**
+     * @return array{0: list<string>, 1: Collection<int, array<int, string|int|null>>, 2: string}
+     */
+    private function buildingExportData(Request $request): array
+    {
+        $rows = $this->applyBuildingFilters($this->buildingQuery(), $request)
+            ->orderByDesc('objectid')
+            ->get()
+            ->map(fn (Building $building): array => [
+                $building->objectid,
+                $building->building_name,
+                $building->municipalitie,
+                $building->neighborhood,
+                $building->assignedto,
+                $building->building_damage_status,
+                $this->decisionLabel($building->committeeDecision),
+                $this->signatureCount($building->committeeDecision),
+                $this->arcGisStatusLabel($building->committeeDecision),
+                route('committee-decisions.buildings.show', $building),
+            ]);
+
+        return [
+            ['ObjectID', 'اسم المبنى', 'البلدية', 'الحي', 'المهندس الميداني', 'الحالة الحالية', 'القرار', 'التواقيع', 'ArcGIS', 'الإجراء'],
+            $rows,
+            'committee-decisions-buildings.xlsx',
+        ];
+    }
+
+    /**
+     * @return array{0: list<string>, 1: Collection<int, array<int, string|int|null>>, 2: string}
+     */
+    private function housingUnitExportData(Request $request): array
+    {
+        $rows = $this->applyHousingUnitFilters($this->housingUnitQuery(), $request)
+            ->orderByDesc('objectid')
+            ->get()
+            ->map(fn (HousingUnit $unit): array => [
+                $unit->objectid,
+                $unit->full_name ?: $unit->unit_owner,
+                $unit->building?->building_name,
+                $unit->municipalitie,
+                $unit->neighborhood,
+                $unit->unit_damage_status,
+                $this->decisionLabel($unit->committeeDecision),
+                $this->signatureCount($unit->committeeDecision),
+                $this->arcGisStatusLabel($unit->committeeDecision),
+                route('committee-decisions.housing-units.show', $unit),
+            ]);
+
+        return [
+            ['ObjectID', 'اسم المالك', 'المبنى', 'البلدية', 'الحي', 'الحالة الحالية', 'القرار', 'التواقيع', 'ArcGIS', 'الإجراء'],
+            $rows,
+            'committee-decisions-housing-units.xlsx',
+        ];
+    }
+
+    private function decisionLabel(?CommitteeDecision $decision): string
+    {
+        return $decision === null ? 'لا يوجد' : 'يوجد';
+    }
+
+    private function signatureCount(?CommitteeDecision $decision): string
+    {
+        if ($decision === null) {
+            return '0 / 0';
+        }
+
+        $required = $decision->signatures->filter(fn ($signature): bool => $signature->committeeMember?->is_active && $signature->is_required);
+
+        return $required->where('status', 'approved')->count().' / '.$required->count();
+    }
+
+    private function arcGisStatusLabel(?CommitteeDecision $decision): string
+    {
+        return $decision?->arcgis_sync_status ?? 'pending';
     }
 
     private function decisionView(CommitteeDecision $decision, string $recordType): View
