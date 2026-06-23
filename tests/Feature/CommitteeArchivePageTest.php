@@ -96,6 +96,8 @@ it('shows archived committee records and compares snapshot values with current v
         ->get(route('committee-archive.show', $archive))
         ->assertOk()
         ->assertSee('مراجعة التغييرات')
+        ->assertSee('اسم المبنى')
+        ->assertSee('المهندس المكلّف')
         ->assertSee('السجل السابق')
         ->assertSee('السجل الحالي')
         ->assertSee('الحقول المتغيرة')
