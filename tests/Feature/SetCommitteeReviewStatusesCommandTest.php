@@ -59,9 +59,9 @@ it('updates the requested records and synchronizes them with ArcGIS', function (
         ->assertSuccessful();
 
     expect(Building::query()->whereIn('objectid', $buildingObjectIds)->pluck('building_damage_status')->unique()->all())->toBe(['committee_review'])
-        ->and(Building::query()->whereIn('objectid', $buildingObjectIds)->pluck('field_status')->unique()->all())->toBe(['Not_Completed'])
+        ->and(Building::query()->whereIn('objectid', $buildingObjectIds)->pluck('field_status')->unique()->all())->toBe(['COMPLETED'])
         ->and(HousingUnit::query()->whereIn('objectid', $housingUnitObjectIds)->pluck('unit_damage_status')->unique()->all())->toBe(['committee_review2'])
-        ->and($parentBuilding->refresh()->field_status)->toBe('Not_Completed');
+        ->and($parentBuilding->refresh()->field_status)->toBe('COMPLETED');
 
     Http::assertSentCount(3);
 });

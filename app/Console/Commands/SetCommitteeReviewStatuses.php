@@ -72,9 +72,9 @@ class SetCommitteeReviewStatuses extends Command
             ->values();
 
         $this->table(['Record type', 'Count', 'Changes'], [
-            ['Buildings', $buildings->count(), 'building_damage_status = committee_review; field_status = Not_Completed'],
+            ['Buildings', $buildings->count(), 'building_damage_status = committee_review; field_status = COMPLETED'],
             ['Housing units', $housingUnits->count(), 'unit_damage_status = committee_review2'],
-            ['Parent buildings of housing units', $parentBuildings->count(), 'field_status = Not_Completed'],
+            ['Parent buildings of housing units', $parentBuildings->count(), 'field_status = COMPLETED'],
         ]);
 
         if (! $this->option('force')) {
@@ -88,7 +88,7 @@ class SetCommitteeReviewStatuses extends Command
                 ->whereIn('id', $buildings->pluck('id'))
                 ->update([
                     'building_damage_status' => 'committee_review',
-                    'field_status' => 'Not_Completed',
+                    'field_status' => 'COMPLETED',
                 ]);
 
             HousingUnit::query()
@@ -97,7 +97,7 @@ class SetCommitteeReviewStatuses extends Command
 
             Building::query()
                 ->whereIn('id', $parentBuildings->pluck('id'))
-                ->update(['field_status' => 'Not_Completed']);
+                ->update(['field_status' => 'COMPLETED']);
         });
 
         try {
@@ -105,7 +105,7 @@ class SetCommitteeReviewStatuses extends Command
             $this->syncArcGisLayer(
                 (string) config('services.arcgis.buildings_url'),
                 $arcGisBuildingObjectIds,
-                ['building_damage_status' => 'committee_review', 'field_status' => 'Not_Completed'],
+                ['building_damage_status' => 'committee_review', 'field_status' => 'COMPLETED'],
                 $token,
             );
             $this->syncArcGisLayer(
