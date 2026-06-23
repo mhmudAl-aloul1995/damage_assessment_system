@@ -126,6 +126,38 @@ it('filters housing unit datatable records using grouped filters and ranges', fu
     $response->assertDontSee('Hani Nassar');
 });
 
+it('filters housing unit datatable records by housing unit objectid', function () {
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3001,
+        'globalid' => 'housing-unit-objectid-1',
+        'housing_unit_number' => '12',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3002,
+        'globalid' => 'housing-unit-objectid-2',
+        'housing_unit_number' => '13',
+    ]);
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'objectid' => '3001',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/housing/show?'.$query);
+
+    $response->assertOk();
+    $response->assertJsonPath('recordsFiltered', 1);
+    $response->assertSee('12');
+    $response->assertDontSee('13');
+});
+
 function seedHousingFilterOptions(): void
 {
     collect([

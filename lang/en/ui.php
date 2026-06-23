@@ -531,6 +531,8 @@ return [
         'action' => 'Action',
         'owner_id' => 'Owner ID',
         'owner_id_placeholder' => 'Enter owner ID',
+        'object_id' => 'Object ID',
+        'object_id_placeholder' => 'Enter unit Object ID',
         'first_name' => 'First name',
         'last_name' => 'Last name',
         'filter_section_unit' => 'Unit information and damage',

@@ -74,6 +74,10 @@
                         <label class="form-label">{{ __('ui.housing_page.owner_id') }}</label>
                         <input type="text" name="filters[id_number1]" class="form-control form-control-solid housing-filter-control" placeholder="{{ __('ui.housing_page.owner_id_placeholder') }}">
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">{{ __('ui.housing_page.object_id') }}</label>
+                        <input type="text" name="filters[objectid]" class="form-control form-control-solid housing-filter-control" placeholder="{{ __('ui.housing_page.object_id_placeholder') }}">
+                    </div>
                     <div class="col-md-3 d-flex gap-2">
                         <button type="submit" class="btn btn-primary flex-grow-1" data-kt-Housing-table-filter="filter">
                             <span class="indicator-label">{{ __('ui.housing_page.search') }}</span>
