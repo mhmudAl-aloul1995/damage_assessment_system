@@ -39,6 +39,11 @@ class auditController extends Controller
         'رانيه سليمان راشد شعت',
     ];
 
+    private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS = [
+        '800409062',
+        '400940623',
+    ];
+
     private const LEGAL_CHALLENGES = [
         'missing_legal_documents' => 'فقدان الوثائق القانونية',
         'broken_ownership_chain' => 'انقطاع تسلسل الملكية',
@@ -4779,7 +4784,8 @@ COALESCE(
             return false;
         }
 
-        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true);
+        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
+            || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);
     }
 
     private function abortFieldEngineerWrite(): void
@@ -4883,7 +4889,8 @@ COALESCE(
 
     private function hasTemporaryStatusAssignmentException(User $user): bool
     {
-        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true);
+        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
+            || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);
     }
 
     private function firstAndLastName(?string $name): string

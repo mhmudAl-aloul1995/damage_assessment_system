@@ -480,6 +480,11 @@ it('hides audit management action buttons for temporary excepted users only', fu
     ]);
     $exceptedUser->assignRole($role);
 
+    $identityExceptedUser = User::factory()->create([
+        'id_no' => '800409062',
+    ]);
+    $identityExceptedUser->assignRole($role);
+
     $regularUser = User::factory()->create([
         'name' => 'Regular Database Officer',
     ]);
@@ -494,6 +499,14 @@ it('hides audit management action buttons for temporary excepted users only', fu
     ];
 
     $response = $this->actingAs($exceptedUser)
+        ->get(route('audit.index'))
+        ->assertOk();
+
+    foreach ($hiddenActionIds as $buttonId) {
+        $response->assertDontSee($buttonId, false);
+    }
+
+    $response = $this->actingAs($identityExceptedUser)
         ->get(route('audit.index'))
         ->assertOk();
 

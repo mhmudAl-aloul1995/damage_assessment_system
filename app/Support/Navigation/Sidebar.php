@@ -13,6 +13,11 @@ class Sidebar
         'رانيه سليمان راشد شعت',
     ];
 
+    private const TEMPORARY_AUDIT_HOME_USER_ID_NUMBERS = [
+        '800409062',
+        '400940623',
+    ];
+
     private const TEMPORARY_AUDIT_HOME_URL = 'damage-assessment/audit';
 
     /**
@@ -113,6 +118,9 @@ class Sidebar
     private static function isTemporaryAuditHomeItem(array $item, User $user): bool
     {
         return ($item['url'] ?? null) === self::TEMPORARY_AUDIT_HOME_URL
-            && in_array(trim($user->name), self::TEMPORARY_AUDIT_HOME_USER_NAMES, true);
+            && (
+                in_array(trim($user->name), self::TEMPORARY_AUDIT_HOME_USER_NAMES, true)
+                || in_array(trim((string) $user->id_no), self::TEMPORARY_AUDIT_HOME_USER_ID_NUMBERS, true)
+            );
     }
 }

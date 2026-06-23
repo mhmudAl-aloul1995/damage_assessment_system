@@ -164,6 +164,14 @@ it('temporarily shows the audit home sidebar link for selected users only', func
     ]);
     $exceptedUser->assignRole($role);
 
+    $identityExceptedUsers = collect(['800409062', '400940623'])
+        ->map(function (string $idNumber) use ($role): User {
+            $user = User::factory()->create(['id_no' => $idNumber]);
+            $user->assignRole($role);
+
+            return $user;
+        });
+
     $regularUser = User::factory()->create([
         'name' => 'Regular QC Engineer',
     ]);
@@ -185,4 +193,14 @@ it('temporarily shows the audit home sidebar link for selected users only', func
         ->toContain('damage-assessment/audit')
         ->and($regularUrls)
         ->not->toContain('damage-assessment/audit');
+
+    $identityExceptedUsers->each(function (User $identityExceptedUser): void {
+        $identityExceptedUrls = Sidebar::forUser($identityExceptedUser)
+            ->flatMap(fn (array $module) => $module['sections'])
+            ->flatMap(fn (array $section) => $section['items'])
+            ->pluck('url')
+            ->all();
+
+        expect($identityExceptedUrls)->toContain('damage-assessment/audit');
+    });
 });
