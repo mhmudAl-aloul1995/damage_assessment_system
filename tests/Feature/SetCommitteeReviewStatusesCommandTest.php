@@ -4,11 +4,19 @@ declare(strict_types=1);
 
 use App\Models\Building;
 use App\Models\HousingUnit;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
+beforeEach(function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+});
+
 it('previews the selected records without changing them', function () {
-    Building::factory()->create(['objectid' => 16708, 'building_damage_status' => 'partially_damaged', 'field_status' => 'COMPLETED']);
-    HousingUnit::factory()->create(['objectid' => 11239, 'unit_damage_status' => 'partially_damaged2']);
+    Building::query()->create(['objectid' => 16708, 'globalid' => 'building-16708', 'building_damage_status' => 'partially_damaged', 'field_status' => 'COMPLETED']);
+    HousingUnit::query()->create(['objectid' => 11239, 'globalid' => 'unit-11239', 'unit_damage_status' => 'partially_damaged2']);
 
     $this->artisan('committee:set-review-statuses')
         ->expectsOutput('No changes were made because some requested records were not found.')
@@ -25,21 +33,25 @@ it('updates the requested records and synchronizes them with ArcGIS', function (
         11140, 11064, 10493, 10487, 19308, 17521, 17906, 18654,
     ];
     $housingUnitObjectIds = [11239, 11267, 10891, 11370, 18992];
-    $parentBuilding = Building::factory()->create(['objectid' => 25000, 'globalid' => 'parent-building-globalid', 'field_status' => 'COMPLETED']);
+    $parentBuilding = Building::query()->create(['objectid' => 25000, 'globalid' => 'parent-building-globalid', 'field_status' => 'COMPLETED']);
 
     foreach ($buildingObjectIds as $objectId) {
-        Building::factory()->create(['objectid' => $objectId]);
+        Building::query()->create(['objectid' => $objectId, 'globalid' => 'building-'.$objectId]);
     }
 
     foreach ($housingUnitObjectIds as $objectId) {
-        HousingUnit::factory()->create(['objectid' => $objectId, 'parentglobalid' => $parentBuilding->globalid]);
+        HousingUnit::query()->create(['objectid' => $objectId, 'globalid' => 'unit-'.$objectId, 'parentglobalid' => $parentBuilding->globalid]);
     }
 
     config()->set('services.arcgis.buildings_url', 'https://arcgis.test/FeatureServer/0');
     config()->set('services.arcgis.housing_units_url', 'https://arcgis.test/FeatureServer/1');
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'test-token']),
-        'https://arcgis.test/FeatureServer/*/updateFeatures' => Http::response(['updateResults' => array_fill(0, 29, ['success' => true])]),
+        'https://arcgis.test/FeatureServer/*/updateFeatures' => function (\Illuminate\Http\Client\Request $request) {
+            $features = json_decode((string) $request['features'], true, flags: JSON_THROW_ON_ERROR);
+
+            return Http::response(['updateResults' => array_fill(0, count($features), ['success' => true])]);
+        },
     ]);
 
     $this->artisan('committee:set-review-statuses --force')
