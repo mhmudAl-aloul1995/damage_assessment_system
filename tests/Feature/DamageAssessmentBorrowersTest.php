@@ -10,6 +10,8 @@ use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Mockery\MockInterface;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Spatie\Permission\Models\Role;
 
 it('allows field engineers to open the borrowers overview page', function () {
@@ -24,9 +26,18 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('استيراد من Excel', false)
         ->assertSee('borrowersImportModal', false)
         ->assertSee('borrowers-import-dropzone', false)
+        ->assertSee('borrowersPreviewBtn', false)
+        ->assertSee('borrowersImportPreview', false)
+        ->assertSee("previewData.append('_token', csrfToken())", false)
         ->assertSee('borrower-command-center', false)
         ->assertSee('borrowerRiskFilter', false)
         ->assertSee('data-risk-filter="critical"', false)
+        ->assertSee('data-stat="partial_damage"', false)
+        ->assertSee('data-damage-filter="partial"', false)
+        ->assertSee('borrowerDamageFilter', false)
+        ->assertSee('borrower-filter-select', false)
+        ->assertSee('borrower-worklist-toolbar', false)
+        ->assertSee("$('.borrower-filter-select').each", false)
         ->assertSee('اسحب ملف Excel هنا أو اضغط للاختيار', false)
         ->assertSee('تعبئة استبيان جديد', false)
         ->assertSee('استبيان المقترضين', false);
@@ -165,6 +176,46 @@ it('imports an uploaded borrower workbook through ajax', function () {
         ->assertJsonPath('summary.skipped', 1);
 });
 
+it('previews and imports active Kuwait loan records from the selected worksheet', function () {
+    $spreadsheet = new Spreadsheet;
+    $activeSheet = $spreadsheet->getActiveSheet();
+    $activeSheet->setTitle('نشطه');
+    $activeSheet->fromArray([
+        ['رقم', 'قرض', 'مقترض', '', 'مقترض', '', '', 'تاريخ التفعيل', 'تاريخ اخر قسط', 'مبلغ القرض', 'محفظة القرض', 'صافي مبلغ القرض', 'الرصيد الاجمالي الحالي'],
+        ['', '', '', 'اصل القرض', 'الجوال', 'الاسم', 'العنوان'],
+        [1, '0000900101', '930046990', 32280, '0599496880', 'سعد كساب', 'خانيونس', 43101, 46323, '26,512.00', '15,729.37', 26512, '15,721.19'],
+    ]);
+    $closedSheet = $spreadsheet->createSheet();
+    $closedSheet->setTitle('مغلقه');
+    $closedSheet->fromArray(array_fill(0, 5, []));
+    $closedSheet->fromArray([
+        ['رقم', 'قرض', 'مقترض', 'الاسم', 'اصل القرض', 'رقم الجوال', 'العنوان', 'المبلغ الكلي', 'عدد دفعات السداد', 'تاريخ بداية السداد', 'المبلغ المطلوب', 'قيمة السداد المدفوعة', 'الرصيد الكلي', 'سلّمت برائة الذّمة'],
+    ], null, 'A6');
+
+    $path = tempnam(sys_get_temp_dir(), 'kuwait-loans-');
+    (new Xlsx($spreadsheet))->save($path);
+
+    $importer = app(BorrowerSpreadsheetImportService::class);
+    $preview = $importer->previewLoanWorkbook($path);
+    $summary = $importer->importLoanWorkbook($path, 'نشطه');
+
+    expect($preview['source'])->toBe('kuwait-loans')
+        ->and($preview['sheets'][0]['name'])->toBe('نشطه')
+        ->and($preview['sheets'][0]['ready'])->toBe(1)
+        ->and($summary['created'])->toBe(1);
+
+    $borrower = DamageAssessmentBorrower::query()->where('borrower_id_number', '930046990')->sole();
+
+    expect($borrower->loan_number)->toBe('0000900101')
+        ->and($borrower->loan_status)->toBe('active')
+        ->and((float) $borrower->loan_original_amount)->toBe(32280.0)
+        ->and((float) $borrower->loan_portfolio_amount)->toBe(15729.37)
+        ->and((float) $borrower->loan_net_amount)->toBe(26512.0)
+        ->and((float) $borrower->loan_balance)->toBe(15721.19);
+
+    unlink($path);
+});
+
 it('lists borrower surveys as json rows', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
@@ -175,15 +226,23 @@ it('lists borrower surveys as json rows', function () {
         'borrower_name' => 'Mona Borrower',
         'borrower_id_number' => '800000001',
         'is_borrower_alive' => true,
+        'loan_balance' => 4908,
+        'loan_total_amount' => 28075,
+        'loan_portfolio_amount' => 4896.81,
+        'loan_net_amount' => 28075,
         'risk_level' => 'medium',
         'risk_score' => 33,
+        'loan_unit_damage_status' => 'minor',
     ]);
 
     $this->actingAs($user)
-        ->getJson(route('damage-assessment-borrowers.data', ['q' => 'Mona']))
+        ->getJson(route('damage-assessment-borrowers.data', ['q' => 'Mona', 'damage_status' => 'partial']))
         ->assertOk()
         ->assertJsonPath('status', true)
         ->assertJsonPath('data.0.borrower_name', 'Mona Borrower')
+        ->assertJsonPath('data.0.loan_balance', 4908)
+        ->assertJsonPath('data.0.loan_portfolio_amount', 4896.81)
+        ->assertJsonPath('stats.partial_damage', 1)
         ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
 });
 
@@ -195,6 +254,13 @@ it('opens borrower details page with survey data attachments and boq items', fun
         'borrower_name' => 'Details Borrower',
         'borrower_id_number' => '810000009',
         'form_number' => 'IDB-DETAIL',
+        'loan_number' => '0000900101',
+        'loan_status' => 'active',
+        'loan_original_amount' => 32280,
+        'loan_total_amount' => 28075,
+        'loan_portfolio_amount' => 4896.81,
+        'loan_net_amount' => 28075,
+        'loan_balance' => 15721.19,
         'phone_primary' => '0599000000',
         'is_borrower_alive' => true,
         'location_latitude' => 31.5012345,
@@ -239,6 +305,11 @@ it('opens borrower details page with survey data attachments and boq items', fun
         ->assertOk()
         ->assertSee('Details Borrower')
         ->assertSee('IDB-DETAIL')
+        ->assertSee('بيانات القرض')
+        ->assertSee('0000900101')
+        ->assertSee('15,721.19')
+        ->assertSee('محفظة القرض')
+        ->assertSee('4,896.81')
         ->assertSee('damage.jpg')
         ->assertSee(route('damage-assessment-borrowers.attachments.show', [$borrower, $attachment]))
         ->assertSee('www.openstreetmap.org/export/embed.html', false)

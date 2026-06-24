@@ -14,6 +14,8 @@ Route::middleware('auth')->group(function () {
         ->name('damage-assessment-borrowers.store');
     Route::post('/import', [BorrowerSurveyController::class, 'import'])
         ->name('damage-assessment-borrowers.import');
+    Route::post('/import/preview', [BorrowerSurveyController::class, 'previewImport'])
+        ->name('damage-assessment-borrowers.import.preview');
     Route::put('/exchange-rate', [BorrowerSurveyController::class, 'updateGlobalExchangeRate'])
         ->name('damage-assessment-borrowers.exchange-rate.update');
     Route::get('/{borrower}/pricing', [BorrowerSurveyController::class, 'pricing'])

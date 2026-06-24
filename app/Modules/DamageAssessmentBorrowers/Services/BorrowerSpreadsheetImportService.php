@@ -219,6 +219,110 @@ class BorrowerSpreadsheetImportService
     }
 
     /**
+     * @return array{source: string, sheets: array<int, array{name: string, status: string, total: int, ready: int, skipped: int, sample: array<int, array<string, mixed>>}>}
+     */
+    public function previewLoanWorkbook(string $path): array
+    {
+        $spreadsheet = IOFactory::load($path);
+        $sheets = collect($spreadsheet->getWorksheetIterator())
+            ->filter(fn (Worksheet $sheet): bool => $this->loanSheetStatus($sheet->getTitle()) !== null)
+            ->map(function (Worksheet $sheet): array {
+                $rows = $this->loanRows($sheet);
+                $readyRows = collect($rows)->filter(fn (array $row): bool => $row['borrower_name'] !== '' && $row['borrower_id_number'] !== '');
+
+                return [
+                    'name' => $sheet->getTitle(),
+                    'status' => $this->loanSheetStatus($sheet->getTitle()),
+                    'total' => count($rows),
+                    'ready' => $readyRows->count(),
+                    'skipped' => count($rows) - $readyRows->count(),
+                    'sample' => $readyRows->take(5)->map(fn (array $row): array => [
+                        'loan_number' => $row['loan_number'],
+                        'borrower_name' => $row['borrower_name'],
+                        'borrower_id_number' => $row['borrower_id_number'],
+                        'loan_balance' => $row['loan_balance'],
+                    ])->values()->all(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        if ($sheets === []) {
+            throw new RuntimeException('لم يتم العثور على ورقتَي القروض «نشطه» أو «مغلقه» داخل الملف.');
+        }
+
+        return ['source' => 'kuwait-loans', 'sheets' => $sheets];
+    }
+
+    /**
+     * @return array{total: int, ready: int, created: int, updated: int, skipped: int, issues: array<int, array{row: int, reasons: array<int, string>}>, duplicate_form_numbers: int, risk_levels: array{critical: int, high: int, medium: int, low: int}}
+     */
+    public function importLoanWorkbook(string $path, string $sheetName): array
+    {
+        $spreadsheet = IOFactory::load($path);
+        $sheet = $spreadsheet->getSheetByName($sheetName);
+
+        if (! $sheet instanceof Worksheet || $this->loanSheetStatus($sheetName) === null) {
+            throw new RuntimeException('ورقة القروض المحددة غير متاحة للاستيراد.');
+        }
+
+        $summary = [
+            'total' => 0,
+            'ready' => 0,
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'issues' => [],
+            'duplicate_form_numbers' => 0,
+            'risk_levels' => ['critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0],
+        ];
+
+        foreach ($this->loanRows($sheet) as $row) {
+            $summary['total']++;
+
+            if ($row['borrower_name'] === '' || $row['borrower_id_number'] === '') {
+                $summary['skipped']++;
+                $summary['issues'][] = ['row' => $row['row_number'], 'reasons' => ['اسم المقترض أو رقم الهوية مفقود.']];
+
+                continue;
+            }
+
+            $summary['ready']++;
+            $borrower = DamageAssessmentBorrower::query()
+                ->where('borrower_id_number', $row['borrower_id_number'])
+                ->orWhere('loan_number', $row['loan_number'])
+                ->firstOrNew();
+            $isNew = ! $borrower->exists;
+
+            $borrower->fill(array_filter([
+                'source_uuid' => $isNew ? 'kuwait-loan-'.$row['loan_number'] : null,
+                'form_number' => $row['loan_number'],
+                'loan_number' => $row['loan_number'],
+                'loan_status' => $row['loan_status'],
+                'loan_original_amount' => $row['loan_original_amount'],
+                'loan_total_amount' => $row['loan_total_amount'],
+                'loan_portfolio_amount' => $row['loan_portfolio_amount'],
+                'loan_net_amount' => $row['loan_net_amount'],
+                'loan_balance' => $row['loan_balance'],
+                'loan_paid_amount' => $row['loan_paid_amount'],
+                'loan_installments_count' => $row['loan_installments_count'],
+                'loan_started_at' => $row['loan_started_at'],
+                'loan_last_installment_at' => $row['loan_last_installment_at'],
+                'loan_clearance_delivered' => $row['loan_clearance_delivered'],
+                'borrower_name' => $row['borrower_name'],
+                'borrower_id_number' => $row['borrower_id_number'],
+                'phone_primary' => $row['phone_primary'],
+                'current_residence_address' => $row['address'],
+                'loan_unit_address' => $row['address'],
+            ], fn (mixed $value): bool => $value !== null && $value !== ''));
+            $borrower->save();
+            $summary[$isNew ? 'created' : 'updated']++;
+        }
+
+        return $summary;
+    }
+
+    /**
      * @param  array<int, array<string, mixed>>  $sourceRows
      * @return array{
      *     total: int,
@@ -686,6 +790,58 @@ class BorrowerSpreadsheetImportService
             ->delete();
     }
 
+    private function loanSheetStatus(string $sheetName): ?string
+    {
+        return match ($sheetName) {
+            'نشطه' => 'active',
+            'مغلقه' => 'closed',
+            default => null,
+        };
+    }
+
+    /**
+     * @return array<int, array{row_number: int, loan_number: string, loan_status: string, borrower_id_number: string, borrower_name: string, phone_primary: string, address: string, loan_original_amount: ?float, loan_total_amount: ?float, loan_portfolio_amount: ?float, loan_net_amount: ?float, loan_balance: ?float, loan_paid_amount: ?float, loan_installments_count: ?int, loan_started_at: ?string, loan_last_installment_at: ?string, loan_clearance_delivered: ?bool}>
+     */
+    private function loanRows(Worksheet $sheet): array
+    {
+        $isActive = $this->loanSheetStatus($sheet->getTitle()) === 'active';
+        $startRow = $isActive ? 3 : 7;
+        $rows = $sheet->toArray(null, true, true, false);
+        $loanRows = [];
+
+        foreach (array_slice($rows, $startRow - 1) as $index => $row) {
+            $loanNumber = $this->text($row[1] ?? null);
+            $borrowerId = $this->text($row[2] ?? null);
+            $borrowerName = $this->text($row[$isActive ? 5 : 3] ?? null);
+
+            if ($loanNumber === '' && $borrowerId === '' && $borrowerName === '') {
+                continue;
+            }
+
+            $loanRows[] = [
+                'row_number' => $startRow + $index,
+                'loan_number' => $loanNumber,
+                'loan_status' => $isActive ? 'active' : 'closed',
+                'borrower_id_number' => $borrowerId,
+                'borrower_name' => $borrowerName,
+                'phone_primary' => $this->text($row[$isActive ? 4 : 5] ?? null),
+                'address' => $this->text($row[$isActive ? 6 : 6] ?? null),
+                'loan_original_amount' => $this->decimal($this->text($row[$isActive ? 3 : 4] ?? null)),
+                'loan_total_amount' => $this->decimal($this->text($row[$isActive ? 9 : 7] ?? null)),
+                'loan_portfolio_amount' => $isActive ? $this->decimal($this->text($row[10] ?? null)) : null,
+                'loan_net_amount' => $isActive ? $this->decimal($this->text($row[11] ?? null)) : null,
+                'loan_balance' => $this->decimal($this->text($row[$isActive ? 12 : 12] ?? null)),
+                'loan_paid_amount' => $isActive ? null : $this->decimal($this->text($row[11] ?? null)),
+                'loan_installments_count' => $isActive ? null : $this->integer($this->text($row[8] ?? null)),
+                'loan_started_at' => $isActive ? null : $this->dateValue($this->text($row[9] ?? null)),
+                'loan_last_installment_at' => $isActive ? $this->dateValue($this->text($row[8] ?? null)) : null,
+                'loan_clearance_delivered' => $isActive ? null : $this->text($row[13] ?? null) === '1',
+            ];
+        }
+
+        return $loanRows;
+    }
+
     /**
      * @return array<string, array<int, string>>
      */
@@ -937,12 +1093,23 @@ class BorrowerSpreadsheetImportService
 
     private function integer(string $value): ?int
     {
-        return $value === '' || ! is_numeric($value) ? null : (int) $value;
+        $normalizedValue = $this->normalizedNumber($value);
+
+        return $normalizedValue === null ? null : (int) $normalizedValue;
     }
 
     private function decimal(string $value): ?float
     {
-        return $value === '' || ! is_numeric($value) ? null : (float) $value;
+        $normalizedValue = $this->normalizedNumber($value);
+
+        return $normalizedValue === null ? null : (float) $normalizedValue;
+    }
+
+    private function normalizedNumber(string $value): ?string
+    {
+        $normalizedValue = str_replace([',', '٬', ' '], '', trim($value));
+
+        return $normalizedValue === '' || ! is_numeric($normalizedValue) ? null : $normalizedValue;
     }
 
     private function dateValue(string $value): ?string

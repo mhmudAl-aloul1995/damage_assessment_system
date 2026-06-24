@@ -53,10 +53,36 @@
         }
 
         .damage-assessment-borrowers-page .borrower-filter-bar {
-            background: var(--bs-gray-100);
+            background: var(--bs-body-bg);
             border: 1px solid var(--bs-gray-200);
             border-radius: 0.9rem;
-            padding: 0.85rem;
+            box-shadow: 0 0.3rem 1rem rgba(15, 23, 42, 0.04);
+            padding: 0.6rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-worklist-toolbar {
+            flex: 0 0 auto;
+            width: auto;
+        }
+
+        .damage-assessment-borrowers-page .borrower-worklist-toolbar .borrower-filter-bar {
+            flex-wrap: nowrap !important;
+        }
+
+        .damage-assessment-borrowers-page .borrower-filter-bar .form-control {
+            min-width: 15rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-filter-bar .select2-container {
+            min-width: 12rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-filter-bar .select2-selection {
+            min-height: 38px;
+        }
+
+        .damage-assessment-borrowers-page .borrower-filter-bar .select2-selection__rendered {
+            line-height: 38px;
         }
 
         .damage-assessment-borrowers-page .borrower-repeat-row {
@@ -71,8 +97,11 @@
             background: var(--bs-gray-100);
             border: 1px solid var(--bs-gray-200);
             border-radius: 0.65rem;
+            box-sizing: border-box;
+            min-height: 10.9rem;
             min-width: 13rem;
             padding: 0.75rem;
+            width: 13rem;
         }
 
         .damage-assessment-borrowers-page .borrower-pricing-amounts {
@@ -89,6 +118,37 @@
 
         .damage-assessment-borrowers-page .borrower-pricing-action {
             width: 100%;
+        }
+
+        .damage-assessment-borrowers-page .borrower-loan-summary {
+            background: var(--bs-gray-100);
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.65rem;
+            box-sizing: border-box;
+            min-height: 10.9rem;
+            min-width: 13rem;
+            padding: 0.75rem;
+            width: 13rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-loan-summary-grid {
+            display: grid;
+            gap: 0.45rem 0.75rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            margin-top: 0.65rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-loan-summary-grid span {
+            color: var(--bs-gray-600);
+            display: block;
+            font-size: 0.75rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-loan-summary-grid strong {
+            color: var(--bs-gray-800);
+            display: block;
+            font-size: 0.8rem;
+            margin-top: 0.1rem;
         }
 
         .damage-assessment-borrowers-page .borrowers-import-dropzone {
@@ -109,6 +169,18 @@
         .damage-assessment-borrowers-page .borrowers-import-file-name {
             max-width: 100%;
             word-break: break-word;
+        }
+
+        .damage-assessment-borrowers-page .borrowers-import-preview {
+            background: var(--bs-gray-100);
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.85rem;
+            display: none;
+            padding: 1rem;
+        }
+
+        .damage-assessment-borrowers-page .borrowers-import-preview.is-visible {
+            display: block;
         }
 
         .damage-assessment-borrowers-page .borrower-create-layout {
@@ -267,6 +339,10 @@
             .damage-assessment-borrowers-page .borrower-analysis-column {
                 position: static;
             }
+
+            .damage-assessment-borrowers-page .borrower-worklist-toolbar .borrower-filter-bar {
+                flex-wrap: wrap !important;
+            }
         }
 
         @media (max-width: 767.98px) {
@@ -400,7 +476,15 @@
             }
 
             .damage-assessment-borrowers-page .borrower-pricing-cell {
+                min-height: 0;
                 min-width: 0;
+                width: 100%;
+            }
+
+            .damage-assessment-borrowers-page .borrower-loan-summary {
+                min-height: 0;
+                min-width: 0;
+                width: 100%;
             }
         }
     </style>
@@ -461,8 +545,16 @@
         <div class="col-md-2 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
-                    <div class="text-gray-500 fw-semibold">هدم كلي</div>
+                    <div class="text-gray-500 fw-semibold">ضرر كلي</div>
                     <div class="fs-2hx fw-bold text-danger" data-stat="destroyed">{{ $stats['destroyed'] }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card card-flush h-100 borrower-stat-card">
+                <div class="card-body">
+                    <div class="text-gray-500 fw-semibold">ضرر جزئي</div>
+                    <div class="fs-2hx fw-bold text-primary" data-stat="partial_damage">{{ $stats['partial_damage'] }}</div>
                 </div>
             </div>
         </div>
@@ -477,24 +569,34 @@
     </div>
 
     <div class="row g-3 mb-6" aria-label="فلاتر الأولوية السريعة">
-        <div class="col-lg-3 col-sm-6">
+        <div class="col-xl col-lg-4 col-sm-6">
             <button type="button" class="borrower-quick-filter is-active" data-risk-filter="">
                 كل الحالات <span class="text-muted d-block fs-8 fw-normal">عرض قائمة العمل الكاملة</span>
             </button>
         </div>
-        <div class="col-lg-3 col-sm-6">
+        <div class="col-xl col-lg-4 col-sm-6">
             <button type="button" class="borrower-quick-filter" data-risk-filter="critical">
                 أولوية حرجة <span class="text-muted d-block fs-8 fw-normal">تحتاج متابعة فورية</span>
             </button>
         </div>
-        <div class="col-lg-3 col-sm-6">
+        <div class="col-xl col-lg-4 col-sm-6">
             <button type="button" class="borrower-quick-filter" data-risk-filter="high">
                 أولوية مرتفعة <span class="text-muted d-block fs-8 fw-normal">تحتاج مراجعة قريبة</span>
             </button>
         </div>
-        <div class="col-lg-3 col-sm-6">
+        <div class="col-xl col-lg-4 col-sm-6">
             <button type="button" class="borrower-quick-filter" data-risk-filter="medium">
                 قيد المراجعة <span class="text-muted d-block fs-8 fw-normal">حالات بمتابعة متوسطة</span>
+            </button>
+        </div>
+        <div class="col-xl col-lg-4 col-sm-6">
+            <button type="button" class="borrower-quick-filter" data-damage-filter="destroyed">
+                ضرر كلي <span class="text-muted d-block fs-8 fw-normal">وحدات مهدمة كليًا</span>
+            </button>
+        </div>
+        <div class="col-xl col-lg-4 col-sm-6">
+            <button type="button" class="borrower-quick-filter" data-damage-filter="partial">
+                ضرر جزئي <span class="text-muted d-block fs-8 fw-normal">أضرار طفيفة أو بليغة</span>
             </button>
         </div>
     </div>
@@ -802,15 +904,20 @@
                             <div class="text-muted fs-7">رتّب الأولويات ثم افتح الحالة لاتخاذ الإجراء التالي.</div>
                         </div>
                     </div>
-                    <div class="card-toolbar w-100 w-md-auto">
+                    <div class="card-toolbar borrower-worklist-toolbar">
                         <div class="borrower-filter-bar d-flex flex-wrap align-items-center gap-2">
                             <input type="search" class="form-control form-control-sm w-200px" id="borrowerSearch" placeholder="بحث بالاسم أو الهوية أو الجوال">
-                            <select class="form-select form-select-sm w-175px" id="borrowerRiskFilter" aria-label="تصفية حسب مستوى الخطورة">
+                            <select class="form-select form-select-solid form-select-sm borrower-filter-select" id="borrowerRiskFilter" aria-label="تصفية حسب مستوى الخطورة" data-control="select2" data-hide-search="true" data-placeholder="كل مستويات الخطورة">
                                 <option value="">كل مستويات الخطورة</option>
                                 <option value="critical">حرج</option>
                                 <option value="high">مرتفع</option>
                                 <option value="medium">متوسط</option>
                                 <option value="low">منخفض</option>
+                            </select>
+                            <select class="form-select form-select-solid form-select-sm borrower-filter-select" id="borrowerDamageFilter" aria-label="تصفية حسب نوع الضرر" data-control="select2" data-hide-search="true" data-placeholder="كل أنواع الضرر">
+                                <option value="">كل أنواع الضرر</option>
+                                <option value="destroyed">ضرر كلي</option>
+                                <option value="partial">ضرر جزئي</option>
                             </select>
                         </div>
                     </div>
@@ -824,6 +931,7 @@
                                     <th>المقترض</th>
                                     <th>النزوح</th>
                                     <th>الوحدة</th>
+                                    <th>القرض</th>
                                     <th>BOQ</th>
                                     <th>صور</th>
                                     <th>الخطورة</th>
@@ -831,7 +939,7 @@
                             </thead>
                             <tbody id="borrowersTableBody">
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">جاري التحميل...</td>
+                                    <td colspan="7" class="text-center text-muted">جاري التحميل...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -879,12 +987,19 @@
                             <input type="file" name="boq_file" id="boqFile" class="form-control form-control-solid mb-3" accept=".xlsx">
                             <div class="form-text mb-5">ارفع ملف BOQ-Analysis Price عند الحاجة لحساب إجمالي البنود تلقائيًا.</div>
                             <div class="form-text">سيتم تجاوز الصفوف المكررة أو غير المكتملة تلقائيًا، ثم تحديث الإحصائيات بعد الاستيراد.</div>
+                            <div class="borrowers-import-preview mt-5" id="borrowersImportPreview" aria-live="polite"></div>
                             <div class="invalid-feedback d-block mt-3" id="borrowersImportError" style="display: none;"></div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="button" class="btn btn-light-primary" id="borrowersPreviewBtn">
+                                <span class="indicator-label">معاينة الملف</span>
+                                <span class="indicator-progress">جارٍ تحليل الملف...
+                                    <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                                </span>
+                            </button>
                             <button type="submit" class="btn btn-primary" id="borrowersImportSubmitBtn">
-                                <span class="indicator-label">بدء الاستيراد</span>
+                                <span class="indicator-label">تأكيد الاستيراد</span>
                                 <span class="indicator-progress">جاري الاستيراد...
                                     <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                                 </span>
@@ -934,6 +1049,7 @@
             data: @json(route('damage-assessment-borrowers.data')),
             store: @json(route('damage-assessment-borrowers.store')),
             import: @json(route('damage-assessment-borrowers.import')),
+            previewImport: @json(route('damage-assessment-borrowers.import.preview')),
         };
 
         const riskClasses = {
@@ -1120,13 +1236,37 @@
             `;
         }
 
+        function loanSummary(row) {
+            if (!row.loan_number) {
+                return '<span class="text-muted">غير مرتبط</span>';
+            }
+
+            const status = row.loan_status === 'active' ? 'نشط' : 'مغلق';
+            const color = row.loan_status === 'active' ? 'success' : 'secondary';
+
+            const amount = (value) => value === null ? 'غير متوفر' : formatMoney(value);
+
+            return `<div class="borrower-loan-summary">
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                    <span class="badge badge-light-${color}">${status}</span>
+                    <strong>${row.loan_number}</strong>
+                </div>
+                <div class="borrower-loan-summary-grid">
+                    <div><span>مبلغ القرض</span><strong>${amount(row.loan_total_amount)}</strong></div>
+                    <div><span>محفظة القرض</span><strong>${amount(row.loan_portfolio_amount)}</strong></div>
+                    <div><span>الصافي</span><strong>${amount(row.loan_net_amount)}</strong></div>
+                    <div><span>الرصيد الحالي</span><strong class="text-success">${amount(row.loan_balance)}</strong></div>
+                </div>
+            </div>`;
+        }
+
         function renderRows(rows) {
             const body = document.getElementById('borrowersTableBody');
             const mobileList = document.getElementById('borrowersMobileList');
             const allRows = [...pendingRows(), ...(rows || [])];
 
             if (!allRows.length) {
-                body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
+                body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
                 mobileList.innerHTML = '<div class="text-center text-muted py-4">لا توجد بيانات بعد</div>';
                 return;
             }
@@ -1143,6 +1283,7 @@
                     </td>
                     <td>${row.displacement_label || '-'}</td>
                     <td>${row.damage_label || '-'}</td>
+                    <td>${loanSummary(row)}</td>
                     <td>${pricingSummary(row)}</td>
                     <td>${row.attachments_count || 0}</td>
                     <td><span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span></td>
@@ -1177,6 +1318,10 @@
                             <span>${formatMoney(row.boq_total_usd)} $ / ${formatMoney(row.boq_total_ils)} ₪</span>
                         </div>
                         <div class="borrower-mobile-meta-item">
+                            <span>القرض</span>
+                            <span>${row.loan_number ? `${row.loan_number} — ${row.loan_balance === null ? 'غير متوفر' : formatMoney(row.loan_balance)}` : 'غير مرتبط'}</span>
+                        </div>
+                        <div class="borrower-mobile-meta-item">
                             <span>صور</span>
                             <span>${row.attachments_count || 0}</span>
                         </div>
@@ -1189,9 +1334,11 @@
         async function loadBorrowers() {
             const q = document.getElementById('borrowerSearch').value;
             const riskLevel = document.getElementById('borrowerRiskFilter')?.value;
+            const damageStatus = document.getElementById('borrowerDamageFilter')?.value;
             const url = new URL(borrowerRoutes.data, window.location.origin);
             if (q) url.searchParams.set('q', q);
             if (riskLevel) url.searchParams.set('risk_level', riskLevel);
+            if (damageStatus) url.searchParams.set('damage_status', damageStatus);
 
             try {
                 const response = await fetch(url, {
@@ -1215,10 +1362,27 @@
         const borrowerSurveyForm = document.getElementById('borrowerSurveyForm');
         const borrowerSearch = document.getElementById('borrowerSearch');
         const borrowerRiskFilter = document.getElementById('borrowerRiskFilter');
+        const borrowerDamageFilter = document.getElementById('borrowerDamageFilter');
         const borrowersImportForm = document.getElementById('borrowersImportForm');
         const borrowersFile = document.getElementById('borrowersFile');
         const borrowersImportDropzone = document.getElementById('borrowersImportDropzone');
         const borrowersImportFileName = document.getElementById('borrowersImportFileName');
+        const borrowersImportPreview = document.getElementById('borrowersImportPreview');
+        const borrowersPreviewBtn = document.getElementById('borrowersPreviewBtn');
+
+        if (window.jQuery && $.fn.select2) {
+            $('.borrower-filter-select').each(function () {
+                const select = $(this);
+
+                if (!select.hasClass('select2-hidden-accessible')) {
+                    select.select2({
+                        allowClear: false,
+                        minimumResultsForSearch: Infinity,
+                        width: '100%',
+                    });
+                }
+            });
+        }
 
         borrowerSurveyForm?.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -1297,11 +1461,21 @@
         });
 
         borrowerRiskFilter?.addEventListener('change', loadBorrowers);
+        borrowerDamageFilter?.addEventListener('change', loadBorrowers);
 
         document.querySelectorAll('[data-risk-filter]').forEach((button) => {
             button.addEventListener('click', () => {
                 borrowerRiskFilter.value = button.dataset.riskFilter;
                 document.querySelectorAll('[data-risk-filter]').forEach((filter) => filter.classList.remove('is-active'));
+                button.classList.add('is-active');
+                loadBorrowers();
+            });
+        });
+
+        document.querySelectorAll('[data-damage-filter]').forEach((button) => {
+            button.addEventListener('click', () => {
+                borrowerDamageFilter.value = button.dataset.damageFilter;
+                document.querySelectorAll('[data-damage-filter]').forEach((filter) => filter.classList.remove('is-active'));
                 button.classList.add('is-active');
                 loadBorrowers();
             });
@@ -1315,6 +1489,79 @@
 
         borrowersFile?.addEventListener('change', () => {
             borrowersImportFileName.textContent = borrowersFile.files?.[0]?.name || 'صيغة XLSX فقط، حتى 20 ميغابايت.';
+            borrowersImportPreview?.classList.remove('is-visible');
+            if (borrowersImportPreview) borrowersImportPreview.innerHTML = '';
+        });
+
+        function renderImportPreview(preview) {
+            const sheets = preview.sheets || [];
+            if (!sheets.length) {
+                borrowersImportPreview.innerHTML = '<div class="text-danger fw-semibold">لم يتم العثور على أوراق قروض قابلة للاستيراد.</div>';
+                borrowersImportPreview.classList.add('is-visible');
+                return;
+            }
+
+            borrowersImportPreview.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                    <div>
+                        <div class="fw-bold">تمت قراءة الملف بنجاح</div>
+                        <div class="text-muted fs-7">اختر ورقة واحدة للاستيراد. لن يُنفذ أي تغيير قبل الضغط على تأكيد الاستيراد.</div>
+                    </div>
+                    <span class="badge badge-light-success">معاينة فقط</span>
+                </div>
+                <div class="row g-3">
+                    ${sheets.map((sheet, index) => `
+                        <div class="col-12">
+                            <label class="form-check form-check-custom form-check-solid border rounded p-3 w-100">
+                                <input class="form-check-input" type="radio" name="sheet_name" value="${sheet.name}" ${index === 0 ? 'checked' : ''}>
+                                <span class="form-check-label ms-3 flex-grow-1">
+                                    <span class="fw-bold d-block">${sheet.name} — ${sheet.status === 'active' ? 'قروض نشطة' : 'قروض مغلقة'}</span>
+                                    <span class="text-muted fs-7">${sheet.ready} سجل جاهز من أصل ${sheet.total}${sheet.skipped ? `، ${sheet.skipped} بحاجة مراجعة` : ''}</span>
+                                </span>
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            borrowersImportPreview.classList.add('is-visible');
+        }
+
+        borrowersPreviewBtn?.addEventListener('click', async () => {
+            if (!borrowersFile?.files?.length) {
+                if (typeof toastr !== 'undefined') toastr.error('اختر ملف Excel أولًا.');
+                return;
+            }
+
+            const error = document.getElementById('borrowersImportError');
+            error.style.display = 'none';
+            borrowersPreviewBtn.setAttribute('data-kt-indicator', 'on');
+            borrowersPreviewBtn.disabled = true;
+
+            try {
+                const previewData = new FormData();
+                previewData.append('borrowers_file', borrowersFile.files[0]);
+                previewData.append('_token', csrfToken());
+                const response = await fetch(borrowerRoutes.previewImport, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: previewData,
+                });
+                const result = await response.json().catch(() => ({
+                    status: false,
+                    message: 'انتهت جلسة العمل أو تعذرت قراءة استجابة الخادم. حدّث الصفحة ثم أعد المحاولة.',
+                }));
+
+                if (!response.ok || !result.status) {
+                    error.textContent = result.message || 'تعذرت معاينة الملف.';
+                    error.style.display = 'block';
+                    return;
+                }
+
+                renderImportPreview(result.preview);
+            } finally {
+                borrowersPreviewBtn.removeAttribute('data-kt-indicator');
+                borrowersPreviewBtn.disabled = false;
+            }
         });
 
         ['dragenter', 'dragover'].forEach((eventName) => {
@@ -1356,6 +1603,8 @@
 
                 form.reset();
                 borrowersImportFileName.textContent = 'صيغة XLSX فقط، حتى 20 ميغابايت.';
+                borrowersImportPreview.classList.remove('is-visible');
+                borrowersImportPreview.innerHTML = '';
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('borrowersImportModal')).hide();
                 renderStats(result.stats);
                 await loadBorrowers();

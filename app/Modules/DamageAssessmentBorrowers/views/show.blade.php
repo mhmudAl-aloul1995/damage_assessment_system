@@ -12,6 +12,7 @@
             'low' => 'success',
         ];
         $riskColor = $riskColors[$borrower->risk_level] ?? 'secondary';
+        $loanStatusLabel = $borrower->loan_status === 'active' ? 'نشط' : ($borrower->loan_status === 'closed' ? 'مغلق' : '-');
 
         $value = static fn (mixed $item): string => filled($item) ? (string) $item : '-';
         $money = static fn (mixed $item): string => number_format((float) $item, 2);
@@ -78,6 +79,24 @@
             overflow-wrap: anywhere;
         }
 
+        .borrower-show-page .loan-financial-grid {
+            display: grid;
+            gap: 0.85rem;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            margin-bottom: 1.5rem;
+        }
+
+        .borrower-show-page .loan-financial-card {
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+
+        .borrower-show-page .loan-financial-card:nth-child(1) { background: #eef6ff; }
+        .borrower-show-page .loan-financial-card:nth-child(2) { background: #fff8dd; }
+        .borrower-show-page .loan-financial-card:nth-child(3) { background: #f4efff; }
+        .borrower-show-page .loan-financial-card:nth-child(4) { background: #e8fff3; }
+
         .borrower-show-page .borrower-attachment-preview {
             aspect-ratio: 4 / 3;
             background: var(--bs-gray-100);
@@ -113,10 +132,18 @@
             .borrower-show-page .borrower-detail-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
+
+            .borrower-show-page .loan-financial-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
 
         @media (max-width: 575.98px) {
             .borrower-show-page .borrower-detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .borrower-show-page .loan-financial-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -166,6 +193,32 @@
                             <div class="fs-3 fw-bold">{{ $borrower->attachments->count() }}</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-flush mb-6">
+            <div class="card-header">
+                <div class="card-title"><h4 class="fw-bold mb-0">بيانات القرض</h4></div>
+            </div>
+            <div class="card-body">
+                <div class="loan-financial-grid">
+                    <div class="loan-financial-card"><div class="borrower-detail-label">مبلغ القرض</div><div class="fs-4 fw-bold">{{ $borrower->loan_total_amount !== null ? $money($borrower->loan_total_amount) : '-' }}</div></div>
+                    <div class="loan-financial-card"><div class="borrower-detail-label">محفظة القرض</div><div class="fs-4 fw-bold">{{ $borrower->loan_portfolio_amount !== null ? $money($borrower->loan_portfolio_amount) : '-' }}</div></div>
+                    <div class="loan-financial-card"><div class="borrower-detail-label">صافي مبلغ القرض</div><div class="fs-4 fw-bold">{{ $borrower->loan_net_amount !== null ? $money($borrower->loan_net_amount) : '-' }}</div></div>
+                    <div class="loan-financial-card"><div class="borrower-detail-label">الرصيد الإجمالي الحالي</div><div class="fs-4 fw-bold text-success">{{ $borrower->loan_balance !== null ? $money($borrower->loan_balance) : '-' }}</div></div>
+                </div>
+                <div class="borrower-detail-grid">
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">رقم القرض</div><div class="borrower-detail-value">{{ $value($borrower->loan_number) }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">حالة القرض</div><div class="borrower-detail-value">{{ $loanStatusLabel }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">أصل القرض</div><div class="borrower-detail-value">{{ $borrower->loan_original_amount !== null ? $money($borrower->loan_original_amount) : '-' }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">إجمالي القرض</div><div class="borrower-detail-value">{{ $borrower->loan_total_amount !== null ? $money($borrower->loan_total_amount) : '-' }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">الرصيد المتبقي</div><div class="borrower-detail-value">{{ $borrower->loan_balance !== null ? $money($borrower->loan_balance) : '-' }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">المبلغ المدفوع</div><div class="borrower-detail-value">{{ $borrower->loan_paid_amount !== null ? $money($borrower->loan_paid_amount) : '-' }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">عدد دفعات السداد</div><div class="borrower-detail-value">{{ $value($borrower->loan_installments_count) }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">بداية السداد</div><div class="borrower-detail-value">{{ $borrower->loan_started_at?->format('Y-m-d') ?: '-' }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">آخر قسط</div><div class="borrower-detail-value">{{ $borrower->loan_last_installment_at?->format('Y-m-d') ?: '-' }}</div></div>
+                    <div class="borrower-detail-item"><div class="borrower-detail-label">براءة الذمة</div><div class="borrower-detail-value">{{ $borrower->loan_clearance_delivered === null ? '-' : ($borrower->loan_clearance_delivered ? 'تم التسليم' : 'لم يتم التسليم') }}</div></div>
                 </div>
             </div>
         </div>

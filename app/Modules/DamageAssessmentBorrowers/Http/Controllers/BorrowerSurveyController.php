@@ -60,6 +60,12 @@ class BorrowerSurveyController extends Controller
             $query->where('risk_level', (string) $request->string('risk_level'));
         }
 
+        if ($request->string('damage_status')->toString() === 'partial') {
+            $query->whereIn('loan_unit_damage_status', ['severe_uninhabitable', 'severe_habitable', 'minor']);
+        } elseif ($request->filled('damage_status')) {
+            $query->where('loan_unit_damage_status', (string) $request->string('damage_status'));
+        }
+
         if ($request->filled('q')) {
             $search = (string) $request->string('q');
             $query->where(function ($query) use ($search): void {
@@ -115,7 +121,10 @@ class BorrowerSurveyController extends Controller
                 $importer->importPriceCatalog($request->file('boq_file')->getRealPath());
             }
 
-            $summary = $importer->importWorkbook($request->file('borrowers_file')->getRealPath());
+            $sheetName = $request->string('sheet_name')->toString();
+            $summary = $sheetName !== ''
+                ? $importer->importLoanWorkbook($request->file('borrowers_file')->getRealPath(), $sheetName)
+                : $importer->importWorkbook($request->file('borrowers_file')->getRealPath());
         } catch (RuntimeException $exception) {
             return response()->json([
                 'status' => false,
@@ -134,6 +143,26 @@ class BorrowerSurveyController extends Controller
             'summary' => $summary,
             'stats' => $this->stats(),
         ]);
+    }
+
+    public function previewImport(ImportBorrowerSpreadsheetRequest $request, BorrowerSpreadsheetImportService $importer): JsonResponse
+    {
+        try {
+            return response()->json([
+                'status' => true,
+                'preview' => $importer->previewLoanWorkbook($request->file('borrowers_file')->getRealPath()),
+            ]);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'status' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        } catch (Throwable) {
+            return response()->json([
+                'status' => false,
+                'message' => 'تعذرت معاينة ملف Excel. تأكد من سلامة الملف وصيغته.',
+            ], 422);
+        }
     }
 
     public function show(DamageAssessmentBorrower $borrower): View
@@ -343,6 +372,9 @@ class BorrowerSurveyController extends Controller
             'high' => DamageAssessmentBorrower::query()->where('risk_level', 'high')->count(),
             'displaced' => DamageAssessmentBorrower::query()->where('displacement_status', 'displaced')->count(),
             'destroyed' => DamageAssessmentBorrower::query()->where('loan_unit_damage_status', 'destroyed')->count(),
+            'partial_damage' => DamageAssessmentBorrower::query()
+                ->whereIn('loan_unit_damage_status', ['severe_uninhabitable', 'severe_habitable', 'minor'])
+                ->count(),
             'inactive_guarantors' => DamageAssessmentBorrower::query()
                 ->whereIn('guarantors_alive_status', ['no', 'none'])
                 ->count(),
@@ -359,6 +391,12 @@ class BorrowerSurveyController extends Controller
             'borrower_name' => $borrower->borrower_name,
             'borrower_id_number' => $borrower->borrower_id_number,
             'phone_primary' => $borrower->phone_primary,
+            'loan_number' => $borrower->loan_number,
+            'loan_status' => $borrower->loan_status,
+            'loan_total_amount' => $borrower->loan_total_amount === null ? null : (float) $borrower->loan_total_amount,
+            'loan_portfolio_amount' => $borrower->loan_portfolio_amount === null ? null : (float) $borrower->loan_portfolio_amount,
+            'loan_net_amount' => $borrower->loan_net_amount === null ? null : (float) $borrower->loan_net_amount,
+            'loan_balance' => $borrower->loan_balance === null ? null : (float) $borrower->loan_balance,
             'displacement_status' => $borrower->displacement_status,
             'displacement_label' => $this->optionLabel($borrower->displacement_status),
             'governorate' => $borrower->displaced_to_governorate,
