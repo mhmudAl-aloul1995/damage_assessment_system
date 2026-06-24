@@ -24,6 +24,9 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('استيراد من Excel', false)
         ->assertSee('borrowersImportModal', false)
         ->assertSee('borrowers-import-dropzone', false)
+        ->assertSee('borrower-command-center', false)
+        ->assertSee('borrowerRiskFilter', false)
+        ->assertSee('data-risk-filter="critical"', false)
         ->assertSee('اسحب ملف Excel هنا أو اضغط للاختيار', false)
         ->assertSee('تعبئة استبيان جديد', false)
         ->assertSee('استبيان المقترضين', false);
@@ -41,6 +44,7 @@ it('allows field engineers to open the borrower survey form page', function () {
         ->assertSee('borrower-survey-form', false)
         ->assertSee('borrower-create-hero', false)
         ->assertSee('borrower-form-progress', false)
+        ->assertSee('data-scroll-to-section="borrowerBasics"', false)
         ->assertSee('borrower-form-section-title', false)
         ->assertSee('data-offline-sync="true"', false)
         ->assertSee('window.phcOfflineSync.queue', false)

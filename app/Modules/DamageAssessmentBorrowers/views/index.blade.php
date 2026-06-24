@@ -21,6 +21,44 @@
             min-height: 104px;
         }
 
+        .damage-assessment-borrowers-page .borrower-command-center {
+            background: linear-gradient(135deg, #1b4d89 0%, #1f6f8b 100%);
+            border-radius: 1rem;
+            box-shadow: 0 1rem 2.5rem rgba(31, 79, 137, 0.18);
+            color: #fff;
+            padding: 1.5rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-command-center .text-muted,
+        .damage-assessment-borrowers-page .borrower-command-center .text-white-75 {
+            color: rgba(255, 255, 255, 0.78) !important;
+        }
+
+        .damage-assessment-borrowers-page .borrower-quick-filter {
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.75rem;
+            color: var(--bs-gray-700);
+            font-weight: 600;
+            padding: 0.6rem 0.8rem;
+            text-align: start;
+            transition: 0.15s ease;
+            width: 100%;
+        }
+
+        .damage-assessment-borrowers-page .borrower-quick-filter:hover,
+        .damage-assessment-borrowers-page .borrower-quick-filter.is-active {
+            background: var(--bs-primary-light);
+            border-color: var(--bs-primary);
+            color: var(--bs-primary);
+        }
+
+        .damage-assessment-borrowers-page .borrower-filter-bar {
+            background: var(--bs-gray-100);
+            border: 1px solid var(--bs-gray-200);
+            border-radius: 0.9rem;
+            padding: 0.85rem;
+        }
+
         .damage-assessment-borrowers-page .borrower-repeat-row {
             overflow: hidden;
         }
@@ -118,6 +156,16 @@
             font-weight: 600;
             gap: 0.6rem;
             padding: 0.8rem 0.9rem;
+            text-align: start;
+            transition: 0.15s ease;
+            width: 100%;
+        }
+
+        .damage-assessment-borrowers-page button.borrower-form-progress-item:hover,
+        .damage-assessment-borrowers-page button.borrower-form-progress-item:focus-visible {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.08);
+            outline: 0;
         }
 
         .damage-assessment-borrowers-page .borrower-form-progress-item span {
@@ -359,6 +407,24 @@
 
     <div class="damage-assessment-borrowers-page">
     @if (! $isFormPage)
+    <section class="borrower-command-center mb-6">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-4">
+            <div>
+                <div class="text-white-75 fw-semibold mb-2">إدارة القروض والتقييمات الميدانية</div>
+                <h2 class="fw-bold mb-2 text-white">مساحة عمل المقترضين</h2>
+                <p class="mb-0 text-white-75">ابحث عن الحالة، حدّد أولويتها، ثم انتقل للتقييم أو التسعير من مكان واحد.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-3">
+                <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#borrowersImportModal">
+                    استيراد من Excel
+                </button>
+                <a href="{{ route('damage-assessment-borrowers.create') }}" class="btn btn-light">
+                    تعبئة استبيان جديد
+                </a>
+            </div>
+        </div>
+    </section>
+
     <div class="row g-5 mb-6" id="borrowerStats">
         <div class="col-md-2 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
@@ -409,6 +475,29 @@
             </div>
         </div>
     </div>
+
+    <div class="row g-3 mb-6" aria-label="فلاتر الأولوية السريعة">
+        <div class="col-lg-3 col-sm-6">
+            <button type="button" class="borrower-quick-filter is-active" data-risk-filter="">
+                كل الحالات <span class="text-muted d-block fs-8 fw-normal">عرض قائمة العمل الكاملة</span>
+            </button>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <button type="button" class="borrower-quick-filter" data-risk-filter="critical">
+                أولوية حرجة <span class="text-muted d-block fs-8 fw-normal">تحتاج متابعة فورية</span>
+            </button>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <button type="button" class="borrower-quick-filter" data-risk-filter="high">
+                أولوية مرتفعة <span class="text-muted d-block fs-8 fw-normal">تحتاج مراجعة قريبة</span>
+            </button>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <button type="button" class="borrower-quick-filter" data-risk-filter="medium">
+                قيد المراجعة <span class="text-muted d-block fs-8 fw-normal">حالات بمتابعة متوسطة</span>
+            </button>
+        </div>
+    </div>
     @endif
 
     @if (! $isFormPage && session('success'))
@@ -432,12 +521,6 @@
                     سعر الصرف الموحد: {{ number_format((float) $globalExchangeRate, 4) }}
                 </button>
             @endif
-            <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#borrowersImportModal">
-                استيراد من Excel
-            </button>
-            <a href="{{ route('damage-assessment-borrowers.create') }}" class="btn btn-primary">
-                تعبئة استبيان جديد
-            </a>
         @endif
     </div>
 
@@ -459,10 +542,10 @@
                             </div>
                         </div>
                         <div class="borrower-form-progress" aria-label="أقسام الاستبيان">
-                            <div class="borrower-form-progress-item"><span>1</span> بيانات المقترض</div>
-                            <div class="borrower-form-progress-item"><span>2</span> الكفلاء</div>
-                            <div class="borrower-form-progress-item"><span>3</span> النزوح والسكن</div>
-                            <div class="borrower-form-progress-item"><span>4</span> الوحدة السكنية</div>
+                            <button type="button" class="borrower-form-progress-item" data-scroll-to-section="borrowerBasics"><span>1</span> بيانات المقترض</button>
+                            <button type="button" class="borrower-form-progress-item" data-scroll-to-section="guarantors"><span>2</span> الكفلاء</button>
+                            <button type="button" class="borrower-form-progress-item" data-scroll-to-section="displacement"><span>3</span> النزوح والسكن</button>
+                            <button type="button" class="borrower-form-progress-item" data-scroll-to-section="housingUnit"><span>4</span> الوحدة السكنية</button>
                         </div>
                     </div>
                 </div>
@@ -470,7 +553,7 @@
                     <form id="borrowerSurveyForm" class="row g-5 borrower-survey-form" data-offline-sync="true">
                         @csrf
 
-                        <div class="col-12"><h4 class="fw-bold borrower-form-section-title mb-0">بيانات المقترض الأساسية</h4></div>
+                        <div class="col-12" id="borrowerBasics"><h4 class="fw-bold borrower-form-section-title mb-0">بيانات المقترض الأساسية</h4></div>
 
                         <div class="col-md-6">
                             <label class="form-label required">اسم المقترض رباعي</label>
@@ -549,7 +632,7 @@
                         </div>
 
                         <div class="separator my-3"></div>
-                        <div class="col-12"><h4 class="fw-bold borrower-form-section-title mb-0">الكفلاء</h4></div>
+                        <div class="col-12" id="guarantors"><h4 class="fw-bold borrower-form-section-title mb-0">الكفلاء</h4></div>
 
                         <div class="col-md-3">
                             <label class="form-label">عدد الكفلاء</label>
@@ -592,7 +675,7 @@
                         </div>
 
                         <div class="separator my-3"></div>
-                        <div class="col-12"><h4 class="fw-bold borrower-form-section-title mb-0">النزوح والسكن الحالي</h4></div>
+                        <div class="col-12" id="displacement"><h4 class="fw-bold borrower-form-section-title mb-0">النزوح والسكن الحالي</h4></div>
 
                         <div class="col-md-4">
                             <label class="form-label">حالة النزوح</label>
@@ -628,7 +711,7 @@
                         </div>
 
                         <div class="separator my-3"></div>
-                        <div class="col-12"><h4 class="fw-bold borrower-form-section-title mb-0">بيانات الوحدة السكنية المستهدفة بالقرض</h4></div>
+                        <div class="col-12" id="housingUnit"><h4 class="fw-bold borrower-form-section-title mb-0">بيانات الوحدة السكنية المستهدفة بالقرض</h4></div>
 
                         <div class="col-md-6">
                             <label class="form-label">عنوان الوحدة</label>
@@ -714,10 +797,22 @@
             <div class="card card-flush">
                 <div class="card-header align-items-center gap-3">
                     <div class="card-title">
-                        <h3 class="fw-bold mb-0">آخر الاستبيانات</h3>
+                        <div>
+                            <h3 class="fw-bold mb-1">قائمة العمل</h3>
+                            <div class="text-muted fs-7">رتّب الأولويات ثم افتح الحالة لاتخاذ الإجراء التالي.</div>
+                        </div>
                     </div>
-                    <div class="card-toolbar">
-                        <input type="search" class="form-control form-control-sm w-200px" id="borrowerSearch" placeholder="بحث">
+                    <div class="card-toolbar w-100 w-md-auto">
+                        <div class="borrower-filter-bar d-flex flex-wrap align-items-center gap-2">
+                            <input type="search" class="form-control form-control-sm w-200px" id="borrowerSearch" placeholder="بحث بالاسم أو الهوية أو الجوال">
+                            <select class="form-select form-select-sm w-175px" id="borrowerRiskFilter" aria-label="تصفية حسب مستوى الخطورة">
+                                <option value="">كل مستويات الخطورة</option>
+                                <option value="critical">حرج</option>
+                                <option value="high">مرتفع</option>
+                                <option value="medium">متوسط</option>
+                                <option value="low">منخفض</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
@@ -1093,8 +1188,10 @@
 
         async function loadBorrowers() {
             const q = document.getElementById('borrowerSearch').value;
+            const riskLevel = document.getElementById('borrowerRiskFilter')?.value;
             const url = new URL(borrowerRoutes.data, window.location.origin);
             if (q) url.searchParams.set('q', q);
+            if (riskLevel) url.searchParams.set('risk_level', riskLevel);
 
             try {
                 const response = await fetch(url, {
@@ -1117,6 +1214,7 @@
 
         const borrowerSurveyForm = document.getElementById('borrowerSurveyForm');
         const borrowerSearch = document.getElementById('borrowerSearch');
+        const borrowerRiskFilter = document.getElementById('borrowerRiskFilter');
         const borrowersImportForm = document.getElementById('borrowersImportForm');
         const borrowersFile = document.getElementById('borrowersFile');
         const borrowersImportDropzone = document.getElementById('borrowersImportDropzone');
@@ -1196,6 +1294,23 @@
         borrowerSearch?.addEventListener('input', () => {
             clearTimeout(window.borrowerSearchTimer);
             window.borrowerSearchTimer = setTimeout(loadBorrowers, 300);
+        });
+
+        borrowerRiskFilter?.addEventListener('change', loadBorrowers);
+
+        document.querySelectorAll('[data-risk-filter]').forEach((button) => {
+            button.addEventListener('click', () => {
+                borrowerRiskFilter.value = button.dataset.riskFilter;
+                document.querySelectorAll('[data-risk-filter]').forEach((filter) => filter.classList.remove('is-active'));
+                button.classList.add('is-active');
+                loadBorrowers();
+            });
+        });
+
+        document.querySelectorAll('[data-scroll-to-section]').forEach((button) => {
+            button.addEventListener('click', () => {
+                document.getElementById(button.dataset.scrollToSection)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
         });
 
         borrowersFile?.addEventListener('change', () => {
