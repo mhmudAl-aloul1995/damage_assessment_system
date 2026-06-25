@@ -127,6 +127,35 @@ test('field engineers are redirected to their audit page after login', function 
     $response->assertRedirect('/damage-assessment/field-engineer-audit');
 });
 
+test('borrowers project officers with only that role are redirected to borrowers page after login', function () {
+    $role = Role::findOrCreate('Project Officer - Borrowers', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => '123456',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect('/damage-assessment-borrowers');
+});
+
+test('borrowers project officers with additional roles use the regular login redirect', function () {
+    $borrowersRole = Role::findOrCreate('Project Officer - Borrowers', 'web');
+    $databaseOfficerRole = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($borrowersRole, $databaseOfficerRole);
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => '123456',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect('/damage-assessment/damageAssessment');
+});
+
 test('dashboard redirects field engineers to their audit page', function () {
     $role = Role::findOrCreate('Field Engineer', 'web');
     $user = User::factory()->create();

@@ -31,6 +31,11 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $user = Auth::user();
+        $roleNames = $user->getRoleNames();
+
+        if ($roleNames->count() === 1 && $roleNames->contains('Project Officer - Borrowers')) {
+            return redirect()->to(app_route('damage-assessment-borrowers.index'));
+        }
 
         if ($user->hasRole('Database Officer')) {
             return redirect()->to(app_route('damageAssessment.index'));
