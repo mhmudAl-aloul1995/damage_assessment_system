@@ -231,7 +231,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.audit.title',
         'icon' => 'ki-medal-star',
-        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Field Engineer'],
+        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Field Engineer', 'Team Leader'],
         'active_patterns' => [
             'damage-assessment/audit*',
             'damage-assessment/field-engineer-audit*',
@@ -248,7 +248,7 @@ return [
                 'title' => 'menu.audit.home',
                 'url' => 'damage-assessment/audit',
                 'pattern' => 'damage-assessment/audit',
-                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager', 'Area Manager'],
+                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Team Leader'],
             ],
             [
                 'title' => 'menu.audit.building_audit',
@@ -260,7 +260,7 @@ return [
                 'title' => 'مباني المهندس الميداني',
                 'url' => 'damage-assessment/field-engineer-audit',
                 'pattern' => 'damage-assessment/field-engineer-audit',
-                'roles' => ['Field Engineer','Database Officer'],
+                'roles' => ['Field Engineer', 'Database Officer'],
             ],
             [
                 'title' => 'menu.audit.area_manager_review',
@@ -297,7 +297,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.committee.title',
         'icon' => 'ki-shield-search',
-        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor','Area Manager'],
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor', 'Area Manager'],
         'active_patterns' => [
             'damage-assessment/committee-decisions*',
             'damage-assessment/committee-members*',
@@ -308,19 +308,19 @@ return [
                 'title' => 'menu.committee.decisions',
                 'url' => 'damage-assessment/committee-decisions',
                 'pattern' => 'damage-assessment/committee-decisions*',
-                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor','Area Manager'],
+                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor', 'Area Manager'],
             ],
             [
                 'title' => 'menu.committee.members',
                 'url' => 'damage-assessment/committee-members',
                 'pattern' => 'damage-assessment/committee-members*',
-                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor','Area Manager'],
+                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'Area Manager'],
             ],
             [
                 'title' => 'menu.committee.archive',
                 'url' => 'damage-assessment/committee-archive',
                 'pattern' => 'damage-assessment/committee-archive*',
-                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor','Area Manager'],
+                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor', 'Area Manager'],
             ],
         ],
     ],
@@ -330,7 +330,7 @@ return [
         'icon' => 'ki-profile-user',
         'url' => 'damage-assessment-borrowers',
         'pattern' => 'damage-assessment-borrowers*',
-        'roles' => ['Database Officer','Project Officer - Borrowers'],
+        'roles' => ['Database Officer', 'Project Officer - Borrowers'],
         'active_patterns' => [
             'damage-assessment-borrowers*',
         ],

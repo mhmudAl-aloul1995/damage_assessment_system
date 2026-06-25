@@ -2986,7 +2986,8 @@ class auditController extends Controller
         $auditExportService = app(AuditExportService::class);
         $buildingExportColumns = $auditExportService->buildingColumns();
         $housingExportColumns = $auditExportService->housingColumns();
-        $hideAuditManagementActions = $this->shouldHideAuditManagementActions(Auth::user());
+        $hideAuditManagementActions = $this->shouldHideAuditManagementActions(Auth::user())
+            || Auth::user()?->hasRole('Team Leader');
         $legalChallenges = self::LEGAL_CHALLENGES;
 
         return View::make(
@@ -4652,8 +4653,9 @@ COALESCE(
         $user = Auth::user();
         $canEditAssessment = $this->canEditAssessmentForBuilding($user, $building);
         $canViewFieldAssessment = $this->canViewFieldAssessmentForBuilding($user, $building);
+        $isTeamLeaderReadOnly = $user?->hasRole('Team Leader') && ! $canEditAssessment;
         $canViewStatusButtons = $canEditAssessment
-            || $user?->hasRole('Team Leader')
+            || $isTeamLeaderReadOnly
             || ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) && $canViewFieldAssessment);
         $isFieldEngineerStatusPreview = $user?->hasAnyRole(['Field Engineer', 'field Engineer'])
             && $canViewFieldAssessment
@@ -4696,9 +4698,10 @@ COALESCE(
             ->first()?->status?->name;
 
         $legalChallenges = self::LEGAL_CHALLENGES;
-        $isAssessmentReadOnly = $user?->hasAnyRole(['Field Engineer', 'field Engineer'])
-            && ! $canEditAssessment
-            && $canViewFieldAssessment;
+        $isAssessmentReadOnly = $isTeamLeaderReadOnly
+            || ($user?->hasAnyRole(['Field Engineer', 'field Engineer'])
+                && ! $canEditAssessment
+                && $canViewFieldAssessment);
 
         return View::make('damage-assessment::audit.assessmentAudit', compact('buildingCurrentStatus', 'buildingEngineeringStatus', 'buildingLegalStatus', 'buildingFinalStatus', 'housingGlobalid', 'buildingGlobalid', 'building', 'assessments', 'HousingUnit', 'legalChallenges', 'isAssessmentReadOnly', 'canEditAssessment', 'canViewStatusButtons', 'isFieldEngineerStatusPreview'));
     }

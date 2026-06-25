@@ -29,6 +29,10 @@ class AssessmentInlineEditController extends Controller
 
         $building = $this->buildingForAssessmentEdit((string) $request->type, (string) $request->globalid);
 
+        if ($request->user()?->hasRole('Team Leader')) {
+            abort(403, 'This assessment is read only.');
+        }
+
         if (
             $request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])
             && ! $this->canEditAssessmentForBuilding($request->user(), $building)

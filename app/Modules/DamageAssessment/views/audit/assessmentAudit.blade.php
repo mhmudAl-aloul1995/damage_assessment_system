@@ -1880,6 +1880,11 @@
         function refreshStatusButtonAvailability(selector) {
             $(selector).each(function () {
                 let button = $(this);
+                if (isAssessmentReadOnly) {
+                    button.prop('disabled', true);
+                    return;
+                }
+
                 button.prop('disabled', button.hasClass('is-active'));
             });
         }

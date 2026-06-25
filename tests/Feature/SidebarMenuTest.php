@@ -204,3 +204,17 @@ it('temporarily shows the audit home sidebar link for selected users only', func
         expect($identityExceptedUrls)->toContain('damage-assessment/audit');
     });
 });
+
+it('shows the read only audit home link for team leaders', function () {
+    $role = Role::findOrCreate('Team Leader', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $urls = Sidebar::forUser($user)
+        ->flatMap(fn (array $module) => $module['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->pluck('url')
+        ->all();
+
+    expect($urls)->toContain('damage-assessment/audit');
+});

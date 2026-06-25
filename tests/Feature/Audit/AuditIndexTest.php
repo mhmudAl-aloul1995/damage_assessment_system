@@ -522,3 +522,36 @@ it('hides audit management action buttons for temporary excepted users only', fu
         $response->assertSee($buttonId, false);
     }
 });
+
+it('opens the audit index for team leaders without management actions', function () {
+    $role = Role::query()->create([
+        'name' => 'Team Leader',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $response = $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk();
+
+    foreach ([
+        'id="btn_final_approve"',
+        'id="btn_undp_final_approve"',
+        'id="btn_assign_to_lawyer"',
+        'id="btn_assign_to_engineer"',
+        'id="btn_import_final_approve"',
+        'id="toggle_select_column"',
+    ] as $buttonId) {
+        $response->assertDontSee($buttonId, false);
+    }
+});

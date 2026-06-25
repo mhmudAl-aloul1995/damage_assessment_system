@@ -384,7 +384,7 @@
 							إظهار الصفوف الخطرة
 							<i class="ki-duotone ki-information-5"></i>
 						</button>
-						@if(! $isFieldEngineerAudit)
+						@if(! $isFieldEngineerAudit && ! $hideAuditManagementActions)
 						<button type="button" id="toggle_select_column" class="btn btn-light-primary btn-sm"
 							data-select-visible="false">
 							إظهار التحديد <i class="ki-duotone ki-check-square"></i>

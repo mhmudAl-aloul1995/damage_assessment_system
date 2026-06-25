@@ -918,6 +918,75 @@ it('prevents team leaders from setting audit statuses without assignment', funct
     ]);
 });
 
+it('shows audit status controls as read only for team leaders', function () {
+    $role = Role::query()->create([
+        'name' => 'Team Leader',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 95461,
+        'globalid' => 'team-leader-read-only-building',
+        'building_name' => 'Team Leader Read Only Building',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    $this->actingAs($user)
+        ->get("damage-assessment/showAssessmentAudit/{$building->globalid}")
+        ->assertOk()
+        ->assertSee('let isAssessmentReadOnly = true;', false)
+        ->assertSee('data-status="accepted"', false)
+        ->assertSee("setBuildingStatus('accepted', 'QC/QA Engineer')", false);
+});
+
+it('prevents team leaders from inline editing audit assessment answers', function () {
+    $role = Role::query()->create([
+        'name' => 'Team Leader',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $building = Building::query()->create([
+        'objectid' => 95462,
+        'globalid' => 'team-leader-inline-edit-building',
+        'building_name' => 'Original Building',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.update'), [
+            'type' => 'building_table',
+            'globalid' => $building->globalid,
+            'field' => 'building_name',
+            'value' => 'Changed Building',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('edit_assessments', [
+        'global_id' => $building->globalid,
+        'field_name' => 'building_name',
+        'field_value' => 'Changed Building',
+    ]);
+});
+
 it('shows only the latest status markup for read only users without allowing field engineer status changes', function () {
     $role = Role::query()->create([
         'name' => 'Field Engineer',
