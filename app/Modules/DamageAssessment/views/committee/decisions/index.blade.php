@@ -7,6 +7,21 @@
     @if (session('success'))
         <div class="alert alert-success mb-5">{{ session('success') }}</div>
     @endif
+    @if ($errors->any())
+        <div class="alert alert-danger mb-5">{{ $errors->first() }}</div>
+    @endif
+    @if (session('committee_import_summary'))
+        @php($committeeImportSummary = session('committee_import_summary'))
+        <div class="alert alert-info mb-5">
+            <div class="fw-bold mb-2">ملخص استيراد قرارات اللجنة</div>
+            <div class="d-flex gap-4 flex-wrap">
+                <span>الصفوف: {{ $committeeImportSummary['rows'] ?? 0 }}</span>
+                <span>المكتملة: {{ $committeeImportSummary['decisions_completed'] ?? 0 }}</span>
+                <span>المتجاوزة: {{ $committeeImportSummary['skipped_rows'] ?? 0 }}</span>
+                <span>أرقام هوية غير مطابقة: {{ count($committeeImportSummary['missing_users'] ?? []) }}</span>
+            </div>
+        </div>
+    @endif
 
     <div class="row g-5 mb-5">
         <div class="col-md-6">
@@ -90,6 +105,7 @@
                         <option value="">الكل</option>
                         <option value="fully_damaged">fully_damaged</option>
                         <option value="partially_damaged">partially_damaged</option>
+                        <option value="higher_committee">higher_committee</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -120,7 +136,14 @@
                 </div>
             </div>
 
-            <div class="mb-6 text-end">
+            <div class="mb-6 d-flex gap-3 justify-content-end flex-wrap">
+                @if ($canImportWorkflowExcel)
+                    <form method="POST" action="{{ route('committee-decisions.workflow-excel.import') }}" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap justify-content-end">
+                        @csrf
+                        <input type="file" name="committee_decisions_excel" accept=".xlsx" class="form-control form-control-solid w-auto" required>
+                        <button type="submit" class="btn btn-light-primary">استيراد قرارات اللجنة</button>
+                    </form>
+                @endif
                 <button type="button" id="committee_export" class="btn btn-light-success">تصدير Excel</button>
             </div>
 

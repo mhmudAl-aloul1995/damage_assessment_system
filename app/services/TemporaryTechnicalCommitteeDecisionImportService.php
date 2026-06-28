@@ -82,7 +82,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 continue;
             }
 
-            if (! $this->isCommitteeReviewRecord($decisionable)) {
+            $resurveyCompleted = (bool) ($record['resurvey_completed'] ?? false);
+
+            if (! $resurveyCompleted && ! $this->isCommitteeReviewRecord($decisionable)) {
                 $this->recordSkip($summary, 'not_committee_review', [
                     'sheet' => $record['sheet'],
                     'row' => $record['row'],
@@ -102,6 +104,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 $record['action_text'],
                 $record['municipality'],
                 $members,
+                ! $resurveyCompleted,
+                $record['decision_date'] ?? null,
+                $record['notes'] ?? null,
             );
             $summary['decisions_completed']++;
         }
@@ -385,6 +390,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
      */
     private function memberIdNumbersForSeedRecord(array $record): array
     {
+        if (($record['use_excel_member_ids'] ?? false) === true) {
+            return $record['member_id_numbers'];
+        }
+
         $municipality = $this->normalizeMunicipality($record['municipality']);
 
         if ($this->isGazaMunicipality($municipality)) {
@@ -561,9 +570,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
     /**
      * @param  list<CommitteeMember>  $members
      */
-    private function completeDecision(Model $decisionable, string $decisionType, string $decisionText, ?string $actionText, string $municipality, array $members): void
+    private function completeDecision(Model $decisionable, string $decisionType, string $decisionText, ?string $actionText, string $municipality, array $members, bool $applyLocalStatus = true, ?string $decisionDate = null, ?string $notes = null): void
     {
-        DB::transaction(function () use ($decisionable, $decisionType, $decisionText, $actionText, $municipality, $members): void {
+        DB::transaction(function () use ($decisionable, $decisionType, $decisionText, $actionText, $municipality, $members, $applyLocalStatus, $decisionDate, $notes): void {
             /** @var CommitteeDecision $decision */
             $decision = CommitteeDecision::query()->firstOrNew([
                 'decisionable_type' => $decisionable::class,
@@ -577,8 +586,11 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 'decision_type' => $decisionType,
                 'decision_text' => $decisionText,
                 'action_text' => $actionText,
-                'notes' => trim('Temporary technical committee seed: '.$municipality),
-                'decision_date' => $signedAt->toDateString(),
+                'notes' => trim(implode("\n", array_filter([
+                    'Temporary technical committee seed: '.$municipality,
+                    $notes,
+                ]))),
+                'decision_date' => $decisionDate ?? $signedAt->toDateString(),
                 'status' => CommitteeDecision::STATUS_COMPLETED,
                 'committee_manager_id' => $managerUserId,
                 'created_by' => $decision->created_by ?? $managerUserId,
@@ -606,7 +618,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
             }
 
             $this->archiveDecisionObject($decision, $decisionable, $managerUserId, $signedAt);
-            $this->updateLocalDecisionableStatus($decisionable, $decisionType);
+
+            if ($applyLocalStatus) {
+                $this->updateLocalDecisionableStatus($decisionable, $decisionType);
+            }
         });
     }
 

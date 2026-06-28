@@ -6,6 +6,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Committee;
 
 use App\Exports\CommitteeDecisionsExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Committee\ImportCommitteeDecisionWorkflowExcelRequest;
 use App\Http\Requests\Committee\SaveCommitteeDecisionRequest;
 use App\Http\Requests\Committee\SignCommitteeDecisionRequest;
 use App\Models\Building;
@@ -13,6 +14,7 @@ use App\Models\CommitteeDecision;
 use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\services\ArcGisStatusUpdaterService;
+use App\services\CommitteeDecisionWorkflowExcelImportService;
 use App\services\CommitteeDecisionWorkflowService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,6 +23,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Facades\Excel;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -37,6 +40,7 @@ class CommitteeDecisionController extends Controller
             'buildingCount' => $this->buildingQuery()->count(),
             'housingCount' => $this->housingUnitQuery()->count(),
             'municipalities' => $this->municipalityOptions(),
+            'canImportWorkflowExcel' => auth()->user()?->can('manage committee decision content') ?? false,
         ]);
     }
 
@@ -82,6 +86,30 @@ class CommitteeDecisionController extends Controller
             new CommitteeDecisionsExport($rows, $headings),
             $filename,
         );
+    }
+
+    public function importWorkflowExcel(
+        ImportCommitteeDecisionWorkflowExcelRequest $request,
+        CommitteeDecisionWorkflowExcelImportService $importer,
+    ): RedirectResponse {
+        try {
+            $summary = $importer->import((string) $request->file('committee_decisions_excel')?->getRealPath());
+        } catch (RuntimeException $exception) {
+            return redirect()
+                ->back()
+                ->withErrors(['committee_decisions_excel' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('committee-decisions.index')
+            ->with('success', sprintf(
+                'تم استيراد ملف قرارات اللجنة. الصفوف: %s، القرارات المكتملة: %s، الصفوف المتجاوزة: %s، أرقام الهوية غير المطابقة: %s.',
+                $summary['rows'] ?? 0,
+                $summary['decisions_completed'] ?? 0,
+                $summary['skipped_rows'] ?? 0,
+                count($summary['missing_users'] ?? []),
+            ))
+            ->with('committee_import_summary', $summary);
     }
 
     public function showBuilding(Building $building): View

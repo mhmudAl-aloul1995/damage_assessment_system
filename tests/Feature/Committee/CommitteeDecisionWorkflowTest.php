@@ -9,10 +9,13 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use App\Notifications\CommitteeDecisionSignatureRequested;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 beforeEach(function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
@@ -92,6 +95,77 @@ it('shows committee decision pages and datatable data for buildings and housing 
         ->get(route('committee-decisions.buildings.show', $building))
         ->assertOk()
         ->assertSee('Decision Summary');
+});
+
+it('imports uploaded workflow excel decisions from the committee decisions index', function () {
+    $manager = User::factory()->create();
+    $manager->givePermissionTo([
+        'view committee decisions',
+        'manage committee decision content',
+    ]);
+
+    $memberUser = User::factory()->create([
+        'name' => 'Excel Committee Member',
+        'id_no' => '800846958',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9701,
+        'globalid' => 'workflow-excel-building',
+        'building_name' => 'Workflow Excel Building',
+        'building_damage_status' => 'partially_damaged',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $path = workflowCommitteeDecisionWorkbookPath([
+        [
+            'sheet' => 'خانيونس -مباني',
+            'objectid' => 9701,
+            'decision' => 'كلي',
+            'decision_text' => 'هدم كلي',
+            'action_text' => 'اعادة المبنى للمهندس لحصره',
+            'resurvey' => 'نعم',
+            'member_id' => '800846958',
+        ],
+    ]);
+
+    $this->actingAs($manager)
+        ->get(route('committee-decisions.index'))
+        ->assertOk()
+        ->assertSee('committee_decisions_excel', false)
+        ->assertSee('استيراد قرارات اللجنة', false);
+
+    $this->actingAs($manager)
+        ->post(route('committee-decisions.workflow-excel.import'), [
+            'committee_decisions_excel' => new UploadedFile(
+                $path,
+                'workflow-decisions.xlsx',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                null,
+                true,
+            ),
+        ])
+        ->assertRedirect(route('committee-decisions.index'))
+        ->assertSessionHas('success');
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
+    $building->refresh();
+
+    expect($decision->decision_type)->toBe(CommitteeDecision::TYPE_FULLY_DAMAGED)
+        ->and($decision->decision_text)->toBe('هدم كلي')
+        ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($building->building_damage_status)->toBe('partially_damaged')
+        ->and($building->field_status)->toBe('COMPLETED')
+        ->and(CommitteeDecisionSignature::query()
+            ->where('committee_decision_id', $decision->id)
+            ->where('status', 'approved')
+            ->count())->toBe(1)
+        ->and(CommitteeMember::query()->where('user_id', $memberUser->id)->exists())->toBeTrue()
+        ->and(BuildingSurveyArchiveObject::query()
+            ->where('source_type', 'committee_decision')
+            ->where('committee_decision_id', $decision->id)
+            ->where('building_objectid', $building->objectid)
+            ->exists())->toBeTrue();
 });
 
 it('suggests the latest committee members for a new decision and saves only selected members', function () {
@@ -650,3 +724,70 @@ it('syncs housing unit committee decisions to the unit damage status and archive
             && data_get($features, '0.attributes.field_status') === 'Not_Completed';
     });
 });
+
+function workflowCommitteeDecisionWorkbookPath(array $records): string
+{
+    $spreadsheet = new Spreadsheet;
+
+    foreach ($records as $index => $record) {
+        $sheet = $index === 0
+            ? $spreadsheet->getActiveSheet()
+            : $spreadsheet->createSheet();
+
+        $sheet->setTitle($record['sheet']);
+
+        $headers = [
+            'ObjectID',
+            'اسم الباحث',
+            'What is the current damage status of the building?',
+            'Building Name',
+            '6.1 Comments & Recommendations',
+            'المحافظة',
+            'الحي',
+            'تاريخ انعقاد اللجنة ',
+            'محمد أبو ريدة',
+            'طارق السلوت',
+            'عدنان العكلوك',
+            'عبد الرحمن شملخ',
+            'محمد عصام احمد',
+            'عبير الكيال',
+            'قرار اللجنة',
+            'نص قرار اللجنة',
+            'الإجراء المطلوب',
+            'هل تم إعادة حصره',
+            'تاريخ انعقاد اللجنة العليا',
+            'فاتنة مهدي',
+            'محمد أبو ريدة',
+            'طارق السلوت',
+            'عدنان العكلوك',
+            'عبد الرحمن شملخ',
+            'محمد عصام احمد',
+            'قرار اللجنة العليا',
+            'نص قرار اللجنة العليا',
+            'الإجراء المطلوب',
+            'هل تم إعادة حصره بعد اللجنة العليا ',
+        ];
+
+        foreach ($headers as $columnIndex => $header) {
+            $sheet->setCellValue([$columnIndex + 1, 1], $header);
+        }
+
+        $sheet->setCellValue('A2', $record['objectid']);
+        $sheet->setCellValue('B2', 'Excel.Researcher');
+        $sheet->setCellValue('D2', 'Excel imported record');
+        $sheet->setCellValue('E2', 'Excel comments');
+        $sheet->setCellValue('F2', 'Khan Younis');
+        $sheet->setCellValue('G2', 'Al-Amal');
+        $sheet->setCellValue('H2', '2026-04-15');
+        $sheet->setCellValue('I2', $record['member_id']);
+        $sheet->setCellValue('O2', $record['decision']);
+        $sheet->setCellValue('P2', $record['decision_text']);
+        $sheet->setCellValue('Q2', $record['action_text']);
+        $sheet->setCellValue('R2', $record['resurvey']);
+    }
+
+    $path = tempnam(sys_get_temp_dir(), 'workflow-committee-decisions-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    return $path;
+}
