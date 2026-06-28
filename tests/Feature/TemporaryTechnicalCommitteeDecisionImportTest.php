@@ -104,7 +104,7 @@ it('temporarily completes building committee decisions from static seed records 
         return str_contains($request->url(), '/0/updateFeatures')
             && data_get($features, '0.attributes.objectid') === 3293
             && data_get($features, '0.attributes.building_damage_status') === 'fully_damaged'
-            && data_get($features, '0.attributes.field_status') === 'Not_Completed';
+            && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
     });
 });
 

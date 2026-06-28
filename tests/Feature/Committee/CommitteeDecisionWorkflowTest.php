@@ -331,7 +331,16 @@ it('imports uploaded workflow excel decisions from the committee decisions index
 
         return str_contains($request->url(), '/0/updateFeatures')
             && data_get($features, '0.attributes.objectid') === 9701
-            && data_get($features, '0.attributes.field_status') === 'COMPLETED';
+            && data_get($features, '0.attributes.Field_status') === 'COMPLETED';
+    });
+
+    Http::assertSent(function ($request): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/1/updateFeatures')
+            && data_get($features, '0.attributes.objectid') === 9703
+            && data_get($features, '0.attributes.unit_damage_status') === 'partially_damaged2'
+            && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
     });
 
     Http::assertSent(function ($request) use ($unitParentBuilding): bool {
@@ -339,7 +348,15 @@ it('imports uploaded workflow excel decisions from the committee decisions index
 
         return str_contains($request->url(), '/0/updateFeatures')
             && data_get($features, '0.attributes.globalid') === $unitParentBuilding->globalid
-            && data_get($features, '0.attributes.field_status') === 'Not_Completed';
+            && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
+    });
+
+    Http::assertSent(function ($request): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/1/updateFeatures')
+            && data_get($features, '0.attributes.objectid') === 9706
+            && data_get($features, '0.attributes.Field_status') === 'COMPLETED';
     });
 
     Http::assertSent(function ($request) use ($resurveyUnitParentBuilding): bool {
@@ -347,7 +364,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
 
         return str_contains($request->url(), '/0/updateFeatures')
             && data_get($features, '0.attributes.globalid') === $resurveyUnitParentBuilding->globalid
-            && data_get($features, '0.attributes.field_status') === 'COMPLETED';
+            && data_get($features, '0.attributes.Field_status') === 'COMPLETED';
     });
 
     $this->withSession([
@@ -584,7 +601,7 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
         $features = json_decode((string) data_get($request->data(), 'features'), true);
 
         return str_contains($request->url(), '/updateFeatures')
-            && data_get($features, '0.attributes.field_status') === 'Not_Completed'
+            && data_get($features, '0.attributes.Field_status') === 'Not_Completed'
             && data_get($features, '0.attributes.building_damage_status') === 'fully_damaged';
     });
 });
@@ -923,7 +940,8 @@ it('syncs housing unit committee decisions to the unit damage status and archive
         $features = json_decode((string) data_get($request->data(), 'features'), true);
 
         return str_contains($request->url(), '/1/updateFeatures')
-            && data_get($features, '0.attributes.unit_damage_status') === 'partially_damaged2';
+            && data_get($features, '0.attributes.unit_damage_status') === 'partially_damaged2'
+            && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
     });
 
     Http::assertSent(function ($request) use ($building): bool {
@@ -931,7 +949,7 @@ it('syncs housing unit committee decisions to the unit damage status and archive
 
         return str_contains($request->url(), '/0/updateFeatures')
             && data_get($features, '0.attributes.globalid') === $building->globalid
-            && data_get($features, '0.attributes.field_status') === 'Not_Completed';
+            && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
     });
 });
 

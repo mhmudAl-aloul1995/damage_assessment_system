@@ -118,7 +118,26 @@ class ArcGisStatusUpdaterService
             $fieldName = (string) config('services.committee_decisions.arcgis.status_field', 'field_status');
 
             if ($featureRecord instanceof HousingUnit) {
-                return $this->sendParentBuildingStatusUpdate($featureRecord, $baseUrl, $token, $decision, $fieldStatus);
+                $unitResult = $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.housing_unit_layer_id', 1), [
+                    (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid') => data_get($featureRecord, (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid')),
+                    $fieldName => $fieldStatus,
+                ], $token, $decision);
+
+                if (! $unitResult['success']) {
+                    return $unitResult;
+                }
+
+                $parentResult = $this->sendParentBuildingStatusUpdate($featureRecord, $baseUrl, $token, $decision, $fieldStatus);
+
+                if (! $parentResult['success']) {
+                    return $parentResult;
+                }
+
+                return [
+                    'success' => true,
+                    'status' => 'synced',
+                    'message' => $unitResult['message']."\n".$parentResult['message'],
+                ];
             }
 
             return $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
@@ -230,6 +249,11 @@ class ArcGisStatusUpdaterService
         $attributes = [
             $statusField => $statusValue,
         ];
+
+        if ($decision->decisionable instanceof HousingUnit) {
+            $attributes[(string) config('services.committee_decisions.arcgis.status_field', 'field_status')]
+                = (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed');
+        }
 
         if ($decision->decisionable instanceof Building) {
             $attributes[(string) config('services.committee_decisions.arcgis.status_field', 'field_status')]

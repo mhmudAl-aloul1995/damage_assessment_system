@@ -111,7 +111,7 @@ return [
             'building_layer_id' => env('COMMITTEE_ARCGIS_BUILDING_LAYER_ID', 0),
             'housing_unit_layer_id' => env('COMMITTEE_ARCGIS_HOUSING_UNIT_LAYER_ID', 1),
             'identifier_field' => env('COMMITTEE_ARCGIS_IDENTIFIER_FIELD', 'objectid'),
-            'status_field' => env('COMMITTEE_ARCGIS_STATUS_FIELD', 'field_status'),
+            'status_field' => env('COMMITTEE_ARCGIS_STATUS_FIELD', 'Field_status'),
             'status_value' => env('COMMITTEE_ARCGIS_STATUS_VALUE', 'Not_Completed'),
             'unit_target' => env('COMMITTEE_ARCGIS_UNIT_TARGET', 'unit'),
             'timeout' => env('COMMITTEE_ARCGIS_TIMEOUT', 90),
