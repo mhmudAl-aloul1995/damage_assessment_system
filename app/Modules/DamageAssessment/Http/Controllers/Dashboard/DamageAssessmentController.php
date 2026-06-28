@@ -15,6 +15,7 @@ use App\Modules\DamageAssessment\Http\Requests\HudBuildingUnitsRequest;
 use App\Services\ArcgisService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -1150,6 +1151,8 @@ class DamageAssessmentController extends Controller
 
         $model = $modelClass::where('globalid', $globalid)->first();
         $record = $model?->toArray() ?? [];
+        $record = $this->applyAssessmentRecordFallbacks($model, $record);
+
         if ($model instanceof Building) {
             $record['submission_date'] = $model->end;
             $record['submition_date'] = $model->end;
@@ -1518,6 +1521,32 @@ class DamageAssessmentController extends Controller
             })
             ->rawColumns(['answer', 'question', 'editAnswer', 'rowClass'])
             ->make(true);
+    }
+
+    private function applyAssessmentRecordFallbacks(?Model $model, array $record): array
+    {
+        if (! $model instanceof Building) {
+            return $record;
+        }
+
+        foreach (['assessment_obstacle_info', 'comments_recommendations'] as $field) {
+            if (! $this->isBlankAssessmentValue($record[$field] ?? null)) {
+                continue;
+            }
+
+            $fallbackValue = $model->getAttribute($field.'_v1');
+
+            if (! $this->isBlankAssessmentValue($fallbackValue)) {
+                $record[$field] = $fallbackValue;
+            }
+        }
+
+        return $record;
+    }
+
+    private function isBlankAssessmentValue(mixed $value): bool
+    {
+        return $value === null || $value === '';
     }
 
     private function sortAssessmentsByFillableOrder($assessmentRows, array $fillable)

@@ -45,6 +45,8 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $note09
  * @property string|null $weather
  * @property string|null $assessment_obstacle
+ * @property string|null $assessment_obstacle_info
+ * @property string|null $assessment_obstacle_info_v1
  * @property string|null $security_situation
  * @property string|null $building_damage_status
  * @property string|null $building_type
@@ -219,6 +221,7 @@ class Building extends Model
         'assignedto',
         'assessment_obstacle',
         'assessment_obstacle_info',
+        'assessment_obstacle_info_v1',
         'objectid',
         'globalid',
         'location',
@@ -440,8 +443,8 @@ class Building extends Model
             return $value;
         }
 
-        if ($key === 'comments_recommendations' && $value === null) {
-            $value = parent::getAttribute('comments_recommendations_v1');
+        if (in_array($key, ['assessment_obstacle_info', 'comments_recommendations'], true) && $value === null) {
+            $value = parent::getAttribute($key.'_v1');
         }
 
         if (! $this->relationLoaded('edits')) {
@@ -452,8 +455,8 @@ class Building extends Model
 
         $editedValue = $editedFields[$key] ?? $value;
 
-        if ($key === 'comments_recommendations' && $editedValue === null) {
-            return parent::getAttribute('comments_recommendations_v1');
+        if (in_array($key, ['assessment_obstacle_info', 'comments_recommendations'], true) && $editedValue === null) {
+            return parent::getAttribute($key.'_v1');
         }
 
         return $editedValue;
