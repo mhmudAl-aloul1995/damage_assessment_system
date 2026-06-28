@@ -69,6 +69,19 @@ class CommitteeDecisionWorkflowExcelImportService
             return [];
         }
 
+        $headerRow = $rows[$headerIndex] ?? [];
+        $objectIdIndex = $this->objectIdColumnIndex($headerRow, $recordType);
+
+        if ($objectIdIndex === null) {
+            $issues[] = [
+                'sheet' => $sheet->getTitle(),
+                'row' => $headerIndex + 1,
+                'reason' => 'ObjectID or Export Row Id column was not found.',
+            ];
+
+            return [];
+        }
+
         $records = [];
 
         foreach (array_slice($rows, $headerIndex + 1) as $offset => $row) {
@@ -78,7 +91,7 @@ class CommitteeDecisionWorkflowExcelImportService
                 continue;
             }
 
-            $objectId = $this->value($row[0] ?? null);
+            $objectId = $this->value($row[$objectIdIndex] ?? null);
 
             if ($objectId === '') {
                 $issues[] = [
@@ -90,7 +103,7 @@ class CommitteeDecisionWorkflowExcelImportService
                 continue;
             }
 
-            $decisionPayload = $this->decisionPayload($row, $rows[$headerIndex] ?? []);
+            $decisionPayload = $this->decisionPayload($row, $headerRow);
 
             if ($decisionPayload === null) {
                 $issues[] = [
@@ -138,7 +151,7 @@ class CommitteeDecisionWorkflowExcelImportService
     private function headerIndex(array $rows): ?int
     {
         foreach ($rows as $index => $row) {
-            if ($this->value($row[0] ?? null) === 'ObjectID') {
+            if ($this->columnIndex($row, ['ObjectID', 'Export Row Id']) !== null) {
                 return $index;
             }
         }
@@ -146,13 +159,49 @@ class CommitteeDecisionWorkflowExcelImportService
         return null;
     }
 
+    /**
+     * @param  array<int, mixed>  $headerRow
+     */
+    private function objectIdColumnIndex(array $headerRow, string $recordType): ?int
+    {
+        if ($recordType === 'housing-unit') {
+            return $this->columnIndex($headerRow, ['Export Row Id', 'ObjectID']);
+        }
+
+        return $this->columnIndex($headerRow, ['ObjectID']);
+    }
+
+    /**
+     * @param  array<int, mixed>  $headerRow
+     * @param  list<string>  $labels
+     */
+    private function columnIndex(array $headerRow, array $labels): ?int
+    {
+        foreach ($labels as $label) {
+            $normalizedLabel = $this->normalizeHeader($label);
+
+            foreach ($headerRow as $index => $header) {
+                if ($this->normalizeHeader($this->value($header)) === $normalizedLabel) {
+                    return $index;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeHeader(string $header): string
+    {
+        return str($header)->lower()->replace([' ', '_', '-'], '')->toString();
+    }
+
     private function recordTypeFromSheetName(string $sheetName): ?string
     {
-        if (str_contains($sheetName, 'وحدات') || str_contains($sheetName, 'ظˆط­ط¯ط§طھ')) {
+        if ($this->containsAny($sheetName, ['وحدات', 'ظˆط­ط¯ط§طھ', 'ط¸ث†ط·آ­ط·آ¯ط·آ§ط·ع¾'])) {
             return 'housing-unit';
         }
 
-        if (str_contains($sheetName, 'مباني') || str_contains($sheetName, 'ظ…ط¨ط§ظ†ظٹ')) {
+        if ($this->containsAny($sheetName, ['مباني', 'ظ…ط¨ط§ظ†ظٹ', 'ط¸â€¦ط·آ¨ط·آ§ط¸â€ ط¸ظ¹'])) {
             return 'building';
         }
 
@@ -203,19 +252,33 @@ class CommitteeDecisionWorkflowExcelImportService
             return null;
         }
 
-        if (str_contains($decision, 'لجنة') || str_contains($decision, 'ظ„ط¬ظ†ط©')) {
+        if ($this->containsAny($decision, ['لجنة', 'ظ„ط¬ظ†ط©', 'ط¸â€‍ط·آ¬ط¸â€ ط·آ©'])) {
             return CommitteeDecision::TYPE_HIGHER_COMMITTEE;
         }
 
-        if (str_contains($decision, 'كلي') || str_contains($decision, 'ظƒظ„ظٹ')) {
+        if ($this->containsAny($decision, ['كلي', 'ظƒظ„ظٹ', 'ط¸ئ’ط¸â€‍ط¸ظ¹'])) {
             return CommitteeDecision::TYPE_FULLY_DAMAGED;
         }
 
-        if (str_contains($decision, 'جزئي') || str_contains($decision, 'ط¬ط²ط¦ظٹ')) {
+        if ($this->containsAny($decision, ['جزئي', 'ط¬ط²ط¦ظٹ', 'ط·آ¬ط·آ²ط·آ¦ط¸ظ¹'])) {
             return CommitteeDecision::TYPE_PARTIALLY_DAMAGED;
         }
 
         return null;
+    }
+
+    /**
+     * @param  list<string>  $needles
+     */
+    private function containsAny(string $haystack, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if ($needle !== '' && str_contains($haystack, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

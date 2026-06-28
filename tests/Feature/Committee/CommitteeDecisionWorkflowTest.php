@@ -214,7 +214,8 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ],
         [
             'sheet' => 'خانيونس-وحدات',
-            'objectid' => 9703,
+            'objectid' => 9702,
+            'export_row_id' => 9703,
             'decision' => 'جزئي',
             'decision_text' => 'ضرر جزئي للوحدة',
             'action_text' => 'اعادة الوحدة للمهندس',
@@ -224,7 +225,8 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ],
         [
             'sheet' => 'خانيونس-وحدات إعادة',
-            'objectid' => 9706,
+            'objectid' => 9705,
+            'export_row_id' => 9706,
             'decision' => 'جزئي',
             'decision_text' => 'ضرر جزئي للوحدة مع إعادة حصر',
             'action_text' => 'اعادة الوحدة للمهندس',
@@ -1013,6 +1015,8 @@ function workflowCommitteeDecisionWorkbookPath(array $records): string
         $sheet->setCellValue('P2', $record['decision_text']);
         $sheet->setCellValue('Q2', $record['action_text']);
         $sheet->setCellValue('R2', $record['resurvey']);
+        $sheet->setCellValue('AD1', 'Export Row Id');
+        $sheet->setCellValue('AD2', $record['export_row_id'] ?? null);
     }
 
     $path = tempnam(sys_get_temp_dir(), 'workflow-committee-decisions-').'.xlsx';
