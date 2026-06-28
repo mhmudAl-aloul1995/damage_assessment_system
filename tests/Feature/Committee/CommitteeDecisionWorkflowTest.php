@@ -165,6 +165,14 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         'unit_damage_status' => 'fully_damaged2',
     ]);
 
+    $secondBuilding = Building::query()->create([
+        'objectid' => 9704,
+        'globalid' => 'workflow-excel-second-building',
+        'building_name' => 'Workflow Excel Second Building',
+        'building_damage_status' => 'fully_damaged',
+        'field_status' => 'COMPLETED',
+    ]);
+
     $path = workflowCommitteeDecisionWorkbookPath([
         [
             'sheet' => 'خانيونس -مباني',
@@ -187,6 +195,18 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             'member_id' => '800846958',
         ],
     ]);
+    $secondPath = workflowCommitteeDecisionWorkbookPath([
+        [
+            'sheet' => 'خانيونس -مباني',
+            'objectid' => 9704,
+            'decision' => 'جزئي',
+            'decision_text' => 'ضرر جزئي من الملف الثاني',
+            'action_text' => 'اعادة المبنى للمهندس',
+            'resurvey' => 'لا',
+            'member_name' => 'Excel Member',
+            'member_id' => '800846958',
+        ],
+    ]);
 
     $this->actingAs($manager)
         ->get(route('committee-decisions.index'))
@@ -198,19 +218,29 @@ it('imports uploaded workflow excel decisions from the committee decisions index
     $this->actingAs($manager)
         ->post(route('committee-decisions.workflow-excel.import'), [
             'clear_existing_committee_decisions' => '1',
-            'committee_decisions_excel' => new UploadedFile(
-                $path,
-                'workflow-decisions.xlsx',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                null,
-                true,
-            ),
+            'committee_decisions_excel' => [
+                new UploadedFile(
+                    $path,
+                    'workflow-decisions.xlsx',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    null,
+                    true,
+                ),
+                new UploadedFile(
+                    $secondPath,
+                    'workflow-decisions-2.xlsx',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    null,
+                    true,
+                ),
+            ],
         ])
         ->assertRedirect(route('committee-decisions.index'))
         ->assertSessionHas('success');
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
     $unitDecision = CommitteeDecision::query()->whereMorphedTo('decisionable', $housingUnit)->firstOrFail();
+    $secondDecision = CommitteeDecision::query()->whereMorphedTo('decisionable', $secondBuilding)->firstOrFail();
     $buildingArchiveObject = BuildingSurveyArchiveObject::query()
         ->where('committee_decision_id', $decision->id)
         ->firstOrFail();
@@ -232,11 +262,13 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->and($housingUnit->unit_damage_status)->toBe('partially_damaged2')
         ->and($unitParentBuilding->field_status)->toBe('Not_Completed')
         ->and($unitArchiveObject->housing_unit_snapshot['unit_damage_status'])->toBe('committee_review2')
+        ->and($secondDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
+        ->and($secondDecision->decision_text)->toBe('ضرر جزئي من الملف الثاني')
         ->and(CommitteeDecision::query()->whereKey($staleDecision->id)->exists())->toBeFalse()
         ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
         ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
         ->and(BuildingSurveyArchiveObject::query()->where('source_type', 'temporary_committee_excel_archive')->exists())->toBeFalse()
-        ->and(CommitteeDecision::query()->count())->toBe(2)
+        ->and(CommitteeDecision::query()->count())->toBe(3)
         ->and(CommitteeDecisionSignature::query()
             ->where('committee_decision_id', $decision->id)
             ->where('status', 'approved')

@@ -14,7 +14,8 @@ class ImportCommitteeDecisionWorkflowExcelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'committee_decisions_excel' => ['required', 'file', 'mimes:xlsx', 'max:20480'],
+            'committee_decisions_excel' => ['required', 'array', 'min:1'],
+            'committee_decisions_excel.*' => ['file', 'mimes:xlsx', 'max:20480'],
             'clear_existing_committee_decisions' => ['nullable', 'boolean'],
         ];
     }
@@ -23,7 +24,8 @@ class ImportCommitteeDecisionWorkflowExcelRequest extends FormRequest
     {
         return [
             'committee_decisions_excel.required' => 'ملف الإكسل مطلوب.',
-            'committee_decisions_excel.mimes' => 'يجب أن يكون الملف بصيغة xlsx.',
+            'committee_decisions_excel.array' => 'يمكن رفع ملف إكسل أو أكثر.',
+            'committee_decisions_excel.*.mimes' => 'يجب أن تكون ملفات الإكسل بصيغة xlsx.',
         ];
     }
 }

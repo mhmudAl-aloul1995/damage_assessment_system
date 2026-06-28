@@ -186,7 +186,7 @@
                 @if ($canImportWorkflowExcel)
                     <form method="POST" action="{{ route('committee-decisions.workflow-excel.import') }}" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap justify-content-end">
                         @csrf
-                        <input type="file" name="committee_decisions_excel" accept=".xlsx" class="form-control form-control-solid w-auto" required>
+                        <input type="file" name="committee_decisions_excel[]" accept=".xlsx" class="form-control form-control-solid w-auto" multiple required>
                         <label class="form-check form-check-custom form-check-solid align-self-center">
                             <input class="form-check-input" type="checkbox" name="clear_existing_committee_decisions" value="1" checked>
                             <span class="form-check-label">تفريغ البيانات القديمة قبل الاستيراد</span>

@@ -100,7 +100,16 @@ class CommitteeDecisionController extends Controller
                 ? $this->clearExistingCommitteeDecisionData()
                 : 0;
 
-            $summary = $importer->import((string) $request->file('committee_decisions_excel')?->getRealPath());
+            $summary = $this->emptyCommitteeImportSummary();
+
+            foreach ($request->file('committee_decisions_excel', []) as $file) {
+                $summary = $this->mergeCommitteeImportSummary(
+                    $summary,
+                    $importer->import((string) $file->getRealPath()),
+                    $file->getClientOriginalName(),
+                );
+            }
+
             $summary['cleared_decisions'] = $clearedDecisionCount;
         } catch (RuntimeException $exception) {
             return redirect()
@@ -119,6 +128,52 @@ class CommitteeDecisionController extends Controller
                 count($summary['missing_users'] ?? []),
             ))
             ->with('committee_import_summary', $summary);
+    }
+
+    private function emptyCommitteeImportSummary(): array
+    {
+        return [
+            'files' => [],
+            'sheets' => [],
+            'parse_issues' => [],
+            'rows' => 0,
+            'decisions_completed' => 0,
+            'skipped_rows' => 0,
+            'statuses_forced_to_committee_review' => 0,
+            'skip_reasons' => [],
+            'missing_users' => [],
+            'issues' => [],
+        ];
+    }
+
+    private function mergeCommitteeImportSummary(array $summary, array $fileSummary, string $filename): array
+    {
+        $summary['files'][] = $filename;
+
+        foreach (['rows', 'decisions_completed', 'skipped_rows', 'statuses_forced_to_committee_review'] as $key) {
+            $summary[$key] = ($summary[$key] ?? 0) + ($fileSummary[$key] ?? 0);
+        }
+
+        foreach (($fileSummary['skip_reasons'] ?? []) as $reason => $count) {
+            $summary['skip_reasons'][$reason] = ($summary['skip_reasons'][$reason] ?? 0) + $count;
+        }
+
+        foreach (($fileSummary['sheets'] ?? []) as $sheet => $count) {
+            $summary['sheets'][$filename.' / '.$sheet] = $count;
+        }
+
+        $summary['missing_users'] = array_values(array_unique([
+            ...($summary['missing_users'] ?? []),
+            ...($fileSummary['missing_users'] ?? []),
+        ]));
+
+        foreach (['issues', 'parse_issues'] as $key) {
+            foreach (($fileSummary[$key] ?? []) as $issue) {
+                $summary[$key][] = ['file' => $filename, ...$issue];
+            }
+        }
+
+        return $summary;
     }
 
     private function clearExistingCommitteeDecisionData(): int
