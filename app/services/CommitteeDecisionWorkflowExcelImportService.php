@@ -117,6 +117,7 @@ class CommitteeDecisionWorkflowExcelImportService
                 'resurvey_completed' => $decisionPayload['resurvey_completed'],
                 'member_id_numbers' => $decisionPayload['member_id_numbers'],
                 'use_excel_member_ids' => true,
+                'force_committee_review_status' => true,
                 'notes' => trim(implode("\n", array_filter([
                     'Excel sheet: '.$sheet->getTitle().' row: '.$rowNumber,
                     'Researcher: '.$this->value($row[1] ?? null),

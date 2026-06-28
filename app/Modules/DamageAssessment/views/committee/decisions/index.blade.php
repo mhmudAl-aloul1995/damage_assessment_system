@@ -15,6 +15,7 @@
         <div class="alert alert-info mb-5">
             <div class="fw-bold mb-2">ملخص استيراد قرارات اللجنة</div>
             <div class="d-flex gap-4 flex-wrap">
+                <span>&#1578;&#1581;&#1608;&#1610;&#1604; &#1573;&#1604;&#1609; &#1575;&#1604;&#1604;&#1580;&#1606;&#1577; &#1575;&#1604;&#1601;&#1606;&#1610;&#1577;: {{ $committeeImportSummary['statuses_forced_to_committee_review'] ?? 0 }}</span>
                 <span>تم تفريغها: {{ $committeeImportSummary['cleared_decisions'] ?? 0 }}</span>
                 <span>الصفوف: {{ $committeeImportSummary['rows'] ?? 0 }}</span>
                 <span>المكتملة: {{ $committeeImportSummary['decisions_completed'] ?? 0 }}</span>

@@ -83,6 +83,13 @@ class TemporaryTechnicalCommitteeDecisionImportService
             }
 
             $resurveyCompleted = (bool) ($record['resurvey_completed'] ?? false);
+            $forcedCommitteeStatus = false;
+
+            if (($record['force_committee_review_status'] ?? false) === true && ! $this->isCommitteeReviewRecord($decisionable)) {
+                $this->forceCommitteeReviewStatus($decisionable);
+                $forcedCommitteeStatus = true;
+                $summary['statuses_forced_to_committee_review']++;
+            }
 
             if (! $resurveyCompleted && ! $this->isCommitteeReviewRecord($decisionable)) {
                 $this->recordSkip($summary, 'not_committee_review', [
@@ -106,7 +113,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 $members,
                 ! $resurveyCompleted,
                 $record['decision_date'] ?? null,
-                $record['notes'] ?? null,
+                trim(implode("\n", array_filter([
+                    $record['notes'] ?? null,
+                    $forcedCommitteeStatus ? 'Status was moved to committee review before importing this decision.' : null,
+                ]))),
             );
             $summary['decisions_completed']++;
         }
@@ -659,6 +669,25 @@ class TemporaryTechnicalCommitteeDecisionImportService
         }
     }
 
+    private function forceCommitteeReviewStatus(Model $decisionable): void
+    {
+        if ($decisionable instanceof Building) {
+            $decisionable->forceFill([
+                'building_damage_status' => 'committee_review',
+            ])->save();
+
+            return;
+        }
+
+        if (! $decisionable instanceof HousingUnit) {
+            return;
+        }
+
+        $decisionable->forceFill([
+            'unit_damage_status' => 'committee_review2',
+        ])->save();
+    }
+
     private function archiveDecisionObject(CommitteeDecision $decision, Model $decisionable, ?int $userId, Carbon $archivedAt): void
     {
         $building = $decisionable instanceof HousingUnit ? $decisionable->building : $decisionable;
@@ -791,6 +820,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
             'rows' => 0,
             'decisions_completed' => 0,
             'skipped_rows' => 0,
+            'statuses_forced_to_committee_review' => 0,
             'skip_reasons' => [],
             'missing_users' => [],
             'issues' => [],

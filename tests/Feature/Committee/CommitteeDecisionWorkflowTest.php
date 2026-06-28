@@ -141,6 +141,22 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         'field_status' => 'COMPLETED',
     ]);
 
+    $unitParentBuilding = Building::query()->create([
+        'objectid' => 9702,
+        'globalid' => 'workflow-excel-unit-parent',
+        'building_name' => 'Workflow Excel Unit Parent',
+        'building_damage_status' => 'fully_damaged',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 9703,
+        'globalid' => 'workflow-excel-unit',
+        'parentglobalid' => $unitParentBuilding->globalid,
+        'housing_unit_number' => 'U-1',
+        'unit_damage_status' => 'fully_damaged2',
+    ]);
+
     $path = workflowCommitteeDecisionWorkbookPath([
         [
             'sheet' => 'خانيونس -مباني',
@@ -149,6 +165,15 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             'decision_text' => 'هدم كلي',
             'action_text' => 'اعادة المبنى للمهندس لحصره',
             'resurvey' => 'نعم',
+            'member_id' => '800846958',
+        ],
+        [
+            'sheet' => 'خانيونس-وحدات',
+            'objectid' => 9703,
+            'decision' => 'جزئي',
+            'decision_text' => 'ضرر جزئي للوحدة',
+            'action_text' => 'اعادة الوحدة للمهندس',
+            'resurvey' => 'لا',
             'member_id' => '800846958',
         ],
     ]);
@@ -175,17 +200,32 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->assertSessionHas('success');
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
+    $unitDecision = CommitteeDecision::query()->whereMorphedTo('decisionable', $housingUnit)->firstOrFail();
+    $buildingArchiveObject = BuildingSurveyArchiveObject::query()
+        ->where('committee_decision_id', $decision->id)
+        ->firstOrFail();
+    $unitArchiveObject = BuildingSurveyArchiveObject::query()
+        ->where('committee_decision_id', $unitDecision->id)
+        ->firstOrFail();
     $building->refresh();
+    $housingUnit->refresh();
+    $unitParentBuilding->refresh();
 
     expect($decision->decision_type)->toBe(CommitteeDecision::TYPE_FULLY_DAMAGED)
         ->and($decision->decision_text)->toBe('هدم كلي')
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
-        ->and($building->building_damage_status)->toBe('partially_damaged')
+        ->and($building->building_damage_status)->toBe('committee_review')
         ->and($building->field_status)->toBe('COMPLETED')
+        ->and($buildingArchiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
+        ->and($unitDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
+        ->and($unitDecision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($housingUnit->unit_damage_status)->toBe('partially_damaged2')
+        ->and($unitParentBuilding->field_status)->toBe('Not_Completed')
+        ->and($unitArchiveObject->housing_unit_snapshot['unit_damage_status'])->toBe('committee_review2')
         ->and(CommitteeDecision::query()->whereKey($staleDecision->id)->exists())->toBeFalse()
         ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
         ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
-        ->and(CommitteeDecision::query()->count())->toBe(1)
+        ->and(CommitteeDecision::query()->count())->toBe(2)
         ->and(CommitteeDecisionSignature::query()
             ->where('committee_decision_id', $decision->id)
             ->where('status', 'approved')
@@ -202,6 +242,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             'cleared_decisions' => 1,
             'rows' => 2,
             'decisions_completed' => 1,
+            'statuses_forced_to_committee_review' => 2,
             'skipped_rows' => 1,
             'skip_reasons' => ['record_not_found' => 1],
             'missing_users' => ['999999999'],
@@ -219,6 +260,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->assertOk()
         ->assertSee('أسباب التجاوز', false)
         ->assertSee('record_not_found: 1', false)
+        ->assertSee('&#1578;&#1581;&#1608;&#1610;&#1604; &#1573;&#1604;&#1609; &#1575;&#1604;&#1604;&#1580;&#1606;&#1577; &#1575;&#1604;&#1601;&#1606;&#1610;&#1577;: 2', false)
         ->assertSee('999999999', false)
         ->assertSee('No matching building or housing unit was found.', false);
 });
