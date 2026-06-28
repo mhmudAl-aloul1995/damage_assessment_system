@@ -86,6 +86,25 @@ test('kobo rest submission updates existing uuid instead of duplicating it', fun
         ->and(DamageAssessmentBorrower::query()->first()->borrower_id_number)->toBe('900000002');
 });
 
+test('kobo rest submission infers borrower name from grouped kobo fields', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/iqrad', [
+            '_uuid' => 'uuid:grouped-name',
+            'group_ak123' => [
+                'name_beneficiary' => 'Grouped Borrower',
+                'beneficiary_id_number' => '900000004',
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $borrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid:grouped-name')->sole();
+
+    expect($borrower->borrower_name)->toBe('Grouped Borrower')
+        ->and($borrower->borrower_id_number)->toBe('900000004');
+});
+
 test('kobo rest submission stores raw payload and skips borrower sync when borrower name is missing', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')
@@ -98,4 +117,27 @@ test('kobo rest submission stores raw payload and skips borrower sync when borro
 
     expect(KoboRestSubmission::query()->first()->sync_error)->toBe('Kobo submission does not include borrower_name.')
         ->and(DamageAssessmentBorrower::query()->count())->toBe(0);
+});
+
+test('kobo sync command retries skipped submissions', function () {
+    KoboRestSubmission::query()->create([
+        'service_name' => 'iqrad',
+        'submission_uuid' => 'uuid:retry-skipped',
+        'payload' => [
+            '_uuid' => 'uuid:retry-skipped',
+            'group_ak123' => [
+                'beneficiary_full_name' => 'Retried Borrower',
+            ],
+        ],
+        'sync_status' => 'skipped',
+        'sync_error' => 'Kobo submission does not include borrower_name.',
+        'received_at' => now(),
+    ]);
+
+    $this->artisan('kobo:sync-rest-submissions')
+        ->expectsOutputToContain('Synced: 1')
+        ->assertSuccessful();
+
+    expect(KoboRestSubmission::query()->first()->sync_status)->toBe('synced')
+        ->and(DamageAssessmentBorrower::query()->where('borrower_name', 'Retried Borrower')->exists())->toBeTrue();
 });

@@ -77,8 +77,8 @@ class KoboBorrowerSubmissionSyncService
             'loan_started_at' => $this->text($this->value($payload, ['loan_started_at', 'loan_start_date'])),
             'loan_last_installment_at' => $this->text($this->value($payload, ['loan_last_installment_at'])),
             'loan_clearance_delivered' => $this->boolean($this->value($payload, ['loan_clearance_delivered'])),
-            'borrower_name' => $this->text($this->value($payload, ['borrower_name', 'name', 'full_name'])),
-            'borrower_id_number' => $this->text($this->value($payload, ['borrower_id_number', 'borrower_id', 'id_number', 'national_id'])),
+            'borrower_name' => $this->borrowerName($payload),
+            'borrower_id_number' => $this->text($this->value($payload, ['borrower_id_number', 'borrower_id', 'beneficiary_id_number', 'beneficiary_id', 'applicant_id_number', 'id_number', 'national_id'])),
             'family_members_count' => $this->integer($this->value($payload, ['family_members_count', 'family_count'])),
             'marital_status' => $this->text($this->value($payload, ['marital_status'])),
             'spouse_name' => $this->text($this->value($payload, ['spouse_name'])),
@@ -122,6 +122,109 @@ class KoboBorrowerSubmissionSyncService
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function borrowerName(array $payload): ?string
+    {
+        $explicitValue = $this->value($payload, [
+            'borrower_name',
+            'borrower_full_name',
+            'full_name_borrower',
+            'name_borrower',
+            'beneficiary_name',
+            'beneficiary_full_name',
+            'applicant_name',
+            'applicant_full_name',
+            'client_name',
+            'customer_name',
+            'owner_name',
+            'name_of_borrower',
+            'name_of_beneficiary',
+            'full_name',
+            'name',
+        ]);
+
+        if ($this->text($explicitValue) !== null) {
+            return $this->text($explicitValue);
+        }
+
+        $candidates = [];
+
+        foreach ($this->lookup($payload) as $key => $value) {
+            $text = $this->text($value);
+
+            if ($text === null || $this->looksLikeNonNameValue($text)) {
+                continue;
+            }
+
+            $score = $this->borrowerNameKeyScore((string) $key);
+
+            if ($score > 0) {
+                $candidates[] = [
+                    'score' => $score,
+                    'key' => (string) $key,
+                    'value' => $text,
+                ];
+            }
+        }
+
+        usort($candidates, fn (array $first, array $second): int => $second['score'] <=> $first['score']);
+
+        return $candidates[0]['value'] ?? null;
+    }
+
+    private function borrowerNameKeyScore(string $key): int
+    {
+        $key = strtolower(str_replace(['-', ' '], '_', $key));
+        $baseKey = strtolower(str_replace(['-', ' '], '_', basename($key)));
+
+        foreach (['_uuid', 'uuid', '_id', 'id', 'token', 'status', 'note', 'phone', 'mobile', 'date', 'start', 'end', 'time', 'amount', 'total', 'balance'] as $blocked) {
+            if ($baseKey === $blocked || str_contains($baseKey, $blocked.'_') || str_contains($baseKey, '_'.$blocked)) {
+                return 0;
+            }
+        }
+
+        if (str_contains($key, 'borrower') && str_contains($key, 'name')) {
+            return 100;
+        }
+
+        if (str_contains($key, 'beneficiary') && str_contains($key, 'name')) {
+            return 90;
+        }
+
+        if (str_contains($key, 'applicant') && str_contains($key, 'name')) {
+            return 80;
+        }
+
+        if ((str_contains($key, 'client') || str_contains($key, 'customer') || str_contains($key, 'owner')) && str_contains($key, 'name')) {
+            return 70;
+        }
+
+        if (in_array($baseKey, ['full_name', 'name'], true)) {
+            return 60;
+        }
+
+        if (str_contains($baseKey, 'name')) {
+            return 40;
+        }
+
+        return 0;
+    }
+
+    private function looksLikeNonNameValue(string $value): bool
+    {
+        if (strlen($value) < 3 || strlen($value) > 255) {
+            return true;
+        }
+
+        if (preg_match('/^[-+]?\d+([.,]\d+)?$/', $value) === 1) {
+            return true;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_URL) !== false;
     }
 
     /**
