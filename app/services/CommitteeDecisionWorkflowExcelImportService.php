@@ -197,11 +197,11 @@ class CommitteeDecisionWorkflowExcelImportService
 
     private function recordTypeFromSheetName(string $sheetName): ?string
     {
-        if ($this->containsAny($sheetName, ['وحدات', 'ظˆط­ط¯ط§طھ', 'ط¸ث†ط·آ­ط·آ¯ط·آ§ط·ع¾'])) {
+        if ($this->containsAny($sheetName, ["\u{0648}\u{062D}\u{062F}\u{0627}\u{062A}", 'ظˆط­ط¯ط§طھ', 'ط¸ث†ط·آ­ط·آ¯ط·آ§ط·ع¾', 'ط·آ¸ط«â€ ط·آ·ط¢آ­ط·آ·ط¢آ¯ط·آ·ط¢آ§ط·آ·ط¹آ¾'])) {
             return 'housing-unit';
         }
 
-        if ($this->containsAny($sheetName, ['مباني', 'ظ…ط¨ط§ظ†ظٹ', 'ط¸â€¦ط·آ¨ط·آ§ط¸â€ ط¸ظ¹'])) {
+        if ($this->containsAny($sheetName, ["\u{0645}\u{0628}\u{0627}\u{0646}\u{064A}", 'ظ…ط¨ط§ظ†ظٹ', 'ط¸â€¦ط·آ¨ط·آ§ط¸â€ ط¸ظ¹', 'ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ¨ط·آ·ط¢آ§ط·آ¸أ¢â‚¬آ ط·آ¸ط¸آ¹'])) {
             return 'building';
         }
 
@@ -252,15 +252,15 @@ class CommitteeDecisionWorkflowExcelImportService
             return null;
         }
 
-        if ($this->containsAny($decision, ['لجنة', 'ظ„ط¬ظ†ط©', 'ط¸â€‍ط·آ¬ط¸â€ ط·آ©'])) {
+        if ($this->containsAny($decision, ["\u{0644}\u{062C}\u{0646}\u{0629}", 'ظ„ط¬ظ†ط©', 'ط¸â€‍ط·آ¬ط¸â€ ط·آ©'])) {
             return CommitteeDecision::TYPE_HIGHER_COMMITTEE;
         }
 
-        if ($this->containsAny($decision, ['كلي', 'ظƒظ„ظٹ', 'ط¸ئ’ط¸â€‍ط¸ظ¹'])) {
+        if ($this->containsAny($decision, ["\u{0643}\u{0644}\u{064A}", 'ظƒظ„ظٹ', 'ط¸ئ’ط¸â€‍ط¸ظ¹'])) {
             return CommitteeDecision::TYPE_FULLY_DAMAGED;
         }
 
-        if ($this->containsAny($decision, ['جزئي', 'ط¬ط²ط¦ظٹ', 'ط·آ¬ط·آ²ط·آ¦ط¸ظ¹'])) {
+        if ($this->containsAny($decision, ["\u{062C}\u{0632}\u{0626}\u{064A}", 'ط¬ط²ط¦ظٹ', 'ط·آ¬ط·آ²ط·آ¦ط¸ظ¹'])) {
             return CommitteeDecision::TYPE_PARTIALLY_DAMAGED;
         }
 
@@ -320,7 +320,7 @@ class CommitteeDecisionWorkflowExcelImportService
     {
         $normalizedValue = str($this->value($value))->lower()->trim()->toString();
 
-        if (in_array($normalizedValue, ['نعم', 'yes', 'y', '1', 'true'], true)) {
+        if (in_array($normalizedValue, ["\u{0646}\u{0639}\u{0645}", 'ظ†ط¹ظ…', 'yes', 'y', '1', 'true'], true)) {
             return true;
         }
 
