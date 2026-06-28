@@ -132,6 +132,14 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         'archived_by' => $manager->id,
         'archived_at' => now(),
     ]);
+    BuildingSurveyArchiveObject::query()->create([
+        'source_type' => 'temporary_committee_excel_archive',
+        'committee_decision_id' => null,
+        'building_objectid' => 9663,
+        'building_globalid' => 'stale-exceptional-archive-building',
+        'archived_by' => $manager->id,
+        'archived_at' => now()->subDay(),
+    ]);
 
     $building = Building::query()->create([
         'objectid' => 9701,
@@ -225,6 +233,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->and(CommitteeDecision::query()->whereKey($staleDecision->id)->exists())->toBeFalse()
         ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
         ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
+        ->and(BuildingSurveyArchiveObject::query()->where('source_type', 'temporary_committee_excel_archive')->exists())->toBeFalse()
         ->and(CommitteeDecision::query()->count())->toBe(2)
         ->and(CommitteeDecisionSignature::query()
             ->where('committee_decision_id', $decision->id)

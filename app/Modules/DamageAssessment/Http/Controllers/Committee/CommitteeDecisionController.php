@@ -127,7 +127,7 @@ class CommitteeDecisionController extends Controller
             $decisionCount = CommitteeDecision::query()->count();
 
             BuildingSurveyArchiveObject::query()
-                ->where('source_type', 'committee_decision')
+                ->whereIn('source_type', ['committee_decision', 'temporary_committee_excel_archive'])
                 ->orWhereNotNull('committee_decision_id')
                 ->delete();
 
