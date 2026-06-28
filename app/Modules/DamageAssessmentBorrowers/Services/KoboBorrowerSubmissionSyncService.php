@@ -12,10 +12,10 @@ class KoboBorrowerSubmissionSyncService
     /**
      * @return array{borrower: DamageAssessmentBorrower|null, status: string, error: string|null}
      */
-    public function sync(KoboRestSubmission $submission, ?string $borrowerNameField = null): array
+    public function sync(KoboRestSubmission $submission, ?string $borrowerNameField = null, ?array $fieldMap = null): array
     {
         $payload = $submission->payload ?? [];
-        $data = $this->borrowerData($payload, $borrowerNameField);
+        $data = $this->borrowerData($payload, $borrowerNameField, $fieldMap);
 
         if (blank($data['borrower_name'] ?? null)) {
             return [
@@ -54,57 +54,82 @@ class KoboBorrowerSubmissionSyncService
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
-    private function borrowerData(array $payload, ?string $borrowerNameField = null): array
+    private function borrowerData(array $payload, ?string $borrowerNameField = null, ?array $fieldMap = null): array
     {
+        $fieldMap ??= $this->configuredFieldMap();
+
         return array_filter([
             'source_uuid' => $this->text($this->value($payload, ['_uuid', 'meta/instanceID', 'instanceID'])),
             'source_submission_id' => $this->integer($this->value($payload, ['_id', 'id', 'submission_id'])),
-            'surveyed_at' => $this->text($this->value($payload, ['surveyed_at', '_submission_time', 'submission_time', 'end', 'today'])),
+            'surveyed_at' => $this->text($this->mappedValue($payload, $fieldMap, 'surveyed_at', ['surveyed_at', '_submission_time', 'submission_time', 'end', 'today'])),
             'location_latitude' => $this->geolocationPart($payload, 0),
             'location_longitude' => $this->geolocationPart($payload, 1),
             'location_altitude' => $this->geolocationPart($payload, 2),
             'location_precision' => $this->geolocationPart($payload, 3),
-            'form_number' => $this->text($this->value($payload, ['form_number', 'form_id', 'form_no'])),
-            'loan_number' => $this->text($this->value($payload, ['loan_number', 'loan_no'])),
-            'loan_status' => $this->text($this->value($payload, ['loan_status'])),
-            'loan_original_amount' => $this->decimal($this->value($payload, ['loan_original_amount'])),
-            'loan_total_amount' => $this->decimal($this->value($payload, ['loan_total_amount', 'total_loan_amount'])),
-            'loan_portfolio_amount' => $this->decimal($this->value($payload, ['loan_portfolio_amount'])),
-            'loan_net_amount' => $this->decimal($this->value($payload, ['loan_net_amount'])),
-            'loan_balance' => $this->decimal($this->value($payload, ['loan_balance', 'remaining_balance'])),
-            'loan_paid_amount' => $this->decimal($this->value($payload, ['loan_paid_amount', 'paid_amount'])),
-            'loan_installments_count' => $this->integer($this->value($payload, ['loan_installments_count'])),
-            'loan_started_at' => $this->text($this->value($payload, ['loan_started_at', 'loan_start_date'])),
-            'loan_last_installment_at' => $this->text($this->value($payload, ['loan_last_installment_at'])),
-            'loan_clearance_delivered' => $this->boolean($this->value($payload, ['loan_clearance_delivered'])),
+            'form_number' => $this->text($this->mappedValue($payload, $fieldMap, 'form_number', ['form_number', 'form_id', 'form_no'])),
+            'loan_number' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_number', ['loan_number', 'loan_no'])),
+            'loan_status' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_status', ['loan_status'])),
+            'loan_original_amount' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_original_amount', ['loan_original_amount'])),
+            'loan_total_amount' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_total_amount', ['loan_total_amount', 'total_loan_amount'])),
+            'loan_portfolio_amount' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_portfolio_amount', ['loan_portfolio_amount'])),
+            'loan_net_amount' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_net_amount', ['loan_net_amount'])),
+            'loan_balance' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_balance', ['loan_balance', 'remaining_balance'])),
+            'loan_paid_amount' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_paid_amount', ['loan_paid_amount', 'paid_amount'])),
+            'loan_installments_count' => $this->integer($this->mappedValue($payload, $fieldMap, 'loan_installments_count', ['loan_installments_count'])),
+            'loan_started_at' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_started_at', ['loan_started_at', 'loan_start_date'])),
+            'loan_last_installment_at' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_last_installment_at', ['loan_last_installment_at'])),
+            'loan_clearance_delivered' => $this->boolean($this->mappedValue($payload, $fieldMap, 'loan_clearance_delivered', ['loan_clearance_delivered'])),
             'borrower_name' => $this->borrowerName($payload, $borrowerNameField),
-            'borrower_id_number' => $this->text($this->value($payload, ['borrower_id_number', 'borrower_id', 'beneficiary_id_number', 'beneficiary_id', 'applicant_id_number', 'id_number', 'national_id'])),
-            'family_members_count' => $this->integer($this->value($payload, ['family_members_count', 'family_count'])),
-            'marital_status' => $this->text($this->value($payload, ['marital_status'])),
-            'spouse_name' => $this->text($this->value($payload, ['spouse_name'])),
-            'spouse_id_number' => $this->text($this->value($payload, ['spouse_id_number'])),
-            'employment_status' => $this->text($this->value($payload, ['employment_status'])),
-            'is_borrower_alive' => $this->boolean($this->value($payload, ['is_borrower_alive', 'borrower_alive'])) ?? true,
-            'vulnerability_types' => $this->arrayValue($this->value($payload, ['vulnerability_types'])),
-            'guarantors_count' => $this->integer($this->value($payload, ['guarantors_count'])),
-            'guarantors_alive_status' => $this->text($this->value($payload, ['guarantors_alive_status'])),
-            'deceased_guarantors' => $this->arrayValue($this->value($payload, ['deceased_guarantors'])),
-            'guarantors_employment_statuses' => $this->arrayValue($this->value($payload, ['guarantors_employment_statuses'])),
-            'affected_guarantors' => $this->arrayValue($this->value($payload, ['affected_guarantors'])),
-            'displacement_status' => $this->text($this->value($payload, ['displacement_status'])),
-            'displaced_to_governorate' => $this->text($this->value($payload, ['displaced_to_governorate', 'governorate'])),
-            'current_residence_address' => $this->text($this->value($payload, ['current_residence_address'])),
-            'phone_primary' => $this->text($this->value($payload, ['phone_primary', 'mobile', 'phone'])),
-            'phone_secondary' => $this->text($this->value($payload, ['phone_secondary'])),
-            'loan_unit_address' => $this->text($this->value($payload, ['loan_unit_address', 'address'])),
-            'loan_unit_area' => $this->decimal($this->value($payload, ['loan_unit_area'])),
-            'parcel_number' => $this->text($this->value($payload, ['parcel_number'])),
-            'plot_number' => $this->text($this->value($payload, ['plot_number'])),
-            'loan_unit_occupancy_status' => $this->text($this->value($payload, ['loan_unit_occupancy_status'])),
-            'resident_households' => $this->arrayValue($this->value($payload, ['resident_households'])),
-            'loan_unit_damage_status' => $this->text($this->value($payload, ['loan_unit_damage_status', 'damage_status'])),
-            'notes' => $this->text($this->value($payload, ['notes', 'note'])),
+            'borrower_id_number' => $this->text($this->mappedValue($payload, $fieldMap, 'borrower_id_number', ['borrower_id_number', 'borrower_id', 'beneficiary_id_number', 'beneficiary_id', 'applicant_id_number', 'id_number', 'national_id'])),
+            'family_members_count' => $this->integer($this->mappedValue($payload, $fieldMap, 'family_members_count', ['family_members_count', 'family_count'])),
+            'marital_status' => $this->text($this->mappedValue($payload, $fieldMap, 'marital_status', ['marital_status'])),
+            'spouse_name' => $this->text($this->mappedValue($payload, $fieldMap, 'spouse_name', ['spouse_name'])),
+            'spouse_id_number' => $this->text($this->mappedValue($payload, $fieldMap, 'spouse_id_number', ['spouse_id_number'])),
+            'employment_status' => $this->text($this->mappedValue($payload, $fieldMap, 'employment_status', ['employment_status'])),
+            'is_borrower_alive' => $this->boolean($this->mappedValue($payload, $fieldMap, 'is_borrower_alive', ['is_borrower_alive', 'borrower_alive'])) ?? true,
+            'vulnerability_types' => $this->arrayValue($this->mappedValue($payload, $fieldMap, 'vulnerability_types', ['vulnerability_types'])),
+            'guarantors_count' => $this->integer($this->mappedValue($payload, $fieldMap, 'guarantors_count', ['guarantors_count'])),
+            'guarantors_alive_status' => $this->text($this->mappedValue($payload, $fieldMap, 'guarantors_alive_status', ['guarantors_alive_status'])),
+            'deceased_guarantors' => $this->arrayValue($this->mappedValue($payload, $fieldMap, 'deceased_guarantors', ['deceased_guarantors'])),
+            'guarantors_employment_statuses' => $this->arrayValue($this->mappedValue($payload, $fieldMap, 'guarantors_employment_statuses', ['guarantors_employment_statuses'])),
+            'affected_guarantors' => $this->arrayValue($this->mappedValue($payload, $fieldMap, 'affected_guarantors', ['affected_guarantors'])),
+            'displacement_status' => $this->text($this->mappedValue($payload, $fieldMap, 'displacement_status', ['displacement_status'])),
+            'displaced_to_governorate' => $this->text($this->mappedValue($payload, $fieldMap, 'displaced_to_governorate', ['displaced_to_governorate', 'governorate'])),
+            'current_residence_address' => $this->text($this->mappedValue($payload, $fieldMap, 'current_residence_address', ['current_residence_address'])),
+            'phone_primary' => $this->text($this->mappedValue($payload, $fieldMap, 'phone_primary', ['phone_primary', 'mobile', 'phone'])),
+            'phone_secondary' => $this->text($this->mappedValue($payload, $fieldMap, 'phone_secondary', ['phone_secondary'])),
+            'loan_unit_address' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_address', ['loan_unit_address', 'address'])),
+            'loan_unit_area' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_unit_area', ['loan_unit_area'])),
+            'parcel_number' => $this->text($this->mappedValue($payload, $fieldMap, 'parcel_number', ['parcel_number'])),
+            'plot_number' => $this->text($this->mappedValue($payload, $fieldMap, 'plot_number', ['plot_number'])),
+            'loan_unit_occupancy_status' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_occupancy_status', ['loan_unit_occupancy_status'])),
+            'resident_households' => $this->arrayValue($this->mappedValue($payload, $fieldMap, 'resident_households', ['resident_households'])),
+            'loan_unit_damage_status' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_damage_status', ['loan_unit_damage_status', 'damage_status'])),
+            'notes' => $this->text($this->mappedValue($payload, $fieldMap, 'notes', ['notes', 'note'])),
         ], fn (mixed $value): bool => $value !== null && $value !== []);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $fieldMap
+     * @param  array<int, string>  $fallbackAliases
+     */
+    private function mappedValue(array $payload, array $fieldMap, string $targetField, array $fallbackAliases): mixed
+    {
+        $mappedAliases = $fieldMap[$targetField] ?? [];
+        $mappedAliases = is_array($mappedAliases) ? $mappedAliases : [$mappedAliases];
+
+        return $this->value($payload, array_values(array_filter(array_merge($mappedAliases, $fallbackAliases))));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function configuredFieldMap(): array
+    {
+        $fieldMap = config('services.kobotoolbox.borrower_field_map', []);
+
+        return is_array($fieldMap) ? $fieldMap : [];
     }
 
     /**

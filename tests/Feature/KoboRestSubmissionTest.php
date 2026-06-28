@@ -122,6 +122,48 @@ test('kobo rest submission uses configured borrower name field automatically', f
     expect(DamageAssessmentBorrower::query()->where('borrower_name', 'Configured Field Borrower')->exists())->toBeTrue();
 });
 
+test('kobo rest submission uses configured borrower field map automatically', function () {
+    config([
+        'services.kobotoolbox.borrower_name_field' => 'group_ss79a79/_1',
+        'services.kobotoolbox.borrower_field_map' => [
+            'borrower_id_number' => 'group_ss79a79/_',
+            'phone_primary' => 'group_ib0uw22/__007',
+            'loan_total_amount' => 'group_ss9qm62/__024',
+            'loan_unit_damage_status' => 'group_ss79a79/__016',
+            'notes' => 'group_ib0uw22/__008',
+        ],
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/iqrad', [
+            '_uuid' => 'uuid:configured-field-map',
+            'group_ss79a79' => [
+                '_1' => 'Mapped Borrower',
+                '_' => '400735199',
+                '__016' => 'destroyed',
+            ],
+            'group_ss9qm62' => [
+                '__024' => '1234.50',
+            ],
+            'group_ib0uw22' => [
+                '__007' => '0599999999',
+                '__008' => 'Mapped notes',
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $borrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid:configured-field-map')->sole();
+
+    expect($borrower->borrower_name)->toBe('Mapped Borrower')
+        ->and($borrower->borrower_id_number)->toBe('400735199')
+        ->and($borrower->phone_primary)->toBe('0599999999')
+        ->and((float) $borrower->loan_total_amount)->toBe(1234.5)
+        ->and($borrower->loan_unit_damage_status)->toBe('destroyed')
+        ->and($borrower->notes)->toBe('Mapped notes');
+});
+
 test('kobo rest submission stores raw payload and skips borrower sync when borrower name is missing', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')
@@ -180,4 +222,31 @@ test('kobo sync command can use an explicit borrower name field', function () {
 
     expect(KoboRestSubmission::query()->first()->sync_status)->toBe('synced')
         ->and(DamageAssessmentBorrower::query()->where('borrower_name', 'Explicit Field Borrower')->exists())->toBeTrue();
+});
+
+test('kobo sync command can use an explicit field map json', function () {
+    KoboRestSubmission::query()->create([
+        'service_name' => 'iqrad',
+        'submission_uuid' => 'uuid:explicit-map',
+        'payload' => [
+            '_uuid' => 'uuid:explicit-map',
+            'group_ak123' => [
+                'q1' => 'Explicit Map Borrower',
+                'q2' => '0555555555',
+            ],
+        ],
+        'sync_status' => 'skipped',
+        'sync_error' => 'Kobo submission does not include borrower_name.',
+        'received_at' => now(),
+    ]);
+
+    $fieldMap = json_encode(['phone_primary' => 'group_ak123/q2'], JSON_THROW_ON_ERROR);
+
+    $this->artisan("kobo:sync-rest-submissions --borrower-name-field=group_ak123/q1 --field-map='{$fieldMap}'")
+        ->expectsOutputToContain('Synced: 1')
+        ->assertSuccessful();
+
+    $borrower = DamageAssessmentBorrower::query()->where('borrower_name', 'Explicit Map Borrower')->sole();
+
+    expect($borrower->phone_primary)->toBe('0555555555');
 });

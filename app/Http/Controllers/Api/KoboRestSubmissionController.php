@@ -42,7 +42,8 @@ class KoboRestSubmissionController extends Controller
         try {
             $sync = $syncService->sync(
                 $submission,
-                config('services.kobotoolbox.borrower_name_field')
+                config('services.kobotoolbox.borrower_name_field'),
+                config('services.kobotoolbox.borrower_field_map')
             );
 
             $submission->forceFill([

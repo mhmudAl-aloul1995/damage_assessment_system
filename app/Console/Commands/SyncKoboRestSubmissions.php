@@ -16,7 +16,8 @@ class SyncKoboRestSubmissions extends Command
      */
     protected $signature = 'kobo:sync-rest-submissions
         {--all : Re-sync every stored Kobo submission}
-        {--borrower-name-field= : Kobo payload key to use as the borrower name}';
+        {--borrower-name-field= : Kobo payload key to use as the borrower name}
+        {--field-map= : JSON object mapping borrower fields to Kobo payload keys}';
 
     /**
      * The console command description.
@@ -32,6 +33,7 @@ class SyncKoboRestSubmissions extends Command
     {
         $borrowerNameField = $this->option('borrower-name-field')
             ?: config('services.kobotoolbox.borrower_name_field');
+        $fieldMap = $this->fieldMapOption();
 
         $query = KoboRestSubmission::query()
             ->orderBy('id');
@@ -44,10 +46,10 @@ class SyncKoboRestSubmissions extends Command
         $skipped = 0;
         $failed = 0;
 
-        $query->chunkById(100, function ($submissions) use ($syncService, $borrowerNameField, &$synced, &$skipped, &$failed): void {
+        $query->chunkById(100, function ($submissions) use ($syncService, $borrowerNameField, $fieldMap, &$synced, &$skipped, &$failed): void {
             foreach ($submissions as $submission) {
                 try {
-                    $sync = $syncService->sync($submission, $borrowerNameField);
+                    $sync = $syncService->sync($submission, $borrowerNameField, $fieldMap);
 
                     $submission->forceFill([
                         'damage_assessment_borrower_id' => $sync['borrower']?->id,
@@ -76,5 +78,21 @@ class SyncKoboRestSubmissions extends Command
         $this->components->info("Kobo submissions sync finished. Synced: {$synced}, skipped: {$skipped}, failed: {$failed}.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function fieldMapOption(): array
+    {
+        $fieldMap = config('services.kobotoolbox.borrower_field_map', []);
+        $option = $this->option('field-map');
+
+        if (filled($option)) {
+            $decoded = json_decode((string) $option, true);
+            $fieldMap = is_array($decoded) ? $decoded : [];
+        }
+
+        return is_array($fieldMap) ? $fieldMap : [];
     }
 }
