@@ -11,6 +11,7 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class TemporaryTechnicalCommitteeDecisionImportService
@@ -278,21 +279,22 @@ class TemporaryTechnicalCommitteeDecisionImportService
      */
     private function resolveCommitteeMembersByNames(array $memberNames, array &$summary): array
     {
-        $committeeMembersByName = CommitteeMember::query()
+        $committeeMembers = CommitteeMember::query()
             ->whereNotNull('user_id')
-            ->get()
+            ->with('user')
+            ->get();
+        $committeeMembersByName = $committeeMembers
             ->keyBy(fn (CommitteeMember $member): string => $this->normalizePersonName($member->name));
 
-        $usersByName = User::query()
-            ->get()
-            ->keyBy(fn (User $user): string => $this->normalizePersonName($user->name));
+        $users = User::query()->get();
+        $usersByName = $users->keyBy(fn (User $user): string => $this->normalizePersonName($user->name));
 
         $members = [];
 
         foreach ($memberNames as $index => $memberName) {
             $normalizedName = $this->normalizePersonName($memberName);
             $existingMember = $committeeMembersByName[$normalizedName] ?? null;
-            $user = $existingMember?->user ?? $usersByName[$normalizedName] ?? null;
+            $user = $existingMember?->user ?? $usersByName[$normalizedName] ?? $this->findUserByPartialName($normalizedName, $committeeMembers, $users);
 
             if (! $user instanceof User) {
                 $summary['missing_users'][] = $memberName;
@@ -313,6 +315,46 @@ class TemporaryTechnicalCommitteeDecisionImportService
         }
 
         return $members;
+    }
+
+    /**
+     * @param  Collection<int, CommitteeMember>  $committeeMembers
+     * @param  Collection<int, User>  $users
+     */
+    private function findUserByPartialName(string $normalizedName, Collection $committeeMembers, Collection $users): ?User
+    {
+        foreach ($committeeMembers as $member) {
+            if ($this->nameContainsAllTokens($this->normalizePersonName($member->name), $normalizedName)) {
+                return $member->user;
+            }
+        }
+
+        foreach ($users as $user) {
+            if ($this->nameContainsAllTokens($this->normalizePersonName($user->name), $normalizedName)) {
+                return $user;
+            }
+        }
+
+        return null;
+    }
+
+    private function nameContainsAllTokens(string $candidateName, string $searchedName): bool
+    {
+        $searchedTokens = array_values(array_filter(explode(' ', $searchedName)));
+
+        if (count($searchedTokens) < 2) {
+            return false;
+        }
+
+        $candidateTokens = array_flip(array_values(array_filter(explode(' ', $candidateName))));
+
+        foreach ($searchedTokens as $token) {
+            if (! isset($candidateTokens[$token])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

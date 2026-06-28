@@ -105,7 +105,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
     ]);
 
     $memberUser = User::factory()->create([
-        'name' => 'Excel Committee Member',
+        'name' => 'Engineer Excel Committee Member',
         'id_no' => '111111111',
     ]);
 
@@ -173,7 +173,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             'decision_text' => 'هدم كلي',
             'action_text' => 'اعادة المبنى للمهندس لحصره',
             'resurvey' => 'نعم',
-            'member_name' => 'Excel Committee Member',
+            'member_name' => 'Excel Member',
             'member_id' => '800846958',
         ],
         [
@@ -183,7 +183,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             'decision_text' => 'ضرر جزئي للوحدة',
             'action_text' => 'اعادة الوحدة للمهندس',
             'resurvey' => 'لا',
-            'member_name' => 'Excel Committee Member',
+            'member_name' => 'Excel Member',
             'member_id' => '800846958',
         ],
     ]);
