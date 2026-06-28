@@ -30,7 +30,8 @@ class SyncKoboRestSubmissions extends Command
      */
     public function handle(KoboBorrowerSubmissionSyncService $syncService): int
     {
-        $borrowerNameField = $this->option('borrower-name-field') ?: null;
+        $borrowerNameField = $this->option('borrower-name-field')
+            ?: config('services.kobotoolbox.borrower_name_field');
 
         $query = KoboRestSubmission::query()
             ->orderBy('id');

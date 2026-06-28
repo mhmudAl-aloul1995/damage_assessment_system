@@ -40,7 +40,10 @@ class KoboRestSubmissionController extends Controller
             : KoboRestSubmission::query()->create($attributes);
 
         try {
-            $sync = $syncService->sync($submission);
+            $sync = $syncService->sync(
+                $submission,
+                config('services.kobotoolbox.borrower_name_field')
+            );
 
             $submission->forceFill([
                 'damage_assessment_borrower_id' => $sync['borrower']?->id,

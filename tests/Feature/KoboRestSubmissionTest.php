@@ -105,6 +105,23 @@ test('kobo rest submission infers borrower name from grouped kobo fields', funct
         ->and($borrower->borrower_id_number)->toBe('900000004');
 });
 
+test('kobo rest submission uses configured borrower name field automatically', function () {
+    config(['services.kobotoolbox.borrower_name_field' => 'group_ss79a79/_1']);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/iqrad', [
+            '_uuid' => 'uuid:configured-name-field',
+            'group_ss79a79' => [
+                '_1' => 'Configured Field Borrower',
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    expect(DamageAssessmentBorrower::query()->where('borrower_name', 'Configured Field Borrower')->exists())->toBeTrue();
+});
+
 test('kobo rest submission stores raw payload and skips borrower sync when borrower name is missing', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')

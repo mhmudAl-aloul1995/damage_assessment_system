@@ -45,6 +45,7 @@ return [
     'kobotoolbox' => [
         'token' => env('KOBOTOOLBOX_TOKEN'),
         'rest_service_token' => env('KOBO_REST_SERVICE_TOKEN'),
+        'borrower_name_field' => env('KOBO_BORROWER_NAME_FIELD'),
         'timeout' => env('KOBOTOOLBOX_TIMEOUT', 60),
     ],
     'arcgis' => [
