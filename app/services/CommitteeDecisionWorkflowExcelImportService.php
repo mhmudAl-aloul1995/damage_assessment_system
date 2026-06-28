@@ -90,7 +90,7 @@ class CommitteeDecisionWorkflowExcelImportService
                 continue;
             }
 
-            $decisionPayload = $this->decisionPayload($row);
+            $decisionPayload = $this->decisionPayload($row, $rows[$headerIndex] ?? []);
 
             if ($decisionPayload === null) {
                 $issues[] = [
@@ -115,8 +115,8 @@ class CommitteeDecisionWorkflowExcelImportService
                 'action_text' => $decisionPayload['action_text'],
                 'decision_date' => $decisionPayload['decision_date'],
                 'resurvey_completed' => $decisionPayload['resurvey_completed'],
-                'member_id_numbers' => $decisionPayload['member_id_numbers'],
-                'use_excel_member_ids' => true,
+                'member_names' => $decisionPayload['member_names'],
+                'use_excel_member_names' => true,
                 'force_committee_review_status' => true,
                 'notes' => trim(implode("\n", array_filter([
                     'Excel sheet: '.$sheet->getTitle().' row: '.$rowNumber,
@@ -163,7 +163,7 @@ class CommitteeDecisionWorkflowExcelImportService
      * @param  array<int, mixed>  $row
      * @return array<string, mixed>|null
      */
-    private function decisionPayload(array $row): ?array
+    private function decisionPayload(array $row, array $headerRow): ?array
     {
         $initialDecision = $this->value($row[14] ?? null);
         $higherDecision = $this->value($row[25] ?? null);
@@ -178,7 +178,7 @@ class CommitteeDecisionWorkflowExcelImportService
                 'action_text' => $this->value($row[27] ?? null) ?: null,
                 'decision_date' => $this->dateValue($row[18] ?? null),
                 'resurvey_completed' => $this->isYes($row[28] ?? null),
-                'member_id_numbers' => $this->memberIdNumbers($row, 19, 24),
+                'member_names' => $this->memberNamesFromHeaders($row, $headerRow, 19, 24),
             ];
         }
 
@@ -193,7 +193,7 @@ class CommitteeDecisionWorkflowExcelImportService
             'action_text' => $this->value($row[16] ?? null) ?: null,
             'decision_date' => $this->dateValue($row[7] ?? null),
             'resurvey_completed' => $this->isYes($row[17] ?? null),
-            'member_id_numbers' => $this->memberIdNumbers($row, 8, 13),
+            'member_names' => $this->memberNamesFromHeaders($row, $headerRow, 8, 13),
         ];
     }
 
@@ -222,15 +222,16 @@ class CommitteeDecisionWorkflowExcelImportService
      * @param  array<int, mixed>  $row
      * @return list<string>
      */
-    private function memberIdNumbers(array $row, int $startIndex, int $endIndex): array
+    private function memberNamesFromHeaders(array $row, array $headerRow, int $startIndex, int $endIndex): array
     {
         $members = [];
 
         for ($index = $startIndex; $index <= $endIndex; $index++) {
-            $value = preg_replace('/\D+/', '', $this->value($row[$index] ?? null)) ?? '';
+            $value = $this->value($row[$index] ?? null);
+            $memberName = $this->value($headerRow[$index] ?? null);
 
-            if ($value !== '') {
-                $members[] = $value;
+            if ($value !== '' && $memberName !== '') {
+                $members[] = $memberName;
             }
         }
 

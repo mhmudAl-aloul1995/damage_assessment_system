@@ -106,7 +106,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
 
     $memberUser = User::factory()->create([
         'name' => 'Excel Committee Member',
-        'id_no' => '800846958',
+        'id_no' => '111111111',
     ]);
 
     $staleBuilding = Building::query()->create([
@@ -173,6 +173,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             'decision_text' => 'هدم كلي',
             'action_text' => 'اعادة المبنى للمهندس لحصره',
             'resurvey' => 'نعم',
+            'member_name' => 'Excel Committee Member',
             'member_id' => '800846958',
         ],
         [
@@ -182,6 +183,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             'decision_text' => 'ضرر جزئي للوحدة',
             'action_text' => 'اعادة الوحدة للمهندس',
             'resurvey' => 'لا',
+            'member_name' => 'Excel Committee Member',
             'member_id' => '800846958',
         ],
     ]);
@@ -878,6 +880,7 @@ function workflowCommitteeDecisionWorkbookPath(array $records): string
             $sheet->setCellValue([$columnIndex + 1, 1], $header);
         }
 
+        $sheet->setCellValue('I1', $record['member_name'] ?? $sheet->getCell('I1')->getValue());
         $sheet->setCellValue('A2', $record['objectid']);
         $sheet->setCellValue('B2', 'Excel.Researcher');
         $sheet->setCellValue('D2', 'Excel imported record');

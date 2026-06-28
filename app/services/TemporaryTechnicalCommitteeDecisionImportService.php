@@ -36,7 +36,8 @@ class TemporaryTechnicalCommitteeDecisionImportService
      *     decision_type: string,
      *     decision_text: string,
      *     action_text: string|null,
-     *     member_id_numbers: list<string>
+     *     member_id_numbers?: list<string>,
+     *     member_names?: list<string>,
      * }>  $records
      * @return array<string, mixed>
      */
@@ -48,9 +49,15 @@ class TemporaryTechnicalCommitteeDecisionImportService
         foreach ($records as $record) {
             $summary['rows']++;
 
-            $memberIdNumbers = $this->memberIdNumbersForSeedRecord($record);
-            $membersKey = implode('|', $memberIdNumbers);
-            $members = $memberCache[$membersKey] ??= $this->resolveCommitteeMembers($memberIdNumbers, $summary);
+            if (($record['use_excel_member_names'] ?? false) === true) {
+                $memberNames = $record['member_names'] ?? [];
+                $membersKey = 'names:'.implode('|', $memberNames);
+                $members = $memberCache[$membersKey] ??= $this->resolveCommitteeMembersByNames($memberNames, $summary);
+            } else {
+                $memberIdNumbers = $this->memberIdNumbersForSeedRecord($record);
+                $membersKey = 'ids:'.implode('|', $memberIdNumbers);
+                $members = $memberCache[$membersKey] ??= $this->resolveCommitteeMembers($memberIdNumbers, $summary);
+            }
 
             if ($members === []) {
                 $this->recordSkip($summary, 'missing_committee_users', [
@@ -252,6 +259,50 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 'name' => $user->name,
                 'phone' => $user->phone,
                 'title' => null,
+                'is_active' => true,
+                'is_required' => true,
+                'sort_order' => $index + 1,
+            ]);
+        }
+
+        return $members;
+    }
+
+    /**
+     * @param  list<string>  $memberNames
+     * @param  array<string, mixed>  $summary
+     * @return list<CommitteeMember>
+     */
+    private function resolveCommitteeMembersByNames(array $memberNames, array &$summary): array
+    {
+        $committeeMembersByName = CommitteeMember::query()
+            ->whereNotNull('user_id')
+            ->get()
+            ->keyBy(fn (CommitteeMember $member): string => $this->normalizePersonName($member->name));
+
+        $usersByName = User::query()
+            ->get()
+            ->keyBy(fn (User $user): string => $this->normalizePersonName($user->name));
+
+        $members = [];
+
+        foreach ($memberNames as $index => $memberName) {
+            $normalizedName = $this->normalizePersonName($memberName);
+            $existingMember = $committeeMembersByName[$normalizedName] ?? null;
+            $user = $existingMember?->user ?? $usersByName[$normalizedName] ?? null;
+
+            if (! $user instanceof User) {
+                $summary['missing_users'][] = $memberName;
+
+                continue;
+            }
+
+            $members[] = CommitteeMember::query()->updateOrCreate([
+                'user_id' => $user->id,
+            ], [
+                'name' => $existingMember?->name ?: $user->name,
+                'phone' => $user->phone,
+                'title' => $existingMember?->title,
                 'is_active' => true,
                 'is_required' => true,
                 'sort_order' => $index + 1,
@@ -798,6 +849,23 @@ class TemporaryTechnicalCommitteeDecisionImportService
         return str($status ?? '')
             ->lower()
             ->replace(' ', '_')
+            ->trim()
+            ->toString();
+    }
+
+    private function normalizePersonName(?string $name): string
+    {
+        $normalizedName = str($name ?? '')
+            ->lower()
+            ->replace(['أ', 'إ', 'آ'], 'ا')
+            ->replace(['ة', 'ى'], ['ه', 'ي'])
+            ->replaceMatches('/[\.،,؛:\/\\\\_-]+/u', ' ')
+            ->replaceMatches('/\s+/u', ' ')
+            ->trim()
+            ->toString();
+
+        return str($normalizedName)
+            ->replaceMatches('/^(م|مهندس|المهندس)\s+/u', '')
             ->trim()
             ->toString();
     }
