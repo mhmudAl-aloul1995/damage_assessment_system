@@ -21,6 +21,50 @@
                 <span>المتجاوزة: {{ $committeeImportSummary['skipped_rows'] ?? 0 }}</span>
                 <span>أرقام هوية غير مطابقة: {{ count($committeeImportSummary['missing_users'] ?? []) }}</span>
             </div>
+            @if (! empty($committeeImportSummary['skip_reasons']))
+                <div class="mt-3">
+                    <div class="fw-semibold mb-1">أسباب التجاوز</div>
+                    <div class="d-flex gap-3 flex-wrap">
+                        @foreach ($committeeImportSummary['skip_reasons'] as $reason => $count)
+                            <span class="badge badge-light-warning">{{ $reason }}: {{ $count }}</span>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+            @if (! empty($committeeImportSummary['missing_users']))
+                <div class="mt-3">
+                    <div class="fw-semibold mb-1">أرقام الهوية غير المطابقة</div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        @foreach (array_slice($committeeImportSummary['missing_users'], 0, 20) as $missingUser)
+                            <span class="badge badge-light-danger">{{ $missingUser }}</span>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+            @if (! empty($committeeImportSummary['issues']))
+                <div class="table-responsive mt-4">
+                    <table class="table table-sm table-row-bordered align-middle mb-0">
+                        <thead>
+                            <tr class="fw-bold text-muted">
+                                <th>الشيت</th>
+                                <th>الصف</th>
+                                <th>ObjectID</th>
+                                <th>السبب</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (array_slice($committeeImportSummary['issues'], 0, 20) as $issue)
+                                <tr>
+                                    <td>{{ $issue['sheet'] ?? '-' }}</td>
+                                    <td>{{ $issue['row'] ?? '-' }}</td>
+                                    <td>{{ $issue['objectid'] ?? '-' }}</td>
+                                    <td>{{ $issue['reason'] ?? $issue['reason_key'] ?? '-' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </div>
     @endif
 

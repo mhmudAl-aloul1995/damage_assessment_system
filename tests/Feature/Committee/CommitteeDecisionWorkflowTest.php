@@ -196,6 +196,31 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             ->where('committee_decision_id', $decision->id)
             ->where('building_objectid', $building->objectid)
             ->exists())->toBeTrue();
+
+    $this->withSession([
+        'committee_import_summary' => [
+            'cleared_decisions' => 1,
+            'rows' => 2,
+            'decisions_completed' => 1,
+            'skipped_rows' => 1,
+            'skip_reasons' => ['record_not_found' => 1],
+            'missing_users' => ['999999999'],
+            'issues' => [[
+                'sheet' => 'خانيونس -مباني',
+                'row' => 9,
+                'objectid' => 9999,
+                'reason' => 'No matching building or housing unit was found.',
+            ]],
+        ],
+    ]);
+
+    $this->actingAs($manager)
+        ->get(route('committee-decisions.index'))
+        ->assertOk()
+        ->assertSee('أسباب التجاوز', false)
+        ->assertSee('record_not_found: 1', false)
+        ->assertSee('999999999', false)
+        ->assertSee('No matching building or housing unit was found.', false);
 });
 
 it('suggests the latest committee members for a new decision and saves only selected members', function () {
