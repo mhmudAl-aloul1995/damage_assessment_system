@@ -128,7 +128,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
                     $forcedCommitteeStatus ? 'Status was moved to committee review before importing this decision.' : null,
                 ]))),
             );
-            if (! $resurveyCompleted) {
+            if ($resurveyCompleted) {
+                $this->markResurveyCompletedFieldStatus($decisionable);
+                $this->syncArcGisResurveyCompletedFieldStatus($decision);
+            } else {
                 $this->syncArcGisDecisionStatus($decision);
             }
             $summary['decisions_completed']++;
@@ -736,6 +739,21 @@ class TemporaryTechnicalCommitteeDecisionImportService
     {
         $result = $this->arcGisStatusUpdaterService->syncDecisionStatus($decision->load('decisionable'));
 
+        $this->markArcGisResult($decision, $result);
+    }
+
+    private function syncArcGisResurveyCompletedFieldStatus(CommitteeDecision $decision): void
+    {
+        $result = $this->arcGisStatusUpdaterService->syncDecisionFieldStatus($decision->load('decisionable'), 'COMPLETED');
+
+        $this->markArcGisResult($decision, $result);
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    private function markArcGisResult(CommitteeDecision $decision, array $result): void
+    {
         $decision->forceFill([
             'arcgis_sync_status' => $result['status'] ?? null,
             'arcgis_last_attempt_at' => now(),
@@ -743,6 +761,29 @@ class TemporaryTechnicalCommitteeDecisionImportService
             'arcgis_last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? null),
             'arcgis_last_response' => $result['message'] ?? null,
         ])->save();
+    }
+
+    private function markResurveyCompletedFieldStatus(Model $decisionable): void
+    {
+        if ($decisionable instanceof Building) {
+            $decisionable->forceFill([
+                'field_status' => 'COMPLETED',
+            ])->save();
+
+            return;
+        }
+
+        if (! $decisionable instanceof HousingUnit) {
+            return;
+        }
+
+        $building = $decisionable->building;
+
+        if ($building instanceof Building) {
+            $building->forceFill([
+                'field_status' => 'COMPLETED',
+            ])->save();
+        }
     }
 
     private function updateLocalDecisionableStatus(Model $decisionable, string $decisionType): void

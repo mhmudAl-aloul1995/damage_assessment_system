@@ -91,6 +91,54 @@ class ArcGisStatusUpdaterService
         }
     }
 
+    public function syncDecisionFieldStatus(CommitteeDecision $decision, string $fieldStatus): array
+    {
+        try {
+            [$featureRecord] = $this->resolveFeatureRecord($decision);
+
+            if ($featureRecord === null) {
+                return [
+                    'success' => false,
+                    'status' => 'skipped',
+                    'message' => 'No ArcGIS target record could be resolved.',
+                ];
+            }
+
+            $baseUrl = $this->resolveBaseUrl();
+
+            if ($baseUrl === '') {
+                return [
+                    'success' => false,
+                    'status' => 'not_configured',
+                    'message' => 'ArcGIS base URL is not configured.',
+                ];
+            }
+
+            $token = $this->resolveToken();
+            $fieldName = (string) config('services.committee_decisions.arcgis.status_field', 'field_status');
+
+            if ($featureRecord instanceof HousingUnit) {
+                return $this->sendParentBuildingStatusUpdate($featureRecord, $baseUrl, $token, $decision, $fieldStatus);
+            }
+
+            return $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
+                (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid') => data_get($featureRecord, (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid')),
+                $fieldName => $fieldStatus,
+            ], $token, $decision);
+        } catch (Throwable $exception) {
+            Log::error('Committee ArcGIS field status sync exception.', [
+                'committee_decision_id' => $decision->id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'status' => 'failed',
+                'message' => $exception->getMessage(),
+            ];
+        }
+    }
+
     private function resolveToken(): string
     {
         $staticToken = (string) config('services.committee_decisions.arcgis.token', '');
@@ -191,7 +239,7 @@ class ArcGisStatusUpdaterService
         return $attributes;
     }
 
-    private function sendParentBuildingStatusUpdate(HousingUnit $housingUnit, string $baseUrl, string $token, CommitteeDecision $decision): array
+    private function sendParentBuildingStatusUpdate(HousingUnit $housingUnit, string $baseUrl, string $token, CommitteeDecision $decision, ?string $fieldStatus = null): array
     {
         if (blank($housingUnit->parentglobalid)) {
             return [
@@ -203,7 +251,7 @@ class ArcGisStatusUpdaterService
 
         return $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
             'globalid' => $housingUnit->parentglobalid,
-            (string) config('services.committee_decisions.arcgis.status_field', 'field_status') => (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed'),
+            (string) config('services.committee_decisions.arcgis.status_field', 'field_status') => $fieldStatus ?? (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed'),
         ], $token, $decision);
     }
 

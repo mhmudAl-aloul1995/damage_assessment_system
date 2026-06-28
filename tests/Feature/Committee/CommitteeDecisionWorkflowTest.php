@@ -98,6 +98,18 @@ it('shows committee decision pages and datatable data for buildings and housing 
 });
 
 it('imports uploaded workflow excel decisions from the committee decisions index', function () {
+    config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
+    config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
+    config()->set('services.committee_decisions.arcgis.housing_unit_layer_id', 1);
+    config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
+    config()->set('services.committee_decisions.arcgis.token', 'static-token');
+
+    Http::fake([
+        'https://example.test/arcgis/FeatureServer/*/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ]),
+    ]);
+
     $manager = User::factory()->create();
     $manager->givePermissionTo([
         'view committee decisions',
@@ -285,7 +297,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($building->building_damage_status)->toBe('committee_review')
         ->and($building->field_status)->toBe('COMPLETED')
-        ->and($decision->arcgis_sync_status)->toBeNull()
+        ->and($decision->arcgis_sync_status)->toBe('synced')
         ->and($buildingArchiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
         ->and($unitDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
         ->and($unitDecision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
@@ -295,7 +307,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->and($resurveyUnitDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
         ->and($resurveyHousingUnit->unit_damage_status)->toBe('committee_review2')
         ->and($resurveyUnitParentBuilding->field_status)->toBe('COMPLETED')
-        ->and($resurveyUnitDecision->arcgis_sync_status)->toBeNull()
+        ->and($resurveyUnitDecision->arcgis_sync_status)->toBe('synced')
         ->and($secondDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
         ->and($secondDecision->decision_text)->toBe('ضرر جزئي من الملف الثاني')
         ->and(CommitteeDecision::query()->whereKey($staleDecision->id)->exists())->toBeFalse()
@@ -313,6 +325,30 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             ->where('committee_decision_id', $decision->id)
             ->where('building_objectid', $building->objectid)
             ->exists())->toBeTrue();
+
+    Http::assertSent(function ($request): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/0/updateFeatures')
+            && data_get($features, '0.attributes.objectid') === 9701
+            && data_get($features, '0.attributes.field_status') === 'COMPLETED';
+    });
+
+    Http::assertSent(function ($request) use ($unitParentBuilding): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/0/updateFeatures')
+            && data_get($features, '0.attributes.globalid') === $unitParentBuilding->globalid
+            && data_get($features, '0.attributes.field_status') === 'Not_Completed';
+    });
+
+    Http::assertSent(function ($request) use ($resurveyUnitParentBuilding): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/0/updateFeatures')
+            && data_get($features, '0.attributes.globalid') === $resurveyUnitParentBuilding->globalid
+            && data_get($features, '0.attributes.field_status') === 'COMPLETED';
+    });
 
     $this->withSession([
         'committee_import_summary' => [
