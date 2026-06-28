@@ -14,7 +14,9 @@ class SyncKoboRestSubmissions extends Command
      *
      * @var string
      */
-    protected $signature = 'kobo:sync-rest-submissions {--all : Re-sync every stored Kobo submission}';
+    protected $signature = 'kobo:sync-rest-submissions
+        {--all : Re-sync every stored Kobo submission}
+        {--borrower-name-field= : Kobo payload key to use as the borrower name}';
 
     /**
      * The console command description.
@@ -28,6 +30,8 @@ class SyncKoboRestSubmissions extends Command
      */
     public function handle(KoboBorrowerSubmissionSyncService $syncService): int
     {
+        $borrowerNameField = $this->option('borrower-name-field') ?: null;
+
         $query = KoboRestSubmission::query()
             ->orderBy('id');
 
@@ -39,10 +43,10 @@ class SyncKoboRestSubmissions extends Command
         $skipped = 0;
         $failed = 0;
 
-        $query->chunkById(100, function ($submissions) use ($syncService, &$synced, &$skipped, &$failed): void {
+        $query->chunkById(100, function ($submissions) use ($syncService, $borrowerNameField, &$synced, &$skipped, &$failed): void {
             foreach ($submissions as $submission) {
                 try {
-                    $sync = $syncService->sync($submission);
+                    $sync = $syncService->sync($submission, $borrowerNameField);
 
                     $submission->forceFill([
                         'damage_assessment_borrower_id' => $sync['borrower']?->id,

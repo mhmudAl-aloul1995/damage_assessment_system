@@ -141,3 +141,26 @@ test('kobo sync command retries skipped submissions', function () {
     expect(KoboRestSubmission::query()->first()->sync_status)->toBe('synced')
         ->and(DamageAssessmentBorrower::query()->where('borrower_name', 'Retried Borrower')->exists())->toBeTrue();
 });
+
+test('kobo sync command can use an explicit borrower name field', function () {
+    KoboRestSubmission::query()->create([
+        'service_name' => 'iqrad',
+        'submission_uuid' => 'uuid:explicit-field',
+        'payload' => [
+            '_uuid' => 'uuid:explicit-field',
+            'group_ak123' => [
+                'q1' => 'Explicit Field Borrower',
+            ],
+        ],
+        'sync_status' => 'skipped',
+        'sync_error' => 'Kobo submission does not include borrower_name.',
+        'received_at' => now(),
+    ]);
+
+    $this->artisan('kobo:sync-rest-submissions --borrower-name-field=group_ak123/q1')
+        ->expectsOutputToContain('Synced: 1')
+        ->assertSuccessful();
+
+    expect(KoboRestSubmission::query()->first()->sync_status)->toBe('synced')
+        ->and(DamageAssessmentBorrower::query()->where('borrower_name', 'Explicit Field Borrower')->exists())->toBeTrue();
+});

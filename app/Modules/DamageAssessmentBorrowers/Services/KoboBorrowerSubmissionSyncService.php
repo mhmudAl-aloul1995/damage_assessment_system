@@ -12,10 +12,10 @@ class KoboBorrowerSubmissionSyncService
     /**
      * @return array{borrower: DamageAssessmentBorrower|null, status: string, error: string|null}
      */
-    public function sync(KoboRestSubmission $submission): array
+    public function sync(KoboRestSubmission $submission, ?string $borrowerNameField = null): array
     {
         $payload = $submission->payload ?? [];
-        $data = $this->borrowerData($payload);
+        $data = $this->borrowerData($payload, $borrowerNameField);
 
         if (blank($data['borrower_name'] ?? null)) {
             return [
@@ -54,7 +54,7 @@ class KoboBorrowerSubmissionSyncService
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
-    private function borrowerData(array $payload): array
+    private function borrowerData(array $payload, ?string $borrowerNameField = null): array
     {
         return array_filter([
             'source_uuid' => $this->text($this->value($payload, ['_uuid', 'meta/instanceID', 'instanceID'])),
@@ -77,7 +77,7 @@ class KoboBorrowerSubmissionSyncService
             'loan_started_at' => $this->text($this->value($payload, ['loan_started_at', 'loan_start_date'])),
             'loan_last_installment_at' => $this->text($this->value($payload, ['loan_last_installment_at'])),
             'loan_clearance_delivered' => $this->boolean($this->value($payload, ['loan_clearance_delivered'])),
-            'borrower_name' => $this->borrowerName($payload),
+            'borrower_name' => $this->borrowerName($payload, $borrowerNameField),
             'borrower_id_number' => $this->text($this->value($payload, ['borrower_id_number', 'borrower_id', 'beneficiary_id_number', 'beneficiary_id', 'applicant_id_number', 'id_number', 'national_id'])),
             'family_members_count' => $this->integer($this->value($payload, ['family_members_count', 'family_count'])),
             'marital_status' => $this->text($this->value($payload, ['marital_status'])),
@@ -127,8 +127,16 @@ class KoboBorrowerSubmissionSyncService
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function borrowerName(array $payload): ?string
+    private function borrowerName(array $payload, ?string $borrowerNameField = null): ?string
     {
+        if (filled($borrowerNameField)) {
+            $configuredValue = $this->text($this->value($payload, [$borrowerNameField]));
+
+            if ($configuredValue !== null) {
+                return $configuredValue;
+            }
+        }
+
         $explicitValue = $this->value($payload, [
             'borrower_name',
             'borrower_full_name',
