@@ -18,6 +18,14 @@ class ArcGisStatusUpdaterService
     public function syncDecisionStatus(CommitteeDecision $decision): array
     {
         try {
+            if ($decision->refersToHigherCommittee()) {
+                return [
+                    'success' => false,
+                    'status' => 'skipped',
+                    'message' => 'Higher committee referrals do not set a final damage status.',
+                ];
+            }
+
             [$featureRecord, $layerId] = $this->resolveFeatureRecord($decision);
 
             if ($featureRecord === null || $layerId === null) {
@@ -157,13 +165,15 @@ class ArcGisStatusUpdaterService
         if ($decisionable instanceof HousingUnit) {
             return [
                 'unit_damage_status',
-                $decision->decision_type === 'fully_damaged' ? 'fully_damaged2' : 'partially_damaged2',
+                $decision->decision_type === CommitteeDecision::TYPE_FULLY_DAMAGED ? 'fully_damaged2' : 'partially_damaged2',
             ];
         }
 
         return [
             'building_damage_status',
-            $decision->decision_type === 'fully_damaged' ? 'fully_damaged' : 'partially_damaged',
+            $decision->decision_type === CommitteeDecision::TYPE_FULLY_DAMAGED
+                ? CommitteeDecision::TYPE_FULLY_DAMAGED
+                : CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
         ];
     }
 

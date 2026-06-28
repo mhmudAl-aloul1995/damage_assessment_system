@@ -245,14 +245,18 @@ class CommitteeDecisionWorkflowService
     {
         $decision->loadMissing('decisionable');
 
+        if ($decision->refersToHigherCommittee()) {
+            return;
+        }
+
         $decisionable = $decision->decisionable;
         $fieldStatus = (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed');
 
         if ($decisionable instanceof Building) {
             $decisionable->forceFill([
-                'building_damage_status' => $decision->decision_type === 'fully_damaged'
-                    ? 'fully_damaged'
-                    : 'partially_damaged',
+                'building_damage_status' => $decision->decision_type === CommitteeDecision::TYPE_FULLY_DAMAGED
+                    ? CommitteeDecision::TYPE_FULLY_DAMAGED
+                    : CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
                 'field_status' => $fieldStatus,
             ])->save();
 
@@ -264,7 +268,7 @@ class CommitteeDecisionWorkflowService
         }
 
         $decisionable->forceFill([
-            'unit_damage_status' => $decision->decision_type === 'fully_damaged'
+            'unit_damage_status' => $decision->decision_type === CommitteeDecision::TYPE_FULLY_DAMAGED
                 ? 'fully_damaged2'
                 : 'partially_damaged2',
         ])->save();

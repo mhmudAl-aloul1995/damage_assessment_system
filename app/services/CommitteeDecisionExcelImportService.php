@@ -117,7 +117,7 @@ class CommitteeDecisionExcelImportService
                 $summary['skipped_rows']++;
                 $summary['issues'][] = [
                     'row' => $rowNumber,
-                    'reason' => 'Decision text is not classified as fully or partially damaged.',
+                    'reason' => 'Decision text is not classified as fully damaged, partially damaged, or higher committee.',
                 ];
 
                 continue;
@@ -231,20 +231,31 @@ class CommitteeDecisionExcelImportService
 
     private function resolveDecisionType(string $decisionText): ?string
     {
+        if (
+            str_contains($decisionText, 'لجنة عليا')
+            || str_contains($decisionText, 'لجنة فنية')
+            || str_contains($decisionText, 'تحول لجنة')
+            || str_contains($decisionText, 'تحويل')
+            || str_contains($decisionText, 'higher committee')
+            || str_contains($decisionText, 'technical committee')
+        ) {
+            return CommitteeDecision::TYPE_HIGHER_COMMITTEE;
+        }
+
         if (str_contains($decisionText, 'جزئي')) {
-            return 'partially_damaged';
+            return CommitteeDecision::TYPE_PARTIALLY_DAMAGED;
         }
 
         if (str_contains($decisionText, 'كلي')) {
-            return 'fully_damaged';
+            return CommitteeDecision::TYPE_FULLY_DAMAGED;
         }
 
         if (str_contains($decisionText, 'جزئي')) {
-            return 'partially_damaged';
+            return CommitteeDecision::TYPE_PARTIALLY_DAMAGED;
         }
 
         if (str_contains($decisionText, 'كلي') || str_contains($decisionText, 'ظƒظ„ظٹ')) {
-            return 'fully_damaged';
+            return CommitteeDecision::TYPE_FULLY_DAMAGED;
         }
 
         return null;

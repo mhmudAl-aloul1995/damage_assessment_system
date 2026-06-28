@@ -305,6 +305,76 @@ it('completes the committee workflow, archives the object, and syncs arcgis afte
     });
 });
 
+it('completes higher committee referrals without applying a final damage status', function () {
+    config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
+
+    Http::fake([
+        'https://example.test/arcgis/FeatureServer/*/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+    ]);
+
+    $manager = User::factory()->create();
+    $manager->givePermissionTo([
+        'view committee decisions',
+        'manage committee decision content',
+        'edit committee decisions',
+    ]);
+
+    $signerUser = User::factory()->create();
+    $member = CommitteeMember::factory()->linkedUser($signerUser)->create([
+        'name' => 'Higher Committee Signer',
+        'sort_order' => 1,
+        'is_required' => true,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9302,
+        'globalid' => 'building-guid-higher-committee',
+        'building_name' => 'Higher Committee Building',
+        'building_damage_status' => 'committee_review',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $this->actingAs($manager)->put(route('committee-decisions.update', CommitteeDecision::query()->firstOrCreate([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+    ], [
+        'created_by' => $manager->id,
+        'updated_by' => $manager->id,
+    ])), [
+        'decision_type' => CommitteeDecision::TYPE_HIGHER_COMMITTEE,
+        'decision_text' => 'Refer this building to the higher committee.',
+        'action_text' => 'No field update until the higher committee decides.',
+        'decision_date' => '2026-06-22',
+        'committee_members' => [$member->id],
+    ])->assertRedirect();
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
+
+    $this->actingAs($signerUser)->post(route('committee-decisions.sign', $decision), [
+        'committee_member_id' => $member->id,
+        'status' => 'approved',
+    ])->assertRedirect();
+
+    $decision->refresh();
+    $building->refresh();
+
+    expect($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->decision_type)->toBe(CommitteeDecision::TYPE_HIGHER_COMMITTEE)
+        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($decision->arcgis_last_response)->toBe('Higher committee referrals do not set a final damage status.')
+        ->and($building->building_damage_status)->toBe('committee_review')
+        ->and($building->field_status)->toBe('COMPLETED')
+        ->and(BuildingSurveyArchiveObject::query()
+            ->where('source_type', 'committee_decision')
+            ->where('committee_decision_id', $decision->id)
+            ->where('building_objectid', $building->objectid)
+            ->exists())->toBeTrue();
+
+    Http::assertNothingSent();
+});
+
 it('allows a linked committee member to sign their own signature without global sign permission', function () {
     $manager = User::factory()->create();
     $manager->givePermissionTo([

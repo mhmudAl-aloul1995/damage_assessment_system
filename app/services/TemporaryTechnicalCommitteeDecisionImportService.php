@@ -487,7 +487,11 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private function decisionTypeForExistingDecision(CommitteeDecision $decision): ?string
     {
-        if (in_array($decision->decision_type, ['fully_damaged', 'partially_damaged'], true)) {
+        if (in_array($decision->decision_type, [
+            CommitteeDecision::TYPE_FULLY_DAMAGED,
+            CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+            CommitteeDecision::TYPE_HIGHER_COMMITTEE,
+        ], true)) {
             return $decision->decision_type;
         }
 
@@ -498,11 +502,22 @@ class TemporaryTechnicalCommitteeDecisionImportService
         ])))->lower()->toString();
 
         if (
+            str_contains($decisionText, 'لجنة عليا')
+            || str_contains($decisionText, 'لجنة فنية')
+            || str_contains($decisionText, 'تحول لجنة')
+            || str_contains($decisionText, 'تحويل')
+            || str_contains($decisionText, 'higher committee')
+            || str_contains($decisionText, 'technical committee')
+        ) {
+            return CommitteeDecision::TYPE_HIGHER_COMMITTEE;
+        }
+
+        if (
             str_contains($decisionText, 'كلي')
             || str_contains($decisionText, 'ظƒظ„ظٹ')
             || str_contains($decisionText, 'fully')
         ) {
-            return 'fully_damaged';
+            return CommitteeDecision::TYPE_FULLY_DAMAGED;
         }
 
         if (
@@ -510,7 +525,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
             || str_contains($decisionText, 'ط¬ط²ط¦ظٹ')
             || str_contains($decisionText, 'partial')
         ) {
-            return 'partially_damaged';
+            return CommitteeDecision::TYPE_PARTIALLY_DAMAGED;
         }
 
         return self::DEFAULT_EXISTING_DECISION_TYPE;
@@ -597,9 +612,15 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private function updateLocalDecisionableStatus(Model $decisionable, string $decisionType): void
     {
+        if ($decisionType === CommitteeDecision::TYPE_HIGHER_COMMITTEE) {
+            return;
+        }
+
         if ($decisionable instanceof Building) {
             $decisionable->forceFill([
-                'building_damage_status' => $decisionType === 'fully_damaged' ? 'fully_damaged' : 'partially_damaged',
+                'building_damage_status' => $decisionType === CommitteeDecision::TYPE_FULLY_DAMAGED
+                    ? CommitteeDecision::TYPE_FULLY_DAMAGED
+                    : CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
                 'field_status' => 'Not_Completed',
             ])->save();
 
@@ -611,7 +632,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
         }
 
         $decisionable->forceFill([
-            'unit_damage_status' => $decisionType === 'fully_damaged' ? 'fully_damaged2' : 'partially_damaged2',
+            'unit_damage_status' => $decisionType === CommitteeDecision::TYPE_FULLY_DAMAGED ? 'fully_damaged2' : 'partially_damaged2',
         ])->save();
 
         $building = $decisionable->building;

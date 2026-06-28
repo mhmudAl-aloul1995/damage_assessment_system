@@ -99,11 +99,11 @@ it('can dry run the temporary excel import without saving records', function () 
         ->and(CommitteeDecisionSignature::query()->count())->toBe(0);
 });
 
-it('skips committee decision rows that are not fully or partially damaged', function () {
-    Building::query()->create([
+it('imports committee decision rows that refer records to a higher committee', function () {
+    $building = Building::query()->create([
         'objectid' => 3001,
         'globalid' => 'building-globalid-3001',
-        'building_name' => 'Skipped Building',
+        'building_name' => 'Higher Committee Building',
         'building_damage_status' => 'committee_review',
     ]);
 
@@ -119,9 +119,16 @@ it('skips committee decision rows that are not fully or partially damaged', func
     ]);
 
     expect($summary['rows'])->toBe(1)
-        ->and($summary['skipped_rows'])->toBe(1)
-        ->and($summary['issues'][0]['reason'])->toBe('Decision text is not classified as fully or partially damaged.')
-        ->and(CommitteeDecision::query()->count())->toBe(0);
+        ->and($summary['skipped_rows'])->toBe(0)
+        ->and($summary['decisions_created'])->toBe(1)
+        ->and($summary['issues'])->toBeEmpty();
+
+    $decision = CommitteeDecision::query()
+        ->whereMorphedTo('decisionable', $building)
+        ->firstOrFail();
+
+    expect($decision->decision_type)->toBe(CommitteeDecision::TYPE_HIGHER_COMMITTEE)
+        ->and($decision->decision_text)->toBe('تحول لجنة فنية أخرى');
 });
 
 function committeeDecisionWorkbookPath(array $records): string

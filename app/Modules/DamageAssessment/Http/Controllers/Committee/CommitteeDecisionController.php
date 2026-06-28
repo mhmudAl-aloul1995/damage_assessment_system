@@ -325,8 +325,9 @@ class CommitteeDecisionController extends Controller
             'canSign' => auth()->user()->can('sign committee decisions'),
             'canRetryArcgis' => auth()->user()->can('sync committee decision arcgis'),
             'decisionTypes' => [
-                'fully_damaged' => 'كلي',
-                'partially_damaged' => 'جزئي',
+                CommitteeDecision::TYPE_FULLY_DAMAGED => 'كلي',
+                CommitteeDecision::TYPE_PARTIALLY_DAMAGED => 'جزئي',
+                CommitteeDecision::TYPE_HIGHER_COMMITTEE => 'لجنة عليا',
             ],
             'statusLabels' => [
                 CommitteeDecision::STATUS_DRAFT => 'مسودة',

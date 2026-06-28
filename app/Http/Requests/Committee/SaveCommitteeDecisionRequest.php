@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Committee;
 
+use App\Models\CommitteeDecision;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,8 +19,9 @@ class SaveCommitteeDecisionRequest extends FormRequest
     {
         return [
             'decision_type' => ['required', 'string', Rule::in([
-                'fully_damaged',
-                'partially_damaged',
+                CommitteeDecision::TYPE_FULLY_DAMAGED,
+                CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+                CommitteeDecision::TYPE_HIGHER_COMMITTEE,
             ])],
             'decision_text' => ['required', 'string'],
             'action_text' => ['nullable', 'string'],

@@ -14,6 +14,12 @@ class CommitteeDecision extends Model
 {
     use HasFactory;
 
+    public const TYPE_FULLY_DAMAGED = 'fully_damaged';
+
+    public const TYPE_PARTIALLY_DAMAGED = 'partially_damaged';
+
+    public const TYPE_HIGHER_COMMITTEE = 'higher_committee';
+
     public const STATUS_DRAFT = 'draft';
 
     public const STATUS_PENDING_SIGNATURES = 'pending_signatures';
@@ -96,5 +102,10 @@ class CommitteeDecision extends Model
     public function isCompleted(): bool
     {
         return $this->status === self::STATUS_COMPLETED;
+    }
+
+    public function refersToHigherCommittee(): bool
+    {
+        return $this->decision_type === self::TYPE_HIGHER_COMMITTEE;
     }
 }
