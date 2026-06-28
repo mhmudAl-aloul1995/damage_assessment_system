@@ -148,11 +148,11 @@ class CommitteeDecisionWorkflowExcelImportService
 
     private function recordTypeFromSheetName(string $sheetName): ?string
     {
-        if (str_contains($sheetName, 'وحدات')) {
+        if (str_contains($sheetName, 'وحدات') || str_contains($sheetName, 'ظˆط­ط¯ط§طھ')) {
             return 'housing-unit';
         }
 
-        if (str_contains($sheetName, 'مباني')) {
+        if (str_contains($sheetName, 'مباني') || str_contains($sheetName, 'ظ…ط¨ط§ظ†ظٹ')) {
             return 'building';
         }
 
@@ -203,15 +203,15 @@ class CommitteeDecisionWorkflowExcelImportService
             return null;
         }
 
-        if (str_contains($decision, 'لجنة')) {
+        if (str_contains($decision, 'لجنة') || str_contains($decision, 'ظ„ط¬ظ†ط©')) {
             return CommitteeDecision::TYPE_HIGHER_COMMITTEE;
         }
 
-        if (str_contains($decision, 'كلي')) {
+        if (str_contains($decision, 'كلي') || str_contains($decision, 'ظƒظ„ظٹ')) {
             return CommitteeDecision::TYPE_FULLY_DAMAGED;
         }
 
-        if (str_contains($decision, 'جزئي')) {
+        if (str_contains($decision, 'جزئي') || str_contains($decision, 'ط¬ط²ط¦ظٹ')) {
             return CommitteeDecision::TYPE_PARTIALLY_DAMAGED;
         }
 
@@ -255,7 +255,13 @@ class CommitteeDecisionWorkflowExcelImportService
 
     private function isYes(mixed $value): bool
     {
-        return $this->value($value) === 'نعم';
+        $normalizedValue = str($this->value($value))->lower()->trim()->toString();
+
+        if (in_array($normalizedValue, ['نعم', 'yes', 'y', '1', 'true'], true)) {
+            return true;
+        }
+
+        return $this->value($value) === 'ظ†ط¹ظ…';
     }
 
     /**

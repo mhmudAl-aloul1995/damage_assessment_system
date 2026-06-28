@@ -165,6 +165,22 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         'unit_damage_status' => 'fully_damaged2',
     ]);
 
+    $resurveyUnitParentBuilding = Building::query()->create([
+        'objectid' => 9705,
+        'globalid' => 'workflow-excel-resurvey-unit-parent',
+        'building_name' => 'Workflow Excel Resurvey Unit Parent',
+        'building_damage_status' => 'fully_damaged',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $resurveyHousingUnit = HousingUnit::query()->create([
+        'objectid' => 9706,
+        'globalid' => 'workflow-excel-resurvey-unit',
+        'parentglobalid' => $resurveyUnitParentBuilding->globalid,
+        'housing_unit_number' => 'U-2',
+        'unit_damage_status' => 'fully_damaged2',
+    ]);
+
     $secondBuilding = Building::query()->create([
         'objectid' => 9704,
         'globalid' => 'workflow-excel-second-building',
@@ -191,6 +207,16 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             'decision_text' => 'ضرر جزئي للوحدة',
             'action_text' => 'اعادة الوحدة للمهندس',
             'resurvey' => 'لا',
+            'member_name' => 'Excel Member',
+            'member_id' => '800846958',
+        ],
+        [
+            'sheet' => 'خانيونس-وحدات إعادة',
+            'objectid' => 9706,
+            'decision' => 'جزئي',
+            'decision_text' => 'ضرر جزئي للوحدة مع إعادة حصر',
+            'action_text' => 'اعادة الوحدة للمهندس',
+            'resurvey' => 'نعم',
             'member_name' => 'Excel Member',
             'member_id' => '800846958',
         ],
@@ -240,6 +266,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
 
     $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
     $unitDecision = CommitteeDecision::query()->whereMorphedTo('decisionable', $housingUnit)->firstOrFail();
+    $resurveyUnitDecision = CommitteeDecision::query()->whereMorphedTo('decisionable', $resurveyHousingUnit)->firstOrFail();
     $secondDecision = CommitteeDecision::query()->whereMorphedTo('decisionable', $secondBuilding)->firstOrFail();
     $buildingArchiveObject = BuildingSurveyArchiveObject::query()
         ->where('committee_decision_id', $decision->id)
@@ -250,25 +277,32 @@ it('imports uploaded workflow excel decisions from the committee decisions index
     $building->refresh();
     $housingUnit->refresh();
     $unitParentBuilding->refresh();
+    $resurveyHousingUnit->refresh();
+    $resurveyUnitParentBuilding->refresh();
 
     expect($decision->decision_type)->toBe(CommitteeDecision::TYPE_FULLY_DAMAGED)
         ->and($decision->decision_text)->toBe('هدم كلي')
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($building->building_damage_status)->toBe('committee_review')
         ->and($building->field_status)->toBe('COMPLETED')
+        ->and($decision->arcgis_sync_status)->toBeNull()
         ->and($buildingArchiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
         ->and($unitDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
         ->and($unitDecision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($housingUnit->unit_damage_status)->toBe('partially_damaged2')
         ->and($unitParentBuilding->field_status)->toBe('Not_Completed')
         ->and($unitArchiveObject->housing_unit_snapshot['unit_damage_status'])->toBe('committee_review2')
+        ->and($resurveyUnitDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
+        ->and($resurveyHousingUnit->unit_damage_status)->toBe('committee_review2')
+        ->and($resurveyUnitParentBuilding->field_status)->toBe('COMPLETED')
+        ->and($resurveyUnitDecision->arcgis_sync_status)->toBeNull()
         ->and($secondDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
         ->and($secondDecision->decision_text)->toBe('ضرر جزئي من الملف الثاني')
         ->and(CommitteeDecision::query()->whereKey($staleDecision->id)->exists())->toBeFalse()
         ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
         ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
         ->and(BuildingSurveyArchiveObject::query()->where('source_type', 'temporary_committee_excel_archive')->exists())->toBeFalse()
-        ->and(CommitteeDecision::query()->count())->toBe(3)
+        ->and(CommitteeDecision::query()->count())->toBe(4)
         ->and(CommitteeDecisionSignature::query()
             ->where('committee_decision_id', $decision->id)
             ->where('status', 'approved')

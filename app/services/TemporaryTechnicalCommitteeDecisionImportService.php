@@ -128,7 +128,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
                     $forcedCommitteeStatus ? 'Status was moved to committee review before importing this decision.' : null,
                 ]))),
             );
-            $this->syncArcGisDecisionStatus($decision);
+            if (! $resurveyCompleted) {
+                $this->syncArcGisDecisionStatus($decision);
+            }
             $summary['decisions_completed']++;
         }
 
