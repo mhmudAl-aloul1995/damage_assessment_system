@@ -15,6 +15,7 @@ class ImportCommitteeDecisionWorkflowExcelRequest extends FormRequest
     {
         return [
             'committee_decisions_excel' => ['required', 'file', 'mimes:xlsx', 'max:20480'],
+            'clear_existing_committee_decisions' => ['nullable', 'boolean'],
         ];
     }
 

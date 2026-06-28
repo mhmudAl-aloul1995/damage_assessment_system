@@ -15,6 +15,7 @@
         <div class="alert alert-info mb-5">
             <div class="fw-bold mb-2">ملخص استيراد قرارات اللجنة</div>
             <div class="d-flex gap-4 flex-wrap">
+                <span>تم تفريغها: {{ $committeeImportSummary['cleared_decisions'] ?? 0 }}</span>
                 <span>الصفوف: {{ $committeeImportSummary['rows'] ?? 0 }}</span>
                 <span>المكتملة: {{ $committeeImportSummary['decisions_completed'] ?? 0 }}</span>
                 <span>المتجاوزة: {{ $committeeImportSummary['skipped_rows'] ?? 0 }}</span>
@@ -141,6 +142,10 @@
                     <form method="POST" action="{{ route('committee-decisions.workflow-excel.import') }}" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap justify-content-end">
                         @csrf
                         <input type="file" name="committee_decisions_excel" accept=".xlsx" class="form-control form-control-solid w-auto" required>
+                        <label class="form-check form-check-custom form-check-solid align-self-center">
+                            <input class="form-check-input" type="checkbox" name="clear_existing_committee_decisions" value="1" checked>
+                            <span class="form-check-label">تفريغ البيانات القديمة قبل الاستيراد</span>
+                        </label>
                         <button type="submit" class="btn btn-light-primary">استيراد قرارات اللجنة</button>
                     </form>
                 @endif

@@ -10,7 +10,9 @@ use App\Http\Requests\Committee\ImportCommitteeDecisionWorkflowExcelRequest;
 use App\Http\Requests\Committee\SaveCommitteeDecisionRequest;
 use App\Http\Requests\Committee\SignCommitteeDecisionRequest;
 use App\Models\Building;
+use App\Models\BuildingSurveyArchiveObject;
 use App\Models\CommitteeDecision;
+use App\Models\CommitteeDecisionSignature;
 use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\services\ArcGisStatusUpdaterService;
@@ -22,6 +24,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -93,7 +96,12 @@ class CommitteeDecisionController extends Controller
         CommitteeDecisionWorkflowExcelImportService $importer,
     ): RedirectResponse {
         try {
+            $clearedDecisionCount = $request->boolean('clear_existing_committee_decisions')
+                ? $this->clearExistingCommitteeDecisionData()
+                : 0;
+
             $summary = $importer->import((string) $request->file('committee_decisions_excel')?->getRealPath());
+            $summary['cleared_decisions'] = $clearedDecisionCount;
         } catch (RuntimeException $exception) {
             return redirect()
                 ->back()
@@ -103,13 +111,31 @@ class CommitteeDecisionController extends Controller
         return redirect()
             ->route('committee-decisions.index')
             ->with('success', sprintf(
-                'تم استيراد ملف قرارات اللجنة. الصفوف: %s، القرارات المكتملة: %s، الصفوف المتجاوزة: %s، أرقام الهوية غير المطابقة: %s.',
+                'تم استيراد ملف قرارات اللجنة. تم تفريغ %s قرار سابق. الصفوف: %s، القرارات المكتملة: %s، الصفوف المتجاوزة: %s، أرقام الهوية غير المطابقة: %s.',
+                $clearedDecisionCount,
                 $summary['rows'] ?? 0,
                 $summary['decisions_completed'] ?? 0,
                 $summary['skipped_rows'] ?? 0,
                 count($summary['missing_users'] ?? []),
             ))
             ->with('committee_import_summary', $summary);
+    }
+
+    private function clearExistingCommitteeDecisionData(): int
+    {
+        return DB::transaction(function (): int {
+            $decisionCount = CommitteeDecision::query()->count();
+
+            BuildingSurveyArchiveObject::query()
+                ->where('source_type', 'committee_decision')
+                ->orWhereNotNull('committee_decision_id')
+                ->delete();
+
+            CommitteeDecisionSignature::query()->delete();
+            CommitteeDecision::query()->delete();
+
+            return $decisionCount;
+        });
     }
 
     public function showBuilding(Building $building): View

@@ -109,6 +109,30 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         'id_no' => '800846958',
     ]);
 
+    $staleBuilding = Building::query()->create([
+        'objectid' => 9700,
+        'globalid' => 'stale-workflow-excel-building',
+        'building_name' => 'Stale Workflow Excel Building',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $staleDecision = CommitteeDecision::factory()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $staleBuilding->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+    ]);
+    CommitteeDecisionSignature::factory()->create([
+        'committee_decision_id' => $staleDecision->id,
+    ]);
+    BuildingSurveyArchiveObject::query()->create([
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $staleDecision->id,
+        'building_objectid' => $staleBuilding->objectid,
+        'building_globalid' => $staleBuilding->globalid,
+        'archived_by' => $manager->id,
+        'archived_at' => now(),
+    ]);
+
     $building = Building::query()->create([
         'objectid' => 9701,
         'globalid' => 'workflow-excel-building',
@@ -133,10 +157,12 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->get(route('committee-decisions.index'))
         ->assertOk()
         ->assertSee('committee_decisions_excel', false)
+        ->assertSee('clear_existing_committee_decisions', false)
         ->assertSee('استيراد قرارات اللجنة', false);
 
     $this->actingAs($manager)
         ->post(route('committee-decisions.workflow-excel.import'), [
+            'clear_existing_committee_decisions' => '1',
             'committee_decisions_excel' => new UploadedFile(
                 $path,
                 'workflow-decisions.xlsx',
@@ -156,6 +182,10 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('COMPLETED')
+        ->and(CommitteeDecision::query()->whereKey($staleDecision->id)->exists())->toBeFalse()
+        ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
+        ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $staleDecision->id)->exists())->toBeFalse()
+        ->and(CommitteeDecision::query()->count())->toBe(1)
         ->and(CommitteeDecisionSignature::query()
             ->where('committee_decision_id', $decision->id)
             ->where('status', 'approved')
