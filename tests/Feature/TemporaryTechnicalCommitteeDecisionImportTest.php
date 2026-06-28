@@ -8,8 +8,26 @@ use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\Models\User;
 use App\services\TemporaryTechnicalCommitteeDecisionImportService;
+use Illuminate\Support\Facades\Http;
+
+beforeEach(function (): void {
+    config()->set('services.committee_decisions.arcgis.base_url', '');
+    config()->set('services.committee_decisions.arcgis.token', '');
+    config()->set('services.arcgis.buildings_url', '');
+});
 
 it('temporarily completes building committee decisions from static seed records when the building is in committee review', function () {
+    config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
+    config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
+    config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
+    config()->set('services.committee_decisions.arcgis.token', 'static-token');
+
+    Http::fake([
+        'https://example.test/arcgis/FeatureServer/0/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+    ]);
+
     temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667', '956242622']);
 
     $building = Building::query()->create([
@@ -68,7 +86,7 @@ it('temporarily completes building committee decisions from static seed records 
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($decision->decision_type)->toBe('fully_damaged')
         ->and($decision->action_text)->toBe('اعادة المبنى للمهندس لحصره')
-        ->and($decision->arcgis_sync_status)->toBe('skipped');
+        ->and($decision->arcgis_sync_status)->toBe('synced');
 
     $building->refresh();
 
@@ -79,6 +97,15 @@ it('temporarily completes building committee decisions from static seed records 
         ->and($archiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
         ->and($archiveObject->building_snapshot['field_status'])->toBe('COMPLETED')
         ->and($archiveObject->committee_decision_snapshot['decision_type'])->toBe('fully_damaged');
+
+    Http::assertSent(function ($request): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/0/updateFeatures')
+            && data_get($features, '0.attributes.objectid') === 3293
+            && data_get($features, '0.attributes.building_damage_status') === 'fully_damaged'
+            && data_get($features, '0.attributes.field_status') === 'Not_Completed';
+    });
 });
 
 it('temporarily completes housing unit committee decisions from static unit sheet records and updates the parent building field status', function () {
@@ -180,7 +207,7 @@ it('syncs configured municipality signatures onto existing committee review deci
         ->and($summary['skipped_without_decision_type'])->toBe(0)
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($decision->decision_type)->toBe('partially_damaged')
-        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($decision->arcgis_sync_status)->toBe('not_configured')
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
         ->and(BuildingSurveyArchiveObject::query()->where('committee_decision_id', $decision->id)->exists())->toBeTrue()
@@ -227,7 +254,7 @@ it('temporarily completes existing committee review decisions with a default par
         ->and($summary['skipped_without_decision_type'])->toBe(0)
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($decision->decision_type)->toBe('partially_damaged')
-        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($decision->arcgis_sync_status)->toBe('not_configured')
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
         ->and($decision->signatures->pluck('committeeMember.user.id_no')->all())->toBe([
@@ -261,7 +288,7 @@ it('creates and completes missing committee decisions for review records that sh
         ->and($summary['decisions_completed'])->toBe(1)
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($decision->decision_type)->toBe('partially_damaged')
-        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($decision->arcgis_sync_status)->toBe('not_configured')
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
         ->and($decision->signatures)->toHaveCount(5)
@@ -296,7 +323,7 @@ it('creates and completes missing block f committee decisions with the gaza comm
         ->and($summary['decisions_completed'])->toBe(1)
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($decision->decision_type)->toBe('partially_damaged')
-        ->and($decision->arcgis_sync_status)->toBe('skipped')
+        ->and($decision->arcgis_sync_status)->toBe('not_configured')
         ->and($building->building_damage_status)->toBe('partially_damaged')
         ->and($building->field_status)->toBe('Not_Completed')
         ->and($decision->signatures)->toHaveCount(5)

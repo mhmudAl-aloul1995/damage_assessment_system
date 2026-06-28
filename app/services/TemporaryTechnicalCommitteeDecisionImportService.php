@@ -25,6 +25,8 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private const KHAN_YOUNIS_NUSEIRAT_MEMBER_ID_NUMBERS = ['801933490', '800282667', '800846958', '804475044', '801113747'];
 
+    public function __construct(private readonly ArcGisStatusUpdaterService $arcGisStatusUpdaterService) {}
+
     /**
      * @param  list<array{
      *     record_type: string,
@@ -111,7 +113,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 continue;
             }
 
-            $this->completeDecision(
+            $decision = $this->completeDecision(
                 $decisionable,
                 $record['decision_type'],
                 $record['decision_text'],
@@ -125,6 +127,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
                     $forcedCommitteeStatus ? 'Status was moved to committee review before importing this decision.' : null,
                 ]))),
             );
+            $this->syncArcGisDecisionStatus($decision);
             $summary['decisions_completed']++;
         }
 
@@ -346,7 +349,8 @@ class TemporaryTechnicalCommitteeDecisionImportService
             return;
         }
 
-        $this->completeExistingReviewDecision($decisionable, $decision, $decisionType, $members);
+        $decision = $this->completeExistingReviewDecision($decisionable, $decision, $decisionType, $members);
+        $this->syncArcGisDecisionStatus($decision);
         $summary['decisions_completed']++;
     }
 
@@ -604,9 +608,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
     /**
      * @param  list<CommitteeMember>  $members
      */
-    private function completeExistingReviewDecision(Building|HousingUnit $decisionable, CommitteeDecision $decision, string $decisionType, array $members): void
+    private function completeExistingReviewDecision(Building|HousingUnit $decisionable, CommitteeDecision $decision, string $decisionType, array $members): CommitteeDecision
     {
-        DB::transaction(function () use ($decisionable, $decision, $decisionType, $members): void {
+        return DB::transaction(function () use ($decisionable, $decision, $decisionType, $members): CommitteeDecision {
             $completedAt = Carbon::now();
             $managerUserId = $members[0]->user_id;
 
@@ -618,22 +622,21 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 'created_by' => $decision->created_by ?? $managerUserId,
                 'updated_by' => $managerUserId,
                 'completed_at' => $decision->completed_at ?? $completedAt,
-                'arcgis_sync_status' => 'skipped',
-                'arcgis_last_attempt_at' => $completedAt,
-                'arcgis_last_response' => 'Temporary seed completed existing committee review decision and updated local status fields only.',
             ])->save();
 
             $this->archiveDecisionObject($decision, $decisionable, $managerUserId, $completedAt);
             $this->updateLocalDecisionableStatus($decisionable, $decisionType);
+
+            return $decision->refresh();
         });
     }
 
     /**
      * @param  list<CommitteeMember>  $members
      */
-    private function completeDecision(Model $decisionable, string $decisionType, string $decisionText, ?string $actionText, string $municipality, array $members, bool $applyLocalStatus = true, ?string $decisionDate = null, ?string $notes = null): void
+    private function completeDecision(Model $decisionable, string $decisionType, string $decisionText, ?string $actionText, string $municipality, array $members, bool $applyLocalStatus = true, ?string $decisionDate = null, ?string $notes = null): CommitteeDecision
     {
-        DB::transaction(function () use ($decisionable, $decisionType, $decisionText, $actionText, $municipality, $members, $applyLocalStatus, $decisionDate, $notes): void {
+        return DB::transaction(function () use ($decisionable, $decisionType, $decisionText, $actionText, $municipality, $members, $applyLocalStatus, $decisionDate, $notes): CommitteeDecision {
             /** @var CommitteeDecision $decision */
             $decision = CommitteeDecision::query()->firstOrNew([
                 'decisionable_type' => $decisionable::class,
@@ -657,9 +660,6 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 'created_by' => $decision->created_by ?? $managerUserId,
                 'updated_by' => $managerUserId,
                 'completed_at' => $signedAt,
-                'arcgis_sync_status' => 'skipped',
-                'arcgis_last_attempt_at' => $signedAt,
-                'arcgis_last_response' => 'Temporary seed updated local status fields only.',
             ])->save();
 
             CommitteeDecisionSignature::query()
@@ -683,7 +683,22 @@ class TemporaryTechnicalCommitteeDecisionImportService
             if ($applyLocalStatus) {
                 $this->updateLocalDecisionableStatus($decisionable, $decisionType);
             }
+
+            return $decision->refresh();
         });
+    }
+
+    private function syncArcGisDecisionStatus(CommitteeDecision $decision): void
+    {
+        $result = $this->arcGisStatusUpdaterService->syncDecisionStatus($decision->load('decisionable'));
+
+        $decision->forceFill([
+            'arcgis_sync_status' => $result['status'] ?? null,
+            'arcgis_last_attempt_at' => now(),
+            'arcgis_synced_at' => ($result['success'] ?? false) ? now() : $decision->arcgis_synced_at,
+            'arcgis_last_error' => ($result['success'] ?? false) ? null : ($result['message'] ?? null),
+            'arcgis_last_response' => $result['message'] ?? null,
+        ])->save();
     }
 
     private function updateLocalDecisionableStatus(Model $decisionable, string $decisionType): void
