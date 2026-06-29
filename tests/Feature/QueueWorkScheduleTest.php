@@ -5,7 +5,9 @@ use Illuminate\Console\Scheduling\Schedule;
 test('queue work is scheduled every minute', function () {
     $queueWorkEvent = collect(app(Schedule::class)->events())
         ->first(function (object $event): bool {
-            return str_contains($event->command, 'queue:work --stop-when-empty');
+            return str_contains($event->command, 'queue:work')
+                && str_contains($event->command, '--stop-when-empty')
+                && str_contains($event->command, '--queue=exports');
         });
 
     expect($queueWorkEvent)->not->toBeNull();

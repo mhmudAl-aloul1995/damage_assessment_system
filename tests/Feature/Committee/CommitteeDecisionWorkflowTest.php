@@ -359,7 +359,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
         ->and($building->building_damage_status)->toBe('committee_review')
         ->and($building->field_status)->toBe('COMPLETED')
-        ->and($decision->arcgis_sync_status)->toBe('synced')
+        ->and($decision->arcgis_sync_status)->toBeNull()
         ->and($buildingArchiveObject->building_snapshot['building_damage_status'])->toBe('committee_review')
         ->and($unitDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
         ->and($unitDecision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
@@ -369,7 +369,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
         ->and($resurveyUnitDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
         ->and($resurveyHousingUnit->unit_damage_status)->toBe('committee_review2')
         ->and($resurveyUnitParentBuilding->field_status)->toBe('COMPLETED')
-        ->and($resurveyUnitDecision->arcgis_sync_status)->toBe('synced')
+        ->and($resurveyUnitDecision->arcgis_sync_status)->toBeNull()
         ->and($secondDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
         ->and($secondDecision->decision_text)->toBe('ضرر جزئي من الملف الثاني')
         ->and(CommitteeDecision::query()->whereKey($staleDecision->id)->exists())->toBeFalse()
@@ -388,46 +388,7 @@ it('imports uploaded workflow excel decisions from the committee decisions index
             ->where('building_objectid', $building->objectid)
             ->exists())->toBeTrue();
 
-    Http::assertSent(function ($request): bool {
-        $features = json_decode((string) data_get($request->data(), 'features'), true);
-
-        return str_contains($request->url(), '/0/updateFeatures')
-            && data_get($features, '0.attributes.objectid') === 9701
-            && data_get($features, '0.attributes.Field_status') === 'COMPLETED';
-    });
-
-    Http::assertSent(function ($request): bool {
-        $features = json_decode((string) data_get($request->data(), 'features'), true);
-
-        return str_contains($request->url(), '/1/updateFeatures')
-            && data_get($features, '0.attributes.objectid') === 9703
-            && data_get($features, '0.attributes.unit_damage_status') === 'partially_damaged2'
-            && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
-    });
-
-    Http::assertSent(function ($request) use ($unitParentBuilding): bool {
-        $features = json_decode((string) data_get($request->data(), 'features'), true);
-
-        return str_contains($request->url(), '/0/updateFeatures')
-            && data_get($features, '0.attributes.globalid') === $unitParentBuilding->globalid
-            && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
-    });
-
-    Http::assertSent(function ($request): bool {
-        $features = json_decode((string) data_get($request->data(), 'features'), true);
-
-        return str_contains($request->url(), '/1/updateFeatures')
-            && data_get($features, '0.attributes.objectid') === 9706
-            && data_get($features, '0.attributes.Field_status') === 'COMPLETED';
-    });
-
-    Http::assertSent(function ($request) use ($resurveyUnitParentBuilding): bool {
-        $features = json_decode((string) data_get($request->data(), 'features'), true);
-
-        return str_contains($request->url(), '/0/updateFeatures')
-            && data_get($features, '0.attributes.globalid') === $resurveyUnitParentBuilding->globalid
-            && data_get($features, '0.attributes.Field_status') === 'COMPLETED';
-    });
+    Http::assertNothingSent();
 
     $this->withSession([
         'committee_import_summary' => [
