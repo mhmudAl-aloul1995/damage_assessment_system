@@ -119,6 +119,9 @@ return [
             'retry_times' => env('COMMITTEE_ARCGIS_RETRY_TIMES', 2),
             'retry_sleep' => env('COMMITTEE_ARCGIS_RETRY_SLEEP', 1000),
             'verify_ssl' => env('COMMITTEE_ARCGIS_VERIFY_SSL', false),
+            'sync_inline' => env('COMMITTEE_ARCGIS_SYNC_INLINE'),
+            'queue_connection' => env('COMMITTEE_ARCGIS_QUEUE_CONNECTION', 'database'),
+            'queue_name' => env('COMMITTEE_ARCGIS_QUEUE_NAME', 'committee-arcgis'),
         ],
     ],
 

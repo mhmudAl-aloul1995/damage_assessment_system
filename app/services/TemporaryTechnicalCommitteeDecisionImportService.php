@@ -2,6 +2,7 @@
 
 namespace App\services;
 
+use App\Jobs\SyncCommitteeDecisionArcGis;
 use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
 use App\Models\CommitteeDecision;
@@ -747,6 +748,12 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private function syncArcGisDecisionStatus(CommitteeDecision $decision): void
     {
+        if (! $this->shouldSyncArcGisInline()) {
+            $this->queueArcGisSync($decision);
+
+            return;
+        }
+
         $result = $this->arcGisStatusUpdaterService->syncDecisionStatus($decision->load('decisionable'));
 
         $this->markArcGisResult($decision, $result);
@@ -754,9 +761,40 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private function syncArcGisResurveyCompletedFieldStatus(CommitteeDecision $decision): void
     {
+        if (! $this->shouldSyncArcGisInline()) {
+            $this->queueArcGisSync($decision, 'COMPLETED');
+
+            return;
+        }
+
         $result = $this->arcGisStatusUpdaterService->syncDecisionFieldStatus($decision->load('decisionable'), 'COMPLETED');
 
         $this->markArcGisResult($decision, $result);
+    }
+
+    private function shouldSyncArcGisInline(): bool
+    {
+        $configured = config('services.committee_decisions.arcgis.sync_inline');
+
+        if ($configured !== null) {
+            return (bool) $configured;
+        }
+
+        return app()->environment('testing');
+    }
+
+    private function queueArcGisSync(CommitteeDecision $decision, ?string $fieldStatus = null): void
+    {
+        $decision->forceFill([
+            'arcgis_sync_status' => 'retrying',
+            'arcgis_last_attempt_at' => now(),
+            'arcgis_last_error' => null,
+            'arcgis_last_response' => 'ArcGIS sync queued.',
+        ])->save();
+
+        SyncCommitteeDecisionArcGis::dispatch($decision->id, $fieldStatus)
+            ->onConnection((string) config('services.committee_decisions.arcgis.queue_connection', 'database'))
+            ->onQueue((string) config('services.committee_decisions.arcgis.queue_name', 'committee-arcgis'));
     }
 
     /**

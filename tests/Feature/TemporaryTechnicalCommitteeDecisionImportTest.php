@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\SyncCommitteeDecisionArcGis;
 use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
 use App\Models\CommitteeDecision;
@@ -9,6 +10,7 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use App\services\TemporaryTechnicalCommitteeDecisionImportService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function (): void {
     config()->set('services.committee_decisions.arcgis.base_url', '');
@@ -106,6 +108,47 @@ it('temporarily completes building committee decisions from static seed records 
             && data_get($features, '0.attributes.building_damage_status') === 'fully_damaged'
             && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
     });
+});
+
+it('queues arcgis sync during committee decision imports when inline sync is disabled', function () {
+    config()->set('services.committee_decisions.arcgis.sync_inline', false);
+
+    Http::fake();
+    Queue::fake();
+
+    temporaryCommitteeUsers(['934863572']);
+
+    $building = Building::query()->create([
+        'objectid' => 4301,
+        'globalid' => 'building-globalid-4301',
+        'building_name' => 'Queued ArcGIS Building',
+        'building_damage_status' => 'committee_review',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importRecords([
+        [
+            'record_type' => 'building',
+            'municipality' => 'Gaza',
+            'sheet' => 'Gaza buildings',
+            'row' => 2,
+            'objectid' => 4301,
+            'globalid' => $building->globalid,
+            'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+            'decision_text' => 'Partial damage',
+            'action_text' => null,
+            'member_id_numbers' => ['934863572'],
+        ],
+    ]);
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
+
+    expect($summary['decisions_completed'])->toBe(1)
+        ->and($decision->arcgis_sync_status)->toBe('retrying')
+        ->and($decision->arcgis_last_response)->toBe('ArcGIS sync queued.');
+
+    Queue::assertPushedOn('committee-arcgis', SyncCommitteeDecisionArcGis::class);
+    Http::assertNothingSent();
 });
 
 it('temporarily completes housing unit committee decisions from static unit sheet records and updates the parent building field status', function () {
