@@ -98,6 +98,25 @@ it('shows committee decision pages and datatable data for buildings and housing 
         'updated_by' => $user->id,
     ]);
 
+    $resurveyBuilding = Building::query()->create([
+        'objectid' => 9004,
+        'globalid' => 'building-guid-resurvey-completed',
+        'building_name' => 'Resurvey Completed Tower',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'building_damage_status' => 'committee_review',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $resurveyBuilding->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'notes' => "Excel sheet: Gaza row: 10\nResurvey completed: yes",
+        'updated_by' => $user->id,
+    ]);
+
     $this->actingAs($user)
         ->get(route('committee-decisions.index'))
         ->assertOk()
@@ -138,7 +157,10 @@ it('shows committee decision pages and datatable data for buildings and housing 
             'has_decision' => 'yes',
         ]))
         ->assertOk()
-        ->assertJsonFragment(['building_name' => 'Completed Decision Tower']);
+        ->assertJsonFragment(['building_name' => 'Completed Decision Tower'])
+        ->assertJsonFragment(['building_name' => 'Resurvey Completed Tower'])
+        ->assertSee('Field: Not_Completed', false)
+        ->assertSee('Field: COMPLETED', false);
 
     $this->actingAs($user)
         ->get(route('committee-decisions.housing-units.data', [
@@ -149,7 +171,8 @@ it('shows committee decision pages and datatable data for buildings and housing 
             'has_decision' => 'yes',
         ]))
         ->assertOk()
-        ->assertSee('B-22');
+        ->assertSee('B-22')
+        ->assertSee('Field: Not_Completed', false);
 
     $this->actingAs($user)
         ->get(route('committee-decisions.buildings.show', $building))

@@ -55,8 +55,9 @@ class CommitteeDecisionController extends Controller
                 : '<span class="badge badge-light-warning">لا يوجد</span>')
             ->addColumn('signatures_count', fn (Building $building): string => $this->signatureBadge($building->committeeDecision))
             ->addColumn('arcgis_status', fn (Building $building): string => $this->syncBadge($building->committeeDecision?->arcgis_sync_status, 'ArcGIS'))
+            ->addColumn('arcgis_field_status', fn (Building $building): string => $this->arcGisFieldStatusBadge($building))
             ->addColumn('actions', fn (Building $building): string => $this->actionButtons($building))
-            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'actions'])
+            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'arcgis_field_status', 'actions'])
             ->toJson();
     }
 
@@ -70,8 +71,9 @@ class CommitteeDecisionController extends Controller
                 : '<span class="badge badge-light-warning">لا يوجد</span>')
             ->addColumn('signatures_count', fn (HousingUnit $unit): string => $this->signatureBadge($unit->committeeDecision))
             ->addColumn('arcgis_status', fn (HousingUnit $unit): string => $this->syncBadge($unit->committeeDecision?->arcgis_sync_status, 'ArcGIS'))
+            ->addColumn('arcgis_field_status', fn (HousingUnit $unit): string => $this->arcGisFieldStatusBadge($unit))
             ->addColumn('actions', fn (HousingUnit $unit): string => $this->actionButtons($unit))
-            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'actions'])
+            ->rawColumns(['has_decision', 'signatures_count', 'arcgis_status', 'arcgis_field_status', 'actions'])
             ->toJson();
     }
 
@@ -274,7 +276,7 @@ class CommitteeDecisionController extends Controller
     private function housingUnitQuery(): Builder
     {
         return HousingUnit::query()
-            ->with(['building:id,globalid,building_name,assignedto,neighborhood', 'committeeDecision.signatures.committeeMember'])
+            ->with(['building:id,globalid,building_name,assignedto,neighborhood,field_status', 'committeeDecision.signatures.committeeMember'])
             ->select([
                 'id',
                 'objectid',
@@ -519,6 +521,36 @@ class CommitteeDecisionController extends Controller
         $text = $status ? str($status)->replace('_', ' ')->title() : 'Pending';
 
         return '<span class="badge badge-light-'.$color.'">'.$label.': '.e((string) $text).'</span>';
+    }
+
+    private function arcGisFieldStatusBadge(Building|HousingUnit $record): string
+    {
+        $status = $this->arcGisFieldStatusForRecord($record);
+
+        if ($status === null || $status === '') {
+            return '<span class="badge badge-light-secondary">Field: -</span>';
+        }
+
+        $color = strcasecmp($status, 'COMPLETED') === 0 ? 'success' : 'warning';
+
+        return '<span class="badge badge-light-'.$color.'">Field: '.e($status).'</span>';
+    }
+
+    private function arcGisFieldStatusForRecord(Building|HousingUnit $record): ?string
+    {
+        $decision = $record->committeeDecision;
+
+        if ($decision?->isCompleted()) {
+            return $this->shouldSyncCompletedFieldStatus($decision)
+                ? 'COMPLETED'
+                : 'Not_Completed';
+        }
+
+        if ($record instanceof HousingUnit) {
+            return $record->building?->field_status;
+        }
+
+        return $record->field_status;
     }
 
     /**
