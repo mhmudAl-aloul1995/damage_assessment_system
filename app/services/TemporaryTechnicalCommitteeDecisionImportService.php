@@ -285,7 +285,6 @@ class TemporaryTechnicalCommitteeDecisionImportService
     private function resolveCommitteeMembersByNames(array $memberNames, array &$summary): array
     {
         $committeeMembers = CommitteeMember::query()
-            ->whereNotNull('user_id')
             ->with('user')
             ->get();
         $committeeMembersByName = $committeeMembers
@@ -302,7 +301,16 @@ class TemporaryTechnicalCommitteeDecisionImportService
             $user = $existingMember?->user ?? $usersByName[$normalizedName] ?? $this->findUserByPartialName($normalizedName, $committeeMembers, $users);
 
             if (! $user instanceof User) {
-                $summary['missing_users'][] = $memberName;
+                $members[] = CommitteeMember::query()->updateOrCreate([
+                    'name' => $memberName,
+                ], [
+                    'user_id' => $existingMember?->user_id,
+                    'phone' => $existingMember?->phone,
+                    'title' => $existingMember?->title,
+                    'is_active' => true,
+                    'is_required' => true,
+                    'sort_order' => $index + 1,
+                ]);
 
                 continue;
             }
@@ -691,7 +699,9 @@ class TemporaryTechnicalCommitteeDecisionImportService
             ]);
 
             $signedAt = Carbon::now();
-            $managerUserId = $members[0]->user_id;
+            $managerUserId = auth()->id()
+                ?? collect($members)->pluck('user_id')->filter()->first()
+                ?? User::query()->value('id');
 
             $decision->fill([
                 'decision_type' => $decisionType,

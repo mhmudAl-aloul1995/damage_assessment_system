@@ -159,6 +159,49 @@ it('temporarily completes housing unit committee decisions from static unit shee
             ->exists())->toBeTrue();
 });
 
+it('creates committee members from excel header names when no linked users exist', function () {
+    User::factory()->create();
+
+    $building = Building::query()->create([
+        'objectid' => 598,
+        'globalid' => 'excel-header-parent-building',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $unit = HousingUnit::query()->create([
+        'objectid' => 1082,
+        'globalid' => 'excel-header-unit',
+        'parentglobalid' => $building->globalid,
+        'unit_damage_status' => 'committee_review2',
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importRecords([[
+        'record_type' => 'housing-unit',
+        'municipality' => 'Khan Younis',
+        'sheet' => 'خانيونس-وحدات',
+        'row' => 2,
+        'objectid' => 1082,
+        'globalid' => $unit->globalid,
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Excel unit decision',
+        'action_text' => 'Excel action',
+        'member_names' => ['م. محمد أحمد أبو ريدة', 'طارق عيد خميس السلوت'],
+        'use_excel_member_names' => true,
+    ]]);
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $unit)->firstOrFail();
+
+    expect($summary['decisions_completed'])->toBe(1)
+        ->and($summary['skipped_rows'])->toBe(0)
+        ->and($summary['missing_users'])->toBe([])
+        ->and(CommitteeMember::query()->pluck('name')->all())->toBe([
+            'م. محمد أحمد أبو ريدة',
+            'طارق عيد خميس السلوت',
+        ])
+        ->and($decision->signatures()->count())->toBe(2)
+        ->and($decision->signatures()->whereNull('signed_by_user_id')->count())->toBe(2);
+});
+
 it('syncs configured municipality signatures onto existing committee review decisions not included in seed records', function () {
     temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
     $oldSigner = User::factory()->create(['id_no' => '700000001']);
