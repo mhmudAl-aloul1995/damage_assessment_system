@@ -232,6 +232,8 @@ class CommitteeDecisionController extends Controller
         abort_unless(auth()->user()?->can('sync committee decision arcgis'), 403);
         abort_unless($committeeDecision->isCompleted(), 422, 'لا يمكن مزامنة ArcGIS قبل اكتمال القرار.');
 
+        $committeeDecision->load('decisionable');
+
         $committeeDecision->forceFill([
             'arcgis_sync_status' => 'retrying',
             'arcgis_last_error' => null,
@@ -240,12 +242,21 @@ class CommitteeDecisionController extends Controller
 
         $this->workflowService->markArcGisResult(
             $committeeDecision,
-            $this->arcGisStatusUpdaterService->syncDecisionStatus($committeeDecision->load('decisionable')),
+            $this->shouldSyncCompletedFieldStatus($committeeDecision)
+                ? $this->arcGisStatusUpdaterService->syncDecisionFieldStatus($committeeDecision, 'COMPLETED')
+                : $this->arcGisStatusUpdaterService->syncDecisionStatus($committeeDecision),
         );
 
         return redirect()
             ->back()
             ->with('success', 'تمت محاولة مزامنة ArcGIS.');
+    }
+
+    private function shouldSyncCompletedFieldStatus(CommitteeDecision $decision): bool
+    {
+        return str($decision->notes ?? '')
+            ->lower()
+            ->contains('resurvey completed: yes');
     }
 
     private function buildingQuery(): Builder

@@ -976,6 +976,58 @@ it('syncs housing unit committee decisions to the unit damage status and archive
     });
 });
 
+it('syncs imported resurvey completed decisions with completed field status on manual arcgis retry', function () {
+    config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
+    config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
+    config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
+    config()->set('services.committee_decisions.arcgis.token', 'static-token');
+
+    Http::fake([
+        'https://example.test/arcgis/FeatureServer/0/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+    ]);
+
+    $manager = User::factory()->create();
+    $manager->givePermissionTo('sync committee decision arcgis');
+
+    $building = Building::query()->create([
+        'objectid' => 8027,
+        'globalid' => 'building-guid-resurvey-completed',
+        'building_name' => 'Resurvey Completed Building',
+        'building_damage_status' => 'committee_review',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'decision_text' => 'Imported decision',
+        'decision_date' => '2026-06-28',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'notes' => "Excel sheet: Khan Younis row: 10\nResurvey completed: yes",
+        'updated_by' => $manager->id,
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($manager)
+        ->post(route('committee-decisions.retry-arcgis', $decision))
+        ->assertRedirect();
+
+    expect($decision->refresh()->arcgis_sync_status)->toBe('synced');
+
+    Http::assertSent(function ($request): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+        $attributes = data_get($features, '0.attributes', []);
+
+        return str_contains($request->url(), '/0/updateFeatures')
+            && data_get($attributes, 'objectid') === 8027
+            && data_get($attributes, 'Field_status') === 'COMPLETED'
+            && ! array_key_exists('building_damage_status', $attributes);
+    });
+});
+
 function workflowCommitteeDecisionWorkbookPath(array $records): string
 {
     $spreadsheet = new Spreadsheet;
