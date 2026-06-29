@@ -60,6 +60,44 @@ it('shows committee decision pages and datatable data for buildings and housing 
         'unit_damage_status' => 'committee_review2',
     ]);
 
+    $completedBuilding = Building::query()->create([
+        'objectid' => 9003,
+        'globalid' => 'building-guid-with-decision',
+        'building_name' => 'Completed Decision Tower',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'building_damage_status' => 'partially_damaged',
+    ]);
+
+    $completedUnit = HousingUnit::query()->create([
+        'objectid' => 9102,
+        'globalid' => 'housing-guid-with-decision',
+        'parentglobalid' => 'building-guid-1',
+        'housing_unit_number' => 'B-22',
+        'municipalitie' => 'Gaza',
+        'q_9_3_1_first_name' => 'Mona',
+        'q_9_3_2_second_name__father' => 'Yousef',
+        'q_9_3_4_last_name' => 'Salem',
+        'neighborhood' => 'Rimal',
+        'unit_damage_status' => 'partially_damaged2',
+    ]);
+
+    CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $completedBuilding->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'updated_by' => $user->id,
+    ]);
+
+    CommitteeDecision::query()->create([
+        'decisionable_type' => HousingUnit::class,
+        'decisionable_id' => $completedUnit->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'updated_by' => $user->id,
+    ]);
+
     $this->actingAs($user)
         ->get(route('committee-decisions.index'))
         ->assertOk()
@@ -90,6 +128,28 @@ it('shows committee decision pages and datatable data for buildings and housing 
         ]))
         ->assertOk()
         ->assertSee('A-12');
+
+    $this->actingAs($user)
+        ->get(route('committee-decisions.buildings.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'municipality' => 'Gaza',
+            'has_decision' => 'yes',
+        ]))
+        ->assertOk()
+        ->assertJsonFragment(['building_name' => 'Completed Decision Tower']);
+
+    $this->actingAs($user)
+        ->get(route('committee-decisions.housing-units.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'municipality' => 'Gaza',
+            'has_decision' => 'yes',
+        ]))
+        ->assertOk()
+        ->assertSee('B-22');
 
     $this->actingAs($user)
         ->get(route('committee-decisions.buildings.show', $building))

@@ -253,7 +253,11 @@ class CommitteeDecisionController extends Controller
         return Building::query()
             ->with(['committeeDecision.signatures.committeeMember'])
             ->select(['id', 'objectid', 'globalid', 'building_name', 'municipalitie', 'neighborhood', 'assignedto', 'building_damage_status', 'field_status'])
-            ->whereIn('building_damage_status', ['commite_review', 'committee_review']);
+            ->where(function (Builder $query): void {
+                $query
+                    ->whereIn('building_damage_status', ['commite_review', 'committee_review'])
+                    ->orWhereHas('committeeDecision');
+            });
     }
 
     private function housingUnitQuery(): Builder
@@ -274,7 +278,11 @@ class CommitteeDecisionController extends Controller
                 'neighborhood',
                 'unit_damage_status',
             ])
-            ->whereIn('unit_damage_status', ['commite_review', 'committee_review', 'committee_review2']);
+            ->where(function (Builder $query): void {
+                $query
+                    ->whereIn('unit_damage_status', ['commite_review', 'committee_review', 'committee_review2'])
+                    ->orWhereHas('committeeDecision');
+            });
     }
 
     private function applyBuildingFilters(Builder $query, Request $request): Builder
