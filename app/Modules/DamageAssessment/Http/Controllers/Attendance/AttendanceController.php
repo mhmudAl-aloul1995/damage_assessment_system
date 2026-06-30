@@ -8,6 +8,8 @@ use App\Models\Attendance;
 use App\Models\AttendanceImportLog;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -83,6 +85,40 @@ class AttendanceController extends Controller
         return $dataTable->make(true);
     }
 
+    public function summary(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+            'contract_type' => 'nullable|string',
+            'region' => 'nullable|string',
+        ]);
+
+        $users = $this->attendanceUsersQuery($request);
+
+        $totalUsers = (clone $users)->count();
+
+        $presentCount = (clone $users)
+            ->whereHas('attendances', function ($query) use ($validated) {
+                $query->whereDate('date', $validated['date'])
+                    ->where('status', 1);
+            })
+            ->count();
+
+        $absentCount = (clone $users)
+            ->whereHas('attendances', function ($query) use ($validated) {
+                $query->whereDate('date', $validated['date'])
+                    ->where('status', 0);
+            })
+            ->count();
+
+        return response()->json([
+            'total' => $totalUsers,
+            'present' => $presentCount,
+            'absent' => $absentCount,
+            'unset' => max(0, $totalUsers - $presentCount - $absentCount),
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -125,7 +161,7 @@ class AttendanceController extends Controller
         ]);
 
         try {
-            $users = User::query()->with('roles');
+            $users = $this->attendanceUsersQuery($request)->with('roles');
 
             // فلترة role
             if ($request->filled('role')) {
@@ -135,10 +171,6 @@ class AttendanceController extends Controller
             }
 
             // فلترة contract
-            if ($request->filled('contract_type')) {
-                $users->where('contract_type', $request->contract_type);
-            }
-
             $users = $users->pluck('id');
 
             foreach ($users as $userId) {
@@ -176,16 +208,12 @@ class AttendanceController extends Controller
         ]);
 
         try {
-            $users = User::query()->with('roles');
+            $users = $this->attendanceUsersQuery($request)->with('roles');
 
             if ($request->filled('role')) {
                 $users->whereHas('roles', function ($q) use ($request) {
                     $q->where('name', $request->role);
                 });
-            }
-
-            if ($request->filled('contract_type')) {
-                $users->where('contract_type', $request->contract_type);
             }
 
             $users = $users->pluck('id');
@@ -537,5 +565,20 @@ class AttendanceController extends Controller
         return response()->json([
             'data' => $users,
         ]);
+    }
+
+    private function attendanceUsersQuery(Request $request): Builder
+    {
+        $users = User::role(['Field Engineer', 'Team Leader', 'QC/QA Engineer', 'Area Manager', 'Team Leader -INF', 'Legal Auditor', 'Auditing Supervisor']);
+
+        if ($request->filled('contract_type')) {
+            $users->where('contract_type', $request->contract_type);
+        }
+
+        if ($request->filled('region')) {
+            $users->where('region', $request->region);
+        }
+
+        return $users;
     }
 }

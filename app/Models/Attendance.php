@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Attendance
- * 
+ *
  * @property int $id
  * @property int $user_id
  * @property Carbon $date
@@ -19,30 +19,29 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $notes
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * 
  * @property User $user
- *
- * @package App\Models
  */
 class Attendance extends Model
 {
-	protected $table = 'attendances';
+    protected $table = 'attendances';
 
-	protected $casts = [
-		'user_id' => 'int',
-		'date' => 'datetime',
-		'status' => 'bool'
-	];
+    protected $casts = [
+        'user_id' => 'int',
+        'date' => 'datetime',
+        'status' => 'bool',
+        'updated_by' => 'int',
+    ];
 
-	protected $fillable = [
-		'user_id',
-		'date',
-		'status',
-		'notes'
-	];
+    protected $fillable = [
+        'user_id',
+        'date',
+        'status',
+        'updated_by',
+        'notes',
+    ];
 
-	public function user()
-	{
-		return $this->belongsTo(User::class);
-	}
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

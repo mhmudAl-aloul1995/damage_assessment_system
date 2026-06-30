@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/import', [AttendanceController::class, 'import'])->name('import');
         Route::get('import-progress/{log}', [AttendanceController::class, 'importProgress'])
             ->name('import.progress');
+        Route::post('/summary', [AttendanceController::class, 'summary'])->name('summary');
         Route::post('/set-day-present', [AttendanceController::class, 'setDayPresent'])->name('set-day-present');
         Route::post('/set-day-absent', [AttendanceController::class, 'setDayAbsent'])->name('set-day-absent');
         Route::get('dashboard', [AttendanceController::class, 'dashboard'])

@@ -8,8 +8,8 @@
 
     <style>
         .day-column {
-            min-width: 55px !important;
-            width: 55px !important;
+            min-width: 48px !important;
+            width: 48px !important;
             text-align: center;
             vertical-align: middle !important;
         }
@@ -95,13 +95,74 @@
             color: var(--kt-gray-600);
         }
 
+        .attendance-summary-bar {
+            border: 1px solid #eef1f6;
+            border-radius: 8px;
+            background: #fbfcfe;
+        }
+
+        .attendance-summary-item {
+            min-width: 105px;
+            padding: 8px 12px;
+            border-inline-start: 1px solid #eef1f6;
+        }
+
+        .attendance-summary-item:first-child {
+            border-inline-start: 0;
+        }
+
+        .attendance-summary-item span {
+            display: block;
+            color: var(--kt-gray-600);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .attendance-summary-item strong {
+            display: block;
+            color: var(--kt-gray-900);
+            font-size: 18px;
+            line-height: 1.1;
+        }
+
+        .attendance-view-switch .btn {
+            min-width: 86px;
+        }
+
+        .employee-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .employee-detail-item {
+            border: 1px solid #eef1f6;
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: #fbfcfe;
+        }
+
+        .employee-detail-item span {
+            display: block;
+            color: var(--kt-gray-600);
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .employee-detail-item strong {
+            color: var(--kt-gray-900);
+            font-size: 13px;
+            word-break: break-word;
+        }
+
         .toolbar-filters {
             gap: 10px;
             flex-wrap: wrap;
         }
 
         .day-column {
-            min-width: 90px !important;
+            min-width: 48px !important;
         }
 
         .day-column .btn {
@@ -109,6 +170,11 @@
             height: 22px !important;
             padding: 0 !important;
             font-size: 12px !important;
+        }
+
+        .set-day-present,
+        .set-day-absent {
+            display: none !important;
         }
 
         .day-column .spinner-border {
@@ -194,22 +260,60 @@
                                             <div class="text-muted mt-2" id="import_progress_text">Starting import...</div>
                                         </div> -->
                     <div class="card-body py-4">
+                        <div class="attendance-summary-bar d-flex align-items-center justify-content-between flex-wrap gap-3 p-3 mb-4">
+                            <div class="d-flex align-items-center flex-wrap gap-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <label for="selected_day" class="fw-semibold text-muted mb-0">Selected day</label>
+                                    <select id="selected_day" class="form-select form-select-solid w-100px">
+                                        @for($i = 1; $i <= 31; $i++)
+                                            <option value="{{ $i }}">{{ $i }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+
+                                <div class="attendance-summary-item">
+                                    <span>Present</span>
+                                    <strong id="summary_present">0</strong>
+                                </div>
+
+                                <div class="attendance-summary-item">
+                                    <span>Absent</span>
+                                    <strong id="summary_absent">0</strong>
+                                </div>
+
+                                <div class="attendance-summary-item">
+                                    <span>Unset</span>
+                                    <strong id="summary_unset">0</strong>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <div class="btn-group attendance-view-switch" role="group" aria-label="Attendance view">
+                                    <button type="button" class="btn btn-light-primary active" data-view-mode="month">Month</button>
+                                    <button type="button" class="btn btn-light" data-view-mode="day">Day</button>
+                                </div>
+
+                                <button type="button" class="btn btn-light-success" id="btn_set_selected_present">
+                                    Set day present
+                                </button>
+
+                                <button type="button" class="btn btn-light-danger" id="btn_set_selected_absent">
+                                    Set day absent
+                                </button>
+                            </div>
+                        </div>
+
                         <table class="table table-bordered align-middle fs-7 gy-2" id="kt_attendance_table">
                             <thead>
                                 <tr class="text-center bg-light fw-bold">
                                     <th>#</th>
                                     <th>Name</th>
-                                    <th>ID</th>
-                                    <th>Phone</th>
-                                    <th>role</th>
-                                    <th>Contract</th>
-                                    <th>Region</th>
+                                    <th>Details</th>
                                     <th>Total</th>
 
                                     @for($i = 1; $i <= 31; $i++)
                                         <th class="day-column">
-                                            <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <span class="fw-bold">{{ $i }}</span>
+                                            <span class="fw-bold">{{ $i }}</span>
 
                                                 <button type="button"
                                                     class="btn btn-icon btn-light-success btn-sm set-day-present"
@@ -222,7 +326,6 @@
                                                     data-day="{{ $i }}" title="Set all absent">
                                                     ✕
                                                 </button>
-                                            </div>
                                         </th>
                                     @endfor
 
@@ -233,6 +336,53 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+
+        <div class="modal fade" id="employeeDetailsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h5 class="modal-title mb-1" id="employeeDetailsTitle">Employee details</h5>
+                            <div class="text-muted fs-7" id="employeeDetailsSubtitle"></div>
+                        </div>
+                        <button type="button" class="btn btn-icon btn-sm btn-light" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="ki-duotone ki-cross fs-2">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="employee-detail-grid">
+                            <div class="employee-detail-item">
+                                <span>ID</span>
+                                <strong id="employeeDetailId">-</strong>
+                            </div>
+                            <div class="employee-detail-item">
+                                <span>Phone</span>
+                                <strong id="employeeDetailPhone">-</strong>
+                            </div>
+                            <div class="employee-detail-item">
+                                <span>Role</span>
+                                <strong id="employeeDetailRole">-</strong>
+                            </div>
+                            <div class="employee-detail-item">
+                                <span>Contract</span>
+                                <strong id="employeeDetailContract">-</strong>
+                            </div>
+                            <div class="employee-detail-item">
+                                <span>Region</span>
+                                <strong id="employeeDetailRegion">-</strong>
+                            </div>
+                            <div class="employee-detail-item">
+                                <span>Total present</span>
+                                <strong id="employeeDetailTotal">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 @endsection
@@ -267,7 +417,56 @@
                 }
 
                 function getDayColumnIndex(dayNumber) {
-                    return 7 + (parseInt(dayNumber) - 1);
+                    return 3 + parseInt(dayNumber);
+                }
+
+                function getSelectedDate() {
+                    let monthVal = $('#filter_month').val();
+                    let selectedDay = parseInt($('#selected_day').val()) || 1;
+
+                    return monthVal + '-' + String(selectedDay).padStart(2, '0');
+                }
+
+                function syncSelectedDayOptions() {
+                    let monthVal = $('#filter_month').val();
+                    let parts = monthVal.split('-');
+                    let daysInMonth = new Date(parseInt(parts[0]), parseInt(parts[1]), 0).getDate();
+                    let selectedDay = Math.min(parseInt($('#selected_day').val()) || 1, daysInMonth);
+
+                    $('#selected_day option').each(function () {
+                        let optionDay = parseInt($(this).val());
+                        $(this).prop('disabled', optionDay > daysInMonth).toggle(optionDay <= daysInMonth);
+                    });
+
+                    $('#selected_day').val(selectedDay);
+                }
+
+                function refreshSummary() {
+                    $.ajax({
+                        url: "{{ route('attendance.summary') }}",
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}",
+                            date: getSelectedDate(),
+                            contract_type: $('#filter_contract').val(),
+                            region: $('#filter_region').val()
+                        },
+                        success: function (res) {
+                            $('#summary_present').text(res.present ?? 0);
+                            $('#summary_absent').text(res.absent ?? 0);
+                            $('#summary_unset').text(res.unset ?? 0);
+                        }
+                    });
+                }
+
+                function applyViewMode(mode) {
+                    let selectedDay = parseInt($('#selected_day').val()) || 1;
+
+                    for (let day = 1; day <= 31; day++) {
+                        table.column(getDayColumnIndex(day)).visible(mode === 'month' || day === selectedDay, false);
+                    }
+
+                    table.columns.adjust().draw(false);
                 }
 
                 function updateDayButtonsWithoutReload(dayNumber, newStatus, fullDate) {
@@ -325,6 +524,16 @@
                     initTooltips();
                 }
 
+                let currentViewMode = 'month';
+
+                let today = new Date();
+                let currentMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+                if ($('#filter_month').val() === currentMonth) {
+                    $('#selected_day').val(today.getDate());
+                }
+
+                syncSelectedDayOptions();
+
                 let table = $('#kt_attendance_table').DataTable({
                     processing: true,
                     serverSide: true,
@@ -336,7 +545,7 @@
                     scrollX: true,
                     scrollCollapse: true,
                     fixedColumns: {
-                        leftColumns: 7
+                        leftColumns: 4
                     },
                     ajax: {
                         url: "{{ route('attendance.data') }}",
@@ -355,6 +564,7 @@
                     },
                     drawCallback: function () {
                         initTooltips();
+                        refreshSummary();
                     },
                     columns: [{
                         data: 'DT_RowIndex',
@@ -380,63 +590,26 @@
                         }
                     },
                     {
-                        data: 'id_no',
-                        name: 'id_no',
+                        data: null,
+                        name: 'details',
                         className: 'text-center',
-                        width: '120px',
-                        render: function (data) {
-                            return data ?? '-';
-                        }
-                    },
-                    {
-                        data: 'phone',
-                        name: 'phone',
-                        className: 'text-center',
-                        width: '130px',
-                        render: function (data) {
-                            return data ?? '-';
-                        }
-                    },
-                    {
-                        data: 'role',
-                        name: 'role',
+                        width: '80px',
                         orderable: false,
                         searchable: false,
-                        render: function (data) {
-                            if (!data || data.length === 0) return '-';
-
-                            return data.map(role => {
-                                let color = 'badge-light-secondary';
-
-                                if (role === 'Field Engineer') color = 'badge-light-success';
-                                if (role === 'Team Leader') color = 'badge-light-primary';
-                                if (role === 'Team Leader -INF') color = 'badge-light-primary';
-                                if (role === 'Area Manager') color = 'badge-light-warning';
-                                if (role === 'QC/QA Engineer') color = 'badge-light-info';
-                                if (role === 'Auditing Supervisor') color = 'badge-light-danger';
-
-                                return `<span class="badge ${color} me-1 text-uppercase">${role}</span>`;
-                            }).join('');
-                        }
-                    },
-                    {
-                        data: 'contract_type',
-                        name: 'contract_type',
-                        className: 'text-center',
-                        width: '120px',
-                        render: function (data) {
-                            if (!data) return '-';
-                            return `<span class="badge badge-light-primary text-uppercase">${data}</span>`;
-                        }
-                    },
-                    {
-                        data: 'region',
-                        name: 'region',
-                        className: 'text-center',
-                        width: '120px',
-                        render: function (data) {
-                            if (!data) return '-';
-                            return `<span class="badge badge-light-info text-uppercase">${data}</span>`;
+                        render: function (data, type, row) {
+                            return `
+                                <button type="button"
+                                        class="btn btn-icon btn-light-info btn-sm show-employee-details"
+                                        data-row="${encodeURIComponent(JSON.stringify(row))}"
+                                        data-bs-toggle="tooltip"
+                                        title="Show details">
+                                    <i class="ki-duotone ki-eye fs-3">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+                                </button>
+                            `;
                         }
                     },
                     {
@@ -516,12 +689,108 @@
                                                                     ]
                 });
 
+                table.on('init', function () {
+                    applyViewMode(currentViewMode);
+                    refreshSummary();
+                });
+
+                applyViewMode(currentViewMode);
+                refreshSummary();
+
                 $('#filter_month, #filter_contract, #filter_region').on('change', function () {
+                    syncSelectedDayOptions();
+                    applyViewMode(currentViewMode);
                     table.ajax.reload();
+                    refreshSummary();
                 });
 
                 $('#btn_reload').on('click', function () {
                     table.ajax.reload(null, false);
+                    refreshSummary();
+                });
+
+                $('#selected_day').on('change', function () {
+                    applyViewMode(currentViewMode);
+                    refreshSummary();
+                });
+
+                $('[data-view-mode]').on('click', function () {
+                    currentViewMode = $(this).data('view-mode');
+                    $('[data-view-mode]').removeClass('btn-light-primary active').addClass('btn-light');
+                    $(this).removeClass('btn-light').addClass('btn-light-primary active');
+                    applyViewMode(currentViewMode);
+                });
+
+                $(document).on('click', '.show-employee-details', function () {
+                    let row = JSON.parse(decodeURIComponent($(this).attr('data-row')));
+                    let roles = row.role && row.role.length ? row.role.join(', ') : '-';
+
+                    $('#employeeDetailsTitle').text(row.name_en || '-');
+                    $('#employeeDetailsSubtitle').text(row.name || '');
+                    $('#employeeDetailId').text(row.id_no || '-');
+                    $('#employeeDetailPhone').text(row.phone || '-');
+                    $('#employeeDetailRole').text(roles);
+                    $('#employeeDetailContract').text(row.contract_type || '-');
+                    $('#employeeDetailRegion').text(row.region || '-');
+                    $('#employeeDetailTotal').text(row.total || 0);
+
+                    new bootstrap.Modal(document.getElementById('employeeDetailsModal')).show();
+                });
+
+                function setSelectedDayStatus(status, btn) {
+                    if (btn.prop('disabled')) {
+                        return;
+                    }
+
+                    let fullDate = getSelectedDate();
+                    let selectedDay = parseInt($('#selected_day').val()) || 1;
+
+                    let today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    let cellDate = new Date(fullDate);
+                    cellDate.setHours(0, 0, 0, 0);
+
+                    if (cellDate > today) {
+                        toastr.error('Cannot set future date');
+                        return;
+                    }
+
+                    setHeaderButtonLoading(btn, true);
+
+                    $.ajax({
+                        url: status === 1 ? "{{ route('attendance.set-day-present') }}" : "{{ route('attendance.set-day-absent') }}",
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}",
+                            date: fullDate,
+                            contract_type: $('#filter_contract').val(),
+                            region: $('#filter_region').val()
+                        },
+                        success: function (res) {
+                            setHeaderButtonLoading(btn, false);
+
+                            if (res.success) {
+                                table.ajax.reload(null, false);
+                                refreshSummary();
+                                toastr.success(res.message || 'Day updated');
+                            } else {
+                                toastr.error(res.message || 'Update failed');
+                            }
+                        },
+                        error: function () {
+                            setHeaderButtonLoading(btn, false);
+                            toastr.error('Update failed');
+                        }
+                    });
+                }
+
+                $('#btn_set_selected_present').on('click', function () {
+                    setSelectedDayStatus(1, $(this));
+                });
+
+                $('#btn_set_selected_absent').on('click', function () {
+                    setSelectedDayStatus(0, $(this));
                 });
 
                 $(document).on('click', '.toggle-status', function () {
@@ -584,6 +853,7 @@
                                     .text(currentTotal);
 
                                 initTooltips();
+                                refreshSummary();
                                 toastr.success('تم التحديث');
                             } else {
                                 toastr.error(res.message || 'حدث خطأ');
@@ -629,13 +899,15 @@
                         data: {
                             _token: "{{ csrf_token() }}",
                             date: fullDate,
-                            contract_type: $('#filter_contract').val()
+                            contract_type: $('#filter_contract').val(),
+                            region: $('#filter_region').val()
                         },
                         success: function (res) {
                             setHeaderButtonLoading(btn, false);
 
                             if (res.success) {
                                 updateDayButtonsWithoutReload(day, 1, fullDate);
+                                refreshSummary();
                                 toastr.success(res.message || 'All users set to present');
                             } else {
                                 toastr.error(res.message || 'Update failed');
@@ -681,13 +953,15 @@
                         data: {
                             _token: "{{ csrf_token() }}",
                             date: fullDate,
-                            contract_type: $('#filter_contract').val()
+                            contract_type: $('#filter_contract').val(),
+                            region: $('#filter_region').val()
                         },
                         success: function (res) {
                             setHeaderButtonLoading(btn, false);
 
                             if (res.success) {
                                 updateDayButtonsWithoutReload(day, 0, fullDate);
+                                refreshSummary();
                                 toastr.success(res.message || 'All users set to absent');
                             } else {
                                 toastr.error(res.message || 'Update failed');
