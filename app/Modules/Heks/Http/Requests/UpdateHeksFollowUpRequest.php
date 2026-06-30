@@ -25,6 +25,8 @@ class UpdateHeksFollowUpRequest extends FormRequest
             'completed_amount_ils' => ['nullable', 'numeric'],
             'completion_percentage' => ['nullable', 'numeric', 'between:0,100'],
             'engineer_recommendations' => ['nullable', 'string'],
+            'boq_filename' => ['nullable', 'string', 'max:255'],
+            'boq_url' => ['nullable', 'string'],
         ];
     }
 }

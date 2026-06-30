@@ -81,6 +81,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertOk()
             ->assertSee('فلاتر المستفيدين')
             ->assertSee('المستفيدون المطابقون')
+            ->assertSee('جداول الكميات BOQ')
             ->assertSee('DGN1')
             ->assertSee('DGN2');
 
@@ -116,6 +117,13 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('High');
 
         $this->actingAs($user)
+            ->get(route('heks.follow-ups'))
+            ->assertOk()
+            ->assertSee('جدول الكميات BOQ')
+            ->assertSee('boq.pdf')
+            ->assertSee('https://example.test/boq.pdf');
+
+        $this->actingAs($user)
             ->get(route('heks.beneficiaries.edit', $beneficiary))
             ->assertOk()
             ->assertSee('DGN1')
@@ -123,6 +131,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('Scoring-Heks Final')
             ->assertSee('Partial damage')
             ->assertSee('damage_status')
+            ->assertSee('boq.pdf')
             ->assertSee('High');
 
         $this->actingAs($user)

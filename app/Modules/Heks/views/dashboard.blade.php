@@ -123,13 +123,20 @@
             'payments' => 'سجلات الدفعات',
             'follow_ups' => 'زيارات المتابعة',
             'attachments' => 'المرفقات',
+            'boq' => 'جداول الكميات BOQ',
             'grant_total' => 'إجمالي المنح ILS',
         ] as $key => $label)
             <div class="col-xl-2 col-md-4 col-6">
                 <div class="card card-flush h-100">
                     <div class="card-body">
                         <div class="text-gray-500 fw-semibold">{{ $label }}</div>
-                        <div class="fs-2hx fw-bold">{{ is_float($stats[$key]) ? number_format($stats[$key], 2) : number_format($stats[$key]) }}</div>
+                        <div class="fs-2hx fw-bold">
+                            @if ($key === 'boq')
+                                {{ number_format($boqCount) }}
+                            @else
+                                {{ is_float($stats[$key]) ? number_format($stats[$key], 2) : number_format($stats[$key]) }}
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>

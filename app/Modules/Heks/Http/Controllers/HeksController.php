@@ -58,6 +58,10 @@ class HeksController extends Controller
                 ->filter()
                 ->countBy(),
             'populationSummary' => $this->populationSummary($filteredBeneficiaries),
+            'boqCount' => $filteredBeneficiaries
+                ->flatMap(fn (HeksBeneficiary $beneficiary) => $beneficiary->followUps)
+                ->filter(fn (HeksFollowUp $followUp): bool => filled($followUp->boq_filename) || filled($followUp->boq_url))
+                ->count(),
             'latestImports' => HeksImport::query()->latest()->limit(8)->get(),
             'engineerWorkload' => $this->engineerWorkload($filteredBeneficiaries),
             'paymentStatusDistribution' => $this->distribution($filteredBeneficiaries, 'payment_status'),

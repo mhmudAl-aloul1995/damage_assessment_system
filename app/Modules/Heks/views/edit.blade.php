@@ -183,6 +183,15 @@
                         <div class="border-bottom pb-3 mb-3">
                             <div class="fw-bold">{{ $followUp->visit_date?->format('Y-m-d') ?? '-' }} · {{ $followUp->engineer_name ?? '-' }}</div>
                             <div>{{ $followUp->working_condition ?? '-' }}</div>
+                            @if ($followUp->boq_filename || $followUp->boq_url)
+                                <div class="mt-2">
+                                    <span class="badge badge-light-info">BOQ</span>
+                                    <span class="text-muted small">{{ $followUp->boq_filename ?? 'جدول الكميات' }}</span>
+                                    @if ($followUp->boq_url)
+                                        <a class="btn btn-sm btn-light ms-2" href="{{ $followUp->boq_url }}" target="_blank" rel="noopener">فتح جدول الكميات</a>
+                                    @endif
+                                </div>
+                            @endif
                             <div class="text-muted small">{{ $followUp->engineer_recommendations }}</div>
                         </div>
                     @empty
