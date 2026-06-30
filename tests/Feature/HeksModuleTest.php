@@ -62,12 +62,34 @@ it('imports and manages the HEKS operational workbook', function () {
 
         expect(HeksScore::query()->where('classification', 'High')->exists())->toBeTrue();
 
+        HeksBeneficiary::query()->create([
+            'code' => 'DGN2',
+            'name' => 'Other Beneficiary',
+            'governorate' => 'North',
+            'area' => 'Area B',
+            'damage_status' => 'No damage',
+            'raw_data' => [
+                'Scoring-Heks Final' => [
+                    'نوع الوحدة السكنية:' => 'Apartment',
+                    'إجمالي عدد أفراد الأسرة الأساسية' => 4,
+                ],
+            ],
+        ]);
+
         $this->actingAs($user)
             ->get(route('heks.dashboard'))
             ->assertOk()
-            ->assertSee('نظرة عامة على HEKS')
-            ->assertSee('مسار الحالات')
-            ->assertSee('توزيع العمل على المهندسين');
+            ->assertSee('فلاتر المستفيدين')
+            ->assertSee('المستفيدون المطابقون')
+            ->assertSee('DGN1')
+            ->assertSee('DGN2');
+
+        $this->actingAs($user)
+            ->get(route('heks.dashboard', ['governorate' => 'Gaza']))
+            ->assertOk()
+            ->assertSee('DGN1')
+            ->assertDontSee('DGN2')
+            ->assertSee('تقييم ضرر المأوى');
 
         $this->actingAs($user)
             ->get(route('heks.beneficiaries', ['q' => 'DGN1', 'selected' => 1]))
