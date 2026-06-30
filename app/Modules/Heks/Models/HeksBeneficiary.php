@@ -68,6 +68,11 @@ class HeksBeneficiary extends Model
         return $this->hasMany(HeksAttachment::class);
     }
 
+    public function boqItems(): HasMany
+    {
+        return $this->hasMany(HeksBoqItem::class);
+    }
+
     protected function casts(): array
     {
         return [

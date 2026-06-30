@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
+use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksPayment;
@@ -126,6 +127,7 @@ it('imports and manages the HEKS operational workbook', function () {
         $this->actingAs($user)
             ->get(route('heks.beneficiaries.edit', $beneficiary))
             ->assertOk()
+            ->assertSee('جدول الكميات والتسعير BOQ')
             ->assertSee('DGN1')
             ->assertSee('Test Beneficiary')
             ->assertSee('Scoring-Heks Final')
@@ -133,6 +135,46 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('damage_status')
             ->assertSee('boq.pdf')
             ->assertSee('High');
+
+        $this->actingAs($user)
+            ->post(route('heks.beneficiaries.boq-items.store', $beneficiary), [
+                'source' => 'manual',
+                'section' => 'اعمال البلوك',
+                'item_code' => '3.1',
+                'description' => 'توريد و بناء بلوك اسمنتي',
+                'unit' => 'M2',
+                'quantity' => 2,
+                'unit_price_ils' => 610,
+                'notes' => 'حسب جدول الكميات المعتمد',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $boqItem = HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+        expect((float) $boqItem->total_price_ils)->toBe(1220.0);
+
+        $this->actingAs($user)
+            ->put(route('heks.boq-items.update', $boqItem), [
+                'source' => 'manual',
+                'section' => 'اعمال البلوك',
+                'item_code' => '3.1',
+                'description' => 'توريد و بناء بلوك اسمنتي',
+                'unit' => 'M2',
+                'quantity' => 3,
+                'unit_price_ils' => 610,
+                'notes' => 'تم تعديل الكمية',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        expect((float) $boqItem->refresh()->total_price_ils)->toBe(1830.0);
+
+        $this->actingAs($user)
+            ->get(route('heks.beneficiaries.edit', $beneficiary))
+            ->assertOk()
+            ->assertSee('توريد و بناء بلوك اسمنتي')
+            ->assertSee('1,830.00');
 
         $this->actingAs($user)
             ->put(route('heks.beneficiaries.update', $beneficiary), [

@@ -4,12 +4,15 @@ namespace App\Modules\Heks\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Heks\Http\Requests\ImportHeksSpreadsheetRequest;
+use App\Modules\Heks\Http\Requests\StoreHeksBoqItemRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksBeneficiaryRequest;
+use App\Modules\Heks\Http\Requests\UpdateHeksBoqItemRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksFollowUpRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksLabelRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksScoreRequest;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
+use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksImport;
 use App\Modules\Heks\Models\HeksLabel;
@@ -36,6 +39,7 @@ class HeksController extends Controller
                 'attachments',
                 'workAssignments',
                 'labels',
+                'boqItems',
             ])
             ->latest()
             ->get();
@@ -58,10 +62,7 @@ class HeksController extends Controller
                 ->filter()
                 ->countBy(),
             'populationSummary' => $this->populationSummary($filteredBeneficiaries),
-            'boqCount' => $filteredBeneficiaries
-                ->flatMap(fn (HeksBeneficiary $beneficiary) => $beneficiary->followUps)
-                ->filter(fn (HeksFollowUp $followUp): bool => filled($followUp->boq_filename) || filled($followUp->boq_url))
-                ->count(),
+            'boqCount' => $filteredBeneficiaries->sum(fn (HeksBeneficiary $beneficiary): int => $beneficiary->boqItems->count()),
             'latestImports' => HeksImport::query()->latest()->limit(8)->get(),
             'engineerWorkload' => $this->engineerWorkload($filteredBeneficiaries),
             'paymentStatusDistribution' => $this->distribution($filteredBeneficiaries, 'payment_status'),
@@ -127,10 +128,12 @@ class HeksController extends Controller
             'payments' => fn ($query) => $query->latest(),
             'workAssignments' => fn ($query) => $query->latest(),
             'attachments' => fn ($query) => $query->latest(),
+            'boqItems' => fn ($query) => $query->orderBy('section')->orderBy('item_code')->latest(),
         ]);
 
         return view('heks::edit', [
             'beneficiary' => $beneficiary,
+            'boqTotal' => (float) $beneficiary->boqItems->sum('total_price_ils'),
             'rawDataSections' => $this->rawDataSections($beneficiary),
         ]);
     }
@@ -140,6 +143,28 @@ class HeksController extends Controller
         $beneficiary->update($request->validated());
 
         return back()->with('success', 'تم تحديث بيانات المستفيد.');
+    }
+
+    public function storeBoqItem(StoreHeksBoqItemRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
+    {
+        $beneficiary->boqItems()->create($this->boqPayload($request->validated()));
+
+        return back()->with('success', 'تمت إضافة بند جدول الكميات.');
+    }
+
+    public function updateBoqItem(UpdateHeksBoqItemRequest $request, HeksBoqItem $boqItem): RedirectResponse
+    {
+        $boqItem->update($this->boqPayload($request->validated()));
+
+        return back()->with('success', 'تم تحديث بند جدول الكميات.');
+    }
+
+    public function destroyBoqItem(HeksBoqItem $boqItem): RedirectResponse
+    {
+        $this->authorizeAccess();
+        $boqItem->delete();
+
+        return back()->with('success', 'تم حذف بند جدول الكميات.');
     }
 
     public function labels(): View
@@ -221,6 +246,21 @@ class HeksController extends Controller
                 ->having('aggregate', '>', 1)
                 ->pluck('aggregate', 'identity_number'),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function boqPayload(array $data): array
+    {
+        $quantity = (float) ($data['quantity'] ?? 0);
+        $unitPrice = (float) ($data['unit_price_ils'] ?? 0);
+
+        return [
+            ...$data,
+            'total_price_ils' => round($quantity * $unitPrice, 2),
+        ];
     }
 
     /**

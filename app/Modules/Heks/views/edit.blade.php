@@ -92,6 +92,113 @@
         </div>
     </form>
 
+    <div class="card card-flush mb-6">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">جدول الكميات والتسعير BOQ</h3>
+                <div class="text-muted">بنود قابلة للإضافة والتعديل لكل مستفيد حسب جدول الكميات المعتمد.</div>
+            </div>
+            <div class="card-toolbar d-flex gap-3">
+                <div class="text-end">
+                    <div class="text-muted small">عدد البنود</div>
+                    <div class="fw-bold">{{ number_format($beneficiary->boqItems->count()) }}</div>
+                </div>
+                <div class="text-end">
+                    <div class="text-muted small">إجمالي التسعير ILS</div>
+                    <div class="fs-4 fw-bold text-primary">{{ number_format($boqTotal, 2) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('heks.beneficiaries.boq-items.store', $beneficiary) }}" class="row g-3 align-items-end mb-6">
+                @csrf
+                <div class="col-xl-2 col-md-3">
+                    <label class="form-label">القسم</label>
+                    <input name="section" class="form-control" placeholder="اعمال البلوك">
+                </div>
+                <div class="col-xl-1 col-md-2">
+                    <label class="form-label">رقم البند</label>
+                    <input name="item_code" class="form-control" placeholder="3.1">
+                </div>
+                <div class="col-xl-3 col-md-7">
+                    <label class="form-label">وصف البند</label>
+                    <input name="description" class="form-control" required placeholder="وصف البند من جدول الكميات">
+                </div>
+                <div class="col-xl-1 col-md-2">
+                    <label class="form-label">الوحدة</label>
+                    <input name="unit" class="form-control" placeholder="M2">
+                </div>
+                <div class="col-xl-1 col-md-2">
+                    <label class="form-label">الكمية</label>
+                    <input name="quantity" type="number" min="0" step="0.001" class="form-control" value="0" required>
+                </div>
+                <div class="col-xl-2 col-md-3">
+                    <label class="form-label">تكلفة الوحدة ILS</label>
+                    <input name="unit_price_ils" type="number" min="0" step="0.01" class="form-control" value="0" required>
+                </div>
+                <div class="col-xl-1 col-md-2">
+                    <label class="form-label">المصدر</label>
+                    <input name="source" class="form-control" value="manual">
+                </div>
+                <div class="col-xl-1 col-md-2">
+                    <button class="btn btn-primary w-100">إضافة</button>
+                </div>
+                <div class="col-12">
+                    <input name="notes" class="form-control" placeholder="ملاحظات البند">
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-row-dashed align-middle">
+                    <thead>
+                    <tr class="fw-bold text-muted">
+                        <th>القسم</th>
+                        <th>رقم</th>
+                        <th class="min-w-300px">الوصف</th>
+                        <th>الوحدة</th>
+                        <th>الكمية</th>
+                        <th>سعر الوحدة ILS</th>
+                        <th>الإجمالي ILS</th>
+                        <th>ملاحظات</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @forelse ($beneficiary->boqItems as $item)
+                        <form id="update-boq-{{ $item->id }}" method="POST" action="{{ route('heks.boq-items.update', $item) }}">
+                            @csrf
+                            @method('PUT')
+                        </form>
+                        <form id="delete-boq-{{ $item->id }}" method="POST" action="{{ route('heks.boq-items.destroy', $item) }}">
+                            @csrf
+                            @method('DELETE')
+                        </form>
+                        <tr>
+                            <td><input form="update-boq-{{ $item->id }}" name="section" class="form-control form-control-sm" value="{{ $item->section }}"></td>
+                            <td><input form="update-boq-{{ $item->id }}" name="item_code" class="form-control form-control-sm" value="{{ $item->item_code }}"></td>
+                            <td><textarea form="update-boq-{{ $item->id }}" name="description" class="form-control form-control-sm" rows="2" required>{{ $item->description }}</textarea></td>
+                            <td><input form="update-boq-{{ $item->id }}" name="unit" class="form-control form-control-sm" value="{{ $item->unit }}"></td>
+                            <td><input form="update-boq-{{ $item->id }}" name="quantity" type="number" min="0" step="0.001" class="form-control form-control-sm" value="{{ $item->quantity }}" required></td>
+                            <td><input form="update-boq-{{ $item->id }}" name="unit_price_ils" type="number" min="0" step="0.01" class="form-control form-control-sm" value="{{ $item->unit_price_ils }}" required></td>
+                            <td class="fw-bold">{{ number_format((float) $item->total_price_ils, 2) }}</td>
+                            <td>
+                                <input form="update-boq-{{ $item->id }}" type="hidden" name="source" value="{{ $item->source }}">
+                                <input form="update-boq-{{ $item->id }}" name="notes" class="form-control form-control-sm" value="{{ $item->notes }}">
+                            </td>
+                            <td class="text-nowrap">
+                                <button form="update-boq-{{ $item->id }}" class="btn btn-sm btn-light-primary">حفظ</button>
+                                <button form="delete-boq-{{ $item->id }}" class="btn btn-sm btn-light-danger">حذف</button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="text-center text-muted">لا توجد بنود جدول كميات لهذا المستفيد بعد.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-5 mb-6">
         <div class="col-xl-6">
             <div class="card card-flush h-100">
