@@ -31,6 +31,10 @@ class HeksSpreadsheetImportService
         'تقرير المتابعة -هيكس 125',
     ];
 
+    private const LABEL_SHEETS = [
+        'Heks Final V1',
+    ];
+
     /**
      * @return array<string, mixed>
      */
@@ -131,6 +135,10 @@ class HeksSpreadsheetImportService
             return 'followups';
         }
 
+        if (in_array($sheetName, self::LABEL_SHEETS, true)) {
+            return 'labels';
+        }
+
         if (in_array($sheetName, self::SCORE_SHEETS, true)) {
             return 'scores';
         }
@@ -140,8 +148,8 @@ class HeksSpreadsheetImportService
 
     private function normalizeRequestedType(string $type, Worksheet $sheet): ?string
     {
-        if ($type === 'labels') {
-            return in_array($sheet->getTitle(), self::SCORE_SHEETS, true) ? 'scores' : null;
+        if ($type === 'labels' && in_array($sheet->getTitle(), self::LABEL_SHEETS, true)) {
+            return 'labels';
         }
 
         if ($type === 'scores' && in_array($sheet->getTitle(), self::SCORE_SHEETS, true)) {
@@ -182,6 +190,10 @@ class HeksSpreadsheetImportService
 
             if ($type === 'scores') {
                 $this->score($beneficiary, $row, $sheet->getTitle());
+                $this->labels($beneficiary, $row, $sheet->getTitle());
+            }
+
+            if ($type === 'labels') {
                 $this->labels($beneficiary, $row, $sheet->getTitle());
             }
 

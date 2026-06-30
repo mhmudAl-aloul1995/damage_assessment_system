@@ -19,13 +19,20 @@ it('imports and manages the HEKS shelter repair module data', function () {
     $user->assignRole($role);
 
     $importer = app(HeksSpreadsheetImportService::class);
+    $labelsPath = heksWorkbookPath('labels');
     $scorePath = heksWorkbookPath('scores');
     $followUpPath = heksWorkbookPath('followups');
 
     try {
+        heksWriteLabelsWorkbook($labelsPath);
         heksWriteScoresWorkbook($scorePath);
         heksWriteFollowUpsWorkbook($followUpPath);
 
+        $labelsSummary = $importer->import(
+            new UploadedFile($labelsPath, 'heks-labels.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
+            'labels',
+            $user->id
+        )['summary'];
         $scoreSummary = $importer->import(
             new UploadedFile($scorePath, 'heks-scores.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
             'scores',
@@ -37,7 +44,8 @@ it('imports and manages the HEKS shelter repair module data', function () {
             $user->id
         )['summary'];
 
-        expect($scoreSummary['created_rows'])->toBe(1)
+        expect($labelsSummary['created_rows'])->toBe(1)
+            ->and($scoreSummary['updated_rows'])->toBe(1)
             ->and($followUpSummary['updated_rows'])->toBe(1)
             ->and(HeksBeneficiary::query()->where('code', 'DGN1')->exists())->toBeTrue()
             ->and(HeksScore::query()->count())->toBe(1)
@@ -75,6 +83,7 @@ it('imports and manages the HEKS shelter repair module data', function () {
         expect($beneficiary->refresh()->name)->toBe('Updated Beneficiary')
             ->and((float) $beneficiary->grant_amount)->toBe(1300.0);
     } finally {
+        @unlink($labelsPath);
         @unlink($scorePath);
         @unlink($followUpPath);
     }
@@ -143,6 +152,43 @@ function heksWriteScoresWorkbook(string $path): void
             60,
             80,
             'v1',
+        ],
+    ]);
+
+    (new Xlsx($spreadsheet))->save($path);
+}
+
+function heksWriteLabelsWorkbook(string $path): void
+{
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Heks Final V1');
+    $sheet->fromArray([
+        [
+            'رقم الطلب/الكود',
+            'اسم رب الأسرة',
+            'رقم هوية رب الأسرة',
+            'رقم التواصل',
+            'اسم المهندس الميداني',
+            'تاريخ الزيارة',
+            'تقييم حالة ضرر المأوى:',
+            'حالة السقف',
+            'حالة الإشغال الحالي للوحدة السكنية',
+            'توصيات نهائية',
+            '__version__',
+        ],
+        [
+            'DGN1',
+            'Test Beneficiary',
+            '900000001',
+            '0599000000',
+            'Engineer One',
+            '2026-04-23',
+            'Initial partial damage',
+            'Initial roof repair',
+            'Occupied',
+            'Initial eligible',
+            'labels-v1',
         ],
     ]);
 

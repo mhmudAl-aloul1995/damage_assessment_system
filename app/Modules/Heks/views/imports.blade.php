@@ -19,8 +19,9 @@
                     <label class="form-label">Type</label>
                     <select name="type" class="form-select">
                         <option value="auto">Auto detect</option>
+                        <option value="labels">Initial assessment labels - 180 cases</option>
                         <option value="followups">Follow-ups</option>
-                        <option value="scores">Scoring / Payments / Labels</option>
+                        <option value="scores">Scoring / Selection / Payments</option>
                     </select>
                 </div>
                 <div class="col-lg-2">
