@@ -272,7 +272,7 @@ class HeksController extends Controller
         $this->authorizeAccess();
 
         return view('heks::follow-ups', [
-            'followUps' => HeksFollowUp::query()->with('beneficiary')->latest()->paginate(25),
+            'followUps' => HeksFollowUp::query()->with('beneficiary.attachments')->latest()->paginate(25),
         ]);
     }
 

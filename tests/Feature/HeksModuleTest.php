@@ -54,7 +54,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->and(HeksLabel::query()->where('label_key', 'damage_status')->exists())->toBeTrue()
             ->and(HeksPayment::query()->count())->toBe(1)
             ->and(HeksWorkAssignment::query()->count())->toBe(1)
-            ->and(HeksAttachment::query()->count())->toBe(1)
+            ->and(HeksAttachment::query()->count())->toBe(2)
+            ->and(HeksAttachment::query()->where('attachment_type', 'follow_up_boq')->where('filename', 'boq.pdf')->exists())->toBeTrue()
             ->and(HeksScoringWeight::query()->count())->toBeGreaterThan(0)
             ->and(HeksFollowUp::query()->count())->toBe(1);
 
@@ -126,7 +127,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertOk()
             ->assertSee('جدول الكميات BOQ')
             ->assertSee('boq.pdf')
-            ->assertSee('https://example.test/boq.pdf');
+            ->assertSee('https://example.test/boq.pdf')
+            ->assertSee('محفوظ في قاعدة البيانات');
 
         $this->actingAs($user)
             ->get(route('heks.beneficiaries.edit', $beneficiary))

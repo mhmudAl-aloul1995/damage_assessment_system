@@ -334,7 +334,7 @@ class HeksSpreadsheetImportService
             $wasRecentlyCreated = $beneficiary->wasRecentlyCreated;
 
             match ($type) {
-                'followups' => $this->followUp($beneficiary, $row),
+                'followups' => $this->followUp($beneficiary, $row, $sheet->getTitle()),
                 'assessment' => $this->assessment($beneficiary, $row, $sheet->getTitle()),
                 'selected' => $this->selected($beneficiary, $row, $sheet->getTitle()),
                 'payments' => $this->payment($beneficiary, $row, $sheet->getTitle()),
@@ -467,9 +467,9 @@ class HeksSpreadsheetImportService
     /**
      * @param  array<string, mixed>  $row
      */
-    private function followUp(HeksBeneficiary $beneficiary, array $row): void
+    private function followUp(HeksBeneficiary $beneficiary, array $row, string $source): void
     {
-        HeksFollowUp::query()->updateOrCreate(
+        $followUp = HeksFollowUp::query()->updateOrCreate(
             [
                 'heks_beneficiary_id' => $beneficiary->id,
                 'code' => $beneficiary->code,
@@ -486,6 +486,40 @@ class HeksSpreadsheetImportService
                 'boq_filename' => $this->first($row, ['Insert BOQ']),
                 'boq_url' => $this->first($row, ['Insert BOQ_URL']),
                 'raw_data' => $row,
+            ]
+        );
+
+        $this->followUpBoqAttachment($beneficiary, $followUp, $row, $source);
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function followUpBoqAttachment(HeksBeneficiary $beneficiary, HeksFollowUp $followUp, array $row, string $source): void
+    {
+        $filename = $this->first($row, ['Insert BOQ']);
+        $url = $this->first($row, ['Insert BOQ_URL']);
+
+        if ($filename === '' && $url === '') {
+            return;
+        }
+
+        HeksAttachment::query()->updateOrCreate(
+            [
+                'heks_beneficiary_id' => $beneficiary->id,
+                'source' => "follow-up:{$followUp->id}",
+                'attachment_type' => 'follow_up_boq',
+            ],
+            [
+                'filename' => $filename !== '' ? $filename : 'BOQ',
+                'url' => $url,
+                'parent_table' => $source,
+                'source_index' => (int) $this->decimal((string) ($row['_row_number'] ?? '0')) ?: null,
+                'raw_data' => [
+                    'follow_up_id' => $followUp->id,
+                    'visit_number' => $followUp->visit_number,
+                    'kobo_row' => $row,
+                ],
             ]
         );
     }

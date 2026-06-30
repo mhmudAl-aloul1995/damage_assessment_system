@@ -28,6 +28,10 @@
                 </thead>
                 <tbody>
                 @forelse ($followUps as $followUp)
+                    @php
+                        $boqAttachment = $followUp->beneficiary?->attachments
+                            ->first(fn ($attachment) => $attachment->attachment_type === 'follow_up_boq' && $attachment->source === "follow-up:{$followUp->id}");
+                    @endphp
                     <tr>
                         <form method="POST" action="{{ route('heks.follow-ups.update', $followUp) }}">
                             @csrf
@@ -50,6 +54,11 @@
                                 <input name="boq_url" class="form-control mb-2" value="{{ $followUp->boq_url }}" placeholder="رابط BOQ">
                                 @if ($followUp->boq_url)
                                     <a class="btn btn-sm btn-light" href="{{ $followUp->boq_url }}" target="_blank" rel="noopener">فتح BOQ</a>
+                                @endif
+                                @if ($boqAttachment)
+                                    <div class="mt-2">
+                                        <span class="badge badge-light-success">محفوظ في قاعدة البيانات</span>
+                                    </div>
                                 @endif
                             </td>
                             <td><textarea name="engineer_recommendations" class="form-control" rows="2">{{ $followUp->engineer_recommendations }}</textarea></td>
