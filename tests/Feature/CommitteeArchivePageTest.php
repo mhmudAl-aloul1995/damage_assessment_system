@@ -15,7 +15,7 @@ beforeEach(function () {
     app(RolesAndPermissionsSeeder::class)->run();
 });
 
-it('shows archived committee records and compares snapshot values with current values', function () {
+it('shows archived committee records and compares only visible Excel fields', function () {
     $user = User::factory()->create();
 
     $building = Building::query()->create([
@@ -75,10 +75,8 @@ it('shows archived committee records and compares snapshot values with current v
     $this->actingAs($user)
         ->get(route('committee-archive.index'))
         ->assertOk()
-        ->assertSee('أرشيف قرارات اللجنة الفنية')
         ->assertSee('8801')
-        ->assertSee('Archived Committee Member')
-        ->assertSee('Excel استثنائي');
+        ->assertSee('Archived Committee Member');
 
     $this->actingAs($user)
         ->get(route('committee-archive.index', [
@@ -89,29 +87,26 @@ it('shows archived committee records and compares snapshot values with current v
         ]))
         ->assertOk()
         ->assertSee('8801')
-        ->assertSee('Gaza')
-        ->assertDontSee('لا توجد سجلات مطابقة.');
+        ->assertSee('Gaza');
 
     $this->actingAs($user)
         ->get(route('committee-archive.show', $archive))
         ->assertOk()
-        ->assertSee('مراجعة التغييرات')
-        ->assertSee('اسم المبنى')
-        ->assertSee('المهندس المكلّف')
-        ->assertSee('السجل السابق')
-        ->assertSee('السجل الحالي')
-        ->assertSee('الحقول المتغيرة')
-        ->assertSee('عرض السجل الخام للمراجعة الفنية')
+        ->assertSee('Building Name')
+        ->assertSee('تظهر فقط الحقول الظاهرة في ملف Excel')
+        ->assertSee('القيمة السابقة')
+        ->assertSee('القيمة الحالية')
         ->assertSee('Old Building Name')
         ->assertSee('Current Building Name')
-        ->assertSee('general_notes')
-        ->assertSee('Old full record note')
-        ->assertSee('Current full record note')
+        ->assertSee('Old Engineer')
+        ->assertSee('Current Engineer')
         ->assertSee('Archived Committee Member')
-        ->assertSee('Archived Committee User')
         ->assertSee('Approved in the archived decision.')
-        ->assertSee('committee_review')
-        ->assertSee('partially_damaged');
+        ->assertDontSee('general_notes')
+        ->assertDontSee('Old full record note')
+        ->assertDontSee('Current full record note')
+        ->assertDontSee('عرض السجل الخام')
+        ->assertDontSee('committee_review');
 });
 
 it('uses Bootstrap pagination so navigation arrows keep their intended size', function () {

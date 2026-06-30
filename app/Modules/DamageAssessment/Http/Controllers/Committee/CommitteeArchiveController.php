@@ -3,11 +3,13 @@
 namespace App\Modules\DamageAssessment\Http\Controllers\Committee;
 
 use App\Http\Controllers\Controller;
+use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
 use App\Models\HousingUnit;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class CommitteeArchiveController extends Controller
 {
@@ -145,6 +147,8 @@ class CommitteeArchiveController extends Controller
             unset($decisionSnapshot['committee_members']);
         }
 
+        $visibleExcelFields = $this->visibleExcelFields();
+
         return view('damage-assessment::committee.archive.show', [
             'archiveObject' => $archiveObject,
             'currentBuilding' => $currentBuilding,
@@ -152,17 +156,17 @@ class CommitteeArchiveController extends Controller
             'buildingRows' => $this->comparisonRows(
                 $archiveObject->building_snapshot,
                 $currentBuilding?->attributesToArray(),
-                $this->buildingFields(),
+                $this->visibleBuildingFields($visibleExcelFields),
             ),
             'housingRows' => $this->comparisonRows(
                 $archiveObject->housing_unit_snapshot,
                 $currentHousingUnit?->attributesToArray(),
-                $this->housingUnitFields(),
+                $this->visibleHousingUnitFields($visibleExcelFields),
             ),
             'decisionRows' => $this->comparisonRows(
                 $decisionSnapshot,
                 $archiveObject->committeeDecision?->attributesToArray(),
-                $this->decisionFields(),
+                $this->visibleDecisionFields($visibleExcelFields),
             ),
             'committeeMembers' => $this->committeeMembers($archiveObject),
         ]);
@@ -202,16 +206,7 @@ class CommitteeArchiveController extends Controller
     private function comparisonRows(?array $oldRecord, ?array $currentRecord, array $priorityFields): array
     {
         $rows = [];
-        $allFields = collect(array_keys($oldRecord ?? []))
-            ->merge(array_keys($currentRecord ?? []))
-            ->unique()
-            ->values();
-
-        $fields = collect($priorityFields)
-            ->merge($allFields
-                ->reject(fn (string $field): bool => array_key_exists($field, $priorityFields))
-                ->sort()
-                ->mapWithKeys(fn (string $field): array => [$field => $field]));
+        $fields = collect($priorityFields);
 
         foreach ($fields as $field => $label) {
             $oldValue = $oldRecord[$field] ?? null;
@@ -275,6 +270,141 @@ class CommitteeArchiveController extends Controller
             'completed_at' => 'تاريخ الاكتمال',
             'arcgis_sync_status' => 'حالة ArcGIS',
         ];
+    }
+
+    /**
+     * @param  array<string, string>  $visibleExcelFields
+     * @return array<string, string>
+     */
+    private function visibleBuildingFields(array $visibleExcelFields): array
+    {
+        return array_intersect_key($visibleExcelFields, array_flip([
+            'objectid',
+            'parcel_no1',
+            'assignedto',
+            'building_name',
+            'shape__length',
+            'creationdate',
+            'editdate',
+            'editor',
+            'security_info',
+            'governorate',
+            'neighborhood',
+        ]));
+    }
+
+    /**
+     * @param  array<string, string>  $visibleExcelFields
+     * @return array<string, string>
+     */
+    private function visibleHousingUnitFields(array $visibleExcelFields): array
+    {
+        return array_intersect_key($visibleExcelFields, array_flip([
+            'objectid',
+            'parcel_no1',
+            'assignedto',
+            'building_name',
+            'shape__length',
+            'creationdate',
+            'editdate',
+            'editor',
+            'security_info',
+            'governorate',
+            'neighborhood',
+        ]));
+    }
+
+    /**
+     * @param  array<string, string>  $visibleExcelFields
+     * @return array<string, string>
+     */
+    private function visibleDecisionFields(array $visibleExcelFields): array
+    {
+        return array_intersect_key($visibleExcelFields, array_flip([
+            'decision_type',
+        ]));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function visibleExcelFields(): array
+    {
+        $path = base_path('committe_review.xlsx');
+
+        if (! file_exists($path)) {
+            return $this->defaultVisibleFields();
+        }
+
+        $worksheet = IOFactory::load($path)->getActiveSheet();
+        $assessmentLabels = Assessment::query()
+            ->get(['name', 'label', 'hint'])
+            ->flatMap(fn (Assessment $assessment): array => [
+                $this->normalizeFieldLabel($assessment->name) => $assessment->name,
+                $this->normalizeFieldLabel($assessment->label) => $assessment->name,
+                $this->normalizeFieldLabel($assessment->hint) => $assessment->name,
+            ])
+            ->filter()
+            ->all();
+
+        $visibleFields = [];
+
+        foreach ($worksheet->getRowIterator(1, 1)->current()->getCellIterator() as $cell) {
+            $header = trim((string) $cell->getValue());
+
+            if ($header === '' || $worksheet->getColumnDimension($cell->getColumn())->getVisible() === false) {
+                continue;
+            }
+
+            $field = $this->excelHeaderFieldMap()[$this->normalizeFieldLabel($header)]
+                ?? $assessmentLabels[$this->normalizeFieldLabel($header)]
+                ?? null;
+
+            if ($field !== null) {
+                $visibleFields[$field] = $header;
+            }
+        }
+
+        return $visibleFields ?: $this->defaultVisibleFields();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function defaultVisibleFields(): array
+    {
+        return [
+            'objectid' => 'ObjectID',
+            'parcel_no1' => 'رقم القطعة',
+            'assignedto' => 'اسم الباحث',
+            'building_name' => 'Building Name',
+            'shape__length' => 'Shape__Length',
+            'creationdate' => 'CreationDate',
+            'editdate' => 'EditDate',
+            'editor' => 'Editor',
+            'security_info' => 'security information',
+            'governorate' => 'المحافظة',
+            'neighborhood' => 'الحي',
+            'decision_type' => 'قرار اللجنة',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function excelHeaderFieldMap(): array
+    {
+        return collect($this->defaultVisibleFields())
+            ->mapWithKeys(fn (string $label, string $field): array => [$this->normalizeFieldLabel($label) => $field])
+            ->all();
+    }
+
+    private function normalizeFieldLabel(?string $label): string
+    {
+        return str($label ?? '')
+            ->lower()
+            ->replace([' ', '-', '_'], '')
+            ->toString();
     }
 
     /**
