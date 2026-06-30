@@ -130,7 +130,7 @@ class HeksController extends Controller
     {
         $label->update($request->validated());
 
-        return back()->with('success', 'تم تحديث التصنيف.');
+        return back()->with('success', 'تم تحديث معيار التقييم.');
     }
 
     public function followUps(): View
@@ -210,12 +210,12 @@ class HeksController extends Controller
     private function pipeline(): array
     {
         return [
-            ['label' => 'Assessed', 'count' => HeksBeneficiary::query()->count(), 'tone' => 'primary'],
-            ['label' => 'Selected', 'count' => HeksBeneficiary::query()->where('is_selected', true)->count(), 'tone' => 'success'],
-            ['label' => 'Assigned', 'count' => HeksBeneficiary::query()->has('workAssignments')->count(), 'tone' => 'info'],
-            ['label' => 'Paid 30%', 'count' => HeksBeneficiary::query()->whereIn('payment_status', ['paid_30', 'paid_80', 'paid_100'])->count(), 'tone' => 'warning'],
-            ['label' => 'Followed-up', 'count' => HeksBeneficiary::query()->has('followUps')->count(), 'tone' => 'dark'],
-            ['label' => 'Fully Paid', 'count' => HeksBeneficiary::query()->where('payment_status', 'paid_100')->count(), 'tone' => 'success'],
+            ['label' => 'تم تقييمها', 'count' => HeksBeneficiary::query()->count(), 'tone' => 'primary'],
+            ['label' => 'تم اختيارها', 'count' => HeksBeneficiary::query()->where('is_selected', true)->count(), 'tone' => 'success'],
+            ['label' => 'تم توزيعها', 'count' => HeksBeneficiary::query()->has('workAssignments')->count(), 'tone' => 'info'],
+            ['label' => 'استلمت دفعة أولى', 'count' => HeksBeneficiary::query()->whereIn('payment_status', ['paid_30', 'paid_80', 'paid_100'])->count(), 'tone' => 'warning'],
+            ['label' => 'تمت متابعتها', 'count' => HeksBeneficiary::query()->has('followUps')->count(), 'tone' => 'dark'],
+            ['label' => 'اكتمل دفعها', 'count' => HeksBeneficiary::query()->where('payment_status', 'paid_100')->count(), 'tone' => 'success'],
         ];
     }
 

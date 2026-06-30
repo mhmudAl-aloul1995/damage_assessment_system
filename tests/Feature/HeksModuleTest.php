@@ -63,16 +63,16 @@ it('imports and manages the HEKS operational workbook', function () {
         $this->actingAs($user)
             ->get(route('heks.dashboard'))
             ->assertOk()
-            ->assertSee('HEKS Command Center')
-            ->assertSee('Project Pipeline')
-            ->assertSee('Engineer Workload');
+            ->assertSee('نظرة عامة على HEKS')
+            ->assertSee('مسار الحالات')
+            ->assertSee('توزيع العمل على المهندسين');
 
         $this->actingAs($user)
             ->get(route('heks.beneficiaries', ['q' => 'DGN1', 'selected' => 1]))
             ->assertOk()
             ->assertSee('DGN1')
-            ->assertSee('selected')
-            ->assertSee('paid 100');
+            ->assertSee('مختار')
+            ->assertSee('مدفوع كامل');
 
         $this->actingAs($user)
             ->put(route('heks.beneficiaries.update', $beneficiary), [
