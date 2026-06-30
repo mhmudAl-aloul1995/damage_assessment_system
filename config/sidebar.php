@@ -266,7 +266,7 @@ return [
                 'title' => 'menu.audit.area_manager_review',
                 'url' => 'damage-assessment/area-manager-review',
                 'pattern' => 'damage-assessment/area-manager-review*',
-                'roles' => ['Area Manager', 'Database Officer'],
+                'roles' => ['Database Officer'],
             ],
         ],
     ],
