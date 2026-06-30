@@ -78,7 +78,11 @@ it('imports and manages the HEKS operational workbook', function () {
             ->get(route('heks.imports'))
             ->assertOk()
             ->assertSee('خريطة شيتات ملف HEKS')
-            ->assertSee('Scoring-Heks Final');
+            ->assertSee('Scoring-Heks Final')
+            ->assertSee('KOBO_List')
+            ->assertSee('125 BNFs -Data')
+            ->assertSee('group_un2xy00')
+            ->assertSee('مجموعات العمل');
 
         $this->actingAs($user)
             ->get(route('heks.beneficiaries.edit', $beneficiary))

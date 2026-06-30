@@ -7,7 +7,12 @@
     @include('heks::partials.nav')
 
     <div class="card card-flush mb-6">
-        <div class="card-header"><h3 class="card-title">استيراد ملف Excel</h3></div>
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">استيراد ملف Excel</h3>
+                <div class="text-muted">ارفع ملف HEKS الكامل مرة واحدة. النظام يقرأ الشيتات ويقسمها إلى حالات، درجات، دفعات، مرفقات، ومجموعات عمل.</div>
+            </div>
+        </div>
         <div class="card-body">
             <form method="POST" action="{{ route('heks.imports.store') }}" enctype="multipart/form-data" class="row g-4 align-items-end">
                 @csrf
@@ -32,32 +37,83 @@
     </div>
 
     <div class="card card-flush mb-6">
-        <div class="card-header"><h3 class="card-title">خريطة شيتات ملف HEKS</h3></div>
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">خريطة شيتات ملف HEKS</h3>
+                <div class="text-muted">هذا الجدول يشرح وظيفة كل شيت وأين يظهر أثره داخل الموديول.</div>
+            </div>
+        </div>
         <div class="card-body table-responsive">
-            <table class="table align-middle">
+            <table class="table table-row-dashed align-middle">
                 <thead>
-                <tr>
-                    <th>الشيت</th>
-                    <th>يدخل في النظام كـ</th>
-                    <th>الاستخدام</th>
+                <tr class="fw-bold text-muted">
+                    <th class="min-w-175px">Sheet Name</th>
+                    <th class="min-w-250px">نوع البيانات</th>
+                    <th class="min-w-450px">ماذا يمكن الاستفادة منها</th>
                 </tr>
                 </thead>
                 <tbody>
                 @foreach ([
-                    ['Scoring-Heks Final', 'التقييم والدرجات', 'احتساب الدرجة الفنية والاجتماعية والنتيجة النهائية وتصنيف الأولوية.'],
-                    ['KOBO_List', 'البيانات الخام', 'إجابات KoBo الأصلية التي تعتمد عليها الحسابات.'],
-                    ['125 BNFs -Data', 'المستفيدون المختارون', 'قائمة 125 مستفيد المعتمدة للمشروع.'],
-                    ['Scoring-Heks- V1', 'نسخة مقارنة', 'إصدار سابق أو تجريبي للمقارنة.'],
-                    ['3دفعات', 'الدفعات', 'تقسيم المنحة إلى 30% و50% و20%.'],
-                    ['Shelter Technical Weights', 'الأوزان الفنية', 'وزن كل مؤشر فني داخل حساب الأولوية.'],
-                    ['T-V / S-V', 'القيم المرجعية', 'تحويل الإجابات الفنية والاجتماعية إلى قيم رقمية.'],
-                    ['group_un2xy00 / group_lm1ok19', 'المرفقات', 'مستندات وصور الوحدة السكنية وروابطها.'],
-                    ['مجموعات العمل', 'توزيع العمل', 'ربط المستفيد بالمهندس وقيمة العقد والدفعة الأولى.'],
-                ] as [$sheet, $target, $usage])
+                    [
+                        'sheet' => 'Scoring-Heks Final',
+                        'type' => 'شيت التقييم للمستفيدين والبيانات الخاصة بهم والدفعات',
+                        'usage' => 'معرفة تكرار الحالات، الدفعات المالية، حالة كل مستفيد، قيم العقود والدفعات، والبيانات الأساسية للمستفيدين.',
+                    ],
+                    [
+                        'sheet' => 'KOBO_List',
+                        'type' => 'شيت البيانات الأولية للتقييم',
+                        'usage' => 'معرفة عدد الوحدات، حالة الوحدات، المناطق الجغرافية، التعداد السكاني للحالات التي تم تقييمها.',
+                    ],
+                    [
+                        'sheet' => '125 BNFs -Data',
+                        'type' => 'بيانات المستفيدين الـ 125 من المشروع',
+                        'usage' => 'عرض الحالات المعتمدة فقط، وربطها بملف المتابعة والدفعات والتنفيذ.',
+                    ],
+                    [
+                        'sheet' => 'Scoring-Heks- V1',
+                        'type' => 'ملف تقييم الحالات',
+                        'usage' => 'المقارنة مع نسخة تقييم سابقة عند الحاجة، ومراجعة اختلافات الحساب أو التصنيف.',
+                    ],
+                    [
+                        'sheet' => '3دفعات',
+                        'type' => 'شيت البيانات المالية للمستفيدين الـ 125',
+                        'usage' => 'معرفة قيم العقود والدفعات والحسابات البنكية والمفوضين.',
+                    ],
+                    [
+                        'sheet' => 'Shelter Technical Weights',
+                        'type' => 'شيت توضيحي للتقييم الفني',
+                        'usage' => 'الربط مع شيت التقييم لتفسير وزن كل مؤشر فني في عملية التنقيط.',
+                    ],
+                    [
+                        'sheet' => 'T-V',
+                        'type' => 'شيت أسئلة التقييم الفني',
+                        'usage' => 'تحويل الإجابات الفنية إلى قيم رقمية وربطها بعملية التنقيط.',
+                    ],
+                    [
+                        'sheet' => 'S-V',
+                        'type' => 'شيت أسئلة التقييم الاجتماعي',
+                        'usage' => 'تحويل الإجابات الاجتماعية إلى قيم رقمية وربطها بعملية التنقيط.',
+                    ],
+                    [
+                        'sheet' => 'group_un2xy00',
+                        'type' => 'مرفقات مصدرة من الكوبو',
+                        'usage' => 'عرض مستندات الحالة وروابطها وربطها بالمستفيد داخل صفحة التفاصيل.',
+                    ],
+                    [
+                        'sheet' => 'group_lm1ok19',
+                        'type' => 'ملفات مصدرة من الكوبو',
+                        'usage' => 'عرض صور الوحدة السكنية وروابطها وربطها بالمستفيد داخل صفحة التفاصيل.',
+                    ],
+                    [
+                        'sheet' => 'مجموعات العمل',
+                        'type' => 'تقسيم الحالات على المهندسين',
+                        'usage' => 'ربط كل مستفيد بالمهندس المسؤول وقيمة العقد والدفعة الأولى ومعلومات التواصل.',
+                    ],
+                ] as $sheet)
                     <tr>
-                        <td class="fw-bold">{{ $sheet }}</td>
-                        <td>{{ $target }}</td>
-                        <td class="text-muted">{{ $usage }}</td>
+                        <td class="fw-bold">{{ $sheet['sheet'] }}</td>
+                        <td>{{ $sheet['type'] }}</td>
+                        <td class="text-muted">{{ $sheet['usage'] }}</td>
                     </tr>
                 @endforeach
                 </tbody>
