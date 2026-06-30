@@ -99,6 +99,7 @@
                 <div class="text-muted">بنود قابلة للإضافة والتعديل لكل مستفيد حسب جدول الكميات المعتمد.</div>
             </div>
             <div class="card-toolbar d-flex gap-3">
+                <a href="{{ route('heks.beneficiaries.pricing', $beneficiary) }}" class="btn btn-primary">فتح شاشة التسعير</a>
                 <div class="text-end">
                     <div class="text-muted small">عدد البنود</div>
                     <div class="fw-bold">{{ number_format($beneficiary->boqItems->count()) }}</div>

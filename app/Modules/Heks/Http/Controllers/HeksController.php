@@ -8,6 +8,7 @@ use App\Modules\Heks\Http\Requests\ImportHeksSpreadsheetRequest;
 use App\Modules\Heks\Http\Requests\StoreHeksBoqItemRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksBeneficiaryRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksBoqItemRequest;
+use App\Modules\Heks\Http\Requests\UpdateHeksBoqPricingRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksFollowUpRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksLabelRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksScoreRequest;
@@ -25,6 +26,7 @@ use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class HeksController extends Controller
@@ -147,6 +149,73 @@ class HeksController extends Controller
         $beneficiary->update($request->validated());
 
         return back()->with('success', 'تم تحديث بيانات المستفيد.');
+    }
+
+    public function pricing(HeksBeneficiary $beneficiary): View
+    {
+        $this->authorizeAccess();
+        $beneficiary->load(['boqItems' => fn ($query) => $query->orderBy('section')->orderBy('item_code')->orderBy('id')]);
+
+        return view('heks::pricing', [
+            'beneficiary' => $beneficiary,
+            'pricingRows' => $this->heksPricingRows($beneficiary),
+            'boqTotal' => (float) $beneficiary->boqItems->sum('total_price_ils'),
+        ]);
+    }
+
+    public function updateBoqPricing(UpdateHeksBoqPricingRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
+    {
+        $items = collect($request->validated('items') ?? [])
+            ->map(function (array $item): array {
+                $quantity = (float) ($item['quantity'] ?? 0);
+                $unitPrice = (float) ($item['unit_price_ils'] ?? 0);
+
+                return [
+                    'source' => $item['source'] ?? 'pricing',
+                    'section' => $item['section'] ?? null,
+                    'item_code' => $item['item_code'] ?? null,
+                    'description' => (string) $item['description'],
+                    'unit' => $item['unit'] ?? null,
+                    'quantity' => $quantity,
+                    'unit_price_ils' => $unitPrice,
+                    'total_price_ils' => round($quantity * $unitPrice, 2),
+                    'notes' => $item['notes'] ?? null,
+                ];
+            })
+            ->filter(fn (array $item): bool => $item['quantity'] > 0)
+            ->values();
+
+        DB::transaction(function () use ($beneficiary, $items): void {
+            $seen = [];
+
+            foreach ($items as $item) {
+                $key = sha1(($item['item_code'] ?? '').'|'.$item['description']);
+                $seen[] = $key;
+
+                $beneficiary->boqItems()->updateOrCreate(
+                    [
+                        'item_code' => $item['item_code'],
+                        'description' => $item['description'],
+                    ],
+                    [
+                        ...$item,
+                        'raw_data' => ['pricing_key' => $key],
+                    ]
+                );
+            }
+
+            $beneficiary->boqItems()->get()->each(function (HeksBoqItem $item) use ($seen): void {
+                $key = sha1(($item->item_code ?? '').'|'.$item->description);
+
+                if (! in_array($key, $seen, true)) {
+                    $item->delete();
+                }
+            });
+        });
+
+        return redirect()
+            ->route('heks.beneficiaries.pricing', $beneficiary)
+            ->with('success', 'تم حفظ تسعير جدول الكميات بنجاح.');
     }
 
     public function storeBoqItem(StoreHeksBoqItemRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
@@ -272,6 +341,53 @@ class HeksController extends Controller
             ...$data,
             'total_price_ils' => round($quantity * $unitPrice, 2),
         ];
+    }
+
+    private function heksPricingRows(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection
+    {
+        $existingItems = $beneficiary->boqItems
+            ->keyBy(fn (HeksBoqItem $item): string => sha1(($item->item_code ?? '').'|'.$item->description));
+
+        $rows = $this->boqCatalog()
+            ->map(function (array $catalogItem, int $index) use ($existingItems): array {
+                $key = sha1(($catalogItem['item_code'] ?? '').'|'.$catalogItem['description']);
+                $existing = $existingItems->get($key);
+                $quantity = $existing?->quantity ?? 0;
+                $unitPrice = $existing?->unit_price_ils ?? $catalogItem['unit_price_ils'];
+
+                return [
+                    'key' => $key,
+                    'source' => $existing?->source ?? 'catalog',
+                    'section' => $existing?->section ?? $catalogItem['section'],
+                    'item_code' => $existing?->item_code ?? $catalogItem['item_code'],
+                    'description' => $existing?->description ?? $catalogItem['description'],
+                    'unit' => $existing?->unit ?? $catalogItem['unit'],
+                    'quantity' => $quantity,
+                    'unit_price_ils' => $unitPrice,
+                    'total_price_ils' => $existing?->total_price_ils ?? 0,
+                    'notes' => $existing?->notes,
+                    'sort_order' => $index,
+                ];
+            });
+
+        $catalogKeys = $rows->pluck('key')->all();
+        $extraRows = $beneficiary->boqItems
+            ->reject(fn (HeksBoqItem $item): bool => in_array(sha1(($item->item_code ?? '').'|'.$item->description), $catalogKeys, true))
+            ->map(fn (HeksBoqItem $item): array => [
+                'key' => sha1(($item->item_code ?? '').'|'.$item->description),
+                'source' => $item->source,
+                'section' => $item->section,
+                'item_code' => $item->item_code,
+                'description' => $item->description,
+                'unit' => $item->unit,
+                'quantity' => $item->quantity,
+                'unit_price_ils' => $item->unit_price_ils,
+                'total_price_ils' => $item->total_price_ils,
+                'notes' => $item->notes,
+                'sort_order' => 9999,
+            ]);
+
+        return $rows->merge($extraRows)->values();
     }
 
     private function boqCatalog(): \Illuminate\Support\Collection

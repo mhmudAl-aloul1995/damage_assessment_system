@@ -133,6 +133,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('استيراد BOQ')
             ->assertSee('data-control="select2"', false)
             ->assertSee('اختر أو ابحث عن بند')
+            ->assertSee('فتح شاشة التسعير')
             ->assertSee('DGN1')
             ->assertSee('Test Beneficiary')
             ->assertSee('Scoring-Heks Final')
@@ -150,6 +151,34 @@ it('imports and manages the HEKS operational workbook', function () {
 
         expect(HeksBoqItem::query()->where('source', 'beneficiary-boq.xlsx')->count())->toBe(1)
             ->and((float) HeksBoqItem::query()->where('source', 'beneficiary-boq.xlsx')->value('total_price_ils'))->toBe(1220.0);
+
+        $this->actingAs($user)
+            ->get(route('heks.beneficiaries.pricing', $beneficiary))
+            ->assertOk()
+            ->assertSee('heksPricingForm', false)
+            ->assertSee('pricing-table', false)
+            ->assertSee('pricingSearchInput', false)
+            ->assertSee('عرض البنود المسعّرة فقط')
+            ->assertSee('توريد و بناء بلوك اسمنتي');
+
+        $this->actingAs($user)
+            ->put(route('heks.beneficiaries.pricing.update', $beneficiary), [
+                'items' => [
+                    [
+                        'source' => 'pricing',
+                        'section' => 'اعمال البلوك',
+                        'item_code' => '3.1',
+                        'description' => 'توريد و بناء بلوك اسمنتي',
+                        'unit' => 'M2',
+                        'quantity' => 4,
+                        'unit_price_ils' => 610,
+                    ],
+                ],
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('heks.beneficiaries.pricing', $beneficiary));
+
+        expect((float) HeksBoqItem::query()->where('description', 'توريد و بناء بلوك اسمنتي')->value('total_price_ils'))->toBe(2440.0);
 
         $this->actingAs($user)
             ->post(route('heks.beneficiaries.boq-items.store', $beneficiary), [
