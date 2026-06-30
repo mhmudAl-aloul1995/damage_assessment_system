@@ -14,6 +14,7 @@ use App\Modules\Heks\Models\HeksScoringWeight;
 use App\Modules\Heks\Models\HeksWorkAssignment;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -176,12 +177,12 @@ class HeksSpreadsheetImportService
                 HeksBoqItem::query()->updateOrCreate(
                     [
                         'heks_beneficiary_id' => $beneficiary->id,
-                        'source' => $source,
                         'item_code' => $itemCode,
+                        'description' => $description,
                     ],
                     [
+                        'source' => $source,
                         'section' => $section,
-                        'description' => $description,
                         'unit' => $unit,
                         'quantity' => $quantity,
                         'unit_price_ils' => $unitPrice,
@@ -489,22 +490,32 @@ class HeksSpreadsheetImportService
             ]
         );
 
-        $this->followUpBoqAttachment($beneficiary, $followUp, $row, $source);
+        $attachment = $this->followUpBoqAttachment($beneficiary, $followUp, $row, $source);
+
+        if ($attachment !== null) {
+            $summary = $this->importFollowUpBoqWorkbook($beneficiary, $attachment);
+
+            if ($summary !== null) {
+                $attachment->forceFill([
+                    'raw_data' => array_merge($attachment->raw_data ?? [], ['boq_import_summary' => $summary]),
+                ])->save();
+            }
+        }
     }
 
     /**
      * @param  array<string, mixed>  $row
      */
-    private function followUpBoqAttachment(HeksBeneficiary $beneficiary, HeksFollowUp $followUp, array $row, string $source): void
+    private function followUpBoqAttachment(HeksBeneficiary $beneficiary, HeksFollowUp $followUp, array $row, string $source): ?HeksAttachment
     {
         $filename = $this->first($row, ['Insert BOQ']);
         $url = $this->first($row, ['Insert BOQ_URL']);
 
         if ($filename === '' && $url === '') {
-            return;
+            return null;
         }
 
-        HeksAttachment::query()->updateOrCreate(
+        return HeksAttachment::query()->updateOrCreate(
             [
                 'heks_beneficiary_id' => $beneficiary->id,
                 'source' => "follow-up:{$followUp->id}",
@@ -522,6 +533,66 @@ class HeksSpreadsheetImportService
                 ],
             ]
         );
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function importFollowUpBoqWorkbook(HeksBeneficiary $beneficiary, HeksAttachment $attachment): ?array
+    {
+        if (! $this->isExcelAttachment((string) $attachment->filename, (string) $attachment->url)) {
+            return null;
+        }
+
+        if ($attachment->url === null || $attachment->url === '') {
+            return [
+                'imported' => false,
+                'error' => 'لا يوجد رابط لتحميل ملف جدول الكميات.',
+            ];
+        }
+
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'heks-boq-');
+
+        try {
+            $response = Http::timeout(30)->get($attachment->url);
+
+            if (! $response->successful() || $response->body() === '') {
+                return [
+                    'imported' => false,
+                    'error' => 'تعذر تحميل ملف جدول الكميات من KoBo.',
+                    'status' => $response->status(),
+                ];
+            }
+
+            file_put_contents($temporaryPath, $response->body());
+
+            return array_merge(
+                ['imported' => true],
+                $this->importBeneficiaryBoq(
+                    new UploadedFile($temporaryPath, (string) $attachment->filename, null, null, true),
+                    $beneficiary
+                )
+            );
+        } catch (Throwable $exception) {
+            return [
+                'imported' => false,
+                'error' => $exception->getMessage(),
+            ];
+        } finally {
+            if (is_string($temporaryPath) && file_exists($temporaryPath)) {
+                @unlink($temporaryPath);
+            }
+        }
+    }
+
+    private function isExcelAttachment(string $filename, string $url): bool
+    {
+        $filenameExtension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        $urlPath = parse_url($url, PHP_URL_PATH);
+        $urlExtension = is_string($urlPath) ? strtolower(pathinfo($urlPath, PATHINFO_EXTENSION)) : '';
+
+        return in_array($filenameExtension, ['xlsx', 'xls'], true)
+            || in_array($urlExtension, ['xlsx', 'xls'], true);
     }
 
     /**

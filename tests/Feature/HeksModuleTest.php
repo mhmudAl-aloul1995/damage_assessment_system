@@ -13,6 +13,7 @@ use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -34,6 +35,11 @@ it('imports and manages the HEKS operational workbook', function () {
         heksWriteFollowUpsWorkbook($followUpPath);
         heksWriteBoqWorkbook($boqPath);
         heksWriteBoqWorkbook($mismatchedBoqPath, 'DGN2', 'Other Beneficiary');
+        Http::fake([
+            'https://example.test/boq.xlsx' => Http::response(file_get_contents($boqPath), 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]),
+        ]);
 
         $workbookSummary = $importer->import(
             new UploadedFile($workbookPath, 'heks-full.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
@@ -55,7 +61,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->and(HeksPayment::query()->count())->toBe(1)
             ->and(HeksWorkAssignment::query()->count())->toBe(1)
             ->and(HeksAttachment::query()->count())->toBe(2)
-            ->and(HeksAttachment::query()->where('attachment_type', 'follow_up_boq')->where('filename', 'boq.pdf')->exists())->toBeTrue()
+            ->and(HeksAttachment::query()->where('attachment_type', 'follow_up_boq')->where('filename', 'boq.xlsx')->exists())->toBeTrue()
+            ->and(HeksBoqItem::query()->where('source', 'boq.xlsx')->count())->toBe(1)
             ->and(HeksScoringWeight::query()->count())->toBeGreaterThan(0)
             ->and(HeksFollowUp::query()->count())->toBe(1);
 
@@ -126,8 +133,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->get(route('heks.follow-ups'))
             ->assertOk()
             ->assertSee('جدول الكميات BOQ')
-            ->assertSee('boq.pdf')
-            ->assertSee('https://example.test/boq.pdf')
+            ->assertSee('boq.xlsx')
+            ->assertSee('https://example.test/boq.xlsx')
             ->assertSee('محفوظ في قاعدة البيانات');
 
         $this->actingAs($user)
@@ -143,7 +150,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('Scoring-Heks Final')
             ->assertSee('Partial damage')
             ->assertSee('damage_status')
-            ->assertSee('boq.pdf')
+            ->assertSee('boq.xlsx')
             ->assertSee('High');
 
         $this->actingAs($user)
@@ -460,8 +467,8 @@ function heksWriteFollowUpsWorkbook(string $path): void
             'Engineer One',
             'In progress',
             '',
-            'boq.pdf',
-            'https://example.test/boq.pdf',
+            'boq.xlsx',
+            'https://example.test/boq.xlsx',
             500,
             40,
             'Continue',
