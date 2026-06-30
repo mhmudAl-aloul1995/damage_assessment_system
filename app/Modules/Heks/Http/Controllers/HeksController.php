@@ -135,6 +135,9 @@ class HeksController extends Controller
         return view('heks::edit', [
             'beneficiary' => $beneficiary,
             'boqTotal' => (float) $beneficiary->boqItems->sum('total_price_ils'),
+            'boqCatalog' => $this->boqCatalog(),
+            'boqSections' => $this->boqCatalog()->pluck('section')->filter()->unique()->sort()->values(),
+            'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
             'rawDataSections' => $this->rawDataSections($beneficiary),
         ]);
     }
@@ -269,6 +272,42 @@ class HeksController extends Controller
             ...$data,
             'total_price_ils' => round($quantity * $unitPrice, 2),
         ];
+    }
+
+    private function boqCatalog(): \Illuminate\Support\Collection
+    {
+        $savedItems = HeksBoqItem::query()
+            ->select(['section', 'item_code', 'description', 'unit', 'unit_price_ils'])
+            ->whereNotNull('description')
+            ->get()
+            ->map(fn (HeksBoqItem $item): array => [
+                'section' => (string) $item->section,
+                'item_code' => (string) $item->item_code,
+                'description' => (string) $item->description,
+                'unit' => (string) $item->unit,
+                'unit_price_ils' => (float) $item->unit_price_ils,
+            ]);
+
+        return collect([
+            ['section' => 'أعمال الازالة', 'item_code' => '1.1', 'description' => 'أعمال هدم وإزالة أنقاض جدران من البلوك الاسمنتي أو أجزائها الخرسانية', 'unit' => 'm3', 'unit_price_ils' => 113],
+            ['section' => 'أعمال الازالة', 'item_code' => '1.2', 'description' => 'أعمال إزالة أنقاض فقط أي كانت محتوياتها وسواء كانت داخل المنزل أو خارجه', 'unit' => 'm3', 'unit_price_ils' => 97],
+            ['section' => 'اعمال الخرسانة', 'item_code' => '2.1', 'description' => 'توريد وصب خرسانة B200 لزوم المدات الأرضية بسمك 10سم', 'unit' => 'M2', 'unit_price_ils' => 1035],
+            ['section' => 'اعمال الخرسانة', 'item_code' => '2.2', 'description' => 'توريد وصب خرسانة مسلحة B250 لزوم الأسقف بسمك 25 سم', 'unit' => 'M2', 'unit_price_ils' => 2511],
+            ['section' => 'اعمال البلوك', 'item_code' => '3.1', 'description' => 'توريد و بناء بلوك اسمنتي مفرغ مستخدم بحالة جيدة مقاس 20 سم', 'unit' => 'M2', 'unit_price_ils' => 610],
+            ['section' => 'اعمال البلوك', 'item_code' => '3.2', 'description' => 'توريد و بناء بلوك اسمنتي مفرغ مستخدم بحالة جيدة مقاس 15 سم', 'unit' => 'M2', 'unit_price_ils' => 585],
+            ['section' => 'اعمال البلوك', 'item_code' => '3.3', 'description' => 'توريد و بناء بلوك اسمنتي مفرغ مستخدم بحالة جيدة مقاس 12 سم', 'unit' => 'M2', 'unit_price_ils' => 572],
+            ['section' => 'القصارة', 'item_code' => '4.1', 'description' => 'قصارة داخلية من طبقتين رشقة مسمار وبطانة', 'unit' => 'M2', 'unit_price_ils' => 210],
+            ['section' => 'البلاط', 'item_code' => '5.1', 'description' => 'توريد وتركيب بلاط نوع سيراميك أو بورسلان للأرضيات', 'unit' => 'M2', 'unit_price_ils' => 315],
+            ['section' => 'المجلى', 'item_code' => '6.1', 'description' => 'توريد وتركيب كاونتر مطبخ وجه باطون', 'unit' => 'م.ط', 'unit_price_ils' => 680],
+            ['section' => 'الدهان', 'item_code' => '7.1', 'description' => 'توريد ودهان لزوم الحوائط الداخلية والأسقف بوجهين', 'unit' => 'M2', 'unit_price_ils' => 15],
+            ['section' => 'الخشب', 'item_code' => '8.1', 'description' => 'توريد وتركيب ضلفة باب خشب جديد', 'unit' => 'عدد', 'unit_price_ils' => 1455],
+            ['section' => 'السباكة', 'item_code' => '11.1', 'description' => 'توريد وتركيب مغسلة بورسلان مقاس 50 سم', 'unit' => 'عدد', 'unit_price_ils' => 435],
+            ['section' => 'الجبس', 'item_code' => '12.1', 'description' => 'توريد وتركيب قواطع من ألواح الجبس', 'unit' => 'M2', 'unit_price_ils' => 565],
+        ])
+            ->merge($savedItems)
+            ->unique(fn (array $item): string => $item['item_code'].'|'.$item['description'])
+            ->sortBy('item_code')
+            ->values();
     }
 
     /**

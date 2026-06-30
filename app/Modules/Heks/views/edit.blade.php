@@ -128,21 +128,45 @@
 
             <form method="POST" action="{{ route('heks.beneficiaries.boq-items.store', $beneficiary) }}" class="row g-3 align-items-end mb-6">
                 @csrf
-                <div class="col-xl-2 col-md-3">
+                <input type="hidden" name="source" value="manual">
+                <div class="col-xl-2 col-md-4">
                     <label class="form-label">القسم</label>
-                    <input name="section" class="form-control" placeholder="اعمال البلوك">
+                    <select id="heks-boq-section" name="section" class="form-select form-select-solid heks-boq-select2" data-control="select2" data-placeholder="اختر القسم" data-tags="true">
+                        <option></option>
+                        @foreach ($boqSections as $section)
+                            <option value="{{ $section }}">{{ $section }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <div class="col-xl-1 col-md-2">
+                <div class="col-xl-4 col-md-8">
+                    <label class="form-label">البند</label>
+                    <select id="heks-boq-item-select" name="description" class="form-select form-select-solid heks-boq-select2" data-control="select2" data-placeholder="اختر أو ابحث عن بند" data-tags="true" required>
+                        <option></option>
+                        @foreach ($boqCatalog as $item)
+                            <option
+                                value="{{ $item['description'] }}"
+                                data-section="{{ $item['section'] }}"
+                                data-code="{{ $item['item_code'] }}"
+                                data-unit="{{ $item['unit'] }}"
+                                data-price="{{ $item['unit_price_ils'] }}"
+                            >
+                                {{ $item['item_code'] }} - {{ $item['description'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-xl-1 col-md-3">
                     <label class="form-label">رقم البند</label>
-                    <input name="item_code" class="form-control" placeholder="3.1">
+                    <input id="heks-boq-item-code" name="item_code" class="form-control" placeholder="3.1">
                 </div>
-                <div class="col-xl-3 col-md-7">
-                    <label class="form-label">وصف البند</label>
-                    <input name="description" class="form-control" required placeholder="وصف البند من جدول الكميات">
-                </div>
-                <div class="col-xl-1 col-md-2">
+                <div class="col-xl-1 col-md-3">
                     <label class="form-label">الوحدة</label>
-                    <input name="unit" class="form-control" placeholder="M2">
+                    <select id="heks-boq-unit" name="unit" class="form-select form-select-solid heks-boq-select2" data-control="select2" data-placeholder="الوحدة" data-tags="true">
+                        <option></option>
+                        @foreach ($boqUnits as $unit)
+                            <option value="{{ $unit }}">{{ $unit }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-xl-1 col-md-2">
                     <label class="form-label">الكمية</label>
@@ -150,11 +174,7 @@
                 </div>
                 <div class="col-xl-2 col-md-3">
                     <label class="form-label">تكلفة الوحدة ILS</label>
-                    <input name="unit_price_ils" type="number" min="0" step="0.01" class="form-control" value="0" required>
-                </div>
-                <div class="col-xl-1 col-md-2">
-                    <label class="form-label">المصدر</label>
-                    <input name="source" class="form-control" value="manual">
+                    <input id="heks-boq-unit-price" name="unit_price_ils" type="number" min="0" step="0.01" class="form-control" value="0" required>
                 </div>
                 <div class="col-xl-1 col-md-2">
                     <button class="btn btn-primary w-100">إضافة</button>
@@ -214,6 +234,46 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.jQuery && $.fn.select2) {
+                $('.heks-boq-select2').select2({
+                    dir: 'rtl',
+                    width: '100%',
+                    tags: true,
+                    allowClear: true
+                });
+            }
+
+            $('#heks-boq-item-select').on('change', function () {
+                const selected = $(this).find(':selected');
+                const section = selected.data('section') || '';
+                const code = selected.data('code') || '';
+                const unit = selected.data('unit') || '';
+                const price = selected.data('price') || 0;
+
+                if (section) {
+                    const sectionSelect = $('#heks-boq-section');
+                    if (!sectionSelect.find(`option[value="${section}"]`).length) {
+                        sectionSelect.append(new Option(section, section, true, true));
+                    }
+                    sectionSelect.val(section).trigger('change');
+                }
+
+                if (unit) {
+                    const unitSelect = $('#heks-boq-unit');
+                    if (!unitSelect.find(`option[value="${unit}"]`).length) {
+                        unitSelect.append(new Option(unit, unit, true, true));
+                    }
+                    unitSelect.val(unit).trigger('change');
+                }
+
+                $('#heks-boq-item-code').val(code);
+                $('#heks-boq-unit-price').val(price);
+            });
+        });
+    </script>
 
     <div class="row g-5 mb-6">
         <div class="col-xl-6">

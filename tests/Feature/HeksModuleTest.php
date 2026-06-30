@@ -131,6 +131,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertOk()
             ->assertSee('جدول الكميات والتسعير BOQ')
             ->assertSee('استيراد BOQ')
+            ->assertSee('data-control="select2"', false)
+            ->assertSee('اختر أو ابحث عن بند')
             ->assertSee('DGN1')
             ->assertSee('Test Beneficiary')
             ->assertSee('Scoring-Heks Final')
