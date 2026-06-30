@@ -267,12 +267,66 @@ class HeksController extends Controller
         return back()->with('success', 'تم تحديث معيار التقييم.');
     }
 
-    public function followUps(): View
+    public function followUps(Request $request): View
     {
         $this->authorizeAccess();
 
+        $query = HeksFollowUp::query()
+            ->with('beneficiary.attachments')
+            ->when($request->filled('q'), function ($query) use ($request): void {
+                $search = (string) $request->string('q');
+                $query->where(function ($query) use ($search): void {
+                    $query->where('code', 'like', "%{$search}%")
+                        ->orWhereHas('beneficiary', function ($query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%")
+                                ->orWhere('identity_number', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($request->filled('engineer'), fn ($query) => $query->where('engineer_name', (string) $request->string('engineer')))
+            ->when($request->filled('visit_number'), fn ($query) => $query->where('visit_number', (string) $request->string('visit_number')))
+            ->when($request->filled('visit_from'), fn ($query) => $query->whereDate('visit_date', '>=', (string) $request->string('visit_from')))
+            ->when($request->filled('visit_to'), fn ($query) => $query->whereDate('visit_date', '<=', (string) $request->string('visit_to')))
+            ->when($request->string('boq_status')->toString() === 'with_boq', function ($query): void {
+                $query->where(function ($query): void {
+                    $query->whereNotNull('boq_filename')->orWhereNotNull('boq_url');
+                });
+            })
+            ->when($request->string('boq_status')->toString() === 'without_boq', function ($query): void {
+                $query->whereNull('boq_filename')->whereNull('boq_url');
+            });
+
+        $boqAttachments = HeksAttachment::query()
+            ->where('attachment_type', 'follow_up_boq')
+            ->get();
+
         return view('heks::follow-ups', [
-            'followUps' => HeksFollowUp::query()->with('beneficiary.attachments')->latest()->paginate(25),
+            'followUps' => $query->latest()->paginate(25)->withQueryString(),
+            'followUpSummary' => [
+                'total' => HeksFollowUp::query()->count(),
+                'with_boq' => HeksFollowUp::query()
+                    ->where(fn ($query) => $query->whereNotNull('boq_filename')->orWhereNotNull('boq_url'))
+                    ->count(),
+                'imported_boq' => $boqAttachments
+                    ->filter(fn (HeksAttachment $attachment): bool => (bool) data_get($attachment->raw_data, 'boq_import_summary.imported'))
+                    ->count(),
+                'failed_boq' => $boqAttachments
+                    ->filter(fn (HeksAttachment $attachment): bool => data_get($attachment->raw_data, 'boq_import_summary.imported') === false)
+                    ->count(),
+                'completed_amount' => HeksFollowUp::query()->sum('completed_amount_ils'),
+            ],
+            'engineers' => HeksFollowUp::query()
+                ->whereNotNull('engineer_name')
+                ->where('engineer_name', '<>', '')
+                ->distinct()
+                ->orderBy('engineer_name')
+                ->pluck('engineer_name'),
+            'visitNumbers' => HeksFollowUp::query()
+                ->whereNotNull('visit_number')
+                ->where('visit_number', '<>', '')
+                ->distinct()
+                ->orderBy('visit_number')
+                ->pluck('visit_number'),
         ]);
     }
 
