@@ -302,10 +302,10 @@ class HeksSpreadsheetImportService
             'displacement_status' => $this->first($row, ['حالة النزوح للأسرة حالياً']),
             'occupancy_status' => $this->first($row, ['حالة الإشغال الحالي للوحدة السكنية']),
             'damage_status' => $this->first($row, ['تقييم حالة ضرر المأوى:']),
-            'grant_amount' => $this->decimal($this->first($row, ['GRANT', 'المنحة', 'قيمة العقد ILS'])),
-            'payment_1' => $this->decimal($this->first($row, ['Payment_1', '30%', 'الدفعة الأولى  30% ILS'])),
-            'payment_2' => $this->decimal($this->first($row, ['Payment_2', '50%'])),
-            'payment_3' => $this->decimal($this->first($row, ['Payment_3', '20%'])),
+            'grant_amount' => $this->decimal($this->first($row, ['Intervention (ILS)', 'GRANT', 'المنحة', 'قيمة العقد ILS'])),
+            'payment_1' => $this->decimal($this->first($row, ['الدفعة  1', 'الدفعة 1', 'Payment_1', '30%', 'الدفعة الأولى  30% ILS'])),
+            'payment_2' => $this->decimal($this->first($row, ['الدفعة 2', 'Payment_2', '50%'])),
+            'payment_3' => $this->decimal($this->first($row, ['الدفعة 3', 'Payment_3', '20%'])),
             'recommendations' => $this->first($row, ['توصيات المهندس للزيارة', 'توصيات نهائية']),
             'selection_source' => in_array($type, ['selected', 'payments', 'work_groups'], true) ? $source : null,
             'selection_status' => in_array($type, ['selected', 'payments', 'work_groups'], true) ? 'selected' : null,
@@ -376,13 +376,14 @@ class HeksSpreadsheetImportService
         HeksScore::query()->updateOrCreate(
             ['heks_beneficiary_id' => $beneficiary->id, 'source' => $source],
             [
-                'grant_amount' => $this->decimal($this->first($row, ['GRANT', 'المنحة', 'قيمة العقد ILS'])),
-                'payment_1' => $this->decimal($this->first($row, ['Payment_1', '30%', 'الدفعة الأولى  30% ILS'])),
-                'payment_2' => $this->decimal($this->first($row, ['Payment_2', '50%'])),
-                'payment_3' => $this->decimal($this->first($row, ['Payment_3', '20%'])),
+                'grant_amount' => $this->decimal($this->first($row, ['Intervention (ILS)', 'GRANT', 'المنحة', 'قيمة العقد ILS'])),
+                'payment_1' => $this->decimal($this->first($row, ['الدفعة  1', 'الدفعة 1', 'Payment_1', '30%', 'الدفعة الأولى  30% ILS'])),
+                'payment_2' => $this->decimal($this->first($row, ['الدفعة 2', 'Payment_2', '50%'])),
+                'payment_3' => $this->decimal($this->first($row, ['الدفعة 3', 'Payment_3', '20%'])),
                 'social_score' => $this->decimal($this->first($row, ['تقييم الحالة الاجتماعية من 35', 'تقييم الحالة الاجتماعية  (30)'])),
                 'technical_score' => $this->decimal($this->first($row, ['تقييم الحالة الفنية (70)'])),
-                'total_score' => $this->decimal($this->first($row, ['Total Score', 'Score', 'score'])),
+                'total_score' => $this->decimal($this->first($row, ['التقييم الكلي', 'Total Score', 'Score', 'score'])),
+                'classification' => $this->first($row, ['التصنيف', 'Classification', 'classification']),
                 'raw_data' => $row,
             ]
         );
@@ -608,7 +609,11 @@ class HeksSpreadsheetImportService
 
         foreach ($row as $heading => $value) {
             foreach ($keys as $key) {
-                if (is_string($heading) && str_contains($heading, $key) && trim((string) $value) !== '') {
+                if (
+                    is_string($heading)
+                    && str_contains($this->normalizedHeading($heading), $this->normalizedHeading($key))
+                    && trim((string) $value) !== ''
+                ) {
                     return trim((string) $value);
                 }
             }
@@ -629,13 +634,18 @@ class HeksSpreadsheetImportService
             }
 
             foreach (array_keys($headers) as $heading) {
-                if (is_string($heading) && str_contains($heading, $key)) {
+                if (is_string($heading) && str_contains($this->normalizedHeading($heading), $this->normalizedHeading($key))) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    private function normalizedHeading(string $heading): string
+    {
+        return preg_replace('/\s+/u', ' ', trim($heading)) ?? trim($heading);
     }
 
     private function paymentStatus(HeksPayment $payment): string

@@ -24,6 +24,7 @@ class UpdateHeksScoreRequest extends FormRequest
             'social_score' => ['nullable', 'numeric'],
             'technical_score' => ['nullable', 'numeric'],
             'total_score' => ['nullable', 'numeric'],
+            'classification' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

@@ -60,6 +60,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->and($beneficiary->field_engineer)->toBe('Engineer One')
             ->and($beneficiary->payment_status)->toBe('paid_100');
 
+        expect(HeksScore::query()->where('classification', 'High')->exists())->toBeTrue();
+
         $this->actingAs($user)
             ->get(route('heks.dashboard'))
             ->assertOk()
@@ -85,13 +87,21 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('مجموعات العمل');
 
         $this->actingAs($user)
+            ->get(route('heks.scores'))
+            ->assertOk()
+            ->assertSee('التقييم والدرجات')
+            ->assertSee('Intervention (ILS)')
+            ->assertSee('High');
+
+        $this->actingAs($user)
             ->get(route('heks.beneficiaries.edit', $beneficiary))
             ->assertOk()
             ->assertSee('DGN1')
             ->assertSee('Test Beneficiary')
             ->assertSee('Scoring-Heks Final')
             ->assertSee('Partial damage')
-            ->assertSee('damage_status');
+            ->assertSee('damage_status')
+            ->assertSee('High');
 
         $this->actingAs($user)
             ->put(route('heks.beneficiaries.update', $beneficiary), [
@@ -218,7 +228,12 @@ function heksAssessmentHeaders(): array
         'Payment_3',
         'تقييم الحالة الاجتماعية  (30)',
         'تقييم الحالة الفنية (70)',
-        'Total Score',
+        'التقييم الكلي',
+        'التصنيف',
+        'Intervention (ILS)',
+        'الدفعة  1',
+        'الدفعة 2',
+        'الدفعة 3',
         '__version__',
     ];
 }
@@ -244,6 +259,11 @@ function heksAssessmentRow(string $code): array
         20,
         60,
         80,
+        'High',
+        1200,
+        360,
+        600,
+        240,
         'v1',
     ];
 }

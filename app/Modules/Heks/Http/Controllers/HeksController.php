@@ -165,6 +165,19 @@ class HeksController extends Controller
 
         return view('heks::scores', [
             'scores' => HeksScore::query()->with('beneficiary')->latest()->paginate(25),
+            'scoreSummary' => [
+                'total' => HeksScore::query()->count(),
+                'average_social' => HeksScore::query()->avg('social_score'),
+                'average_technical' => HeksScore::query()->avg('technical_score'),
+                'average_total' => HeksScore::query()->avg('total_score'),
+            ],
+            'classifications' => HeksScore::query()
+                ->selectRaw('classification, count(*) as aggregate')
+                ->whereNotNull('classification')
+                ->where('classification', '<>', '')
+                ->groupBy('classification')
+                ->orderByDesc('aggregate')
+                ->pluck('aggregate', 'classification'),
         ]);
     }
 

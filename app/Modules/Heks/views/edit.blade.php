@@ -98,7 +98,7 @@
                 <div class="card-header"><h3 class="card-title">التقييم والدرجات</h3></div>
                 <div class="card-body table-responsive">
                     <table class="table align-middle">
-                        <thead><tr><th>المصدر</th><th>اجتماعي</th><th>فني</th><th>نهائي</th><th>المنحة</th></tr></thead>
+                        <thead><tr><th>المصدر</th><th>اجتماعي</th><th>فني</th><th>نهائي</th><th>التصنيف</th><th>المنحة</th></tr></thead>
                         <tbody>
                         @forelse ($beneficiary->scores as $score)
                             <tr>
@@ -106,10 +106,11 @@
                                 <td>{{ $score->social_score ?? '-' }}</td>
                                 <td>{{ $score->technical_score ?? '-' }}</td>
                                 <td>{{ $score->total_score ?? '-' }}</td>
+                                <td>{{ $score->classification ?? '-' }}</td>
                                 <td>{{ $score->grant_amount ?? '-' }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="text-center text-muted">لا توجد درجات.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted">لا توجد درجات.</td></tr>
                         @endforelse
                         </tbody>
                     </table>

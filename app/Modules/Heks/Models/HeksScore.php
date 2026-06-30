@@ -17,6 +17,7 @@ class HeksScore extends Model
         'social_score',
         'technical_score',
         'total_score',
+        'classification',
         'raw_data',
     ];
 
