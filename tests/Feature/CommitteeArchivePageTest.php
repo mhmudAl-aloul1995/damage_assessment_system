@@ -15,7 +15,7 @@ beforeEach(function () {
     app(RolesAndPermissionsSeeder::class)->run();
 });
 
-it('shows archived committee records and compares only visible Excel fields', function () {
+it('shows archived committee records and compares survey fields', function () {
     $user = User::factory()->create();
 
     $building = Building::query()->create([
@@ -93,20 +93,21 @@ it('shows archived committee records and compares only visible Excel fields', fu
         ->get(route('committee-archive.show', $archive))
         ->assertOk()
         ->assertSee('Building Name')
-        ->assertSee('تظهر فقط الحقول الظاهرة في ملف Excel')
+        ->assertSee('تظهر حقول الاستبيان المعرفة في النظام')
         ->assertSee('القيمة السابقة')
         ->assertSee('القيمة الحالية')
         ->assertSee('Old Building Name')
         ->assertSee('Current Building Name')
         ->assertSee('Old Engineer')
         ->assertSee('Current Engineer')
+        ->assertSee('committee_review')
+        ->assertSee('partially_damaged')
         ->assertSee('Archived Committee Member')
         ->assertSee('Approved in the archived decision.')
         ->assertDontSee('general_notes')
         ->assertDontSee('Old full record note')
         ->assertDontSee('Current full record note')
-        ->assertDontSee('عرض السجل الخام')
-        ->assertDontSee('committee_review');
+        ->assertDontSee('عرض السجل الخام');
 });
 
 it('uses Bootstrap pagination so navigation arrows keep their intended size', function () {

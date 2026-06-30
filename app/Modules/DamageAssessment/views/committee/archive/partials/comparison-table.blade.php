@@ -8,7 +8,7 @@
         <div class="card-title">
             <div>
                 <h3 class="fw-bold m-0">{{ $title }}</h3>
-                <div class="text-muted fs-7 mt-1">تظهر فقط الحقول الظاهرة في ملف Excel، مع إبراز الحقول المتغيرة أولًا.</div>
+                <div class="text-muted fs-7 mt-1">تظهر حقول الاستبيان المعرفة في النظام، مع إبراز الحقول المتغيرة أولًا.</div>
             </div>
         </div>
         <div class="card-toolbar">
@@ -45,8 +45,8 @@
             </div>
         @else
             <div class="rounded border border-dashed border-gray-300 bg-light-success p-5">
-                <div class="fw-bold">لا توجد تغييرات في الحقول الظاهرة.</div>
-                <div class="text-muted fs-7">النسخة المؤرشفة مطابقة للسجل الحالي ضمن الحقول المعروضة من Excel.</div>
+                <div class="fw-bold">لا توجد تغييرات في الحقول المعروضة.</div>
+                <div class="text-muted fs-7">النسخة المؤرشفة مطابقة للسجل الحالي ضمن حقول الاستبيان المتاحة.</div>
             </div>
         @endif
 

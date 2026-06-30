@@ -9,7 +9,7 @@ use App\Models\BuildingSurveyArchiveObject;
 use App\Models\HousingUnit;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use Illuminate\Support\Facades\Schema;
 
 class CommitteeArchiveController extends Controller
 {
@@ -147,7 +147,7 @@ class CommitteeArchiveController extends Controller
             unset($decisionSnapshot['committee_members']);
         }
 
-        $visibleExcelFields = $this->visibleExcelFields();
+        $surveyFields = $this->surveyFields();
 
         return view('damage-assessment::committee.archive.show', [
             'archiveObject' => $archiveObject,
@@ -156,17 +156,17 @@ class CommitteeArchiveController extends Controller
             'buildingRows' => $this->comparisonRows(
                 $archiveObject->building_snapshot,
                 $currentBuilding?->attributesToArray(),
-                $this->visibleBuildingFields($visibleExcelFields),
+                $this->surveyFieldsForRecords($archiveObject->building_snapshot, $currentBuilding?->attributesToArray(), $surveyFields, $this->buildingFields()),
             ),
             'housingRows' => $this->comparisonRows(
                 $archiveObject->housing_unit_snapshot,
                 $currentHousingUnit?->attributesToArray(),
-                $this->visibleHousingUnitFields($visibleExcelFields),
+                $this->surveyFieldsForRecords($archiveObject->housing_unit_snapshot, $currentHousingUnit?->attributesToArray(), $surveyFields, $this->housingUnitFields()),
             ),
             'decisionRows' => $this->comparisonRows(
                 $decisionSnapshot,
                 $archiveObject->committeeDecision?->attributesToArray(),
-                $this->visibleDecisionFields($visibleExcelFields),
+                $this->decisionFields(),
             ),
             'committeeMembers' => $this->committeeMembers($archiveObject),
         ]);
@@ -273,101 +273,8 @@ class CommitteeArchiveController extends Controller
     }
 
     /**
-     * @param  array<string, string>  $visibleExcelFields
      * @return array<string, string>
      */
-    private function visibleBuildingFields(array $visibleExcelFields): array
-    {
-        return array_intersect_key($visibleExcelFields, array_flip([
-            'objectid',
-            'parcel_no1',
-            'assignedto',
-            'building_name',
-            'shape__length',
-            'creationdate',
-            'editdate',
-            'editor',
-            'security_info',
-            'governorate',
-            'neighborhood',
-        ]));
-    }
-
-    /**
-     * @param  array<string, string>  $visibleExcelFields
-     * @return array<string, string>
-     */
-    private function visibleHousingUnitFields(array $visibleExcelFields): array
-    {
-        return array_intersect_key($visibleExcelFields, array_flip([
-            'objectid',
-            'parcel_no1',
-            'assignedto',
-            'building_name',
-            'shape__length',
-            'creationdate',
-            'editdate',
-            'editor',
-            'security_info',
-            'governorate',
-            'neighborhood',
-        ]));
-    }
-
-    /**
-     * @param  array<string, string>  $visibleExcelFields
-     * @return array<string, string>
-     */
-    private function visibleDecisionFields(array $visibleExcelFields): array
-    {
-        return array_intersect_key($visibleExcelFields, array_flip([
-            'decision_type',
-        ]));
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function visibleExcelFields(): array
-    {
-        $path = base_path('committe_review.xlsx');
-
-        if (! file_exists($path)) {
-            return $this->defaultVisibleFields();
-        }
-
-        $worksheet = IOFactory::load($path)->getActiveSheet();
-        $assessmentLabels = Assessment::query()
-            ->get(['name', 'label', 'hint'])
-            ->flatMap(fn (Assessment $assessment): array => [
-                $this->normalizeFieldLabel($assessment->name) => $assessment->name,
-                $this->normalizeFieldLabel($assessment->label) => $assessment->name,
-                $this->normalizeFieldLabel($assessment->hint) => $assessment->name,
-            ])
-            ->filter()
-            ->all();
-
-        $visibleFields = [];
-
-        foreach ($worksheet->getRowIterator(1, 1)->current()->getCellIterator() as $cell) {
-            $header = trim((string) $cell->getValue());
-
-            if ($header === '' || $worksheet->getColumnDimension($cell->getColumn())->getVisible() === false) {
-                continue;
-            }
-
-            $field = $this->excelHeaderFieldMap()[$this->normalizeFieldLabel($header)]
-                ?? $assessmentLabels[$this->normalizeFieldLabel($header)]
-                ?? null;
-
-            if ($field !== null) {
-                $visibleFields[$field] = $header;
-            }
-        }
-
-        return $visibleFields ?: $this->defaultVisibleFields();
-    }
-
     /**
      * @return array<string, string>
      */
@@ -392,19 +299,51 @@ class CommitteeArchiveController extends Controller
     /**
      * @return array<string, string>
      */
-    private function excelHeaderFieldMap(): array
+    private function surveyFields(): array
     {
-        return collect($this->defaultVisibleFields())
-            ->mapWithKeys(fn (string $label, string $field): array => [$this->normalizeFieldLabel($label) => $field])
+        $columns = ['name', 'label', 'hint'];
+
+        if (Schema::hasColumn('assessments', 'appearance')) {
+            $columns[] = 'appearance';
+        }
+
+        $query = Assessment::query()->select($columns);
+
+        if (Schema::hasColumn('assessments', 'appearance')) {
+            $query->where(fn ($query) => $query
+                ->whereNull('appearance')
+                ->orWhere('appearance', '!=', 'hidden'));
+        }
+
+        return $query
+            ->get()
+            ->filter(fn (Assessment $assessment): bool => filled($assessment->name))
+            ->mapWithKeys(fn (Assessment $assessment): array => [
+                (string) $assessment->name => filled($assessment->hint)
+                    ? (string) $assessment->hint
+                    : (string) ($assessment->label ?: $assessment->name),
+            ])
             ->all();
     }
 
-    private function normalizeFieldLabel(?string $label): string
+    /**
+     * @param  array<string, mixed>|null  $oldRecord
+     * @param  array<string, mixed>|null  $currentRecord
+     * @param  array<string, string>  $surveyFields
+     * @param  array<string, string>  $fallbackFields
+     * @return array<string, string>
+     */
+    private function surveyFieldsForRecords(?array $oldRecord, ?array $currentRecord, array $surveyFields, array $fallbackFields): array
     {
-        return str($label ?? '')
-            ->lower()
-            ->replace([' ', '-', '_'], '')
-            ->toString();
+        $recordFields = collect(array_keys($oldRecord ?? []))
+            ->merge(array_keys($currentRecord ?? []))
+            ->unique()
+            ->flip()
+            ->all();
+
+        $fields = array_intersect_key($surveyFields, $recordFields);
+
+        return $fields ?: $fallbackFields;
     }
 
     /**
