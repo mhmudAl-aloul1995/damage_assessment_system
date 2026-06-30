@@ -3,6 +3,7 @@
 namespace App\Modules\Heks\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Heks\Http\Requests\ImportHeksBoqItemsRequest;
 use App\Modules\Heks\Http\Requests\ImportHeksSpreadsheetRequest;
 use App\Modules\Heks\Http\Requests\StoreHeksBoqItemRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksBeneficiaryRequest;
@@ -150,6 +151,13 @@ class HeksController extends Controller
         $beneficiary->boqItems()->create($this->boqPayload($request->validated()));
 
         return back()->with('success', 'تمت إضافة بند جدول الكميات.');
+    }
+
+    public function importBoqItems(ImportHeksBoqItemsRequest $request, HeksBeneficiary $beneficiary, HeksSpreadsheetImportService $importer): RedirectResponse
+    {
+        $summary = $importer->importBeneficiaryBoq($request->file('file'), $beneficiary);
+
+        return back()->with('success', "تم استيراد {$summary['imported_rows']} بند جدول كميات، وتم تجاوز {$summary['skipped_rows']} بند.");
     }
 
     public function updateBoqItem(UpdateHeksBoqItemRequest $request, HeksBoqItem $boqItem): RedirectResponse

@@ -4,6 +4,7 @@ namespace App\Modules\Heks\Services;
 
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
+use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksImport;
 use App\Modules\Heks\Models\HeksLabel;
@@ -127,6 +128,79 @@ class HeksSpreadsheetImportService
         ];
     }
 
+    /**
+     * @return array{total_rows: int, imported_rows: int, skipped_rows: int}
+     */
+    public function importBeneficiaryBoq(UploadedFile $file, HeksBeneficiary $beneficiary): array
+    {
+        $spreadsheet = IOFactory::load($file->getRealPath());
+        $sheet = $spreadsheet->getSheet(0);
+        $headerRow = $this->boqHeaderRow($sheet);
+        $summary = ['total_rows' => 0, 'imported_rows' => 0, 'skipped_rows' => 0];
+        $section = null;
+        $source = $file->getClientOriginalName();
+
+        DB::transaction(function () use ($sheet, $headerRow, $beneficiary, $source, &$summary, &$section): void {
+            for ($row = $headerRow + 1; $row <= $sheet->getHighestDataRow(); $row++) {
+                $itemCode = $this->text($sheet->getCell([2, $row]));
+                $description = $this->text($sheet->getCell([3, $row]));
+                $unit = $this->text($sheet->getCell([4, $row]));
+                $unitPrice = $this->decimal($this->text($sheet->getCell([5, $row]))) ?? 0.0;
+                $quantity = $this->decimal($this->text($sheet->getCell([6, $row]))) ?? 0.0;
+
+                if ($itemCode === '' && $description === '') {
+                    continue;
+                }
+
+                if ($description === '' && ! preg_match('/^\d+(\.\d+)*$/', $itemCode)) {
+                    $section = $itemCode;
+
+                    continue;
+                }
+
+                if ($itemCode === '' || ! preg_match('/^\d+(\.\d+)*$/', $itemCode)) {
+                    $summary['skipped_rows']++;
+
+                    continue;
+                }
+
+                $summary['total_rows']++;
+
+                if ($quantity <= 0 || $description === '') {
+                    $summary['skipped_rows']++;
+
+                    continue;
+                }
+
+                HeksBoqItem::query()->updateOrCreate(
+                    [
+                        'heks_beneficiary_id' => $beneficiary->id,
+                        'source' => $source,
+                        'item_code' => $itemCode,
+                    ],
+                    [
+                        'section' => $section,
+                        'description' => $description,
+                        'unit' => $unit,
+                        'quantity' => $quantity,
+                        'unit_price_ils' => $unitPrice,
+                        'total_price_ils' => round($quantity * $unitPrice, 2),
+                        'raw_data' => [
+                            'sheet' => $sheet->getTitle(),
+                            'row' => $row,
+                        ],
+                    ]
+                );
+
+                $summary['imported_rows']++;
+            }
+        });
+
+        $spreadsheet->disconnectWorksheets();
+
+        return $summary;
+    }
+
     private function detectType(Worksheet $sheet): ?string
     {
         $sheetNameType = $this->detectTypeFromSheetName($sheet->getTitle());
@@ -146,6 +220,20 @@ class HeksSpreadsheetImportService
         }
 
         return null;
+    }
+
+    private function boqHeaderRow(Worksheet $sheet): int
+    {
+        for ($row = 1; $row <= min(15, $sheet->getHighestDataRow()); $row++) {
+            $descriptionHeader = $this->text($sheet->getCell([3, $row]));
+            $quantityHeader = $this->text($sheet->getCell([6, $row]));
+
+            if (str_contains($descriptionHeader, 'وصف البند') && str_contains($quantityHeader, 'الكمية')) {
+                return $row;
+            }
+        }
+
+        throw new RuntimeException('لم يتم العثور على صف عناوين جدول الكميات في الملف.');
     }
 
     private function detectTypeFromSheetName(string $sheetName): ?string

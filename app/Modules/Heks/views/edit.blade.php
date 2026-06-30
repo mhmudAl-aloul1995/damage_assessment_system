@@ -110,6 +110,22 @@
             </div>
         </div>
         <div class="card-body">
+            <form method="POST" action="{{ route('heks.beneficiaries.boq-items.import', $beneficiary) }}" enctype="multipart/form-data" class="row g-3 align-items-end mb-6">
+                @csrf
+                <div class="col-xl-6 col-lg-8">
+                    <label class="form-label">استيراد جدول كميات خاص بالمستفيد</label>
+                    <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                </div>
+                <div class="col-xl-2 col-lg-3">
+                    <button class="btn btn-light-primary w-100">استيراد BOQ</button>
+                </div>
+                <div class="col-xl-4">
+                    <div class="text-muted small">يتم استيراد البنود التي تحتوي كمية أكبر من صفر فقط، مع احتساب الإجمالي تلقائياً.</div>
+                </div>
+            </form>
+
+            <div class="separator my-5"></div>
+
             <form method="POST" action="{{ route('heks.beneficiaries.boq-items.store', $beneficiary) }}" class="row g-3 align-items-end mb-6">
                 @csrf
                 <div class="col-xl-2 col-md-3">

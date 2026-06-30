@@ -26,10 +26,12 @@ it('imports and manages the HEKS operational workbook', function () {
     $importer = app(HeksSpreadsheetImportService::class);
     $workbookPath = heksWorkbookPath('full');
     $followUpPath = heksWorkbookPath('followups');
+    $boqPath = heksWorkbookPath('boq');
 
     try {
         heksWriteFullWorkbook($workbookPath);
         heksWriteFollowUpsWorkbook($followUpPath);
+        heksWriteBoqWorkbook($boqPath);
 
         $workbookSummary = $importer->import(
             new UploadedFile($workbookPath, 'heks-full.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
@@ -128,6 +130,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->get(route('heks.beneficiaries.edit', $beneficiary))
             ->assertOk()
             ->assertSee('جدول الكميات والتسعير BOQ')
+            ->assertSee('استيراد BOQ')
             ->assertSee('DGN1')
             ->assertSee('Test Beneficiary')
             ->assertSee('Scoring-Heks Final')
@@ -135,6 +138,16 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('damage_status')
             ->assertSee('boq.pdf')
             ->assertSee('High');
+
+        $this->actingAs($user)
+            ->post(route('heks.beneficiaries.boq-items.import', $beneficiary), [
+                'file' => new UploadedFile($boqPath, 'beneficiary-boq.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        expect(HeksBoqItem::query()->where('source', 'beneficiary-boq.xlsx')->count())->toBe(1)
+            ->and((float) HeksBoqItem::query()->where('source', 'beneficiary-boq.xlsx')->value('total_price_ils'))->toBe(1220.0);
 
         $this->actingAs($user)
             ->post(route('heks.beneficiaries.boq-items.store', $beneficiary), [
@@ -150,7 +163,10 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSessionHasNoErrors()
             ->assertRedirect();
 
-        $boqItem = HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+        $boqItem = HeksBoqItem::query()
+            ->where('heks_beneficiary_id', $beneficiary->id)
+            ->where('source', 'manual')
+            ->sole();
 
         expect((float) $boqItem->total_price_ils)->toBe(1220.0);
 
@@ -193,6 +209,7 @@ it('imports and manages the HEKS operational workbook', function () {
     } finally {
         @unlink($workbookPath);
         @unlink($followUpPath);
+        @unlink($boqPath);
     }
 });
 
@@ -383,6 +400,25 @@ function heksWriteFollowUpsWorkbook(string $path): void
             40,
             'Continue',
         ],
+    ]);
+
+    (new Xlsx($spreadsheet))->save($path);
+}
+
+function heksWriteBoqWorkbook(string $path): void
+{
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('DGN1');
+    $sheet->fromArray([
+        ['', '', '', '', '', '', ''],
+        ['', 'DGN1', 'Test Beneficiary', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '#', 'وصف البند', 'الوحدة', 'تكلفة الوحدة ILS', 'الكمية', 'الإجماليILS'],
+        ['', 'اعمال البلوك', '', '', '', '', ''],
+        ['', '3.1', 'توريد و بناء بلوك اسمنتي', 'M2', 610, 2, '=E7*F7'],
+        ['', '3.2', 'توريد و بناء بلوك اسمنتي صفر', 'M2', 585, 0, '=E8*F8'],
     ]);
 
     (new Xlsx($spreadsheet))->save($path);

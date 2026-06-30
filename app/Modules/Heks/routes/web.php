@@ -11,6 +11,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/beneficiaries', [HeksController::class, 'beneficiaries'])->name('heks.beneficiaries');
     Route::get('/beneficiaries/{beneficiary}/edit', [HeksController::class, 'edit'])->name('heks.beneficiaries.edit');
     Route::put('/beneficiaries/{beneficiary}', [HeksController::class, 'update'])->name('heks.beneficiaries.update');
+    Route::post('/beneficiaries/{beneficiary}/boq-items/import', [HeksController::class, 'importBoqItems'])->name('heks.beneficiaries.boq-items.import');
     Route::post('/beneficiaries/{beneficiary}/boq-items', [HeksController::class, 'storeBoqItem'])->name('heks.beneficiaries.boq-items.store');
     Route::put('/boq-items/{boqItem}', [HeksController::class, 'updateBoqItem'])->name('heks.boq-items.update');
     Route::delete('/boq-items/{boqItem}', [HeksController::class, 'destroyBoqItem'])->name('heks.boq-items.destroy');
