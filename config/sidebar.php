@@ -336,6 +336,25 @@ return [
         ],
     ],
     [
+        'module' => 'heks',
+        'title' => 'HEKS Shelter Repairs',
+        'icon' => 'ki-home-2',
+        'url' => 'heks',
+        'pattern' => 'heks*',
+        'roles' => [
+            'Database Officer',
+            'Project Officer',
+            'Project Officer - Borrowers',
+            'Area Manager',
+            'Team Leader',
+            'Team Leader -INF',
+            'Auditing Supervisor',
+        ],
+        'active_patterns' => [
+            'heks*',
+        ],
+    ],
+    [
         'module' => 'administration',
         'title' => 'menu.user_management.title',
         'icon' => 'ki-user',

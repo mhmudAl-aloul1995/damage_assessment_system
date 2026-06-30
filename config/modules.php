@@ -13,6 +13,12 @@ return [
         'enabled' => true,
         'order' => 20,
     ],
+    'heks' => [
+        'title' => 'المساعدة النقدية لإصلاح المأوى الطارئ (HEKS)',
+        'central' => false,
+        'enabled' => true,
+        'order' => 30,
+    ],
     'administration' => [
         'title' => 'menu.modules.administration',
         'central' => true,
