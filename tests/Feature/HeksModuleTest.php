@@ -81,6 +81,15 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('Scoring-Heks Final');
 
         $this->actingAs($user)
+            ->get(route('heks.beneficiaries.edit', $beneficiary))
+            ->assertOk()
+            ->assertSee('DGN1')
+            ->assertSee('Test Beneficiary')
+            ->assertSee('Scoring-Heks Final')
+            ->assertSee('Partial damage')
+            ->assertSee('damage_status');
+
+        $this->actingAs($user)
             ->put(route('heks.beneficiaries.update', $beneficiary), [
                 'name' => 'Updated Beneficiary',
                 'identity_number' => '900000001',

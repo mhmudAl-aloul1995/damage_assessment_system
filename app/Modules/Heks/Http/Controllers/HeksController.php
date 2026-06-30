@@ -105,9 +105,19 @@ class HeksController extends Controller
     public function edit(HeksBeneficiary $beneficiary): View
     {
         $this->authorizeAccess();
-        $beneficiary->load(['labels', 'followUps', 'scores', 'payments', 'workAssignments', 'attachments']);
+        $beneficiary->load([
+            'labels' => fn ($query) => $query->latest(),
+            'followUps' => fn ($query) => $query->latest('visit_date')->latest(),
+            'scores' => fn ($query) => $query->latest(),
+            'payments' => fn ($query) => $query->latest(),
+            'workAssignments' => fn ($query) => $query->latest(),
+            'attachments' => fn ($query) => $query->latest(),
+        ]);
 
-        return view('heks::edit', compact('beneficiary'));
+        return view('heks::edit', [
+            'beneficiary' => $beneficiary,
+            'rawDataSections' => $this->rawDataSections($beneficiary),
+        ]);
     }
 
     public function update(UpdateHeksBeneficiaryRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
@@ -230,5 +240,35 @@ class HeksController extends Controller
             'Team Leader -INF',
             'Auditing Supervisor',
         ]), 403);
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function rawDataSections(HeksBeneficiary $beneficiary): array
+    {
+        $rawData = $beneficiary->raw_data;
+
+        if (! is_array($rawData) || $rawData === []) {
+            return [];
+        }
+
+        $sections = [];
+
+        foreach ($rawData as $source => $values) {
+            if (is_array($values)) {
+                $filtered = array_filter($values, fn (mixed $value): bool => $value !== null && $value !== '');
+
+                if ($filtered !== []) {
+                    $sections[(string) $source] = $filtered;
+                }
+            }
+        }
+
+        if ($sections === []) {
+            $sections['Imported data'] = array_filter($rawData, fn (mixed $value): bool => $value !== null && $value !== '');
+        }
+
+        return $sections;
     }
 }
