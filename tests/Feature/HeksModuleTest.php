@@ -75,6 +75,12 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('مدفوع كامل');
 
         $this->actingAs($user)
+            ->get(route('heks.imports'))
+            ->assertOk()
+            ->assertSee('خريطة شيتات ملف HEKS')
+            ->assertSee('Scoring-Heks Final');
+
+        $this->actingAs($user)
             ->put(route('heks.beneficiaries.update', $beneficiary), [
                 'name' => 'Updated Beneficiary',
                 'identity_number' => '900000001',

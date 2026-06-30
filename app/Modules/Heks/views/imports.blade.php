@@ -31,6 +31,40 @@
         </div>
     </div>
 
+    <div class="card card-flush mb-6">
+        <div class="card-header"><h3 class="card-title">خريطة شيتات ملف HEKS</h3></div>
+        <div class="card-body table-responsive">
+            <table class="table align-middle">
+                <thead>
+                <tr>
+                    <th>الشيت</th>
+                    <th>يدخل في النظام كـ</th>
+                    <th>الاستخدام</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach ([
+                    ['Scoring-Heks Final', 'التقييم والدرجات', 'احتساب الدرجة الفنية والاجتماعية والنتيجة النهائية وتصنيف الأولوية.'],
+                    ['KOBO_List', 'البيانات الخام', 'إجابات KoBo الأصلية التي تعتمد عليها الحسابات.'],
+                    ['125 BNFs -Data', 'المستفيدون المختارون', 'قائمة 125 مستفيد المعتمدة للمشروع.'],
+                    ['Scoring-Heks- V1', 'نسخة مقارنة', 'إصدار سابق أو تجريبي للمقارنة.'],
+                    ['3دفعات', 'الدفعات', 'تقسيم المنحة إلى 30% و50% و20%.'],
+                    ['Shelter Technical Weights', 'الأوزان الفنية', 'وزن كل مؤشر فني داخل حساب الأولوية.'],
+                    ['T-V / S-V', 'القيم المرجعية', 'تحويل الإجابات الفنية والاجتماعية إلى قيم رقمية.'],
+                    ['group_un2xy00 / group_lm1ok19', 'المرفقات', 'مستندات وصور الوحدة السكنية وروابطها.'],
+                    ['مجموعات العمل', 'توزيع العمل', 'ربط المستفيد بالمهندس وقيمة العقد والدفعة الأولى.'],
+                ] as [$sheet, $target, $usage])
+                    <tr>
+                        <td class="fw-bold">{{ $sheet }}</td>
+                        <td>{{ $target }}</td>
+                        <td class="text-muted">{{ $usage }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="card card-flush">
         <div class="card-header"><h3 class="card-title">سجل الاستيراد</h3></div>
         <div class="card-body table-responsive">
