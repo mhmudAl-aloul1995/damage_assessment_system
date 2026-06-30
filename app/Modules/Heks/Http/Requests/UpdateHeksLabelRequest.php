@@ -8,7 +8,7 @@ class UpdateHeksLabelRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check();
+        return auth()->user()?->hasRole('Database Officer') ?? false;
     }
 
     /**

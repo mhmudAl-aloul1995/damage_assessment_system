@@ -341,15 +341,7 @@ return [
         'icon' => 'ki-home-2',
         'url' => 'heks',
         'pattern' => 'heks*',
-        'roles' => [
-            'Database Officer',
-            'Project Officer',
-            'Project Officer - Borrowers',
-            'Area Manager',
-            'Team Leader',
-            'Team Leader -INF',
-            'Auditing Supervisor',
-        ],
+        'roles' => ['Database Officer'],
         'active_patterns' => [
             'heks*',
         ],

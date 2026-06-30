@@ -124,6 +124,18 @@ it('adds HEKS to the sidebar for database officers', function () {
         ->and($module['sections']->first()['url'])->toBe('heks');
 });
 
+it('hides and blocks HEKS for non database officers', function () {
+    $role = Role::findOrCreate('Project Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    expect(Sidebar::forUser($user)->firstWhere('key', 'heks'))->toBeNull();
+
+    $this->actingAs($user)
+        ->get(route('heks.dashboard'))
+        ->assertForbidden();
+});
+
 function heksWorkbookPath(string $name): string
 {
     return sys_get_temp_dir().DIRECTORY_SEPARATOR.$name.'-'.Str::random(8).'.xlsx';

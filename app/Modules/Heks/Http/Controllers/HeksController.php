@@ -231,15 +231,7 @@ class HeksController extends Controller
 
     private function authorizeAccess(): void
     {
-        abort_unless(auth()->user()?->hasAnyRole([
-            'Database Officer',
-            'Project Officer',
-            'Project Officer - Borrowers',
-            'Area Manager',
-            'Team Leader',
-            'Team Leader -INF',
-            'Auditing Supervisor',
-        ]), 403);
+        abort_unless(auth()->user()?->hasRole('Database Officer'), 403);
     }
 
     /**
