@@ -1,10 +1,14 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksLabel;
+use App\Modules\Heks\Models\HeksPayment;
 use App\Modules\Heks\Models\HeksScore;
+use App\Modules\Heks\Models\HeksScoringWeight;
+use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
@@ -13,28 +17,21 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Spatie\Permission\Models\Role;
 
-it('imports and manages the HEKS shelter repair module data', function () {
+it('imports and manages the HEKS operational workbook', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 
     $importer = app(HeksSpreadsheetImportService::class);
-    $labelsPath = heksWorkbookPath('labels');
-    $scorePath = heksWorkbookPath('scores');
+    $workbookPath = heksWorkbookPath('full');
     $followUpPath = heksWorkbookPath('followups');
 
     try {
-        heksWriteLabelsWorkbook($labelsPath);
-        heksWriteScoresWorkbook($scorePath);
+        heksWriteFullWorkbook($workbookPath);
         heksWriteFollowUpsWorkbook($followUpPath);
 
-        $labelsSummary = $importer->import(
-            new UploadedFile($labelsPath, 'heks-labels.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
-            'labels',
-            $user->id
-        )['summary'];
-        $scoreSummary = $importer->import(
-            new UploadedFile($scorePath, 'heks-scores.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
+        $workbookSummary = $importer->import(
+            new UploadedFile($workbookPath, 'heks-full.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
             'scores',
             $user->id
         )['summary'];
@@ -44,31 +41,38 @@ it('imports and manages the HEKS shelter repair module data', function () {
             $user->id
         )['summary'];
 
-        expect($labelsSummary['created_rows'])->toBe(1)
-            ->and($scoreSummary['updated_rows'])->toBe(1)
+        expect($workbookSummary['sheets'])->toHaveCount(7)
             ->and($followUpSummary['updated_rows'])->toBe(1)
             ->and(HeksBeneficiary::query()->where('code', 'DGN1')->exists())->toBeTrue()
-            ->and(HeksScore::query()->count())->toBe(1)
+            ->and(HeksBeneficiary::query()->where('code', 'DGN1')->value('is_selected'))->toBeTrue()
+            ->and(HeksScore::query()->count())->toBeGreaterThanOrEqual(2)
             ->and(HeksLabel::query()->where('label_key', 'damage_status')->exists())->toBeTrue()
+            ->and(HeksPayment::query()->count())->toBe(1)
+            ->and(HeksWorkAssignment::query()->count())->toBe(1)
+            ->and(HeksAttachment::query()->count())->toBe(1)
+            ->and(HeksScoringWeight::query()->count())->toBeGreaterThan(0)
             ->and(HeksFollowUp::query()->count())->toBe(1);
 
         $beneficiary = HeksBeneficiary::query()->where('code', 'DGN1')->sole();
 
         expect($beneficiary->name)->toBe('Test Beneficiary')
             ->and((float) $beneficiary->grant_amount)->toBe(1200.0)
-            ->and($beneficiary->field_engineer)->toBe('Engineer One');
+            ->and($beneficiary->field_engineer)->toBe('Engineer One')
+            ->and($beneficiary->payment_status)->toBe('paid_100');
 
         $this->actingAs($user)
             ->get(route('heks.dashboard'))
             ->assertOk()
-            ->assertSee('HEKS Dashboard')
-            ->assertSee('Beneficiaries');
+            ->assertSee('HEKS Command Center')
+            ->assertSee('Project Pipeline')
+            ->assertSee('Engineer Workload');
 
         $this->actingAs($user)
-            ->get(route('heks.beneficiaries', ['q' => 'DGN1']))
+            ->get(route('heks.beneficiaries', ['q' => 'DGN1', 'selected' => 1]))
             ->assertOk()
             ->assertSee('DGN1')
-            ->assertSee('Test Beneficiary');
+            ->assertSee('selected')
+            ->assertSee('paid 100');
 
         $this->actingAs($user)
             ->put(route('heks.beneficiaries.update', $beneficiary), [
@@ -76,6 +80,8 @@ it('imports and manages the HEKS shelter repair module data', function () {
                 'identity_number' => '900000001',
                 'phone' => '0599000000',
                 'grant_amount' => 1300,
+                'is_selected' => true,
+                'payment_status' => 'paid_100',
             ])
             ->assertSessionHasNoErrors()
             ->assertRedirect();
@@ -83,8 +89,7 @@ it('imports and manages the HEKS shelter repair module data', function () {
         expect($beneficiary->refresh()->name)->toBe('Updated Beneficiary')
             ->and((float) $beneficiary->grant_amount)->toBe(1300.0);
     } finally {
-        @unlink($labelsPath);
-        @unlink($scorePath);
+        @unlink($workbookPath);
         @unlink($followUpPath);
     }
 });
@@ -105,94 +110,111 @@ function heksWorkbookPath(string $name): string
     return sys_get_temp_dir().DIRECTORY_SEPARATOR.$name.'-'.Str::random(8).'.xlsx';
 }
 
-function heksWriteScoresWorkbook(string $path): void
+function heksWriteFullWorkbook(string $path): void
 {
     $spreadsheet = new Spreadsheet;
-    $sheet = $spreadsheet->getActiveSheet();
-    $sheet->setTitle('Scoring-Heks Final');
-    $sheet->fromArray([
-        [
-            'رقم الطلب/الكود',
-            'اسم رب الأسرة',
-            'رقم هوية رب الأسرة',
-            'رقم التواصل',
-            'اسم المهندس الميداني',
-            'تاريخ الزيارة',
-            'المحافظة',
-            'المنطقة/التجمع',
-            'تقييم حالة ضرر المأوى:',
-            'حالة السقف',
-            'توصيات نهائية',
-            'GRANT',
-            'Payment_1',
-            'Payment_2',
-            'Payment_3',
-            'تقييم الحالة الاجتماعية  (30)',
-            'تقييم الحالة الفنية (70)',
-            'Total Score',
-            '__version__',
-        ],
-        [
-            'DGN1',
-            'Test Beneficiary',
-            '900000001',
-            '0599000000',
-            'Engineer One',
-            '2026-06-01',
-            'Gaza',
-            'Area A',
-            'Partial damage',
-            'Needs repair',
-            'Eligible',
-            1200,
-            360,
-            600,
-            240,
-            20,
-            60,
-            80,
-            'v1',
-        ],
+
+    $assessment = $spreadsheet->getActiveSheet();
+    $assessment->setTitle('Scoring-Heks Final');
+    $assessment->fromArray([
+        heksAssessmentHeaders(),
+        heksAssessmentRow('DGN1'),
+    ]);
+
+    $selected = $spreadsheet->createSheet();
+    $selected->setTitle('125 BNFs -Data');
+    $selected->fromArray([
+        heksAssessmentHeaders(),
+        heksAssessmentRow('DGN1'),
+    ]);
+
+    $payments = $spreadsheet->createSheet();
+    $payments->setTitle('3دفعات');
+    $payments->fromArray([
+        ['#', 'الكود', 'المستفيد', 'الهوية', 'المنحة', 'المبلغ بالحروف', 'تاريخ دفعة 1', '30%', 'الدفعة 30% بالحروف', 'تاريخ دفعة 2', '50%', 'الدفعة 50% بالحروف', 'تاريخ دفعة 3', '20%', 'الدفعة 20% بالحروف'],
+        [1, 'DGN1', 'Test Beneficiary', '900000001', 1200, 'one thousand two hundred', 360, 360, 'three sixty', 600, 600, 'six hundred', 240, 240, 'two forty'],
+    ]);
+
+    $weights = $spreadsheet->createSheet();
+    $weights->setTitle('Shelter Technical Weights');
+    $weights->fromArray([
+        ['Category', 'Indicator', 'Weight (from 100)', 'Question'],
+        ['Sealing', 'Damage assessment', 4, 'تقييم حالة ضرر المأوى:'],
+    ]);
+
+    $technicalValues = $spreadsheet->createSheet();
+    $technicalValues->setTitle('T-V');
+    $technicalValues->fromArray([
+        ['تقييم حالة ضرر المأوى:', 'حالة السقف'],
+        ['لا يوجد ضرر', 'لا حاجة للصيانة'],
+    ]);
+
+    $attachments = $spreadsheet->createSheet();
+    $attachments->setTitle('group_lm1ok19');
+    $attachments->fromArray([
+        ['صور الوحدة السكنية', 'صور الوحدة السكنية_URL', '_index', '_parent_table_name', '_parent_index'],
+        ['house.jpg', 'https://example.test/house.jpg', 1, 'Scoring-Heks Final', 1],
+    ]);
+
+    $workGroups = $spreadsheet->createSheet();
+    $workGroups->setTitle('مجموعات العمل');
+    $workGroups->fromArray([
+        [],
+        ['#', 'الكود', 'اسم المستفيد', 'هوية المستفيد', 'قيمة العقد ILS', 'الدفعة الأولى  30% ILS', 'رقم التواصل', 'المهندس المتابع'],
+        [1, 'DGN1', 'Test Beneficiary', '900000001', 1200, 360, '0599000000', 'Engineer One'],
     ]);
 
     (new Xlsx($spreadsheet))->save($path);
 }
 
-function heksWriteLabelsWorkbook(string $path): void
+function heksAssessmentHeaders(): array
 {
-    $spreadsheet = new Spreadsheet;
-    $sheet = $spreadsheet->getActiveSheet();
-    $sheet->setTitle('Heks Final V1');
-    $sheet->fromArray([
-        [
-            'رقم الطلب/الكود',
-            'اسم رب الأسرة',
-            'رقم هوية رب الأسرة',
-            'رقم التواصل',
-            'اسم المهندس الميداني',
-            'تاريخ الزيارة',
-            'تقييم حالة ضرر المأوى:',
-            'حالة السقف',
-            'حالة الإشغال الحالي للوحدة السكنية',
-            'توصيات نهائية',
-            '__version__',
-        ],
-        [
-            'DGN1',
-            'Test Beneficiary',
-            '900000001',
-            '0599000000',
-            'Engineer One',
-            '2026-04-23',
-            'Initial partial damage',
-            'Initial roof repair',
-            'Occupied',
-            'Initial eligible',
-            'labels-v1',
-        ],
-    ]);
+    return [
+        'رقم الطلب/الكود',
+        'اسم رب الأسرة',
+        'رقم هوية رب الأسرة',
+        'رقم التواصل',
+        'اسم المهندس الميداني',
+        'تاريخ الزيارة',
+        'المحافظة',
+        'المنطقة/التجمع',
+        'تقييم حالة ضرر المأوى:',
+        'حالة السقف',
+        'توصيات نهائية',
+        'GRANT',
+        'Payment_1',
+        'Payment_2',
+        'Payment_3',
+        'تقييم الحالة الاجتماعية  (30)',
+        'تقييم الحالة الفنية (70)',
+        'Total Score',
+        '__version__',
+    ];
+}
 
-    (new Xlsx($spreadsheet))->save($path);
+function heksAssessmentRow(string $code): array
+{
+    return [
+        $code,
+        'Test Beneficiary',
+        '900000001',
+        '0599000000',
+        'Engineer One',
+        '2026-06-01',
+        'Gaza',
+        'Area A',
+        'Partial damage',
+        'Needs repair',
+        'Eligible',
+        1200,
+        360,
+        600,
+        240,
+        20,
+        60,
+        80,
+        'v1',
+    ];
 }
 
 function heksWriteFollowUpsWorkbook(string $path): void

@@ -109,4 +109,61 @@
             </div>
         </div>
     </div>
+
+    <div class="row g-5 mt-1">
+        <div class="col-lg-4">
+            <div class="card card-flush h-100">
+                <div class="card-header"><h3 class="card-title">Payments</h3></div>
+                <div class="card-body">
+                    @forelse ($beneficiary->payments as $payment)
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="fw-bold">{{ $payment->source }}</div>
+                            <div class="text-muted small">Grant: {{ $payment->grant_amount ? number_format((float) $payment->grant_amount, 2) : '-' }}</div>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <span class="badge badge-light">30% {{ $payment->payment_1_amount ?? '-' }}</span>
+                                <span class="badge badge-light">50% {{ $payment->payment_2_amount ?? '-' }}</span>
+                                <span class="badge badge-light">20% {{ $payment->payment_3_amount ?? '-' }}</span>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-muted">No payments.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-flush h-100">
+                <div class="card-header"><h3 class="card-title">Assignments</h3></div>
+                <div class="card-body">
+                    @forelse ($beneficiary->workAssignments as $assignment)
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="fw-bold">{{ $assignment->engineer_name ?? '-' }}</div>
+                            <div class="text-muted small">{{ $assignment->source }}</div>
+                            <div class="mt-2">Contract: {{ $assignment->contract_amount_ils ? number_format((float) $assignment->contract_amount_ils, 2) : '-' }} ILS</div>
+                        </div>
+                    @empty
+                        <div class="text-muted">No assignments.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-flush h-100">
+                <div class="card-header"><h3 class="card-title">Attachments</h3></div>
+                <div class="card-body">
+                    @forelse ($beneficiary->attachments as $attachment)
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="fw-bold text-truncate">{{ $attachment->filename ?? '-' }}</div>
+                            <div class="text-muted small">{{ $attachment->attachment_type ?? $attachment->source }}</div>
+                            @if ($attachment->url)
+                                <a class="btn btn-sm btn-light mt-2" href="{{ $attachment->url }}" target="_blank" rel="noopener">Open</a>
+                            @endif
+                        </div>
+                    @empty
+                        <div class="text-muted">No attachments.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection

@@ -2,37 +2,55 @@
 
 namespace App\Modules\Heks\Services;
 
+use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksImport;
 use App\Modules\Heks\Models\HeksLabel;
+use App\Modules\Heks\Models\HeksPayment;
 use App\Modules\Heks\Models\HeksScore;
+use App\Modules\Heks\Models\HeksScoringWeight;
+use App\Modules\Heks\Models\HeksWorkAssignment;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use RuntimeException;
 use Throwable;
 
 class HeksSpreadsheetImportService
 {
-    private const SCORE_SHEETS = [
+    private const ASSESSMENT_SHEETS = [
+        'Heks Final V1',
         'Scoring-Heks Final',
         'KOBO_List',
+        'Scoring-Heks- V1',
+    ];
+
+    private const SELECTED_SHEETS = [
         '125 BNFs -Data',
+    ];
+
+    private const PAYMENT_SHEETS = [
         '3دفعات',
+    ];
+
+    private const WORK_GROUP_SHEETS = [
         'مجموعات العمل',
+    ];
+
+    private const WEIGHT_SHEETS = [
+        'Shelter Technical Weights',
+        'T-V',
+        'S-V',
     ];
 
     private const FOLLOW_UP_SHEETS = [
         'تقرير المتابعة -هيكس 125',
-    ];
-
-    private const LABEL_SHEETS = [
-        'Heks Final V1',
     ];
 
     /**
@@ -62,6 +80,7 @@ class HeksSpreadsheetImportService
     public function import(UploadedFile $file, string $type, ?int $userId = null): array
     {
         $spreadsheet = IOFactory::load($file->getRealPath());
+        $parentCodes = $this->parentCodes($spreadsheet);
         $summary = [
             'total_rows' => 0,
             'created_rows' => 0,
@@ -71,7 +90,7 @@ class HeksSpreadsheetImportService
         ];
         $createdImport = null;
 
-        DB::transaction(function () use ($spreadsheet, $file, $type, $userId, &$summary, &$createdImport): void {
+        DB::transaction(function () use ($spreadsheet, $file, $type, $userId, $parentCodes, &$summary, &$createdImport): void {
             foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
                 $sheetType = $type === 'auto' ? $this->detectType($sheet) : $this->normalizeRequestedType($type, $sheet);
 
@@ -79,7 +98,7 @@ class HeksSpreadsheetImportService
                     continue;
                 }
 
-                $sheetSummary = $this->importSheet($sheet, $sheetType);
+                $sheetSummary = $this->importSheet($sheet, $sheetType, $parentCodes);
                 $summary['total_rows'] += $sheetSummary['total'];
                 $summary['created_rows'] += $sheetSummary['created'];
                 $summary['updated_rows'] += $sheetSummary['updated'];
@@ -123,7 +142,7 @@ class HeksSpreadsheetImportService
         }
 
         if ($this->hasAnyHeader($headers, ['الكود', 'رقم الطلب/الكود'])) {
-            return 'scores';
+            return 'assessment';
         }
 
         return null;
@@ -131,48 +150,56 @@ class HeksSpreadsheetImportService
 
     private function detectTypeFromSheetName(string $sheetName): ?string
     {
-        if (in_array($sheetName, self::FOLLOW_UP_SHEETS, true)) {
-            return 'followups';
-        }
-
-        if (in_array($sheetName, self::LABEL_SHEETS, true)) {
-            return 'labels';
-        }
-
-        if (in_array($sheetName, self::SCORE_SHEETS, true)) {
-            return 'scores';
-        }
-
-        return null;
+        return match (true) {
+            in_array($sheetName, self::FOLLOW_UP_SHEETS, true) => 'followups',
+            in_array($sheetName, self::PAYMENT_SHEETS, true) => 'payments',
+            in_array($sheetName, self::WORK_GROUP_SHEETS, true) => 'work_groups',
+            in_array($sheetName, self::WEIGHT_SHEETS, true) => 'weights',
+            in_array($sheetName, self::SELECTED_SHEETS, true) => 'selected',
+            in_array($sheetName, self::ASSESSMENT_SHEETS, true) => 'assessment',
+            str_starts_with($sheetName, 'group_') => 'attachments',
+            default => null,
+        };
     }
 
     private function normalizeRequestedType(string $type, Worksheet $sheet): ?string
     {
-        if ($type === 'labels' && in_array($sheet->getTitle(), self::LABEL_SHEETS, true)) {
-            return 'labels';
+        $detectedType = $this->detectType($sheet);
+
+        if ($type === 'scores' && in_array($detectedType, ['assessment', 'selected', 'payments', 'work_groups', 'weights', 'attachments'], true)) {
+            return $detectedType;
         }
 
-        if ($type === 'scores' && in_array($sheet->getTitle(), self::SCORE_SHEETS, true)) {
-            return 'scores';
+        if ($type === 'labels' && $detectedType === 'assessment') {
+            return 'assessment';
         }
 
-        if ($type === 'followups' && in_array($sheet->getTitle(), self::FOLLOW_UP_SHEETS, true)) {
-            return 'followups';
-        }
-
-        return $this->detectType($sheet) === $type ? $type : null;
+        return $detectedType === $type ? $detectedType : null;
     }
 
     /**
+     * @param  array<int, string>  $parentCodes
      * @return array{total: int, created: int, updated: int, skipped: int}
      */
-    private function importSheet(Worksheet $sheet, string $type): array
+    private function importSheet(Worksheet $sheet, string $type, array $parentCodes): array
     {
+        if ($type === 'weights') {
+            return $this->weights($sheet);
+        }
+
         $headers = $this->headers($sheet);
         $summary = ['total' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0];
 
         foreach ($this->rows($sheet, $headers) as $row) {
             $summary['total']++;
+
+            if ($type === 'attachments') {
+                $stored = $this->attachment($row, $sheet->getTitle(), $parentCodes);
+                $summary[$stored ? 'updated' : 'skipped']++;
+
+                continue;
+            }
+
             $code = $this->code($row);
 
             if ($code === '') {
@@ -181,21 +208,17 @@ class HeksSpreadsheetImportService
                 continue;
             }
 
-            $beneficiary = $this->beneficiary($code, $row);
+            $beneficiary = $this->beneficiary($code, $row, $type, $sheet->getTitle());
             $wasRecentlyCreated = $beneficiary->wasRecentlyCreated;
 
-            if ($type === 'followups') {
-                $this->followUp($beneficiary, $row);
-            }
-
-            if ($type === 'scores') {
-                $this->score($beneficiary, $row, $sheet->getTitle());
-                $this->labels($beneficiary, $row, $sheet->getTitle());
-            }
-
-            if ($type === 'labels') {
-                $this->labels($beneficiary, $row, $sheet->getTitle());
-            }
+            match ($type) {
+                'followups' => $this->followUp($beneficiary, $row),
+                'assessment' => $this->assessment($beneficiary, $row, $sheet->getTitle()),
+                'selected' => $this->selected($beneficiary, $row, $sheet->getTitle()),
+                'payments' => $this->payment($beneficiary, $row, $sheet->getTitle()),
+                'work_groups' => $this->workAssignment($beneficiary, $row, $sheet->getTitle()),
+                default => null,
+            };
 
             $summary[$wasRecentlyCreated ? 'created' : 'updated']++;
         }
@@ -211,7 +234,7 @@ class HeksSpreadsheetImportService
         $bestRow = 1;
         $bestHeaders = [];
 
-        for ($row = 1; $row <= min(8, $sheet->getHighestDataRow()); $row++) {
+        for ($row = 1; $row <= min(10, $sheet->getHighestDataRow()); $row++) {
             $headers = [];
 
             for ($column = 1; $column <= $this->highestColumnIndex($sheet); $column++) {
@@ -261,7 +284,7 @@ class HeksSpreadsheetImportService
     /**
      * @param  array<string, mixed>  $row
      */
-    private function beneficiary(string $code, array $row): HeksBeneficiary
+    private function beneficiary(string $code, array $row, string $type, string $source): HeksBeneficiary
     {
         $beneficiary = HeksBeneficiary::query()->firstOrNew(['code' => $code]);
         $data = array_filter([
@@ -283,15 +306,40 @@ class HeksSpreadsheetImportService
             'payment_1' => $this->decimal($this->first($row, ['Payment_1', '30%', 'الدفعة الأولى  30% ILS'])),
             'payment_2' => $this->decimal($this->first($row, ['Payment_2', '50%'])),
             'payment_3' => $this->decimal($this->first($row, ['Payment_3', '20%'])),
-            'social_notes' => $this->first($row, ['ملاحظات إجتماعية']),
-            'engineer_notes' => $this->first($row, ['ملاحظات المهندسين']),
             'recommendations' => $this->first($row, ['توصيات المهندس للزيارة', 'توصيات نهائية']),
-            'raw_data' => array_merge($beneficiary->raw_data ?? [], $row),
+            'selection_source' => in_array($type, ['selected', 'payments', 'work_groups'], true) ? $source : null,
+            'selection_status' => in_array($type, ['selected', 'payments', 'work_groups'], true) ? 'selected' : null,
+            'is_selected' => in_array($type, ['selected', 'payments', 'work_groups'], true) ? true : null,
+            'raw_data' => array_merge($beneficiary->raw_data ?? [], [$source => $row]),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
 
         $beneficiary->fill($data)->save();
 
         return $beneficiary;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function assessment(HeksBeneficiary $beneficiary, array $row, string $source): void
+    {
+        $this->score($beneficiary, $row, $source);
+        $this->labels($beneficiary, $row, $source);
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function selected(HeksBeneficiary $beneficiary, array $row, string $source): void
+    {
+        $beneficiary->forceFill([
+            'is_selected' => true,
+            'selection_source' => $source,
+            'selection_status' => 'selected',
+        ])->save();
+
+        $this->score($beneficiary, $row, $source);
+        $this->labels($beneficiary, $row, $source);
     }
 
     /**
@@ -343,6 +391,62 @@ class HeksSpreadsheetImportService
     /**
      * @param  array<string, mixed>  $row
      */
+    private function payment(HeksBeneficiary $beneficiary, array $row, string $source): void
+    {
+        $payment = HeksPayment::query()->updateOrCreate(
+            ['heks_beneficiary_id' => $beneficiary->id, 'source' => $source],
+            [
+                'grant_amount' => $this->decimal($this->first($row, ['المنحة', 'قيمة العقد ILS', 'GRANT'])),
+                'payment_1_amount' => $this->decimal($this->first($row, ['تاريخ دفعة 1', '30%', 'الدفعة الأولى  30% ILS'])),
+                'payment_2_amount' => $this->decimal($this->first($row, ['تاريخ دفعة 2', '50%'])),
+                'payment_3_amount' => $this->decimal($this->first($row, ['تاريخ دفعة 3', '20%'])),
+                'payment_1_words' => $this->first($row, ['الدفعة 30% بالحروف']),
+                'payment_2_words' => $this->first($row, ['الدفعة 50% بالحروف']),
+                'payment_3_words' => $this->first($row, ['الدفعة 20% بالحروف']),
+                'grant_words' => $this->first($row, ['المبلغ بالحروف']),
+                'raw_data' => $row,
+            ]
+        );
+
+        $beneficiary->forceFill([
+            'grant_amount' => $payment->grant_amount ?? $beneficiary->grant_amount,
+            'payment_1' => $payment->payment_1_amount ?? $beneficiary->payment_1,
+            'payment_2' => $payment->payment_2_amount ?? $beneficiary->payment_2,
+            'payment_3' => $payment->payment_3_amount ?? $beneficiary->payment_3,
+            'payment_status' => $this->paymentStatus($payment),
+            'is_selected' => true,
+        ])->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function workAssignment(HeksBeneficiary $beneficiary, array $row, string $source): void
+    {
+        $assignment = HeksWorkAssignment::query()->updateOrCreate(
+            ['heks_beneficiary_id' => $beneficiary->id, 'source' => $source],
+            [
+                'engineer_name' => $this->first($row, ['المهندس المتابع', 'اسم المهندس الميداني']),
+                'contract_amount_ils' => $this->decimal($this->first($row, ['قيمة العقد ILS'])),
+                'first_payment_ils' => $this->decimal($this->first($row, ['الدفعة الأولى  30% ILS'])),
+                'phone' => $this->first($row, ['رقم التواصل']),
+                'raw_data' => $row,
+            ]
+        );
+
+        $beneficiary->forceFill(array_filter([
+            'field_engineer' => $assignment->engineer_name,
+            'grant_amount' => $assignment->contract_amount_ils,
+            'payment_1' => $assignment->first_payment_ils,
+            'phone' => $assignment->phone,
+            'work_group_source' => $source,
+            'is_selected' => true,
+        ], fn (mixed $value): bool => $value !== null && $value !== ''))->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function labels(HeksBeneficiary $beneficiary, array $row, string $source): void
     {
         $keys = [
@@ -371,11 +475,123 @@ class HeksSpreadsheetImportService
     }
 
     /**
+     * @return array{total: int, created: int, updated: int, skipped: int}
+     */
+    private function weights(Worksheet $sheet): array
+    {
+        $headers = $this->headers($sheet);
+        $summary = ['total' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0];
+
+        foreach ($this->rows($sheet, $headers) as $row) {
+            $summary['total']++;
+            $indicator = $this->first($row, ['Indicator']);
+            $questionKey = $this->first($row, ['question_key', 'Question', 'تقييم حالة ضرر المأوى:', 'حالة السقف']);
+
+            if ($indicator === '' && $questionKey === '') {
+                $summary['skipped']++;
+
+                continue;
+            }
+
+            HeksScoringWeight::query()->updateOrCreate(
+                [
+                    'source' => $sheet->getTitle(),
+                    'indicator' => $indicator !== '' ? $indicator : null,
+                    'question_key' => $questionKey !== '' ? $questionKey : null,
+                    'option_value' => $this->first($row, ['option_value']) ?: null,
+                ],
+                [
+                    'category' => $this->first($row, ['Category']),
+                    'weight' => $this->decimal($this->first($row, ['Weight (from 100)', 'Weight'])),
+                    'option_score' => $this->decimal($this->first($row, ['score', 'Score'])),
+                    'raw_data' => $row,
+                ]
+            );
+            $summary['updated']++;
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @param  array<int, string>  $parentCodes
+     */
+    private function attachment(array $row, string $source, array $parentCodes): bool
+    {
+        $filename = $this->first($row, ['صور الوحدة السكنية', 'قم بتصوير المستندات المتوفرة', 'Photos']);
+        $url = $this->first($row, ['صور الوحدة السكنية_URL', 'قم بتصوير المستندات المتوفرة_URL', 'Photos_URL']);
+        $parentIndex = (int) $this->decimal($this->first($row, ['_parent_index']));
+        $beneficiary = isset($parentCodes[$parentIndex])
+            ? HeksBeneficiary::query()->where('code', $parentCodes[$parentIndex])->first()
+            : null;
+
+        if ($filename === '' && $url === '') {
+            return false;
+        }
+
+        HeksAttachment::query()->updateOrCreate(
+            [
+                'source' => $source,
+                'filename' => $filename,
+                'parent_index' => $parentIndex > 0 ? $parentIndex : null,
+                'source_index' => (int) $this->decimal($this->first($row, ['_index'])),
+            ],
+            [
+                'heks_beneficiary_id' => $beneficiary?->id,
+                'url' => $url,
+                'parent_table' => $this->first($row, ['_parent_table_name']),
+                'attachment_type' => str_contains($source, 'lm1ok19') ? 'shelter_photo' : 'document',
+                'raw_data' => $row,
+            ]
+        );
+
+        return true;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function parentCodes(Spreadsheet $spreadsheet): array
+    {
+        $codes = [];
+
+        foreach (self::ASSESSMENT_SHEETS as $sheetName) {
+            $sheet = $spreadsheet->getSheetByName($sheetName);
+
+            if ($sheet === null) {
+                continue;
+            }
+
+            $headers = $this->headers($sheet);
+            $index = 1;
+
+            foreach ($this->rows($sheet, $headers) as $row) {
+                $code = $this->code($row);
+
+                if ($code !== '') {
+                    $codes[$index] = $code;
+                }
+
+                $index++;
+            }
+
+            if ($codes !== []) {
+                return $codes;
+            }
+        }
+
+        return $codes;
+    }
+
+    /**
      * @param  array<string, mixed>  $row
      */
     private function code(array $row): string
     {
-        return $this->first($row, ['Code', 'الكود', 'رقم الطلب/الكود']);
+        $code = $this->first($row, ['Code', 'الكود', 'رقم الطلب/الكود']);
+
+        return preg_match('/^[A-Z]{1,4}\d+/i', $code) ? $code : '';
     }
 
     /**
@@ -422,6 +638,23 @@ class HeksSpreadsheetImportService
         return false;
     }
 
+    private function paymentStatus(HeksPayment $payment): string
+    {
+        if ($payment->payment_1_amount !== null && $payment->payment_2_amount !== null && $payment->payment_3_amount !== null) {
+            return 'paid_100';
+        }
+
+        if ($payment->payment_1_amount !== null && $payment->payment_2_amount !== null) {
+            return 'paid_80';
+        }
+
+        if ($payment->payment_1_amount !== null) {
+            return 'paid_30';
+        }
+
+        return 'pending';
+    }
+
     private function text(Cell $cell): string
     {
         try {
@@ -460,7 +693,7 @@ class HeksSpreadsheetImportService
         $index = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
 
         if ($index > 350) {
-            throw new RuntimeException('ملف HEKS يحتوي عدداً غير متوقع من الأعمدة.');
+            throw new RuntimeException('ملف HEKS يحتوي عددا غير متوقع من الأعمدة.');
         }
 
         return $index;

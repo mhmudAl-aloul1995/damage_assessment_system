@@ -8,11 +8,15 @@ use App\Modules\Heks\Http\Requests\UpdateHeksBeneficiaryRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksFollowUpRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksLabelRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksScoreRequest;
+use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksImport;
 use App\Modules\Heks\Models\HeksLabel;
+use App\Modules\Heks\Models\HeksPayment;
 use App\Modules\Heks\Models\HeksScore;
+use App\Modules\Heks\Models\HeksScoringWeight;
+use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,7 +30,20 @@ class HeksController extends Controller
 
         return view('heks::dashboard', [
             'stats' => $this->stats(),
+            'pipeline' => $this->pipeline(),
             'latestImports' => HeksImport::query()->latest()->limit(8)->get(),
+            'engineerWorkload' => HeksWorkAssignment::query()
+                ->selectRaw('engineer_name, count(*) as cases_count, coalesce(sum(contract_amount_ils), 0) as contract_total')
+                ->whereNotNull('engineer_name')
+                ->groupBy('engineer_name')
+                ->orderByDesc('cases_count')
+                ->limit(8)
+                ->get(),
+            'paymentStatusDistribution' => HeksBeneficiary::query()
+                ->selectRaw('payment_status, count(*) as aggregate')
+                ->whereNotNull('payment_status')
+                ->groupBy('payment_status')
+                ->pluck('aggregate', 'payment_status'),
             'labelDistribution' => HeksLabel::query()
                 ->selectRaw('label_key, count(*) as aggregate')
                 ->groupBy('label_key')
@@ -64,7 +81,7 @@ class HeksController extends Controller
         $this->authorizeAccess();
 
         $beneficiaries = HeksBeneficiary::query()
-            ->withCount(['labels', 'followUps', 'scores'])
+            ->withCount(['labels', 'followUps', 'scores', 'payments', 'workAssignments', 'attachments'])
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $search = (string) $request->string('q');
                 $query->where(function ($query) use ($search): void {
@@ -73,17 +90,22 @@ class HeksController extends Controller
                         ->orWhere('identity_number', 'like', "%{$search}%");
                 });
             })
+            ->when($request->filled('selected'), fn ($query) => $query->where('is_selected', $request->boolean('selected')))
+            ->when($request->filled('engineer'), fn ($query) => $query->where('field_engineer', (string) $request->string('engineer')))
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        return view('heks::beneficiaries', compact('beneficiaries'));
+        return view('heks::beneficiaries', [
+            'beneficiaries' => $beneficiaries,
+            'engineers' => HeksBeneficiary::query()->whereNotNull('field_engineer')->distinct()->orderBy('field_engineer')->pluck('field_engineer'),
+        ]);
     }
 
     public function edit(HeksBeneficiary $beneficiary): View
     {
         $this->authorizeAccess();
-        $beneficiary->load(['labels', 'followUps', 'scores']);
+        $beneficiary->load(['labels', 'followUps', 'scores', 'payments', 'workAssignments', 'attachments']);
 
         return view('heks::edit', compact('beneficiary'));
     }
@@ -150,7 +172,9 @@ class HeksController extends Controller
         return view('heks::quality', [
             'missingIdentity' => HeksBeneficiary::query()->whereNull('identity_number')->orWhere('identity_number', '')->count(),
             'missingScores' => HeksBeneficiary::query()->doesntHave('scores')->count(),
-            'missingFollowUps' => HeksBeneficiary::query()->doesntHave('followUps')->count(),
+            'missingPayments' => HeksBeneficiary::query()->where('is_selected', true)->doesntHave('payments')->count(),
+            'missingFollowUps' => HeksBeneficiary::query()->where('is_selected', true)->doesntHave('followUps')->count(),
+            'unlinkedAttachments' => HeksAttachment::query()->whereNull('heks_beneficiary_id')->count(),
             'duplicateIdentities' => HeksBeneficiary::query()
                 ->selectRaw('identity_number, count(*) as aggregate')
                 ->whereNotNull('identity_number')
@@ -168,11 +192,30 @@ class HeksController extends Controller
     {
         return [
             'beneficiaries' => HeksBeneficiary::query()->count(),
+            'selected' => HeksBeneficiary::query()->where('is_selected', true)->count(),
             'labels' => HeksLabel::query()->count(),
             'follow_ups' => HeksFollowUp::query()->count(),
             'scores' => HeksScore::query()->count(),
+            'payments' => HeksPayment::query()->count(),
+            'attachments' => HeksAttachment::query()->count(),
+            'weights' => HeksScoringWeight::query()->count(),
             'imports' => HeksImport::query()->count(),
             'grant_total' => (float) HeksBeneficiary::query()->sum('grant_amount'),
+        ];
+    }
+
+    /**
+     * @return array<int, array{label: string, count: int, tone: string}>
+     */
+    private function pipeline(): array
+    {
+        return [
+            ['label' => 'Assessed', 'count' => HeksBeneficiary::query()->count(), 'tone' => 'primary'],
+            ['label' => 'Selected', 'count' => HeksBeneficiary::query()->where('is_selected', true)->count(), 'tone' => 'success'],
+            ['label' => 'Assigned', 'count' => HeksBeneficiary::query()->has('workAssignments')->count(), 'tone' => 'info'],
+            ['label' => 'Paid 30%', 'count' => HeksBeneficiary::query()->whereIn('payment_status', ['paid_30', 'paid_80', 'paid_100'])->count(), 'tone' => 'warning'],
+            ['label' => 'Followed-up', 'count' => HeksBeneficiary::query()->has('followUps')->count(), 'tone' => 'dark'],
+            ['label' => 'Fully Paid', 'count' => HeksBeneficiary::query()->where('payment_status', 'paid_100')->count(), 'tone' => 'success'],
         ];
     }
 

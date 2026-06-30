@@ -30,6 +30,11 @@ class HeksBeneficiary extends Model
         'social_notes',
         'engineer_notes',
         'recommendations',
+        'is_selected',
+        'selection_source',
+        'selection_status',
+        'payment_status',
+        'work_group_source',
         'raw_data',
     ];
 
@@ -48,6 +53,21 @@ class HeksBeneficiary extends Model
         return $this->hasMany(HeksScore::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(HeksPayment::class);
+    }
+
+    public function workAssignments(): HasMany
+    {
+        return $this->hasMany(HeksWorkAssignment::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(HeksAttachment::class);
+    }
+
     protected function casts(): array
     {
         return [
@@ -56,6 +76,7 @@ class HeksBeneficiary extends Model
             'payment_1' => 'decimal:2',
             'payment_2' => 'decimal:2',
             'payment_3' => 'decimal:2',
+            'is_selected' => 'boolean',
             'raw_data' => 'array',
         ];
     }

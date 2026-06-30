@@ -10,10 +10,12 @@
         @foreach ([
             'Missing identity numbers' => $missingIdentity,
             'Without scores' => $missingScores,
+            'Selected without payments' => $missingPayments,
             'Without follow-ups' => $missingFollowUps,
+            'Unlinked attachments' => $unlinkedAttachments,
             'Duplicate identity numbers' => $duplicateIdentities->count(),
         ] as $label => $value)
-            <div class="col-md-3 col-6">
+            <div class="col-md-2 col-6">
                 <div class="card card-flush h-100">
                     <div class="card-body">
                         <div class="text-gray-500 fw-semibold">{{ $label }}</div>
