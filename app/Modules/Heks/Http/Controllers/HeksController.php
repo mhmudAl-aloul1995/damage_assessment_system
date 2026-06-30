@@ -227,7 +227,11 @@ class HeksController extends Controller
 
     public function importBoqItems(ImportHeksBoqItemsRequest $request, HeksBeneficiary $beneficiary, HeksSpreadsheetImportService $importer): RedirectResponse
     {
-        $summary = $importer->importBeneficiaryBoq($request->file('file'), $beneficiary);
+        try {
+            $summary = $importer->importBeneficiaryBoq($request->file('file'), $beneficiary);
+        } catch (\RuntimeException $exception) {
+            return back()->withErrors(['file' => $exception->getMessage()]);
+        }
 
         return back()->with('success', "تم استيراد {$summary['imported_rows']} بند جدول كميات، وتم تجاوز {$summary['skipped_rows']} بند.");
     }

@@ -27,11 +27,13 @@ it('imports and manages the HEKS operational workbook', function () {
     $workbookPath = heksWorkbookPath('full');
     $followUpPath = heksWorkbookPath('followups');
     $boqPath = heksWorkbookPath('boq');
+    $mismatchedBoqPath = heksWorkbookPath('boq-mismatch');
 
     try {
         heksWriteFullWorkbook($workbookPath);
         heksWriteFollowUpsWorkbook($followUpPath);
         heksWriteBoqWorkbook($boqPath);
+        heksWriteBoqWorkbook($mismatchedBoqPath, 'DGN2', 'Other Beneficiary');
 
         $workbookSummary = $importer->import(
             new UploadedFile($workbookPath, 'heks-full.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
@@ -153,6 +155,15 @@ it('imports and manages the HEKS operational workbook', function () {
             ->and((float) HeksBoqItem::query()->where('source', 'beneficiary-boq.xlsx')->value('total_price_ils'))->toBe(1220.0);
 
         $this->actingAs($user)
+            ->post(route('heks.beneficiaries.boq-items.import', $beneficiary), [
+                'file' => new UploadedFile($mismatchedBoqPath, 'wrong-beneficiary-boq.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
+            ])
+            ->assertSessionHasErrors('file')
+            ->assertRedirect();
+
+        expect(HeksBoqItem::query()->where('source', 'wrong-beneficiary-boq.xlsx')->count())->toBe(0);
+
+        $this->actingAs($user)
             ->get(route('heks.beneficiaries.pricing', $beneficiary))
             ->assertOk()
             ->assertSee('heksPricingForm', false)
@@ -241,6 +252,7 @@ it('imports and manages the HEKS operational workbook', function () {
         @unlink($workbookPath);
         @unlink($followUpPath);
         @unlink($boqPath);
+        @unlink($mismatchedBoqPath);
     }
 });
 
@@ -265,6 +277,27 @@ it('hides and blocks HEKS for non database officers', function () {
     $this->actingAs($user)
         ->get(route('heks.dashboard'))
         ->assertForbidden();
+});
+
+it('renders HEKS pagination with compact bootstrap controls', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    foreach (range(1, 25) as $index) {
+        HeksBeneficiary::query()->create([
+            'code' => "DGN{$index}",
+            'name' => "Beneficiary {$index}",
+            'identity_number' => "9000000{$index}",
+        ]);
+    }
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries'))
+        ->assertOk()
+        ->assertSee('heks-pagination', false)
+        ->assertSee('page-link', false)
+        ->assertDontSee('<svg', false);
 });
 
 function heksWorkbookPath(string $name): string
@@ -436,14 +469,14 @@ function heksWriteFollowUpsWorkbook(string $path): void
     (new Xlsx($spreadsheet))->save($path);
 }
 
-function heksWriteBoqWorkbook(string $path): void
+function heksWriteBoqWorkbook(string $path, string $code = 'DGN1', string $name = 'Test Beneficiary'): void
 {
     $spreadsheet = new Spreadsheet;
     $sheet = $spreadsheet->getActiveSheet();
-    $sheet->setTitle('DGN1');
+    $sheet->setTitle($code);
     $sheet->fromArray([
         ['', '', '', '', '', '', ''],
-        ['', 'DGN1', 'Test Beneficiary', '', '', '', ''],
+        ['', $code, $name, '', '', '', ''],
         ['', '', '', '', '', '', ''],
         ['', '', '', '', '', '', ''],
         ['', '#', 'وصف البند', 'الوحدة', 'تكلفة الوحدة ILS', 'الكمية', 'الإجماليILS'],

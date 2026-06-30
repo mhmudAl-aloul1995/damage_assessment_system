@@ -84,7 +84,9 @@
                 @endforelse
                 </tbody>
             </table>
-            {{ $beneficiaries->links() }}
+            <div class="heks-pagination">
+                {{ $beneficiaries->links('pagination::bootstrap-5') }}
+            </div>
         </div>
     </div>
 @endsection

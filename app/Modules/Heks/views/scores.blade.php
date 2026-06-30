@@ -93,7 +93,9 @@
                 @endforelse
                 </tbody>
             </table>
-            {{ $scores->links() }}
+            <div class="heks-pagination">
+                {{ $scores->links('pagination::bootstrap-5') }}
+            </div>
         </div>
     </div>
 @endsection

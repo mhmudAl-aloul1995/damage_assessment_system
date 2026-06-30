@@ -136,6 +136,7 @@ class HeksSpreadsheetImportService
         $spreadsheet = IOFactory::load($file->getRealPath());
         $sheet = $spreadsheet->getSheet(0);
         $headerRow = $this->boqHeaderRow($sheet);
+        $this->assertBoqMatchesBeneficiary($file, $sheet, $beneficiary, $headerRow);
         $summary = ['total_rows' => 0, 'imported_rows' => 0, 'skipped_rows' => 0];
         $section = null;
         $source = $file->getClientOriginalName();
@@ -234,6 +235,39 @@ class HeksSpreadsheetImportService
         }
 
         throw new RuntimeException('لم يتم العثور على صف عناوين جدول الكميات في الملف.');
+    }
+
+    private function assertBoqMatchesBeneficiary(UploadedFile $file, Worksheet $sheet, HeksBeneficiary $beneficiary, int $headerRow): void
+    {
+        $expectedCode = $this->normalizedIdentifier((string) $beneficiary->code);
+        $expectedName = $this->normalizedIdentifier((string) $beneficiary->name);
+        $identifiers = [
+            $file->getClientOriginalName(),
+            $sheet->getTitle(),
+        ];
+        $lastRow = max(1, min($headerRow - 1, 15));
+        $lastColumn = min($this->highestColumnIndex($sheet), 10);
+
+        for ($row = 1; $row <= $lastRow; $row++) {
+            for ($column = 1; $column <= $lastColumn; $column++) {
+                $value = $this->text($sheet->getCell([$column, $row]));
+
+                if ($value !== '') {
+                    $identifiers[] = $value;
+                }
+            }
+        }
+
+        $matchesCode = $expectedCode !== '' && collect($identifiers)
+            ->contains(fn (string $identifier): bool => str_contains($this->normalizedIdentifier($identifier), $expectedCode));
+        $matchesName = $expectedName !== '' && collect($identifiers)
+            ->contains(fn (string $identifier): bool => str_contains($this->normalizedIdentifier($identifier), $expectedName));
+
+        if ($matchesCode || $matchesName) {
+            return;
+        }
+
+        throw new RuntimeException("ملف جدول الكميات لا يطابق المستفيد الحالي. يرجى رفع ملف يحتوي كود الطلب {$beneficiary->code} أو اسم المستفيد {$beneficiary->name}.");
     }
 
     private function detectTypeFromSheetName(string $sheetName): ?string
@@ -734,6 +768,13 @@ class HeksSpreadsheetImportService
     private function normalizedHeading(string $heading): string
     {
         return preg_replace('/\s+/u', ' ', trim($heading)) ?? trim($heading);
+    }
+
+    private function normalizedIdentifier(string $value): string
+    {
+        $normalized = mb_strtolower($value);
+
+        return preg_replace('/[^\p{L}\p{N}]+/u', '', $normalized) ?? $normalized;
     }
 
     private function paymentStatus(HeksPayment $payment): string

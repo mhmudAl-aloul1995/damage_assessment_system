@@ -41,7 +41,9 @@
                 @endforelse
                 </tbody>
             </table>
-            {{ $labels->links() }}
+            <div class="heks-pagination">
+                {{ $labels->links('pagination::bootstrap-5') }}
+            </div>
         </div>
     </div>
 @endsection

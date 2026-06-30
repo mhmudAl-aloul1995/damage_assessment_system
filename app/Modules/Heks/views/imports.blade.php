@@ -144,7 +144,9 @@
                 @endforelse
                 </tbody>
             </table>
-            {{ $imports->links() }}
+            <div class="heks-pagination">
+                {{ $imports->links('pagination::bootstrap-5') }}
+            </div>
         </div>
     </div>
 @endsection
