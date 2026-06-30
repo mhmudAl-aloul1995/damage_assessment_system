@@ -135,7 +135,11 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('جدول الكميات BOQ')
             ->assertSee('boq.xlsx')
             ->assertSee('https://example.test/boq.xlsx')
-            ->assertSee('محفوظ في قاعدة البيانات');
+            ->assertSee('فتح جدول الكميات')
+            ->assertSee('خيارات الملف')
+            ->assertSee('تحميل Excel الأصلي')
+            ->assertSee('فتح رابط KoBo')
+            ->assertSee('تم استيراد البنود');
 
         $this->actingAs($user)
             ->get(route('heks.beneficiaries.edit', $beneficiary))

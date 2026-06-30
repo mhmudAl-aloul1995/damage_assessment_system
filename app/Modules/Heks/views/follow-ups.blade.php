@@ -31,6 +31,9 @@
                     @php
                         $boqAttachment = $followUp->beneficiary?->attachments
                             ->first(fn ($attachment) => $attachment->attachment_type === 'follow_up_boq' && $attachment->source === "follow-up:{$followUp->id}");
+                        $boqImportSummary = $boqAttachment?->raw_data['boq_import_summary'] ?? null;
+                        $boqImported = is_array($boqImportSummary) && ($boqImportSummary['imported'] ?? false) && (($boqImportSummary['imported_rows'] ?? 0) > 0);
+                        $boqImportFailed = is_array($boqImportSummary) && ($boqImportSummary['imported'] ?? true) === false;
                     @endphp
                     <tr>
                         <form method="POST" action="{{ route('heks.follow-ups.update', $followUp) }}">
@@ -52,12 +55,34 @@
                             <td class="min-w-200px">
                                 <input name="boq_filename" class="form-control mb-2" value="{{ $followUp->boq_filename }}" placeholder="اسم ملف BOQ">
                                 <input name="boq_url" class="form-control mb-2" value="{{ $followUp->boq_url }}" placeholder="رابط BOQ">
-                                @if ($followUp->boq_url)
-                                    <a class="btn btn-sm btn-light" href="{{ $followUp->boq_url }}" target="_blank" rel="noopener">فتح BOQ</a>
+                                @if ($followUp->beneficiary)
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a class="btn btn-sm btn-light-primary" href="{{ route('heks.beneficiaries.pricing', $followUp->beneficiary) }}">فتح جدول الكميات</a>
+                                        @if ($followUp->boq_url)
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">خيارات الملف</button>
+                                                <div class="dropdown-menu">
+                                                    <a class="dropdown-item" href="{{ $followUp->boq_url }}" download>تحميل Excel الأصلي</a>
+                                                    <a class="dropdown-item" href="{{ $followUp->boq_url }}" target="_blank" rel="noopener">فتح رابط KoBo</a>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @elseif ($followUp->boq_url)
+                                    <a class="btn btn-sm btn-light" href="{{ $followUp->boq_url }}" target="_blank" rel="noopener">فتح رابط KoBo</a>
                                 @endif
-                                @if ($boqAttachment)
+                                @if ($boqImported)
                                     <div class="mt-2">
-                                        <span class="badge badge-light-success">محفوظ في قاعدة البيانات</span>
+                                        <span class="badge badge-light-success">تم استيراد البنود</span>
+                                        <span class="text-muted small">{{ $boqImportSummary['imported_rows'] }} بند</span>
+                                    </div>
+                                @elseif ($boqImportFailed)
+                                    <div class="mt-2">
+                                        <span class="badge badge-light-danger">فشل الاستيراد</span>
+                                    </div>
+                                @elseif ($boqAttachment)
+                                    <div class="mt-2">
+                                        <span class="badge badge-light-warning">ملف محفوظ فقط</span>
                                     </div>
                                 @endif
                             </td>
