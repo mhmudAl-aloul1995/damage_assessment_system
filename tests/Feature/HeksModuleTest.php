@@ -178,8 +178,6 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('Social vulnerability')
             ->assertSee('Extreme')
             ->assertSee('معايير التقييم الاجتماعي')
-            ->assertSee('رقم الطلب/الكود')
-            ->assertSee('قيمة المستفيد')
             ->assertSee('Female-headed household')
             ->assertSee('تقييم الحالة الاجتماعية')
             ->assertSee('التقييم الفني للمأوى')

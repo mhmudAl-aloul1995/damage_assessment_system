@@ -13,11 +13,9 @@
         .heks-case-page .case-tabs .nav-link.active { background: var(--bs-primary); color: #fff; }
         .heks-case-page .table-fixed-wide { min-width: 980px; }
         .heks-case-page .text-soft { color: var(--bs-gray-600); }
-        .heks-case-page .social-matrix { border-collapse: separate; border-spacing: 0; min-width: 1700px; table-layout: fixed; }
-        .heks-case-page .social-matrix th { background: #a996c3; color: #111827; font-weight: 700; min-width: 150px; white-space: normal; }
-        .heks-case-page .social-matrix th:first-child, .heks-case-page .social-matrix td:first-child { background: #d9e8f5; font-weight: 700; min-width: 130px; position: sticky; right: 0; z-index: 2; }
-        .heks-case-page .social-matrix td { background: #b7a4cc; color: #111827; font-weight: 700; text-align: center; }
-        .heks-case-page .social-matrix .social-value-row td { background: #f8fafc; color: var(--bs-gray-700); font-size: .78rem; font-weight: 500; line-height: 1.45; text-align: center; vertical-align: top; white-space: normal; }
+        .heks-case-page .assessment-table-wrap { border: 1px solid var(--bs-gray-200); border-radius: .75rem; max-height: 34rem; overflow: auto; }
+        .heks-case-page .assessment-table-wrap table { margin-bottom: 0; min-width: 760px; }
+        .heks-case-page .assessment-table-wrap thead th { background: var(--bs-body-bg); position: sticky; top: 0; z-index: 1; }
     </style>
 
     @php
@@ -418,98 +416,107 @@
                             </div>
                         </div>
 
-                        <div class="d-flex flex-column flex-xl-row justify-content-between gap-4 mb-5">
-                            <div>
-                                <h3 class="fs-4 fw-bold mb-1">معايير التقييم الاجتماعي</h3>
-                                <div class="text-muted">Social Vulnerability: كل معيار حسب الملف No = 0 و Yes = 5، مع قراءة قيمة المستفيد من KoBo إن وجدت.</div>
-                            </div>
-                            <div class="case-kpi py-3 min-w-150px">
-                                <div class="text-muted small">عدد المعايير</div>
-                                <div class="fs-4 fw-bold text-info">{{ number_format($socialAssessmentRows->count()) }}</div>
-                            </div>
-                        </div>
-
-                        <div class="table-responsive mb-7">
-                            <table class="table table-bordered align-middle social-matrix">
-                                <thead>
-                                <tr>
-                                    <th>رقم الطلب/الكود</th>
-                                    @foreach ($socialAssessmentRows as $row)
-                                        <th>{{ $row['factor'] }}</th>
-                                    @endforeach
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @if ($socialAssessmentRows->isNotEmpty())
-                                    <tr>
-                                        <td>{{ $beneficiary->code }}</td>
-                                        @foreach ($socialAssessmentRows as $row)
-                                            <td>{{ $row['points'] ?? '-' }}</td>
-                                        @endforeach
-                                    </tr>
-                                    <tr class="social-value-row">
-                                        <td>قيمة المستفيد</td>
-                                        @foreach ($socialAssessmentRows as $row)
-                                            <td>{{ filled($row['value']) ? $row['value'] : 'غير متوفر' }}</td>
-                                        @endforeach
-                                    </tr>
-                                @else
-                                    <tr><td class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
-                                @endif
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="d-flex flex-column flex-xl-row justify-content-between gap-4 mb-5">
-                            <div>
-                                <h3 class="fs-4 fw-bold mb-1">التقييم الفني للمأوى</h3>
-                                <div class="text-muted">عرض مؤشرات Shelter Technical Weights مع قيمة هذا المستفيد من بيانات KoBo أو labels.</div>
-                            </div>
-                            <div class="d-flex flex-wrap gap-3">
-                                <div class="case-kpi py-3 min-w-150px">
-                                    <div class="text-muted small">مجموع الأوزان</div>
-                                    <div class="fs-4 fw-bold text-primary">{{ number_format($technicalWeightTotal, 2) }}</div>
+                        <div class="row g-5 mb-7">
+                            <div class="col-xl-6">
+                                <div class="d-flex flex-column flex-md-row justify-content-between gap-4 mb-5">
+                                    <div>
+                                        <h3 class="fs-4 fw-bold mb-1">معايير التقييم الاجتماعي</h3>
+                                        <div class="text-muted">Social Vulnerability: كل معيار No = 0 و Yes = 5.</div>
+                                    </div>
+                                    <div class="case-kpi py-3 min-w-150px">
+                                        <div class="text-muted small">عدد المعايير</div>
+                                        <div class="fs-4 fw-bold text-info">{{ number_format($socialAssessmentRows->count()) }}</div>
+                                    </div>
                                 </div>
-                                <div class="case-kpi py-3 min-w-150px">
-                                    <div class="text-muted small">قيم موجودة</div>
-                                    <div class="fs-4 fw-bold text-success">{{ number_format($answeredTechnicalRows->count()) }} / {{ number_format($technicalAssessmentRows->count()) }}</div>
+
+                                <div class="assessment-table-wrap">
+                                    <table class="table table-row-dashed align-middle">
+                                        <thead>
+                                        <tr class="fw-bold text-muted">
+                                            <th class="min-w-260px">المعيار الاجتماعي</th>
+                                            <th class="min-w-180px">قيمة المستفيد</th>
+                                            <th>النقاط</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @forelse ($socialAssessmentRows as $row)
+                                            <tr>
+                                                <td class="fw-semibold">{{ $row['question'] }}</td>
+                                                <td>
+                                                    @if (filled($row['value']))
+                                                        <span class="fw-semibold">{{ $row['value'] }}</span>
+                                                    @else
+                                                        <span class="text-muted">غير متوفر</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if ($row['points'] !== null)
+                                                        <span class="badge {{ (int) $row['points'] > 0 ? 'badge-light-success' : 'badge-light' }}">{{ $row['points'] }}</span>
+                                                    @else
+                                                        <span class="text-muted">-</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="3" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
+                                        @endforelse
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="table-responsive mb-7">
-                            <table class="table table-row-dashed align-middle table-fixed-wide">
-                                <thead>
-                                <tr class="fw-bold text-muted">
-                                    <th>الفئة</th>
-                                    <th>المؤشر</th>
-                                    <th class="min-w-350px">السؤال / المعيار</th>
-                                    <th>الوزن</th>
-                                    <th class="min-w-220px">قيمة المستفيد</th>
-                                    <th>المصدر</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                @forelse ($technicalAssessmentRows as $row)
-                                    <tr>
-                                        <td><span class="badge badge-light">{{ $row['category'] ?: '-' }}</span></td>
-                                        <td class="fw-semibold">{{ $row['indicator'] ?: '-' }}</td>
-                                        <td>{{ $row['question'] ?: '-' }}</td>
-                                        <td><span class="badge badge-light-primary">{{ $row['weight'] !== null ? number_format((float) $row['weight'], 2) : '-' }}</span></td>
-                                        <td>
-                                            @if (filled($row['value']))
-                                                <span class="fw-semibold">{{ $row['value'] }}</span>
-                                            @else
-                                                <span class="text-muted">غير متوفر</span>
-                                            @endif
-                                        </td>
-                                        <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="6" class="text-center text-muted">لم يتم استيراد جدول أوزان التقييم الفني بعد.</td></tr>
-                                @endforelse
-                                </tbody>
-                            </table>
+                            <div class="col-xl-6">
+                                <div class="d-flex flex-column flex-md-row justify-content-between gap-4 mb-5">
+                                    <div>
+                                        <h3 class="fs-4 fw-bold mb-1">التقييم الفني للمأوى</h3>
+                                        <div class="text-muted">Shelter Technical Weights مع قيمة هذا المستفيد.</div>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div class="case-kpi py-3 min-w-125px">
+                                            <div class="text-muted small">الأوزان</div>
+                                            <div class="fs-4 fw-bold text-primary">{{ number_format($technicalWeightTotal, 2) }}</div>
+                                        </div>
+                                        <div class="case-kpi py-3 min-w-125px">
+                                            <div class="text-muted small">قيم موجودة</div>
+                                            <div class="fs-4 fw-bold text-success">{{ number_format($answeredTechnicalRows->count()) }} / {{ number_format($technicalAssessmentRows->count()) }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="assessment-table-wrap">
+                                    <table class="table table-row-dashed align-middle">
+                                        <thead>
+                                        <tr class="fw-bold text-muted">
+                                            <th>الفئة</th>
+                                            <th>المؤشر</th>
+                                            <th>الوزن</th>
+                                            <th class="min-w-180px">قيمة المستفيد</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @forelse ($technicalAssessmentRows as $row)
+                                            <tr>
+                                                <td><span class="badge badge-light">{{ $row['category'] ?: '-' }}</span></td>
+                                                <td>
+                                                    <div class="fw-semibold">{{ $row['indicator'] ?: '-' }}</div>
+                                                    <div class="text-muted small">{{ $row['question'] ?: '-' }}</div>
+                                                </td>
+                                                <td><span class="badge badge-light-primary">{{ $row['weight'] !== null ? number_format((float) $row['weight'], 2) : '-' }}</span></td>
+                                                <td>
+                                                    @if (filled($row['value']))
+                                                        <span class="fw-semibold">{{ $row['value'] }}</span>
+                                                    @else
+                                                        <span class="text-muted">غير متوفر</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="4" class="text-center text-muted">لم يتم استيراد جدول أوزان التقييم الفني بعد.</td></tr>
+                                        @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="row g-5">
