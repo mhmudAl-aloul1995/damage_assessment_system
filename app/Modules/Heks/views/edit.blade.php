@@ -371,10 +371,47 @@
                             @endforeach
                         </div>
 
+                        <div class="row g-5 mb-7">
+                            <div class="col-xl-5">
+                                <h3 class="fs-5 fw-bold mb-4">مكونات التقييم</h3>
+                                <div class="table-responsive">
+                                    <table class="table table-row-dashed align-middle">
+                                        <thead><tr class="fw-bold text-muted"><th>المكون</th><th>الوزن</th><th>الحد الأعلى</th></tr></thead>
+                                        <tbody>
+                                        @foreach ($scoringComponents as $component)
+                                            <tr>
+                                                <td class="fw-semibold">{{ $component['component'] }}</td>
+                                                <td><span class="badge badge-light-primary">{{ $component['weight'] }}</span></td>
+                                                <td>{{ $component['max_points'] }} points</td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-xl-7">
+                                <h3 class="fs-5 fw-bold mb-4">تصنيف الأولوية والتدخل</h3>
+                                <div class="table-responsive">
+                                    <table class="table table-row-dashed align-middle">
+                                        <thead><tr class="fw-bold text-muted"><th>النقاط</th><th>الأولوية</th><th>التدخل</th></tr></thead>
+                                        <tbody>
+                                        @foreach ($priorityMatrix as $priority)
+                                            <tr>
+                                                <td><span class="badge badge-light">{{ $priority['score'] }}</span></td>
+                                                <td class="fw-bold">{{ $priority['priority'] }}</td>
+                                                <td>{{ $priority['intervention'] }}</td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="d-flex flex-column flex-xl-row justify-content-between gap-4 mb-5">
                             <div>
                                 <h3 class="fs-4 fw-bold mb-1">معايير التقييم الاجتماعي</h3>
-                                <div class="text-muted">عرض أسئلة وقيم S-V الاجتماعية مع قيمة هذا المستفيد من KoBo أو labels.</div>
+                                <div class="text-muted">Social Vulnerability: كل معيار حسب الملف No = 0 و Yes = 5، مع قراءة قيمة المستفيد من KoBo إن وجدت.</div>
                             </div>
                             <div class="case-kpi py-3 min-w-150px">
                                 <div class="text-muted small">عدد المعايير</div>
@@ -388,6 +425,7 @@
                                 <tr class="fw-bold text-muted">
                                     <th class="min-w-350px">السؤال / المعيار الاجتماعي</th>
                                     <th class="min-w-260px">قيمة المستفيد</th>
+                                    <th>النقاط</th>
                                     <th class="min-w-300px">الخيارات المرجعية</th>
                                     <th>المصدر</th>
                                 </tr>
@@ -403,11 +441,18 @@
                                                 <span class="text-muted">غير متوفر</span>
                                             @endif
                                         </td>
+                                        <td>
+                                            @if ($row['points'] !== null)
+                                                <span class="badge {{ (int) $row['points'] > 0 ? 'badge-light-success' : 'badge-light' }}">{{ $row['points'] }}</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
                                         <td class="text-muted">{{ $row['options'] ?: '-' }}</td>
                                         <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="4" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
                                 @endforelse
                                 </tbody>
                             </table>

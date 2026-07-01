@@ -141,6 +141,8 @@ class HeksController extends Controller
             'boqSections' => $this->boqCatalog()->pluck('section')->filter()->unique()->sort()->values(),
             'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
             'rawDataSections' => $this->rawDataSections($beneficiary),
+            'scoringComponents' => $this->scoringComponents(),
+            'priorityMatrix' => $this->priorityMatrix(),
             'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
             'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary),
         ]);
@@ -933,17 +935,28 @@ class HeksController extends Controller
             });
     }
 
-    /**
-     * @return \Illuminate\Support\Collection<int, array{question: string, value: mixed, options: string, source: string}>
-     */
     private function socialAssessmentRows(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection
     {
         $labels = $beneficiary->labels->keyBy('label_key');
         $rawData = collect($beneficiary->raw_data ?? [])
             ->filter(fn (mixed $section): bool => is_array($section))
             ->flatMap(fn (array $section): array => $section);
+        $matrixRows = collect($this->socialVulnerabilityMatrix())
+            ->map(function (array $criterion) use ($beneficiary): array {
+                $value = $this->rawValue($beneficiary, $criterion['keys']);
+                $isYes = $value !== '' && $this->isPositiveSocialValue($value, $criterion['positive_terms']);
 
-        return HeksScoringWeight::query()
+                return [
+                    'factor' => $criterion['factor'],
+                    'question' => $criterion['factor'],
+                    'value' => $value,
+                    'options' => 'No = 0 / Yes = 5',
+                    'points' => $value === '' ? null : ($isYes ? 5 : 0),
+                    'source' => $value !== '' ? 'Scoring matrix S -2' : '',
+                ];
+            });
+
+        $importedRows = HeksScoringWeight::query()
             ->where('source', 'S-V')
             ->whereNotNull('question_key')
             ->orderBy('id')
@@ -954,12 +967,77 @@ class HeksController extends Controller
                 $rawValue = $rawData->get($question);
 
                 return [
+                    'factor' => $question,
                     'question' => $question,
                     'value' => $label?->label_value ?? $rawValue,
                     'options' => $weights->pluck('option_value')->filter()->unique()->values()->implode(' / '),
+                    'points' => null,
                     'source' => $label ? (string) $label->source : ($rawValue !== null ? 'raw_data' : ''),
                 ];
             })
             ->values();
+
+        return $matrixRows
+            ->concat($importedRows->reject(fn (array $row): bool => $matrixRows->pluck('factor')->contains($row['factor'])))
+            ->values();
+    }
+
+    private function isPositiveSocialValue(string $value, array $positiveTerms): bool
+    {
+        $normalized = $this->normalizedDashboardText($value);
+
+        if (is_numeric(str_replace([',', ' '], '', $value))) {
+            return (float) str_replace([',', ' '], '', $value) > 0;
+        }
+
+        foreach ($positiveTerms as $term) {
+            if (str_contains($normalized, $this->normalizedDashboardText($term))) {
+                return true;
+            }
+        }
+
+        return str_contains($normalized, 'yes')
+            || str_contains($normalized, 'نعم')
+            || str_contains($normalized, 'يوجد');
+    }
+
+    private function scoringComponents(): array
+    {
+        return [
+            ['component' => 'Technical vulnerability', 'weight' => '70%', 'max_points' => 70],
+            ['component' => 'Social vulnerability', 'weight' => '30%', 'max_points' => 30],
+            ['component' => 'Total', 'weight' => '100%', 'max_points' => 100],
+        ];
+    }
+
+    private function priorityMatrix(): array
+    {
+        return [
+            ['score' => '80 - 100', 'priority' => 'Extreme', 'intervention' => 'urgent support (repair/seal, bathroom, kitchen)'],
+            ['score' => '65 - 79', 'priority' => 'Very High', 'intervention' => 'high priority'],
+            ['score' => '50 - 64', 'priority' => 'High', 'intervention' => 'medium priority'],
+            ['score' => '35 - 49', 'priority' => 'Moderate', 'intervention' => 'lower priority'],
+            ['score' => '<35', 'priority' => 'Low', 'intervention' => 'may not need intervention'],
+        ];
+    }
+
+    private function socialVulnerabilityMatrix(): array
+    {
+        return [
+            ['factor' => 'Female-headed household', 'keys' => ['جنس رب الأسرة', 'household head gender', 'female-headed'], 'positive_terms' => ['أنث', 'female', 'woman']],
+            ['factor' => 'Household head age >60 or <18', 'keys' => ['عمر رب الأسرة', 'household head age', 'age of household head'], 'positive_terms' => ['>60', '<18', 'أكبر من 60', 'أقل من 18']],
+            ['factor' => 'At least one chronic health condition', 'keys' => ['مرض مزمن', 'أمراض مزمنة', 'chronic'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Survivor of violence', 'keys' => ['ناجي من العنف', 'survivor of violence', 'violence'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Disability present in household', 'keys' => ['إعاقة', 'ذوي إعاقة', 'disability', 'PWD'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Single-parent household (Divorced, Separated, widowed, abandoned)', 'keys' => ['الحالة الاجتماعية', 'single parent', 'divorced', 'widowed', 'separated'], 'positive_terms' => ['مطلق', 'منفصل', 'أرمل', 'مهجور', 'divorced', 'separated', 'widowed', 'abandoned']],
+            ['factor' => 'No adult able to support repairs', 'keys' => ['لا يوجد بالغ', 'قادر على دعم الإصلاح', 'adult able to support repairs'], 'positive_terms' => ['لا يوجد', 'no adult', 'not able']],
+            ['factor' => 'Household can organize repairs themselves if given cash', 'keys' => ['تنظيم الإصلاح', 'تنفيذ الإصلاح', 'organize repairs', 'given cash'], 'positive_terms' => ['نعم', 'قادر', 'yes', 'can']],
+            ['factor' => 'Availability of valid proof of ownership/lease/hosting agreement', 'keys' => ['إثبات ملكية', 'عقد إيجار', 'عقد ايجار', 'استضافة', 'ownership', 'lease', 'hosting agreement'], 'positive_terms' => ['نعم', 'متوفر', 'ساري', 'yes', 'valid']],
+            ['factor' => 'Children <18 present', 'keys' => ['أطفال', 'أقل من 18', 'children', '<18'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Presence of pregnant/lactating women in the housing unit', 'keys' => ['حامل', 'مرضعة', 'pregnant', 'lactating'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Current housing type, shared unit with more than one family', 'keys' => ['سكن مشترك', 'أكثر من أسرة', 'shared unit', 'more than one family'], 'positive_terms' => ['مشترك', 'أكثر من أسرة', 'shared', 'yes']],
+            ['factor' => 'No Continuous secured income, heavily depend on Food aid', 'keys' => ['دخل ثابت', 'مساعدات غذائية', 'secured income', 'food aid'], 'positive_terms' => ['لا يوجد', 'يعتمد', 'food aid', 'no income']],
+            ['factor' => 'No or insufficient condition of furniture', 'keys' => ['الأثاث', 'حالة الأثاث', 'furniture'], 'positive_terms' => ['غير كاف', 'سيئ', 'insufficient', 'poor', 'no']],
+        ];
     }
 }
