@@ -12,6 +12,7 @@ use App\Modules\Heks\Http\Requests\UpdateHeksBoqPricingRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksFollowUpRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksLabelRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksScoreRequest;
+use App\Modules\Heks\Http\Requests\UpdateHeksSurveyValueRequest;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksBoqItem;
@@ -21,6 +22,7 @@ use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksPayment;
 use App\Modules\Heks\Models\HeksScore;
 use App\Modules\Heks\Models\HeksScoringWeight;
+use App\Modules\Heks\Models\HeksSurveyValueHistory;
 use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -132,6 +134,7 @@ class HeksController extends Controller
             'workAssignments' => fn ($query) => $query->latest(),
             'attachments' => fn ($query) => $query->latest(),
             'boqItems' => fn ($query) => $query->whereNull('heks_follow_up_id')->orderBy('section')->orderBy('item_code')->latest(),
+            'surveyValueHistories' => fn ($query) => $query->with('user')->latest(),
         ]);
 
         return view('heks::edit', [
@@ -154,6 +157,43 @@ class HeksController extends Controller
         $beneficiary->update($request->validated());
 
         return back()->with('success', 'تم تحديث بيانات المستفيد.');
+    }
+
+    public function updateSurveyValue(UpdateHeksSurveyValueRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
+    {
+        $this->authorizeAccess();
+
+        $data = $request->validated();
+        $rawData = $beneficiary->raw_data ?? [];
+        $source = $data['source'];
+        $fieldKey = $data['field_key'];
+        $newValue = $data['value'] ?? null;
+
+        abort_unless(is_array($rawData) && array_key_exists($source, $rawData) && is_array($rawData[$source]) && array_key_exists($fieldKey, $rawData[$source]), 404);
+
+        $oldValue = $this->surveyDisplayValue($rawData[$source][$fieldKey] ?? null);
+        $newValue = $newValue !== null ? trim($newValue) : null;
+
+        if ($oldValue === ($newValue ?? '')) {
+            return back()->with('success', 'لا يوجد تغيير على قيمة الاستبيان.');
+        }
+
+        $rawData[$source][$fieldKey] = $newValue;
+
+        DB::transaction(function () use ($beneficiary, $rawData, $source, $fieldKey, $oldValue, $newValue): void {
+            $beneficiary->forceFill(['raw_data' => $rawData])->save();
+
+            HeksSurveyValueHistory::query()->create([
+                'heks_beneficiary_id' => $beneficiary->id,
+                'user_id' => auth()->id(),
+                'source' => $source,
+                'field_key' => $fieldKey,
+                'old_value' => $oldValue,
+                'new_value' => $newValue,
+            ]);
+        });
+
+        return back()->with('success', 'تم تحديث قيمة الاستبيان وحفظ سجل التعديل.');
     }
 
     public function pricing(HeksBeneficiary $beneficiary): View
@@ -937,6 +977,8 @@ class HeksController extends Controller
         ]);
 
         $seen = [];
+        $histories = $beneficiary->surveyValueHistories
+            ->groupBy(fn (HeksSurveyValueHistory $history): string => $history->source.'|'.$history->field_key);
 
         foreach ($rawData as $source => $values) {
             $values = is_array($values) ? $values : ['value' => $values];
@@ -967,6 +1009,15 @@ class HeksController extends Controller
                     'question' => $key,
                     'value' => $displayValue,
                     'source' => (string) $source,
+                    'history' => $histories->get((string) $source.'|'.$key, collect())
+                        ->map(fn (HeksSurveyValueHistory $history): array => [
+                            'old_value' => $history->old_value,
+                            'new_value' => $history->new_value,
+                            'user' => $history->user?->name,
+                            'created_at' => $history->created_at?->format('Y-m-d H:i'),
+                        ])
+                        ->values()
+                        ->all(),
                 ];
                 $sections->put($sectionKey, $section);
             }

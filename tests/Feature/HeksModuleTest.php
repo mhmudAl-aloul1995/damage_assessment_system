@@ -9,6 +9,7 @@ use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksPayment;
 use App\Modules\Heks\Models\HeksScore;
 use App\Modules\Heks\Models\HeksScoringWeight;
+use App\Modules\Heks\Models\HeksSurveyValueHistory;
 use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
@@ -351,6 +352,45 @@ it('hides and blocks HEKS for non database officers', function () {
     $this->actingAs($user)
         ->get(route('heks.dashboard'))
         ->assertForbidden();
+});
+
+it('updates HEKS survey values and stores previous values in history', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY1',
+        'name' => 'Survey Beneficiary',
+        'identity_number' => '900001111',
+        'raw_data' => [
+            'KOBO_List' => [
+                'حالة السقف' => 'بحاجة إلى صيانة بسيطة',
+            ],
+        ],
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('heks.beneficiaries.survey-values.update', $beneficiary), [
+            'source' => 'KOBO_List',
+            'field_key' => 'حالة السقف',
+            'value' => 'أضرار متوسطة',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    expect($beneficiary->refresh()->raw_data['KOBO_List']['حالة السقف'])->toBe('أضرار متوسطة');
+
+    $this->assertDatabaseHas('heks_survey_value_histories', [
+        'heks_beneficiary_id' => $beneficiary->id,
+        'user_id' => $user->id,
+        'source' => 'KOBO_List',
+        'field_key' => 'حالة السقف',
+        'old_value' => 'بحاجة إلى صيانة بسيطة',
+        'new_value' => 'أضرار متوسطة',
+    ]);
+
+    expect(HeksSurveyValueHistory::query()->where('heks_beneficiary_id', $beneficiary->id)->count())->toBe(1);
 });
 
 it('renders HEKS pagination with compact bootstrap controls', function () {

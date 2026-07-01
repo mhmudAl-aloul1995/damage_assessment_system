@@ -73,6 +73,11 @@ class HeksBeneficiary extends Model
         return $this->hasMany(HeksBoqItem::class);
     }
 
+    public function surveyValueHistories(): HasMany
+    {
+        return $this->hasMany(HeksSurveyValueHistory::class);
+    }
+
     protected function casts(): array
     {
         return [

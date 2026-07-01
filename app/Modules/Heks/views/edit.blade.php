@@ -37,6 +37,9 @@
         .heks-case-page .survey-item:hover { background: #f8fbff; }
         .heks-case-page .survey-question { font-weight: 800; color: var(--bs-gray-800); line-height: 1.6; overflow-wrap: anywhere; }
         .heks-case-page .survey-answer { font-weight: 700; color: var(--bs-gray-700); line-height: 1.6; overflow-wrap: anywhere; }
+        .heks-case-page .survey-edit-box { border: 1px solid #e8eef7; border-radius: .75rem; background: #fff; padding: .75rem; }
+        .heks-case-page .survey-history-card { border: 1px solid #edf1f5; border-radius: .65rem; background: #fff; padding: .75rem; }
+        .heks-case-page .survey-history-label { color: var(--bs-gray-600); font-size: .75rem; font-weight: 800; }
         @media (max-width: 767.98px) {
             .heks-case-page .assessment-list-header { display: none; }
             .heks-case-page .assessment-list-row { grid-template-columns: 1fr auto; gap: .75rem; }
@@ -711,13 +714,59 @@
 
                                     <div id="{{ $sectionId }}" class="collapse {{ $isOpen ? 'show' : '' }}" data-bs-parent="#heksSurveyAccordion">
                                         @foreach ($section['items'] as $item)
+                                            @php
+                                                $historyId = 'heks_survey_history_'.md5($item['source'].'|'.$item['question']);
+                                                $historyCount = count($item['history']);
+                                            @endphp
                                             <div class="survey-item">
                                                 <div class="row g-4 align-items-start">
                                                     <div class="col-lg-5">
                                                         <div class="survey-question">{{ $item['question'] }}</div>
                                                     </div>
                                                     <div class="col-lg-7">
-                                                        <div class="survey-answer">{{ $item['value'] }}</div>
+                                                        <div class="survey-answer mb-3">{{ $item['value'] }}</div>
+                                                        <form method="POST" action="{{ route('heks.beneficiaries.survey-values.update', $beneficiary) }}" class="survey-edit-box">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <input type="hidden" name="source" value="{{ $item['source'] }}">
+                                                            <input type="hidden" name="field_key" value="{{ $item['question'] }}">
+                                                            <div class="d-flex flex-column flex-md-row gap-2">
+                                                                <input name="value" class="form-control form-control-sm" value="{{ $item['value'] }}" aria-label="تعديل قيمة الاستبيان">
+                                                                <button class="btn btn-sm btn-light-primary flex-shrink-0">حفظ</button>
+                                                            </div>
+                                                        </form>
+
+                                                        @if ($historyCount > 0)
+                                                            <button class="btn btn-sm btn-light mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $historyId }}" aria-expanded="false" aria-controls="{{ $historyId }}">
+                                                                سجل التعديلات ({{ $historyCount }})
+                                                            </button>
+                                                            <div class="collapse mt-3" id="{{ $historyId }}">
+                                                                <div class="d-flex flex-column gap-2">
+                                                                    @foreach ($item['history'] as $history)
+                                                                        <div class="survey-history-card">
+                                                                            <div class="row g-3">
+                                                                                <div class="col-md-6">
+                                                                                    <div class="survey-history-label">القيمة السابقة</div>
+                                                                                    <div>{{ $history['old_value'] ?? '-' }}</div>
+                                                                                </div>
+                                                                                <div class="col-md-6">
+                                                                                    <div class="survey-history-label">القيمة الجديدة</div>
+                                                                                    <div class="fw-bold">{{ $history['new_value'] ?? '-' }}</div>
+                                                                                </div>
+                                                                                <div class="col-md-6">
+                                                                                    <div class="survey-history-label">المستخدم</div>
+                                                                                    <div>{{ $history['user'] ?? '-' }}</div>
+                                                                                </div>
+                                                                                <div class="col-md-6">
+                                                                                    <div class="survey-history-label">الوقت</div>
+                                                                                    <div>{{ $history['created_at'] ?? '-' }}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
