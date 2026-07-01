@@ -64,6 +64,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->and(HeksAttachment::query()->where('attachment_type', 'follow_up_boq')->where('filename', 'boq.xlsx')->exists())->toBeTrue()
             ->and(HeksBoqItem::query()->where('source', 'boq.xlsx')->whereNotNull('heks_follow_up_id')->count())->toBe(1)
             ->and(HeksScoringWeight::query()->count())->toBeGreaterThan(0)
+            ->and(HeksScoringWeight::query()->where('category', 'Sealing & Internal Privacy')->where('indicator', 'Damage assessment')->exists())->toBeTrue()
             ->and(HeksFollowUp::query()->count())->toBe(1);
 
         $beneficiary = HeksBeneficiary::query()->where('code', 'DGN1')->sole();
@@ -358,8 +359,9 @@ function heksWriteFullWorkbook(string $path): void
     $weights = $spreadsheet->createSheet();
     $weights->setTitle('Shelter Technical Weights');
     $weights->fromArray([
-        ['Category', 'Indicator', 'Weight (from 100)', 'Question'],
-        ['Sealing', 'Damage assessment', 4, 'تقييم حالة ضرر المأوى:'],
+        ['Category', 'Indicator', '', 'Weight (from 100)', '', '', '', ''],
+        ['', '', '', 'Max', 'AVG', 'Min', '', ''],
+        ['Sealing & Internal Privacy', 'Damage assessment', 4, 4, 2, 0, 1, 'تقييم حالة ضرر المأوى:'],
     ]);
 
     $technicalValues = $spreadsheet->createSheet();

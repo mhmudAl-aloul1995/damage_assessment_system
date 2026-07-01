@@ -711,10 +711,9 @@ class HeksSpreadsheetImportService
      */
     private function weights(Worksheet $sheet): array
     {
-        $headers = $this->headers($sheet);
         $summary = ['total' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0];
 
-        foreach ($this->rows($sheet, $headers) as $row) {
+        foreach ($this->weightRows($sheet) as $row) {
             $summary['total']++;
             $indicator = $this->first($row, ['Indicator']);
             $questionKey = $this->first($row, ['question_key', 'Question', 'تقييم حالة ضرر المأوى:', 'حالة السقف']);
@@ -743,6 +742,87 @@ class HeksSpreadsheetImportService
         }
 
         return $summary;
+    }
+
+    /**
+     * @return iterable<int, array<string, mixed>>
+     */
+    private function weightRows(Worksheet $sheet): iterable
+    {
+        $headerRow = $this->weightHeaderRow($sheet);
+        $headers = $this->headersForRow($sheet, $headerRow);
+        $lastColumn = max($this->highestColumnIndex($sheet), 8);
+
+        for ($rowNumber = $headerRow + 1; $rowNumber <= $sheet->getHighestDataRow(); $rowNumber++) {
+            $category = $this->text($sheet->getCell([1, $rowNumber]));
+            $indicator = $this->text($sheet->getCell([2, $rowNumber]));
+            $weight = $this->text($sheet->getCell([3, $rowNumber]));
+            $question = $this->text($sheet->getCell([8, $rowNumber]));
+
+            if ($category === '' && $indicator === '' && $question === '') {
+                continue;
+            }
+
+            if (in_array(mb_strtolower($category), ['category'], true) || in_array(mb_strtolower($indicator), ['indicator'], true)) {
+                continue;
+            }
+
+            if (in_array(mb_strtolower($weight), ['max', 'avg', 'min'], true)) {
+                continue;
+            }
+
+            $row = [
+                '_row_number' => $rowNumber,
+                'Category' => $category,
+                'Indicator' => $indicator,
+                'Weight (from 100)' => $weight,
+                'Question' => $question,
+            ];
+
+            foreach ($headers as $heading => $column) {
+                if ($heading !== '') {
+                    $row[$heading] = $this->text($sheet->getCell([$column, $rowNumber]));
+                }
+            }
+
+            for ($column = 1; $column <= $lastColumn; $column++) {
+                $row["column_{$column}"] = $this->text($sheet->getCell([$column, $rowNumber]));
+            }
+
+            yield $rowNumber => $row;
+        }
+    }
+
+    private function weightHeaderRow(Worksheet $sheet): int
+    {
+        for ($row = 1; $row <= min(15, $sheet->getHighestDataRow()); $row++) {
+            $firstColumn = mb_strtolower($this->text($sheet->getCell([1, $row])));
+            $secondColumn = mb_strtolower($this->text($sheet->getCell([2, $row])));
+
+            if ($firstColumn === 'category' && $secondColumn === 'indicator') {
+                return $row;
+            }
+        }
+
+        return 1;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function headersForRow(Worksheet $sheet, int $row): array
+    {
+        $headers = [];
+
+        for ($column = 1; $column <= $this->highestColumnIndex($sheet); $column++) {
+            $heading = $this->text($sheet->getCell([$column, $row]));
+
+            if ($heading !== '') {
+                $headers[$heading] = $column;
+            }
+        }
+
+        return $headers;
     }
 
     /**

@@ -914,13 +914,16 @@ class HeksController extends Controller
             ->orderBy('id')
             ->get()
             ->map(function (HeksScoringWeight $weight) use ($labels, $rawData): array {
-                $question = $weight->question_key ?: $weight->indicator;
+                $weightRawData = is_array($weight->raw_data) ? $weight->raw_data : [];
+                $category = $weight->category ?: ($weightRawData['Category'] ?? $weightRawData['column_1'] ?? null);
+                $indicator = $weight->indicator ?: ($weightRawData['Indicator'] ?? $weightRawData['column_2'] ?? null);
+                $question = $weight->question_key ?: ($weightRawData['Question'] ?? $weightRawData['column_8'] ?? $indicator);
                 $label = $question ? $labels->get($question) : null;
                 $rawValue = $question ? $rawData->get($question) : null;
 
                 return [
-                    'category' => $weight->category,
-                    'indicator' => $weight->indicator,
+                    'category' => $category,
+                    'indicator' => $indicator,
                     'question' => $question,
                     'weight' => $weight->weight,
                     'value' => $label?->label_value ?? $rawValue,
