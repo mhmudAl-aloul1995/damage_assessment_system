@@ -199,7 +199,6 @@ class AreaProductivityReportService
 
         $query = HousingUnit::query()
             ->join('buildings as unit_buildings', 'housing_units.parentglobalid', '=', 'unit_buildings.globalid')
-            ->whereIn('housing_units.unit_damage_status', self::HOUSING_UNIT_PRODUCTIVITY_STATUSES)
             ->selectRaw("
                 {$groupKey} as neighborhood_group,
                 COUNT(*) as housing_units_count

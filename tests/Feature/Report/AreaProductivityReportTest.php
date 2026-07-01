@@ -322,7 +322,7 @@ it('renders separated area productivity reports for all supported datasets with 
             && $summary['tda'] === 1
             && $summary['pda'] === 2
             && $summary['cra'] === 0
-            && $summary['housing_units_count'] === 4;
+            && $summary['housing_units_count'] === 5;
     });
 
     $buildingResponse->assertViewHas('rows', function ($rows): bool {
@@ -333,7 +333,7 @@ it('renders separated area productivity reports for all supported datasets with 
             && (int) $rimal->tda_range === 1
             && (int) $rimal->pda_range === 2
             && (int) $rimal->cra_range === 0
-            && (int) $rimal->housing_units_count === 4;
+            && (int) $rimal->housing_units_count === 5;
     });
 
     $this->actingAs($user)
