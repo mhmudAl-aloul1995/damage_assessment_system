@@ -347,9 +347,29 @@
 
                     <div class="tab-pane fade" id="assessment" role="tabpanel">
                         @php
+                            $latestScore = $beneficiary->scores->first();
                             $technicalWeightTotal = $technicalAssessmentRows->sum(fn ($row) => (float) ($row['weight'] ?? 0));
                             $answeredTechnicalRows = $technicalAssessmentRows->filter(fn ($row) => filled($row['value']));
                         @endphp
+
+                        <div class="row g-4 mb-6">
+                            @foreach ([
+                                ['label' => 'التقييم الاجتماعي', 'value' => $latestScore?->social_score !== null ? number_format((float) $latestScore->social_score, 2) : '-', 'hint' => 'من 30', 'tone' => 'info'],
+                                ['label' => 'التقييم الفني', 'value' => $latestScore?->technical_score !== null ? number_format((float) $latestScore->technical_score, 2) : '-', 'hint' => 'من 70', 'tone' => 'primary'],
+                                ['label' => 'التقييم النهائي', 'value' => $latestScore?->total_score !== null ? number_format((float) $latestScore->total_score, 2) : '-', 'hint' => 'Social + Technical', 'tone' => 'success'],
+                                ['label' => 'التصنيف', 'value' => $latestScore?->classification ?: '-', 'hint' => $latestScore?->source ?: 'Scoring', 'tone' => 'warning'],
+                            ] as $scoreCard)
+                                <div class="col-xl-3 col-md-6">
+                                    <div class="case-kpi">
+                                        <div class="d-flex justify-content-between gap-3">
+                                            <div class="text-muted small">{{ $scoreCard['label'] }}</div>
+                                            <span class="badge badge-light-{{ $scoreCard['tone'] }}">{{ $scoreCard['hint'] }}</span>
+                                        </div>
+                                        <div class="fs-2 fw-bold text-{{ $scoreCard['tone'] }} mt-2">{{ $scoreCard['value'] }}</div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
 
                         <div class="d-flex flex-column flex-xl-row justify-content-between gap-4 mb-5">
                             <div>
