@@ -448,6 +448,12 @@ class HeksSpreadsheetImportService
                 $hasValue = $hasValue || $value !== '';
             }
 
+            for ($column = 1; $column <= $this->highestColumnIndex($sheet); $column++) {
+                $value = $this->text($sheet->getCell([$column, $rowNumber]));
+                $row["column_{$column}"] = $value;
+                $hasValue = $hasValue || $value !== '';
+            }
+
             if ($hasValue) {
                 yield $rowNumber => $row;
             }
@@ -915,6 +921,8 @@ class HeksSpreadsheetImportService
     {
         $filename = $this->first($row, ['صور الوحدة السكنية', 'قم بتصوير المستندات المتوفرة', 'Photos']);
         $url = $this->first($row, ['صور الوحدة السكنية_URL', 'قم بتصوير المستندات المتوفرة_URL', 'Photos_URL']);
+        $filename = $filename !== '' ? $filename : $this->firstExact($row, ['column_1', 'column_3']);
+        $url = $url !== '' ? $url : $this->firstExact($row, ['column_2', 'column_4']);
         $parentIndex = (int) $this->decimal($this->first($row, ['_parent_index']));
         $beneficiary = isset($parentCodes[$parentIndex])
             ? HeksBeneficiary::query()->where('code', $parentCodes[$parentIndex])->first()
@@ -986,6 +994,21 @@ class HeksSpreadsheetImportService
         $code = $this->first($row, ['Code', 'الكود', 'رقم الطلب/الكود']);
 
         return preg_match('/^[A-Z]{1,4}\d+/i', $code) ? $code : '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @param  array<int, string>  $keys
+     */
+    private function firstExact(array $row, array $keys): string
+    {
+        foreach ($keys as $key) {
+            if (($row[$key] ?? '') !== '') {
+                return trim((string) $row[$key]);
+            }
+        }
+
+        return '';
     }
 
     /**

@@ -461,6 +461,53 @@ it('shows beneficiary image attachments in a dedicated photos tab', function () 
         ->assertSee('https://example.test/shelter-photo.jpg');
 });
 
+it('imports image attachments from Arabic KoBo group sheets', function () {
+    $path = heksWorkbookPath('arabic-attachments');
+    $spreadsheet = new Spreadsheet;
+
+    try {
+        $assessment = $spreadsheet->getActiveSheet();
+        $assessment->setTitle('Heks Final V1');
+        $assessment->fromArray([
+            ['رقم الطلب/الكود', 'اسم رب الأسرة'],
+            ['DGN1', 'Test Beneficiary'],
+        ]);
+
+        $documents = $spreadsheet->createSheet();
+        $documents->setTitle('group_un2xy00');
+        $documents->fromArray([
+            ['قم بتصوير المستندات المتوفرة', 'قم بتصوير المستندات المتوفرة_URL', 'قم بتصوير المستندات المتوفرة', 'قم بتصوير المستندات المتوفرة_URL', '_index', '_parent_table_name', '_parent_index'],
+            ['document.jpg', 'https://example.test/document.jpg', '', '', 1, 'Heks Final V1', 1],
+        ]);
+
+        $photos = $spreadsheet->createSheet();
+        $photos->setTitle('group_lm1ok19');
+        $photos->fromArray([
+            ['صور الوحدة السكنية', 'صور الوحدة السكنية_URL', '_index', '_parent_table_name', '_parent_index'],
+            ['house.jpg', '', 1, 'Heks Final V1', 1],
+        ]);
+
+        (new Xlsx($spreadsheet))->save($path);
+
+        app(HeksSpreadsheetImportService::class)->import(
+            new UploadedFile($path, 'heks-arabic-attachments.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
+            'scores'
+        );
+
+        $beneficiary = HeksBeneficiary::query()->where('code', 'DGN1')->sole();
+
+        expect(HeksAttachment::query()->where('heks_beneficiary_id', $beneficiary->id)->count())->toBe(2)
+            ->and(HeksAttachment::query()->where('filename', 'document.jpg')->value('url'))->toBe('https://example.test/document.jpg')
+            ->and(HeksAttachment::query()->where('filename', 'house.jpg')->where('attachment_type', 'shelter_photo')->exists())->toBeTrue();
+    } finally {
+        $spreadsheet->disconnectWorksheets();
+
+        if (file_exists($path)) {
+            unlink($path);
+        }
+    }
+});
+
 it('renders HEKS pagination with compact bootstrap controls', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
