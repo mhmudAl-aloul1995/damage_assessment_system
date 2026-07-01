@@ -347,7 +347,12 @@
 
                     <div class="tab-pane fade" id="assessment" role="tabpanel">
                         @php
-                            $latestScore = $beneficiary->scores->first();
+                            $latestScore = $beneficiary->scores->first(
+                                fn ($score) => $score->social_score !== null
+                                    || $score->technical_score !== null
+                                    || $score->total_score !== null
+                                    || filled($score->classification)
+                            ) ?? $beneficiary->scores->first();
                             $technicalWeightTotal = $technicalAssessmentRows->sum(fn ($row) => (float) ($row['weight'] ?? 0));
                             $answeredTechnicalRows = $technicalAssessmentRows->filter(fn ($row) => filled($row['value']));
                         @endphp

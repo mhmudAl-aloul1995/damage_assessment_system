@@ -611,7 +611,7 @@ class HeksSpreadsheetImportService
                 'payment_1' => $this->decimal($this->first($row, ['الدفعة  1', 'الدفعة 1', 'Payment_1', '30%', 'الدفعة الأولى  30% ILS'])),
                 'payment_2' => $this->decimal($this->first($row, ['الدفعة 2', 'Payment_2', '50%'])),
                 'payment_3' => $this->decimal($this->first($row, ['الدفعة 3', 'Payment_3', '20%'])),
-                'social_score' => $this->decimal($this->first($row, ['تقييم الحالة الاجتماعية من 35', 'تقييم الحالة الاجتماعية  (30)'])),
+                'social_score' => $this->decimal($this->first($row, ['تقييم الحالة الاجتماعية  (30)', 'تقييم الحالة الاجتماعية من 35'])),
                 'technical_score' => $this->decimal($this->first($row, ['تقييم الحالة الفنية (70)'])),
                 'total_score' => $this->decimal($this->first($row, ['التقييم الكلي', 'Total Score', 'Score', 'score'])),
                 'classification' => $this->first($row, ['التصنيف', 'Classification', 'classification']),

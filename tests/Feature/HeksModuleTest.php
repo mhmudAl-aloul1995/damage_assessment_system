@@ -52,7 +52,7 @@ it('imports and manages the HEKS operational workbook', function () {
             $user->id
         )['summary'];
 
-        expect($workbookSummary['sheets'])->toHaveCount(8)
+        expect($workbookSummary['sheets'])->toHaveCount(9)
             ->and($followUpSummary['updated_rows'])->toBe(1)
             ->and(HeksBeneficiary::query()->where('code', 'DGN1')->exists())->toBeTrue()
             ->and(HeksBeneficiary::query()->where('code', 'DGN1')->value('is_selected'))->toBeTrue()
@@ -76,6 +76,15 @@ it('imports and manages the HEKS operational workbook', function () {
             ->and($beneficiary->payment_status)->toBe('paid_100');
 
         expect(HeksScore::query()->where('classification', 'High')->exists())->toBeTrue();
+        $v1Score = HeksScore::query()
+            ->where('source', 'Scoring-Heks- V1')
+            ->where('heks_beneficiary_id', $beneficiary->id)
+            ->sole();
+
+        expect((float) $v1Score->social_score)->toBe(20.0)
+            ->and((float) $v1Score->technical_score)->toBe(60.0)
+            ->and((float) $v1Score->total_score)->toBe(80.0)
+            ->and($v1Score->classification)->toBe('High');
 
         HeksBeneficiary::query()->create([
             'code' => 'DGN2',
@@ -162,6 +171,9 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('التقييم الاجتماعي')
             ->assertSee('التقييم الفني')
             ->assertSee('التقييم النهائي')
+            ->assertSee('20.00')
+            ->assertSee('60.00')
+            ->assertSee('80.00')
             ->assertSee('Technical vulnerability')
             ->assertSee('Social vulnerability')
             ->assertSee('Extreme')
@@ -358,6 +370,13 @@ function heksWriteFullWorkbook(string $path): void
         heksAssessmentRow('DGN1'),
     ]);
 
+    $scoringV1 = $spreadsheet->createSheet();
+    $scoringV1->setTitle('Scoring-Heks- V1');
+    $scoringV1->fromArray([
+        heksAssessmentHeaders(),
+        heksAssessmentRow('DGN1'),
+    ]);
+
     $payments = $spreadsheet->createSheet();
     $payments->setTitle('3دفعات');
     $payments->fromArray([
@@ -424,6 +443,7 @@ function heksAssessmentHeaders(): array
         'Payment_1',
         'Payment_2',
         'Payment_3',
+        'تقييم الحالة الاجتماعية من 35',
         'تقييم الحالة الاجتماعية  (30)',
         'تقييم الحالة الفنية (70)',
         'التقييم الكلي',
@@ -454,6 +474,7 @@ function heksAssessmentRow(string $code): array
         360,
         600,
         240,
+        35,
         20,
         60,
         80,
