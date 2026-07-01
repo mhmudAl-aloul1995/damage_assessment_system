@@ -141,6 +141,7 @@ class HeksController extends Controller
             'boqSections' => $this->boqCatalog()->pluck('section')->filter()->unique()->sort()->values(),
             'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
             'rawDataSections' => $this->rawDataSections($beneficiary),
+            'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
             'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary),
         ]);
     }
@@ -930,5 +931,35 @@ class HeksController extends Controller
                     'source' => $label ? (string) $label->source : ($rawValue !== null ? 'raw_data' : ''),
                 ];
             });
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{question: string, value: mixed, options: string, source: string}>
+     */
+    private function socialAssessmentRows(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection
+    {
+        $labels = $beneficiary->labels->keyBy('label_key');
+        $rawData = collect($beneficiary->raw_data ?? [])
+            ->filter(fn (mixed $section): bool => is_array($section))
+            ->flatMap(fn (array $section): array => $section);
+
+        return HeksScoringWeight::query()
+            ->where('source', 'S-V')
+            ->whereNotNull('question_key')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('question_key')
+            ->map(function (\Illuminate\Support\Collection $weights, string $question) use ($labels, $rawData): array {
+                $label = $labels->get($question);
+                $rawValue = $rawData->get($question);
+
+                return [
+                    'question' => $question,
+                    'value' => $label?->label_value ?? $rawValue,
+                    'options' => $weights->pluck('option_value')->filter()->unique()->values()->implode(' / '),
+                    'source' => $label ? (string) $label->source : ($rawValue !== null ? 'raw_data' : ''),
+                ];
+            })
+            ->values();
     }
 }

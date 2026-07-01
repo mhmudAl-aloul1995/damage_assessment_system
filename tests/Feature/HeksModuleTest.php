@@ -52,7 +52,7 @@ it('imports and manages the HEKS operational workbook', function () {
             $user->id
         )['summary'];
 
-        expect($workbookSummary['sheets'])->toHaveCount(7)
+        expect($workbookSummary['sheets'])->toHaveCount(8)
             ->and($followUpSummary['updated_rows'])->toBe(1)
             ->and(HeksBeneficiary::query()->where('code', 'DGN1')->exists())->toBeTrue()
             ->and(HeksBeneficiary::query()->where('code', 'DGN1')->value('is_selected'))->toBeTrue()
@@ -162,6 +162,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('التقييم الاجتماعي')
             ->assertSee('التقييم الفني')
             ->assertSee('التقييم النهائي')
+            ->assertSee('معايير التقييم الاجتماعي')
+            ->assertSee('تقييم الحالة الاجتماعية')
             ->assertSee('التقييم الفني للمأوى')
             ->assertSee('Damage assessment')
             ->assertSee('تقييم حالة ضرر المأوى')
@@ -372,6 +374,14 @@ function heksWriteFullWorkbook(string $path): void
     $technicalValues->fromArray([
         ['تقييم حالة ضرر المأوى:', 'حالة السقف'],
         ['لا يوجد ضرر', 'لا حاجة للصيانة'],
+    ]);
+
+    $socialValues = $spreadsheet->createSheet();
+    $socialValues->setTitle('S-V');
+    $socialValues->fromArray([
+        ['تقييم الحالة الاجتماعية  (30)', 'حالة رب الأسرة'],
+        [20, 'ذكر'],
+        [30, 'أنثى'],
     ]);
 
     $attachments = $spreadsheet->createSheet();

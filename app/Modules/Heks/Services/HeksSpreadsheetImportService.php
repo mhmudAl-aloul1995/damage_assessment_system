@@ -712,8 +712,11 @@ class HeksSpreadsheetImportService
     private function weights(Worksheet $sheet): array
     {
         $summary = ['total' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0];
+        $rows = $sheet->getTitle() === 'Shelter Technical Weights'
+            ? $this->weightRows($sheet)
+            : $this->valueRows($sheet);
 
-        foreach ($this->weightRows($sheet) as $row) {
+        foreach ($rows as $row) {
             $summary['total']++;
             $indicator = $this->first($row, ['Indicator']);
             $questionKey = $this->first($row, ['question_key', 'Question', 'تقييم حالة ضرر المأوى:', 'حالة السقف']);
@@ -742,6 +745,38 @@ class HeksSpreadsheetImportService
         }
 
         return $summary;
+    }
+
+    /**
+     * @return iterable<int, array<string, mixed>>
+     */
+    private function valueRows(Worksheet $sheet): iterable
+    {
+        $headers = $this->headers($sheet);
+        $headerRow = $headers['_header_row'] ?? 1;
+        unset($headers['_header_row']);
+
+        foreach ($headers as $question => $column) {
+            if ($question === '') {
+                continue;
+            }
+
+            for ($rowNumber = $headerRow + 1; $rowNumber <= $sheet->getHighestDataRow(); $rowNumber++) {
+                $optionValue = $this->text($sheet->getCell([$column, $rowNumber]));
+
+                if ($optionValue === '') {
+                    continue;
+                }
+
+                yield $rowNumber => [
+                    '_row_number' => $rowNumber,
+                    'question_key' => $question,
+                    'Question' => $question,
+                    'option_value' => $optionValue,
+                    'column' => $column,
+                ];
+            }
+        }
     }
 
     /**
