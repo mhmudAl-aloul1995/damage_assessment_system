@@ -180,6 +180,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('معايير التقييم الاجتماعي')
             ->assertSee('Female-headed household')
             ->assertSee('تقييم الحالة الاجتماعية')
+            ->assertSee('Scoring matrix S -2')
             ->assertSee('التقييم الفني للمأوى')
             ->assertSee('Damage assessment')
             ->assertSee('تقييم حالة ضرر المأوى')

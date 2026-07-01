@@ -848,7 +848,11 @@ class HeksController extends Controller
             return '';
         }
 
-        foreach ($rawData as $values) {
+        $orderedRawData = collect($rawData)
+            ->sortBy(fn (mixed $values, string|int $source): int => $source === 'Heks Final V1' ? 0 : 1)
+            ->all();
+
+        foreach ($orderedRawData as $values) {
             if (! is_array($values)) {
                 continue;
             }
@@ -1038,19 +1042,19 @@ class HeksController extends Controller
     {
         return [
             ['factor' => 'Female-headed household', 'keys' => ['جنس رب الأسرة', 'household head gender', 'female-headed'], 'positive_terms' => ['أنث', 'female', 'woman']],
-            ['factor' => 'Household head age >60 or <18', 'keys' => ['عمر رب الأسرة', 'household head age', 'age of household head'], 'positive_terms' => ['>60', '<18', 'أكبر من 60', 'أقل من 18']],
-            ['factor' => 'At least one chronic health condition', 'keys' => ['مرض مزمن', 'أمراض مزمنة', 'chronic'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Household head age >60 or <18', 'keys' => ['العمر', 'عمر رب الأسرة', 'household head age', 'age of household head'], 'positive_terms' => ['أقل من 17', 'أكبر من 60', '>60', '<18']],
+            ['factor' => 'At least one chronic health condition', 'keys' => ['يوجد بالأسرة أفراد لديهم أمراض مزمنة', 'هل يعاني من معيل الأسرة من مرض مزمن', 'مرض مزمن', 'أمراض مزمنة', 'chronic'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
             ['factor' => 'Survivor of violence', 'keys' => ['ناجي من العنف', 'survivor of violence', 'violence'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
-            ['factor' => 'Disability present in household', 'keys' => ['إعاقة', 'ذوي إعاقة', 'disability', 'PWD'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Disability present in household', 'keys' => ['يوجد أشخاص ذوي إعاقة', 'إعاقة', 'ذوي إعاقة', 'disability', 'PWD'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
             ['factor' => 'Single-parent household (Divorced, Separated, widowed, abandoned)', 'keys' => ['الحالة الاجتماعية', 'single parent', 'divorced', 'widowed', 'separated'], 'positive_terms' => ['مطلق', 'منفصل', 'أرمل', 'مهجور', 'divorced', 'separated', 'widowed', 'abandoned']],
-            ['factor' => 'No adult able to support repairs', 'keys' => ['لا يوجد بالغ', 'قادر على دعم الإصلاح', 'adult able to support repairs'], 'positive_terms' => ['لا يوجد', 'no adult', 'not able']],
-            ['factor' => 'Household can organize repairs themselves if given cash', 'keys' => ['تنظيم الإصلاح', 'تنفيذ الإصلاح', 'organize repairs', 'given cash'], 'positive_terms' => ['نعم', 'قادر', 'yes', 'can']],
-            ['factor' => 'Availability of valid proof of ownership/lease/hosting agreement', 'keys' => ['إثبات ملكية', 'عقد إيجار', 'عقد ايجار', 'استضافة', 'ownership', 'lease', 'hosting agreement'], 'positive_terms' => ['نعم', 'متوفر', 'ساري', 'yes', 'valid']],
-            ['factor' => 'Children <18 present', 'keys' => ['أطفال', 'أقل من 18', 'children', '<18'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
-            ['factor' => 'Presence of pregnant/lactating women in the housing unit', 'keys' => ['حامل', 'مرضعة', 'pregnant', 'lactating'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
-            ['factor' => 'Current housing type, shared unit with more than one family', 'keys' => ['سكن مشترك', 'أكثر من أسرة', 'shared unit', 'more than one family'], 'positive_terms' => ['مشترك', 'أكثر من أسرة', 'shared', 'yes']],
-            ['factor' => 'No Continuous secured income, heavily depend on Food aid', 'keys' => ['دخل ثابت', 'مساعدات غذائية', 'secured income', 'food aid'], 'positive_terms' => ['لا يوجد', 'يعتمد', 'food aid', 'no income']],
-            ['factor' => 'No or insufficient condition of furniture', 'keys' => ['الأثاث', 'حالة الأثاث', 'furniture'], 'positive_terms' => ['غير كاف', 'سيئ', 'insufficient', 'poor', 'no']],
+            ['factor' => 'No adult able to support repairs', 'keys' => ['هل يوجد شخص بالغ واحد على الأقل في المنزل يمكنه المساعدة في الإصلاح أو الصيانة', 'لا يوجد بالغ', 'قادر على دعم الإصلاح', 'adult able to support repairs'], 'positive_terms' => ['لا', 'لا يوجد', 'no adult', 'not able']],
+            ['factor' => 'Household can organize repairs themselves if given cash', 'keys' => ['تستطيع الأسرة تنظيم أعمال الصيانة بنفسها إذا مُنحت مبلغاً نقدياً', 'تنظيم الإصلاح', 'تنفيذ الإصلاح', 'organize repairs', 'given cash'], 'positive_terms' => ['نعم', 'قادر', 'yes', 'can']],
+            ['factor' => 'Availability of valid proof of ownership/lease/hosting agreement', 'keys' => ['يتوفر إثبات ساري المفعول للملكية/الإيجار/اتفاقية الاستضافة', 'إثبات ملكية', 'عقد إيجار', 'عقد ايجار', 'استضافة', 'ownership', 'lease', 'hosting agreement'], 'positive_terms' => ['نعم', 'متوفر', 'ساري', 'yes', 'valid']],
+            ['factor' => 'Children <18 present', 'keys' => ['هل يوجد أطفال أقل من 17 سنة بالأسرة', 'أطفال', 'أقل من 18', 'children', '<18'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Presence of pregnant/lactating women in the housing unit', 'keys' => ['يوجد نساء حوامل أو مرضعات', 'حامل', 'مرضعة', 'pregnant', 'lactating'], 'positive_terms' => ['نعم', 'يوجد', 'yes']],
+            ['factor' => 'Current housing type, shared unit with more than one family', 'keys' => ['نوع المساحة المستخدمة', 'أسر ممتدة متواجدة بنفس الوحدة السكنية', 'سكن مشترك', 'أكثر من أسرة', 'shared unit', 'more than one family'], 'positive_terms' => ['مشتركة', 'مشترك', 'أكثر من أسرة', 'shared', 'yes', 'نعم']],
+            ['factor' => 'No Continuous secured income, heavily depend on Food aid', 'keys' => ['هل تمتلك الأسرة مصدر دخل ثابت أو منتظم', 'هل تعتمد الأسرة في توفير الطعام على التكية و/أو المساعدات الغذائية', 'دخل ثابت', 'مساعدات غذائية', 'secured income', 'food aid'], 'positive_terms' => ['لا', 'بشكل كامل', 'بشكل جزئي', 'يعتمد', 'food aid', 'no income']],
+            ['factor' => 'No or insufficient condition of furniture', 'keys' => ['هل يتوفر لدى الأسرة الاحتياجات الأساسية للمعيشة مثل مواد الفراش وأدوات المطبخ', 'الأثاث', 'حالة الأثاث', 'furniture'], 'positive_terms' => ['غير كاف', 'لا', 'سيئ', 'insufficient', 'poor', 'no']],
         ];
     }
 }
