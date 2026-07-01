@@ -491,29 +491,24 @@
                                     <table class="table table-row-dashed align-middle">
                                         <thead>
                                         <tr class="fw-bold text-muted">
-                                            <th>الفئة</th>
-                                            <th>المؤشر</th>
+                                            <th class="min-w-260px">البند الفني من PDF/KoBo</th>
+                                            <th class="min-w-180px">قيمة المستفيد</th>
+                                            <th>النقاط</th>
                                             <th>الوزن</th>
                                             <th>Max</th>
                                             <th>AVG</th>
                                             <th>Min</th>
-                                            <th class="min-w-180px">قيمة المستفيد</th>
-                                            <th>النقاط</th>
+                                            <th>الفئة / المؤشر</th>
                                             <th>المصدر</th>
                                         </tr>
                                         </thead>
                                         <tbody>
                                         @forelse ($technicalAssessmentRows as $row)
                                             <tr>
-                                                <td><span class="badge badge-light">{{ $row['category'] ?: '-' }}</span></td>
                                                 <td>
-                                                    <div class="fw-semibold">{{ $row['indicator'] ?: '-' }}</div>
-                                                    <div class="text-muted small">{{ $row['question'] ?: '-' }}</div>
+                                                    <div class="fw-semibold">{{ $row['question'] ?: $row['indicator'] ?: '-' }}</div>
+                                                    <div class="text-muted small">PDF/KoBo shelter item</div>
                                                 </td>
-                                                <td><span class="badge badge-light-primary">{{ $row['weight'] !== null ? number_format((float) $row['weight'], 2) : '-' }}</span></td>
-                                                <td>{{ $row['max'] ?? '-' }}</td>
-                                                <td>{{ $row['avg'] ?? '-' }}</td>
-                                                <td>{{ $row['min'] ?? '-' }}</td>
                                                 <td>
                                                     @if (filled($row['value']))
                                                         <span class="fw-semibold">{{ $row['value'] }}</span>
@@ -522,6 +517,14 @@
                                                     @endif
                                                 </td>
                                                 <td>{{ filled($row['score']) ? $row['score'] : '-' }}</td>
+                                                <td><span class="badge badge-light-primary">{{ $row['weight'] !== null ? number_format((float) $row['weight'], 2) : '-' }}</span></td>
+                                                <td>{{ $row['max'] ?? '-' }}</td>
+                                                <td>{{ $row['avg'] ?? '-' }}</td>
+                                                <td>{{ $row['min'] ?? '-' }}</td>
+                                                <td>
+                                                    <div><span class="badge badge-light">{{ $row['category'] ?: '-' }}</span></div>
+                                                    <div class="text-muted small mt-1">{{ $row['indicator'] ?: '-' }}</div>
+                                                </td>
                                                 <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
                                             </tr>
                                         @empty

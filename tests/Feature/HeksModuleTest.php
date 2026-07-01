@@ -182,6 +182,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('تقييم الحالة الاجتماعية')
             ->assertSee('Scoring matrix S -2')
             ->assertSee('التقييم الفني للمأوى')
+            ->assertSee('البند الفني من PDF/KoBo')
             ->assertSee('Damage assessment')
             ->assertSee('تقييم حالة ضرر المأوى')
             ->assertSee('Max')
