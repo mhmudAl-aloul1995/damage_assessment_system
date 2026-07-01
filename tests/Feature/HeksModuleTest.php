@@ -393,6 +393,47 @@ it('updates HEKS survey values and stores previous values in history', function 
     expect(HeksSurveyValueHistory::query()->where('heks_beneficiary_id', $beneficiary->id)->count())->toBe(1);
 });
 
+it('shows follow-up BOQ items directly on the follow-ups page', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'BOQ-FU',
+        'name' => 'Follow Up BOQ Beneficiary',
+        'identity_number' => '900002222',
+    ]);
+
+    $followUp = HeksFollowUp::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'code' => $beneficiary->code,
+        'visit_number' => '2',
+        'boq_filename' => 'visit-boq.xlsx',
+        'boq_url' => 'https://example.test/visit-boq.xlsx',
+    ]);
+
+    HeksBoqItem::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'heks_follow_up_id' => $followUp->id,
+        'source' => 'visit-boq.xlsx',
+        'section' => 'Masonry',
+        'item_code' => '3.1',
+        'description' => 'Inline BOQ item',
+        'unit' => 'M2',
+        'quantity' => 2,
+        'unit_price_ils' => 100,
+        'total_price_ils' => 200,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.follow-ups'))
+        ->assertOk()
+        ->assertSee('عرض BOQ')
+        ->assertSee('Inline BOQ item')
+        ->assertSee('200.00')
+        ->assertSee('ترحيل BOQ من Excel');
+});
+
 it('renders HEKS pagination with compact bootstrap controls', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/labels/{label}', [HeksController::class, 'updateLabel'])->name('heks.labels.update');
     Route::get('/follow-ups', [HeksController::class, 'followUps'])->name('heks.follow-ups');
     Route::get('/follow-ups/{followUp}/boq', [HeksController::class, 'followUpBoq'])->name('heks.follow-ups.boq');
+    Route::post('/follow-ups/{followUp}/boq/import', [HeksController::class, 'importFollowUpBoq'])->name('heks.follow-ups.boq.import');
     Route::put('/follow-ups/{followUp}', [HeksController::class, 'updateFollowUp'])->name('heks.follow-ups.update');
     Route::get('/scores', [HeksController::class, 'scores'])->name('heks.scores');
     Route::put('/scores/{score}', [HeksController::class, 'updateScore'])->name('heks.scores.update');

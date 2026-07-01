@@ -13,6 +13,9 @@
         .heks-follow-ups-page .follow-up-file-name { max-width: 210px; }
         .heks-follow-ups-page .follow-up-recommendation { max-width: 230px; }
         .heks-follow-ups-page .follow-up-actions { min-width: 190px; }
+        .heks-follow-ups-page .follow-up-boq-preview { background: #f8fbff; border: 1px solid var(--bs-gray-200); border-radius: .75rem; padding: 1rem; }
+        .heks-follow-ups-page .follow-up-boq-preview table { margin-bottom: 0; }
+        .heks-follow-ups-page .follow-up-boq-preview .boq-preview-description { min-width: 280px; }
     </style>
 
     <div class="heks-follow-ups-page">
@@ -121,6 +124,9 @@
                                 $boqImportFailed = is_array($boqImportSummary) && ($boqImportSummary['imported'] ?? true) === false;
                                 $boqStatusLabel = $boqImported ? 'تم استيراد البنود' : ($boqImportFailed ? 'فشل الاستيراد' : ($boqAttachment ? 'ملف محفوظ فقط' : 'لا يوجد BOQ'));
                                 $boqStatusClass = $boqImported ? 'badge-light-success' : ($boqImportFailed ? 'badge-light-danger' : ($boqAttachment ? 'badge-light-warning' : 'badge-light'));
+                                $boqItemsCount = $followUp->boqItems->count();
+                                $boqItemsTotal = (float) $followUp->boqItems->sum('total_price_ils');
+                                $boqPreviewId = "follow-up-boq-preview-{$followUp->id}";
                             @endphp
                             <tr>
                                 <td class="fw-bold">{{ $followUp->code }}</td>
@@ -148,7 +154,9 @@
                                     @if ($followUp->boq_filename)
                                         <div class="text-muted small text-truncate follow-up-file-name mt-1">{{ $followUp->boq_filename }}</div>
                                     @endif
-                                    @if ($boqImported)
+                                    @if ($boqItemsCount > 0)
+                                        <div class="fw-bold text-success small mt-1">{{ number_format($boqItemsCount) }} بند · {{ number_format($boqItemsTotal, 2) }} ILS</div>
+                                    @elseif ($boqImported)
                                         <div class="text-muted small">{{ $boqImportSummary['imported_rows'] }} بند</div>
                                     @endif
                                 </td>
@@ -158,7 +166,7 @@
                                 <td class="text-end follow-up-actions">
                                     <div class="d-flex justify-content-end gap-2">
                                         @if ($followUp->boqItems->isNotEmpty())
-                                            <a class="btn btn-sm btn-light-primary" href="{{ route('heks.follow-ups.boq', $followUp) }}">فتح BOQ الزيارة</a>
+                                            <button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $boqPreviewId }}" aria-expanded="false" aria-controls="{{ $boqPreviewId }}">عرض BOQ</button>
                                         @elseif ($followUp->beneficiary)
                                             <a class="btn btn-sm btn-light" href="{{ route('heks.beneficiaries.pricing', $followUp->beneficiary) }}">BOQ الأساسي</a>
                                         @endif
@@ -166,6 +174,10 @@
                                             <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">خيارات الملف</button>
                                             <div class="dropdown-menu">
                                                 @if ($followUp->boq_url)
+                                                    <form method="POST" action="{{ route('heks.follow-ups.boq.import', $followUp) }}">
+                                                        @csrf
+                                                        <button class="dropdown-item">ترحيل BOQ من Excel</button>
+                                                    </form>
                                                     <a class="dropdown-item" href="{{ $followUp->boq_url }}" download>تحميل Excel الأصلي</a>
                                                     <a class="dropdown-item" href="{{ $followUp->boq_url }}" target="_blank" rel="noopener">فتح رابط KoBo</a>
                                                 @endif
@@ -175,6 +187,49 @@
                                     </div>
                                 </td>
                             </tr>
+                            @if ($followUp->boqItems->isNotEmpty())
+                                <tr class="collapse" id="{{ $boqPreviewId }}">
+                                    <td colspan="9">
+                                        <div class="follow-up-boq-preview">
+                                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                                                <div>
+                                                    <div class="fw-bold">جدول كميات الزيارة</div>
+                                                    <div class="text-muted small">{{ number_format($boqItemsCount) }} بند · الإجمالي {{ number_format($boqItemsTotal, 2) }} ILS</div>
+                                                </div>
+                                                <a class="btn btn-sm btn-light" href="{{ route('heks.follow-ups.boq', $followUp) }}">فتح BOQ الزيارة كاملة</a>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-row-dashed align-middle">
+                                                    <thead>
+                                                    <tr class="fw-bold text-muted">
+                                                        <th>القسم</th>
+                                                        <th>رقم</th>
+                                                        <th class="boq-preview-description">الوصف</th>
+                                                        <th>الوحدة</th>
+                                                        <th>الكمية</th>
+                                                        <th>سعر الوحدة ILS</th>
+                                                        <th>الإجمالي ILS</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    @foreach ($followUp->boqItems as $item)
+                                                        <tr>
+                                                            <td>{{ $item->section ?? '-' }}</td>
+                                                            <td class="fw-bold">{{ $item->item_code ?? '-' }}</td>
+                                                            <td>{{ $item->description }}</td>
+                                                            <td>{{ $item->unit ?? '-' }}</td>
+                                                            <td>{{ number_format((float) $item->quantity, 3) }}</td>
+                                                            <td>{{ number_format((float) $item->unit_price_ils, 2) }}</td>
+                                                            <td class="fw-bold text-success">{{ number_format((float) $item->total_price_ils, 2) }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
                         @empty
                             <tr><td colspan="9" class="text-center text-muted">لا توجد متابعات بعد.</td></tr>
                         @endforelse

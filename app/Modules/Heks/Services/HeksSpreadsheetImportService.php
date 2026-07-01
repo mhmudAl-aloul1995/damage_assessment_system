@@ -206,6 +206,50 @@ class HeksSpreadsheetImportService
         return $summary;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function importFollowUpBoq(HeksFollowUp $followUp): ?array
+    {
+        $followUp->loadMissing('beneficiary');
+
+        if (! $followUp->beneficiary) {
+            return [
+                'imported' => false,
+                'error' => 'لا يوجد مستفيد مرتبط بهذه المتابعة.',
+            ];
+        }
+
+        $attachment = HeksAttachment::query()->firstOrCreate(
+            [
+                'heks_beneficiary_id' => $followUp->beneficiary->id,
+                'source' => "follow-up:{$followUp->id}",
+                'attachment_type' => 'follow_up_boq',
+            ],
+            [
+                'filename' => $followUp->boq_filename ?: 'BOQ',
+                'url' => $followUp->boq_url,
+                'parent_table' => 'manual-follow-up',
+                'raw_data' => [
+                    'follow_up_id' => $followUp->id,
+                    'visit_number' => $followUp->visit_number,
+                ],
+            ]
+        );
+
+        $summary = $this->importFollowUpBoqWorkbook($followUp->beneficiary, $followUp, $attachment);
+
+        if ($summary !== null) {
+            $attachment->forceFill([
+                'filename' => $followUp->boq_filename ?: $attachment->filename,
+                'url' => $followUp->boq_url ?: $attachment->url,
+                'raw_data' => array_merge($attachment->raw_data ?? [], ['boq_import_summary' => $summary]),
+            ])->save();
+        }
+
+        return $summary;
+    }
+
     private function detectType(Worksheet $sheet): ?string
     {
         $sheetNameType = $this->detectTypeFromSheetName($sheet->getTitle());

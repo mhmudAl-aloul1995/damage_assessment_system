@@ -321,7 +321,10 @@ class HeksController extends Controller
         $this->authorizeAccess();
 
         $query = HeksFollowUp::query()
-            ->with(['beneficiary.attachments', 'boqItems'])
+            ->with([
+                'beneficiary.attachments',
+                'boqItems' => fn ($query) => $query->orderBy('section')->orderBy('item_code')->orderBy('id'),
+            ])
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $search = (string) $request->string('q');
                 $query->where(function ($query) use ($search): void {
@@ -384,6 +387,23 @@ class HeksController extends Controller
         $followUp->update($request->validated());
 
         return back()->with('success', 'تم تحديث المتابعة.');
+    }
+
+    public function importFollowUpBoq(HeksFollowUp $followUp, HeksSpreadsheetImportService $importer): RedirectResponse
+    {
+        $this->authorizeAccess();
+
+        $summary = $importer->importFollowUpBoq($followUp);
+
+        if ($summary === null) {
+            return back()->with('error', 'ملف BOQ لهذه الزيارة ليس ملف Excel قابل للترحيل.');
+        }
+
+        if (($summary['imported'] ?? false) === false) {
+            return back()->with('error', $summary['error'] ?? 'تعذر ترحيل جدول الكميات من ملف Excel.');
+        }
+
+        return back()->with('success', 'تم ترحيل '.number_format((int) ($summary['imported_rows'] ?? 0)).' بند من Excel إلى قاعدة البيانات.');
     }
 
     public function followUpBoq(HeksFollowUp $followUp): View
