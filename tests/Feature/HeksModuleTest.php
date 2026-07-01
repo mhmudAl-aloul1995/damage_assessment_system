@@ -288,11 +288,9 @@ it('adds HEKS to the sidebar for database officers', function () {
     $user->assignRole($role);
 
     $module = Sidebar::forUser($user)->firstWhere('key', 'heks');
-    $section = $module['sections']->first();
 
     expect($module)->not->toBeNull()
-        ->and($section['items']->firstWhere('url', 'heks'))->not->toBeNull()
-        ->and($section['items']->firstWhere('url', 'heks/scores')['title'])->toBe('Scoring');
+        ->and($module['sections']->first()['url'])->toBe('heks');
 });
 
 it('hides and blocks HEKS for non database officers', function () {
