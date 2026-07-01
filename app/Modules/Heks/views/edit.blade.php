@@ -13,9 +13,19 @@
         .heks-case-page .case-tabs .nav-link.active { background: var(--bs-primary); color: #fff; }
         .heks-case-page .table-fixed-wide { min-width: 980px; }
         .heks-case-page .text-soft { color: var(--bs-gray-600); }
-        .heks-case-page .assessment-table-wrap { border: 1px solid var(--bs-gray-200); border-radius: .75rem; max-height: 34rem; overflow: auto; }
-        .heks-case-page .assessment-table-wrap table { margin-bottom: 0; min-width: 760px; }
-        .heks-case-page .assessment-table-wrap thead th { background: var(--bs-body-bg); position: sticky; top: 0; z-index: 1; }
+        .heks-case-page .assessment-list { border: 1px solid var(--bs-gray-200); border-radius: .75rem; max-height: 34rem; overflow-y: auto; overflow-x: hidden; }
+        .heks-case-page .assessment-list-header,
+        .heks-case-page .assessment-list-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(8rem, .52fr) 5rem; gap: 1rem; align-items: center; }
+        .heks-case-page .assessment-list-header { background: var(--bs-body-bg); color: var(--bs-gray-600); font-weight: 700; padding: .85rem 1rem; position: sticky; top: 0; z-index: 1; }
+        .heks-case-page .assessment-list-row { border-top: 1px dashed var(--bs-gray-200); padding: 1rem; }
+        .heks-case-page .assessment-list-item,
+        .heks-case-page .assessment-list-value { min-width: 0; overflow-wrap: anywhere; }
+        .heks-case-page .assessment-list-score { justify-self: start; }
+        @media (max-width: 767.98px) {
+            .heks-case-page .assessment-list-header { display: none; }
+            .heks-case-page .assessment-list-row { grid-template-columns: 1fr auto; gap: .75rem; }
+            .heks-case-page .assessment-list-item { grid-column: 1 / -1; }
+        }
     </style>
 
     @php
@@ -429,39 +439,35 @@
                                     </div>
                                 </div>
 
-                                <div class="assessment-table-wrap">
-                                    <table class="table table-row-dashed align-middle">
-                                        <thead>
-                                        <tr class="fw-bold text-muted">
-                                            <th class="min-w-260px">البند</th>
-                                            <th class="min-w-180px">القيمة</th>
-                                            <th>النقاط</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        @forelse ($socialAssessmentRows as $row)
-                                            <tr>
-                                                <td class="fw-semibold">{{ $row['question'] }}</td>
-                                                <td>
-                                                    @if (filled($row['value']))
-                                                        <span class="fw-semibold">{{ $row['value'] }}</span>
-                                                    @else
-                                                        <span class="text-muted">غير متوفر</span>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if ($row['points'] !== null)
-                                                        <span class="badge {{ (int) $row['points'] > 0 ? 'badge-light-success' : 'badge-light' }}">{{ $row['points'] }}</span>
-                                                    @else
-                                                        <span class="text-muted">-</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="3" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
-                                        @endforelse
-                                        </tbody>
-                                    </table>
+                                <div class="assessment-list">
+                                    <div class="assessment-list-header">
+                                        <div>البند</div>
+                                        <div>القيمة</div>
+                                        <div>النقاط</div>
+                                    </div>
+                                    @forelse ($socialAssessmentRows as $row)
+                                        <div class="assessment-list-row">
+                                            <div class="assessment-list-item fw-semibold">{{ $row['question'] }}</div>
+                                            <div class="assessment-list-value">
+                                                @if (filled($row['value']))
+                                                    <span class="fw-semibold">{{ $row['value'] }}</span>
+                                                @else
+                                                    <span class="text-muted">غير متوفر</span>
+                                                @endif
+                                            </div>
+                                            <div class="assessment-list-score">
+                                                @if ($row['points'] !== null)
+                                                    <span class="badge {{ (int) $row['points'] > 0 ? 'badge-light-success' : 'badge-light' }}">{{ $row['points'] }}</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="assessment-list-row">
+                                            <div class="assessment-list-item text-center text-muted" style="grid-column: 1 / -1;">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</div>
+                                        </div>
+                                    @endforelse
                                 </div>
                             </div>
 
@@ -483,36 +489,38 @@
                                     </div>
                                 </div>
 
-                                <div class="assessment-table-wrap">
-                                    <table class="table table-row-dashed align-middle">
-                                        <thead>
-                                        <tr class="fw-bold text-muted">
-                                            <th class="min-w-260px">البند</th>
-                                            <th class="min-w-180px">القيمة</th>
-                                            <th>النقاط</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        @forelse ($technicalAssessmentRows as $row)
-                                            <tr>
-                                                <td>
-                                                    <div class="fw-semibold">{{ $row['question'] ?: $row['indicator'] ?: '-' }}</div>
-                                                    <div class="text-muted small">PDF/KoBo shelter item</div>
-                                                </td>
-                                                <td>
-                                                    @if (filled($row['value']))
-                                                        <span class="fw-semibold">{{ $row['value'] }}</span>
-                                                    @else
-                                                        <span class="text-muted">غير متوفر</span>
-                                                    @endif
-                                                </td>
-                                                <td>{{ filled($row['score']) ? $row['score'] : '-' }}</td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="3" class="text-center text-muted">لم يتم استيراد جدول أوزان التقييم الفني بعد.</td></tr>
-                                        @endforelse
-                                        </tbody>
-                                    </table>
+                                <div class="assessment-list">
+                                    <div class="assessment-list-header">
+                                        <div>البند</div>
+                                        <div>القيمة</div>
+                                        <div>النقاط</div>
+                                    </div>
+                                    @forelse ($technicalAssessmentRows as $row)
+                                        <div class="assessment-list-row">
+                                            <div class="assessment-list-item">
+                                                <div class="fw-semibold">{{ $row['question'] ?: $row['indicator'] ?: '-' }}</div>
+                                                <div class="text-muted small">PDF/KoBo shelter item</div>
+                                            </div>
+                                            <div class="assessment-list-value">
+                                                @if (filled($row['value']))
+                                                    <span class="fw-semibold">{{ $row['value'] }}</span>
+                                                @else
+                                                    <span class="text-muted">غير متوفر</span>
+                                                @endif
+                                            </div>
+                                            <div class="assessment-list-score">
+                                                @if (filled($row['score']))
+                                                    <span class="badge badge-light-primary">{{ $row['score'] }}</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="assessment-list-row">
+                                            <div class="assessment-list-item text-center text-muted" style="grid-column: 1 / -1;">لم يتم استيراد جدول أوزان التقييم الفني بعد.</div>
+                                        </div>
+                                    @endforelse
                                 </div>
                             </div>
                         </div>
