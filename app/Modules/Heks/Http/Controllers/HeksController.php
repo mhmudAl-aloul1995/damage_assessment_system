@@ -389,6 +389,15 @@ class HeksController extends Controller
         return back()->with('success', 'تم تحديث الدرجات.');
     }
 
+    public function storeScore(UpdateHeksScoreRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
+    {
+        $beneficiary->scores()->create(array_merge($request->validated(), [
+            'source' => $request->validated('source') ?: 'manual',
+        ]));
+
+        return back()->with('success', 'تمت إضافة سجل الدرجات.');
+    }
+
     public function quality(): View
     {
         $this->authorizeAccess();

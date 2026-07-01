@@ -189,7 +189,28 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('Partial damage')
             ->assertSee('damage_status')
             ->assertSee('boq.xlsx')
-            ->assertSee('High');
+            ->assertSee('High')
+            ->assertSee('name="social_score"', false)
+            ->assertSee('name="technical_score"', false)
+            ->assertSee('name="total_score"', false);
+
+        $this->actingAs($user)
+            ->post(route('heks.beneficiaries.scores.store', $beneficiary), [
+                'source' => 'manual',
+                'social_score' => 22,
+                'technical_score' => 55,
+                'total_score' => 77,
+                'classification' => 'Very High',
+                'grant_amount' => 1500,
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        expect(HeksScore::query()
+            ->where('heks_beneficiary_id', $beneficiary->id)
+            ->where('source', 'manual')
+            ->where('classification', 'Very High')
+            ->exists())->toBeTrue();
 
         $this->actingAs($user)
             ->post(route('heks.beneficiaries.boq-items.import', $beneficiary), [

@@ -17,6 +17,7 @@ class UpdateHeksScoreRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'source' => ['nullable', 'string', 'max:255'],
             'grant_amount' => ['nullable', 'numeric'],
             'payment_1' => ['nullable', 'numeric'],
             'payment_2' => ['nullable', 'numeric'],
