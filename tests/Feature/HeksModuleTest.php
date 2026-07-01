@@ -193,7 +193,6 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('Partial damage')
             ->assertSee('استبيان KoBo للمستفيد')
             ->assertSee('تقييم المأوى والأضرار')
-            ->assertSee('عرض البيانات الخام الأصلية')
             ->assertSee('damage_status')
             ->assertSee('boq.xlsx')
             ->assertSee('High')

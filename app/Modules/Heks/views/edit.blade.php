@@ -21,13 +21,22 @@
         .heks-case-page .assessment-list-item,
         .heks-case-page .assessment-list-value { min-width: 0; overflow-wrap: anywhere; }
         .heks-case-page .assessment-list-score { justify-self: start; }
-        .heks-case-page .survey-section { border: 1px solid var(--bs-gray-200); border-radius: .85rem; padding: 1.25rem; height: 100%; }
-        .heks-case-page .survey-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .85rem; }
-        .heks-case-page .survey-item { border: 1px solid var(--bs-gray-200); border-radius: .65rem; padding: .95rem; background: var(--bs-body-bg); min-width: 0; }
-        .heks-case-page .survey-question { color: var(--bs-gray-600); font-size: .82rem; line-height: 1.55; overflow-wrap: anywhere; }
-        .heks-case-page .survey-answer { color: var(--bs-gray-900); font-weight: 700; line-height: 1.6; overflow-wrap: anywhere; }
-        .heks-case-page .survey-source { color: var(--bs-gray-500); font-size: .75rem; margin-top: .4rem; }
-        .heks-case-page .survey-empty { grid-column: 1 / -1; }
+        .heks-case-page .survey-section { border: 1px solid #edf1f5; border-radius: 1rem; overflow: hidden; background: #fff; box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .04); }
+        .heks-case-page .survey-section-header { cursor: pointer; padding: 1rem 1.25rem; border: 0; background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 45%, #e8f3ff 100%); border-bottom: 1px solid #e4ecf7; transition: all .25s ease; position: relative; }
+        .heks-case-page .survey-section-header:hover { background: linear-gradient(135deg, #eef6ff 0%, #dceeff 100%); box-shadow: inset 0 0 0 1px rgba(0, 158, 247, .08); }
+        .heks-case-page .survey-section-header:after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, #009ef7, #50cd89); }
+        .heks-case-page .survey-collapse-indicator { width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #fff; color: #009ef7; border: 1px solid rgba(0, 158, 247, .18); font-size: .8rem; font-weight: 800; flex: 0 0 auto; }
+        .heks-case-page .survey-section-header .survey-collapse-closed,
+        .heks-case-page .survey-section-header.collapsed .survey-collapse-open,
+        .heks-case-page .survey-section-header .survey-state-badge { display: none; }
+        .heks-case-page .survey-section-header.collapsed .survey-collapse-closed,
+        .heks-case-page .survey-section-header.collapsed .survey-state-badge { display: inline-flex; }
+        .heks-case-page .survey-progress-bar { width: 120px; height: 6px; border-radius: 20px; background: #eef3f7; overflow: hidden; }
+        .heks-case-page .survey-progress-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, #009ef7, #50cd89); }
+        .heks-case-page .survey-item { border-top: 1px dashed var(--bs-gray-300); padding: 1rem 1.25rem; background: #f1fff5; }
+        .heks-case-page .survey-item:hover { background: #f8fbff; }
+        .heks-case-page .survey-question { font-weight: 800; color: var(--bs-gray-800); line-height: 1.6; overflow-wrap: anywhere; }
+        .heks-case-page .survey-answer { font-weight: 700; color: var(--bs-gray-700); line-height: 1.6; overflow-wrap: anywhere; }
         @media (max-width: 767.98px) {
             .heks-case-page .assessment-list-header { display: none; }
             .heks-case-page .assessment-list-row { grid-template-columns: 1fr auto; gap: .75rem; }
@@ -666,71 +675,61 @@
                             </div>
                         </div>
 
-                        <div class="row g-5">
-                            @forelse ($surveySections as $section)
-                                <div class="col-12">
-                                    <div class="survey-section">
-                                        <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
+                        <div class="accordion accordion-icon-toggle" id="heksSurveyAccordion">
+                            @forelse ($surveySections as $sectionIndex => $section)
+                                @php
+                                    $sectionId = 'heks_survey_section_'.$sectionIndex;
+                                    $itemsCount = count($section['items']);
+                                    $answeredCount = collect($section['items'])->filter(fn ($item) => filled($item['value']))->count();
+                                    $completionPercent = $itemsCount > 0 ? (int) round(($answeredCount / $itemsCount) * 100) : 0;
+                                    $isOpen = $sectionIndex === array_key_first($surveySections);
+                                @endphp
+                                <div class="survey-section mb-4">
+                                    <div class="survey-section-header {{ $isOpen ? '' : 'collapsed' }} d-flex justify-content-between align-items-center flex-wrap gap-3"
+                                         data-bs-toggle="collapse"
+                                         data-bs-target="#{{ $sectionId }}"
+                                         role="button"
+                                         aria-expanded="{{ $isOpen ? 'true' : 'false' }}"
+                                         aria-controls="{{ $sectionId }}">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <span class="survey-collapse-indicator survey-collapse-open">−</span>
+                                            <span class="survey-collapse-indicator survey-collapse-closed">+</span>
                                             <div>
-                                                <div class="d-flex align-items-center gap-2 mb-1">
-                                                    <span class="badge badge-light-{{ $section['tone'] }}">{{ number_format(count($section['items'])) }}</span>
-                                                    <h4 class="fs-5 fw-bold mb-0">{{ $section['title'] }}</h4>
+                                                <div class="fw-bold fs-5 text-gray-800">{{ $section['title'] }}</div>
+                                                <div class="text-muted mt-1">{{ $section['description'] }}</div>
+                                                <div class="survey-progress-bar mt-3">
+                                                    <div class="survey-progress-fill" style="width: {{ $completionPercent }}%"></div>
                                                 </div>
-                                                <div class="text-muted">{{ $section['description'] }}</div>
                                             </div>
                                         </div>
-
-                                        <div class="survey-grid">
-                                            @foreach ($section['items'] as $item)
-                                                <div class="survey-item">
-                                                    <div class="survey-question">{{ $item['question'] }}</div>
-                                                    <div class="survey-answer mt-2">{{ $item['value'] }}</div>
-                                                    <div class="survey-source">{{ $item['source'] }}</div>
-                                                </div>
-                                            @endforeach
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="badge badge-light-primary">{{ number_format($answeredCount) }} / {{ number_format($itemsCount) }}</span>
+                                            <span class="badge badge-light-success">{{ $completionPercent }}% مكتمل</span>
+                                            <span class="badge badge-light survey-state-badge">اضغط للعرض</span>
                                         </div>
+                                    </div>
+
+                                    <div id="{{ $sectionId }}" class="collapse {{ $isOpen ? 'show' : '' }}" data-bs-parent="#heksSurveyAccordion">
+                                        @foreach ($section['items'] as $item)
+                                            <div class="survey-item">
+                                                <div class="row g-4 align-items-start">
+                                                    <div class="col-lg-5">
+                                                        <div class="survey-question">{{ $item['question'] }}</div>
+                                                    </div>
+                                                    <div class="col-lg-7">
+                                                        <div class="survey-answer">{{ $item['value'] }}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
                                     </div>
                                 </div>
                             @empty
-                                <div class="col-12">
-                                    <div class="survey-section text-muted">لا توجد بيانات استبيان محفوظة لهذه الحالة.</div>
+                                <div class="survey-section">
+                                    <div class="survey-item text-muted">لا توجد بيانات استبيان محفوظة لهذه الحالة.</div>
                                 </div>
                             @endforelse
                         </div>
-
-                        @if ($rawDataSections !== [])
-                            <div class="accordion mt-7" id="heksRawDataAccordion">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="heksRawDataHeading">
-                                        <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#heksRawDataCollapse" aria-expanded="false" aria-controls="heksRawDataCollapse">
-                                            عرض البيانات الخام الأصلية
-                                        </button>
-                                    </h2>
-                                    <div id="heksRawDataCollapse" class="accordion-collapse collapse" aria-labelledby="heksRawDataHeading" data-bs-parent="#heksRawDataAccordion">
-                                        <div class="accordion-body">
-                                            @foreach ($rawDataSections as $source => $values)
-                                                <div class="mb-6">
-                                                    <h4 class="fs-6 fw-bold mb-3">{{ $source }}</h4>
-                                                    <div class="table-responsive">
-                                                        <table class="table table-row-dashed align-middle">
-                                                            <tbody>
-                                                            @foreach ($values as $key => $value)
-                                                                @continue(str_starts_with((string) $key, '_') && ! in_array($key, ['_submission__uuid', '_submission___version__'], true))
-                                                                <tr>
-                                                                    <th class="w-300px text-muted">{{ $key }}</th>
-                                                                    <td>{{ is_scalar($value) ? $value : json_encode($value, JSON_UNESCAPED_UNICODE) }}</td>
-                                                                </tr>
-                                                            @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>
