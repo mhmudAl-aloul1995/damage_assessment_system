@@ -126,7 +126,7 @@ class HeksController extends Controller
         $this->authorizeAccess();
         $beneficiary->load([
             'labels' => fn ($query) => $query->latest(),
-            'followUps' => fn ($query) => $query->latest('visit_date')->latest(),
+            'followUps' => fn ($query) => $query->with('boqItems')->latest('visit_date')->latest(),
             'scores' => fn ($query) => $query->latest(),
             'payments' => fn ($query) => $query->latest(),
             'workAssignments' => fn ($query) => $query->latest(),
