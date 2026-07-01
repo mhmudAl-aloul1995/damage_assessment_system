@@ -141,6 +141,7 @@ class HeksController extends Controller
             'boqSections' => $this->boqCatalog()->pluck('section')->filter()->unique()->sort()->values(),
             'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
             'rawDataSections' => $this->rawDataSections($beneficiary),
+            'surveySections' => $this->surveySections($beneficiary),
             'scoringComponents' => $this->scoringComponents(),
             'priorityMatrix' => $this->priorityMatrix(),
             'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
@@ -883,6 +884,190 @@ class HeksController extends Controller
     private function authorizeAccess(): void
     {
         abort_unless(auth()->user()?->hasRole('Database Officer'), 403);
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function surveySections(HeksBeneficiary $beneficiary): array
+    {
+        $rawData = $beneficiary->raw_data;
+
+        if (! is_array($rawData) || $rawData === []) {
+            return [];
+        }
+
+        $sections = collect([
+            'beneficiary' => [
+                'title' => 'بيانات المستفيد والزيارة',
+                'description' => 'الهوية، التواصل، الموقع، وتفاصيل الزيارة.',
+                'tone' => 'primary',
+                'items' => [],
+            ],
+            'shelter' => [
+                'title' => 'تقييم المأوى والأضرار',
+                'description' => 'حالة الوحدة السكنية، الضرر، الإشغال، والمرافق.',
+                'tone' => 'warning',
+                'items' => [],
+            ],
+            'social' => [
+                'title' => 'الهشاشة الاجتماعية',
+                'description' => 'الأسرة، العمر، الجنس، الإعاقة، المرض، والدخل.',
+                'tone' => 'success',
+                'items' => [],
+            ],
+            'protection' => [
+                'title' => 'الحماية والظروف المعيشية',
+                'description' => 'مؤشرات الخطر، الخصوصية، السلامة، والاحتياجات.',
+                'tone' => 'danger',
+                'items' => [],
+            ],
+            'management' => [
+                'title' => 'الإدارة والتوصيات',
+                'description' => 'المنحة، الدفعات، التوصيات، وملاحظات الفريق.',
+                'tone' => 'info',
+                'items' => [],
+            ],
+            'other' => [
+                'title' => 'بيانات إضافية من الاستبيان',
+                'description' => 'حقول مستوردة لا تنتمي مباشرة إلى الأقسام الرئيسية.',
+                'tone' => 'secondary',
+                'items' => [],
+            ],
+        ]);
+
+        $seen = [];
+
+        foreach ($rawData as $source => $values) {
+            $values = is_array($values) ? $values : ['value' => $values];
+
+            foreach ($values as $key => $value) {
+                $key = (string) $key;
+
+                if ($this->isHiddenSurveyKey($key) || $value === null || $value === '') {
+                    continue;
+                }
+
+                $displayValue = $this->surveyDisplayValue($value);
+
+                if ($displayValue === '') {
+                    continue;
+                }
+
+                $uniqueKey = $key.'|'.$displayValue;
+
+                if (isset($seen[$uniqueKey])) {
+                    continue;
+                }
+
+                $seen[$uniqueKey] = true;
+                $sectionKey = $this->surveySectionKey($key);
+                $section = $sections->get($sectionKey);
+                $section['items'][] = [
+                    'question' => $key,
+                    'value' => $displayValue,
+                    'source' => (string) $source,
+                ];
+                $sections->put($sectionKey, $section);
+            }
+        }
+
+        return $sections
+            ->filter(fn (array $section): bool => $section['items'] !== [])
+            ->all();
+    }
+
+    private function surveySectionKey(string $key): string
+    {
+        $normalized = $this->normalizedDashboardText($key);
+
+        return match (true) {
+            str_contains($normalized, 'اسم')
+                || str_contains($normalized, 'الكود')
+                || str_contains($normalized, 'رقم')
+                || str_contains($normalized, 'هوية')
+                || str_contains($normalized, 'جوال')
+                || str_contains($normalized, 'هاتف')
+                || str_contains($normalized, 'تاريخ')
+                || str_contains($normalized, 'محافظة')
+                || str_contains($normalized, 'منطقة')
+                || str_contains($normalized, 'عنوان')
+                || str_contains($normalized, 'مهندس') => 'beneficiary',
+            str_contains($normalized, 'مأوى')
+                || str_contains($normalized, 'المأوى')
+                || str_contains($normalized, 'سكن')
+                || str_contains($normalized, 'السكنية')
+                || str_contains($normalized, 'ضرر')
+                || str_contains($normalized, 'السقف')
+                || str_contains($normalized, 'جدران')
+                || str_contains($normalized, 'حمام')
+                || str_contains($normalized, 'مطبخ')
+                || str_contains($normalized, 'باب')
+                || str_contains($normalized, 'نافذة')
+                || str_contains($normalized, 'مياه')
+                || str_contains($normalized, 'صرف')
+                || str_contains($normalized, 'إنارة')
+                || str_contains($normalized, 'اشغال')
+                || str_contains($normalized, 'إشغال') => 'shelter',
+            str_contains($normalized, 'أسرة')
+                || str_contains($normalized, 'الأسرة')
+                || str_contains($normalized, 'افراد')
+                || str_contains($normalized, 'أفراد')
+                || str_contains($normalized, 'عمر')
+                || str_contains($normalized, 'جنس')
+                || str_contains($normalized, 'إعاقة')
+                || str_contains($normalized, 'اعاقة')
+                || str_contains($normalized, 'مرض')
+                || str_contains($normalized, 'مزمن')
+                || str_contains($normalized, 'دخل')
+                || str_contains($normalized, 'غذائية')
+                || str_contains($normalized, 'مرضعات')
+                || str_contains($normalized, 'حوامل')
+                || str_contains($normalized, 'نازح') => 'social',
+            str_contains($normalized, 'خطر')
+                || str_contains($normalized, 'آمن')
+                || str_contains($normalized, 'امن')
+                || str_contains($normalized, 'uxo')
+                || str_contains($normalized, 'erw')
+                || str_contains($normalized, 'مخلفات')
+                || str_contains($normalized, 'خصوصية')
+                || str_contains($normalized, 'فصل')
+                || str_contains($normalized, 'سلامة')
+                || str_contains($normalized, 'حماية') => 'protection',
+            str_contains($normalized, 'منحة')
+                || str_contains($normalized, 'دفعة')
+                || str_contains($normalized, 'توصية')
+                || str_contains($normalized, 'ملاحظ')
+                || str_contains($normalized, 'عقد')
+                || str_contains($normalized, 'حساب') => 'management',
+            default => 'other',
+        };
+    }
+
+    private function surveyDisplayValue(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'نعم' : 'لا';
+        }
+
+        if (is_scalar($value)) {
+            return trim((string) $value);
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+    }
+
+    private function isHiddenSurveyKey(string $key): bool
+    {
+        if (in_array($key, ['_submission__uuid', '_submission___version__'], true)) {
+            return false;
+        }
+
+        return str_starts_with($key, '_')
+            || str_contains($key, 'uuid')
+            || str_contains($key, 'index')
+            || str_contains($key, 'parent_table_name')
+            || str_contains($key, 'parent_index');
     }
 
     /**
