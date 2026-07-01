@@ -433,11 +433,9 @@
                                     <table class="table table-row-dashed align-middle">
                                         <thead>
                                         <tr class="fw-bold text-muted">
-                                            <th class="min-w-260px">المعيار الاجتماعي</th>
-                                            <th class="min-w-180px">قيمة المستفيد</th>
+                                            <th class="min-w-260px">البند</th>
+                                            <th class="min-w-180px">القيمة</th>
                                             <th>النقاط</th>
-                                            <th>الحد الأعلى</th>
-                                            <th>المصدر</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -458,11 +456,9 @@
                                                         <span class="text-muted">-</span>
                                                     @endif
                                                 </td>
-                                                <td><span class="badge badge-light-info">5</span></td>
-                                                <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="5" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
+                                            <tr><td colspan="3" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
                                         @endforelse
                                         </tbody>
                                     </table>
@@ -491,15 +487,9 @@
                                     <table class="table table-row-dashed align-middle">
                                         <thead>
                                         <tr class="fw-bold text-muted">
-                                            <th class="min-w-260px">البند الفني من PDF/KoBo</th>
-                                            <th class="min-w-180px">قيمة المستفيد</th>
+                                            <th class="min-w-260px">البند</th>
+                                            <th class="min-w-180px">القيمة</th>
                                             <th>النقاط</th>
-                                            <th>الوزن</th>
-                                            <th>Max</th>
-                                            <th>AVG</th>
-                                            <th>Min</th>
-                                            <th>الفئة / المؤشر</th>
-                                            <th>المصدر</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -517,18 +507,9 @@
                                                     @endif
                                                 </td>
                                                 <td>{{ filled($row['score']) ? $row['score'] : '-' }}</td>
-                                                <td><span class="badge badge-light-primary">{{ $row['weight'] !== null ? number_format((float) $row['weight'], 2) : '-' }}</span></td>
-                                                <td>{{ $row['max'] ?? '-' }}</td>
-                                                <td>{{ $row['avg'] ?? '-' }}</td>
-                                                <td>{{ $row['min'] ?? '-' }}</td>
-                                                <td>
-                                                    <div><span class="badge badge-light">{{ $row['category'] ?: '-' }}</span></div>
-                                                    <div class="text-muted small mt-1">{{ $row['indicator'] ?: '-' }}</div>
-                                                </td>
-                                                <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="9" class="text-center text-muted">لم يتم استيراد جدول أوزان التقييم الفني بعد.</td></tr>
+                                            <tr><td colspan="3" class="text-center text-muted">لم يتم استيراد جدول أوزان التقييم الفني بعد.</td></tr>
                                         @endforelse
                                         </tbody>
                                     </table>
