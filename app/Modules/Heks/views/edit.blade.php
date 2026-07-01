@@ -436,6 +436,8 @@
                                             <th class="min-w-260px">المعيار الاجتماعي</th>
                                             <th class="min-w-180px">قيمة المستفيد</th>
                                             <th>النقاط</th>
+                                            <th>الحد الأعلى</th>
+                                            <th>المصدر</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -456,9 +458,11 @@
                                                         <span class="text-muted">-</span>
                                                     @endif
                                                 </td>
+                                                <td><span class="badge badge-light-info">5</span></td>
+                                                <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="3" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
+                                            <tr><td colspan="5" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
                                         @endforelse
                                         </tbody>
                                     </table>
@@ -490,7 +494,12 @@
                                             <th>الفئة</th>
                                             <th>المؤشر</th>
                                             <th>الوزن</th>
+                                            <th>Max</th>
+                                            <th>AVG</th>
+                                            <th>Min</th>
                                             <th class="min-w-180px">قيمة المستفيد</th>
+                                            <th>النقاط</th>
+                                            <th>المصدر</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -502,6 +511,9 @@
                                                     <div class="text-muted small">{{ $row['question'] ?: '-' }}</div>
                                                 </td>
                                                 <td><span class="badge badge-light-primary">{{ $row['weight'] !== null ? number_format((float) $row['weight'], 2) : '-' }}</span></td>
+                                                <td>{{ $row['max'] ?? '-' }}</td>
+                                                <td>{{ $row['avg'] ?? '-' }}</td>
+                                                <td>{{ $row['min'] ?? '-' }}</td>
                                                 <td>
                                                     @if (filled($row['value']))
                                                         <span class="fw-semibold">{{ $row['value'] }}</span>
@@ -509,9 +521,11 @@
                                                         <span class="text-muted">غير متوفر</span>
                                                     @endif
                                                 </td>
+                                                <td>{{ filled($row['score']) ? $row['score'] : '-' }}</td>
+                                                <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="4" class="text-center text-muted">لم يتم استيراد جدول أوزان التقييم الفني بعد.</td></tr>
+                                            <tr><td colspan="9" class="text-center text-muted">لم يتم استيراد جدول أوزان التقييم الفني بعد.</td></tr>
                                         @endforelse
                                         </tbody>
                                     </table>

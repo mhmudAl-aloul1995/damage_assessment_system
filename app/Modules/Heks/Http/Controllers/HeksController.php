@@ -912,7 +912,7 @@ class HeksController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{category: ?string, indicator: ?string, question: ?string, weight: mixed, value: mixed, source: string}>
+     * @return \Illuminate\Support\Collection<int, array{category: ?string, indicator: ?string, question: ?string, weight: mixed, max: mixed, avg: mixed, min: mixed, value: mixed, score: mixed, source: string}>
      */
     private function technicalAssessmentRows(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection
     {
@@ -938,7 +938,11 @@ class HeksController extends Controller
                     'indicator' => $indicator,
                     'question' => $question,
                     'weight' => $weight->weight,
+                    'max' => $weightRawData['Max'] ?? $weightRawData['column_4'] ?? null,
+                    'avg' => $weightRawData['AVG'] ?? $weightRawData['column_5'] ?? null,
+                    'min' => $weightRawData['Min'] ?? $weightRawData['column_6'] ?? null,
                     'value' => $label?->label_value ?? $rawValue,
+                    'score' => $label?->label_value ?? $rawValue,
                     'source' => $label ? (string) $label->source : ($rawValue !== null ? 'raw_data' : ''),
                 ];
             });
