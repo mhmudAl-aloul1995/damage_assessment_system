@@ -13,6 +13,11 @@
         .heks-case-page .case-tabs .nav-link.active { background: var(--bs-primary); color: #fff; }
         .heks-case-page .table-fixed-wide { min-width: 980px; }
         .heks-case-page .text-soft { color: var(--bs-gray-600); }
+        .heks-case-page .social-matrix { border-collapse: separate; border-spacing: 0; min-width: 1700px; table-layout: fixed; }
+        .heks-case-page .social-matrix th { background: #a996c3; color: #111827; font-weight: 700; min-width: 150px; white-space: normal; }
+        .heks-case-page .social-matrix th:first-child, .heks-case-page .social-matrix td:first-child { background: #d9e8f5; font-weight: 700; min-width: 130px; position: sticky; right: 0; z-index: 2; }
+        .heks-case-page .social-matrix td { background: #b7a4cc; color: #111827; font-weight: 700; text-align: center; }
+        .heks-case-page .social-matrix .social-value-row td { background: #f8fafc; color: var(--bs-gray-700); font-size: .78rem; font-weight: 500; line-height: 1.45; text-align: center; vertical-align: top; white-space: normal; }
     </style>
 
     @php
@@ -425,40 +430,32 @@
                         </div>
 
                         <div class="table-responsive mb-7">
-                            <table class="table table-row-dashed align-middle table-fixed-wide">
+                            <table class="table table-bordered align-middle social-matrix">
                                 <thead>
-                                <tr class="fw-bold text-muted">
-                                    <th class="min-w-350px">السؤال / المعيار الاجتماعي</th>
-                                    <th class="min-w-260px">قيمة المستفيد</th>
-                                    <th>النقاط</th>
-                                    <th class="min-w-300px">الخيارات المرجعية</th>
-                                    <th>المصدر</th>
+                                <tr>
+                                    <th>رقم الطلب/الكود</th>
+                                    @foreach ($socialAssessmentRows as $row)
+                                        <th>{{ $row['factor'] }}</th>
+                                    @endforeach
                                 </tr>
                                 </thead>
                                 <tbody>
-                                @forelse ($socialAssessmentRows as $row)
+                                @if ($socialAssessmentRows->isNotEmpty())
                                     <tr>
-                                        <td class="fw-semibold">{{ $row['question'] }}</td>
-                                        <td>
-                                            @if (filled($row['value']))
-                                                <span class="fw-semibold">{{ $row['value'] }}</span>
-                                            @else
-                                                <span class="text-muted">غير متوفر</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if ($row['points'] !== null)
-                                                <span class="badge {{ (int) $row['points'] > 0 ? 'badge-light-success' : 'badge-light' }}">{{ $row['points'] }}</span>
-                                            @else
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </td>
-                                        <td class="text-muted">{{ $row['options'] ?: '-' }}</td>
-                                        <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
+                                        <td>{{ $beneficiary->code }}</td>
+                                        @foreach ($socialAssessmentRows as $row)
+                                            <td>{{ $row['points'] ?? '-' }}</td>
+                                        @endforeach
                                     </tr>
-                                @empty
-                                    <tr><td colspan="5" class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
-                                @endforelse
+                                    <tr class="social-value-row">
+                                        <td>قيمة المستفيد</td>
+                                        @foreach ($socialAssessmentRows as $row)
+                                            <td>{{ filled($row['value']) ? $row['value'] : 'غير متوفر' }}</td>
+                                        @endforeach
+                                    </tr>
+                                @else
+                                    <tr><td class="text-center text-muted">لم يتم استيراد شيت S-V لمعايير التقييم الاجتماعي بعد.</td></tr>
+                                @endif
                                 </tbody>
                             </table>
                         </div>
