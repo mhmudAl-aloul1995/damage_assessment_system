@@ -21,6 +21,13 @@
         .heks-case-page .assessment-list-item,
         .heks-case-page .assessment-list-value { min-width: 0; overflow-wrap: anywhere; }
         .heks-case-page .assessment-list-score { justify-self: start; }
+        .heks-case-page .survey-section { border: 1px solid var(--bs-gray-200); border-radius: .85rem; padding: 1.25rem; height: 100%; }
+        .heks-case-page .survey-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .85rem; }
+        .heks-case-page .survey-item { border: 1px solid var(--bs-gray-200); border-radius: .65rem; padding: .95rem; background: var(--bs-body-bg); min-width: 0; }
+        .heks-case-page .survey-question { color: var(--bs-gray-600); font-size: .82rem; line-height: 1.55; overflow-wrap: anywhere; }
+        .heks-case-page .survey-answer { color: var(--bs-gray-900); font-weight: 700; line-height: 1.6; overflow-wrap: anywhere; }
+        .heks-case-page .survey-source { color: var(--bs-gray-500); font-size: .75rem; margin-top: .4rem; }
+        .heks-case-page .survey-empty { grid-column: 1 / -1; }
         @media (max-width: 767.98px) {
             .heks-case-page .assessment-list-header { display: none; }
             .heks-case-page .assessment-list-row { grid-template-columns: 1fr auto; gap: .75rem; }
@@ -642,26 +649,88 @@
                     </div>
 
                     <div class="tab-pane fade" id="raw" role="tabpanel">
-                        @forelse ($rawDataSections as $source => $values)
-                            <div class="mb-6">
-                                <h4 class="fs-6 fw-bold mb-3">{{ $source }}</h4>
-                                <div class="table-responsive">
-                                    <table class="table table-row-dashed align-middle">
-                                        <tbody>
-                                        @foreach ($values as $key => $value)
-                                            @continue(str_starts_with((string) $key, '_') && ! in_array($key, ['_submission__uuid', '_submission___version__'], true))
-                                            <tr>
-                                                <th class="w-300px text-muted">{{ $key }}</th>
-                                                <td>{{ is_scalar($value) ? $value : json_encode($value, JSON_UNESCAPED_UNICODE) }}</td>
-                                            </tr>
-                                        @endforeach
-                                        </tbody>
-                                    </table>
+                        <div class="d-flex flex-column flex-xl-row justify-content-between gap-4 mb-6">
+                            <div>
+                                <h3 class="fs-3 fw-bold mb-2">استبيان KoBo للمستفيد</h3>
+                                <div class="text-muted">عرض منظم لإجابات الاستبيان حسب المحاور، مع الاحتفاظ بالمصدر لكل قيمة.</div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="case-kpi py-3 min-w-125px">
+                                    <div class="text-muted small">الأقسام</div>
+                                    <div class="fs-4 fw-bold text-primary">{{ number_format(count($surveySections)) }}</div>
+                                </div>
+                                <div class="case-kpi py-3 min-w-125px">
+                                    <div class="text-muted small">الإجابات</div>
+                                    <div class="fs-4 fw-bold text-success">{{ number_format(collect($surveySections)->sum(fn ($section) => count($section['items']))) }}</div>
                                 </div>
                             </div>
-                        @empty
-                            <div class="text-muted">لا توجد بيانات خام محفوظة لهذه الحالة.</div>
-                        @endforelse
+                        </div>
+
+                        <div class="row g-5">
+                            @forelse ($surveySections as $section)
+                                <div class="col-12">
+                                    <div class="survey-section">
+                                        <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
+                                            <div>
+                                                <div class="d-flex align-items-center gap-2 mb-1">
+                                                    <span class="badge badge-light-{{ $section['tone'] }}">{{ number_format(count($section['items'])) }}</span>
+                                                    <h4 class="fs-5 fw-bold mb-0">{{ $section['title'] }}</h4>
+                                                </div>
+                                                <div class="text-muted">{{ $section['description'] }}</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="survey-grid">
+                                            @foreach ($section['items'] as $item)
+                                                <div class="survey-item">
+                                                    <div class="survey-question">{{ $item['question'] }}</div>
+                                                    <div class="survey-answer mt-2">{{ $item['value'] }}</div>
+                                                    <div class="survey-source">{{ $item['source'] }}</div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="col-12">
+                                    <div class="survey-section text-muted">لا توجد بيانات استبيان محفوظة لهذه الحالة.</div>
+                                </div>
+                            @endforelse
+                        </div>
+
+                        @if ($rawDataSections !== [])
+                            <div class="accordion mt-7" id="heksRawDataAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heksRawDataHeading">
+                                        <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#heksRawDataCollapse" aria-expanded="false" aria-controls="heksRawDataCollapse">
+                                            عرض البيانات الخام الأصلية
+                                        </button>
+                                    </h2>
+                                    <div id="heksRawDataCollapse" class="accordion-collapse collapse" aria-labelledby="heksRawDataHeading" data-bs-parent="#heksRawDataAccordion">
+                                        <div class="accordion-body">
+                                            @foreach ($rawDataSections as $source => $values)
+                                                <div class="mb-6">
+                                                    <h4 class="fs-6 fw-bold mb-3">{{ $source }}</h4>
+                                                    <div class="table-responsive">
+                                                        <table class="table table-row-dashed align-middle">
+                                                            <tbody>
+                                                            @foreach ($values as $key => $value)
+                                                                @continue(str_starts_with((string) $key, '_') && ! in_array($key, ['_submission__uuid', '_submission___version__'], true))
+                                                                <tr>
+                                                                    <th class="w-300px text-muted">{{ $key }}</th>
+                                                                    <td>{{ is_scalar($value) ? $value : json_encode($value, JSON_UNESCAPED_UNICODE) }}</td>
+                                                                </tr>
+                                                            @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
