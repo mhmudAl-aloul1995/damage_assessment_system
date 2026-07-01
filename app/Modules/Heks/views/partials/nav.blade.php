@@ -30,7 +30,7 @@
     <a class="btn btn-sm {{ request()->routeIs('heks.dashboard') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.dashboard') }}">نظرة عامة</a>
     <a class="btn btn-sm {{ request()->routeIs('heks.imports') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.imports') }}">استيراد الملفات</a>
     <a class="btn btn-sm {{ request()->routeIs('heks.beneficiaries*') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.beneficiaries') }}">الحالات والمستفيدون</a>
-    <a class="btn btn-sm {{ request()->routeIs('heks.scores') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.scores') }}">التقييم والدرجات</a>
+    <a class="btn btn-sm {{ request()->routeIs('heks.scores') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.scores') }}">Scoring / الدرجات</a>
     <a class="btn btn-sm {{ request()->routeIs('heks.labels') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.labels') }}">معايير التقييم</a>
     <a class="btn btn-sm {{ request()->routeIs('heks.follow-ups') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.follow-ups') }}">المتابعات</a>
     <a class="btn btn-sm {{ request()->routeIs('heks.quality') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.quality') }}">فحص البيانات</a>

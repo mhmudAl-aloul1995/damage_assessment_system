@@ -339,11 +339,54 @@ return [
         'module' => 'heks',
         'title' => 'HEKS Shelter Repairs',
         'icon' => 'ki-home-2',
-        'url' => 'heks',
         'pattern' => 'heks*',
         'roles' => ['Database Officer'],
         'active_patterns' => [
             'heks*',
+        ],
+        'items' => [
+            [
+                'title' => 'Dashboard',
+                'url' => 'heks',
+                'pattern' => 'heks',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Beneficiaries',
+                'url' => 'heks/beneficiaries',
+                'pattern' => 'heks/beneficiaries*',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Scoring',
+                'url' => 'heks/scores',
+                'pattern' => 'heks/scores*',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Assessment Criteria',
+                'url' => 'heks/labels',
+                'pattern' => 'heks/labels*',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Follow-ups',
+                'url' => 'heks/follow-ups',
+                'pattern' => 'heks/follow-ups*',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Imports',
+                'url' => 'heks/imports',
+                'pattern' => 'heks/imports*',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'Data Quality',
+                'url' => 'heks/quality',
+                'pattern' => 'heks/quality*',
+                'roles' => ['Database Officer'],
+            ],
         ],
     ],
     [
