@@ -499,7 +499,6 @@
                                         <div class="assessment-list-row">
                                             <div class="assessment-list-item">
                                                 <div class="fw-semibold">{{ $row['question'] ?: $row['indicator'] ?: '-' }}</div>
-                                                <div class="text-muted small">PDF/KoBo shelter item</div>
                                             </div>
                                             <div class="assessment-list-value">
                                                 @if (filled($row['value']))
