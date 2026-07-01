@@ -141,6 +141,7 @@ class HeksController extends Controller
             'boqSections' => $this->boqCatalog()->pluck('section')->filter()->unique()->sort()->values(),
             'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
             'rawDataSections' => $this->rawDataSections($beneficiary),
+            'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary),
         ]);
     }
 
@@ -896,5 +897,35 @@ class HeksController extends Controller
         }
 
         return $sections;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{category: ?string, indicator: ?string, question: ?string, weight: mixed, value: mixed, source: string}>
+     */
+    private function technicalAssessmentRows(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection
+    {
+        $labels = $beneficiary->labels->keyBy('label_key');
+        $rawData = collect($beneficiary->raw_data ?? [])
+            ->filter(fn (mixed $section): bool => is_array($section))
+            ->flatMap(fn (array $section): array => $section);
+
+        return HeksScoringWeight::query()
+            ->where('source', 'Shelter Technical Weights')
+            ->orderBy('id')
+            ->get()
+            ->map(function (HeksScoringWeight $weight) use ($labels, $rawData): array {
+                $question = $weight->question_key ?: $weight->indicator;
+                $label = $question ? $labels->get($question) : null;
+                $rawValue = $question ? $rawData->get($question) : null;
+
+                return [
+                    'category' => $weight->category,
+                    'indicator' => $weight->indicator,
+                    'question' => $question,
+                    'weight' => $weight->weight,
+                    'value' => $label?->label_value ?? $rawValue,
+                    'source' => $label ? (string) $label->source : ($rawValue !== null ? 'raw_data' : ''),
+                ];
+            });
     }
 }

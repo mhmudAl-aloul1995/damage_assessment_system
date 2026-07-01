@@ -346,6 +346,63 @@
                     </div>
 
                     <div class="tab-pane fade" id="assessment" role="tabpanel">
+                        @php
+                            $technicalWeightTotal = $technicalAssessmentRows->sum(fn ($row) => (float) ($row['weight'] ?? 0));
+                            $answeredTechnicalRows = $technicalAssessmentRows->filter(fn ($row) => filled($row['value']));
+                        @endphp
+
+                        <div class="d-flex flex-column flex-xl-row justify-content-between gap-4 mb-5">
+                            <div>
+                                <h3 class="fs-4 fw-bold mb-1">التقييم الفني للمأوى</h3>
+                                <div class="text-muted">عرض مؤشرات Shelter Technical Weights مع قيمة هذا المستفيد من بيانات KoBo أو labels.</div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="case-kpi py-3 min-w-150px">
+                                    <div class="text-muted small">مجموع الأوزان</div>
+                                    <div class="fs-4 fw-bold text-primary">{{ number_format($technicalWeightTotal, 2) }}</div>
+                                </div>
+                                <div class="case-kpi py-3 min-w-150px">
+                                    <div class="text-muted small">قيم موجودة</div>
+                                    <div class="fs-4 fw-bold text-success">{{ number_format($answeredTechnicalRows->count()) }} / {{ number_format($technicalAssessmentRows->count()) }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive mb-7">
+                            <table class="table table-row-dashed align-middle table-fixed-wide">
+                                <thead>
+                                <tr class="fw-bold text-muted">
+                                    <th>الفئة</th>
+                                    <th>المؤشر</th>
+                                    <th class="min-w-350px">السؤال / المعيار</th>
+                                    <th>الوزن</th>
+                                    <th class="min-w-220px">قيمة المستفيد</th>
+                                    <th>المصدر</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @forelse ($technicalAssessmentRows as $row)
+                                    <tr>
+                                        <td><span class="badge badge-light">{{ $row['category'] ?: '-' }}</span></td>
+                                        <td class="fw-semibold">{{ $row['indicator'] ?: '-' }}</td>
+                                        <td>{{ $row['question'] ?: '-' }}</td>
+                                        <td><span class="badge badge-light-primary">{{ $row['weight'] !== null ? number_format((float) $row['weight'], 2) : '-' }}</span></td>
+                                        <td>
+                                            @if (filled($row['value']))
+                                                <span class="fw-semibold">{{ $row['value'] }}</span>
+                                            @else
+                                                <span class="text-muted">غير متوفر</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-muted">{{ $row['source'] ?: '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="text-center text-muted">لم يتم استيراد جدول أوزان التقييم الفني بعد.</td></tr>
+                                @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
                         <div class="row g-5">
                             <div class="col-xl-6">
                                 <h3 class="fs-5 fw-bold mb-4">التقييم والدرجات</h3>
