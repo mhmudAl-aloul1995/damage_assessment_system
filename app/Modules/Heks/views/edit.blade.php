@@ -40,6 +40,10 @@
         .heks-case-page .survey-edit-box { border: 1px solid #e8eef7; border-radius: .75rem; background: #fff; padding: .75rem; }
         .heks-case-page .survey-history-card { border: 1px solid #edf1f5; border-radius: .65rem; background: #fff; padding: .75rem; }
         .heks-case-page .survey-history-label { color: var(--bs-gray-600); font-size: .75rem; font-weight: 800; }
+        .heks-case-page .photo-card { border: 1px solid var(--bs-gray-200); border-radius: .85rem; overflow: hidden; background: #fff; height: 100%; }
+        .heks-case-page .photo-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--bs-gray-100); }
+        .heks-case-page .photo-card-body { padding: 1rem; }
+        .heks-case-page .photo-card-title { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         @media (max-width: 767.98px) {
             .heks-case-page .assessment-list-header { display: none; }
             .heks-case-page .assessment-list-row { grid-template-columns: 1fr auto; gap: .75rem; }
@@ -113,6 +117,7 @@
                         'followups' => 'المتابعات',
                         'assessment' => 'التقييم',
                         'finance' => 'الدفعات والتوزيع',
+                        'photos' => 'الصور',
                         'attachments' => 'المرفقات',
                         'raw' => 'البيانات الخام',
                     ] as $tabId => $tabLabel)
@@ -640,6 +645,46 @@
                                 @endforelse
                             </div>
                         </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="photos" role="tabpanel">
+                            <div class="d-flex flex-column flex-xl-row justify-content-between gap-4 mb-6">
+                                <div>
+                                    <h3 class="fs-4 fw-bold mb-1">صور المستفيد والوحدة السكنية</h3>
+                                    <div class="text-muted">عرض الصور المستوردة من مرفقات KoBo والزيارات المرتبطة بهذا المستفيد.</div>
+                                </div>
+                                <div class="case-kpi py-3 min-w-125px">
+                                    <div class="text-muted small">عدد الصور</div>
+                                    <div class="fs-4 fw-bold text-primary">{{ number_format($imageAttachments->count()) }}</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-4">
+                                @forelse ($imageAttachments as $image)
+                                    <div class="col-xxl-3 col-xl-4 col-md-6">
+                                        <div class="photo-card">
+                                            @if ($image->url)
+                                                <a href="{{ $image->url }}" target="_blank" rel="noopener">
+                                                    <img src="{{ $image->url }}" alt="{{ $image->filename ?? 'HEKS photo' }}" loading="lazy">
+                                                </a>
+                                            @else
+                                                <div class="d-flex align-items-center justify-content-center bg-light text-muted" style="aspect-ratio: 4 / 3;">لا يوجد رابط صورة</div>
+                                            @endif
+                                            <div class="photo-card-body">
+                                                <div class="photo-card-title">{{ $image->filename ?? 'صورة بدون اسم' }}</div>
+                                                <div class="text-muted small mt-1">{{ $image->attachment_type ?? $image->source ?? '-' }}</div>
+                                                @if ($image->url)
+                                                    <a class="btn btn-sm btn-light-primary mt-3" href="{{ $image->url }}" target="_blank" rel="noopener">فتح الصورة</a>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="col-12">
+                                        <div class="border rounded p-6 text-muted text-center">لا توجد صور مرتبطة بهذا المستفيد.</div>
+                                    </div>
+                                @endforelse
+                            </div>
                     </div>
 
                     <div class="tab-pane fade" id="attachments" role="tabpanel">

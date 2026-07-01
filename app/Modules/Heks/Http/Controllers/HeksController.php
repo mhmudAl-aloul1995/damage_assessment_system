@@ -145,6 +145,7 @@ class HeksController extends Controller
             'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
             'rawDataSections' => $this->rawDataSections($beneficiary),
             'surveySections' => $this->surveySections($beneficiary),
+            'imageAttachments' => $this->imageAttachments($beneficiary),
             'scoringComponents' => $this->scoringComponents(),
             'priorityMatrix' => $this->priorityMatrix(),
             'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
@@ -1169,6 +1170,24 @@ class HeksController extends Controller
         }
 
         return $sections;
+    }
+
+    private function imageAttachments(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection
+    {
+        return $beneficiary->attachments
+            ->filter(function (HeksAttachment $attachment): bool {
+                $filename = mb_strtolower((string) $attachment->filename);
+                $url = mb_strtolower((string) $attachment->url);
+                $type = mb_strtolower((string) $attachment->attachment_type);
+
+                return preg_match('/\.(jpg|jpeg|png|webp|gif)(\?|$)/i', $filename) === 1
+                    || preg_match('/\.(jpg|jpeg|png|webp|gif)(\?|$)/i', $url) === 1
+                    || str_contains($type, 'image')
+                    || str_contains($type, 'photo')
+                    || str_contains($type, 'صورة')
+                    || str_contains($type, 'صور');
+            })
+            ->values();
     }
 
     /**

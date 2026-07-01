@@ -434,6 +434,33 @@ it('shows follow-up BOQ items directly on the follow-ups page', function () {
         ->assertSee('ترحيل BOQ من Excel');
 });
 
+it('shows beneficiary image attachments in a dedicated photos tab', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'IMG1',
+        'name' => 'Image Beneficiary',
+        'identity_number' => '900003333',
+    ]);
+
+    HeksAttachment::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'source' => 'group_lm1ok19',
+        'filename' => 'shelter-photo.jpg',
+        'url' => 'https://example.test/shelter-photo.jpg',
+        'attachment_type' => 'صور الوحدة السكنية',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.edit', $beneficiary))
+        ->assertOk()
+        ->assertSee('photo-card', false)
+        ->assertSee('shelter-photo.jpg')
+        ->assertSee('https://example.test/shelter-photo.jpg');
+});
+
 it('renders HEKS pagination with compact bootstrap controls', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
