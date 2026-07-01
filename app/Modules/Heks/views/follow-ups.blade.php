@@ -156,6 +156,8 @@
                                     @endif
                                     @if ($boqItemsCount > 0)
                                         <div class="fw-bold text-success small mt-1">{{ number_format($boqItemsCount) }} بند · {{ number_format($boqItemsTotal, 2) }} ILS</div>
+                                    @elseif ($boqImportFailed)
+                                        <div class="text-danger small text-break mt-1">{{ $boqImportSummary['error'] ?? 'تعذر استيراد ملف جدول الكميات.' }}</div>
                                     @elseif ($boqImported)
                                         <div class="text-muted small">{{ $boqImportSummary['imported_rows'] }} بند</div>
                                     @endif

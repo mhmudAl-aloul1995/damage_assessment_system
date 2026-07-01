@@ -237,12 +237,15 @@ class HeksSpreadsheetImportService
             ]
         );
 
+        $attachment->forceFill([
+            'filename' => $followUp->boq_filename ?: $attachment->filename,
+            'url' => $followUp->boq_url ?: $attachment->url,
+        ])->save();
+
         $summary = $this->importFollowUpBoqWorkbook($followUp->beneficiary, $followUp, $attachment);
 
         if ($summary !== null) {
             $attachment->forceFill([
-                'filename' => $followUp->boq_filename ?: $attachment->filename,
-                'url' => $followUp->boq_url ?: $attachment->url,
                 'raw_data' => array_merge($attachment->raw_data ?? [], ['boq_import_summary' => $summary]),
             ])->save();
         }

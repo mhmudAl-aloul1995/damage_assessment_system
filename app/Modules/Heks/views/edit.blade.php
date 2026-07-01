@@ -102,7 +102,7 @@
                 </div>
             @endforeach
         </div>
-
+الإستبيان
         <div class="card card-flush">
             <div class="card-body">
                 <ul class="nav nav-pills case-tabs gap-2 mb-6" role="tablist">
@@ -703,7 +703,7 @@
                                                 <div class="survey-progress-bar mt-3">
                                                     <div class="survey-progress-fill" style="width: {{ $completionPercent }}%"></div>
                                                 </div>
-                                            </div>
+                                            </diالإستبيان
                                         </div>
                                         <div class="d-flex align-items-center gap-2 flex-wrap">
                                             <span class="badge badge-light-primary">{{ number_format($answeredCount) }} / {{ number_format($itemsCount) }}</span>
