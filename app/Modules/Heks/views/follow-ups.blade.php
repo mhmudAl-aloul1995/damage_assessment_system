@@ -157,8 +157,10 @@
                                 </td>
                                 <td class="text-end follow-up-actions">
                                     <div class="d-flex justify-content-end gap-2">
-                                        @if ($followUp->beneficiary)
-                                            <a class="btn btn-sm btn-light-primary" href="{{ route('heks.beneficiaries.pricing', $followUp->beneficiary) }}">فتح جدول الكميات</a>
+                                        @if ($followUp->boqItems->isNotEmpty())
+                                            <a class="btn btn-sm btn-light-primary" href="{{ route('heks.follow-ups.boq', $followUp) }}">فتح BOQ الزيارة</a>
+                                        @elseif ($followUp->beneficiary)
+                                            <a class="btn btn-sm btn-light" href="{{ route('heks.beneficiaries.pricing', $followUp->beneficiary) }}">BOQ الأساسي</a>
                                         @endif
                                         <div class="dropdown">
                                             <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">خيارات الملف</button>

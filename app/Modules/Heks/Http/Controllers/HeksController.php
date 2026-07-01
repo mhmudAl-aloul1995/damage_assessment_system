@@ -131,7 +131,7 @@ class HeksController extends Controller
             'payments' => fn ($query) => $query->latest(),
             'workAssignments' => fn ($query) => $query->latest(),
             'attachments' => fn ($query) => $query->latest(),
-            'boqItems' => fn ($query) => $query->orderBy('section')->orderBy('item_code')->latest(),
+            'boqItems' => fn ($query) => $query->whereNull('heks_follow_up_id')->orderBy('section')->orderBy('item_code')->latest(),
         ]);
 
         return view('heks::edit', [
@@ -154,7 +154,7 @@ class HeksController extends Controller
     public function pricing(HeksBeneficiary $beneficiary): View
     {
         $this->authorizeAccess();
-        $beneficiary->load(['boqItems' => fn ($query) => $query->orderBy('section')->orderBy('item_code')->orderBy('id')]);
+        $beneficiary->load(['boqItems' => fn ($query) => $query->whereNull('heks_follow_up_id')->orderBy('section')->orderBy('item_code')->orderBy('id')]);
 
         return view('heks::pricing', [
             'beneficiary' => $beneficiary,
@@ -196,6 +196,7 @@ class HeksController extends Controller
                     [
                         'item_code' => $item['item_code'],
                         'description' => $item['description'],
+                        'heks_follow_up_id' => null,
                     ],
                     [
                         ...$item,
@@ -204,7 +205,7 @@ class HeksController extends Controller
                 );
             }
 
-            $beneficiary->boqItems()->get()->each(function (HeksBoqItem $item) use ($seen): void {
+            $beneficiary->boqItems()->whereNull('heks_follow_up_id')->get()->each(function (HeksBoqItem $item) use ($seen): void {
                 $key = sha1(($item->item_code ?? '').'|'.$item->description);
 
                 if (! in_array($key, $seen, true)) {
@@ -220,7 +221,10 @@ class HeksController extends Controller
 
     public function storeBoqItem(StoreHeksBoqItemRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
     {
-        $beneficiary->boqItems()->create($this->boqPayload($request->validated()));
+        $beneficiary->boqItems()->create($this->boqPayload([
+            ...$request->validated(),
+            'heks_follow_up_id' => null,
+        ]));
 
         return back()->with('success', 'تمت إضافة بند جدول الكميات.');
     }
@@ -272,7 +276,7 @@ class HeksController extends Controller
         $this->authorizeAccess();
 
         $query = HeksFollowUp::query()
-            ->with('beneficiary.attachments')
+            ->with(['beneficiary.attachments', 'boqItems'])
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $search = (string) $request->string('q');
                 $query->where(function ($query) use ($search): void {
@@ -335,6 +339,21 @@ class HeksController extends Controller
         $followUp->update($request->validated());
 
         return back()->with('success', 'تم تحديث المتابعة.');
+    }
+
+    public function followUpBoq(HeksFollowUp $followUp): View
+    {
+        $this->authorizeAccess();
+        $followUp->load([
+            'beneficiary',
+            'boqItems' => fn ($query) => $query->orderBy('section')->orderBy('item_code')->orderBy('id'),
+        ]);
+
+        return view('heks::follow-up-boq', [
+            'followUp' => $followUp,
+            'beneficiary' => $followUp->beneficiary,
+            'boqTotal' => (float) $followUp->boqItems->sum('total_price_ils'),
+        ]);
     }
 
     public function scores(): View

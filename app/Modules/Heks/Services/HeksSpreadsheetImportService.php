@@ -132,7 +132,7 @@ class HeksSpreadsheetImportService
     /**
      * @return array{total_rows: int, imported_rows: int, skipped_rows: int}
      */
-    public function importBeneficiaryBoq(UploadedFile $file, HeksBeneficiary $beneficiary): array
+    public function importBeneficiaryBoq(UploadedFile $file, HeksBeneficiary $beneficiary, ?HeksFollowUp $followUp = null): array
     {
         $spreadsheet = IOFactory::load($file->getRealPath());
         $sheet = $spreadsheet->getSheet(0);
@@ -142,7 +142,7 @@ class HeksSpreadsheetImportService
         $section = null;
         $source = $file->getClientOriginalName();
 
-        DB::transaction(function () use ($sheet, $headerRow, $beneficiary, $source, &$summary, &$section): void {
+        DB::transaction(function () use ($sheet, $headerRow, $beneficiary, $followUp, $source, &$summary, &$section): void {
             for ($row = $headerRow + 1; $row <= $sheet->getHighestDataRow(); $row++) {
                 $itemCode = $this->text($sheet->getCell([2, $row]));
                 $description = $this->text($sheet->getCell([3, $row]));
@@ -177,6 +177,7 @@ class HeksSpreadsheetImportService
                 HeksBoqItem::query()->updateOrCreate(
                     [
                         'heks_beneficiary_id' => $beneficiary->id,
+                        'heks_follow_up_id' => $followUp?->id,
                         'item_code' => $itemCode,
                         'description' => $description,
                     ],
@@ -190,6 +191,8 @@ class HeksSpreadsheetImportService
                         'raw_data' => [
                             'sheet' => $sheet->getTitle(),
                             'row' => $row,
+                            'boq_scope' => $followUp === null ? 'base' : 'follow_up',
+                            'follow_up_id' => $followUp?->id,
                         ],
                     ]
                 );
@@ -493,7 +496,7 @@ class HeksSpreadsheetImportService
         $attachment = $this->followUpBoqAttachment($beneficiary, $followUp, $row, $source);
 
         if ($attachment !== null) {
-            $summary = $this->importFollowUpBoqWorkbook($beneficiary, $attachment);
+            $summary = $this->importFollowUpBoqWorkbook($beneficiary, $followUp, $attachment);
 
             if ($summary !== null) {
                 $attachment->forceFill([
@@ -538,7 +541,7 @@ class HeksSpreadsheetImportService
     /**
      * @return array<string, mixed>|null
      */
-    private function importFollowUpBoqWorkbook(HeksBeneficiary $beneficiary, HeksAttachment $attachment): ?array
+    private function importFollowUpBoqWorkbook(HeksBeneficiary $beneficiary, HeksFollowUp $followUp, HeksAttachment $attachment): ?array
     {
         if (! $this->isExcelAttachment((string) $attachment->filename, (string) $attachment->url)) {
             return null;
@@ -570,7 +573,8 @@ class HeksSpreadsheetImportService
                 ['imported' => true],
                 $this->importBeneficiaryBoq(
                     new UploadedFile($temporaryPath, (string) $attachment->filename, null, null, true),
-                    $beneficiary
+                    $beneficiary,
+                    $followUp
                 )
             );
         } catch (Throwable $exception) {

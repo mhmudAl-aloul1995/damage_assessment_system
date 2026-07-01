@@ -9,6 +9,7 @@ class HeksBoqItem extends Model
 {
     protected $fillable = [
         'heks_beneficiary_id',
+        'heks_follow_up_id',
         'source',
         'section',
         'item_code',
@@ -26,10 +27,16 @@ class HeksBoqItem extends Model
         return $this->belongsTo(HeksBeneficiary::class, 'heks_beneficiary_id');
     }
 
+    public function followUp(): BelongsTo
+    {
+        return $this->belongsTo(HeksFollowUp::class, 'heks_follow_up_id');
+    }
+
     protected function casts(): array
     {
         return [
             'heks_beneficiary_id' => 'integer',
+            'heks_follow_up_id' => 'integer',
             'quantity' => 'decimal:3',
             'unit_price_ils' => 'decimal:2',
             'total_price_ils' => 'decimal:2',

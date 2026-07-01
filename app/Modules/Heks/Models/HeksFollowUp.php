@@ -4,6 +4,7 @@ namespace App\Modules\Heks\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HeksFollowUp extends Model
 {
@@ -26,6 +27,11 @@ class HeksFollowUp extends Model
     public function beneficiary(): BelongsTo
     {
         return $this->belongsTo(HeksBeneficiary::class, 'heks_beneficiary_id');
+    }
+
+    public function boqItems(): HasMany
+    {
+        return $this->hasMany(HeksBoqItem::class, 'heks_follow_up_id');
     }
 
     protected function casts(): array

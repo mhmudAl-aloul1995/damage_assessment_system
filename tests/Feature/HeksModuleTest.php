@@ -62,11 +62,12 @@ it('imports and manages the HEKS operational workbook', function () {
             ->and(HeksWorkAssignment::query()->count())->toBe(1)
             ->and(HeksAttachment::query()->count())->toBe(2)
             ->and(HeksAttachment::query()->where('attachment_type', 'follow_up_boq')->where('filename', 'boq.xlsx')->exists())->toBeTrue()
-            ->and(HeksBoqItem::query()->where('source', 'boq.xlsx')->count())->toBe(1)
+            ->and(HeksBoqItem::query()->where('source', 'boq.xlsx')->whereNotNull('heks_follow_up_id')->count())->toBe(1)
             ->and(HeksScoringWeight::query()->count())->toBeGreaterThan(0)
             ->and(HeksFollowUp::query()->count())->toBe(1);
 
         $beneficiary = HeksBeneficiary::query()->where('code', 'DGN1')->sole();
+        $followUp = HeksFollowUp::query()->where('code', 'DGN1')->sole();
 
         expect($beneficiary->name)->toBe('Test Beneficiary')
             ->and((float) $beneficiary->grant_amount)->toBe(1200.0)
@@ -135,11 +136,19 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('جدول الكميات BOQ')
             ->assertSee('boq.xlsx')
             ->assertSee('https://example.test/boq.xlsx')
-            ->assertSee('فتح جدول الكميات')
+            ->assertSee('فتح BOQ الزيارة')
             ->assertSee('خيارات الملف')
             ->assertSee('تحميل Excel الأصلي')
             ->assertSee('فتح رابط KoBo')
             ->assertSee('تم استيراد البنود');
+
+        $this->actingAs($user)
+            ->get(route('heks.follow-ups.boq', $followUp))
+            ->assertOk()
+            ->assertSee('جدول كميات زيارة المتابعة')
+            ->assertSee('BOQ الأساسي')
+            ->assertSee('توريد و بناء بلوك اسمنتي')
+            ->assertSee('1,220.00');
 
         $this->actingAs($user)
             ->get(route('heks.beneficiaries.edit', $beneficiary))
@@ -164,7 +173,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSessionHasNoErrors()
             ->assertRedirect();
 
-        expect(HeksBoqItem::query()->where('source', 'beneficiary-boq.xlsx')->count())->toBe(1)
+        expect(HeksBoqItem::query()->where('source', 'beneficiary-boq.xlsx')->whereNull('heks_follow_up_id')->count())->toBe(1)
             ->and((float) HeksBoqItem::query()->where('source', 'beneficiary-boq.xlsx')->value('total_price_ils'))->toBe(1220.0);
 
         $this->actingAs($user)
@@ -202,7 +211,7 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('heks.beneficiaries.pricing', $beneficiary));
 
-        expect((float) HeksBoqItem::query()->where('description', 'توريد و بناء بلوك اسمنتي')->value('total_price_ils'))->toBe(2440.0);
+        expect((float) HeksBoqItem::query()->whereNull('heks_follow_up_id')->where('description', 'توريد و بناء بلوك اسمنتي')->value('total_price_ils'))->toBe(2440.0);
 
         $this->actingAs($user)
             ->post(route('heks.beneficiaries.boq-items.store', $beneficiary), [
