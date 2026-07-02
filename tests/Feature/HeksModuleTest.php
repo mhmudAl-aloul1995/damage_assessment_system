@@ -354,6 +354,49 @@ it('hides and blocks HEKS for non database officers', function () {
         ->assertForbidden();
 });
 
+it('shows HEKS BOQ pricing as grouped catalog sections', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'BOQ1',
+        'name' => 'BOQ Beneficiary',
+        'identity_number' => '900004444',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.pricing', $beneficiary))
+        ->assertOk()
+        ->assertSee('pricingSectionFilter', false)
+        ->assertSee('pricing-section-row', false)
+        ->assertSee('data-section-header', false)
+        ->assertSee('items[0][notes]', false);
+
+    $this->actingAs($user)
+        ->put(route('heks.beneficiaries.pricing.update', $beneficiary), [
+            'items' => [
+                [
+                    'source' => 'pricing',
+                    'section' => 'اعمال البلوك',
+                    'item_code' => '3.1',
+                    'description' => 'توريد و بناء بلوك اسمنتي',
+                    'unit' => 'M2',
+                    'quantity' => 2,
+                    'unit_price_ils' => 610,
+                    'notes' => 'حسب نموذج BOQ KoBo',
+                ],
+            ],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('heks.beneficiaries.pricing', $beneficiary));
+
+    $item = HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect((float) $item->total_price_ils)->toBe(1220.0)
+        ->and($item->notes)->toBe('حسب نموذج BOQ KoBo');
+});
+
 it('updates HEKS survey values and stores previous values in history', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

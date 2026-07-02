@@ -201,11 +201,21 @@ class HeksController extends Controller
     {
         $this->authorizeAccess();
         $beneficiary->load(['boqItems' => fn ($query) => $query->whereNull('heks_follow_up_id')->orderBy('section')->orderBy('item_code')->orderBy('id')]);
+        $pricingRows = $this->heksPricingRows($beneficiary);
 
         return view('heks::pricing', [
             'beneficiary' => $beneficiary,
-            'pricingRows' => $this->heksPricingRows($beneficiary),
+            'pricingRows' => $pricingRows,
             'boqTotal' => (float) $beneficiary->boqItems->sum('total_price_ils'),
+            'pricingSections' => $pricingRows
+                ->groupBy('section')
+                ->map(fn (\Illuminate\Support\Collection $rows, string $section): array => [
+                    'section' => $section !== '' ? $section : 'بدون قسم',
+                    'items_count' => $rows->count(),
+                    'priced_count' => $rows->filter(fn (array $row): bool => (float) $row['quantity'] > 0)->count(),
+                    'total' => (float) $rows->sum('total_price_ils'),
+                ])
+                ->values(),
         ]);
     }
 

@@ -14,15 +14,19 @@
         .heks-pricing-page .pricing-table thead th { background: var(--bs-body-bg); position: sticky; top: 0; z-index: 1; }
         .heks-pricing-page .pricing-table tbody tr.is-priced-row { background: rgba(var(--bs-success-rgb), .035); }
         .heks-pricing-page .pricing-table tbody tr.is-hidden-by-filter { display: none; }
+        .heks-pricing-page .pricing-table tbody tr.pricing-section-row { background: #f8fbff; }
+        .heks-pricing-page .pricing-table tbody tr.pricing-section-row.is-hidden-by-filter { display: none; }
         .heks-pricing-page .pricing-table-wrap { border: 1px solid var(--bs-gray-200); border-radius: .75rem; max-height: calc(100vh - 18rem); overflow: auto; }
         .heks-pricing-page .pricing-save-bar { bottom: 1rem; box-shadow: 0 .65rem 1.75rem rgba(15, 23, 42, .08); position: sticky; z-index: 2; }
         .heks-pricing-page .pricing-col-code { width: 88px; }
         .heks-pricing-page .pricing-col-section { width: 150px; }
-        .heks-pricing-page .pricing-col-item { width: 38%; }
+        .heks-pricing-page .pricing-col-item { width: 34%; }
         .heks-pricing-page .pricing-col-unit { width: 80px; }
         .heks-pricing-page .pricing-col-money { width: 130px; }
         .heks-pricing-page .pricing-col-quantity { width: 105px; }
+        .heks-pricing-page .pricing-col-notes { width: 180px; }
         .heks-pricing-page .pricing-item-description { line-height: 1.55; overflow-wrap: anywhere; }
+        .heks-pricing-page .pricing-section-strip { border-inline-start: 4px solid var(--bs-primary); padding: .75rem 1rem; }
     </style>
 
     @php
@@ -92,6 +96,12 @@
                     <div class="pricing-tools d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4 mb-4">
                         <div class="d-flex flex-column flex-md-row gap-3 flex-grow-1">
                             <input type="search" class="form-control" id="pricingSearchInput" placeholder="بحث بالكود أو اسم البند أو القسم">
+                            <select class="form-select" id="pricingSectionFilter" aria-label="فلترة القسم">
+                                <option value="">كل الأقسام</option>
+                                @foreach ($pricingSections as $section)
+                                    <option value="{{ md5($section['section']) }}">{{ $section['section'] }}</option>
+                                @endforeach
+                            </select>
                             <label class="form-check form-switch form-check-custom form-check-solid align-items-center">
                                 <input class="form-check-input" type="checkbox" value="1" id="pricingActiveOnlyToggle">
                                 <span class="form-check-label text-muted">عرض البنود المسعّرة فقط</span>
@@ -110,6 +120,7 @@
                                 <col class="pricing-col-money">
                                 <col class="pricing-col-quantity">
                                 <col class="pricing-col-money">
+                                <col class="pricing-col-notes">
                             </colgroup>
                             <thead>
                             <tr class="fw-bold text-muted">
@@ -124,7 +135,32 @@
                             </thead>
                             <tbody>
                             @forelse ($pricingRows as $index => $row)
-                                <tr data-pricing-row data-search-text="{{ Str::lower($row['item_code'].' '.$row['section'].' '.$row['description'].' '.$row['unit']) }}">
+                                @php
+                                    $sectionName = $row['section'] ?: 'بدون قسم';
+                                    $sectionKey = md5($sectionName);
+                                    $previousSection = $pricingRows[$index - 1]['section'] ?? null;
+                                @endphp
+                                @if ($index === 0 || $previousSection !== $row['section'])
+                                    @php
+                                        $sectionSummary = $pricingSections->firstWhere('section', $sectionName);
+                                    @endphp
+                                    <tr class="pricing-section-row" data-section-header="{{ $sectionKey }}">
+                                        <td colspan="8">
+                                            <div class="pricing-section-strip d-flex flex-column flex-md-row justify-content-between gap-2">
+                                                <div>
+                                                    <div class="fw-bold text-gray-800">{{ $sectionName }}</div>
+                                                    <div class="text-muted small">أدخل الكميات المطلوبة فقط، واترك باقي البنود فارغة أو صفر.</div>
+                                                </div>
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    <span class="badge badge-light-primary">{{ number_format($sectionSummary['items_count'] ?? 0) }} بند</span>
+                                                    <span class="badge badge-light-success">{{ number_format($sectionSummary['priced_count'] ?? 0) }} مسعر</span>
+                                                    <span class="badge badge-light">{{ number_format((float) ($sectionSummary['total'] ?? 0), 2) }} ILS</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endif
+                                <tr data-pricing-row data-section-key="{{ $sectionKey }}" data-search-text="{{ Str::lower($row['item_code'].' '.$row['section'].' '.$row['description'].' '.$row['unit']) }}">
                                     <td>
                                         <input type="hidden" name="items[{{ $index }}][source]" value="{{ $row['source'] }}">
                                         <input type="text" name="items[{{ $index }}][item_code]" value="{{ $row['item_code'] }}" class="form-control form-control-sm form-control-solid">
@@ -138,9 +174,10 @@
                                     <td><input type="text" inputmode="decimal" name="items[{{ $index }}][unit_price_ils]" value="{{ $row['unit_price_ils'] }}" class="form-control form-control-sm pricing-number" data-unit-price dir="ltr"></td>
                                     <td><input type="text" inputmode="decimal" name="items[{{ $index }}][quantity]" value="{{ $row['quantity'] }}" class="form-control form-control-sm pricing-number" data-quantity dir="ltr"></td>
                                     <td class="fw-bold pricing-number text-success" data-row-total>{{ number_format((float) $row['total_price_ils'], 2) }}</td>
+                                    <td><input type="text" name="items[{{ $index }}][notes]" value="{{ $row['notes'] }}" class="form-control form-control-sm" placeholder="ملاحظة"></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="7" class="text-center text-muted py-10">لا توجد بنود BOQ بعد.</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted py-10">لا توجد بنود BOQ بعد.</td></tr>
                             @endforelse
                             </tbody>
                         </table>
@@ -169,23 +206,34 @@
             const activeCount = document.getElementById('pricingActiveCount');
             const visibleCount = document.getElementById('pricingVisibleCount');
             const searchInput = document.getElementById('pricingSearchInput');
+            const sectionFilter = document.getElementById('pricingSectionFilter');
             const activeOnlyToggle = document.getElementById('pricingActiveOnlyToggle');
 
             function normalize(value) { return String(value || '').trim().toLowerCase(); }
 
             function applyFilters() {
                 const searchTerm = normalize(searchInput?.value);
+                const selectedSection = sectionFilter?.value || '';
                 const activeOnly = Boolean(activeOnlyToggle?.checked);
+                const visibleSections = new Set();
                 let visible = 0;
 
                 document.querySelectorAll('[data-pricing-row]').forEach((row) => {
                     const quantity = Number(row.querySelector('[data-quantity]')?.value || 0);
                     const matchesSearch = !searchTerm || normalize(row.dataset.searchText).includes(searchTerm);
+                    const matchesSection = !selectedSection || row.dataset.sectionKey === selectedSection;
                     const matchesActive = !activeOnly || quantity > 0;
-                    const isVisible = matchesSearch && matchesActive;
+                    const isVisible = matchesSearch && matchesSection && matchesActive;
 
                     row.classList.toggle('is-hidden-by-filter', !isVisible);
-                    if (isVisible) visible += 1;
+                    if (isVisible) {
+                        visible += 1;
+                        visibleSections.add(row.dataset.sectionKey);
+                    }
+                });
+
+                document.querySelectorAll('[data-section-header]').forEach((row) => {
+                    row.classList.toggle('is-hidden-by-filter', !visibleSections.has(row.dataset.sectionHeader));
                 });
 
                 if (visibleCount) visibleCount.textContent = countFormatter.format(visible);
@@ -216,6 +264,7 @@
                 if (event.target.matches('[data-unit-price], [data-quantity]')) recalculate();
             });
             searchInput?.addEventListener('input', applyFilters);
+            sectionFilter?.addEventListener('change', applyFilters);
             activeOnlyToggle?.addEventListener('change', applyFilters);
             recalculate();
         })();
