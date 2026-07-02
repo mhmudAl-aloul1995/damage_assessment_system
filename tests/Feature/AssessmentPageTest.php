@@ -1151,6 +1151,46 @@ it('can undo a scheduled housing unit deletion before it is committed', function
     ]);
 });
 
+it('allows auditing supervisors to schedule and undo housing unit deletion', function () {
+    Role::query()->create([
+        'name' => 'Auditing Supervisor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole('Auditing Supervisor');
+
+    $building = Building::query()->create([
+        'objectid' => 9655,
+        'globalid' => 'supervisor-housing-delete-building',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 9656,
+        'globalid' => 'supervisor-housing-delete-unit',
+        'parentglobalid' => $building->globalid,
+    ]);
+
+    $schedule = $this->actingAs($user)
+        ->postJson(route('housing.assessment.delete.schedule'), [
+            'globalids' => [$housing->globalid],
+            'mode' => 'database',
+            'building_globalid' => $building->globalid,
+        ])
+        ->assertOk()
+        ->json();
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.delete.undo'), [
+            'token' => $schedule['token'],
+        ])
+        ->assertOk();
+
+    $this->assertDatabaseHas('housing_units', [
+        'globalid' => $housing->globalid,
+    ]);
+});
+
 it('commits scheduled housing unit database deletion and removes related audit records', function () {
     Role::query()->create([
         'name' => 'Database Officer',

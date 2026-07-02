@@ -794,14 +794,14 @@
                                                 class="dropdown-item"
                                                 onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
                                             @endhasanyrole
-                                            @hasrole('Database Officer')
+                                            @hasanyrole('Database Officer|Auditing Supervisor')
                                             <button type="button" class="dropdown-item text-danger"
                                                 onclick="scheduleHousingUnitsDeletion('database')">حذف الوحدات المحددة من قاعدة البيانات</button>
                                             <button type="button" class="dropdown-item text-danger"
                                                 onclick="scheduleHousingUnitsDeletion('arcgis')">حذف الوحدات المحددة من ArcGIS</button>
                                             <button type="button" class="dropdown-item text-danger"
                                                 onclick="scheduleHousingUnitsDeletion('both')">حذف الوحدات المحددة من قاعدة البيانات و ArcGIS</button>
-                                            @endhasrole
+                                            @endhasanyrole
                                             @endif
                                             <button type="button" class="dropdown-item"
                                                 onclick="reloadBuildingUnitsTable()">تحديث</button>
