@@ -8,6 +8,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/imports', [HeksController::class, 'imports'])->name('heks.imports');
     Route::post('/imports/preview', [HeksController::class, 'preview'])->name('heks.imports.preview');
     Route::post('/imports', [HeksController::class, 'import'])->name('heks.imports.store');
+    Route::get('/pricing-catalog', [HeksController::class, 'pricingCatalog'])->name('heks.pricing-catalog');
+    Route::post('/pricing-catalog', [HeksController::class, 'storePricingCatalogItem'])->name('heks.pricing-catalog.store');
+    Route::put('/pricing-catalog/{catalogItem}', [HeksController::class, 'updatePricingCatalogItem'])->name('heks.pricing-catalog.update');
+    Route::delete('/pricing-catalog/{catalogItem}', [HeksController::class, 'destroyPricingCatalogItem'])->name('heks.pricing-catalog.destroy');
     Route::get('/beneficiaries', [HeksController::class, 'beneficiaries'])->name('heks.beneficiaries');
     Route::get('/beneficiaries/{beneficiary}/edit', [HeksController::class, 'edit'])->name('heks.beneficiaries.edit');
     Route::put('/beneficiaries/{beneficiary}', [HeksController::class, 'update'])->name('heks.beneficiaries.update');

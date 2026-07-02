@@ -412,6 +412,62 @@ it('shows HEKS BOQ pricing as grouped catalog sections', function () {
     expect(HeksBoqItem::query()->whereKey($item->id)->exists())->toBeFalse();
 });
 
+it('manages the HEKS BOQ pricing catalog', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('heks.pricing-catalog'))
+        ->assertOk()
+        ->assertSee('جدول التسعير')
+        ->assertSee('إضافة بند تسعير');
+
+    $this->actingAs($user)
+        ->post(route('heks.pricing-catalog.store'), [
+            'section' => 'أعمال اختبار',
+            'item_code' => '99.1',
+            'description' => 'بند تسعير قابل للتعديل',
+            'unit' => 'M2',
+            'unit_price_ils' => 125.5,
+            'notes' => 'ملاحظة كتالوج',
+            'is_active' => 1,
+            'sort_order' => 99,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $catalogItem = \App\Modules\Heks\Models\HeksBoqCatalogItem::query()
+        ->where('item_code', '99.1')
+        ->sole();
+
+    expect((float) $catalogItem->unit_price_ils)->toBe(125.5);
+
+    $this->actingAs($user)
+        ->put(route('heks.pricing-catalog.update', $catalogItem), [
+            'section' => 'أعمال اختبار محدثة',
+            'item_code' => '99.2',
+            'description' => 'بند تسعير بعد التعديل',
+            'unit' => 'عدد',
+            'unit_price_ils' => 200,
+            'notes' => 'تم التعديل',
+            'sort_order' => 100,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    expect($catalogItem->refresh()->is_active)->toBeFalse()
+        ->and($catalogItem->item_code)->toBe('99.2')
+        ->and((float) $catalogItem->unit_price_ils)->toBe(200.0);
+
+    $this->actingAs($user)
+        ->delete(route('heks.pricing-catalog.destroy', $catalogItem))
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    expect(\App\Modules\Heks\Models\HeksBoqCatalogItem::query()->whereKey($catalogItem->id)->exists())->toBeFalse();
+});
+
 it('updates HEKS survey values and stores previous values in history', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

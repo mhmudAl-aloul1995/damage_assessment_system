@@ -5,8 +5,10 @@ namespace App\Modules\Heks\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Heks\Http\Requests\ImportHeksBoqItemsRequest;
 use App\Modules\Heks\Http\Requests\ImportHeksSpreadsheetRequest;
+use App\Modules\Heks\Http\Requests\StoreHeksBoqCatalogItemRequest;
 use App\Modules\Heks\Http\Requests\StoreHeksBoqItemRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksBeneficiaryRequest;
+use App\Modules\Heks\Http\Requests\UpdateHeksBoqCatalogItemRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksBoqItemRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksBoqPricingRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksFollowUpRequest;
@@ -15,6 +17,7 @@ use App\Modules\Heks\Http\Requests\UpdateHeksScoreRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksSurveyValueRequest;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
+use App\Modules\Heks\Models\HeksBoqCatalogItem;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksImport;
@@ -273,6 +276,48 @@ class HeksController extends Controller
         return redirect()
             ->route('heks.beneficiaries.pricing', $beneficiary)
             ->with('success', 'تم حفظ تسعير جدول الكميات بنجاح.');
+    }
+
+    public function pricingCatalog(): View
+    {
+        $this->authorizeAccess();
+        $this->ensureBoqCatalogSeeded();
+
+        $items = HeksBoqCatalogItem::query()
+            ->orderBy('sort_order')
+            ->orderBy('section')
+            ->orderBy('item_code')
+            ->get();
+
+        return view('heks::pricing-catalog', [
+            'items' => $items,
+            'sections' => $items->pluck('section')->filter()->unique()->sort()->values(),
+            'units' => $items->pluck('unit')->filter()->unique()->sort()->values(),
+            'activeCount' => $items->where('is_active', true)->count(),
+            'totalItems' => $items->count(),
+        ]);
+    }
+
+    public function storePricingCatalogItem(StoreHeksBoqCatalogItemRequest $request): RedirectResponse
+    {
+        HeksBoqCatalogItem::query()->create($this->catalogPayload($request->validated()));
+
+        return back()->with('success', 'تمت إضافة بند إلى جدول التسعير.');
+    }
+
+    public function updatePricingCatalogItem(UpdateHeksBoqCatalogItemRequest $request, HeksBoqCatalogItem $catalogItem): RedirectResponse
+    {
+        $catalogItem->update($this->catalogPayload($request->validated()));
+
+        return back()->with('success', 'تم تحديث بند جدول التسعير.');
+    }
+
+    public function destroyPricingCatalogItem(HeksBoqCatalogItem $catalogItem): RedirectResponse
+    {
+        $this->authorizeAccess();
+        $catalogItem->delete();
+
+        return back()->with('success', 'تم حذف بند من جدول التسعير.');
     }
 
     public function storeBoqItem(StoreHeksBoqItemRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
@@ -556,18 +601,59 @@ class HeksController extends Controller
 
     private function boqCatalog(): \Illuminate\Support\Collection
     {
-        $savedItems = HeksBoqItem::query()
-            ->select(['section', 'item_code', 'description', 'unit', 'unit_price_ils'])
-            ->whereNotNull('description')
+        $this->ensureBoqCatalogSeeded();
+
+        return HeksBoqCatalogItem::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('section')
+            ->orderBy('item_code')
             ->get()
-            ->map(fn (HeksBoqItem $item): array => [
+            ->map(fn (HeksBoqCatalogItem $item): array => [
                 'section' => (string) $item->section,
                 'item_code' => (string) $item->item_code,
                 'description' => (string) $item->description,
                 'unit' => (string) $item->unit,
                 'unit_price_ils' => (float) $item->unit_price_ils,
-            ]);
+            ])
+            ->values();
+    }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function catalogPayload(array $data): array
+    {
+        return [
+            'section' => $data['section'] ?? null,
+            'item_code' => $data['item_code'] ?? null,
+            'description' => (string) $data['description'],
+            'unit' => $data['unit'] ?? null,
+            'unit_price_ils' => (float) ($data['unit_price_ils'] ?? 0),
+            'notes' => $data['notes'] ?? null,
+            'is_active' => (bool) ($data['is_active'] ?? false),
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+        ];
+    }
+
+    private function ensureBoqCatalogSeeded(): void
+    {
+        if (HeksBoqCatalogItem::query()->exists()) {
+            return;
+        }
+
+        foreach ($this->defaultBoqCatalogItems() as $index => $item) {
+            HeksBoqCatalogItem::query()->create([
+                ...$item,
+                'is_active' => true,
+                'sort_order' => $index + 1,
+            ]);
+        }
+    }
+
+    private function defaultBoqCatalogItems(): \Illuminate\Support\Collection
+    {
         return collect([
             ['section' => 'أعمال الازالة', 'item_code' => '1.1', 'description' => 'أعمال هدم وإزالة أنقاض جدران من البلوك الاسمنتي أو أجزائها الخرسانية', 'unit' => 'm3', 'unit_price_ils' => 113],
             ['section' => 'أعمال الازالة', 'item_code' => '1.2', 'description' => 'أعمال إزالة أنقاض فقط أي كانت محتوياتها وسواء كانت داخل المنزل أو خارجه', 'unit' => 'm3', 'unit_price_ils' => 97],
@@ -584,9 +670,6 @@ class HeksController extends Controller
             ['section' => 'السباكة', 'item_code' => '11.1', 'description' => 'توريد وتركيب مغسلة بورسلان مقاس 50 سم', 'unit' => 'عدد', 'unit_price_ils' => 435],
             ['section' => 'الجبس', 'item_code' => '12.1', 'description' => 'توريد وتركيب قواطع من ألواح الجبس', 'unit' => 'M2', 'unit_price_ils' => 565],
         ])
-            ->merge($savedItems)
-            ->unique(fn (array $item): string => $item['item_code'].'|'.$item['description'])
-            ->sortBy('item_code')
             ->values();
     }
 
