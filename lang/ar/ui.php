@@ -512,6 +512,8 @@ return [
         'owner_id' => 'رقم هوية المالك',
         'owner_id_placeholder' => 'أدخل رقم هوية المالك',
         'object_id' => 'Object ID',
+        'submission_date_from' => 'تاريخ الإرسال من',
+        'submission_date_to' => 'تاريخ الإرسال إلى',
         'object_id_placeholder' => 'أدخل Object ID للوحدة',
         'first_name' => 'الاسم الأول',
         'last_name' => 'اسم العائلة',

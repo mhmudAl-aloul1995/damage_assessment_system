@@ -533,6 +533,8 @@ return [
         'owner_id_placeholder' => 'Enter owner ID',
         'object_id' => 'Object ID',
         'object_id_placeholder' => 'Enter unit Object ID',
+        'submission_date_from' => 'Submission date from',
+        'submission_date_to' => 'Submission date to',
         'first_name' => 'First name',
         'last_name' => 'Last name',
         'filter_section_unit' => 'Unit information and damage',

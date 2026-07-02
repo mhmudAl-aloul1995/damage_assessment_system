@@ -310,6 +310,32 @@ class HousingUnitController extends Controller
                 $query->where($field, '<=', $to);
             }
         }
+
+        $submissionDateColumn = $this->housingSubmissionDateColumn();
+
+        if ($submissionDateColumn !== null) {
+            $from = $filters['submission_date_from'] ?? null;
+            $to = $filters['submission_date_to'] ?? null;
+
+            if ($from !== null && $from !== '') {
+                $query->whereDate($submissionDateColumn, '>=', $from);
+            }
+
+            if ($to !== null && $to !== '') {
+                $query->whereDate($submissionDateColumn, '<=', $to);
+            }
+        }
+    }
+
+    private function housingSubmissionDateColumn(): ?string
+    {
+        foreach (['submition_date', 'submission_date', 'submissiondate', 'building_submit_date'] as $column) {
+            if (Schema::hasColumn('housing_units', $column)) {
+                return $column;
+            }
+        }
+
+        return null;
     }
 
     /**

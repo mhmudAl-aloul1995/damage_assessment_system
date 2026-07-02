@@ -158,6 +158,45 @@ it('filters housing unit datatable records by housing unit objectid', function (
     $response->assertDontSee('13');
 });
 
+it('filters housing unit datatable records by submission date range', function () {
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3101,
+        'globalid' => 'housing-unit-submission-date-inside',
+        'housing_unit_number' => '21',
+        'q_9_3_1_first_name' => 'Inside',
+        'q_9_3_4_last_name' => 'Range',
+        'building_submit_date' => '2026-06-15 09:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3102,
+        'globalid' => 'housing-unit-submission-date-outside',
+        'housing_unit_number' => '22',
+        'q_9_3_1_first_name' => 'Outside',
+        'q_9_3_4_last_name' => 'Range',
+        'building_submit_date' => '2026-06-30 09:00:00',
+    ]);
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'submission_date_from' => '2026-06-01',
+            'submission_date_to' => '2026-06-20',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/housing/show?'.$query);
+
+    $response->assertOk();
+    $response->assertJsonPath('recordsFiltered', 1);
+    $response->assertSee('Inside Range');
+    $response->assertDontSee('Outside Range');
+});
+
 function seedHousingFilterOptions(): void
 {
     collect([

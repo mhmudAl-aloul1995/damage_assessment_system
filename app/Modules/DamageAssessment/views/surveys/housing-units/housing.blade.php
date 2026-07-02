@@ -78,6 +78,14 @@
                         <label class="form-label">{{ __('ui.housing_page.object_id') }}</label>
                         <input type="text" name="filters[objectid]" class="form-control form-control-solid housing-filter-control" placeholder="{{ __('ui.housing_page.object_id_placeholder') }}">
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">{{ __('ui.housing_page.submission_date_from') }}</label>
+                        <input type="text" name="filters[submission_date_from]" class="form-control form-control-solid housing-filter-control housing-date-filter" placeholder="yyyy-mm-dd">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">{{ __('ui.housing_page.submission_date_to') }}</label>
+                        <input type="text" name="filters[submission_date_to]" class="form-control form-control-solid housing-filter-control housing-date-filter" placeholder="yyyy-mm-dd">
+                    </div>
                     <div class="col-md-3 d-flex gap-2">
                         <button type="submit" class="btn btn-primary flex-grow-1" data-kt-Housing-table-filter="filter">
                             <span class="indicator-label">{{ __('ui.housing_page.search') }}</span>
@@ -218,6 +226,7 @@
                 const initialSearch = initialQueryParams.get('search'); if (initialSearch) { const input = document.querySelector('[data-kt-Housing-table-filter="search"]'); if (input) input.value = initialSearch; datatable.search(initialSearch).draw(); }
             };
             const bindEvents = function () {
+                if (typeof flatpickr !== 'undefined') { flatpickr('.housing-date-filter', { dateFormat: 'Y-m-d', allowInput: true }); }
                 const search = document.querySelector('[data-kt-Housing-table-filter="search"]'); if (search) search.addEventListener('keyup', function (event) { datatable.search(event.target.value).draw(); });
                 if (filterForm) { filterForm.addEventListener('submit', function (event) { event.preventDefault(); const button = filterForm.querySelector('[data-kt-Housing-table-filter="filter"]'); button.setAttribute('data-kt-indicator', 'on'); button.disabled = true; datatable.ajax.reload(function () { button.removeAttribute('data-kt-indicator'); button.disabled = false; activeFilterChips(); }, true); }); $(filterForm).find('select').on('change', activeFilterChips); }
                 const reset = document.querySelector('[data-kt-housing-filter-action="reset"]'); if (reset) reset.addEventListener('click', function () { $(filterForm).find('select').val('').trigger('change'); $(filterForm).find('input').val(''); datatable.search('').ajax.reload(); activeFilterChips(); });
