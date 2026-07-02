@@ -794,6 +794,14 @@
                                                 class="dropdown-item"
                                                 onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
                                             @endhasanyrole
+                                            @hasrole('Database Officer')
+                                            <button type="button" class="dropdown-item text-danger"
+                                                onclick="scheduleHousingUnitsDeletion('database')">حذف الوحدات المحددة من قاعدة البيانات</button>
+                                            <button type="button" class="dropdown-item text-danger"
+                                                onclick="scheduleHousingUnitsDeletion('arcgis')">حذف الوحدات المحددة من ArcGIS</button>
+                                            <button type="button" class="dropdown-item text-danger"
+                                                onclick="scheduleHousingUnitsDeletion('both')">حذف الوحدات المحددة من قاعدة البيانات و ArcGIS</button>
+                                            @endhasrole
                                             @endif
                                             <button type="button" class="dropdown-item"
                                                 onclick="reloadBuildingUnitsTable()">تحديث</button>
@@ -1935,6 +1943,167 @@
 
         function getSelectedHousingGlobalIds() {
             return Array.from(selectedHousingGlobalIds);
+        }
+
+        const pendingHousingDeletionTimers = {};
+
+        function housingDeletionModeLabel(mode) {
+            return {
+                database: 'قاعدة البيانات',
+                arcgis: 'ArcGIS',
+                both: 'قاعدة البيانات و ArcGIS'
+            }[mode] || mode;
+        }
+
+        function removeHousingRowsFromCurrentTable(globalIds) {
+            if (!$.fn.DataTable.isDataTable('#housing_table')) return;
+
+            let table = $('#housing_table').DataTable();
+            table
+                .rows(function (idx, data) {
+                    return data && globalIds.includes(data.globalid);
+                })
+                .remove()
+                .draw(false);
+        }
+
+        function showHousingDeletionUndo(token, globalIds, seconds) {
+            let alertId = 'housing_delete_undo_' + token;
+            let alert = $(`
+                <div id="${alertId}" class="alert alert-warning d-flex align-items-center justify-content-between gap-3 mt-3">
+                    <div>
+                        <div class="fw-bold">سيتم حذف ${globalIds.length} وحدة خلال <span class="housing-delete-countdown">${seconds}</span> ثانية.</div>
+                        <div class="small text-muted">يمكنك التراجع قبل انتهاء الوقت.</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-light-primary">تراجع</button>
+                </div>
+            `);
+
+            $('#housing_active_delete_alerts').remove();
+            $('#tab_housing .card-body').first().prepend('<div id="housing_active_delete_alerts"></div>');
+            $('#housing_active_delete_alerts').append(alert);
+
+            let remaining = seconds;
+            let countdown = setInterval(function () {
+                remaining -= 1;
+                alert.find('.housing-delete-countdown').text(Math.max(remaining, 0));
+
+                if (remaining <= 0) {
+                    clearInterval(countdown);
+                }
+            }, 1000);
+
+            alert.find('button').on('click', function () {
+                clearInterval(countdown);
+                clearTimeout(pendingHousingDeletionTimers[token]);
+                delete pendingHousingDeletionTimers[token];
+
+                $.ajax({
+                    url: "{{ route('housing.assessment.delete.undo') }}",
+                    method: 'POST',
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        token: token
+                    },
+                    success: function (response) {
+                        toastr.success(response.message || 'تم التراجع عن الحذف');
+                        alert.remove();
+                        reloadBuildingUnitsTable();
+                    },
+                    error: function (xhr) {
+                        toastr.error(xhr.responseJSON?.message || 'تعذر التراجع عن الحذف');
+                    }
+                });
+            });
+        }
+
+        function commitHousingUnitsDeletion(token) {
+            $.ajax({
+                url: "{{ route('housing.assessment.delete.commit') }}",
+                method: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    token: token
+                },
+                success: function (response) {
+                    toastr.success(response.message || 'تم حذف الوحدات بنجاح');
+                    $('#housing_delete_undo_' + token).remove();
+                    reloadBuildingUnitsTable();
+                },
+                error: function (xhr) {
+                    if (xhr.status === 410) {
+                        toastr.info(xhr.responseJSON?.message || 'تم إلغاء عملية الحذف');
+                    } else {
+                        toastr.error(xhr.responseJSON?.message || 'تعذر حذف الوحدات');
+                        reloadBuildingUnitsTable();
+                    }
+                    $('#housing_delete_undo_' + token).remove();
+                },
+                complete: function () {
+                    delete pendingHousingDeletionTimers[token];
+                }
+            });
+        }
+
+        function scheduleHousingUnitsDeletion(mode) {
+            if (isAssessmentReadOnly) {
+                toastr.warning('لا يمكن تعديل هذا التقييم في وضع القراءة فقط');
+                return;
+            }
+
+            let globalIds = getSelectedHousingGlobalIds();
+
+            if (globalIds.length === 0) {
+                toastr.warning('يرجى اختيار وحدة واحدة على الأقل');
+                return;
+            }
+
+            let message = 'سيتم حذف ' + globalIds.length + ' وحدة من ' + housingDeletionModeLabel(mode) + ' بعد 50 ثانية. هل تريد المتابعة؟';
+            let confirmed = window.Swal
+                ? null
+                : confirm(message);
+
+            let startDeletion = function () {
+                $.ajax({
+                    url: "{{ route('housing.assessment.delete.schedule') }}",
+                    method: 'POST',
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        globalids: globalIds,
+                        mode: mode,
+                        building_globalid: @json($buildingGlobalid)
+                    },
+                    success: function (response) {
+                        selectedHousingGlobalIds.clear();
+                        syncHousingSelectionCheckboxes($('#housing_table').DataTable());
+                        removeHousingRowsFromCurrentTable(globalIds);
+                        showHousingDeletionUndo(response.token, globalIds, response.seconds || 50);
+                        pendingHousingDeletionTimers[response.token] = setTimeout(function () {
+                            commitHousingUnitsDeletion(response.token);
+                        }, (response.seconds || 50) * 1000);
+                        toastr.warning(response.message || 'تم تجهيز عملية الحذف');
+                    },
+                    error: function (xhr) {
+                        toastr.error(xhr.responseJSON?.message || 'تعذر تجهيز عملية الحذف');
+                    }
+                });
+            };
+
+            if (window.Swal) {
+                Swal.fire({
+                    text: message,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'نعم، متابعة',
+                    cancelButtonText: 'إلغاء'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        startDeletion();
+                    }
+                });
+            } else if (confirmed) {
+                startDeletion();
+            }
         }
 
         function syncHousingSelectionCheckboxes(datatable) {

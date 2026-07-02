@@ -12,6 +12,8 @@ use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
+use App\Models\CommitteeDecision;
+use App\Models\EditAssessment;
 use App\Models\Filter;
 use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
@@ -25,8 +27,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use Throwable;
 use Yajra\Datatables\Datatables;
@@ -3324,6 +3328,174 @@ class auditController extends Controller
                 'details' => $exception->getMessage(),
             ], 502);
         }
+    }
+
+    public function scheduleHousingUnitDeletion(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->hasRole('Database Officer'), 403);
+
+        $validated = $request->validate([
+            'globalids' => ['required', 'array', 'min:1'],
+            'globalids.*' => ['required', 'string', 'distinct'],
+            'mode' => ['required', 'in:database,arcgis,both'],
+            'building_globalid' => ['nullable', 'string'],
+        ]);
+
+        $units = HousingUnit::query()
+            ->whereIn('globalid', $validated['globalids'])
+            ->when(filled($validated['building_globalid'] ?? null), function (Builder $query) use ($validated): void {
+                $query->where('parentglobalid', $validated['building_globalid']);
+            })
+            ->get(['id', 'globalid', 'objectid', 'parentglobalid']);
+
+        if ($units->isEmpty()) {
+            return response()->json([
+                'message' => 'لم يتم العثور على الوحدات المحددة.',
+            ], 422);
+        }
+
+        $token = (string) Str::uuid();
+
+        Cache::put($this->housingDeletionCacheKey($token), [
+            'user_id' => $request->user()?->id,
+            'mode' => $validated['mode'],
+            'building_globalid' => $validated['building_globalid'] ?? null,
+            'units' => $units
+                ->map(fn (HousingUnit $unit): array => [
+                    'id' => $unit->id,
+                    'globalid' => $unit->globalid,
+                    'objectid' => $unit->objectid,
+                    'parentglobalid' => $unit->parentglobalid,
+                ])
+                ->values()
+                ->all(),
+        ], now()->addSeconds(70));
+
+        return response()->json([
+            'token' => $token,
+            'seconds' => 50,
+            'count' => $units->count(),
+            'message' => 'تم تجهيز عملية الحذف. يمكنك التراجع خلال 50 ثانية.',
+        ]);
+    }
+
+    public function undoHousingUnitDeletion(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->hasRole('Database Officer'), 403);
+
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+        ]);
+
+        Cache::forget($this->housingDeletionCacheKey($validated['token']));
+
+        return response()->json([
+            'message' => 'تم التراجع عن الحذف.',
+        ]);
+    }
+
+    public function commitHousingUnitDeletion(Request $request, ArcgisService $arcgis): JsonResponse
+    {
+        abort_unless($request->user()?->hasRole('Database Officer'), 403);
+
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+        ]);
+
+        $cacheKey = $this->housingDeletionCacheKey($validated['token']);
+        $payload = Cache::pull($cacheKey);
+
+        if (! is_array($payload)) {
+            return response()->json([
+                'message' => 'تم إلغاء عملية الحذف أو انتهت صلاحيتها.',
+            ], 410);
+        }
+
+        if (($payload['user_id'] ?? null) !== $request->user()?->id) {
+            return response()->json([
+                'message' => 'لا يمكن تنفيذ عملية حذف لمستخدم آخر.',
+            ], 403);
+        }
+
+        $units = collect($payload['units'] ?? []);
+        $objectIds = $units->pluck('objectid')->filter()->values()->all();
+        $globalIds = $units->pluck('globalid')->filter()->values()->all();
+        $mode = (string) ($payload['mode'] ?? 'database');
+
+        if (in_array($mode, ['arcgis', 'both'], true)) {
+            $arcgisResult = $this->deleteHousingUnitsFromArcgis($arcgis, $objectIds);
+
+            if (! ($arcgisResult['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'تعذر حذف الوحدات من ArcGIS.',
+                    'details' => $arcgisResult['message'] ?? null,
+                ], 502);
+            }
+        }
+
+        $deletedFromDatabase = 0;
+
+        if (in_array($mode, ['database', 'both'], true)) {
+            $deletedFromDatabase = $this->deleteHousingUnitsFromDatabase($globalIds, $objectIds);
+        }
+
+        return response()->json([
+            'message' => 'تم تنفيذ حذف الوحدات بنجاح.',
+            'deleted_from_database' => $deletedFromDatabase,
+            'deleted_from_arcgis' => in_array($mode, ['arcgis', 'both'], true) ? count($objectIds) : 0,
+        ]);
+    }
+
+    private function deleteHousingUnitsFromArcgis(ArcgisService $arcgis, array $objectIds): array
+    {
+        $layerUrl = (string) config('services.arcgis.housing_units_url', '');
+
+        return filled($layerUrl)
+            ? $arcgis->deleteFeaturesFromLayerUrl($layerUrl, $objectIds, $arcgis->getToken())
+            : $arcgis->deleteFeatures($objectIds, $arcgis->getLayerId(HousingUnit::class), $arcgis->getToken());
+    }
+
+    private function deleteHousingUnitsFromDatabase(array $globalIds, array $objectIds): int
+    {
+        return DB::transaction(function () use ($globalIds, $objectIds): int {
+            $units = HousingUnit::query()
+                ->whereIn('globalid', $globalIds)
+                ->get(['id', 'globalid', 'objectid']);
+
+            $unitIds = $units->pluck('id')->all();
+            $existingGlobalIds = $units->pluck('globalid')->filter()->all();
+            $existingObjectIds = $units->pluck('objectid')->filter()->all();
+            $allObjectIds = collect($objectIds)->merge($existingObjectIds)->filter()->unique()->values()->all();
+
+            if ($allObjectIds !== []) {
+                HousingStatus::query()->whereIn('housing_id', $allObjectIds)->delete();
+                HousingStatusHistory::query()->whereIn('housing_id', $allObjectIds)->delete();
+            }
+
+            if ($existingGlobalIds !== []) {
+                EditAssessment::query()
+                    ->where('type', 'housing_table')
+                    ->whereIn('global_id', $existingGlobalIds)
+                    ->delete();
+            }
+
+            if ($unitIds !== []) {
+                CommitteeDecision::query()
+                    ->where('decisionable_type', HousingUnit::class)
+                    ->whereIn('decisionable_id', $unitIds)
+                    ->get()
+                    ->each(fn (CommitteeDecision $decision): ?bool => $decision->delete());
+            }
+
+            return HousingUnit::query()
+                ->whereIn('globalid', $globalIds)
+                ->delete();
+        });
+    }
+
+    private function housingDeletionCacheKey(string $token): string
+    {
+        return "audit:housing-unit-delete:{$token}";
     }
 
     public function fieldEngineerAudit(Request $request, AuditTableService $auditTableService)

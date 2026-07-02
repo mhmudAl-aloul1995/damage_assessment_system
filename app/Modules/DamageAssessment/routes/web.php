@@ -294,6 +294,12 @@ Route::middleware('auth')->group(function () {
         ->name('housing.assessment.set.status');
     Route::post('/housing-assessment/legal-challenge', [auditController::class, 'updateHousingLegalChallenge'])
         ->name('housing.assessment.legalChallenge');
+    Route::post('/housing-assessment/delete-units/schedule', [auditController::class, 'scheduleHousingUnitDeletion'])
+        ->name('housing.assessment.delete.schedule');
+    Route::post('/housing-assessment/delete-units/undo', [auditController::class, 'undoHousingUnitDeletion'])
+        ->name('housing.assessment.delete.undo');
+    Route::post('/housing-assessment/delete-units/commit', [auditController::class, 'commitHousingUnitDeletion'])
+        ->name('housing.assessment.delete.commit');
     Route::post('/building/status', [auditController::class, 'setStatus'])
         ->name('building.assessment.set.status');
 

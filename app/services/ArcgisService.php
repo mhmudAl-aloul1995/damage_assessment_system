@@ -154,6 +154,60 @@ class ArcgisService
         ];
     }
 
+    public function deleteFeatures(array $objectIds, int|string $layerId, string $token): array
+    {
+        $objectIds = collect($objectIds)
+            ->filter(fn ($objectId): bool => filled($objectId))
+            ->map(fn ($objectId): int|string => is_numeric($objectId) ? (int) $objectId : (string) $objectId)
+            ->values()
+            ->all();
+
+        if ($objectIds === []) {
+            return [
+                'success' => false,
+                'message' => 'Missing ArcGIS object ids.',
+            ];
+        }
+
+        return $this->deleteFeaturesFromLayerUrl("{$this->baseUrl}/{$layerId}", $objectIds, $token);
+    }
+
+    public function deleteFeaturesFromLayerUrl(string $layerUrl, array $objectIds, string $token): array
+    {
+        $objectIds = collect($objectIds)
+            ->filter(fn ($objectId): bool => filled($objectId))
+            ->map(fn ($objectId): int|string => is_numeric($objectId) ? (int) $objectId : (string) $objectId)
+            ->values()
+            ->all();
+
+        if (! filled($layerUrl) || $objectIds === []) {
+            return [
+                'success' => false,
+                'message' => 'Missing ArcGIS layer URL or object ids.',
+            ];
+        }
+
+        $response = Http::asForm()
+            ->withoutVerifying()
+            ->post($this->normalizeLayerUrl($layerUrl).'/deleteFeatures', [
+                'f' => 'json',
+                'token' => $token,
+                'objectIds' => implode(',', $objectIds),
+            ]);
+
+        $body = $response->json();
+        $deleteResults = data_get($body, 'deleteResults', []);
+        $success = $response->successful()
+            && $deleteResults !== []
+            && collect($deleteResults)->every(fn (array $result): bool => (bool) ($result['success'] ?? false));
+
+        return [
+            'success' => $success,
+            'message' => $success ? 'Features deleted.' : $response->body(),
+            'response' => $body,
+        ];
+    }
+
     public function downloadAttachment(int|string $objectId, int|string $layerId, int|string $attachmentId, string $token): array
     {
         if (! filled($objectId) || ! filled($attachmentId)) {

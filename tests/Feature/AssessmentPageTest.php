@@ -8,6 +8,7 @@ use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
 use App\Models\EditAssessment;
 use App\Models\HousingStatus;
+use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
 use App\Models\User;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
@@ -1102,6 +1103,136 @@ it('returns the latest housing status for read only field engineers', function (
         ->assertJsonPath('data.0.current_status', 'legal_notes')
         ->assertJsonPath('data.0.current_engineering_status', 'accepted_by_engineer')
         ->assertJsonPath('data.0.current_legal_status', 'legal_notes');
+});
+
+it('can undo a scheduled housing unit deletion before it is committed', function () {
+    Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole('Database Officer');
+
+    $building = Building::query()->create([
+        'objectid' => 9650,
+        'globalid' => 'undo-housing-delete-building',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 9651,
+        'globalid' => 'undo-housing-delete-unit',
+        'parentglobalid' => $building->globalid,
+    ]);
+
+    $schedule = $this->actingAs($user)
+        ->postJson(route('housing.assessment.delete.schedule'), [
+            'globalids' => [$housing->globalid],
+            'mode' => 'database',
+            'building_globalid' => $building->globalid,
+        ])
+        ->assertOk()
+        ->json();
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.delete.undo'), [
+            'token' => $schedule['token'],
+        ])
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.delete.commit'), [
+            'token' => $schedule['token'],
+        ])
+        ->assertStatus(410);
+
+    $this->assertDatabaseHas('housing_units', [
+        'globalid' => $housing->globalid,
+    ]);
+});
+
+it('commits scheduled housing unit database deletion and removes related audit records', function () {
+    Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole('Database Officer');
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9660,
+        'globalid' => 'commit-housing-delete-building',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 9661,
+        'globalid' => 'commit-housing-delete-unit',
+        'parentglobalid' => $building->globalid,
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $housing->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    HousingStatusHistory::query()->create([
+        'housing_id' => $housing->objectid,
+        'status_id' => $status->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $housing->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'housing_unit_number',
+        'field_value' => '12',
+        'user_id' => $user->id,
+    ]);
+
+    $schedule = $this->actingAs($user)
+        ->postJson(route('housing.assessment.delete.schedule'), [
+            'globalids' => [$housing->globalid],
+            'mode' => 'database',
+            'building_globalid' => $building->globalid,
+        ])
+        ->assertOk()
+        ->json();
+
+    $this->actingAs($user)
+        ->postJson(route('housing.assessment.delete.commit'), [
+            'token' => $schedule['token'],
+        ])
+        ->assertOk()
+        ->assertJsonPath('deleted_from_database', 1);
+
+    $this->assertDatabaseMissing('housing_units', [
+        'globalid' => $housing->globalid,
+    ]);
+
+    $this->assertDatabaseMissing('housing_statuses', [
+        'housing_id' => $housing->objectid,
+    ]);
+
+    $this->assertDatabaseMissing('housing_status_histories', [
+        'housing_id' => $housing->objectid,
+    ]);
+
+    $this->assertDatabaseMissing('edit_assessments', [
+        'global_id' => $housing->globalid,
+        'type' => 'housing_table',
+    ]);
 });
 
 it('returns structured status history payload for rendering badges safely', function () {
