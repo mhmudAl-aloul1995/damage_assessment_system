@@ -40,13 +40,41 @@ class HeksController extends Controller
     {
         $this->authorizeAccess();
         $beneficiaries = HeksBeneficiary::query()
+            ->select([
+                'id',
+                'code',
+                'name',
+                'identity_number',
+                'phone',
+                'field_engineer',
+                'visit_date',
+                'governorate',
+                'area',
+                'address',
+                'household_head_gender',
+                'marital_status',
+                'displacement_status',
+                'occupancy_status',
+                'damage_status',
+                'grant_amount',
+                'payment_1',
+                'payment_2',
+                'payment_3',
+                'recommendations',
+                'is_selected',
+                'selection_status',
+                'payment_status',
+                'work_group_source',
+                'created_at',
+                'updated_at',
+            ])
+            ->withCount(['labels', 'followUps', 'scores', 'payments', 'workAssignments', 'attachments'])
             ->with([
                 'scores' => fn ($query) => $query->latest(),
                 'payments',
                 'followUps',
                 'attachments',
                 'workAssignments',
-                'labels',
                 'boqItems',
             ])
             ->latest()

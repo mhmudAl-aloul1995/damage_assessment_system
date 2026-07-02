@@ -354,6 +354,39 @@ it('hides and blocks HEKS for non database officers', function () {
         ->assertForbidden();
 });
 
+it('renders HEKS dashboard without loading bulky survey answers', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'HEAVY1',
+        'name' => 'Heavy Survey Beneficiary',
+        'damage_status' => 'Moderate',
+        'raw_data' => [
+            'heks-main' => collect(range(1, 400))
+                ->mapWithKeys(fn (int $index): array => ["question_{$index}" => str_repeat('answer ', 40)])
+                ->all(),
+        ],
+    ]);
+
+    HeksLabel::query()->insert(collect(range(1, 400))
+        ->map(fn (int $index): array => [
+            'heks_beneficiary_id' => $beneficiary->id,
+            'source' => 'heks-main',
+            'label_key' => "survey:{$index}",
+            'label_value' => str_repeat('answer ', 40),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])
+        ->all());
+
+    $this->actingAs($user)
+        ->get(route('heks.dashboard'))
+        ->assertOk()
+        ->assertSee('HEAVY1');
+});
+
 it('shows HEKS BOQ pricing as grouped catalog sections', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
