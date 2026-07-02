@@ -21,9 +21,9 @@
         .heks-case-page .assessment-list-item,
         .heks-case-page .assessment-list-value { min-width: 0; overflow-wrap: anywhere; }
         .heks-case-page .assessment-list-score { justify-self: start; }
-        .heks-case-page .survey-section { border: 1px solid #edf1f5; border-radius: 1rem; overflow: hidden; background: #fff; box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .04); }
-        .heks-case-page .survey-section-header { cursor: pointer; padding: 1rem 1.25rem; border: 0; background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 45%, #e8f3ff 100%); border-bottom: 1px solid #e4ecf7; transition: all .25s ease; position: relative; }
-        .heks-case-page .survey-section-header:hover { background: linear-gradient(135deg, #eef6ff 0%, #dceeff 100%); box-shadow: inset 0 0 0 1px rgba(0, 158, 247, .08); }
+        .heks-case-page .survey-section { border: 1px solid #edf1f5; border-radius: .85rem; overflow: hidden; background: #fff; box-shadow: 0 .25rem .75rem rgba(15, 23, 42, .035); }
+        .heks-case-page .survey-section-header { cursor: pointer; padding: 1rem 1.25rem; border: 0; background: #fff; border-bottom: 1px solid #edf1f5; transition: all .25s ease; position: relative; }
+        .heks-case-page .survey-section-header:hover { background: #f8fbff; box-shadow: inset 0 0 0 1px rgba(0, 158, 247, .08); }
         .heks-case-page .survey-section-header:after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, #009ef7, #50cd89); }
         .heks-case-page .survey-collapse-indicator { width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #fff; color: #009ef7; border: 1px solid rgba(0, 158, 247, .18); font-size: .8rem; font-weight: 800; flex: 0 0 auto; }
         .heks-case-page .survey-section-header .survey-collapse-closed,
@@ -33,7 +33,7 @@
         .heks-case-page .survey-section-header.collapsed .survey-state-badge { display: inline-flex; }
         .heks-case-page .survey-progress-bar { width: 120px; height: 6px; border-radius: 20px; background: #eef3f7; overflow: hidden; }
         .heks-case-page .survey-progress-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, #009ef7, #50cd89); }
-        .heks-case-page .survey-item { border-top: 1px dashed var(--bs-gray-300); padding: 1rem 1.25rem; background: #f1fff5; }
+        .heks-case-page .survey-item { border-top: 1px dashed var(--bs-gray-300); padding: 1rem 1.25rem; background: #fff; }
         .heks-case-page .survey-item:hover { background: #f8fbff; }
         .heks-case-page .survey-question { font-weight: 800; color: var(--bs-gray-800); line-height: 1.6; overflow-wrap: anywhere; }
         .heks-case-page .survey-answer { font-weight: 700; color: var(--bs-gray-700); line-height: 1.6; overflow-wrap: anywhere; }
@@ -730,7 +730,7 @@
                                     $itemsCount = count($section['items']);
                                     $answeredCount = collect($section['items'])->filter(fn ($item) => filled($item['value']))->count();
                                     $completionPercent = $itemsCount > 0 ? (int) round(($answeredCount / $itemsCount) * 100) : 0;
-                                    $isOpen = $sectionIndex === array_key_first($surveySections);
+                                    $isOpen = false;
                                 @endphp
                                 <div class="survey-section mb-4">
                                     <div class="survey-section-header {{ $isOpen ? '' : 'collapsed' }} d-flex justify-content-between align-items-center flex-wrap gap-3"
@@ -740,7 +740,7 @@
                                          aria-expanded="{{ $isOpen ? 'true' : 'false' }}"
                                          aria-controls="{{ $sectionId }}">
                                         <div class="d-flex align-items-start gap-3">
-                                            <span class="survey-collapse-indicator survey-collapse-open">−</span>
+                                            <span class="survey-collapse-indicator survey-collapse-open">-</span>
                                             <span class="survey-collapse-indicator survey-collapse-closed">+</span>
                                             <div>
                                                 <div class="fw-bold fs-5 text-gray-800">{{ $section['title'] }}</div>
@@ -748,7 +748,7 @@
                                                 <div class="survey-progress-bar mt-3">
                                                     <div class="survey-progress-fill" style="width: {{ $completionPercent }}%"></div>
                                                 </div>
-                                            </diالإستبيان
+                                            </div>
                                         </div>
                                         <div class="d-flex align-items-center gap-2 flex-wrap">
                                             <span class="badge badge-light-primary">{{ number_format($answeredCount) }} / {{ number_format($itemsCount) }}</span>
