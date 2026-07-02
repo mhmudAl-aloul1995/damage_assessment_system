@@ -15,10 +15,10 @@ Route::match(['GET', 'POST'], 'login.php', function () {
     return redirect()->to(app_route('login'));
 });
 
-Route::get('login', [AuthenticatedSessionController::class, 'create'])
-    ->name('login');
-
 Route::middleware('guest')->group(function () {
+    Route::get('login', [AuthenticatedSessionController::class, 'create'])
+        ->name('login');
+
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 

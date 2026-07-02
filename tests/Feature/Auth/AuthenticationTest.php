@@ -93,12 +93,22 @@ test('duplicated server subdirectory path redirects to the normalized app path',
         ->assertSee('action="/damage_assessment_system/login"', false);
 });
 
-test('login screen can be rendered with an existing session', function () {
+test('authenticated users are redirected away from the login screen', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get('/login');
 
-    $response->assertStatus(200);
+    $response->assertRedirect('/dashboard');
+});
+
+test('authenticated users are redirected away from the server subdirectory login screen', function () {
+    config(['app.url' => 'http://213.6.135.115/damage_assessment_system']);
+
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/damage_assessment_system/login');
+
+    $response->assertRedirect('/damage_assessment_system/dashboard');
 });
 
 test('users can authenticate using the login screen', function () {
