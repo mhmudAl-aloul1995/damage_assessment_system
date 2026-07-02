@@ -178,7 +178,7 @@ test('heks kobo backfill imports old submissions from Kobo API', function () {
         ->and(KoboRestSubmission::query()->where('submission_uuid', 'uuid:old-heks-main')->value('service_name'))->toBe('heks-main')
         ->and((float) HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->value('total_score'))->toBe(65.0);
 
-    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer api-token'));
+    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Token api-token'));
 });
 
 test('kobo rest submission updates existing uuid instead of duplicating it', function () {

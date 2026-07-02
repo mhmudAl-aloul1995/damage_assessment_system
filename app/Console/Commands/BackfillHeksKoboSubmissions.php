@@ -61,12 +61,16 @@ class BackfillHeksKoboSubmissions extends Command
 
         while ($url !== null) {
             $response = Http::timeout((int) config('services.kobotoolbox.timeout', 60))
-                ->withToken($token)
+                ->withHeader('Authorization', "Token {$token}")
                 ->acceptJson()
                 ->get($url);
 
             if (! $response->successful()) {
                 $this->components->error("Kobo request failed with status {$response->status()}.");
+
+                if ($response->status() === 404) {
+                    $this->components->warn('Check that the asset UID belongs to the same Kobo account as KOBOTOOLBOX_TOKEN, or share the project with that account.');
+                }
 
                 return self::FAILURE;
             }
