@@ -140,6 +140,29 @@ test('kobo rest submission maps HEKS scoring workbook column names', function ()
         ->and($score->classification)->toBe('Very High');
 });
 
+test('kobo rest submission ignores computed HEKS display columns and invalid values', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-computed-display-columns',
+            'رقم الطلب/الكود' => 'CLEAN1',
+            'Name' => 'نفسه',
+            'Name:${Name}' => 'نفسه',
+            'اسم رب الأسرة' => 'الاسم الحقيقي للمستفيد',
+            'Engineer Name' => 'N/A#',
+            'اسم المهندس الميداني' => 'م. محمد الشيخ',
+            'رقم هوية رب الأسرة' => '123123123',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'CLEAN1')->sole();
+
+    expect($beneficiary->name)->toBe('الاسم الحقيقي للمستفيد')
+        ->and($beneficiary->field_engineer)->toBe('م. محمد الشيخ')
+        ->and($beneficiary->identity_number)->toBe('123123123');
+});
+
 test('kobo rest submission preserves every HEKS survey answer as searchable labels', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')

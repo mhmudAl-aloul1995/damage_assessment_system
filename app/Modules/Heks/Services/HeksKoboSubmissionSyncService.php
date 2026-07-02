@@ -581,16 +581,26 @@ class HeksKoboSubmissionSyncService
      */
     private function beneficiaryName(array $payload): string
     {
-        return $this->first($payload, [
+        $candidates = [
             'name',
             'Name',
             'beneficiary_name',
             'beneficiary_full_name',
-            'اسم المستفيد',
-            'المستفيد',
-            'اسم رب الأسرة',
-            'اسم الشخص المقابل',
-        ]);
+            "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0633}\u{062A}\u{0641}\u{064A}\u{062F}",
+            "\u{0627}\u{0644}\u{0645}\u{0633}\u{062A}\u{0641}\u{064A}\u{062F}",
+            "\u{0627}\u{0633}\u{0645} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}",
+            "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0634}\u{062E}\u{0635} \u{0627}\u{0644}\u{0645}\u{0642}\u{0627}\u{0628}\u{0644}",
+        ];
+
+        foreach ($candidates as $candidate) {
+            $name = $this->first($payload, [$candidate]);
+
+            if ($name !== '' && ! $this->isInvalidBeneficiaryName($name)) {
+                return $name;
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -601,7 +611,15 @@ class HeksKoboSubmissionSyncService
     {
         foreach ($candidates as $candidate) {
             if (array_key_exists($candidate, $payload) && filled($payload[$candidate])) {
-                return trim((string) $payload[$candidate]);
+                $value = trim((string) $payload[$candidate]);
+
+                if (! $this->isInvalidValue($value)) {
+                    return $value;
+                }
+            }
+
+            if ($this->isGenericCandidate($candidate)) {
+                continue;
             }
 
             $match = $this->findByKeyPart($payload, [$candidate]);
@@ -621,7 +639,13 @@ class HeksKoboSubmissionSyncService
     private function findByKeyPart(array $payload, array $needles): string
     {
         foreach ($payload as $key => $value) {
-            if (! filled($value) || is_array($value)) {
+            if (! filled($value) || is_array($value) || $this->isComputedFieldKey($key)) {
+                continue;
+            }
+
+            $value = trim((string) $value);
+
+            if ($this->isInvalidValue($value)) {
                 continue;
             }
 
@@ -631,12 +655,46 @@ class HeksKoboSubmissionSyncService
                 $normalizedNeedle = $this->normalizeKey($needle);
 
                 if ($normalizedNeedle !== '' && str_contains($normalizedKey, $normalizedNeedle)) {
-                    return trim((string) $value);
+                    return $value;
                 }
             }
         }
 
         return '';
+    }
+
+    private function isGenericCandidate(string $candidate): bool
+    {
+        return in_array($this->normalizeKey($candidate), ['name', 'code', 'id', 'phone', 'mobile', 'area'], true);
+    }
+
+    private function isComputedFieldKey(string $key): bool
+    {
+        return str_contains($key, '${')
+            || str_contains($key, '}')
+            || str_contains($key, ':${');
+    }
+
+    private function isInvalidValue(string $value): bool
+    {
+        $normalized = $this->normalizeKey($value);
+
+        return in_array($normalized, ['na', 'n/a', 'n/a#', 'na#', '#na', '#n/a', 'null', 'undefined'], true)
+            || str_starts_with($normalized, 'na')
+            || str_starts_with($normalized, '#na');
+    }
+
+    private function isInvalidBeneficiaryName(string $value): bool
+    {
+        $normalized = $this->normalizeKey($value);
+
+        return $this->isInvalidValue($value)
+            || in_array($normalized, [
+                "\u{0646}\u{0641}\u{0633}\u{0647}",
+                "\u{0646}\u{0641}\u{0633}\u{0647}\u{0627}",
+                "\u{0646}\u{0641}\u{0633}\u{0627}\u{0644}\u{0634}\u{062E}\u{0635}",
+                "\u{0630}\u{0627}\u{062A}\u{0647}",
+            ], true);
     }
 
     /**
