@@ -113,12 +113,21 @@ class HeksKoboSubmissionSyncService
      */
     private function syncBeneficiary(HeksBeneficiary $beneficiary, array $payload, string $service): void
     {
+        $beneficiaryName = $this->beneficiaryName($payload);
+        $fieldEngineer = $this->cleanEngineerName($this->first($payload, [
+            'engineer_name',
+            'field_engineer',
+            'Engineer Name',
+            "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
+            "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
+        ]));
+
         $data = array_filter([
-            'name' => $this->beneficiaryName($payload),
+            'name' => $beneficiaryName,
             'identity_number' => $this->first($payload, ['identity_number', 'id_number', 'beneficiary_id_number', 'رقم هوية رب الأسرة', 'رقم الهوية', 'الهوية']),
             'phone' => $this->first($payload, ['phone', 'phone_number', 'mobile', 'رقم التواصل', 'رقم الجوال']),
             'alternate_phone' => $this->first($payload, ['alternate_phone', 'رقم تواصل بديل', 'رقم التواصل2']),
-            'field_engineer' => $this->first($payload, ['engineer_name', 'field_engineer', 'Engineer Name', 'اسم المهندس', 'المهندس المتابع']),
+            'field_engineer' => $fieldEngineer,
             'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', 'تاريخ الزيارة', '_submission_time'])),
             'governorate' => $this->first($payload, ['governorate', 'المحافظة']),
             'area' => $this->first($payload, ['area', 'community', 'المنطقة', 'التجمع']),
@@ -138,6 +147,14 @@ class HeksKoboSubmissionSyncService
             'raw_data' => array_merge($beneficiary->raw_data ?? [], [$service => $payload]),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
 
+        if (! isset($data['name']) && $this->isInvalidBeneficiaryName((string) $beneficiary->name)) {
+            $data['name'] = null;
+        }
+
+        if (! isset($data['field_engineer']) && $this->isInvalidEngineerName((string) $beneficiary->field_engineer)) {
+            $data['field_engineer'] = null;
+        }
+
         $beneficiary->fill($data)->save();
     }
 
@@ -156,7 +173,12 @@ class HeksKoboSubmissionSyncService
             ],
             [
                 'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', 'تاريخ الزيارة', '_submission_time'])),
-                'engineer_name' => $this->first($payload, ['engineer_name', 'Engineer Name', 'اسم المهندس', 'المهندس المتابع']),
+                'engineer_name' => $this->cleanEngineerName($this->first($payload, [
+                    'engineer_name',
+                    'Engineer Name',
+                    "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
+                    "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
+                ])),
                 'working_condition' => $this->first($payload, ['working_condition', 'Working condition', 'حالة العمل']),
                 'other_condition' => $this->first($payload, ['other_condition', 'Other condition:', 'حالة أخرى']),
                 'completed_amount_ils' => $this->decimal($this->first($payload, ['completed_amount_ils', 'completed_amount', 'إجمالي ما تم انجازة حتى الآن ILS'])),
@@ -672,7 +694,8 @@ class HeksKoboSubmissionSyncService
     {
         return str_contains($key, '${')
             || str_contains($key, '}')
-            || str_contains($key, ':${');
+            || str_contains($key, ':${')
+            || str_contains($key, '/');
     }
 
     private function isInvalidValue(string $value): bool
@@ -689,12 +712,32 @@ class HeksKoboSubmissionSyncService
         $normalized = $this->normalizeKey($value);
 
         return $this->isInvalidValue($value)
+            || $this->isLikelyKoboUsername($value)
             || in_array($normalized, [
                 "\u{0646}\u{0641}\u{0633}\u{0647}",
                 "\u{0646}\u{0641}\u{0633}\u{0647}\u{0627}",
                 "\u{0646}\u{0641}\u{0633}\u{0627}\u{0644}\u{0634}\u{062E}\u{0635}",
                 "\u{0630}\u{0627}\u{062A}\u{0647}",
             ], true);
+    }
+
+    private function cleanEngineerName(string $value): string
+    {
+        return $this->isInvalidEngineerName($value) ? '' : $value;
+    }
+
+    private function isInvalidEngineerName(string $value): bool
+    {
+        return $this->isInvalidValue($value)
+            || preg_match('/^[0-9_\\-]+$/', trim($value)) === 1;
+    }
+
+    private function isLikelyKoboUsername(string $value): bool
+    {
+        $trimmed = trim($value);
+
+        return preg_match('/^[A-Za-z][A-Za-z0-9_.-]{2,30}$/', $trimmed) === 1
+            && ! str_contains($trimmed, ' ');
     }
 
     /**
