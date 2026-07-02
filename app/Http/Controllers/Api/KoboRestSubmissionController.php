@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\KoboRestSubmission;
 use App\Modules\DamageAssessmentBorrowers\Services\KoboBorrowerSubmissionSyncService;
+use App\Modules\Heks\Services\HeksKoboSubmissionSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -12,8 +13,12 @@ use Throwable;
 
 class KoboRestSubmissionController extends Controller
 {
-    public function __invoke(Request $request, string $service, KoboBorrowerSubmissionSyncService $syncService): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        string $service,
+        KoboBorrowerSubmissionSyncService $borrowerSyncService,
+        HeksKoboSubmissionSyncService $heksSyncService
+    ): JsonResponse {
         $configuredToken = (string) config('services.kobotoolbox.rest_service_token', '');
         $requestToken = (string) $request->header('X-Kobo-Token', '');
 
@@ -40,14 +45,14 @@ class KoboRestSubmissionController extends Controller
             : KoboRestSubmission::query()->create($attributes);
 
         try {
-            $sync = $syncService->sync(
+            $sync = $heksSyncService->sync($submission) ?? $borrowerSyncService->sync(
                 $submission,
                 config('services.kobotoolbox.borrower_name_field'),
                 config('services.kobotoolbox.borrower_field_map')
             );
 
             $submission->forceFill([
-                'damage_assessment_borrower_id' => $sync['borrower']?->id,
+                'damage_assessment_borrower_id' => $sync['borrower']?->id ?? null,
                 'sync_status' => $sync['status'],
                 'sync_error' => $sync['error'],
                 'synced_at' => $sync['status'] === 'synced' ? now() : null,

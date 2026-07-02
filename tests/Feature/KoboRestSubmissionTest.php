@@ -2,6 +2,12 @@
 
 use App\Models\KoboRestSubmission;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
+use App\Modules\Heks\Models\HeksAttachment;
+use App\Modules\Heks\Models\HeksBeneficiary;
+use App\Modules\Heks\Models\HeksBoqItem;
+use App\Modules\Heks\Models\HeksFollowUp;
+use App\Modules\Heks\Models\HeksScore;
+use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
     config(['services.kobotoolbox.rest_service_token' => 'test-kobo-token']);
@@ -57,6 +63,122 @@ test('kobo rest submission stores json payload', function () {
         ->risk_level->toBe('low')
         ->attachments_count->toBe(1)
         ->and($borrower->attachments()->first()->url)->toBe('https://kf.example.test/media/damage.jpg');
+});
+
+test('kobo rest submission syncs HEKS main survey payload', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-main-001',
+            'code' => 'GDQ3',
+            'beneficiary_name' => 'Ashraf Hamdi',
+            'identity_number' => '597106204',
+            'phone' => '0592026269',
+            'visit_date' => '2026-06-06',
+            'damage_status' => 'أضرار جزئية متوسطة',
+            'social_score' => 30,
+            'technical_score' => 42,
+            'total_score' => 72,
+            'classification' => 'Very High',
+            'roof_status' => 'بحاجة إلى صيانة بسيطة',
+            '_attachments' => [
+                [
+                    'filename' => 'house.jpg',
+                    'download_url' => 'https://kf.example.test/house.jpg',
+                ],
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'GDQ3')->sole();
+    $score = HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect($beneficiary->name)->toBe('Ashraf Hamdi')
+        ->and($beneficiary->identity_number)->toBe('597106204')
+        ->and($beneficiary->damage_status)->toBe('أضرار جزئية متوسطة')
+        ->and((float) $score->social_score)->toBe(30.0)
+        ->and((float) $score->technical_score)->toBe(42.0)
+        ->and((float) $score->total_score)->toBe(72.0)
+        ->and($score->classification)->toBe('Very High')
+        ->and(HeksAttachment::query()->where('filename', 'house.jpg')->where('attachment_type', 'shelter_photo')->exists())->toBeTrue()
+        ->and(KoboRestSubmission::query()->where('submission_uuid', 'uuid:heks-main-001')->value('sync_status'))->toBe('synced');
+});
+
+test('kobo rest submission syncs HEKS follow up BOQ payload', function () {
+    HeksBeneficiary::query()->create([
+        'code' => 'F35',
+        'name' => 'Hazem Suhail',
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-followup-boq', [
+            '_uuid' => 'uuid:heks-followup-boq-001',
+            'code' => 'F35',
+            'visit_number' => '2',
+            'visit_date' => '2026-06-07',
+            'engineer_name' => 'م مصطفى رضوان',
+            'working_condition' => 'العمل قيد التنفيذ',
+            'completed_amount_ils' => '850',
+            'completion_percentage' => '8',
+            'boq_items' => [
+                [
+                    'section' => 'اعمال البلوك',
+                    'item_code' => '3.1',
+                    'description' => 'توريد وبناء بلوك اسمنتي',
+                    'unit' => 'M2',
+                    'quantity' => '10',
+                    'unit_price_ils' => '85',
+                ],
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'F35')->sole();
+    $followUp = HeksFollowUp::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+    $item = HeksBoqItem::query()->where('heks_follow_up_id', $followUp->id)->sole();
+
+    expect($followUp->visit_number)->toBe('2')
+        ->and($followUp->working_condition)->toBe('العمل قيد التنفيذ')
+        ->and((float) $followUp->completed_amount_ils)->toBe(850.0)
+        ->and($item->description)->toBe('توريد وبناء بلوك اسمنتي')
+        ->and((float) $item->quantity)->toBe(10.0)
+        ->and((float) $item->unit_price_ils)->toBe(85.0)
+        ->and((float) $item->total_price_ils)->toBe(850.0);
+});
+
+test('heks kobo backfill imports old submissions from Kobo API', function () {
+    config(['services.kobotoolbox.token' => 'api-token']);
+
+    Http::fake([
+        'https://kf.kobotoolbox.org/api/v2/assets/asset123/data/?format=json' => Http::response([
+            'results' => [
+                [
+                    '_uuid' => 'uuid:old-heks-main',
+                    '_submission_time' => '2026-06-30T08:00:00',
+                    'code' => 'OLD1',
+                    'beneficiary_name' => 'Old HEKS Beneficiary',
+                    'social_score' => 25,
+                    'technical_score' => 40,
+                ],
+            ],
+            'next' => null,
+        ]),
+    ]);
+
+    $this->artisan('heks:kobo-backfill heks-main asset123')
+        ->expectsOutputToContain('HEKS Kobo backfill finished. Imported: 1, synced: 1, skipped: 0, failed: 0.')
+        ->assertSuccessful();
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'OLD1')->sole();
+
+    expect($beneficiary->name)->toBe('Old HEKS Beneficiary')
+        ->and(KoboRestSubmission::query()->where('submission_uuid', 'uuid:old-heks-main')->value('service_name'))->toBe('heks-main')
+        ->and((float) HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->value('total_score'))->toBe(65.0);
+
+    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer api-token'));
 });
 
 test('kobo rest submission updates existing uuid instead of duplicating it', function () {
