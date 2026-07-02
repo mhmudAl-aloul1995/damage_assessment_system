@@ -7,10 +7,10 @@
     <style>
         .heks-pricing-page .pricing-number { direction: ltr; text-align: right; font-variant-numeric: tabular-nums; unicode-bidi: plaintext; }
         .heks-pricing-page .pricing-page-header { background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), .08), rgba(var(--bs-success-rgb), .05)); border: 1px solid var(--bs-gray-200); border-radius: .75rem; }
-        .heks-pricing-page .pricing-summary-card, .heks-pricing-page .pricing-tools, .heks-pricing-page .pricing-save-bar { background: var(--bs-body-bg); border: 1px solid var(--bs-gray-200); border-radius: .75rem; }
+        .heks-pricing-page .pricing-summary-card, .heks-pricing-page .pricing-tools, .heks-pricing-page .pricing-save-bar, .heks-pricing-page .pricing-manage-card { background: var(--bs-body-bg); border: 1px solid var(--bs-gray-200); border-radius: .75rem; }
         .heks-pricing-page .pricing-summary-card { height: 100%; padding: 1.2rem; }
-        .heks-pricing-page .pricing-tools { padding: 1rem; }
-        .heks-pricing-page .pricing-table { min-width: 1050px; table-layout: fixed; }
+        .heks-pricing-page .pricing-tools, .heks-pricing-page .pricing-manage-card { padding: 1rem; }
+        .heks-pricing-page .pricing-table { min-width: 1220px; table-layout: fixed; }
         .heks-pricing-page .pricing-table thead th { background: var(--bs-body-bg); position: sticky; top: 0; z-index: 1; }
         .heks-pricing-page .pricing-table tbody tr.is-priced-row { background: rgba(var(--bs-success-rgb), .035); }
         .heks-pricing-page .pricing-table tbody tr.is-hidden-by-filter { display: none; }
@@ -25,6 +25,7 @@
         .heks-pricing-page .pricing-col-money { width: 130px; }
         .heks-pricing-page .pricing-col-quantity { width: 105px; }
         .heks-pricing-page .pricing-col-notes { width: 180px; }
+        .heks-pricing-page .pricing-col-actions { width: 110px; }
         .heks-pricing-page .pricing-item-description { line-height: 1.55; overflow-wrap: anywhere; }
         .heks-pricing-page .pricing-section-strip { border-inline-start: 4px solid var(--bs-primary); padding: .75rem 1rem; }
     </style>
@@ -48,7 +49,7 @@
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('heks.beneficiaries.edit', $beneficiary) }}" class="btn btn-light">بيانات المستفيد</a>
                     <a href="{{ route('heks.beneficiaries') }}" class="btn btn-light-primary">رجوع</a>
-                    <button type="submit" form="heksPricingForm" class="btn btn-primary">حفظ التسعير</button>
+                    <button type="submit" form="heksPricingForm" class="btn btn-primary">حفظ التعديلات</button>
                 </div>
             </div>
         </div>
@@ -89,9 +90,81 @@
                     </div>
                 </div>
 
+                <div class="row g-4 mb-6">
+                    <div class="col-xl-8">
+                        <div class="pricing-manage-card h-100">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+                                <div>
+                                    <h3 class="fs-5 fw-bold mb-1">إضافة بند إلى BOQ الأساسي</h3>
+                                    <div class="text-muted fs-7">أضف بندا خارج الكتالوج أو بندا ميدانيا خاصا بهذا المستفيد.</div>
+                                </div>
+                                <span class="badge badge-light-primary">يدوي</span>
+                            </div>
+                            <form method="POST" action="{{ route('heks.beneficiaries.boq-items.store', $beneficiary) }}" class="row g-3 align-items-end">
+                                @csrf
+                                <input type="hidden" name="source" value="manual">
+                                <div class="col-md-3">
+                                    <label class="form-label">القسم</label>
+                                    <input name="section" class="form-control" list="heksPricingSections" placeholder="القسم">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">رقم البند</label>
+                                    <input name="item_code" class="form-control" placeholder="3.1">
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label">وصف البند</label>
+                                    <input name="description" class="form-control" placeholder="وصف البند" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">الوحدة</label>
+                                    <input name="unit" class="form-control" list="heksPricingUnits" placeholder="M2">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">الكمية</label>
+                                    <input name="quantity" type="number" min="0" step="0.001" class="form-control pricing-number" value="0" required dir="ltr">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">سعر الوحدة</label>
+                                    <input name="unit_price_ils" type="number" min="0" step="0.01" class="form-control pricing-number" value="0" required dir="ltr">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">ملاحظات</label>
+                                    <input name="notes" class="form-control" placeholder="ملاحظة اختيارية">
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-primary w-100">إضافة</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="pricing-manage-card h-100">
+                            <h3 class="fs-5 fw-bold mb-1">استيراد BOQ أساسي</h3>
+                            <div class="text-muted fs-7 mb-4">يراجع النظام كود الطلب أو اسم المستفيد قبل ترحيل البنود.</div>
+                            <form method="POST" action="{{ route('heks.beneficiaries.boq-items.import', $beneficiary) }}" enctype="multipart/form-data" class="d-flex flex-column gap-3">
+                                @csrf
+                                <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                                <button class="btn btn-light-primary">استيراد ملف Excel</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <datalist id="heksPricingSections">
+                    @foreach ($pricingSections as $section)
+                        <option value="{{ $section['section'] }}"></option>
+                    @endforeach
+                </datalist>
+                <datalist id="heksPricingUnits">
+                    @foreach ($pricingRows->pluck('unit')->filter()->unique()->sort()->values() as $unit)
+                        <option value="{{ $unit }}"></option>
+                    @endforeach
+                </datalist>
+
                 <form method="POST" action="{{ route('heks.beneficiaries.pricing.update', $beneficiary) }}" id="heksPricingForm">
                     @csrf
                     @method('PUT')
+                </form>
 
                     <div class="pricing-tools d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4 mb-4">
                         <div class="d-flex flex-column flex-md-row gap-3 flex-grow-1">
@@ -121,6 +194,7 @@
                                 <col class="pricing-col-quantity">
                                 <col class="pricing-col-money">
                                 <col class="pricing-col-notes">
+                                <col class="pricing-col-actions">
                             </colgroup>
                             <thead>
                             <tr class="fw-bold text-muted">
@@ -131,6 +205,8 @@
                                 <th>سعر الوحدة ILS</th>
                                 <th>الكمية</th>
                                 <th>الإجمالي ILS</th>
+                                <th>ملاحظات</th>
+                                <th>الإجراء</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -145,7 +221,7 @@
                                         $sectionSummary = $pricingSections->firstWhere('section', $sectionName);
                                     @endphp
                                     <tr class="pricing-section-row" data-section-header="{{ $sectionKey }}">
-                                        <td colspan="8">
+                                        <td colspan="9">
                                             <div class="pricing-section-strip d-flex flex-column flex-md-row justify-content-between gap-2">
                                                 <div>
                                                     <div class="fw-bold text-gray-800">{{ $sectionName }}</div>
@@ -162,22 +238,33 @@
                                 @endif
                                 <tr data-pricing-row data-section-key="{{ $sectionKey }}" data-search-text="{{ Str::lower($row['item_code'].' '.$row['section'].' '.$row['description'].' '.$row['unit']) }}">
                                     <td>
-                                        <input type="hidden" name="items[{{ $index }}][source]" value="{{ $row['source'] }}">
-                                        <input type="text" name="items[{{ $index }}][item_code]" value="{{ $row['item_code'] }}" class="form-control form-control-sm form-control-solid">
+                                        <input form="heksPricingForm" type="hidden" name="items[{{ $index }}][source]" value="{{ $row['source'] }}">
+                                        <input form="heksPricingForm" type="text" name="items[{{ $index }}][item_code]" value="{{ $row['item_code'] }}" class="form-control form-control-sm form-control-solid">
                                     </td>
-                                    <td><input type="text" name="items[{{ $index }}][section]" value="{{ $row['section'] }}" class="form-control form-control-sm form-control-solid"></td>
+                                    <td><input form="heksPricingForm" type="text" name="items[{{ $index }}][section]" value="{{ $row['section'] }}" class="form-control form-control-sm form-control-solid"></td>
                                     <td>
-                                        <input type="hidden" name="items[{{ $index }}][description]" value="{{ $row['description'] }}">
+                                        <input form="heksPricingForm" type="hidden" name="items[{{ $index }}][description]" value="{{ $row['description'] }}">
                                         <div class="fw-semibold pricing-item-description">{{ $row['description'] }}</div>
                                     </td>
-                                    <td><input type="text" name="items[{{ $index }}][unit]" value="{{ $row['unit'] }}" class="form-control form-control-sm form-control-solid"></td>
-                                    <td><input type="text" inputmode="decimal" name="items[{{ $index }}][unit_price_ils]" value="{{ $row['unit_price_ils'] }}" class="form-control form-control-sm pricing-number" data-unit-price dir="ltr"></td>
-                                    <td><input type="text" inputmode="decimal" name="items[{{ $index }}][quantity]" value="{{ $row['quantity'] }}" class="form-control form-control-sm pricing-number" data-quantity dir="ltr"></td>
+                                    <td><input form="heksPricingForm" type="text" name="items[{{ $index }}][unit]" value="{{ $row['unit'] }}" class="form-control form-control-sm form-control-solid"></td>
+                                    <td><input form="heksPricingForm" type="text" inputmode="decimal" name="items[{{ $index }}][unit_price_ils]" value="{{ $row['unit_price_ils'] }}" class="form-control form-control-sm pricing-number" data-unit-price dir="ltr"></td>
+                                    <td><input form="heksPricingForm" type="text" inputmode="decimal" name="items[{{ $index }}][quantity]" value="{{ $row['quantity'] }}" class="form-control form-control-sm pricing-number" data-quantity dir="ltr"></td>
                                     <td class="fw-bold pricing-number text-success" data-row-total>{{ number_format((float) $row['total_price_ils'], 2) }}</td>
-                                    <td><input type="text" name="items[{{ $index }}][notes]" value="{{ $row['notes'] }}" class="form-control form-control-sm" placeholder="ملاحظة"></td>
+                                    <td><input form="heksPricingForm" type="text" name="items[{{ $index }}][notes]" value="{{ $row['notes'] }}" class="form-control form-control-sm" placeholder="ملاحظة"></td>
+                                    <td>
+                                        @if ($row['id'])
+                                            <form id="delete-pricing-row-{{ $row['id'] }}" method="POST" action="{{ route('heks.boq-items.destroy', $row['id']) }}" onsubmit="return confirm('هل تريد حذف هذا البند من BOQ الأساسي؟')">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                            <button form="delete-pricing-row-{{ $row['id'] }}" class="btn btn-sm btn-light-danger w-100">حذف</button>
+                                        @else
+                                            <span class="badge badge-light">كتالوج</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="text-center text-muted py-10">لا توجد بنود BOQ بعد.</td></tr>
+                                <tr><td colspan="9" class="text-center text-muted py-10">لا توجد بنود BOQ بعد.</td></tr>
                             @endforelse
                             </tbody>
                         </table>
@@ -188,9 +275,8 @@
                             <div class="fw-bold">جاهز للحفظ</div>
                             <div class="text-muted fs-7">سيتم حفظ البنود التي كميتها أكبر من صفر فقط.</div>
                         </div>
-                        <button type="submit" class="btn btn-primary">حفظ التسعير</button>
+                        <button type="submit" form="heksPricingForm" class="btn btn-primary">حفظ التعديلات</button>
                     </div>
-                </form>
             </div>
         </div>
     </div>

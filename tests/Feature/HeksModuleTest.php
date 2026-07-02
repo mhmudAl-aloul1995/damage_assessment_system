@@ -368,6 +368,8 @@ it('shows HEKS BOQ pricing as grouped catalog sections', function () {
     $this->actingAs($user)
         ->get(route('heks.beneficiaries.pricing', $beneficiary))
         ->assertOk()
+        ->assertSee('إضافة بند إلى BOQ الأساسي')
+        ->assertSee('استيراد BOQ أساسي')
         ->assertSee('pricingSectionFilter', false)
         ->assertSee('pricing-section-row', false)
         ->assertSee('data-section-header', false)
@@ -395,6 +397,19 @@ it('shows HEKS BOQ pricing as grouped catalog sections', function () {
 
     expect((float) $item->total_price_ils)->toBe(1220.0)
         ->and($item->notes)->toBe('حسب نموذج BOQ KoBo');
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.pricing', $beneficiary))
+        ->assertOk()
+        ->assertSee("delete-pricing-row-{$item->id}", false)
+        ->assertSee('حذف');
+
+    $this->actingAs($user)
+        ->delete(route('heks.boq-items.destroy', $item))
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    expect(HeksBoqItem::query()->whereKey($item->id)->exists())->toBeFalse();
 });
 
 it('updates HEKS survey values and stores previous values in history', function () {

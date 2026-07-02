@@ -518,6 +518,7 @@ class HeksController extends Controller
                 $unitPrice = $existing?->unit_price_ils ?? $catalogItem['unit_price_ils'];
 
                 return [
+                    'id' => $existing?->id,
                     'key' => $key,
                     'source' => $existing?->source ?? 'catalog',
                     'section' => $existing?->section ?? $catalogItem['section'],
@@ -536,6 +537,7 @@ class HeksController extends Controller
         $extraRows = $beneficiary->boqItems
             ->reject(fn (HeksBoqItem $item): bool => in_array(sha1(($item->item_code ?? '').'|'.$item->description), $catalogKeys, true))
             ->map(fn (HeksBoqItem $item): array => [
+                'id' => $item->id,
                 'key' => sha1(($item->item_code ?? '').'|'.$item->description),
                 'source' => $item->source,
                 'section' => $item->section,
