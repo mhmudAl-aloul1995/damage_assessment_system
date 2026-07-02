@@ -176,7 +176,10 @@ class AreaProductivityReportService
                 SUM(CASE WHEN buildings.building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN buildings.building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN buildings.building_damage_status IN ('committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1 ELSE 0 END) as cra_range,
-                COUNT(*) as total_count,
+                SUM(CASE
+                    WHEN buildings.building_damage_status IN ('fully_damaged', 'partially_damaged', 'committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1
+                    ELSE 0
+                END) as total_count,
                 COALESCE(MAX(filtered_housing_units.housing_units_count), 0) as housing_units_count
             ")
             ->groupByRaw($groupKey)

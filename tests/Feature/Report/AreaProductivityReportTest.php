@@ -318,7 +318,7 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSeeInOrder(['<td>Gaza</td>', '<td>Buildings</td>'], false);
 
     $buildingResponse->assertViewHas('summary', function (array $summary): bool {
-        return $summary['total_records'] === 4
+        return $summary['total_records'] === 3
             && $summary['tda'] === 1
             && $summary['pda'] === 2
             && $summary['cra'] === 0
@@ -329,7 +329,7 @@ it('renders separated area productivity reports for all supported datasets with 
         $rimal = $rows->firstWhere('neighborhood', 'Rimal');
 
         return $rimal !== null
-            && (int) $rimal->total_count === 4
+            && (int) $rimal->total_count === 3
             && (int) $rimal->tda_range === 1
             && (int) $rimal->pda_range === 2
             && (int) $rimal->cra_range === 0
