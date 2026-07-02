@@ -5,6 +5,7 @@ namespace App\Modules\Heks\Services;
 use App\Models\KoboRestSubmission;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
+use App\Modules\Heks\Models\HeksBoqCatalogItem;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksLabel;
@@ -42,6 +43,7 @@ class HeksKoboSubmissionSyncService
         $this->syncBeneficiary($beneficiary, $flatPayload, $service);
         $this->syncScores($beneficiary, $flatPayload, $service);
         $this->syncLabels($beneficiary, $flatPayload, $service);
+        $this->syncAllSurveyAnswers($beneficiary, $flatPayload, $service);
         $this->syncAttachments($beneficiary, $payload, $flatPayload, $service);
 
         $followUp = null;
@@ -113,9 +115,9 @@ class HeksKoboSubmissionSyncService
     {
         $data = array_filter([
             'name' => $this->beneficiaryName($payload),
-            'identity_number' => $this->first($payload, ['identity_number', 'id_number', 'beneficiary_id_number', 'رقم الهوية', 'الهوية']),
+            'identity_number' => $this->first($payload, ['identity_number', 'id_number', 'beneficiary_id_number', 'رقم هوية رب الأسرة', 'رقم الهوية', 'الهوية']),
             'phone' => $this->first($payload, ['phone', 'phone_number', 'mobile', 'رقم التواصل', 'رقم الجوال']),
-            'alternate_phone' => $this->first($payload, ['alternate_phone', 'رقم تواصل بديل']),
+            'alternate_phone' => $this->first($payload, ['alternate_phone', 'رقم تواصل بديل', 'رقم التواصل2']),
             'field_engineer' => $this->first($payload, ['engineer_name', 'field_engineer', 'Engineer Name', 'اسم المهندس', 'المهندس المتابع']),
             'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', 'تاريخ الزيارة', '_submission_time'])),
             'governorate' => $this->first($payload, ['governorate', 'المحافظة']),
@@ -124,13 +126,15 @@ class HeksKoboSubmissionSyncService
             'household_head_gender' => $this->first($payload, ['household_head_gender', 'gender', 'جنس رب الأسرة']),
             'marital_status' => $this->first($payload, ['marital_status', 'الحالة الاجتماعية']),
             'displacement_status' => $this->first($payload, ['displacement_status', 'حالة النزوح']),
-            'occupancy_status' => $this->first($payload, ['occupancy_status', 'حالة الإشغال']),
+            'occupancy_status' => $this->first($payload, ['occupancy_status', 'حالة الإشغال الحالي للوحدة السكنية', 'نوع الإشغال الحالي:', 'حالة الإشغال']),
             'damage_status' => $this->first($payload, ['damage_status', 'Damage assessment', 'تقييم حالة ضرر المأوى']),
-            'grant_amount' => $this->decimal($this->first($payload, ['grant_amount', 'grant', 'GRANT', 'Intervention (ILS)', 'المنحة', 'قيمة العقد ILS'])),
+            'grant_amount' => $this->decimal($this->first($payload, ['grant_amount', 'grant', 'GRANT', 'Intervention (ILS)', "Intervention \n(ILS)", 'المنحة', 'قيمة العقد ILS'])),
             'payment_1' => $this->decimal($this->first($payload, ['payment_1', 'Payment_1', '30%'])),
             'payment_2' => $this->decimal($this->first($payload, ['payment_2', 'Payment_2', '50%'])),
             'payment_3' => $this->decimal($this->first($payload, ['payment_3', 'Payment_3', '20%'])),
             'recommendations' => $this->first($payload, ['recommendations', 'final_recommendation', 'توصيات']),
+            'social_notes' => $this->first($payload, ['social_notes', 'ملاحظات إجتماعية']),
+            'engineer_notes' => $this->first($payload, ['engineer_notes', 'ملاحظات المهندسين']),
             'raw_data' => array_merge($beneficiary->raw_data ?? [], [$service => $payload]),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
 
@@ -170,9 +174,9 @@ class HeksKoboSubmissionSyncService
      */
     private function syncScores(HeksBeneficiary $beneficiary, array $payload, string $service): void
     {
-        $social = $this->decimal($this->first($payload, ['social_score', 'Social Score', 'التقييم الاجتماعي']));
-        $technical = $this->decimal($this->first($payload, ['technical_score', 'Technical Score', 'التقييم الفني']));
-        $total = $this->decimal($this->first($payload, ['total_score', 'final_score', 'total', 'final', 'التقييم الكلي']));
+        $social = $this->decimal($this->first($payload, ['social_score', 'Social Score', 'تقييم الحالة الاجتماعية  (30)', "تقييم الحالة \nالاجتماعية  (30)", 'تقييم الحالة الاجتماعية من 35', 'التقييم الاجتماعي']));
+        $technical = $this->decimal($this->first($payload, ['technical_score', 'Technical Score', 'تقييم الحالة الفنية (70)', "تقييم الحالة \nالفنية (70)", 'التقييم الفني']));
+        $total = $this->decimal($this->first($payload, ['total_score', 'final_score', 'Total Score', 'التقييم الكلي']));
 
         if ($social === null && $technical === null && $total === null) {
             return;
@@ -181,14 +185,14 @@ class HeksKoboSubmissionSyncService
         HeksScore::query()->updateOrCreate(
             ['heks_beneficiary_id' => $beneficiary->id, 'source' => $service],
             [
-                'grant_amount' => $this->decimal($this->first($payload, ['grant_amount', 'grant', 'GRANT', 'Intervention (ILS)'])),
+                'grant_amount' => $this->decimal($this->first($payload, ['grant_amount', 'grant', 'GRANT', 'Intervention (ILS)', "Intervention \n(ILS)"])),
                 'payment_1' => $this->decimal($this->first($payload, ['payment_1', 'Payment_1', '30%'])),
                 'payment_2' => $this->decimal($this->first($payload, ['payment_2', 'Payment_2', '50%'])),
                 'payment_3' => $this->decimal($this->first($payload, ['payment_3', 'Payment_3', '20%'])),
                 'social_score' => $social,
                 'technical_score' => $technical,
                 'total_score' => $total ?? (($social ?? 0) + ($technical ?? 0)),
-                'classification' => $this->first($payload, ['classification', 'priority', 'التصنيف', 'الأولوية']),
+                'classification' => $this->first($payload, ['classification', 'Classification', 'priority', 'التصنيف', 'الأولوية']),
                 'raw_data' => $payload,
             ]
         );
@@ -204,7 +208,7 @@ class HeksKoboSubmissionSyncService
             'damage_status' => ['damage_status', 'Damage assessment', 'تقييم حالة ضرر المأوى'],
             'roof_status' => ['roof_status', 'Roof condition', 'حالة السقف'],
             'kitchen_status' => ['kitchen_status', 'General kitchen condition', 'حالة المطبخ'],
-            'occupancy_status' => ['occupancy_status', 'حالة الإشغال'],
+            'occupancy_status' => ['occupancy_status', 'حالة الإشغال الحالي للوحدة السكنية', 'نوع الإشغال الحالي:', 'حالة الإشغال'],
             'final_recommendation' => ['final_recommendation', 'recommendations', 'توصيات نهائية'],
         ];
 
@@ -224,6 +228,96 @@ class HeksKoboSubmissionSyncService
                 ]
             );
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function syncAllSurveyAnswers(HeksBeneficiary $beneficiary, array $payload, string $service): void
+    {
+        foreach ($payload as $key => $value) {
+            if ($this->shouldSkipSurveyAnswer($key, $value)) {
+                continue;
+            }
+
+            $displayValue = $this->displayValue($value);
+
+            if ($displayValue === '') {
+                continue;
+            }
+
+            HeksLabel::query()->updateOrCreate(
+                [
+                    'heks_beneficiary_id' => $beneficiary->id,
+                    'source' => $service,
+                    'label_key' => $this->surveyAnswerLabelKey($key),
+                ],
+                [
+                    'label_value' => $displayValue,
+                    'version' => $this->first($payload, ['__version__', '_submission___version__']),
+                    'raw_data' => [
+                        'field_key' => $key,
+                        'field_label' => $this->cleanFieldLabel($key),
+                        'value' => $value,
+                        'source' => $service,
+                    ],
+                ]
+            );
+        }
+    }
+
+    private function shouldSkipSurveyAnswer(string $key, mixed $value): bool
+    {
+        if ($value === null || $value === '') {
+            return true;
+        }
+
+        $normalized = $this->normalizeKey($key);
+
+        return $normalized === ''
+            || str_contains($normalized, 'uuid')
+            || str_contains($normalized, 'parenttablename')
+            || str_contains($normalized, 'parentindex')
+            || str_contains($normalized, 'validationstatus')
+            || str_contains($normalized, 'submittedby')
+            || str_contains($normalized, 'tags')
+            || str_contains($normalized, 'notes')
+            || str_contains($normalized, 'index');
+    }
+
+    private function surveyAnswerLabelKey(string $key): string
+    {
+        $cleanLabel = Str::of($this->cleanFieldLabel($key))
+            ->limit(70, '')
+            ->toString();
+
+        return 'survey:'.substr(sha1($key), 0, 12).':'.$cleanLabel;
+    }
+
+    private function cleanFieldLabel(string $key): string
+    {
+        return Str::of($key)
+            ->replace(["\r", "\n", "\t"], ' ')
+            ->replace(['/', '_'], ' ')
+            ->squish()
+            ->toString();
+    }
+
+    private function displayValue(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'نعم' : 'لا';
+        }
+
+        if (is_scalar($value)) {
+            return trim((string) $value);
+        }
+
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+        }
+
+        return '';
     }
 
     /**
@@ -356,7 +450,130 @@ class HeksKoboSubmissionSyncService
             return [$flatPayload];
         }
 
-        return [];
+        $catalogRows = $this->catalogQuantityRows($flatPayload);
+
+        if ($catalogRows !== []) {
+            return $catalogRows;
+        }
+
+        return $this->questionQuantityRows($flatPayload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $flatPayload
+     * @return array<int, array<string, mixed>>
+     */
+    private function catalogQuantityRows(array $flatPayload): array
+    {
+        $catalogItems = HeksBoqCatalogItem::query()
+            ->where('is_active', true)
+            ->whereNotNull('item_code')
+            ->orderBy('sort_order')
+            ->get();
+        $rows = [];
+
+        foreach ($catalogItems as $catalogItem) {
+            $itemCode = trim((string) $catalogItem->item_code);
+
+            if ($itemCode === '') {
+                continue;
+            }
+
+            $quantity = $this->quantityForCatalogItem($flatPayload, $itemCode);
+
+            if ($quantity === null || $quantity <= 0) {
+                continue;
+            }
+
+            $unitPrice = (float) $catalogItem->unit_price_ils;
+
+            $rows[] = [
+                'section' => $catalogItem->section,
+                'item_code' => $itemCode,
+                'description' => $catalogItem->description,
+                'unit' => $catalogItem->unit,
+                'quantity' => $quantity,
+                'unit_price_ils' => $unitPrice,
+                'total_price_ils' => $quantity * $unitPrice,
+                'notes' => 'Imported from KoBo quantity field',
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $flatPayload
+     */
+    private function quantityForCatalogItem(array $flatPayload, string $itemCode): ?float
+    {
+        $normalizedCode = $this->normalizeKey($itemCode);
+
+        foreach ($flatPayload as $key => $value) {
+            $quantity = $this->decimal((string) $value);
+
+            if ($quantity === null || $quantity <= 0) {
+                continue;
+            }
+
+            $normalizedKey = $this->normalizeKey($key);
+
+            if (! str_contains($normalizedKey, $normalizedCode)) {
+                continue;
+            }
+
+            if (! $this->looksLikeQuantityKey($key) && ! str_contains($normalizedKey, 'boq')) {
+                continue;
+            }
+
+            return $quantity;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $flatPayload
+     * @return array<int, array<string, mixed>>
+     */
+    private function questionQuantityRows(array $flatPayload): array
+    {
+        $rows = [];
+
+        foreach ($flatPayload as $key => $value) {
+            $quantity = $this->decimal((string) $value);
+
+            if ($quantity === null || $quantity <= 0 || ! $this->looksLikeQuantityKey($key)) {
+                continue;
+            }
+
+            $rows[] = [
+                'description' => Str::of($key)->replace(['/', '_'], ' ')->squish()->toString(),
+                'quantity' => $quantity,
+                'unit_price_ils' => 0,
+                'total_price_ils' => 0,
+                'notes' => 'Imported from unmapped KoBo BOQ quantity field',
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function looksLikeQuantityKey(string $key): bool
+    {
+        $normalized = Str::lower($key);
+
+        return str_contains($normalized, 'quantity')
+            || str_contains($normalized, 'qty')
+            || str_contains($normalized, 'boq')
+            || str_contains($normalized, 'item')
+            || str_contains($normalized, 'كمية')
+            || str_contains($normalized, 'البند');
+    }
+
+    private function normalizeKey(string $value): string
+    {
+        return Str::lower((string) preg_replace('/[^\pL\pN]+/u', '', $value));
     }
 
     /**
@@ -408,10 +625,10 @@ class HeksKoboSubmissionSyncService
                 continue;
             }
 
-            $normalizedKey = Str::lower(str_replace([' ', '-', '_'], '', $key));
+            $normalizedKey = $this->normalizeKey($key);
 
             foreach ($needles as $needle) {
-                $normalizedNeedle = Str::lower(str_replace([' ', '-', '_'], '', $needle));
+                $normalizedNeedle = $this->normalizeKey($needle);
 
                 if ($normalizedNeedle !== '' && str_contains($normalizedKey, $normalizedNeedle)) {
                     return trim((string) $value);

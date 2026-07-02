@@ -4,8 +4,10 @@ use App\Models\KoboRestSubmission;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
+use App\Modules\Heks\Models\HeksBoqCatalogItem;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
+use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
 use Illuminate\Support\Facades\Http;
 
@@ -105,6 +107,68 @@ test('kobo rest submission syncs HEKS main survey payload', function () {
         ->and(KoboRestSubmission::query()->where('submission_uuid', 'uuid:heks-main-001')->value('sync_status'))->toBe('synced');
 });
 
+test('kobo rest submission maps HEKS scoring workbook column names', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-score-workbook-columns',
+            'رقم الطلب/الكود' => 'GDQ9',
+            'اسم رب الأسرة' => 'Workbook Columns Beneficiary',
+            'رقم هوية رب الأسرة' => '123456789',
+            "Intervention \n(ILS)" => '12096.50',
+            'تقييم الحالة الاجتماعية  (30)' => '30',
+            "تقييم الحالة \nالفنية (70)" => '42',
+            'التقييم الكلي' => '72',
+            'التصنيف' => 'Very High',
+            'ملاحظات إجتماعية' => 'Social note',
+            'ملاحظات المهندسين' => 'Engineer note',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'GDQ9')->sole();
+    $score = HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect($beneficiary->name)->toBe('Workbook Columns Beneficiary')
+        ->and($beneficiary->identity_number)->toBe('123456789')
+        ->and((float) $beneficiary->grant_amount)->toBe(12096.5)
+        ->and($beneficiary->social_notes)->toBe('Social note')
+        ->and($beneficiary->engineer_notes)->toBe('Engineer note')
+        ->and((float) $score->social_score)->toBe(30.0)
+        ->and((float) $score->technical_score)->toBe(42.0)
+        ->and((float) $score->total_score)->toBe(72.0)
+        ->and($score->classification)->toBe('Very High');
+});
+
+test('kobo rest submission preserves every HEKS survey answer as searchable labels', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-all-survey-answers',
+            'رقم الطلب/الكود' => 'ALL1',
+            'اسم رب الأسرة' => 'All Fields Beneficiary',
+            'custom_group/custom_question_one' => 'answer one',
+            'custom_group/custom_question_two' => 'answer two',
+            'توصيات نهائية/بحاجة لاعمال تشطيبات فقط137' => 'Yes',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'ALL1')->sole();
+
+    expect(HeksLabel::query()
+        ->where('heks_beneficiary_id', $beneficiary->id)
+        ->where('label_key', 'like', 'survey:%')
+        ->where('label_value', 'answer one')
+        ->exists())->toBeTrue()
+        ->and(HeksLabel::query()
+            ->where('heks_beneficiary_id', $beneficiary->id)
+            ->where('label_key', 'like', 'survey:%')
+            ->where('label_value', 'Yes')
+            ->exists())->toBeTrue()
+        ->and(data_get($beneficiary->raw_data, 'heks-main.custom_group/custom_question_two'))->toBe('answer two');
+});
+
 test('kobo rest submission syncs HEKS follow up BOQ payload', function () {
     HeksBeneficiary::query()->create([
         'code' => 'F35',
@@ -147,6 +211,57 @@ test('kobo rest submission syncs HEKS follow up BOQ payload', function () {
         ->and((float) $item->quantity)->toBe(10.0)
         ->and((float) $item->unit_price_ils)->toBe(85.0)
         ->and((float) $item->total_price_ils)->toBe(850.0);
+});
+
+test('kobo rest submission builds HEKS BOQ rows from catalog quantity fields', function () {
+    HeksBoqCatalogItem::query()->create([
+        'section' => 'اعمال البلوك',
+        'item_code' => '3.1',
+        'description' => 'توريد وبناء بلوك اسمنتي',
+        'unit' => 'M2',
+        'unit_price_ils' => 85,
+        'is_active' => true,
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-boq', [
+            '_uuid' => 'uuid:heks-boq-catalog-quantity',
+            'code' => 'GDQ4',
+            'beneficiary_name' => 'Catalog Quantity Beneficiary',
+            'boq_qty_3_1' => '12',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'GDQ4')->sole();
+    $item = HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect($item->item_code)->toBe('3.1')
+        ->and($item->description)->toBe('توريد وبناء بلوك اسمنتي')
+        ->and((float) $item->quantity)->toBe(12.0)
+        ->and((float) $item->unit_price_ils)->toBe(85.0)
+        ->and((float) $item->total_price_ils)->toBe(1020.0);
+});
+
+test('kobo rest submission keeps unmapped HEKS BOQ quantity fields visible', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-boq', [
+            '_uuid' => 'uuid:heks-boq-unmapped-quantity',
+            'code' => 'GDQ5',
+            'beneficiary_name' => 'Unmapped Quantity Beneficiary',
+            'custom_boq_quantity_roof_repair' => '3',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'GDQ5')->sole();
+    $item = HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect($item->description)->toContain('custom boq quantity roof repair')
+        ->and((float) $item->quantity)->toBe(3.0)
+        ->and((float) $item->unit_price_ils)->toBe(0.0);
 });
 
 test('heks kobo backfill imports old submissions from Kobo API', function () {
