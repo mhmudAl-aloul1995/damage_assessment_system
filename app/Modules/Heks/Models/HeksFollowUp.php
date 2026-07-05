@@ -34,6 +34,24 @@ class HeksFollowUp extends Model
         return $this->hasMany(HeksBoqItem::class, 'heks_follow_up_id');
     }
 
+    public function workingConditionLabel(): string
+    {
+        return match ($this->working_condition) {
+            'the_work_have_not_been_started' => 'لم يتم البدء في العمل',
+            'work_in_progress__but_not_due_for_second' => 'العمل قيد التنفيذ ولا يستحق الدفعة الثانية بعد',
+            'work_in_progress__and_due_for_next_payme' => 'العمل قيد التنفيذ ويستحق الدفعة التالية',
+            'work_has_been_finished_and_due_for_the_f' => 'تم الانتهاء من العمل ويستحق الدفعة النهائية',
+            'other_condition' => filled($this->other_condition) ? (string) $this->other_condition : 'حالة أخرى',
+            null, '' => '-',
+            default => (string) $this->working_condition,
+        };
+    }
+
+    public function hasBoqLink(): bool
+    {
+        return filled($this->boq_url) || filled($this->boq_filename);
+    }
+
     protected function casts(): array
     {
         return [

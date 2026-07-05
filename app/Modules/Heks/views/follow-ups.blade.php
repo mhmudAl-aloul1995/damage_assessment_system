@@ -122,10 +122,11 @@
                                 $boqImportSummary = $boqAttachment?->raw_data['boq_import_summary'] ?? null;
                                 $boqImported = is_array($boqImportSummary) && ($boqImportSummary['imported'] ?? false) && (($boqImportSummary['imported_rows'] ?? 0) > 0);
                                 $boqImportFailed = is_array($boqImportSummary) && ($boqImportSummary['imported'] ?? true) === false;
-                                $boqStatusLabel = $boqImported ? 'تم استيراد البنود' : ($boqImportFailed ? 'فشل الاستيراد' : ($boqAttachment ? 'ملف محفوظ فقط' : 'لا يوجد BOQ'));
-                                $boqStatusClass = $boqImported ? 'badge-light-success' : ($boqImportFailed ? 'badge-light-danger' : ($boqAttachment ? 'badge-light-warning' : 'badge-light'));
                                 $boqItemsCount = $followUp->boqItems->count();
                                 $boqItemsTotal = (float) $followUp->boqItems->sum('total_price_ils');
+                                $boqHasFile = $boqAttachment || $followUp->hasBoqLink();
+                                $boqStatusLabel = $boqItemsCount > 0 ? 'بنود مستوردة' : ($boqImported ? 'تم استيراد البنود' : ($boqImportFailed ? 'فشل الاستيراد' : ($boqHasFile ? 'ملف محفوظ فقط' : 'لا يوجد BOQ')));
+                                $boqStatusClass = $boqItemsCount > 0 ? 'badge-light-success' : ($boqImported ? 'badge-light-success' : ($boqImportFailed ? 'badge-light-danger' : ($boqHasFile ? 'badge-light-warning' : 'badge-light')));
                                 $boqPreviewId = "follow-up-boq-preview-{$followUp->id}";
                             @endphp
                             <tr>
@@ -140,7 +141,7 @@
                                 </td>
                                 <td>{{ $followUp->engineer_name ?? '-' }}</td>
                                 <td>
-                                    <div class="fw-semibold">{{ $followUp->working_condition ?? '-' }}</div>
+                                    <div class="fw-semibold">{{ $followUp->workingConditionLabel() }}</div>
                                     @if ($followUp->other_condition)
                                         <div class="text-muted small text-truncate" style="max-width: 160px;">{{ $followUp->other_condition }}</div>
                                     @endif
@@ -169,6 +170,11 @@
                                     <div class="d-flex justify-content-end gap-2">
                                         @if ($followUp->boqItems->isNotEmpty())
                                             <button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $boqPreviewId }}" aria-expanded="false" aria-controls="{{ $boqPreviewId }}">عرض BOQ</button>
+                                        @elseif ($followUp->boq_url)
+                                            <form method="POST" action="{{ route('heks.follow-ups.boq.import', $followUp) }}">
+                                                @csrf
+                                                <button class="btn btn-sm btn-light-primary">ترحيل BOQ</button>
+                                            </form>
                                         @elseif ($followUp->beneficiary)
                                             <a class="btn btn-sm btn-light" href="{{ route('heks.beneficiaries.pricing', $followUp->beneficiary) }}">BOQ الأساسي</a>
                                         @endif
@@ -246,8 +252,10 @@
                         $boqImportSummary = $boqAttachment?->raw_data['boq_import_summary'] ?? null;
                         $boqImported = is_array($boqImportSummary) && ($boqImportSummary['imported'] ?? false) && (($boqImportSummary['imported_rows'] ?? 0) > 0);
                         $boqImportFailed = is_array($boqImportSummary) && ($boqImportSummary['imported'] ?? true) === false;
-                        $boqStatusLabel = $boqImported ? 'تم استيراد البنود' : ($boqImportFailed ? 'فشل الاستيراد' : ($boqAttachment ? 'ملف محفوظ فقط' : 'لا يوجد BOQ'));
-                        $boqStatusClass = $boqImported ? 'badge-light-success' : ($boqImportFailed ? 'badge-light-danger' : ($boqAttachment ? 'badge-light-warning' : 'badge-light'));
+                        $boqItemsCount = $followUp->boqItems->count();
+                        $boqHasFile = $boqAttachment || $followUp->hasBoqLink();
+                        $boqStatusLabel = $boqItemsCount > 0 ? 'بنود مستوردة' : ($boqImported ? 'تم استيراد البنود' : ($boqImportFailed ? 'فشل الاستيراد' : ($boqHasFile ? 'ملف محفوظ فقط' : 'لا يوجد BOQ')));
+                        $boqStatusClass = $boqItemsCount > 0 ? 'badge-light-success' : ($boqImported ? 'badge-light-success' : ($boqImportFailed ? 'badge-light-danger' : ($boqHasFile ? 'badge-light-warning' : 'badge-light')));
                     @endphp
                     <div class="modal fade" id="followUpModal{{ $followUp->id }}" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog modal-xl modal-dialog-scrollable">

@@ -178,6 +178,13 @@ test('kobo rest submission syncs HEKS path style field keys from api backfill pa
             'group_bv71d05/Engineer_Name' => '_____3',
             'group_ab98d17/Working_condition' => 'work_has_been_finished_and_due_for_the_f',
             'group_ab98d17/integer_hv9hz51' => '2966',
+            'group_ab98d17/Insert_BOQ' => 'Follow Up BOQ (DGS20)-1.xlsx',
+            '_attachments' => [
+                [
+                    'filename' => 'owner/attachments/submission/Follow_Up_BOQ_DGS20-1.xlsx',
+                    'download_url' => 'https://kf.kobotoolbox.org/api/v2/assets/demo/data/1/attachments/demo/',
+                ],
+            ],
         ])
         ->assertCreated()
         ->assertJsonPath('sync_status', 'synced');
@@ -190,7 +197,9 @@ test('kobo rest submission syncs HEKS path style field keys from api backfill pa
         ->and($beneficiary->field_engineer)->toBeNull()
         ->and($followUp->visit_number)->toBe('3.0')
         ->and($followUp->visit_date->toDateString())->toBe('2026-06-28')
-        ->and($followUp->working_condition)->toBe('work_has_been_finished_and_due_for_the_f');
+        ->and($followUp->working_condition)->toBe('work_has_been_finished_and_due_for_the_f')
+        ->and($followUp->workingConditionLabel())->toBe('تم الانتهاء من العمل ويستحق الدفعة النهائية')
+        ->and($followUp->boq_url)->toBe('https://kf.kobotoolbox.org/api/v2/assets/demo/data/1/attachments/demo/');
 });
 
 test('kobo rest submission syncs HEKS main KoBo field names from api backfill payloads', function () {

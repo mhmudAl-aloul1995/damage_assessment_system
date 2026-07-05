@@ -610,7 +610,25 @@ class HeksSpreadsheetImportService
         $temporaryPath = tempnam(sys_get_temp_dir(), 'heks-boq-');
 
         try {
-            $response = Http::timeout(30)->get($attachment->url);
+            $request = Http::timeout((int) config('services.kobotoolbox.timeout', 60))
+                ->accept('*/*');
+
+            if (str_contains((string) $attachment->url, 'kobotoolbox.org/api/')) {
+                $token = (string) config('services.kobotoolbox.token', '');
+
+                if ($token === '') {
+                    return [
+                        'imported' => false,
+                        'error' => 'KoboToolbox token is not configured.',
+                    ];
+                }
+
+                $request = $request->withHeaders([
+                    'Authorization' => 'Token '.$token,
+                ]);
+            }
+
+            $response = $request->get($attachment->url);
 
             if (! $response->successful() || $response->body() === '') {
                 return [

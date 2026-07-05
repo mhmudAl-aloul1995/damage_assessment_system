@@ -83,6 +83,10 @@ class HeksKoboSubmissionSyncService
             'beneficiary_code',
             'case_code',
             'request_code',
+            "\u{0631}\u{0642}\u{0645} \u{0627}\u{0644}\u{0637}\u{0644}\u{0628}/\u{0627}\u{0644}\u{0643}\u{0648}\u{062F}",
+            "\u{0631}\u{0642}\u{0645} \u{0627}\u{0644}\u{0637}\u{0644}\u{0628}",
+            "\u{0627}\u{0644}\u{0643}\u{0648}\u{062F}",
+            "\u{0643}\u{0648}\u{062F}",
             'رقم الطلب/الكود',
             'رقم الطلب',
             'الكود',
@@ -130,7 +134,7 @@ class HeksKoboSubmissionSyncService
 
         $data = array_filter([
             'name' => $beneficiaryName,
-            'identity_number' => $this->first($payload, ['identity_number', 'id_number', 'beneficiary_id_number', '_003', 'رقم هوية رب الأسرة', 'رقم الهوية', 'الهوية']),
+            'identity_number' => $this->first($payload, ['identity_number', 'id_number', 'beneficiary_id_number', '_003', "\u{0631}\u{0642}\u{0645} \u{0647}\u{0648}\u{064A}\u{0629} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}", "\u{0631}\u{0642}\u{0645} \u{0627}\u{0644}\u{0647}\u{0648}\u{064A}\u{0629}", "\u{0627}\u{0644}\u{0647}\u{0648}\u{064A}\u{0629}", 'رقم هوية رب الأسرة', 'رقم الهوية', 'الهوية']),
             'phone' => $this->first($payload, ['phone', 'phone_number', 'mobile', 'رقم التواصل', 'رقم الجوال']),
             'alternate_phone' => $this->first($payload, ['alternate_phone', 'رقم تواصل بديل', 'رقم التواصل2']),
             'field_engineer' => $fieldEngineer,
@@ -148,8 +152,8 @@ class HeksKoboSubmissionSyncService
             'payment_2' => $this->decimal($this->first($payload, ['payment_2', 'Payment_2', '50%'])),
             'payment_3' => $this->decimal($this->first($payload, ['payment_3', 'Payment_3', '20%'])),
             'recommendations' => $this->first($payload, ['recommendations', 'final_recommendation', 'توصيات']),
-            'social_notes' => $this->first($payload, ['social_notes', 'ملاحظات إجتماعية']),
-            'engineer_notes' => $this->first($payload, ['engineer_notes', 'ملاحظات المهندسين']),
+            'social_notes' => $this->first($payload, ['social_notes', "\u{0645}\u{0644}\u{0627}\u{062D}\u{0638}\u{0627}\u{062A} \u{0625}\u{062C}\u{062A}\u{0645}\u{0627}\u{0639}\u{064A}\u{0629}", 'ملاحظات إجتماعية']),
+            'engineer_notes' => $this->first($payload, ['engineer_notes', "\u{0645}\u{0644}\u{0627}\u{062D}\u{0638}\u{0627}\u{062A} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}\u{064A}\u{0646}", 'ملاحظات المهندسين']),
             'raw_data' => array_merge($beneficiary->raw_data ?? [], [$service => $payload]),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
 
@@ -171,6 +175,13 @@ class HeksKoboSubmissionSyncService
     {
         $visitNumber = $this->first($payload, ['visit_number', 'visit #', 'visit_no', 'رقم الزيارة', 'الزيارة']);
 
+        $boqFilename = $this->first($payload, ['boq_filename', 'Insert BOQ', 'BOQ']);
+        $boqUrl = $this->first($payload, ['boq_url', 'Insert BOQ_URL', 'BOQ_URL']);
+
+        if ($boqUrl === '' && $boqFilename !== '') {
+            $boqUrl = $this->followUpBoqAttachmentUrl($beneficiary, $boqFilename);
+        }
+
         return HeksFollowUp::query()->updateOrCreate(
             [
                 'heks_beneficiary_id' => $beneficiary->id,
@@ -190,11 +201,31 @@ class HeksKoboSubmissionSyncService
                 'completed_amount_ils' => $this->decimal($this->first($payload, ['completed_amount_ils', 'completed_amount', 'إجمالي ما تم انجازة حتى الآن ILS'])),
                 'completion_percentage' => $this->decimal($this->first($payload, ['completion_percentage', 'completion_percent', 'نسبة الإنجاز بالأعمال %'])),
                 'engineer_recommendations' => $this->first($payload, ['engineer_recommendations', 'recommendations', 'توصيات المهندس للزيارة']),
-                'boq_filename' => $this->first($payload, ['boq_filename', 'Insert BOQ', 'BOQ']),
-                'boq_url' => $this->first($payload, ['boq_url', 'Insert BOQ_URL', 'BOQ_URL']),
+                'boq_filename' => $boqFilename,
+                'boq_url' => $boqUrl,
                 'raw_data' => $payload,
             ]
         );
+    }
+
+    private function followUpBoqAttachmentUrl(HeksBeneficiary $beneficiary, string $filename): string
+    {
+        $normalizedFilename = $this->normalizedAttachmentFilename($filename);
+
+        if ($normalizedFilename === '') {
+            return '';
+        }
+
+        $attachment = HeksAttachment::query()
+            ->where('heks_beneficiary_id', $beneficiary->id)
+            ->where('attachment_type', 'follow_up_boq')
+            ->whereNotNull('url')
+            ->get()
+            ->first(function (HeksAttachment $attachment) use ($normalizedFilename): bool {
+                return $this->normalizedAttachmentFilename((string) $attachment->filename) === $normalizedFilename;
+            });
+
+        return (string) ($attachment?->url ?? '');
     }
 
     /**
@@ -202,9 +233,9 @@ class HeksKoboSubmissionSyncService
      */
     private function syncScores(HeksBeneficiary $beneficiary, array $payload, string $service): void
     {
-        $social = $this->decimal($this->first($payload, ['social_score', 'Social Score', 'تقييم الحالة الاجتماعية  (30)', "تقييم الحالة \nالاجتماعية  (30)", 'تقييم الحالة الاجتماعية من 35', 'التقييم الاجتماعي']));
-        $technical = $this->decimal($this->first($payload, ['technical_score', 'Technical Score', 'تقييم الحالة الفنية (70)', "تقييم الحالة \nالفنية (70)", 'التقييم الفني']));
-        $total = $this->decimal($this->first($payload, ['total_score', 'final_score', 'Total Score', 'التقييم الكلي']));
+        $social = $this->decimal($this->first($payload, ['social_score', 'Social Score', "\u{062A}\u{0642}\u{064A}\u{064A}\u{0645} \u{0627}\u{0644}\u{062D}\u{0627}\u{0644}\u{0629} \u{0627}\u{0644}\u{0627}\u{062C}\u{062A}\u{0645}\u{0627}\u{0639}\u{064A}\u{0629}  (30)", "\u{062A}\u{0642}\u{064A}\u{064A}\u{0645} \u{0627}\u{0644}\u{062D}\u{0627}\u{0644}\u{0629}\n\u{0627}\u{0644}\u{0627}\u{062C}\u{062A}\u{0645}\u{0627}\u{0639}\u{064A}\u{0629}  (30)", 'تقييم الحالة الاجتماعية  (30)', "تقييم الحالة \nالاجتماعية  (30)", 'تقييم الحالة الاجتماعية من 35', 'التقييم الاجتماعي']));
+        $technical = $this->decimal($this->first($payload, ['technical_score', 'Technical Score', "\u{062A}\u{0642}\u{064A}\u{064A}\u{0645} \u{0627}\u{0644}\u{062D}\u{0627}\u{0644}\u{0629} \u{0627}\u{0644}\u{0641}\u{0646}\u{064A}\u{0629} (70)", "\u{062A}\u{0642}\u{064A}\u{064A}\u{0645} \u{0627}\u{0644}\u{062D}\u{0627}\u{0644}\u{0629}\n\u{0627}\u{0644}\u{0641}\u{0646}\u{064A}\u{0629} (70)", 'تقييم الحالة الفنية (70)', "تقييم الحالة \nالفنية (70)", 'التقييم الفني']));
+        $total = $this->decimal($this->first($payload, ['total_score', 'final_score', 'Total Score', "\u{0627}\u{0644}\u{062A}\u{0642}\u{064A}\u{064A}\u{0645} \u{0627}\u{0644}\u{0643}\u{0644}\u{064A}", 'التقييم الكلي']));
 
         if ($social === null && $technical === null && $total === null) {
             return;
@@ -220,7 +251,7 @@ class HeksKoboSubmissionSyncService
                 'social_score' => $social,
                 'technical_score' => $technical,
                 'total_score' => $total ?? (($social ?? 0) + ($technical ?? 0)),
-                'classification' => $this->first($payload, ['classification', 'Classification', 'priority', 'التصنيف', 'الأولوية']),
+                'classification' => $this->first($payload, ['classification', 'Classification', 'priority', "\u{0627}\u{0644}\u{062A}\u{0635}\u{0646}\u{064A}\u{0641}", "\u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0648}\u{064A}\u{0629}", 'التصنيف', 'الأولوية']),
                 'raw_data' => $payload,
             ]
         );
@@ -1019,6 +1050,15 @@ class HeksKoboSubmissionSyncService
             || str_contains($lowerKey, 'صورة')
             || str_contains($lowerKey, 'مرفق')
             || preg_match('/\.(jpg|jpeg|png|webp|pdf|xlsx|xls)(\?.*)?$/', $lowerValue) === 1;
+    }
+
+    private function normalizedAttachmentFilename(string $filename): string
+    {
+        $baseName = basename(str_replace('\\', '/', $filename));
+        $baseName = urldecode($baseName);
+        $baseName = preg_replace('/[\s_()\[\]{}-]+/u', '', $baseName) ?? $baseName;
+
+        return Str::lower($baseName);
     }
 
     private function attachmentType(string $value): string

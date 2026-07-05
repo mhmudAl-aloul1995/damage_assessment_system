@@ -555,6 +555,7 @@ it('shows follow-up BOQ items directly on the follow-ups page', function () {
         'heks_beneficiary_id' => $beneficiary->id,
         'code' => $beneficiary->code,
         'visit_number' => '2',
+        'working_condition' => 'work_has_been_finished_and_due_for_the_f',
         'boq_filename' => 'visit-boq.xlsx',
         'boq_url' => 'https://example.test/visit-boq.xlsx',
     ]);
@@ -576,6 +577,8 @@ it('shows follow-up BOQ items directly on the follow-ups page', function () {
         ->get(route('heks.follow-ups'))
         ->assertOk()
         ->assertSee('عرض BOQ')
+        ->assertSee('تم الانتهاء من العمل ويستحق الدفعة النهائية')
+        ->assertDontSee('work_has_been_finished_and_due_for_the_f')
         ->assertSee('Inline BOQ item')
         ->assertSee('200.00')
         ->assertSee('ترحيل BOQ من Excel');

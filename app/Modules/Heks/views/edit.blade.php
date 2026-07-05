@@ -357,7 +357,7 @@
                                         <td><span class="badge badge-light-primary">{{ $followUp->visit_number ?? '-' }}</span></td>
                                         <td>{{ $followUp->visit_date?->format('Y-m-d') ?? '-' }}</td>
                                         <td>{{ $followUp->engineer_name ?? '-' }}</td>
-                                        <td>{{ $followUp->working_condition ?? '-' }}</td>
+                                        <td>{{ $followUp->workingConditionLabel() }}</td>
                                         <td>
                                             <div>{{ $followUp->completed_amount_ils ? number_format((float) $followUp->completed_amount_ils, 2) : '-' }} ILS</div>
                                             <div class="text-muted small">{{ $followUp->completion_percentage !== null ? number_format((float) $followUp->completion_percentage, 2).'%' : '-' }}</div>
@@ -368,6 +368,9 @@
                                                 <div class="text-muted small mt-1">{{ $followUp->boqItems->count() }} بند</div>
                                             @elseif ($followUp->boq_url)
                                                 <a class="btn btn-sm btn-light" href="{{ $followUp->boq_url }}" target="_blank" rel="noopener">فتح رابط KoBo</a>
+                                            @elseif ($followUp->boq_filename)
+                                                <span class="badge badge-light-warning">ملف محفوظ فقط</span>
+                                                <div class="text-muted small mt-1">{{ $followUp->boq_filename }}</div>
                                             @else
                                                 <span class="text-muted">لا يوجد BOQ</span>
                                             @endif
