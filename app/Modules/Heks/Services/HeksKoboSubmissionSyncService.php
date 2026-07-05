@@ -538,6 +538,10 @@ class HeksKoboSubmissionSyncService
         $normalizedCode = $this->normalizeKey($itemCode);
 
         foreach ($flatPayload as $key => $value) {
+            if (! is_scalar($value)) {
+                continue;
+            }
+
             $quantity = $this->decimal((string) $value);
 
             if ($quantity === null || $quantity <= 0) {
@@ -569,6 +573,10 @@ class HeksKoboSubmissionSyncService
         $rows = [];
 
         foreach ($flatPayload as $key => $value) {
+            if (! is_scalar($value)) {
+                continue;
+            }
+
             $quantity = $this->decimal((string) $value);
 
             if ($quantity === null || $quantity <= 0 || ! $this->looksLikeQuantityKey($key)) {
@@ -659,20 +667,27 @@ class HeksKoboSubmissionSyncService
 
     private function ensureKoboRecordColumn(string $service, string $tableName, string $field): ?string
     {
-        $column = $this->koboColumnName($field);
+        $existingMapping = HeksKoboFieldMapping::query()
+            ->where('service_name', $service)
+            ->where('kobo_field', $field)
+            ->first();
+
+        if ($existingMapping instanceof HeksKoboFieldMapping) {
+            return $existingMapping->column_name;
+        }
+
+        $column = $this->uniqueKoboColumnName($service, $tableName, $field);
 
         if ($column === '') {
             return null;
         }
 
-        HeksKoboFieldMapping::query()->updateOrCreate(
+        HeksKoboFieldMapping::query()->create(
             [
                 'service_name' => $service,
-                'column_name' => $column,
-            ],
-            [
                 'table_name' => $tableName,
                 'kobo_field' => $field,
+                'column_name' => $column,
             ]
         );
 
@@ -680,6 +695,24 @@ class HeksKoboSubmissionSyncService
             Schema::table($tableName, function ($table) use ($column): void {
                 $table->text($column)->nullable();
             });
+        }
+
+        return $column;
+    }
+
+    private function uniqueKoboColumnName(string $service, string $tableName, string $field): string
+    {
+        $base = $this->koboColumnName($field);
+        $column = $base;
+        $attempt = 0;
+
+        while (
+            Schema::hasColumn($tableName, $column)
+            || HeksKoboFieldMapping::query()->where('service_name', $service)->where('column_name', $column)->exists()
+        ) {
+            $attempt++;
+            $suffix = substr(sha1($field.$attempt), 0, 8);
+            $column = substr($base, 0, 55).'_'.$suffix;
         }
 
         return $column;

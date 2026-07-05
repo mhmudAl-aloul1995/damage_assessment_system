@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\KoboRestSubmission;
 use App\Modules\DamageAssessmentBorrowers\Services\KoboBorrowerSubmissionSyncService;
+use App\Modules\Heks\Services\HeksKoboSubmissionSyncService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 use Throwable;
 
 class SyncKoboRestSubmissions extends Command
@@ -29,7 +31,7 @@ class SyncKoboRestSubmissions extends Command
     /**
      * Execute the console command.
      */
-    public function handle(KoboBorrowerSubmissionSyncService $syncService): int
+    public function handle(KoboBorrowerSubmissionSyncService $syncService, HeksKoboSubmissionSyncService $heksSyncService): int
     {
         $borrowerNameField = $this->option('borrower-name-field')
             ?: config('services.kobotoolbox.borrower_name_field');
@@ -46,13 +48,24 @@ class SyncKoboRestSubmissions extends Command
         $skipped = 0;
         $failed = 0;
 
-        $query->chunkById(100, function ($submissions) use ($syncService, $borrowerNameField, $fieldMap, &$synced, &$skipped, &$failed): void {
+        $query->chunkById(100, function ($submissions) use ($syncService, $heksSyncService, $borrowerNameField, $fieldMap, &$synced, &$skipped, &$failed): void {
             foreach ($submissions as $submission) {
                 try {
-                    $sync = $syncService->sync($submission, $borrowerNameField, $fieldMap);
+                    $isHeksSubmission = Str::startsWith($submission->service_name, 'heks-');
+                    $sync = $isHeksSubmission
+                        ? $heksSyncService->sync($submission)
+                        : $syncService->sync($submission, $borrowerNameField, $fieldMap);
+
+                    if ($sync === null) {
+                        $skipped++;
+
+                        continue;
+                    }
 
                     $submission->forceFill([
-                        'damage_assessment_borrower_id' => $sync['borrower']?->id,
+                        'damage_assessment_borrower_id' => $isHeksSubmission
+                            ? $submission->damage_assessment_borrower_id
+                            : $sync['borrower']?->id,
                         'sync_status' => $sync['status'],
                         'sync_error' => $sync['error'],
                         'synced_at' => $sync['status'] === 'synced' ? now() : null,

@@ -7,10 +7,19 @@ use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 class VerifyHeksKoboFields extends Command
 {
+    /**
+     * @var array<string, array<int, string>>
+     */
+    private array $columnsByTable = [];
+
+    /**
+     * @var array<string, array<string, string>>
+     */
+    private array $mappingColumns = [];
+
     /**
      * The name and signature of the console command.
      *
@@ -67,20 +76,15 @@ class VerifyHeksKoboFields extends Command
                         }
 
                         $checked++;
-                        $column = $this->koboColumnName($field);
-                        $mappingExists = HeksKoboFieldMapping::query()
-                            ->where('service_name', $submission->service_name)
-                            ->where('kobo_field', $field)
-                            ->where('column_name', $column)
-                            ->exists();
+                        $column = $this->mappingColumn($submission->service_name, $field);
 
-                        if (! $mappingExists) {
+                        if ($column === null) {
                             $missing[] = "#{$submission->id} {$field}: missing mapping";
 
                             continue;
                         }
 
-                        if (! Schema::hasColumn($tableName, $column)) {
+                        if (! $this->hasColumn($tableName, $column)) {
                             $missing[] = "#{$submission->id} {$field}: missing column {$column}";
 
                             continue;
@@ -122,29 +126,25 @@ class VerifyHeksKoboFields extends Command
         };
     }
 
-    private function koboColumnName(string $field): string
+    private function mappingColumn(string $service, string $field): ?string
     {
-        $column = Str::of($field)
-            ->replace(['/', '-', '.', ' ', ':'], '_')
-            ->replaceMatches('/[^A-Za-z0-9_]+/', '_')
-            ->replaceMatches('/_+/', '_')
-            ->trim('_')
-            ->lower()
-            ->toString();
-
-        if ($column === '') {
-            $column = 'field_'.substr(sha1($field), 0, 12);
+        if (! array_key_exists($service, $this->mappingColumns)) {
+            $this->mappingColumns[$service] = HeksKoboFieldMapping::query()
+                ->where('service_name', $service)
+                ->pluck('column_name', 'kobo_field')
+                ->all();
         }
 
-        if (is_numeric($column[0])) {
-            $column = 'field_'.$column;
+        return $this->mappingColumns[$service][$field] ?? null;
+    }
+
+    private function hasColumn(string $tableName, string $column): bool
+    {
+        if (! array_key_exists($tableName, $this->columnsByTable)) {
+            $this->columnsByTable[$tableName] = Schema::getColumnListing($tableName);
         }
 
-        if (strlen($column) > 58) {
-            $column = substr($column, 0, 45).'_'.substr(sha1($field), 0, 12);
-        }
-
-        return $column;
+        return in_array($column, $this->columnsByTable[$tableName], true);
     }
 
     private function recordValue(mixed $value): ?string

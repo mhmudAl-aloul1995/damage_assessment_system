@@ -547,6 +547,33 @@ test('kobo sync command retries skipped submissions', function () {
         ->and(DamageAssessmentBorrower::query()->where('borrower_name', 'Retried Borrower')->exists())->toBeTrue();
 });
 
+test('kobo sync command replays synced HEKS submissions into wide record columns', function () {
+    KoboRestSubmission::query()->create([
+        'service_name' => 'heks-main',
+        'submission_uuid' => 'uuid:replay-heks-wide-record',
+        'payload' => [
+            '_uuid' => 'uuid:replay-heks-wide-record',
+            'identification/application_code' => 'REPLAY1',
+            'family_info/head_name' => 'Replay Heks Beneficiary',
+            'custom_group/custom_question' => 'replayed answer',
+        ],
+        'sync_status' => 'synced',
+        'received_at' => now(),
+    ]);
+
+    $this->artisan('kobo:sync-rest-submissions --all')
+        ->expectsOutputToContain('Synced: 1')
+        ->assertSuccessful();
+
+    $record = DB::table('heks_main_kobo_records')
+        ->where('submission_uuid', 'uuid:replay-heks-wide-record')
+        ->first();
+
+    expect($record)->not->toBeNull()
+        ->and($record->identification_application_code)->toBe('REPLAY1')
+        ->and($record->custom_group_custom_question)->toBe('replayed answer');
+});
+
 test('kobo sync command can use an explicit borrower name field', function () {
     KoboRestSubmission::query()->create([
         'service_name' => 'iqrad',
