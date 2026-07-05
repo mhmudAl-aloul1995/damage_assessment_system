@@ -119,7 +119,7 @@
                         'finance' => 'الدفعات والتوزيع',
                         'photos' => 'الصور',
                         'attachments' => 'المرفقات',
-                        'raw' => 'البيانات الخام',
+                        'raw' => 'الإستبيان',
                     ] as $tabId => $tabLabel)
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ $loop->first ? 'active' : '' }}" data-bs-toggle="tab" data-bs-target="#{{ $tabId }}" type="button" role="tab">{{ $tabLabel }}</button>

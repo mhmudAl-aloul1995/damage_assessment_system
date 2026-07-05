@@ -9,7 +9,9 @@ use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 beforeEach(function () {
     config(['services.kobotoolbox.rest_service_token' => 'test-kobo-token']);
@@ -161,6 +163,90 @@ test('kobo rest submission ignores computed HEKS display columns and invalid val
     expect($beneficiary->name)->toBe('الاسم الحقيقي للمستفيد')
         ->and($beneficiary->field_engineer)->toBe('م. محمد الشيخ')
         ->and($beneficiary->identity_number)->toBe('123123123');
+});
+
+test('kobo rest submission syncs HEKS path style field keys from api backfill payloads', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-followups', [
+            '_uuid' => 'uuid:heks-path-style-fields',
+            'group_sr3dl25/Code' => 'DGS20',
+            'group_sr3dl25/Name' => 'Path Style Beneficiary',
+            'group_sr3dl25/GRANT' => '10766',
+            'group_bv71d05/Visit_Date' => '2026-06-28',
+            'group_bv71d05/visit_' => '3.0',
+            'group_bv71d05/Engineer_Name' => '_____3',
+            'group_ab98d17/Working_condition' => 'work_has_been_finished_and_due_for_the_f',
+            'group_ab98d17/integer_hv9hz51' => '2966',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'DGS20')->sole();
+    $followUp = HeksFollowUp::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect($beneficiary->name)->toBe('Path Style Beneficiary')
+        ->and((float) $beneficiary->grant_amount)->toBe(10766.0)
+        ->and($beneficiary->field_engineer)->toBeNull()
+        ->and($followUp->visit_number)->toBe('3.0')
+        ->and($followUp->visit_date->toDateString())->toBe('2026-06-28')
+        ->and($followUp->working_condition)->toBe('work_has_been_finished_and_due_for_the_f');
+});
+
+test('kobo rest submission syncs HEKS main KoBo field names from api backfill payloads', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-main-kobo-field-names',
+            'identification/application_code' => 'DGS4+B',
+            'identification/respondent_name' => 'Respondent Name',
+            'family_info/head_name' => 'Household Head Name',
+            'family_info/_003' => '405429788',
+            'family_info/area_001' => 'الدرج النفق',
+            'family_info/address_001' => 'شارع النفق',
+            'housing_info/occupancy_type' => '56',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'DGS4+B')->sole();
+
+    expect($beneficiary->name)->toBe('Household Head Name');
+    expect($beneficiary->identity_number)->toBe('405429788')
+        ->and($beneficiary->area)->toBe('الدرج النفق')
+        ->and($beneficiary->address)->toBe('شارع النفق')
+        ->and($beneficiary->occupancy_status)->toBe('56');
+});
+
+test('kobo rest submission stores every HEKS KoBo field in service record columns', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-main-wide-record',
+            'identification/application_code' => 'WIDE1',
+            'family_info/head_name' => 'Wide Record Beneficiary',
+            'family_info/area_001' => 'الدرج',
+            'custom_group/custom_question_two' => 'answer two',
+            'very/long/kobo/field/name/that/should/be/shortened/because/mysql/column/names/have/a/limit' => 'long answer',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    expect(Schema::hasColumn('heks_main_kobo_records', 'identification_application_code'))->toBeTrue()
+        ->and(Schema::hasColumn('heks_main_kobo_records', 'family_info_head_name'))->toBeTrue()
+        ->and(Schema::hasColumn('heks_main_kobo_records', 'custom_group_custom_question_two'))->toBeTrue();
+
+    $record = DB::table('heks_main_kobo_records')
+        ->where('submission_uuid', 'uuid:heks-main-wide-record')
+        ->first();
+
+    expect($record->identification_application_code)->toBe('WIDE1')
+        ->and($record->family_info_head_name)->toBe('Wide Record Beneficiary')
+        ->and($record->custom_group_custom_question_two)->toBe('answer two')
+        ->and(DB::table('heks_kobo_field_mappings')
+            ->where('service_name', 'heks-main')
+            ->where('kobo_field', 'very/long/kobo/field/name/that/should/be/shortened/because/mysql/column/names/have/a/limit')
+            ->exists())->toBeTrue();
 });
 
 test('kobo rest submission preserves every HEKS survey answer as searchable labels', function () {

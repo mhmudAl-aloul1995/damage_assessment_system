@@ -8,10 +8,13 @@ use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksBoqCatalogItem;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
+use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class HeksKoboSubmissionSyncService
@@ -57,6 +60,8 @@ class HeksKoboSubmissionSyncService
             $boqItems = $this->syncBoqItems($beneficiary, $payload, $flatPayload, $service, $followUp);
         }
 
+        $this->syncKoboRecordFields($submission, $beneficiary, $followUp, $flatPayload);
+
         return [
             'status' => 'synced',
             'error' => null,
@@ -74,6 +79,7 @@ class HeksKoboSubmissionSyncService
         $code = $this->first($payload, [
             'code',
             'Code',
+            'application_code',
             'beneficiary_code',
             'case_code',
             'request_code',
@@ -84,7 +90,7 @@ class HeksKoboSubmissionSyncService
         ]);
 
         if ($code === '') {
-            $code = $this->findByKeyPart($payload, ['beneficiary_code', 'case_code', 'request_code', 'code', 'الكود', 'كود']);
+            $code = $this->findByKeyPart($payload, ['application_code', 'beneficiary_code', 'case_code', 'request_code', 'code', 'الكود', 'كود']);
         }
 
         if ($code !== '') {
@@ -124,18 +130,18 @@ class HeksKoboSubmissionSyncService
 
         $data = array_filter([
             'name' => $beneficiaryName,
-            'identity_number' => $this->first($payload, ['identity_number', 'id_number', 'beneficiary_id_number', 'رقم هوية رب الأسرة', 'رقم الهوية', 'الهوية']),
+            'identity_number' => $this->first($payload, ['identity_number', 'id_number', 'beneficiary_id_number', '_003', 'رقم هوية رب الأسرة', 'رقم الهوية', 'الهوية']),
             'phone' => $this->first($payload, ['phone', 'phone_number', 'mobile', 'رقم التواصل', 'رقم الجوال']),
             'alternate_phone' => $this->first($payload, ['alternate_phone', 'رقم تواصل بديل', 'رقم التواصل2']),
             'field_engineer' => $fieldEngineer,
             'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', 'تاريخ الزيارة', '_submission_time'])),
             'governorate' => $this->first($payload, ['governorate', 'المحافظة']),
-            'area' => $this->first($payload, ['area', 'community', 'المنطقة', 'التجمع']),
-            'address' => $this->first($payload, ['address', 'العنوان', 'العنوان بالتفصيل']),
-            'household_head_gender' => $this->first($payload, ['household_head_gender', 'gender', 'جنس رب الأسرة']),
+            'area' => $this->first($payload, ['area_001', 'area', 'community', 'المنطقة', 'التجمع']),
+            'address' => $this->first($payload, ['address_001', 'address', 'العنوان', 'العنوان بالتفصيل']),
+            'household_head_gender' => $this->first($payload, ['head_gender', 'household_head_gender', 'gender', 'جنس رب الأسرة']),
             'marital_status' => $this->first($payload, ['marital_status', 'الحالة الاجتماعية']),
             'displacement_status' => $this->first($payload, ['displacement_status', 'حالة النزوح']),
-            'occupancy_status' => $this->first($payload, ['occupancy_status', 'حالة الإشغال الحالي للوحدة السكنية', 'نوع الإشغال الحالي:', 'حالة الإشغال']),
+            'occupancy_status' => $this->first($payload, ['occupancy_type', 'occupancy_status', 'حالة الإشغال الحالي للوحدة السكنية', 'نوع الإشغال الحالي:', 'حالة الإشغال']),
             'damage_status' => $this->first($payload, ['damage_status', 'Damage assessment', 'تقييم حالة ضرر المأوى']),
             'grant_amount' => $this->decimal($this->first($payload, ['grant_amount', 'grant', 'GRANT', 'Intervention (ILS)', "Intervention \n(ILS)", 'المنحة', 'قيمة العقد ILS'])),
             'payment_1' => $this->decimal($this->first($payload, ['payment_1', 'Payment_1', '30%'])),
@@ -593,6 +599,134 @@ class HeksKoboSubmissionSyncService
             || str_contains($normalized, 'البند');
     }
 
+    /**
+     * @param  array<string, mixed>  $flatPayload
+     */
+    private function syncKoboRecordFields(KoboRestSubmission $submission, HeksBeneficiary $beneficiary, ?HeksFollowUp $followUp, array $flatPayload): void
+    {
+        $tableName = $this->koboRecordTable($submission->service_name);
+
+        if ($tableName === null || ! Schema::hasTable($tableName)) {
+            return;
+        }
+
+        $fieldValues = [];
+
+        foreach ($flatPayload as $field => $value) {
+            if (! is_string($field) || $field === '') {
+                continue;
+            }
+
+            $column = $this->ensureKoboRecordColumn($submission->service_name, $tableName, $field);
+
+            if ($column === null) {
+                continue;
+            }
+
+            $fieldValues[$column] = $this->koboRecordValue($value);
+        }
+
+        $now = now();
+        $existingId = DB::table($tableName)
+            ->where('submission_uuid', $submission->submission_uuid)
+            ->value('id');
+
+        DB::table($tableName)->updateOrInsert(
+            ['submission_uuid' => $submission->submission_uuid],
+            array_merge([
+                'heks_beneficiary_id' => $beneficiary->id,
+                'heks_follow_up_id' => $followUp?->id,
+                'kobo_rest_submission_id' => $submission->id,
+                'service_name' => $submission->service_name,
+                'received_at' => $submission->received_at,
+                'synced_at' => $now,
+                'created_at' => $existingId === null ? $now : DB::raw('created_at'),
+                'updated_at' => $now,
+            ], $fieldValues)
+        );
+    }
+
+    private function koboRecordTable(string $service): ?string
+    {
+        return match ($service) {
+            'heks-main' => 'heks_main_kobo_records',
+            'heks-followups' => 'heks_followups_kobo_records',
+            'heks-boq' => 'heks_boq_kobo_records',
+            'heks-followup-boq' => 'heks_followup_boq_kobo_records',
+            default => null,
+        };
+    }
+
+    private function ensureKoboRecordColumn(string $service, string $tableName, string $field): ?string
+    {
+        $column = $this->koboColumnName($field);
+
+        if ($column === '') {
+            return null;
+        }
+
+        HeksKoboFieldMapping::query()->updateOrCreate(
+            [
+                'service_name' => $service,
+                'column_name' => $column,
+            ],
+            [
+                'table_name' => $tableName,
+                'kobo_field' => $field,
+            ]
+        );
+
+        if (! Schema::hasColumn($tableName, $column)) {
+            Schema::table($tableName, function ($table) use ($column): void {
+                $table->text($column)->nullable();
+            });
+        }
+
+        return $column;
+    }
+
+    private function koboColumnName(string $field): string
+    {
+        $column = Str::of($field)
+            ->replace(['/', '-', '.', ' ', ':'], '_')
+            ->replaceMatches('/[^A-Za-z0-9_]+/', '_')
+            ->replaceMatches('/_+/', '_')
+            ->trim('_')
+            ->lower()
+            ->toString();
+
+        if ($column === '') {
+            $column = 'field_'.substr(sha1($field), 0, 12);
+        }
+
+        if (is_numeric($column[0])) {
+            $column = 'field_'.$column;
+        }
+
+        if (strlen($column) > 58) {
+            $column = substr($column, 0, 45).'_'.substr(sha1($field), 0, 12);
+        }
+
+        return $column;
+    }
+
+    private function koboRecordValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: null;
+    }
+
     private function normalizeKey(string $value): string
     {
         return Str::lower((string) preg_replace('/[^\pL\pN]+/u', '', $value));
@@ -606,6 +740,8 @@ class HeksKoboSubmissionSyncService
         $candidates = [
             'name',
             'Name',
+            'head_name',
+            'respondent_name',
             'beneficiary_name',
             'beneficiary_full_name',
             "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0633}\u{062A}\u{0641}\u{064A}\u{062F}",
@@ -633,6 +769,10 @@ class HeksKoboSubmissionSyncService
     {
         foreach ($candidates as $candidate) {
             if (array_key_exists($candidate, $payload) && filled($payload[$candidate])) {
+                if (is_array($payload[$candidate])) {
+                    continue;
+                }
+
                 $value = trim((string) $payload[$candidate]);
 
                 if (! $this->isInvalidValue($value)) {
@@ -641,6 +781,12 @@ class HeksKoboSubmissionSyncService
             }
 
             if ($this->isGenericCandidate($candidate)) {
+                $pathSegmentMatch = $this->findByPathSegment($payload, $candidate);
+
+                if ($pathSegmentMatch !== '') {
+                    return $pathSegmentMatch;
+                }
+
                 continue;
             }
 
@@ -672,11 +818,24 @@ class HeksKoboSubmissionSyncService
             }
 
             $normalizedKey = $this->normalizeKey($key);
+            $normalizedLastSegment = $this->normalizeKey(Str::afterLast($key, '/'));
 
             foreach ($needles as $needle) {
                 $normalizedNeedle = $this->normalizeKey($needle);
 
-                if ($normalizedNeedle !== '' && str_contains($normalizedKey, $normalizedNeedle)) {
+                if ($normalizedNeedle === '') {
+                    continue;
+                }
+
+                if (str_contains($key, '/')) {
+                    if ($normalizedLastSegment === $normalizedNeedle) {
+                        return $value;
+                    }
+
+                    continue;
+                }
+
+                if (str_contains($normalizedKey, $normalizedNeedle)) {
                     return $value;
                 }
             }
@@ -690,12 +849,41 @@ class HeksKoboSubmissionSyncService
         return in_array($this->normalizeKey($candidate), ['name', 'code', 'id', 'phone', 'mobile', 'area'], true);
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function findByPathSegment(array $payload, string $candidate): string
+    {
+        $normalizedCandidate = $this->normalizeKey($candidate);
+
+        if ($normalizedCandidate === '') {
+            return '';
+        }
+
+        foreach ($payload as $key => $value) {
+            if (! str_contains($key, '/') || ! filled($value) || is_array($value) || $this->isComputedFieldKey($key)) {
+                continue;
+            }
+
+            $value = trim((string) $value);
+
+            if ($this->isInvalidValue($value)) {
+                continue;
+            }
+
+            if ($this->normalizeKey(Str::afterLast($key, '/')) === $normalizedCandidate) {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
     private function isComputedFieldKey(string $key): bool
     {
         return str_contains($key, '${')
             || str_contains($key, '}')
-            || str_contains($key, ':${')
-            || str_contains($key, '/');
+            || str_contains($key, ':${');
     }
 
     private function isInvalidValue(string $value): bool
