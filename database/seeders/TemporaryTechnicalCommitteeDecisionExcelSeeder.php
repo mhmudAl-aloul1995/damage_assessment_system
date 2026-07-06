@@ -105,6 +105,7 @@ class TemporaryTechnicalCommitteeDecisionExcelSeeder extends Seeder
             'missing_archive_user' => 'no user available for archive ownership',
             'record_not_found' => 'record not found in database',
             'not_committee_review' => 'record exists but damage status is not committee review',
+            'already_has_decision_archive' => 'record already has a committee decision and archive',
             default => $reason,
         };
     }

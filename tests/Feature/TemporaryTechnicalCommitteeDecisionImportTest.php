@@ -196,6 +196,96 @@ it('creates committee members from excel header names when no linked users exist
         ->and($decision->signatures()->whereNull('signed_by_user_id')->count())->toBe(2);
 });
 
+it('skips static seed decisions when no committee member id numbers are linked to users', function () {
+    User::factory()->create();
+
+    $building = Building::query()->create([
+        'objectid' => 1120,
+        'globalid' => 'committee-review-with-unlinked-members',
+        'building_name' => 'Doha Bream',
+        'building_damage_status' => 'committee_review',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importRecords([[
+        'record_type' => 'building',
+        'municipality' => 'Khan Younis',
+        'sheet' => 'Khan Younis buildings',
+        'row' => 34,
+        'objectid' => 1120,
+        'globalid' => $building->globalid,
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Partial demolition from committee Excel',
+        'action_text' => null,
+        'member_id_numbers' => ['801933490', '800282667', '800846958', '804475044'],
+    ]]);
+
+    $expectedMemberIdNumbers = ['801933490', '800282667', '800846958', '804475044', '801113747'];
+
+    expect($summary['decisions_completed'])->toBe(0)
+        ->and($summary['skipped_rows'])->toBe(1)
+        ->and($summary['skip_reasons']['missing_committee_users'])->toBe(1)
+        ->and($summary['missing_users'])->toBe($expectedMemberIdNumbers)
+        ->and(CommitteeMember::query()->count())->toBe(0)
+        ->and(CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->exists())->toBeFalse()
+        ->and(BuildingSurveyArchiveObject::query()->where('building_objectid', 1120)->exists())->toBeFalse();
+});
+
+it('skips static seed records that already have a committee decision and archive', function () {
+    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
+
+    $building = Building::query()->create([
+        'objectid' => 1120,
+        'globalid' => 'already-archived-committee-review',
+        'building_name' => 'Already Archived',
+        'building_damage_status' => 'committee_review',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => 'fully_damaged',
+        'decision_text' => 'Existing decision text',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $decision->id,
+        'building_objectid' => $building->objectid,
+        'building_globalid' => $building->globalid,
+        'archived_by' => User::query()->firstOrFail()->id,
+        'archived_at' => now(),
+        'building_snapshot' => $building->attributesToArray(),
+        'committee_decision_snapshot' => $decision->attributesToArray(),
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importRecords([[
+        'record_type' => 'building',
+        'municipality' => 'Khan Younis',
+        'sheet' => 'Khan Younis buildings',
+        'row' => 34,
+        'objectid' => 1120,
+        'globalid' => $building->globalid,
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'New seed decision text',
+        'action_text' => null,
+        'member_id_numbers' => ['801933490', '800282667', '800846958', '804475044'],
+    ]]);
+
+    $decision->refresh();
+
+    expect($summary['decisions_completed'])->toBe(0)
+        ->and($summary['skipped_rows'])->toBe(1)
+        ->and($summary['skip_reasons']['already_has_decision_archive'])->toBe(1)
+        ->and($summary['missing_users'])->toBe([])
+        ->and($decision->decision_type)->toBe('fully_damaged')
+        ->and($decision->decision_text)->toBe('Existing decision text')
+        ->and(CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->count())->toBe(1)
+        ->and(BuildingSurveyArchiveObject::query()->where('building_objectid', 1120)->count())->toBe(1);
+});
+
 it('syncs configured municipality signatures onto existing committee review decisions not included in seed records', function () {
     temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
     $oldSigner = User::factory()->create(['id_no' => '700000001']);
@@ -408,6 +498,58 @@ it('exceptionally archives full current records for static excel seed rows even 
         ->and($archiveObject->building_snapshot['building_name'])->toBe('Already Completed From Excel')
         ->and($archiveObject->building_snapshot['building_damage_status'])->toBe('fully_damaged')
         ->and($archiveObject->notes)->toContain('sheet=Gaza buildings row=2 decision_type=fully_damaged');
+});
+
+it('skips exceptional archive seed records that already have a committee decision archive', function () {
+    temporaryCommitteeUsers(['934863572', '900277229', '801933490', '800282667', '956242622']);
+
+    $building = Building::query()->create([
+        'objectid' => 3293,
+        'globalid' => 'already-exceptionally-archived',
+        'building_name' => 'Already Exceptional Archived',
+        'building_damage_status' => 'fully_damaged',
+        'field_status' => 'Not_Completed',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => 'fully_damaged',
+        'decision_text' => 'Existing archive decision',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'source_type' => 'temporary_committee_excel_archive',
+        'committee_decision_id' => $decision->id,
+        'building_objectid' => $building->objectid,
+        'building_globalid' => $building->globalid,
+        'archived_by' => User::query()->firstOrFail()->id,
+        'archived_at' => now(),
+        'notes' => 'Original archive notes',
+        'building_snapshot' => $building->attributesToArray(),
+        'committee_decision_snapshot' => $decision->attributesToArray(),
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->archiveSeedRecords([[
+        'record_type' => 'building',
+        'municipality' => 'Gaza',
+        'sheet' => 'Gaza buildings',
+        'row' => 2,
+        'objectid' => 3293,
+        'globalid' => $building->globalid,
+        'decision_type' => 'fully_damaged',
+        'decision_text' => 'Full demolition',
+        'action_text' => null,
+        'member_id_numbers' => ['934863572', '900277229', '801933490', '800282667', '956242622'],
+    ]]);
+
+    expect($summary['rows'])->toBe(1)
+        ->and($summary['archived'])->toBe(0)
+        ->and($summary['skipped_rows'])->toBe(1)
+        ->and($summary['skip_reasons']['already_has_decision_archive'])->toBe(1)
+        ->and(BuildingSurveyArchiveObject::query()->where('building_objectid', 3293)->count())->toBe(1)
+        ->and(BuildingSurveyArchiveObject::query()->where('building_objectid', 3293)->value('notes'))->toBe('Original archive notes');
 });
 
 /**

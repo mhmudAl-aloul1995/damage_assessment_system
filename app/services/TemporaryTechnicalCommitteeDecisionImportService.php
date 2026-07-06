@@ -52,6 +52,36 @@ class TemporaryTechnicalCommitteeDecisionImportService
         foreach ($records as $record) {
             $summary['rows']++;
 
+            $decisionable = $this->resolveDecisionable(
+                $record['record_type'],
+                (string) $record['objectid'],
+                (string) ($record['globalid'] ?? ''),
+            );
+
+            if (! $decisionable instanceof Model) {
+                $this->recordSkip($summary, 'record_not_found', [
+                    'sheet' => $record['sheet'],
+                    'row' => $record['row'],
+                    'objectid' => $record['objectid'],
+                    'record_type' => $record['record_type'],
+                    'reason' => 'No matching building or housing unit was found.',
+                ]);
+
+                continue;
+            }
+
+            if ($this->hasCommitteeDecisionArchive($decisionable)) {
+                $this->recordSkip($summary, 'already_has_decision_archive', [
+                    'sheet' => $record['sheet'],
+                    'row' => $record['row'],
+                    'objectid' => $record['objectid'],
+                    'record_type' => $record['record_type'],
+                    'reason' => 'The matched record already has a committee decision and archive.',
+                ]);
+
+                continue;
+            }
+
             if (($record['use_excel_member_names'] ?? false) === true) {
                 $memberNames = $record['member_names'] ?? [];
                 $membersKey = 'names:'.implode('|', $memberNames);
@@ -69,24 +99,6 @@ class TemporaryTechnicalCommitteeDecisionImportService
                     'objectid' => $record['objectid'],
                     'record_type' => $record['record_type'],
                     'reason' => 'No configured committee users were found by id_no.',
-                ]);
-
-                continue;
-            }
-
-            $decisionable = $this->resolveDecisionable(
-                $record['record_type'],
-                (string) $record['objectid'],
-                (string) ($record['globalid'] ?? ''),
-            );
-
-            if (! $decisionable instanceof Model) {
-                $this->recordSkip($summary, 'record_not_found', [
-                    'sheet' => $record['sheet'],
-                    'row' => $record['row'],
-                    'objectid' => $record['objectid'],
-                    'record_type' => $record['record_type'],
-                    'reason' => 'No matching building or housing unit was found.',
                 ]);
 
                 continue;
@@ -216,6 +228,18 @@ class TemporaryTechnicalCommitteeDecisionImportService
                     'objectid' => $record['objectid'],
                     'record_type' => $record['record_type'],
                     'reason' => 'No matching building or housing unit was found for exceptional archive.',
+                ]);
+
+                continue;
+            }
+
+            if ($this->hasCommitteeDecisionArchive($decisionable)) {
+                $this->recordSkip($summary, 'already_has_decision_archive', [
+                    'sheet' => $record['sheet'],
+                    'row' => $record['row'],
+                    'objectid' => $record['objectid'],
+                    'record_type' => $record['record_type'],
+                    'reason' => 'The matched record already has a committee decision and archive.',
                 ]);
 
                 continue;
@@ -502,6 +526,41 @@ class TemporaryTechnicalCommitteeDecisionImportService
             'housing_unit_snapshot' => $housingUnit?->attributesToArray(),
             'committee_decision_snapshot' => $decision?->attributesToArray(),
         ]);
+    }
+
+    private function hasCommitteeDecisionArchive(Model $decisionable): bool
+    {
+        /** @var CommitteeDecision|null $decision */
+        $decision = $decisionable->committeeDecision;
+
+        if (! $decision instanceof CommitteeDecision) {
+            return false;
+        }
+
+        $building = $decisionable instanceof HousingUnit ? $decisionable->building : $decisionable;
+
+        if (! $building instanceof Building) {
+            return false;
+        }
+
+        return BuildingSurveyArchiveObject::query()
+            ->whereIn('source_type', ['committee_decision', 'temporary_committee_excel_archive'])
+            ->where(function ($query) use ($decisionable, $decision, $building): void {
+                $query
+                    ->where('committee_decision_id', $decision->id)
+                    ->orWhere(function ($query) use ($decisionable, $building): void {
+                        $query->where('building_objectid', $building->objectid);
+
+                        if ($decisionable instanceof HousingUnit) {
+                            $query->where('housing_unit_objectid', $decisionable->objectid);
+
+                            return;
+                        }
+
+                        $query->whereNull('housing_unit_objectid');
+                    });
+            })
+            ->exists();
     }
 
     /**
