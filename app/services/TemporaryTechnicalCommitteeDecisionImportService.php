@@ -26,6 +26,14 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private const KHAN_YOUNIS_NUSEIRAT_MEMBER_ID_NUMBERS = ['801933490', '800282667', '800846958', '804475044', '801113747'];
 
+    private const KHAN_YOUNIS_NUSEIRAT_MEMBER_NAMES = [
+        'محمد أبو ريدة',
+        'طارق السلوت',
+        'عدنان العكلوك',
+        'عبد الرحمن شملخ',
+        'عبير الكيال',
+    ];
+
     public function __construct(private readonly ArcGisStatusUpdaterService $arcGisStatusUpdaterService) {}
 
     /**
@@ -93,6 +101,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
             }
 
             if ($members === []) {
+                $members = $this->existingCommitteeMembersForSeedRecord($record);
+            }
+
+            if ($members === []) {
                 $this->recordSkip($summary, 'missing_committee_users', [
                     'sheet' => $record['sheet'],
                     'row' => $record['row'],
@@ -113,7 +125,11 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 $summary['statuses_forced_to_committee_review']++;
             }
 
-            if (! $resurveyCompleted && ! $this->isCommitteeReviewRecord($decisionable)) {
+            if (
+                ! $resurveyCompleted
+                && ! $this->isCommitteeReviewRecord($decisionable)
+                && ! $this->currentStatusMatchesDecisionType($decisionable, $record['decision_type'])
+            ) {
                 $this->recordSkip($summary, 'not_committee_review', [
                     'sheet' => $record['sheet'],
                     'row' => $record['row'],
@@ -299,6 +315,41 @@ class TemporaryTechnicalCommitteeDecisionImportService
         }
 
         return $members;
+    }
+
+    /**
+     * @param  array{municipality: string}  $record
+     * @return list<CommitteeMember>
+     */
+    private function existingCommitteeMembersForSeedRecord(array $record): array
+    {
+        $municipality = $this->normalizeMunicipality($record['municipality']);
+
+        if (! $this->isKhanYounisOrNuseiratMunicipality($municipality)) {
+            return [];
+        }
+
+        $committeeMembers = CommitteeMember::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        return collect(self::KHAN_YOUNIS_NUSEIRAT_MEMBER_NAMES)
+            ->map(function (string $memberName) use ($committeeMembers): ?CommitteeMember {
+                $normalizedMemberName = $this->normalizePersonName($memberName);
+
+                return $committeeMembers->first(function (CommitteeMember $committeeMember) use ($normalizedMemberName): bool {
+                    $normalizedCandidate = $this->normalizePersonName($committeeMember->name);
+
+                    return $this->nameContainsAllTokens($normalizedCandidate, $normalizedMemberName)
+                        || $this->nameContainsAllTokens($normalizedMemberName, $normalizedCandidate);
+                });
+            })
+            ->filter()
+            ->unique('id')
+            ->values()
+            ->all();
     }
 
     /**
@@ -1017,6 +1068,25 @@ class TemporaryTechnicalCommitteeDecisionImportService
         }
 
         return null;
+    }
+
+    private function currentStatusMatchesDecisionType(Model $decisionable, string $decisionType): bool
+    {
+        if ($decisionType === CommitteeDecision::TYPE_HIGHER_COMMITTEE) {
+            return false;
+        }
+
+        $currentStatus = $this->normalizeStatus($this->currentDamageStatus($decisionable));
+
+        if ($decisionable instanceof Building) {
+            return $currentStatus === $decisionType;
+        }
+
+        if ($decisionable instanceof HousingUnit) {
+            return $currentStatus === ($decisionType === CommitteeDecision::TYPE_FULLY_DAMAGED ? 'fully_damaged2' : 'partially_damaged2');
+        }
+
+        return false;
     }
 
     private function normalizeStatus(?string $status): string
