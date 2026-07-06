@@ -155,7 +155,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($rows as $row)
+                            @foreach ($rows as $row)
                                 <tr>
                                     <td>{{ $row->sequence }}</td>
                                     <td>{{ $row->field_engineer_name }}</td>
@@ -164,13 +164,7 @@
                                     <td class="fw-bold text-warning">{{ $row->need_review_count }}</td>
                                     <td class="fw-bold text-primary">{{ $row->total_completed_count }}</td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">
-                                        لا توجد بيانات ضمن الفلاتر المحددة.
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                         <tfoot class="border-top-2">
                             <tr class="fw-bold bg-light">
@@ -231,7 +225,8 @@
                 pageLength: 25,
                 order: [[2, 'desc'], [5, 'desc']],
                 language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json'
+                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json',
+                    emptyTable: 'لا توجد بيانات ضمن الفلاتر المحددة.'
                 }
             });
         });

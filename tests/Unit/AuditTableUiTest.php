@@ -1,5 +1,17 @@
 <?php
 
+test('engineer audit report leaves empty table messaging to datatables', function () {
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/reports/engineer_audit.blade.php');
+
+    expect($view)
+        ->toContain('id="engineer_audit_table"')
+        ->toContain('@foreach ($rows as $row)')
+        ->toContain("emptyTable: 'لا توجد بيانات ضمن الفلاتر المحددة.'")
+        ->not->toContain('@forelse ($rows as $row)')
+        ->not->toContain('@empty')
+        ->not->toContain('<td colspan="6" class="text-center text-muted">');
+});
+
 test('audit table keeps all columns with responsive text cells', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/audit.blade.php');
     $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');
