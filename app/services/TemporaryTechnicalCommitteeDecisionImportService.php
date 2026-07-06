@@ -87,6 +87,12 @@ class TemporaryTechnicalCommitteeDecisionImportService
             if ($this->hasCommitteeDecisionArchive($decisionable)) {
                 if ($resurveyCompleted) {
                     $this->markResurveyCompletedFieldStatus($decisionable);
+                    $decision = $decisionable->committeeDecision;
+
+                    if ($decision instanceof CommitteeDecision) {
+                        $this->syncArcGisResurveyCompletedFieldStatus($decision);
+                    }
+
                     $summary['resurvey_completed_statuses_fixed']++;
                 }
 
@@ -872,7 +878,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
 
     private function syncArcGisResurveyCompletedFieldStatus(CommitteeDecision $decision): void
     {
-        $this->markArcGisManualPending($decision);
+        $this->markArcGisResult(
+            $decision,
+            $this->arcGisStatusUpdaterService->syncDecisionFieldStatus($decision, 'COMPLETED'),
+        );
     }
 
     private function markArcGisManualPending(CommitteeDecision $decision): void

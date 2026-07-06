@@ -382,6 +382,17 @@ it('skips static seed records that already have a committee decision and archive
 });
 
 it('fixes completed field status for archived seed records marked as resurvey completed', function () {
+    config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
+    config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
+    config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
+    config()->set('services.committee_decisions.arcgis.token', 'static-token');
+
+    Http::fake([
+        'https://example.test/arcgis/FeatureServer/0/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+    ]);
+
     temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
 
     $building = Building::query()->create([
@@ -430,8 +441,20 @@ it('fixes completed field status for archived seed records marked as resurvey co
         ->and($summary['skipped_rows'])->toBe(1)
         ->and($summary['resurvey_completed_statuses_fixed'])->toBe(1)
         ->and($building->field_status)->toBe('COMPLETED')
+        ->and($decision->refresh()->arcgis_sync_status)->toBe('synced')
         ->and(CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->count())->toBe(1)
         ->and(BuildingSurveyArchiveObject::query()->where('building_objectid', 1120)->count())->toBe(1);
+
+    Http::assertSent(function ($request): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true, flags: JSON_THROW_ON_ERROR);
+
+        return str_contains($request->url(), '/0/updateFeatures')
+            && (string) data_get($features, '0.attributes.objectid') === '1120'
+            && (
+                data_get($features, '0.attributes.field_status') === 'COMPLETED'
+                || data_get($features, '0.attributes.Field_status') === 'COMPLETED'
+            );
+    });
 });
 
 it('syncs configured municipality signatures onto existing committee review decisions not included in seed records', function () {
