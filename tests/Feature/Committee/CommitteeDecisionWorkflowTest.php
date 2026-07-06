@@ -117,6 +117,25 @@ it('shows committee decision pages and datatable data for buildings and housing 
         'updated_by' => $user->id,
     ]);
 
+    $seedCompletedBuilding = Building::query()->create([
+        'objectid' => 9005,
+        'globalid' => 'building-guid-seed-completed',
+        'building_name' => 'Seed Completed Tower',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'building_damage_status' => 'partially_damaged',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $seedCompletedBuilding->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'notes' => 'Temporary technical committee seed: Gaza',
+        'updated_by' => $user->id,
+    ]);
+
     $this->actingAs($user)
         ->get(route('committee-decisions.index'))
         ->assertOk()
@@ -159,6 +178,7 @@ it('shows committee decision pages and datatable data for buildings and housing 
         ->assertOk()
         ->assertJsonFragment(['building_name' => 'Completed Decision Tower'])
         ->assertJsonFragment(['building_name' => 'Resurvey Completed Tower'])
+        ->assertJsonFragment(['building_name' => 'Seed Completed Tower'])
         ->assertSee('Field: Not_Completed', false)
         ->assertSee('Field: COMPLETED', false);
 

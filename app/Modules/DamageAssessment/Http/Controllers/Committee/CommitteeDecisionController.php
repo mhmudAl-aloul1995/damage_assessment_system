@@ -541,6 +541,14 @@ class CommitteeDecisionController extends Controller
         $decision = $record->committeeDecision;
 
         if ($decision?->isCompleted()) {
+            $actualFieldStatus = $record instanceof HousingUnit
+                ? $record->building?->field_status
+                : $record->field_status;
+
+            if (filled($actualFieldStatus)) {
+                return $actualFieldStatus;
+            }
+
             return $this->shouldSyncCompletedFieldStatus($decision)
                 ? 'COMPLETED'
                 : 'Not_Completed';
