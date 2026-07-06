@@ -34,6 +34,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
         'عبير الكيال',
     ];
 
+    private const RESURVEY_COMPLETED_SEED_BUILDING_OBJECTIDS = ['1120'];
+
+    private const RESURVEY_COMPLETED_SEED_HOUSING_UNIT_OBJECTIDS = [];
+
     public function __construct(private readonly ArcGisStatusUpdaterService $arcGisStatusUpdaterService) {}
 
     /**
@@ -78,7 +82,14 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 continue;
             }
 
+            $resurveyCompleted = $this->recordResurveyCompleted($record);
+
             if ($this->hasCommitteeDecisionArchive($decisionable)) {
+                if ($resurveyCompleted) {
+                    $this->markResurveyCompletedFieldStatus($decisionable);
+                    $summary['resurvey_completed_statuses_fixed']++;
+                }
+
                 $this->recordSkip($summary, 'already_has_decision_archive', [
                     'sheet' => $record['sheet'],
                     'row' => $record['row'],
@@ -116,7 +127,6 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 continue;
             }
 
-            $resurveyCompleted = (bool) ($record['resurvey_completed'] ?? false);
             $forcedCommitteeStatus = false;
 
             if (($record['force_committee_review_status'] ?? false) === true && ! $this->isCommitteeReviewRecord($decisionable)) {
@@ -1070,6 +1080,24 @@ class TemporaryTechnicalCommitteeDecisionImportService
         return null;
     }
 
+    /**
+     * @param  array{record_type: string, objectid: string|int, resurvey_completed?: bool}  $record
+     */
+    private function recordResurveyCompleted(array $record): bool
+    {
+        if ((bool) ($record['resurvey_completed'] ?? false)) {
+            return true;
+        }
+
+        $objectId = (string) $record['objectid'];
+
+        if ($record['record_type'] === 'housing-unit') {
+            return in_array($objectId, self::RESURVEY_COMPLETED_SEED_HOUSING_UNIT_OBJECTIDS, true);
+        }
+
+        return in_array($objectId, self::RESURVEY_COMPLETED_SEED_BUILDING_OBJECTIDS, true);
+    }
+
     private function currentStatusMatchesDecisionType(Model $decisionable, string $decisionType): bool
     {
         if ($decisionType === CommitteeDecision::TYPE_HIGHER_COMMITTEE) {
@@ -1134,6 +1162,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
             'decisions_completed' => 0,
             'skipped_rows' => 0,
             'statuses_forced_to_committee_review' => 0,
+            'resurvey_completed_statuses_fixed' => 0,
             'skip_reasons' => [],
             'missing_users' => [],
             'issues' => [],

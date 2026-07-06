@@ -381,6 +381,59 @@ it('skips static seed records that already have a committee decision and archive
         ->and(BuildingSurveyArchiveObject::query()->where('building_objectid', 1120)->count())->toBe(1);
 });
 
+it('fixes completed field status for archived seed records marked as resurvey completed', function () {
+    temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
+
+    $building = Building::query()->create([
+        'objectid' => 1120,
+        'globalid' => 'archived-resurvey-completed-building',
+        'building_name' => 'Resurvey Completed Building',
+        'building_damage_status' => 'partially_damaged',
+        'field_status' => 'Not_Completed',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Existing decision text',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $decision->id,
+        'building_objectid' => $building->objectid,
+        'building_globalid' => $building->globalid,
+        'archived_by' => User::query()->firstOrFail()->id,
+        'archived_at' => now(),
+        'building_snapshot' => $building->attributesToArray(),
+        'committee_decision_snapshot' => $decision->attributesToArray(),
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importRecords([[
+        'record_type' => 'building',
+        'municipality' => 'Khan Younis',
+        'sheet' => 'Khan Younis buildings',
+        'row' => 34,
+        'objectid' => 1120,
+        'globalid' => $building->globalid,
+        'decision_type' => 'partially_damaged',
+        'decision_text' => 'Partial demolition from committee Excel',
+        'action_text' => null,
+        'member_id_numbers' => ['801933490', '800282667', '800846958', '804475044'],
+    ]]);
+
+    $building->refresh();
+
+    expect($summary['decisions_completed'])->toBe(0)
+        ->and($summary['skipped_rows'])->toBe(1)
+        ->and($summary['resurvey_completed_statuses_fixed'])->toBe(1)
+        ->and($building->field_status)->toBe('COMPLETED')
+        ->and(CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->count())->toBe(1)
+        ->and(BuildingSurveyArchiveObject::query()->where('building_objectid', 1120)->count())->toBe(1);
+});
+
 it('syncs configured municipality signatures onto existing committee review decisions not included in seed records', function () {
     temporaryCommitteeUsers(['801933490', '800282667', '800846958', '804475044', '801113747']);
     $oldSigner = User::factory()->create(['id_no' => '700000001']);
