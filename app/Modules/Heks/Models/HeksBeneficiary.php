@@ -2,7 +2,9 @@
 
 namespace App\Modules\Heks\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HeksBeneficiary extends Model
@@ -14,6 +16,7 @@ class HeksBeneficiary extends Model
         'phone',
         'alternate_phone',
         'field_engineer',
+        'field_engineer_user_id',
         'visit_date',
         'governorate',
         'area',
@@ -41,6 +44,11 @@ class HeksBeneficiary extends Model
     public function labels(): HasMany
     {
         return $this->hasMany(HeksLabel::class);
+    }
+
+    public function fieldEngineerUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'field_engineer_user_id');
     }
 
     public function followUps(): HasMany
@@ -82,6 +90,7 @@ class HeksBeneficiary extends Model
     {
         return [
             'visit_date' => 'date',
+            'field_engineer_user_id' => 'integer',
             'grant_amount' => 'decimal:2',
             'payment_1' => 'decimal:2',
             'payment_2' => 'decimal:2',

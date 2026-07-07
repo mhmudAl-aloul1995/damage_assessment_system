@@ -19,6 +19,8 @@ use Illuminate\Support\Str;
 
 class HeksKoboSubmissionSyncService
 {
+    public function __construct(private HeksEngineerUserResolver $engineerUserResolver) {}
+
     /**
      * @return array{status: string, error: ?string, beneficiary: ?HeksBeneficiary, follow_up: ?HeksFollowUp, boq_items: int}|null
      */
@@ -138,6 +140,7 @@ class HeksKoboSubmissionSyncService
             'phone' => $this->first($payload, ['phone', 'phone_number', 'mobile', 'رقم التواصل', 'رقم الجوال']),
             'alternate_phone' => $this->first($payload, ['alternate_phone', 'رقم تواصل بديل', 'رقم التواصل2']),
             'field_engineer' => $fieldEngineer,
+            'field_engineer_user_id' => $this->engineerUserResolver->resolve($fieldEngineer),
             'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', 'تاريخ الزيارة', '_submission_time'])),
             'governorate' => $this->first($payload, ['governorate', 'المحافظة']),
             'area' => $this->first($payload, ['area_001', 'area', 'community', 'المنطقة', 'التجمع']),
@@ -192,14 +195,17 @@ class HeksKoboSubmissionSyncService
             'visit_number' => $visitNumber,
         ]);
 
+        $engineerName = $this->cleanEngineerName($this->first($payload, [
+            'engineer_name',
+            'Engineer Name',
+            "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
+            "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
+        ]));
+
         $followUp->fill(array_filter([
             'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', "\u{062A}\u{0627}\u{0631}\u{064A}\u{062E} \u{0627}\u{0644}\u{0632}\u{064A}\u{0627}\u{0631}\u{0629}", '_submission_time'])),
-            'engineer_name' => $this->cleanEngineerName($this->first($payload, [
-                'engineer_name',
-                'Engineer Name',
-                "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
-                "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
-            ])),
+            'engineer_name' => $engineerName,
+            'engineer_user_id' => $this->engineerUserResolver->resolve($engineerName),
             'working_condition' => $this->first($payload, ['working_condition', 'Working condition', "\u{062D}\u{0627}\u{0644}\u{0629} \u{0627}\u{0644}\u{0639}\u{0645}\u{0644}"]),
             'other_condition' => $this->first($payload, ['other_condition', 'Other condition:', "\u{062D}\u{0627}\u{0644}\u{0629} \u{0623}\u{062E}\u{0631}\u{0649}"]),
             'completed_amount_ils' => $this->decimal($this->first($payload, ['completed_amount_ils', 'completed_amount', "\u{0625}\u{062C}\u{0645}\u{0627}\u{0644}\u{064A} \u{0645}\u{0627} \u{062A}\u{0645} \u{0627}\u{0646}\u{062C}\u{0627}\u{0632}\u{0629} \u{062D}\u{062A}\u{0649} \u{0627}\u{0644}\u{0622}\u{0646} ILS"])),

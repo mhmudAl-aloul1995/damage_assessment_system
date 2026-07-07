@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'تفاصيل مستفيد HEKS')
 @section('pageName', $beneficiary->code)
@@ -79,7 +79,7 @@
                     </div>
                     <h2 class="fw-bold mb-2">{{ $beneficiary->name ?? '-' }}</h2>
                     <div class="text-muted">
-                        {{ $beneficiary->identity_number ?? '-' }} · {{ $beneficiary->phone ?? '-' }} · {{ $beneficiary->field_engineer ?? '-' }}
+                        {{ $beneficiary->identity_number ?? '-' }} · {{ $beneficiary->phone ?? '-' }} · {{ $beneficiary->fieldEngineerUser?->name ?? $beneficiary->field_engineer ?? '-' }}
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-start gap-2">
@@ -356,7 +356,7 @@
                                     <tr>
                                         <td><span class="badge badge-light-primary">{{ $followUp->visit_number ?? '-' }}</span></td>
                                         <td>{{ $followUp->visit_date?->format('Y-m-d') ?? '-' }}</td>
-                                        <td>{{ $followUp->engineer_name ?? '-' }}</td>
+                                        <td>{{ $followUp->engineerUser?->name ?? $followUp->engineer_name ?? '-' }}</td>
                                         <td>{{ $followUp->workingConditionLabel() }}</td>
                                         <td>
                                             <div>{{ $followUp->completed_amount_ils ? number_format((float) $followUp->completed_amount_ils, 2) : '-' }} ILS</div>
@@ -639,7 +639,7 @@
                                 <h3 class="fs-5 fw-bold mb-4">التوزيع</h3>
                                 @forelse ($beneficiary->workAssignments as $assignment)
                                     <div class="border rounded p-4 mb-3">
-                                        <div class="fw-bold">{{ $assignment->engineer_name ?? '-' }}</div>
+                                        <div class="fw-bold">{{ $assignment->engineerUser?->name ?? $assignment->engineer_name ?? '-' }}</div>
                                         <div class="text-muted small">{{ $assignment->source }}</div>
                                         <div>قيمة العقد: {{ $assignment->contract_amount_ils ? number_format((float) $assignment->contract_amount_ils, 2) : '-' }} ILS</div>
                                     </div>
@@ -876,3 +876,4 @@
         });
     </script>
 @endsection
+

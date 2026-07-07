@@ -2,6 +2,7 @@
 
 namespace App\Modules\Heks\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,7 @@ class HeksFollowUp extends Model
         'visit_number',
         'visit_date',
         'engineer_name',
+        'engineer_user_id',
         'working_condition',
         'other_condition',
         'completed_amount_ils',
@@ -27,6 +29,11 @@ class HeksFollowUp extends Model
     public function beneficiary(): BelongsTo
     {
         return $this->belongsTo(HeksBeneficiary::class, 'heks_beneficiary_id');
+    }
+
+    public function engineerUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'engineer_user_id');
     }
 
     public function boqItems(): HasMany
@@ -75,6 +82,7 @@ class HeksFollowUp extends Model
     {
         return [
             'heks_beneficiary_id' => 'integer',
+            'engineer_user_id' => 'integer',
             'visit_date' => 'date',
             'completed_amount_ils' => 'decimal:2',
             'completion_percentage' => 'decimal:2',

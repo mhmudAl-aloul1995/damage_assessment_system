@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\KoboRestSubmission;
+use App\Models\User;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
@@ -200,6 +201,31 @@ test('kobo rest submission syncs HEKS path style field keys from api backfill pa
         ->and($followUp->working_condition)->toBe('work_has_been_finished_and_due_for_the_f')
         ->and($followUp->workingConditionLabel())->toBe('تم الانتهاء من العمل ويستحق الدفعة النهائية')
         ->and($followUp->boq_url)->toBe('https://kf.kobotoolbox.org/api/v2/assets/demo/data/1/attachments/demo/');
+});
+
+test('kobo rest submission links HEKS engineer fields to matching users', function () {
+    $engineer = User::factory()->create([
+        'name' => 'م مصطفى رضوان',
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-followups', [
+            '_uuid' => 'uuid:heks-engineer-user-link',
+            'code' => 'ENG1',
+            'beneficiary_name' => 'Engineer Link Beneficiary',
+            'visit_number' => '1',
+            'visit_date' => '2026-06-28',
+            'engineer_name' => 'م. مصطفى رضوان',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'ENG1')->sole();
+    $followUp = HeksFollowUp::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect($beneficiary->field_engineer_user_id)->toBe($engineer->id)
+        ->and($followUp->engineer_user_id)->toBe($engineer->id);
 });
 
 test('kobo rest submission syncs HEKS main KoBo field names from api backfill payloads', function () {

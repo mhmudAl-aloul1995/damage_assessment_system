@@ -3,6 +3,7 @@
 namespace App\Modules\Heks\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Heks\Http\Requests\ImportHeksBoqItemsRequest;
 use App\Modules\Heks\Http\Requests\ImportHeksSpreadsheetRequest;
 use App\Modules\Heks\Http\Requests\StoreHeksBoqCatalogItemRequest;
@@ -27,6 +28,7 @@ use App\Modules\Heks\Models\HeksScore;
 use App\Modules\Heks\Models\HeksScoringWeight;
 use App\Modules\Heks\Models\HeksSurveyValueHistory;
 use App\Modules\Heks\Models\HeksWorkAssignment;
+use App\Modules\Heks\Services\HeksEngineerUserResolver;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
@@ -77,7 +79,7 @@ class HeksController extends Controller
                 'payments',
                 'followUps',
                 'attachments',
-                'workAssignments',
+                'workAssignments.engineerUser:id,name,name_en,username_arcgis',
                 'boqItems',
             ])
             ->latest()
@@ -136,6 +138,7 @@ class HeksController extends Controller
         $this->authorizeAccess();
 
         $beneficiaries = HeksBeneficiary::query()
+            ->with('fieldEngineerUser:id,name,name_en,username_arcgis')
             ->withCount(['labels', 'followUps', 'scores', 'payments', 'workAssignments', 'attachments'])
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $search = (string) $request->string('q');
@@ -146,14 +149,24 @@ class HeksController extends Controller
                 });
             })
             ->when($request->filled('selected'), fn ($query) => $query->where('is_selected', $request->boolean('selected')))
-            ->when($request->filled('engineer'), fn ($query) => $query->where('field_engineer', (string) $request->string('engineer')))
+            ->when($request->filled('engineer'), function ($query) use ($request): void {
+                $engineer = (string) $request->string('engineer');
+
+                if (ctype_digit($engineer)) {
+                    $query->where('field_engineer_user_id', (int) $engineer);
+
+                    return;
+                }
+
+                $query->where('field_engineer', $engineer);
+            })
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
         return view('heks::beneficiaries', [
             'beneficiaries' => $beneficiaries,
-            'engineers' => HeksBeneficiary::query()->whereNotNull('field_engineer')->distinct()->orderBy('field_engineer')->pluck('field_engineer'),
+            'engineers' => $this->beneficiaryEngineerOptions(),
         ]);
     }
 
@@ -162,10 +175,11 @@ class HeksController extends Controller
         $this->authorizeAccess();
         $beneficiary->load([
             'labels' => fn ($query) => $query->latest(),
-            'followUps' => fn ($query) => $query->with('boqItems')->latest('visit_date')->latest(),
+            'fieldEngineerUser:id,name,name_en,username_arcgis',
+            'followUps' => fn ($query) => $query->with(['boqItems', 'engineerUser:id,name,name_en,username_arcgis'])->latest('visit_date')->latest(),
             'scores' => fn ($query) => $query->latest(),
             'payments' => fn ($query) => $query->latest(),
-            'workAssignments' => fn ($query) => $query->latest(),
+            'workAssignments' => fn ($query) => $query->with('engineerUser:id,name,name_en,username_arcgis')->latest(),
             'attachments' => fn ($query) => $query->latest(),
             'boqItems' => fn ($query) => $query->whereNull('heks_follow_up_id')->orderBy('section')->orderBy('item_code')->latest(),
             'surveyValueHistories' => fn ($query) => $query->with('user')->latest(),
@@ -220,9 +234,15 @@ class HeksController extends Controller
         ]);
     }
 
-    public function update(UpdateHeksBeneficiaryRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
+    public function update(UpdateHeksBeneficiaryRequest $request, HeksBeneficiary $beneficiary, HeksEngineerUserResolver $engineerUserResolver): RedirectResponse
     {
-        $beneficiary->update($request->validated());
+        $data = $request->validated();
+
+        if (array_key_exists('field_engineer', $data)) {
+            $data['field_engineer_user_id'] = $engineerUserResolver->resolve($data['field_engineer']);
+        }
+
+        $beneficiary->update($data);
 
         return back()->with('success', 'تم تحديث بيانات المستفيد.');
     }
@@ -443,6 +463,7 @@ class HeksController extends Controller
         $query = HeksFollowUp::query()
             ->with([
                 'beneficiary.attachments',
+                'engineerUser:id,name,name_en,username_arcgis',
                 'boqItems' => fn ($query) => $query->orderBy('section')->orderBy('item_code')->orderBy('id'),
             ])
             ->when($request->filled('q'), function ($query) use ($request): void {
@@ -455,7 +476,17 @@ class HeksController extends Controller
                         });
                 });
             })
-            ->when($request->filled('engineer'), fn ($query) => $query->where('engineer_name', (string) $request->string('engineer')))
+            ->when($request->filled('engineer'), function ($query) use ($request): void {
+                $engineer = (string) $request->string('engineer');
+
+                if (ctype_digit($engineer)) {
+                    $query->where('engineer_user_id', (int) $engineer);
+
+                    return;
+                }
+
+                $query->where('engineer_name', $engineer);
+            })
             ->when($request->filled('visit_number'), fn ($query) => $query->where('visit_number', (string) $request->string('visit_number')))
             ->when($request->filled('visit_from'), fn ($query) => $query->whereDate('visit_date', '>=', (string) $request->string('visit_from')))
             ->when($request->filled('visit_to'), fn ($query) => $query->whereDate('visit_date', '<=', (string) $request->string('visit_to')))
@@ -487,12 +518,7 @@ class HeksController extends Controller
                     ->count(),
                 'completed_amount' => HeksFollowUp::query()->sum('completed_amount_ils'),
             ],
-            'engineers' => HeksFollowUp::query()
-                ->whereNotNull('engineer_name')
-                ->where('engineer_name', '<>', '')
-                ->distinct()
-                ->orderBy('engineer_name')
-                ->pluck('engineer_name'),
+            'engineers' => $this->followUpEngineerOptions(),
             'visitNumbers' => HeksFollowUp::query()
                 ->whereNotNull('visit_number')
                 ->where('visit_number', '<>', '')
@@ -502,9 +528,15 @@ class HeksController extends Controller
         ]);
     }
 
-    public function updateFollowUp(UpdateHeksFollowUpRequest $request, HeksFollowUp $followUp): RedirectResponse
+    public function updateFollowUp(UpdateHeksFollowUpRequest $request, HeksFollowUp $followUp, HeksEngineerUserResolver $engineerUserResolver): RedirectResponse
     {
-        $followUp->update($request->validated());
+        $data = $request->validated();
+
+        if (array_key_exists('engineer_name', $data)) {
+            $data['engineer_user_id'] = $engineerUserResolver->resolve($data['engineer_name']);
+        }
+
+        $followUp->update($data);
 
         return back()->with('success', 'تم تحديث المتابعة.');
     }
@@ -936,6 +968,32 @@ class HeksController extends Controller
         ];
     }
 
+    private function beneficiaryEngineerOptions(): EloquentCollection
+    {
+        $userIds = HeksBeneficiary::query()
+            ->whereNotNull('field_engineer_user_id')
+            ->distinct()
+            ->pluck('field_engineer_user_id');
+
+        return User::query()
+            ->whereIn('id', $userIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'name_en', 'username_arcgis']);
+    }
+
+    private function followUpEngineerOptions(): EloquentCollection
+    {
+        $userIds = HeksFollowUp::query()
+            ->whereNotNull('engineer_user_id')
+            ->distinct()
+            ->pluck('engineer_user_id');
+
+        return User::query()
+            ->whereIn('id', $userIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'name_en', 'username_arcgis']);
+    }
+
     /**
      * @param  EloquentCollection<int, HeksBeneficiary>  $beneficiaries
      * @return array<string, array{cases_count: int, contract_total: float}>
@@ -944,8 +1002,8 @@ class HeksController extends Controller
     {
         return $beneficiaries
             ->flatMap(fn (HeksBeneficiary $beneficiary) => $beneficiary->workAssignments)
-            ->filter(fn (HeksWorkAssignment $assignment): bool => filled($assignment->engineer_name))
-            ->groupBy('engineer_name')
+            ->filter(fn (HeksWorkAssignment $assignment): bool => filled($assignment->engineer_name) || filled($assignment->engineerUser?->name))
+            ->groupBy(fn (HeksWorkAssignment $assignment): string => $assignment->engineerUser?->name ?? (string) $assignment->engineer_name)
             ->map(fn ($assignments): array => [
                 'cases_count' => $assignments->count(),
                 'contract_total' => (float) $assignments->sum('contract_amount_ils'),

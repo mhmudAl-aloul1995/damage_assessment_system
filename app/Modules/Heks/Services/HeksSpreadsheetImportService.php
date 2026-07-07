@@ -26,6 +26,8 @@ use Throwable;
 
 class HeksSpreadsheetImportService
 {
+    public function __construct(private HeksEngineerUserResolver $engineerUserResolver) {}
+
     private const ASSESSMENT_SHEETS = [
         'Heks Final V1',
         'Scoring-Heks Final',
@@ -466,12 +468,14 @@ class HeksSpreadsheetImportService
     private function beneficiary(string $code, array $row, string $type, string $source): HeksBeneficiary
     {
         $beneficiary = HeksBeneficiary::query()->firstOrNew(['code' => $code]);
+        $fieldEngineer = $this->first($row, ['اسم المهندس الميداني', 'Engineer Name', 'المهندس المتابع']);
         $data = array_filter([
             'name' => $this->first($row, ['Name', 'المستفيد', 'اسم المستفيد', 'اسم رب الأسرة', 'اسم الشخص المقابل']),
             'identity_number' => $this->first($row, ['الهوية', 'هوية المستفيد', 'رقم هوية رب الأسرة', 'رقم الهوية']),
             'phone' => $this->first($row, ['رقم التواصل', 'رقم التواصل2']),
             'alternate_phone' => $this->first($row, ['رقم تواصل بديل']),
-            'field_engineer' => $this->first($row, ['اسم المهندس الميداني', 'Engineer Name', 'المهندس المتابع']),
+            'field_engineer' => $fieldEngineer,
+            'field_engineer_user_id' => $this->engineerUserResolver->resolve($fieldEngineer),
             'visit_date' => $this->date($this->first($row, ['Visit Date', 'تاريخ الزيارة'])),
             'governorate' => $this->first($row, ['المحافظة']),
             'area' => $this->first($row, ['المنطقة/التجمع']),
@@ -526,6 +530,8 @@ class HeksSpreadsheetImportService
      */
     private function followUp(HeksBeneficiary $beneficiary, array $row, string $source): void
     {
+        $engineerName = $this->first($row, ['Engineer Name']);
+
         $followUp = HeksFollowUp::query()->updateOrCreate(
             [
                 'heks_beneficiary_id' => $beneficiary->id,
@@ -534,7 +540,8 @@ class HeksSpreadsheetImportService
             ],
             [
                 'visit_date' => $this->date($this->first($row, ['Visit Date'])),
-                'engineer_name' => $this->first($row, ['Engineer Name']),
+                'engineer_name' => $engineerName,
+                'engineer_user_id' => $this->engineerUserResolver->resolve($engineerName),
                 'working_condition' => $this->first($row, ['Working condition']),
                 'other_condition' => $this->first($row, ['Other condition:']),
                 'completed_amount_ils' => $this->decimal($this->first($row, ['إجمالي ما تم انجازة حتى الآن ILS'])),
@@ -726,10 +733,13 @@ class HeksSpreadsheetImportService
      */
     private function workAssignment(HeksBeneficiary $beneficiary, array $row, string $source): void
     {
+        $engineerName = $this->first($row, ['المهندس المتابع', 'اسم المهندس الميداني']);
+
         $assignment = HeksWorkAssignment::query()->updateOrCreate(
             ['heks_beneficiary_id' => $beneficiary->id, 'source' => $source],
             [
-                'engineer_name' => $this->first($row, ['المهندس المتابع', 'اسم المهندس الميداني']),
+                'engineer_name' => $engineerName,
+                'engineer_user_id' => $this->engineerUserResolver->resolve($engineerName),
                 'contract_amount_ils' => $this->decimal($this->first($row, ['قيمة العقد ILS'])),
                 'first_payment_ils' => $this->decimal($this->first($row, ['الدفعة الأولى  30% ILS'])),
                 'phone' => $this->first($row, ['رقم التواصل']),
@@ -739,6 +749,7 @@ class HeksSpreadsheetImportService
 
         $beneficiary->forceFill(array_filter([
             'field_engineer' => $assignment->engineer_name,
+            'field_engineer_user_id' => $assignment->engineer_user_id,
             'grant_amount' => $assignment->contract_amount_ils,
             'payment_1' => $assignment->first_payment_ils,
             'phone' => $assignment->phone,

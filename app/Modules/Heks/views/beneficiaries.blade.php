@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'حالات HEKS')
 @section('pageName', 'الحالات والمستفيدون')
@@ -24,7 +24,7 @@
                     <select name="engineer" class="form-select">
                         <option value="">كل المهندسين</option>
                         @foreach ($engineers as $engineer)
-                            <option value="{{ $engineer }}" @selected(request('engineer') === $engineer)>{{ $engineer }}</option>
+                            <option value="{{ $engineer->id }}" @selected(request('engineer') === (string) $engineer->id)>{{ $engineer->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -53,7 +53,7 @@
                         <td class="fw-bold">{{ $beneficiary->code }}</td>
                         <td>{{ $beneficiary->name ?? '-' }}</td>
                         <td>{{ $beneficiary->identity_number ?? '-' }}</td>
-                        <td>{{ $beneficiary->field_engineer ?? '-' }}</td>
+                        <td>{{ $beneficiary->fieldEngineerUser?->name ?? $beneficiary->field_engineer ?? '-' }}</td>
                         <td>{{ $beneficiary->grant_amount ? number_format((float) $beneficiary->grant_amount, 2) : '-' }}</td>
                         <td>
                             <span class="badge {{ $beneficiary->is_selected ? 'badge-light-success' : 'badge-light' }}">
@@ -90,3 +90,4 @@
         </div>
     </div>
 @endsection
+

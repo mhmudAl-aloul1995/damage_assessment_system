@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'متابعات HEKS')
 @section('pageName', 'المتابعات وجداول الكميات')
@@ -58,7 +58,7 @@
                         <select name="engineer" class="form-select">
                             <option value="">كل المهندسين</option>
                             @foreach ($engineers as $engineer)
-                                <option value="{{ $engineer }}" @selected(request('engineer') === $engineer)>{{ $engineer }}</option>
+                                <option value="{{ $engineer->id }}" @selected(request('engineer') === (string) $engineer->id)>{{ $engineer->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -139,7 +139,7 @@
                                     <span class="badge badge-light-primary">زيارة {{ $followUp->visit_number ?? '-' }}</span>
                                     <div class="text-muted small mt-1">{{ $followUp->visit_date?->format('Y-m-d') ?? '-' }}</div>
                                 </td>
-                                <td>{{ $followUp->engineer_name ?? '-' }}</td>
+                                <td>{{ $followUp->engineerUser?->name ?? $followUp->engineer_name ?? '-' }}</td>
                                 <td>
                                     <div class="fw-semibold">{{ $followUp->workingConditionLabel() }}</div>
                                     @if ($followUp->other_condition)
@@ -346,3 +346,4 @@
         </div>
     </div>
 @endsection
+
