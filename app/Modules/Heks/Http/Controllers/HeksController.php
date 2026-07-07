@@ -31,8 +31,11 @@ use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class HeksController extends Controller
 {
@@ -181,6 +184,39 @@ class HeksController extends Controller
             'priorityMatrix' => $this->priorityMatrix(),
             'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
             'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary),
+        ]);
+    }
+
+    public function attachment(HeksBeneficiary $beneficiary, HeksAttachment $attachment): Response
+    {
+        $this->authorizeAccess();
+        abort_unless((int) $attachment->heks_beneficiary_id === (int) $beneficiary->id, SymfonyResponse::HTTP_NOT_FOUND);
+
+        $url = $this->attachmentUrl($attachment);
+        abort_unless($url !== '', SymfonyResponse::HTTP_NOT_FOUND, 'Attachment URL is not available.');
+
+        $request = Http::timeout((int) config('services.kobotoolbox.timeout', 60))
+            ->accept('*/*');
+
+        if ($this->isKoboAttachmentUrl($url)) {
+            $token = (string) config('services.kobotoolbox.token', '');
+            abort_if($token === '', SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY, 'KoboToolbox token is not configured.');
+
+            $request = $request->withHeaders([
+                'Authorization' => 'Token '.$token,
+            ]);
+        }
+
+        $response = $request->get($url);
+        abort_unless($response->successful(), SymfonyResponse::HTTP_NOT_FOUND, 'Attachment could not be downloaded.');
+
+        $contentType = $response->header('Content-Type') ?: 'application/octet-stream';
+        abort_if(str_contains($contentType, 'application/json'), SymfonyResponse::HTTP_NOT_FOUND, 'Attachment response is not a file.');
+
+        return response($response->body(), SymfonyResponse::HTTP_OK, [
+            'Cache-Control' => 'private, max-age=3600',
+            'Content-Disposition' => 'inline; filename="'.$this->attachmentFilename($attachment).'"',
+            'Content-Type' => $contentType,
         ]);
     }
 
@@ -1068,6 +1104,38 @@ class HeksController extends Controller
     private function authorizeAccess(): void
     {
         abort_unless(auth()->user()?->hasRole('Database Officer'), 403);
+    }
+
+    private function attachmentUrl(HeksAttachment $attachment): string
+    {
+        $value = trim((string) ($attachment->url ?: $attachment->filename));
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        $mediaFile = ltrim(str_replace('\\', '/', $value), '/');
+
+        return 'https://kc.kobotoolbox.org/media/original?'.http_build_query([
+            'media_file' => $mediaFile,
+        ]);
+    }
+
+    private function isKoboAttachmentUrl(string $url): bool
+    {
+        return str_contains($url, 'kobotoolbox.org/api/')
+            || str_contains($url, 'kc.kobotoolbox.org/media/');
+    }
+
+    private function attachmentFilename(HeksAttachment $attachment): string
+    {
+        $filename = basename(str_replace('\\', '/', (string) ($attachment->filename ?: parse_url((string) $attachment->url, PHP_URL_PATH))));
+
+        return $filename !== '' ? $filename : 'heks-attachment';
     }
 
     /**

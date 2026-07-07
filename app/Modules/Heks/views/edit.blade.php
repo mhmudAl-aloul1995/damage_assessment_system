@@ -664,11 +664,14 @@
 
                             <div class="row g-4">
                                 @forelse ($imageAttachments as $image)
+                                    @php
+                                        $imageUrl = route('heks.beneficiaries.attachments.show', [$beneficiary, $image]);
+                                    @endphp
                                     <div class="col-xxl-3 col-xl-4 col-md-6">
                                         <div class="photo-card">
-                                            @if ($image->url)
-                                                <a href="{{ $image->url }}" target="_blank" rel="noopener">
-                                                    <img src="{{ $image->url }}" alt="{{ $image->filename ?? 'HEKS photo' }}" loading="lazy">
+                                            @if ($image->url || $image->filename)
+                                                <a href="{{ $imageUrl }}" target="_blank" rel="noopener">
+                                                    <img src="{{ $imageUrl }}" alt="{{ $image->filename ?? 'HEKS photo' }}" loading="lazy">
                                                 </a>
                                             @else
                                                 <div class="d-flex align-items-center justify-content-center bg-light text-muted" style="aspect-ratio: 4 / 3;">لا يوجد رابط صورة</div>
@@ -676,8 +679,8 @@
                                             <div class="photo-card-body">
                                                 <div class="photo-card-title">{{ $image->filename ?? 'صورة بدون اسم' }}</div>
                                                 <div class="text-muted small mt-1">{{ $image->attachment_type ?? $image->source ?? '-' }}</div>
-                                                @if ($image->url)
-                                                    <a class="btn btn-sm btn-light-primary mt-3" href="{{ $image->url }}" target="_blank" rel="noopener">فتح الصورة</a>
+                                                @if ($image->url || $image->filename)
+                                                    <a class="btn btn-sm btn-light-primary mt-3" href="{{ $imageUrl }}" target="_blank" rel="noopener">فتح الصورة</a>
                                                 @endif
                                             </div>
                                         </div>

@@ -13,6 +13,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/pricing-catalog/{catalogItem}', [HeksController::class, 'updatePricingCatalogItem'])->name('heks.pricing-catalog.update');
     Route::delete('/pricing-catalog/{catalogItem}', [HeksController::class, 'destroyPricingCatalogItem'])->name('heks.pricing-catalog.destroy');
     Route::get('/beneficiaries', [HeksController::class, 'beneficiaries'])->name('heks.beneficiaries');
+    Route::get('/beneficiaries/{beneficiary}/attachments/{attachment}', [HeksController::class, 'attachment'])->name('heks.beneficiaries.attachments.show');
     Route::get('/beneficiaries/{beneficiary}/edit', [HeksController::class, 'edit'])->name('heks.beneficiaries.edit');
     Route::put('/beneficiaries/{beneficiary}', [HeksController::class, 'update'])->name('heks.beneficiaries.update');
     Route::put('/beneficiaries/{beneficiary}/survey-values', [HeksController::class, 'updateSurveyValue'])->name('heks.beneficiaries.survey-values.update');

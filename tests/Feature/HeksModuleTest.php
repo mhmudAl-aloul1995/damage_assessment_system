@@ -608,7 +608,40 @@ it('shows beneficiary image attachments in a dedicated photos tab', function () 
         ->assertOk()
         ->assertSee('photo-card', false)
         ->assertSee('shelter-photo.jpg')
-        ->assertSee('https://example.test/shelter-photo.jpg');
+        ->assertSee(route('heks.beneficiaries.attachments.show', [$beneficiary, HeksAttachment::query()->where('filename', 'shelter-photo.jpg')->sole()]));
+});
+
+it('streams HEKS Kobo image attachments through the application with a token', function () {
+    config(['services.kobotoolbox.token' => 'secret-token']);
+    Http::fake([
+        'https://kc.kobotoolbox.org/media/original?media_file=qais88%2Fattachments%2Fsubmission%2Fphoto.jpg' => Http::response('image-binary', 200, [
+            'Content-Type' => 'image/jpeg',
+        ]),
+    ]);
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'IMG2',
+        'name' => 'Relative Image Beneficiary',
+    ]);
+
+    $attachment = HeksAttachment::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'source' => 'heks-main',
+        'filename' => 'qais88/attachments/submission/photo.jpg',
+        'attachment_type' => 'shelter_photo',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.attachments.show', [$beneficiary, $attachment]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/jpeg')
+        ->assertSee('image-binary');
+
+    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Token secret-token'));
 });
 
 it('imports image attachments from Arabic KoBo group sheets', function () {
