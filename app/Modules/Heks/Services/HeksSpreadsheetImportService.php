@@ -530,7 +530,7 @@ class HeksSpreadsheetImportService
             [
                 'heks_beneficiary_id' => $beneficiary->id,
                 'code' => $beneficiary->code,
-                'visit_number' => $this->first($row, ['visit #']) ?: null,
+                'visit_number' => HeksFollowUp::normalizeVisitNumber($this->first($row, ['visit #'])),
             ],
             [
                 'visit_date' => $this->date($this->first($row, ['Visit Date'])),

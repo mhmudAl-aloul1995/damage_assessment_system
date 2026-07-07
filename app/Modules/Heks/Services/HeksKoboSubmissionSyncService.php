@@ -173,8 +173,12 @@ class HeksKoboSubmissionSyncService
      */
     private function syncFollowUp(HeksBeneficiary $beneficiary, array $payload, string $service): HeksFollowUp
     {
-        $visitNumber = $this->first($payload, ['visit_number', 'visit #', 'visit_no', 'رقم الزيارة', 'الزيارة']);
-
+        $visitNumber = HeksFollowUp::normalizeVisitNumber($this->first($payload, [
+            'visit_number',
+            'visit #',
+            'visit_no',
+            "\u{0631}\u{0642}\u{0645} \u{0627}\u{0644}\u{0632}\u{064A}\u{0627}\u{0631}\u{0629}",
+        ]));
         $boqFilename = $this->first($payload, ['boq_filename', 'Insert BOQ', 'BOQ']);
         $boqUrl = $this->first($payload, ['boq_url', 'Insert BOQ_URL', 'BOQ_URL']);
 
@@ -182,30 +186,32 @@ class HeksKoboSubmissionSyncService
             $boqUrl = $this->followUpBoqAttachmentUrl($beneficiary, $boqFilename);
         }
 
-        return HeksFollowUp::query()->updateOrCreate(
-            [
-                'heks_beneficiary_id' => $beneficiary->id,
-                'code' => $beneficiary->code,
-                'visit_number' => $visitNumber !== '' ? $visitNumber : null,
-            ],
-            [
-                'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', 'تاريخ الزيارة', '_submission_time'])),
-                'engineer_name' => $this->cleanEngineerName($this->first($payload, [
-                    'engineer_name',
-                    'Engineer Name',
-                    "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
-                    "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
-                ])),
-                'working_condition' => $this->first($payload, ['working_condition', 'Working condition', 'حالة العمل']),
-                'other_condition' => $this->first($payload, ['other_condition', 'Other condition:', 'حالة أخرى']),
-                'completed_amount_ils' => $this->decimal($this->first($payload, ['completed_amount_ils', 'completed_amount', 'إجمالي ما تم انجازة حتى الآن ILS'])),
-                'completion_percentage' => $this->decimal($this->first($payload, ['completion_percentage', 'completion_percent', 'نسبة الإنجاز بالأعمال %'])),
-                'engineer_recommendations' => $this->first($payload, ['engineer_recommendations', 'recommendations', 'توصيات المهندس للزيارة']),
-                'boq_filename' => $boqFilename,
-                'boq_url' => $boqUrl,
-                'raw_data' => $payload,
-            ]
-        );
+        $followUp = HeksFollowUp::query()->firstOrNew([
+            'heks_beneficiary_id' => $beneficiary->id,
+            'code' => $beneficiary->code,
+            'visit_number' => $visitNumber,
+        ]);
+
+        $followUp->fill(array_filter([
+            'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', "\u{062A}\u{0627}\u{0631}\u{064A}\u{062E} \u{0627}\u{0644}\u{0632}\u{064A}\u{0627}\u{0631}\u{0629}", '_submission_time'])),
+            'engineer_name' => $this->cleanEngineerName($this->first($payload, [
+                'engineer_name',
+                'Engineer Name',
+                "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
+                "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
+            ])),
+            'working_condition' => $this->first($payload, ['working_condition', 'Working condition', "\u{062D}\u{0627}\u{0644}\u{0629} \u{0627}\u{0644}\u{0639}\u{0645}\u{0644}"]),
+            'other_condition' => $this->first($payload, ['other_condition', 'Other condition:', "\u{062D}\u{0627}\u{0644}\u{0629} \u{0623}\u{062E}\u{0631}\u{0649}"]),
+            'completed_amount_ils' => $this->decimal($this->first($payload, ['completed_amount_ils', 'completed_amount', "\u{0625}\u{062C}\u{0645}\u{0627}\u{0644}\u{064A} \u{0645}\u{0627} \u{062A}\u{0645} \u{0627}\u{0646}\u{062C}\u{0627}\u{0632}\u{0629} \u{062D}\u{062A}\u{0649} \u{0627}\u{0644}\u{0622}\u{0646} ILS"])),
+            'completion_percentage' => $this->decimal($this->first($payload, ['completion_percentage', 'completion_percent', "\u{0646}\u{0633}\u{0628}\u{0629} \u{0627}\u{0644}\u{0625}\u{0646}\u{062C}\u{0627}\u{0632} \u{0628}\u{0627}\u{0644}\u{0623}\u{0639}\u{0645}\u{0627}\u{0644} %"])),
+            'engineer_recommendations' => $this->first($payload, ['engineer_recommendations', 'recommendations', "\u{062A}\u{0648}\u{0635}\u{064A}\u{0627}\u{062A} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0644}\u{0644}\u{0632}\u{064A}\u{0627}\u{0631}\u{0629}"]),
+            'boq_filename' => $boqFilename,
+            'boq_url' => $boqUrl,
+            'raw_data' => $payload,
+        ], fn (mixed $value): bool => $value !== null && $value !== ''));
+        $followUp->save();
+
+        return $followUp;
     }
 
     private function followUpBoqAttachmentUrl(HeksBeneficiary $beneficiary, string $filename): string

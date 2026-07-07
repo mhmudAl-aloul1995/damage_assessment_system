@@ -195,7 +195,7 @@ test('kobo rest submission syncs HEKS path style field keys from api backfill pa
     expect($beneficiary->name)->toBe('Path Style Beneficiary')
         ->and((float) $beneficiary->grant_amount)->toBe(10766.0)
         ->and($beneficiary->field_engineer)->toBeNull()
-        ->and($followUp->visit_number)->toBe('3.0')
+        ->and($followUp->visit_number)->toBe('3')
         ->and($followUp->visit_date->toDateString())->toBe('2026-06-28')
         ->and($followUp->working_condition)->toBe('work_has_been_finished_and_due_for_the_f')
         ->and($followUp->workingConditionLabel())->toBe('تم الانتهاء من العمل ويستحق الدفعة النهائية')

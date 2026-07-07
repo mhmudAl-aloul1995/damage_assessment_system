@@ -52,6 +52,25 @@ class HeksFollowUp extends Model
         return filled($this->boq_url) || filled($this->boq_filename);
     }
 
+    public static function normalizeVisitNumber(?string $visitNumber): ?string
+    {
+        $visitNumber = trim((string) $visitNumber);
+
+        if ($visitNumber === '' || preg_match('/^\d{4}-\d{2}-\d{2}$/', $visitNumber) === 1) {
+            return null;
+        }
+
+        $normalized = preg_replace('/[^\d.\-]/', '', str_replace(',', '', $visitNumber)) ?? '';
+
+        if ($normalized !== '' && is_numeric($normalized)) {
+            $number = (float) $normalized;
+
+            return floor($number) === $number ? (string) (int) $number : rtrim(rtrim((string) $number, '0'), '.');
+        }
+
+        return $visitNumber;
+    }
+
     protected function casts(): array
     {
         return [
