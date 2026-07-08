@@ -23,6 +23,15 @@ test('assessment audit hides obstacle details when assessment has no obstacle', 
         ->toContain('rows = removeInactiveDependentRows(rows, prefix)');
 });
 
+test('housing audit detail card fills the row beside the summary card', function () {
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
+
+    expect($view)
+        ->toContain('col-12 col-lg-3 col-xl-2')
+        ->toContain('col-12 col-lg-9 col-xl-10')
+        ->not->toContain('col-12 col-lg-8 col-xl-9');
+});
+
 test('audit table keeps all columns with responsive text cells', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/audit.blade.php');
     $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');

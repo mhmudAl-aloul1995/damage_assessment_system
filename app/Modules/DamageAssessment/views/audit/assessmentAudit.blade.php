@@ -912,7 +912,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-lg-8 col-xl-9">
+                        <div class="col-12 col-lg-9 col-xl-10">
                             <div class="card card-flush shadow-sm border-0">
                                 <div class="card-header border-0 pt-6 pb-4">
                                     <div class="card-title">
