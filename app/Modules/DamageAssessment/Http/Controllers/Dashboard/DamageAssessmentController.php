@@ -2048,11 +2048,11 @@ class DamageAssessmentController extends Controller
         [$startDate, $endDate] = $this->dashboardDateRange($request);
 
         if ($startDate !== null) {
-            $query->whereDate('submiton_date', '>=', $startDate);
+            $query->whereDate('building_submit_date', '>=', $startDate);
         }
 
         if ($endDate !== null) {
-            $query->whereDate('submiton_date', '<=', $endDate);
+            $query->whereDate('building_submit_date', '<=', $endDate);
         }
 
         if ($request->filled('neighborhood')) {
@@ -2073,17 +2073,17 @@ class DamageAssessmentController extends Controller
         if ($startDate !== null && $endDate !== null) {
             $query->where(function (Builder $dateQuery) use ($startDate, $endDate) {
                 $dateQuery
-                    ->whereBetween(DB::raw('DATE(housing_units.submiton_date)'), [$startDate, $endDate]);
+                    ->whereBetween(DB::raw('DATE(housing_units.building_submit_date)'), [$startDate, $endDate]);
             });
         } elseif ($startDate !== null) {
             $query->where(function (Builder $dateQuery) use ($startDate) {
                 $dateQuery
-                    ->whereDate('housing_units.submiton_date', '>=', $startDate);
+                    ->whereDate('housing_units.building_submit_date', '>=', $startDate);
             });
         } elseif ($endDate !== null) {
             $query->where(function (Builder $dateQuery) use ($endDate) {
                 $dateQuery
-                    ->whereDate('housing_units.submiton_date', '<=', $endDate);
+                    ->whereDate('housing_units.building_submit_date', '<=', $endDate);
             });
         }
     }

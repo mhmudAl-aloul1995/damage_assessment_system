@@ -328,7 +328,6 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $final_comments
  * @property string|null $parentglobalid
  * @property string|null $building_submit_date
- * @property string|null $submiton_date
  * @property string|null $creationdate
  * @property string|null $creator
  * @property string|null $editdate
@@ -701,7 +700,6 @@ class HousingUnit extends Model
         'globalid',
         'parentglobalid',
         'building_submit_date',
-        'submiton_date',
         'creationdate',
         'creator',
         'editdate',

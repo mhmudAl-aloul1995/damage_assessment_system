@@ -191,7 +191,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
         'parentglobalid' => 'building-rimal',
         'unit_damage_status' => 'fully_damaged2',
         'creationdate' => '2026-01-01',
-        'submiton_date' => $today,
+        'building_submit_date' => $today,
         'editdate' => $today,
     ]);
 
@@ -201,7 +201,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
         'parentglobalid' => 'building-sabra',
         'unit_damage_status' => 'partially_damaged2',
         'creationdate' => '2026-01-01',
-        'submiton_date' => $today,
+        'building_submit_date' => $today,
         'editdate' => $today,
     ]);
 
@@ -284,7 +284,7 @@ it('accepts a flatpickr date range string in dashboard filters', function () {
         ->assertJsonPath('data.0.neighborhood', 'Rimal');
 });
 
-it('filters the homepage housing unit map table by the housing submit date', function () {
+it('filters the homepage housing unit map table by the building submit date', function () {
     $user = User::factory()->create();
 
     Building::query()->create([
@@ -310,7 +310,7 @@ it('filters the homepage housing unit map table by the housing submit date', fun
         'globalid' => 'unit-current-end',
         'parentglobalid' => 'building-with-current-end',
         'unit_damage_status' => 'fully_damaged2',
-        'submiton_date' => '2026-01-01',
+        'building_submit_date' => '2026-01-01',
         'editdate' => '2026-01-01',
     ]);
 
@@ -319,7 +319,7 @@ it('filters the homepage housing unit map table by the housing submit date', fun
         'globalid' => 'unit-old-end',
         'parentglobalid' => 'building-with-old-end',
         'unit_damage_status' => 'partially_damaged2',
-        'submiton_date' => '2026-05-18',
+        'building_submit_date' => '2026-05-18',
         'editdate' => '2026-05-18',
     ]);
 
@@ -333,7 +333,7 @@ it('filters the homepage housing unit map table by the housing submit date', fun
         ->assertJsonPath('data.0.building_name', 'Old End Building');
 });
 
-it('filters dashboard housing totals by the housing submit date', function () {
+it('filters dashboard housing totals by the building submit date', function () {
     $user = User::factory()->create();
 
     $this->app->instance(ArcgisService::class, new class extends ArcgisService
@@ -348,7 +348,7 @@ it('filters dashboard housing totals by the housing submit date', function () {
         'objectid' => 901,
         'globalid' => 'unit-submitted-in-range',
         'unit_damage_status' => 'fully_damaged2',
-        'submiton_date' => '2026-06-15 10:00:00',
+        'building_submit_date' => '2026-06-15 10:00:00',
         'editdate' => '2026-05-01 10:00:00',
     ]);
 
@@ -356,7 +356,7 @@ it('filters dashboard housing totals by the housing submit date', function () {
         'objectid' => 902,
         'globalid' => 'unit-edited-in-range',
         'unit_damage_status' => 'partially_damaged2',
-        'submiton_date' => '2026-05-01 10:00:00',
+        'building_submit_date' => '2026-05-01 10:00:00',
         'editdate' => '2026-06-15 10:00:00',
     ]);
 

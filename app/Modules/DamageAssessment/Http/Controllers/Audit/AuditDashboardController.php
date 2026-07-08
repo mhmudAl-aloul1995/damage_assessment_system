@@ -37,8 +37,8 @@ class AuditDashboardController extends Controller
             ->whereDate('end', '<=', $endDate->toDateString())
             ->count();
         $totalHousingUnitsCount = HousingUnit::query()
-            ->whereDate('submiton_date', '>=', $startDate->toDateString())
-            ->whereDate('submiton_date', '<=', $endDate->toDateString())
+            ->whereDate('building_submit_date', '>=', $startDate->toDateString())
+            ->whereDate('building_submit_date', '<=', $endDate->toDateString())
             ->count();
         $dailyHousingAchievementStartDate = $startDate->copy();
 
