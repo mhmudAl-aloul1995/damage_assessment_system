@@ -102,7 +102,8 @@ it('renders separated area productivity reports for all supported datasets with 
         'globalid' => 'housing-1',
         'parentglobalid' => 'building-1',
         'unit_damage_status' => 'fully_damaged2',
-        'creationdate' => '2026-04-10 12:00:00',
+        'building_submit_date' => '2026-04-10 12:00:00',
+        'creationdate' => '2026-05-10 12:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -110,6 +111,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'globalid' => 'housing-2',
         'parentglobalid' => 'building-1',
         'unit_damage_status' => 'partially_damaged2',
+        'building_submit_date' => '2026-04-10 13:00:00',
         'creationdate' => '2026-04-10 13:00:00',
     ]);
 
@@ -118,6 +120,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'globalid' => 'housing-3',
         'parentglobalid' => 'building-2',
         'unit_damage_status' => 'committee_review2',
+        'building_submit_date' => '2026-04-11 13:00:00',
         'creationdate' => '2026-04-11 13:00:00',
     ]);
 
@@ -126,6 +129,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'globalid' => 'housing-unclassified',
         'parentglobalid' => 'building-2',
         'unit_damage_status' => 'no_damage2',
+        'building_submit_date' => '2026-04-11 14:00:00',
         'creationdate' => '2026-04-11 14:00:00',
     ]);
 
@@ -134,6 +138,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'globalid' => 'housing-for-unclassified-building',
         'parentglobalid' => 'building-unclassified',
         'unit_damage_status' => 'partially_damaged2',
+        'building_submit_date' => '2026-04-13 14:00:00',
         'creationdate' => '2026-04-13 14:00:00',
     ]);
 
@@ -142,7 +147,8 @@ it('renders separated area productivity reports for all supported datasets with 
         'globalid' => 'housing-outside-report-range',
         'parentglobalid' => 'building-1',
         'unit_damage_status' => 'fully_damaged2',
-        'creationdate' => '2026-05-01 14:00:00',
+        'building_submit_date' => '2026-05-01 14:00:00',
+        'creationdate' => '2026-04-10 14:00:00',
     ]);
 
     PublicBuildingSurvey::query()->create([

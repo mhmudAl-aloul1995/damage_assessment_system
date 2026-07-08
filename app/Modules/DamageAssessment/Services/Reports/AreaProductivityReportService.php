@@ -153,7 +153,7 @@ class AreaProductivityReportService
             'neighborhood' => 'buildings.neighborhood',
             'zone_code' => 'buildings.zone_code',
             'assignedto' => 'buildings.assignedto',
-        ], 'housing_units.creationdate', $fromDate, $toDate);
+        ], 'housing_units.building_submit_date', $fromDate, $toDate);
 
         return $query;
     }
@@ -214,7 +214,7 @@ class AreaProductivityReportService
             'neighborhood' => 'unit_buildings.neighborhood',
             'zone_code' => 'unit_buildings.zone_code',
             'assignedto' => 'unit_buildings.assignedto',
-        ], 'housing_units.creationdate', $fromDate, $toDate);
+        ], 'housing_units.building_submit_date', $fromDate, $toDate);
 
         return $query;
     }
