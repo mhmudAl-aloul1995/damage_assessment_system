@@ -1305,6 +1305,32 @@
             return pinnedAttachmentRows.concat(filteredRows.filter(row => !pinnedRows.has(row)));
         }
 
+        function plainAuditAnswer(row) {
+            return $('<div>').html(row?.answer || '').text().trim().toLowerCase();
+        }
+
+        function buildingHasAssessmentObstacle(rows) {
+            let obstacleRow = rows.find(function (row) {
+                return normalizeSurveyName(row.name) === 'assessment_obstacle';
+            });
+
+            if (!obstacleRow) return false;
+
+            let answer = plainAuditAnswer(obstacleRow);
+
+            return answer === 'yes' || answer === 'نعم';
+        }
+
+        function removeInactiveDependentRows(rows, prefix) {
+            if (prefix !== 'building' || buildingHasAssessmentObstacle(rows)) {
+                return rows;
+            }
+
+            return rows.filter(function (row) {
+                return !['obstacle_type', 'assessment_obstacle_info'].includes(normalizeSurveyName(row.name));
+            });
+        }
+
         function applyAuditFilter(rows, filter) {
             if (filter === 'missing') return keepAttachmentRowsVisible(rows, rows.filter(row => !isAnswered(row)));
             if (filter === 'edited') return keepAttachmentRowsVisible(rows, rows.filter(row => isEdited(row)));
@@ -1316,6 +1342,7 @@
         }
 
         function renderAccordion(target, rows, filter, prefix) {
+            rows = removeInactiveDependentRows(rows, prefix);
             rows = applyAuditFilter(rows, filter);
 
             let html = '';

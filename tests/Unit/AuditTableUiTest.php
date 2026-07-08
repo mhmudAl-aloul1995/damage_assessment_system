@@ -12,6 +12,17 @@ test('engineer audit report leaves empty table messaging to datatables', functio
         ->not->toContain('<td colspan="6" class="text-center text-muted">');
 });
 
+test('assessment audit hides obstacle details when assessment has no obstacle', function () {
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
+
+    expect($view)
+        ->toContain('function removeInactiveDependentRows')
+        ->toContain("normalizeSurveyName(row.name) === 'assessment_obstacle'")
+        ->toContain("return answer === 'yes' || answer === 'نعم'")
+        ->toContain("return !['obstacle_type', 'assessment_obstacle_info'].includes(normalizeSurveyName(row.name))")
+        ->toContain('rows = removeInactiveDependentRows(rows, prefix)');
+});
+
 test('audit table keeps all columns with responsive text cells', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/audit.blade.php');
     $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');
