@@ -24,9 +24,24 @@
     <style>
         /* Units table auto-size */
         #housing_table {
-            width: auto !important;
-            min-width: 100%;
-            table-layout: auto !important;
+            width: 100% !important;
+            min-width: 960px;
+            table-layout: fixed !important;
+        }
+
+        .assessment-audit-page,
+        .assessment-audit-page .tab-content,
+        .assessment-audit-page .tab-pane,
+        .assessment-audit-page .card,
+        .assessment-audit-page .card-body {
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        #tab_housing .table-responsive {
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: visible;
         }
 
         #housing_table th,
@@ -211,7 +226,8 @@
             border: 1px solid #eef2f7;
             border-radius: .65rem;
             background: #fff;
-            min-width: max-content
+            min-width: 0;
+            max-width: 100%
         }
 
         .audit-action-label {
@@ -226,7 +242,18 @@
             display: inline-flex;
             align-items: center;
             gap: .35rem;
-            flex-wrap: wrap
+            flex-wrap: wrap;
+            min-width: 0
+        }
+
+        .audit-toolbar-sticky,
+        .audit-toolbar-sticky>.d-flex {
+            max-width: 100%;
+            min-width: 0
+        }
+
+        .audit-action-controls .btn {
+            white-space: normal
         }
 
         .assessment-section {
@@ -550,9 +577,7 @@
         }
     </style>
 
-    </style>
-
-    <div class="card card-flush mb-7">
+    <div class="card card-flush mb-7 assessment-audit-page">
         <div class="card-header pt-7">
             <div class="card-title">
                 <h2>الإستبيان</h2>
@@ -2412,7 +2437,7 @@
                         url: "{{ route('housing.units.by.building') }}",
                         data: function (d) { d.globalid = '{{ $buildingGlobalid }}'; }
                     },
-                    autoWidth: true,
+                    autoWidth: false,
                     scrollX: false,
                     responsive: false,
                     columns: [
@@ -2433,6 +2458,7 @@
 
                 datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') KTMenu.createInstances();
+                    datatable.columns.adjust();
 
                     if (!initialHousingSelectionDone || pendingHousingGlobalId) {
                         setTimeout(function () {
@@ -2450,6 +2476,10 @@
 
                     $('[name="globalid"]').val(row.globalid).trigger('change');
                     setAssessmentActiveStatusButtons('.housing-status-btn', row.current_engineering_status, row.current_legal_status, row.current_status);
+                });
+
+                $('a[data-bs-toggle="tab"][href="#tab_housing"]').on('shown.bs.tab', function () {
+                    datatable.columns.adjust();
                 });
             };
 
