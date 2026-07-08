@@ -109,6 +109,7 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
         'objectid' => 201,
         'globalid' => 'housing-201',
         'parentglobalid' => 'building-101',
+        'submiton_date' => '2026-02-20 09:00:00',
         'editdate' => '2026-02-20 09:00:00',
     ]);
 
@@ -116,6 +117,7 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
         'objectid' => 202,
         'globalid' => 'housing-202',
         'parentglobalid' => 'building-101',
+        'submiton_date' => '2026-02-21 10:00:00',
         'editdate' => '2026-02-21 10:00:00',
     ]);
 
@@ -123,6 +125,7 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
         'objectid' => 203,
         'globalid' => 'housing-203',
         'parentglobalid' => 'building-102',
+        'submiton_date' => '2026-02-22 11:00:00',
         'editdate' => '2026-02-22 11:00:00',
     ]);
 
@@ -130,6 +133,7 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
         'objectid' => 204,
         'globalid' => 'housing-204',
         'parentglobalid' => 'building-103',
+        'submiton_date' => '2026-02-21 12:00:00',
         'editdate' => '2026-02-21 12:00:00',
     ]);
 
@@ -137,6 +141,7 @@ it('shows audit dashboard metrics and charts for engineers and lawyers', functio
         'objectid' => 205,
         'globalid' => 'housing-205',
         'parentglobalid' => 'building-104',
+        'submiton_date' => '2026-01-10 08:00:00',
         'editdate' => '2026-01-10 08:00:00',
     ]);
 
