@@ -46,6 +46,9 @@ class auditController extends Controller
     private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS = [
         '800409062',
         '400940623',
+        '803275288',
+        '800900607',
+        '801773987'
     ];
 
     private const LEGAL_CHALLENGES = [

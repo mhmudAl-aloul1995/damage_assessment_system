@@ -32,6 +32,47 @@ test('housing audit detail card fills the row beside the summary card', function
         ->not->toContain('col-12 col-lg-8 col-xl-9');
 });
 
+test('housing units table groups audit statuses into one visual column', function () {
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
+
+    expect($view)
+        ->toContain('function (row) {')
+        ->toContain('renderHousingStatusStack')
+        ->toContain('housing-status-stack')
+        ->toContain('housing-status-item')
+        ->toContain('#housing_table .badge')
+        ->toContain('padding: .48rem .65rem !important')
+        ->toContain('font-size: .86rem')
+        ->toContain('min-height: 26px')
+        ->toContain('font-size: .74rem')
+        ->toContain('display: none')
+        ->toContain('{ targets: [4, 9, 10], visible: false, searchable: false }')
+        ->toContain("data: 'legal_challenge_label'")
+        ->toContain("return $('<div>').text(data || '-').html()")
+        ->toContain("$(table).find('thead th').eq(3).text('الطابق / الوحدة')")
+        ->toContain("let unitNumber = $('<div>').text(row.housing_unit_number || '-').html()")
+        ->toContain('<div class="housing-unit-subtitle">الطابق ${floorNumber}</div>')
+        ->toContain("$(table).find('thead th').eq(8).text('التواقيع')")
+        ->toContain('#housing_table.dataTable tbody tr.selected>*')
+        ->toContain('#housing_table.dataTable tbody tr.selected>td:first-child')
+        ->toContain('box-shadow: none !important')
+        ->toContain('autoWidth: false')
+        ->toContain('scrollX: false')
+        ->toContain('assessment-audit-page')
+        ->toContain('body:has(.assessment-audit-page) #kt_app_content_container')
+        ->toContain('max-width: 100vw')
+        ->toContain('#tab_housing .table-responsive')
+        ->toContain('max-height: 440px')
+        ->toContain('overflow-x: auto')
+        ->toContain('overflow-y: auto')
+        ->toContain('#tab_housing #housing_table thead th')
+        ->toContain('position: sticky')
+        ->toContain('#tab_housing #housing_table_wrapper')
+        ->toContain('#tab_housing .dt-scroll-body')
+        ->toContain('#tab_housing .dataTables_scrollBody')
+        ->toContain('datatable.columns.adjust()');
+});
+
 test('audit table keeps all columns with responsive text cells', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/audit.blade.php');
     $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');
