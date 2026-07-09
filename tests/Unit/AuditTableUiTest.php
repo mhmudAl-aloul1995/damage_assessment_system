@@ -28,8 +28,10 @@ test('housing audit detail card fills the row beside the summary card', function
 
     expect($view)
         ->toContain('housing-summary-row')
+        ->toContain('housing-summary-column')
         ->toContain('housing-summary-card')
         ->toContain('#tab_housing .housing-summary-card')
+        ->toContain('align-items: stretch')
         ->toContain('top: 88px')
         ->toContain('max-height: calc(100vh - 104px) !important')
         ->toContain('col-12 col-lg-3 col-xl-2')

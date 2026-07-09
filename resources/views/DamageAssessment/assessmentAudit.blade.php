@@ -734,7 +734,11 @@
 
         /* إلغاء الـ sticky في الجوال لضمان الظهور */
         #tab_housing .housing-summary-row {
-            align-items: flex-start;
+            align-items: stretch;
+        }
+
+        #tab_housing .housing-summary-column {
+            align-self: stretch;
         }
 
         #tab_housing .housing-summary-card {
@@ -980,7 +984,7 @@
                     </div>
 
                     <div class="row g-7 housing-summary-row">
-                        <div class="col-12 col-lg-3 col-xl-2">
+                        <div class="col-12 col-lg-3 col-xl-2 housing-summary-column">
                             <div class="card card-flush shadow-sm border-0 audit-sticky-menu housing-summary-card">
                                 <div class="card-header py-3 px-4">
                                     <div class="card-title m-0">
