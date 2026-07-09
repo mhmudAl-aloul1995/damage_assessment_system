@@ -3461,7 +3461,6 @@
                                             <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
                                         </div>
                                     </div>`);
-            setTimeout(updateHousingSummaryPosition, 50);
         }
 
         function renderBuildingSummaryItems(rows) {
