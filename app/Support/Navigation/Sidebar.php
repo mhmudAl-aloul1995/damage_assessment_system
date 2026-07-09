@@ -14,8 +14,11 @@ class Sidebar
     ];
 
     private const TEMPORARY_AUDIT_HOME_USER_ID_NUMBERS = [
-        '800409062',
+         '800409062',
         '400940623',
+        '803275288',
+        '800900607',
+        '801773987'
     ];
 
     private const TEMPORARY_AUDIT_HOME_URL = 'damage-assessment/audit';
