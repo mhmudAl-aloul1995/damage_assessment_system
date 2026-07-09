@@ -761,6 +761,7 @@
 
         #tab_housing .housing-summary-column {
             align-self: stretch;
+            position: relative;
         }
 
         #tab_housing .housing-summary-card {
@@ -770,6 +771,20 @@
             max-height: calc(100vh - 104px) !important;
             overflow-y: auto !important;
             scrollbar-width: thin;
+        }
+
+        #tab_housing .housing-summary-card.is-fixed {
+            position: fixed !important;
+            bottom: auto !important;
+        }
+
+        #tab_housing .housing-summary-card.is-anchored-bottom {
+            position: absolute !important;
+            top: auto !important;
+            bottom: 0;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
         }
 
         @media(max-width:991px) {
@@ -3367,6 +3382,63 @@
             });
         }
 
+        function resetHousingSummaryPosition() {
+            const card = document.querySelector('#tab_housing .housing-summary-card');
+            if (!card) return;
+
+            card.classList.remove('is-fixed', 'is-anchored-bottom');
+            card.style.removeProperty('top');
+            card.style.removeProperty('left');
+            card.style.removeProperty('width');
+        }
+
+        function updateHousingSummaryPosition() {
+            const tab = document.getElementById('tab_housing');
+            const row = document.querySelector('#tab_housing .housing-summary-row');
+            const column = document.querySelector('#tab_housing .housing-summary-column');
+            const card = document.querySelector('#tab_housing .housing-summary-card');
+            const detailColumn = document.querySelector('#tab_housing .col-12.col-lg-9.col-xl-10');
+
+            if (!tab || !row || !column || !card || window.innerWidth < 992 || !tab.classList.contains('active')) {
+                resetHousingSummaryPosition();
+                return;
+            }
+
+            const topOffset = 88;
+            const rowRect = row.getBoundingClientRect();
+            const columnRect = column.getBoundingClientRect();
+            const detailHeight = detailColumn ? detailColumn.offsetHeight : row.offsetHeight;
+            const cardHeight = card.offsetHeight;
+            const rowHeight = Math.max(cardHeight, detailHeight);
+
+            column.style.minHeight = `${rowHeight}px`;
+
+            const bottomLimit = rowRect.top + rowHeight - cardHeight;
+
+            card.classList.remove('is-fixed', 'is-anchored-bottom');
+            card.style.removeProperty('top');
+            card.style.removeProperty('left');
+            card.style.removeProperty('width');
+
+            if (rowRect.top > topOffset) return;
+
+            if (bottomLimit <= topOffset) {
+                card.classList.add('is-anchored-bottom');
+                return;
+            }
+
+            card.classList.add('is-fixed');
+            card.style.top = `${topOffset}px`;
+            card.style.left = `${columnRect.left}px`;
+            card.style.width = `${columnRect.width}px`;
+        }
+
+        window.addEventListener('scroll', updateHousingSummaryPosition, { passive: true });
+        window.addEventListener('resize', updateHousingSummaryPosition);
+        $('a[data-bs-toggle="tab"][href="#tab_housing"]').on('shown.bs.tab', function () {
+            setTimeout(updateHousingSummaryPosition, 50);
+        });
+
         function renderHousingSummaryItems(items) {
             const colors = ['info', 'primary', 'warning', 'success', 'danger'];
             let html = '';
@@ -3389,6 +3461,7 @@
                                             <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
                                         </div>
                                     </div>`);
+            setTimeout(updateHousingSummaryPosition, 50);
         }
 
         function renderBuildingSummaryItems(rows) {
