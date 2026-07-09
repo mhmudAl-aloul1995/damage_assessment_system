@@ -27,6 +27,11 @@ test('housing audit detail card fills the row beside the summary card', function
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
 
     expect($view)
+        ->toContain('housing-summary-row')
+        ->toContain('housing-summary-card')
+        ->toContain('#tab_housing .housing-summary-card')
+        ->toContain('top: 88px')
+        ->toContain('max-height: calc(100vh - 104px) !important')
         ->toContain('col-12 col-lg-3 col-xl-2')
         ->toContain('col-12 col-lg-9 col-xl-10')
         ->not->toContain('col-12 col-lg-8 col-xl-9');
