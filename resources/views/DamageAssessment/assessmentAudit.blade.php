@@ -2930,6 +2930,7 @@
             const column = document.querySelector('#tab_housing .housing-summary-column');
             const card = document.querySelector('#tab_housing .housing-summary-card');
             const detailColumn = document.querySelector('#tab_housing .col-12.col-lg-9.col-xl-10');
+            const unitsTableCard = document.querySelector('#tab_housing #housing_table')?.closest('.card');
 
             if (!tab || !row || !column || !card || window.innerWidth < 992 || !tab.classList.contains('active')) {
                 resetHousingSummaryPosition();
@@ -2953,6 +2954,7 @@
             card.style.removeProperty('width');
 
             if (rowRect.top > topOffset) return;
+            if (unitsTableCard && unitsTableCard.getBoundingClientRect().bottom > topOffset + 16) return;
 
             if (bottomLimit <= topOffset) {
                 card.classList.add('is-anchored-bottom');
