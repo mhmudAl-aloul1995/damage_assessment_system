@@ -96,195 +96,6 @@
             max-width: 48px !important;
         }
 
-        #housing_table {
-            width: 100% !important;
-            min-width: 940px;
-            table-layout: fixed !important;
-        }
-
-        .assessment-audit-page,
-        .assessment-audit-page .tab-content,
-        .assessment-audit-page .tab-pane,
-        .assessment-audit-page .card,
-        .assessment-audit-page .card-body {
-            min-width: 0;
-            max-width: 100%;
-        }
-
-        html:has(.assessment-audit-page),
-        body:has(.assessment-audit-page),
-        body:has(.assessment-audit-page) #kt_app_wrapper,
-        body:has(.assessment-audit-page) #kt_app_main,
-        body:has(.assessment-audit-page) #kt_app_content,
-        body:has(.assessment-audit-page) #kt_app_content_container {
-            max-width: 100vw;
-            overflow-x: hidden !important;
-        }
-
-        #tab_housing .table-responsive {
-            max-width: 100%;
-            max-height: 440px;
-            overflow-x: auto;
-            overflow-y: auto;
-            scrollbar-width: thin;
-        }
-
-        #tab_housing #housing_table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 2;
-        }
-
-        #tab_housing #housing_table_wrapper,
-        #tab_housing .dt-scroll,
-        #tab_housing .dataTables_scroll {
-            max-width: 100%;
-            overflow-x: hidden;
-        }
-
-        #tab_housing .dt-scroll-body,
-        #tab_housing .dataTables_scrollBody {
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-            scrollbar-width: thin;
-        }
-
-        #tab_housing .dt-scroll-head,
-        #tab_housing .dataTables_scrollHead {
-            overflow: hidden !important;
-        }
-
-        #housing_table th,
-        #housing_table td {
-            padding: .48rem .65rem !important;
-            font-size: .86rem;
-            line-height: 1.28;
-        }
-
-        #housing_table thead th {
-            color: var(--bs-gray-700);
-            font-size: .82rem;
-            font-weight: 700;
-            background: #f8fafc;
-            border-bottom: 1px solid #e8eef6 !important;
-        }
-
-        #housing_table tbody td {
-            color: #1f2a44;
-            font-weight: 600;
-        }
-
-        #housing_table tbody tr {
-            border-bottom: 1px solid #edf1f5;
-            transition: background-color .18s ease, box-shadow .18s ease;
-        }
-
-        #housing_table tbody tr:hover {
-            background: #f8fbff;
-        }
-
-        #housing_table tbody tr.selected,
-        #housing_table.table tbody tr.selected {
-            background: #f3f9ff !important;
-        }
-
-        #housing_table.dataTable tbody tr.selected>* {
-            background: #f3f9ff !important;
-            box-shadow: none !important;
-        }
-
-        #housing_table tbody tr.selected td,
-        #housing_table.dataTable tbody tr.selected>* {
-            color: inherit !important;
-        }
-
-        #housing_table.dataTable tbody tr.selected>td:first-child {
-            box-shadow: inset -4px 0 0 #3e97ff !important;
-        }
-
-        #housing_table th:nth-child(6),
-        #housing_table td:nth-child(6) {
-            width: 180px !important;
-            max-width: 180px !important;
-        }
-
-        #housing_table th:nth-child(7),
-        #housing_table td:nth-child(7) {
-            width: 90px !important;
-            max-width: 90px !important;
-        }
-
-        #housing_table th:nth-child(8),
-        #housing_table td:nth-child(8) {
-            width: 150px !important;
-            max-width: 150px !important;
-        }
-
-        #housing_table th:nth-child(9),
-        #housing_table td:nth-child(9) {
-            width: 250px !important;
-            max-width: 250px !important;
-        }
-
-        #housing_table .housing-unit-title {
-            color: #1f2a44;
-            font-size: .9rem;
-            font-weight: 700;
-            line-height: 1.22;
-        }
-
-        #housing_table .housing-unit-subtitle {
-            color: #8a94a6;
-            font-size: .74rem;
-            font-weight: 600;
-            line-height: 1.22;
-        }
-
-        #housing_table .housing-owner-name {
-            color: #1f2a44;
-            font-weight: 700;
-            line-height: 1.45;
-            word-break: break-word;
-        }
-
-        #housing_table .housing-status-stack {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: .25rem;
-            flex-wrap: wrap;
-            text-align: center;
-        }
-
-        #housing_table .housing-status-item {
-            display: inline-flex;
-            align-items: center;
-            min-width: 0;
-        }
-
-        #housing_table .housing-status-label {
-            display: none;
-        }
-
-        #housing_table .badge {
-            min-width: 62px;
-            min-height: 26px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: .42rem;
-            font-size: .74rem;
-            font-weight: 700;
-            letter-spacing: 0;
-        }
-
-        #housing_table .housing-status-item .badge {
-            max-width: 100%;
-            padding: .24rem .48rem;
-            white-space: nowrap;
-            line-height: 1;
-        }
-
         .building-status-btn,
         .housing-status-btn {
             transition: all .2s ease-in-out
@@ -755,41 +566,8 @@
         }
 
         /* إلغاء الـ sticky في الجوال لضمان الظهور */
-        #tab_housing .housing-summary-row {
-            align-items: stretch;
-        }
-
-        #tab_housing .housing-summary-column {
-            align-self: stretch;
-            position: relative;
-        }
-
-        #tab_housing .housing-summary-card {
-            position: sticky !important;
-            top: 88px;
-            z-index: 20;
-            max-height: calc(100vh - 104px) !important;
-            overflow-y: auto !important;
-            scrollbar-width: thin;
-        }
-
-        #tab_housing .housing-summary-card.is-fixed {
-            position: fixed !important;
-            bottom: auto !important;
-        }
-
-        #tab_housing .housing-summary-card.is-anchored-bottom {
-            position: absolute !important;
-            top: auto !important;
-            bottom: 0;
-            left: 0 !important;
-            right: 0 !important;
-            width: 100% !important;
-        }
-
         @media(max-width:991px) {
-            .audit-sticky-menu,
-            #tab_housing .housing-summary-card {
+            .audit-sticky-menu {
                 position: relative !important;
                 top: 0 !important;
                 max-height: none !important;
@@ -798,7 +576,9 @@
         }
     </style>
 
-    <div class="card card-flush mb-7 assessment-audit-page">
+    </style>
+
+    <div class="card card-flush mb-7">
         <div class="card-header pt-7">
             <div class="card-title">
                 <h2>الإستبيان</h2>
@@ -1047,7 +827,7 @@
                                             <th class="px-2 py-3">اسم المالك</th>
                                             <th class="px-2 py-3">اتجاه الوحدة</th>
                                             <th class="px-2 py-3">التحديات القانونية</th>
-                                            <th class="px-2 py-3">التواقيع</th>
+                                            <th class="px-2 py-3">التدقيق القانوني</th>
                                             <th class="px-2 py-3">التدقيق الهندسي</th>
                                             <th class="px-2 py-3">الاعتماد النهائي</th>
                                         </tr>
@@ -1058,9 +838,9 @@
                         </div>
                     </div>
 
-                    <div class="row g-7 housing-summary-row">
-                        <div class="col-12 col-lg-3 col-xl-2 housing-summary-column">
-                            <div class="card card-flush shadow-sm border-0 audit-sticky-menu housing-summary-card">
+                    <div class="row g-7">
+                        <div class="col-12 col-lg-3 col-xl-2">
+                            <div class="card card-flush shadow-sm border-0 audit-sticky-menu">
                                 <div class="card-header py-3 px-4">
                                     <div class="card-title m-0">
                                         <h3 class="fw-bold fs-4 mb-0">ملخص الوحدة</h3>
@@ -1132,7 +912,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-lg-9 col-xl-10">
+                        <div class="col-12 col-lg-8 col-xl-9">
                             <div class="card card-flush shadow-sm border-0">
                                 <div class="card-header border-0 pt-6 pb-4">
                                     <div class="card-title">
@@ -3058,25 +2838,6 @@
             var table = document.getElementById('housing_table');
             var datatable;
 
-            var statusItem = function (label, value) {
-                return `
-                    <div class="housing-status-item">
-                        <span class="housing-status-label">${label}</span>
-                        <div>${value || '-'}</div>
-                    </div>
-                `;
-            };
-
-            var renderHousingStatusStack = function (row) {
-                return `
-                    <div class="housing-status-stack">
-                        ${statusItem('قانوني', row.legal_audit_status)}
-                        ${statusItem('هندسي', row.engineering_audit_status)}
-                        ${statusItem('نهائي', row.final_approval_status)}
-                    </div>
-                `;
-            };
-
             var initTable = function () {
                 datatable = $(table).DataTable({
                     processing: true,
@@ -3091,12 +2852,9 @@
                         url: "{{ route('housing.units.by.building') }}",
                         data: function (d) { d.globalid = '{{ $buildingGlobalid }}'; }
                     },
-                    autoWidth: false,
+                    autoWidth: true,
                     scrollX: false,
                     responsive: false,
-                    columnDefs: [
-                        { targets: [4, 9, 10], visible: false, searchable: false }
-                    ],
                     columns: [
                         {
                             data: 'globalid',
@@ -3112,53 +2870,11 @@
                                 return '<input type="checkbox" class="form-check-input housing-unit-select" value="' + $('<div>').text(data || '').html() + '">';
                             }
                         },
-                        {
-                            data: 'housing_unit_type',
-                            name: 'housing_unit_type',
-                            className: 'text-start px-2 py-3',
-                            render: function (data, type) {
-                                if (type !== 'display') {
-                                    return data;
-                                }
-
-                                return `
-                                    <div class="housing-unit-title">${$('<div>').text(data || '-').html()}</div>
-                                    <div class="housing-unit-subtitle">نوع الوحدة</div>
-                                `;
-                            }
-                        },
+                        { data: 'housing_unit_type', name: 'housing_unit_type', className: 'text-start px-2 py-3' },
                         { data: 'unit_damage_status', name: 'unit_damage_status', className: 'text-center px-2 py-3' },
-                        {
-                            data: 'floor_number',
-                            name: 'floor_number',
-                            className: 'text-center px-2 py-3',
-                            render: function (data, type, row) {
-                                if (type !== 'display') {
-                                    return data;
-                                }
-
-                                let floorNumber = $('<div>').text(data || '-').html();
-                                let unitNumber = $('<div>').text(row.housing_unit_number || '-').html();
-
-                                return `
-                                    <div class="housing-unit-title">${unitNumber}</div>
-                                    <div class="housing-unit-subtitle">الطابق ${floorNumber}</div>
-                                `;
-                            }
-                        },
+                        { data: 'floor_number', name: 'floor_number', className: 'text-center px-2 py-3' },
                         { data: 'housing_unit_number', name: 'housing_unit_number', className: 'text-center px-2 py-3' },
-                        {
-                            data: 'owner_name',
-                            name: 'owner_name',
-                            className: 'text-start px-2 py-3 min-w-280px',
-                            render: function (data, type) {
-                                if (type !== 'display') {
-                                    return data;
-                                }
-
-                                return '<div class="housing-owner-name">' + $('<div>').text(data || '-').html() + '</div>';
-                            }
-                        },
+                        { data: 'owner_name', name: 'owner_name', className: 'text-start px-2 py-3 min-w-280px' },
                         { data: 'unit_direction', name: 'unit_direction', className: 'text-center px-2 py-3' },
                         {
                             data: 'legal_challenge_label',
@@ -3172,18 +2888,7 @@
                                 return $('<div>').text(data || '-').html();
                             }
                         },
-                        {
-                            data: 'legal_audit_status',
-                            name: 'legal_audit_status',
-                            className: 'text-center px-2 py-3',
-                            render: function (data, type, row) {
-                                if (type !== 'display') {
-                                    return data;
-                                }
-
-                                return renderHousingStatusStack(row);
-                            }
-                        },
+                        { data: 'legal_audit_status', name: 'legal_audit_status', className: 'text-center px-2 py-3' },
                         { data: 'engineering_audit_status', name: 'engineering_audit_status', className: 'text-center px-2 py-3' },
                         { data: 'final_approval_status', name: 'final_approval_status', className: 'text-center px-2 py-3' }
                     ],
@@ -3192,12 +2897,8 @@
                     }
                 });
 
-                $(table).find('thead th').eq(3).text('الطابق / الوحدة');
-                $(table).find('thead th').eq(8).text('التواقيع');
-
                 datatable.on('draw', function () {
                     if (typeof KTMenu !== 'undefined') KTMenu.createInstances();
-                    datatable.columns.adjust();
                     syncHousingSelectionCheckboxes(datatable);
 
                     if (!initialHousingSelectionDone || pendingHousingGlobalId) {
@@ -3381,65 +3082,6 @@
                 renderHousingSummaryItems([]);
             });
         }
-
-        function resetHousingSummaryPosition() {
-            const card = document.querySelector('#tab_housing .housing-summary-card');
-            if (!card) return;
-
-            card.classList.remove('is-fixed', 'is-anchored-bottom');
-            card.style.removeProperty('top');
-            card.style.removeProperty('left');
-            card.style.removeProperty('width');
-        }
-
-        function updateHousingSummaryPosition() {
-            const tab = document.getElementById('tab_housing');
-            const row = document.querySelector('#tab_housing .housing-summary-row');
-            const column = document.querySelector('#tab_housing .housing-summary-column');
-            const card = document.querySelector('#tab_housing .housing-summary-card');
-            const detailColumn = document.querySelector('#tab_housing .col-12.col-lg-9.col-xl-10');
-            const unitsTableCard = document.querySelector('#tab_housing #housing_table')?.closest('.card');
-
-            if (!tab || !row || !column || !card || window.innerWidth < 992 || !tab.classList.contains('active')) {
-                resetHousingSummaryPosition();
-                return;
-            }
-
-            const topOffset = 88;
-            const rowRect = row.getBoundingClientRect();
-            const columnRect = column.getBoundingClientRect();
-            const detailHeight = detailColumn ? detailColumn.offsetHeight : row.offsetHeight;
-            const cardHeight = card.offsetHeight;
-            const rowHeight = Math.max(cardHeight, detailHeight);
-
-            column.style.minHeight = `${rowHeight}px`;
-
-            const bottomLimit = rowRect.top + rowHeight - cardHeight;
-
-            card.classList.remove('is-fixed', 'is-anchored-bottom');
-            card.style.removeProperty('top');
-            card.style.removeProperty('left');
-            card.style.removeProperty('width');
-
-            if (rowRect.top > topOffset) return;
-            if (unitsTableCard && unitsTableCard.getBoundingClientRect().bottom > topOffset + 16) return;
-
-            if (bottomLimit <= topOffset) {
-                card.classList.add('is-anchored-bottom');
-                return;
-            }
-
-            card.classList.add('is-fixed');
-            card.style.top = `${topOffset}px`;
-            card.style.left = `${columnRect.left}px`;
-            card.style.width = `${columnRect.width}px`;
-        }
-
-        window.addEventListener('scroll', updateHousingSummaryPosition, { passive: true });
-        window.addEventListener('resize', updateHousingSummaryPosition);
-        $('a[data-bs-toggle="tab"][href="#tab_housing"]').on('shown.bs.tab', function () {
-            setTimeout(updateHousingSummaryPosition, 50);
-        });
 
         function renderHousingSummaryItems(items) {
             const colors = ['info', 'primary', 'warning', 'success', 'danger'];
