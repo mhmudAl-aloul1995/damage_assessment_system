@@ -47,6 +47,7 @@
 		],
 	];
 	$user = auth()->user();
+	$isMetronic9Enabled = session('ui.metronic9_enabled', false);
 	$sidebarModules = \App\Support\Navigation\Sidebar::forUser($user);
 	$headerNotifications = collect();
 	$headerUnreadNotificationsCount = 0;
@@ -93,6 +94,10 @@
 	<link href="{{url('')}}/assets/plugins/global/plugins.bundle{{ $suffix }}.css" rel="stylesheet" type="text/css" />
 	<link href="{{url('')}}/assets/css/style.bundle{{ $suffix }}.css" rel="stylesheet" type="text/css" />
 	<link href="{{ asset('assets/css/font-unified.css') }}" rel="stylesheet" type="text/css" />
+	@if($isMetronic9Enabled)
+		@include('layouts.partials.metronic9-styles')
+	@endif
+	@stack('styles')
 	<!--end::Global Stylesheets Bundle-->
 	<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
 	@include('pwa.head')
@@ -405,7 +410,7 @@
 	data-kt-app-sidebar-enabled="true" data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-hoverable="true"
 	data-kt-app-sidebar-push-header="true" data-kt-app-sidebar-push-toolbar="true"
 	data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true"
-	class="app-default locale-{{ $direction }}" data-locale="{{ app()->getLocale() }}"
+	class="app-default locale-{{ $direction }} {{ $isMetronic9Enabled ? 'phc-metronic9-enabled' : '' }}" data-locale="{{ app()->getLocale() }}"
 	data-direction="{{ $direction }}">
 	<!--begin::Theme mode setup on page load-->
 	<script>var defaultThemeMode = "light"; var themeMode; if (document.documentElement) { if (document.documentElement.hasAttribute("data-bs-theme-mode")) { themeMode = document.documentElement.getAttribute("data-bs-theme-mode"); } else { if (localStorage.getItem("data-bs-theme") !== null) { themeMode = localStorage.getItem("data-bs-theme"); } else { themeMode = defaultThemeMode; } } if (themeMode === "system") { themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; } document.documentElement.setAttribute("data-bs-theme", themeMode); }</script>
@@ -546,6 +551,20 @@
 							</button>
 						</div>
 						<!--end::Navigation layout toggle-->
+						<!--begin::Metronic 9 switch-->
+						<div class="app-navbar-item ms-1 ms-md-4">
+							<form method="POST" action="{{ route('theme.metronic9.update') }}"
+								class="d-flex align-items-center gap-2 m-0" title="Metronic 9">
+								@csrf
+								<input type="hidden" name="enabled" value="0">
+								<label class="form-check form-switch form-check-custom form-check-solid align-items-center m-0">
+									<input class="form-check-input h-20px w-35px" type="checkbox" name="enabled" value="1"
+										{{ $isMetronic9Enabled ? 'checked' : '' }} onchange="this.form.submit()">
+									<span class="form-check-label fw-semibold fs-8 text-muted ms-2">M9</span>
+								</label>
+							</form>
+						</div>
+						<!--end::Metronic 9 switch-->
 						<!--begin::Search-->
 						<div class="app-navbar-item align-items-stretch ms-1 ms-md-4">
 							<!--begin::Search-->
@@ -1651,6 +1670,7 @@
 	<script src="{{url('')}}/assets/js/custom/utilities/modals/users-search.js"></script>
 
 	@yield('script')
+	@stack('scripts')
 	<!--end::Custom Javascript-->
 	<!--end::Javascript-->
 

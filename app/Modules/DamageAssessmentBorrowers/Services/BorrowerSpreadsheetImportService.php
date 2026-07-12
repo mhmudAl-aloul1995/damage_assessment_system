@@ -84,7 +84,10 @@ class BorrowerSpreadsheetImportService
         'أضرار طفيفة' => 'minor',
     ];
 
-    public function __construct(private readonly BorrowerRiskAnalysisService $riskAnalysis) {}
+    public function __construct(
+        private readonly BorrowerRiskAnalysisService $riskAnalysis,
+        private readonly BorrowerDamageValuationService $damageValuation,
+    ) {}
 
     /**
      * @return array{total: int, imported: int, skipped: int, exchange_rate: float}
@@ -499,6 +502,7 @@ class BorrowerSpreadsheetImportService
                 'phone_secondary' => $this->value($row, $headers, 'رقم التواصل 2'),
                 'loan_unit_address' => $this->value($row, $headers, 'عنوان الوحدة السكنية المستهدفة بالقرض( المحافظة- المدينة- أقرب معلم)'),
                 'loan_unit_area' => $this->value($row, $headers, 'مساحة الوحدة السكنية م2'),
+                'loan_unit_floor_type_label' => $this->value($row, $headers, 'الطابق'),
                 'parcel_number' => $this->value($row, $headers, 'رقم القطعة'),
                 'plot_number' => $this->value($row, $headers, 'رقم القسيمة'),
                 'loan_unit_occupancy_label' => $this->value($row, $headers, 'وضع  الاشخاص الذين يعيشون داخل الشقة المستهدفة بالقرض'),
@@ -551,6 +555,7 @@ class BorrowerSpreadsheetImportService
             'phone_secondary' => $this->text($sourceRow['phone_secondary'] ?? null),
             'loan_unit_address' => $this->text($sourceRow['loan_unit_address'] ?? null),
             'loan_unit_area' => $this->decimal($this->text($sourceRow['loan_unit_area'] ?? null)),
+            'loan_unit_floor_type_label' => $this->text($sourceRow['loan_unit_floor_type_label'] ?? ($sourceRow['loan_unit_floor_type'] ?? null)),
             'parcel_number' => $this->text($sourceRow['parcel_number'] ?? null),
             'plot_number' => $this->text($sourceRow['plot_number'] ?? null),
             'loan_unit_occupancy_label' => $this->text($sourceRow['loan_unit_occupancy_label'] ?? null),
@@ -602,7 +607,13 @@ class BorrowerSpreadsheetImportService
             ? $sourceRow['guarantors_employment_statuses'][0]
             : null;
         $boqItems = $this->mappedBoqItems($sourceRow['boq_quantities']);
-        $boqTotalUsd = collect($boqItems)->sum('total_price');
+        $loanUnitDamageStatus = self::DAMAGE_MAP[$sourceRow['loan_unit_damage_label']] ?? null;
+        $loanUnitFloorType = $this->damageValuation->normalizeFloorType($sourceRow['loan_unit_floor_type_label']);
+        $boqTotalUsd = $this->damageValuation->fullDemolitionValueUsd(
+            $sourceRow['loan_unit_area'],
+            $loanUnitFloorType,
+            $loanUnitDamageStatus,
+        ) ?? collect($boqItems)->sum('total_price');
         $exchangeRate = $this->currentExchangeRate();
 
         return [
@@ -636,10 +647,11 @@ class BorrowerSpreadsheetImportService
             'phone_secondary' => $sourceRow['phone_secondary'] ?: null,
             'loan_unit_address' => $sourceRow['loan_unit_address'] ?: null,
             'loan_unit_area' => $sourceRow['loan_unit_area'],
+            'loan_unit_floor_type' => $loanUnitFloorType,
             'parcel_number' => $sourceRow['parcel_number'] ?: null,
             'plot_number' => $sourceRow['plot_number'] ?: null,
             'loan_unit_occupancy_status' => self::OCCUPANCY_MAP[$sourceRow['loan_unit_occupancy_label']] ?? null,
-            'loan_unit_damage_status' => self::DAMAGE_MAP[$sourceRow['loan_unit_damage_label']] ?? null,
+            'loan_unit_damage_status' => $loanUnitDamageStatus,
             'notes' => collect($sourceRow['notes'])->filter()->unique()->implode("\n") ?: null,
             'resident_households' => $sourceRow['resident_households'],
             'attachments' => $sourceRow['attachments'],

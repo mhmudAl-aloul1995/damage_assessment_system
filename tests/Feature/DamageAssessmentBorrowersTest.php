@@ -126,6 +126,8 @@ it('stores borrower surveys through ajax and returns risk analysis', function ()
             'displaced_to_governorate' => 'gaza',
             'loan_unit_occupancy_status' => 'none_due_damage',
             'loan_unit_damage_status' => 'destroyed',
+            'loan_unit_area' => 100,
+            'loan_unit_floor_type' => 'repeated',
         ]);
 
     $response
@@ -133,7 +135,10 @@ it('stores borrower surveys through ajax and returns risk analysis', function ()
         ->assertJsonPath('status', true)
         ->assertJsonPath('analysis.risk_level', 'critical');
 
-    expect(DamageAssessmentBorrower::query()->where('borrower_id_number', '900000001')->exists())->toBeTrue();
+    $borrower = DamageAssessmentBorrower::query()->where('borrower_id_number', '900000001')->sole();
+
+    expect((float) $borrower->boq_total_usd)->toBe(28000.0)
+        ->and($borrower->loan_unit_floor_type)->toBe('repeated');
 });
 
 it('imports an uploaded borrower workbook through ajax', function () {
@@ -598,6 +603,46 @@ it('imports borrower boq items attachments and resident households', function ()
             ->and((float) $borrower->refresh()->boq_total_usd)->toBe(20.0)
             ->and((float) $borrower->boq_total_ils)->toBe(64.0)
             ->and($borrower->attachments_count)->toBe(1);
+    } finally {
+        @unlink($path);
+    }
+});
+
+it('calculates full demolition borrower damage value from area and floor type', function () {
+    $path = tempnam(sys_get_temp_dir(), 'borrower-import-demolition-').'.json';
+    file_put_contents($path, json_encode([
+        'records' => [
+            [
+                'row_number' => 2,
+                'source_uuid' => 'uuid-demolition-ground',
+                'borrower_name' => 'Ground Demolition Borrower',
+                'borrower_id_number' => '9912',
+                'loan_unit_area' => 160,
+                'loan_unit_floor_type_label' => 'ارضي',
+                'loan_unit_damage_label' => 'هدم كلي',
+            ],
+            [
+                'row_number' => 3,
+                'source_uuid' => 'uuid-demolition-repeated',
+                'borrower_name' => 'Repeated Demolition Borrower',
+                'borrower_id_number' => '9913',
+                'loan_unit_area' => 140,
+                'loan_unit_floor_type_label' => 'متكرر',
+                'loan_unit_damage_label' => 'هدم كلي',
+            ],
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+
+    try {
+        $summary = app(BorrowerSpreadsheetImportService::class)->import($path);
+        $groundBorrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid-demolition-ground')->sole();
+        $repeatedBorrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid-demolition-repeated')->sole();
+
+        expect($summary['created'])->toBe(2)
+            ->and((float) $groundBorrower->boq_total_usd)->toBe(52000.0)
+            ->and($groundBorrower->loan_unit_floor_type)->toBe('ground')
+            ->and((float) $repeatedBorrower->boq_total_usd)->toBe(39200.0)
+            ->and($repeatedBorrower->loan_unit_floor_type)->toBe('repeated');
     } finally {
         @unlink($path);
     }

@@ -1,0 +1,170 @@
+:root {
+  --primary: #3e97ff;
+  --primary-foreground: #ffffff;
+  --ring: #3e97ff;
+  --bs-primary: #3e97ff;
+  --bs-primary-rgb: 62, 151, 255;
+  --bs-link-color: #3e97ff;
+  --bs-link-hover-color: #2b7fd9;
+}
+
+.dark {
+  --primary: #3e97ff;
+  --primary-foreground: #ffffff;
+  --ring: #3e97ff;
+}
+
+.kt-btn-primary,
+.kt-badge-primary,
+.kt-tabs .active,
+.kt-menu-link.active,
+.kt-menu-link[data-kt-menu-link-toggle='active'] {
+  --tw-ring-color: #3e97ff;
+}
+
+.phc-metronic9-enabled {
+  --phc-m9-border: #e4e6ef;
+  --phc-m9-muted: #78829d;
+  --phc-m9-surface: #ffffff;
+  --phc-m9-soft: #f8f9fa;
+}
+
+.phc-metronic9-enabled .app-main,
+.phc-metronic9-enabled .app-wrapper,
+.phc-metronic9-enabled .app-content {
+  min-width: 0;
+}
+
+.phc-metronic9-enabled .app-header,
+.phc-metronic9-enabled .app-toolbar,
+.phc-metronic9-enabled .app-content {
+  background-color: var(--phc-m9-soft);
+}
+
+.phc-metronic9-enabled.app-blank {
+  background-color: #f5f8fa;
+}
+
+.phc-metronic9-enabled .app-header {
+  border-bottom: 1px solid var(--phc-m9-border);
+  box-shadow: none;
+}
+
+.phc-metronic9-enabled #kt_app_header_container {
+  min-height: 58px;
+}
+
+.phc-metronic9-enabled .app-sidebar {
+  background: #111827;
+  border-inline-end: 1px solid rgb(255 255 255 / 8%);
+  box-shadow: 0 10px 30px rgb(15 23 42 / 18%);
+}
+
+.phc-metronic9-enabled #kt_app_sidebar_logo {
+  min-height: 70px;
+}
+
+.phc-metronic9-enabled #kt_app_sidebar_menu .menu-link {
+  min-height: 42px;
+}
+
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-module-label {
+  color: #94a3b8;
+  font-size: 0.6875rem;
+}
+
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-section > .menu-link,
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-link {
+  border: 1px solid transparent;
+}
+
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-section > .menu-link:hover,
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-section.show > .menu-link,
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-section.phc-sidebar-section-active > .menu-link,
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-link:hover,
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-link.active {
+  background: rgb(62 151 255 / 14%);
+  border-color: rgb(62 151 255 / 20%);
+}
+
+.phc-metronic9-enabled #kt_app_sidebar_menu .phc-sidebar-icon {
+  background: rgb(62 151 255 / 14%);
+  color: #3e97ff;
+}
+
+.phc-metronic9-enabled .card,
+.phc-metronic9-enabled .bg-body,
+.phc-metronic9-enabled .modal-content,
+.phc-metronic9-enabled .menu-sub-dropdown {
+  background-color: var(--phc-m9-surface);
+  border: 1px solid var(--phc-m9-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 4%);
+}
+
+.phc-metronic9-enabled .bg-body {
+  box-shadow: 0 16px 48px rgb(15 23 42 / 12%);
+}
+
+.phc-metronic9-enabled .card-header {
+  border-bottom-color: var(--phc-m9-border);
+}
+
+.phc-metronic9-enabled .btn {
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
+
+.phc-metronic9-enabled .btn-primary,
+.phc-metronic9-enabled .badge-primary,
+.phc-metronic9-enabled .bg-primary {
+  background-color: #3e97ff !important;
+  border-color: #3e97ff !important;
+}
+
+.phc-metronic9-enabled .text-primary,
+.phc-metronic9-enabled .link-primary,
+.phc-metronic9-enabled .menu-link.active .menu-title,
+.phc-metronic9-enabled .menu-link:hover .menu-title {
+  color: #3e97ff !important;
+}
+
+.phc-metronic9-enabled .table {
+  --bs-table-border-color: var(--phc-m9-border);
+  border-color: var(--phc-m9-border);
+}
+
+.phc-metronic9-enabled .table thead th {
+  color: var(--phc-m9-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.phc-metronic9-enabled .form-control,
+.phc-metronic9-enabled .form-select,
+.phc-metronic9-enabled .select2-container--bootstrap5 .select2-selection {
+  border-color: var(--phc-m9-border);
+  border-radius: 0.375rem;
+}
+
+.phc-metronic9-enabled .form-control:focus,
+.phc-metronic9-enabled .form-select:focus,
+.phc-metronic9-enabled .select2-container--bootstrap5.select2-container--focus .select2-selection {
+  border-color: #3e97ff;
+  box-shadow: 0 0 0 0.25rem rgb(62 151 255 / 10%);
+}
+
+.phc-metronic9-enabled .form-check-input:checked {
+  background-color: #3e97ff;
+  border-color: #3e97ff;
+}
+
+.phc-metronic9-enabled .form-switch .form-check-input {
+  cursor: pointer;
+}
+
+.phc-metronic9-enabled #kt_sign_in_submit {
+  min-height: 44px;
+  box-shadow: 0 8px 18px rgb(62 151 255 / 24%);
+}

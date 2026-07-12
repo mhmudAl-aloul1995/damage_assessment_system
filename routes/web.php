@@ -7,6 +7,7 @@ use App\Http\Controllers\LoginLogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SystemLogController;
+use App\Http\Controllers\ThemePreferenceController;
 use App\Http\Controllers\UserActivityLogController;
 use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\roleController;
@@ -224,6 +225,8 @@ Route::get('/offline.html', function (): Response {
 })->name('pwa.offline');
 
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
+Route::post('/theme/metronic9', [ThemePreferenceController::class, 'update'])->name('theme.metronic9.update');
+Route::get('/theme/metronic9-preview', [ThemePreferenceController::class, 'preview'])->name('theme.metronic9.preview');
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
 Route::get('/dashboard', function (Request $request) {

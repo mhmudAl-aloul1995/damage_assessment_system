@@ -2,6 +2,7 @@
     $isRtl = app()->getLocale() === 'ar';
     $direction = $isRtl ? 'rtl' : 'ltr';
     $suffix = $isRtl ? '.rtl' : '';
+    $isMetronic9Enabled = session('ui.metronic9_enabled', false);
 @endphp
 <!DOCTYPE html>
 <html lang="{{ app()->getLocale() }}" dir="{{ $direction }}" style="direction: {{ $direction }}">
@@ -57,6 +58,16 @@
                                 </form>
                             @endforeach
                         </div>
+
+                        <form method="POST" action="{{ route('theme.metronic9.update') }}" class="m-0" title="Metronic 9">
+                            @csrf
+                            <input type="hidden" name="enabled" value="0">
+                            <label class="form-check form-switch form-check-custom form-check-solid align-items-center bg-body rounded px-3 py-2 m-0">
+                                <input class="form-check-input h-20px w-35px" type="checkbox" name="enabled" value="1"
+                                    {{ $isMetronic9Enabled ? 'checked' : '' }} onchange="this.form.submit()">
+                                <span class="form-check-label fw-semibold fs-8 text-muted ms-2">M9</span>
+                            </label>
+                        </form>
                     </div>
 
                     <h1 class="text-white fw-normal m-0">{{ __('ui.app.name') }}</h1>
