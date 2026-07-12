@@ -38,7 +38,7 @@
 
 @section('content')
     <style>
-        /* Units table auto-size */
+        /* Units table auto-siيسيسze */
         #housing_table {
             width: auto !important;
             min-width: 100%;
