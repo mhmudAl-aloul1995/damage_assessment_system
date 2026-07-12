@@ -391,6 +391,27 @@ it('opens borrower details page with survey data attachments and boq items', fun
         ->assertSee('High risk reason');
 });
 
+it('shows a clear full demolition valuation warning when floor type is missing', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Missing Floor Borrower',
+        'borrower_id_number' => '810000029',
+        'is_borrower_alive' => true,
+        'loan_unit_area' => 260,
+        'loan_unit_damage_status' => 'destroyed',
+        'boq_total_usd' => 0,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.show', $borrower))
+        ->assertOk()
+        ->assertSee('قيمة الضرر للهدم الكلي')
+        ->assertSee('يلزم تحديد الطابق لحساب قيمة الضرر.');
+});
+
 it('streams borrower attachments through the application with a kobo token', function () {
     config(['services.kobotoolbox.token' => 'secret-token']);
     Http::fake([
