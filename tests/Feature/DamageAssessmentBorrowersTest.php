@@ -268,12 +268,14 @@ it('opens borrower details page with survey data attachments and boq items', fun
         'loan_balance' => 15721.19,
         'phone_primary' => '0599000000',
         'is_borrower_alive' => true,
+        'loan_unit_area' => 260,
+        'loan_unit_floor_type' => 'ground',
         'location_latitude' => 31.5012345,
         'location_longitude' => 34.4667891,
         'location_precision' => 4.5,
         'loan_unit_damage_status' => 'destroyed',
-        'boq_total_usd' => 45,
-        'boq_total_ils' => 144,
+        'boq_total_usd' => 84500,
+        'boq_total_ils' => 245050,
         'risk_level' => 'high',
         'risk_score' => 65,
         'risk_reasons' => ['High risk reason'],
@@ -313,6 +315,8 @@ it('opens borrower details page with survey data attachments and boq items', fun
         ->assertSee('بيانات القرض')
         ->assertSee('0000900101')
         ->assertSee('15,721.19')
+        ->assertSee('قيمة الضرر للهدم الكلي')
+        ->assertSee('84,500.00')
         ->assertSee('محفظة القرض')
         ->assertSee('4,896.81')
         ->assertSee('damage.jpg')

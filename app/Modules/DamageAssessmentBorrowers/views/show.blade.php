@@ -13,6 +13,9 @@
         ];
         $riskColor = $riskColors[$borrower->risk_level] ?? 'secondary';
         $loanStatusLabel = $borrower->loan_status === 'active' ? 'نشط' : ($borrower->loan_status === 'closed' ? 'مغلق' : '-');
+        $isFullDemolitionValuation = $borrower->loan_unit_damage_status === 'destroyed'
+            && filled($borrower->loan_unit_area)
+            && filled($borrower->loan_unit_floor_type);
 
         $value = static fn (mixed $item): string => filled($item) ? (string) $item : '-';
         $money = static fn (mixed $item): string => number_format((float) $item, 2);
@@ -171,7 +174,7 @@
                 <div class="row g-5">
                     <div class="col-md-3 col-6">
                         <div class="border rounded p-4 h-100">
-                            <div class="text-muted fs-7 mb-1">إجمالي الدولار</div>
+                            <div class="text-muted fs-7 mb-1">{{ $isFullDemolitionValuation ? 'قيمة الضرر للهدم الكلي' : 'إجمالي الدولار' }}</div>
                             <div class="fs-3 fw-bold text-primary">{{ $money($borrower->boq_total_usd) }} $</div>
                         </div>
                     </div>

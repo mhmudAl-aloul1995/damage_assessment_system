@@ -1225,9 +1225,10 @@
         function pricingSummary(row) {
             const usd = Number(row.boq_total_usd || 0);
             const ils = Number(row.boq_total_ils || 0);
+            const isFullDemolitionValuation = row.loan_unit_damage_status === 'destroyed' && row.loan_unit_floor_type;
             const isPriced = usd > 0 || ils > 0;
             const badgeColor = isPriced ? 'success' : 'secondary';
-            const badgeText = isPriced ? 'مسعّر' : 'غير مسعّر';
+            const badgeText = isFullDemolitionValuation ? 'قيمة الضرر للهدم الكلي' : (isPriced ? 'مسعّر' : 'غير مسعّر');
             const actionText = isPriced ? 'تعديل التسعير' : 'إضافة تسعير';
 
             return `
@@ -1323,7 +1324,7 @@
                             <span>${row.damage_label || '-'}</span>
                         </div>
                         <div class="borrower-mobile-meta-item boq">
-                            <span>BOQ</span>
+                            <span>${row.loan_unit_damage_status === 'destroyed' && row.loan_unit_floor_type ? 'قيمة الضرر للهدم الكلي' : 'BOQ'}</span>
                             <span>${formatMoney(row.boq_total_usd)} $ / ${formatMoney(row.boq_total_ils)} ₪</span>
                         </div>
                         <div class="borrower-mobile-meta-item">
