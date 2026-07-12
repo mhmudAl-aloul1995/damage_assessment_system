@@ -11,5 +11,6 @@ class HeksKoboFieldMapping extends Model
         'table_name',
         'kobo_field',
         'column_name',
+        'display_label',
     ];
 }

@@ -8,11 +8,14 @@ use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksBoqCatalogItem;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
+use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 beforeEach(function () {
     config(['services.kobotoolbox.rest_service_token' => 'test-kobo-token']);
@@ -251,6 +254,115 @@ test('kobo rest submission syncs HEKS main KoBo field names from api backfill pa
         ->and($beneficiary->area)->toBe('الدرج النفق')
         ->and($beneficiary->address)->toBe('شارع النفق')
         ->and($beneficiary->occupancy_status)->toBe('56');
+});
+
+test('kobo rest submission applies configured HEKS Kobo display labels to technical fields', function () {
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_001',
+        'column_name' => 'q_001',
+        'display_label' => 'اسم رب الأسرة',
+    ]);
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_002',
+        'column_name' => 'q_002',
+        'display_label' => 'رقم هوية رب الأسرة',
+    ]);
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_087',
+        'column_name' => 'q_087',
+        'display_label' => 'اسم المهندس الميداني',
+    ]);
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_092',
+        'column_name' => 'q_092',
+        'display_label' => 'تقييم حالة ضرر المأوى:',
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-main-technical-field-labels',
+            'application_code' => 'DGN1',
+            'q_001' => 'Technical Field Beneficiary',
+            'q_002' => '987654321',
+            'q_087' => 'م. نعيم شاهين',
+            'q_092' => 'أضرار جزئية متوسطة',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'DGN1')->sole();
+
+    expect($beneficiary->name)->toBe('Technical Field Beneficiary')
+        ->and($beneficiary->identity_number)->toBe('987654321')
+        ->and($beneficiary->field_engineer)->toBe('م. نعيم شاهين')
+        ->and($beneficiary->damage_status)->toBe('أضرار جزئية متوسطة')
+        ->and(Schema::hasColumn('heks_main_kobo_records', 'q_087'))->toBeTrue()
+        ->and(HeksLabel::query()
+            ->where('heks_beneficiary_id', $beneficiary->id)
+            ->where('label_key', 'like', 'survey:%اسم المهندس الميداني')
+            ->where('label_value', 'م. نعيم شاهين')
+            ->exists())->toBeTrue();
+});
+
+test('heks kobo field label import command builds mappings from paired exports', function () {
+    $directory = storage_path('framework/testing/heks-kobo-labels');
+
+    if (! is_dir($directory)) {
+        mkdir($directory, 0777, true);
+    }
+
+    $technicalPath = $directory.'/technical.xlsx';
+    $labelsPath = $directory.'/labels.xlsx';
+
+    $technicalWorkbook = new Spreadsheet;
+    $technicalWorkbook->getActiveSheet()
+        ->setTitle('Heks Final V1')
+        ->fromArray(['application_code', 'q_001', 'q_087'], null, 'A1');
+    IOFactory::createWriter($technicalWorkbook, 'Xlsx')->save($technicalPath);
+    $technicalWorkbook->disconnectWorksheets();
+
+    $labelsWorkbook = new Spreadsheet;
+    $labelsWorkbook->getActiveSheet()
+        ->setTitle('Heks Final V1')
+        ->fromArray(['رقم الطلب/الكود', 'اسم رب الأسرة', 'اسم المهندس الميداني'], null, 'A1');
+    IOFactory::createWriter($labelsWorkbook, 'Xlsx')->save($labelsPath);
+    $labelsWorkbook->disconnectWorksheets();
+
+    $this->artisan('heks:kobo-import-field-labels', [
+        'service' => 'heks-main',
+        'technical_file' => $technicalPath,
+        'labels_file' => $labelsPath,
+    ])->assertSuccessful();
+
+    expect(HeksKoboFieldMapping::query()
+        ->where('service_name', 'heks-main')
+        ->where('kobo_field', 'q_087')
+        ->value('display_label'))->toBe('اسم المهندس الميداني');
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-main-imported-label-map',
+            'application_code' => 'MAP1',
+            'q_001' => 'Mapped Export Beneficiary',
+            'q_087' => 'م. نعيم شاهين',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'MAP1')->sole();
+
+    expect($beneficiary->name)->toBe('Mapped Export Beneficiary')
+        ->and($beneficiary->field_engineer)->toBe('م. نعيم شاهين');
 });
 
 test('kobo rest submission stores every HEKS KoBo field in service record columns', function () {

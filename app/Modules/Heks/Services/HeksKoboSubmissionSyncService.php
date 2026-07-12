@@ -19,6 +19,11 @@ use Illuminate\Support\Str;
 
 class HeksKoboSubmissionSyncService
 {
+    /**
+     * @var array<string, array<string, string>>
+     */
+    private array $displayLabelCache = [];
+
     public function __construct(private HeksEngineerUserResolver $engineerUserResolver) {}
 
     /**
@@ -31,8 +36,8 @@ class HeksKoboSubmissionSyncService
         }
 
         $payload = $submission->payload ?? [];
-        $flatPayload = $this->flatten($payload);
         $service = $submission->service_name;
+        $flatPayload = $this->withMappedDisplayLabels($this->flatten($payload), $service);
         $beneficiary = $this->beneficiary($flatPayload, $service);
 
         if (! $beneficiary instanceof HeksBeneficiary) {
@@ -321,14 +326,14 @@ class HeksKoboSubmissionSyncService
                 [
                     'heks_beneficiary_id' => $beneficiary->id,
                     'source' => $service,
-                    'label_key' => $this->surveyAnswerLabelKey($key),
+                    'label_key' => $this->surveyAnswerLabelKey($key, $service),
                 ],
                 [
                     'label_value' => $displayValue,
                     'version' => $this->first($payload, ['__version__', '_submission___version__']),
                     'raw_data' => [
                         'field_key' => $key,
-                        'field_label' => $this->cleanFieldLabel($key),
+                        'field_label' => $this->cleanFieldLabel($key, $service),
                         'value' => $value,
                         'source' => $service,
                     ],
@@ -356,17 +361,23 @@ class HeksKoboSubmissionSyncService
             || str_contains($normalized, 'index');
     }
 
-    private function surveyAnswerLabelKey(string $key): string
+    private function surveyAnswerLabelKey(string $key, string $service): string
     {
-        $cleanLabel = Str::of($this->cleanFieldLabel($key))
+        $cleanLabel = Str::of($this->cleanFieldLabel($key, $service))
             ->limit(70, '')
             ->toString();
 
         return 'survey:'.substr(sha1($key), 0, 12).':'.$cleanLabel;
     }
 
-    private function cleanFieldLabel(string $key): string
+    private function cleanFieldLabel(string $key, string $service): string
     {
+        $mappedLabel = $this->displayLabelForField($service, $key);
+
+        if ($mappedLabel !== null) {
+            return $mappedLabel;
+        }
+
         return Str::of($key)
             ->replace(["\r", "\n", "\t"], ' ')
             ->replace(['/', '_'], ' ')
@@ -716,6 +727,12 @@ class HeksKoboSubmissionSyncService
             ->first();
 
         if ($existingMapping instanceof HeksKoboFieldMapping) {
+            if (! Schema::hasColumn($tableName, $existingMapping->column_name)) {
+                Schema::table($tableName, function ($table) use ($existingMapping): void {
+                    $table->text($existingMapping->column_name)->nullable();
+                });
+            }
+
             return $existingMapping->column_name;
         }
 
@@ -741,6 +758,85 @@ class HeksKoboSubmissionSyncService
         }
 
         return $column;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function withMappedDisplayLabels(array $payload, string $service): array
+    {
+        foreach ($this->displayLabels($service) as $field => $label) {
+            foreach ($this->fieldLookupKeys($field) as $lookupKey) {
+                if (! array_key_exists($lookupKey, $payload) || array_key_exists($label, $payload)) {
+                    continue;
+                }
+
+                $payload[$label] = $payload[$lookupKey];
+            }
+        }
+
+        return $payload;
+    }
+
+    private function displayLabelForField(string $service, string $field): ?string
+    {
+        $labels = $this->displayLabels($service);
+
+        foreach ($this->fieldLookupKeys($field) as $lookupKey) {
+            if (isset($labels[$lookupKey])) {
+                return $labels[$lookupKey];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function displayLabels(string $service): array
+    {
+        if (array_key_exists($service, $this->displayLabelCache)) {
+            return $this->displayLabelCache[$service];
+        }
+
+        return $this->displayLabelCache[$service] = HeksKoboFieldMapping::query()
+            ->where('service_name', $service)
+            ->whereNotNull('display_label')
+            ->get(['kobo_field', 'display_label'])
+            ->flatMap(function (HeksKoboFieldMapping $mapping): array {
+                $label = trim((string) $mapping->display_label);
+
+                if ($label === '') {
+                    return [];
+                }
+
+                return collect($this->fieldLookupKeys((string) $mapping->kobo_field))
+                    ->mapWithKeys(fn (string $field): array => [$field => $label])
+                    ->all();
+            })
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function fieldLookupKeys(string $field): array
+    {
+        $field = trim($field);
+
+        if ($field === '') {
+            return [];
+        }
+
+        $keys = [$field];
+
+        if (str_contains($field, '/')) {
+            $keys[] = Str::afterLast($field, '/');
+        }
+
+        return array_values(array_unique($keys));
     }
 
     private function uniqueKoboColumnName(string $service, string $tableName, string $field): string
