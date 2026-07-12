@@ -1075,7 +1075,7 @@
                                         <input class="form-check-input" type="radio" name="report_type" value="compact" checked>
                                         <span class="form-check-label ms-3">
                                             <span class="fw-bold d-block">تقرير مختصر مطابق للقالب</span>
-                                            <span class="text-muted fs-7">الكود، الاسم، الهوية، قيمة القرض، المبلغ المتبقي، قيمة الضرر، نوع الضرر، الملاحظات.</span>
+                                            <span class="text-muted fs-7">الكود، الاسم، الهوية، قيمة القرض، المبلغ المتبقي، قيمة الضرر للهدم الكلي، نوع الضرر، الملاحظات.</span>
                                         </span>
                                     </label>
                                     <label class="form-check form-check-custom form-check-solid border rounded p-4">
@@ -1091,7 +1091,7 @@
                             <div class="rounded border bg-light p-4">
                                 <div class="fw-bold mb-2">أعمدة التقرير المختصر</div>
                                 <div class="d-flex flex-wrap gap-2">
-                                    @foreach (['الكود', 'اسم المقترض', 'رقم الهوية', 'قيمة القرض', 'المبلغ المتبقي', 'قيمة الضرر', 'نوع الضرر', 'الملاحظات'] as $column)
+                                    @foreach (['الكود', 'اسم المقترض', 'رقم الهوية', 'قيمة القرض', 'المبلغ المتبقي', 'قيمة الضرر للهدم الكلي', 'نوع الضرر', 'الملاحظات'] as $column)
                                         <span class="badge badge-light-primary">{{ $column }}</span>
                                     @endforeach
                                 </div>

@@ -46,7 +46,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
                 'المساحة',
                 'الطابق',
                 'سعر المتر',
-                'قيمة الضرر',
+                'قيمة الضرر للهدم الكلي',
                 'قيمة الضرر بالشيكل',
                 'نوع الضرر',
                 'درجة الخطورة',
@@ -62,7 +62,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
             'رقم الهوية',
             'قيمة القرض',
             'المبلغ المتبقي',
-            'قيمة الضرر',
+            'قيمة الضرر للهدم الكلي',
             'نوع الضرر',
             'الملاحظات',
         ];
