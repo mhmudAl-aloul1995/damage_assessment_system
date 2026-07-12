@@ -10,6 +10,8 @@ Route::middleware('auth')->group(function () {
         ->name('damage-assessment-borrowers.create');
     Route::get('/data', [BorrowerSurveyController::class, 'data'])
         ->name('damage-assessment-borrowers.data');
+    Route::get('/export', [BorrowerSurveyController::class, 'export'])
+        ->name('damage-assessment-borrowers.export');
     Route::post('/', [BorrowerSurveyController::class, 'store'])
         ->name('damage-assessment-borrowers.store');
     Route::post('/import', [BorrowerSurveyController::class, 'import'])

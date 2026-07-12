@@ -2,6 +2,7 @@
 
 namespace App\Modules\DamageAssessmentBorrowers\Http\Controllers;
 
+use App\Exports\BorrowerReportExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\ImportBorrowerSpreadsheetRequest;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateBorrowerPricingRequest;
@@ -15,6 +16,7 @@ use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerDamageValuationService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +26,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
@@ -55,28 +59,7 @@ class BorrowerSurveyController extends Controller
     {
         $this->authorizeAccess();
 
-        $query = DamageAssessmentBorrower::query()->with('submitter:id,name');
-
-        if ($request->filled('risk_level')) {
-            $query->where('risk_level', (string) $request->string('risk_level'));
-        }
-
-        if ($request->string('damage_status')->toString() === 'partial') {
-            $query->whereIn('loan_unit_damage_status', ['severe_uninhabitable', 'severe_habitable', 'minor']);
-        } elseif ($request->filled('damage_status')) {
-            $query->where('loan_unit_damage_status', (string) $request->string('damage_status'));
-        }
-
-        if ($request->filled('q')) {
-            $search = (string) $request->string('q');
-            $query->where(function ($query) use ($search): void {
-                $query->where('borrower_name', 'like', "%{$search}%")
-                    ->orWhere('borrower_id_number', 'like', "%{$search}%")
-                    ->orWhere('phone_primary', 'like', "%{$search}%");
-            });
-        }
-
-        $borrowers = $query
+        $borrowers = $this->borrowersQuery($request)
             ->latest()
             ->limit(250)
             ->get()
@@ -87,6 +70,28 @@ class BorrowerSurveyController extends Controller
             'stats' => $this->stats(),
             'data' => $borrowers,
         ]);
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        $this->authorizeAccess();
+
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:255'],
+            'risk_level' => ['nullable', 'in:critical,high,medium,low'],
+            'damage_status' => ['nullable', 'in:destroyed,partial,severe_uninhabitable,severe_habitable,minor'],
+            'report_type' => ['nullable', 'in:compact,detailed'],
+        ]);
+
+        $reportType = $validated['report_type'] ?? 'compact';
+        $borrowers = $this->borrowersQuery($request)
+            ->latest()
+            ->get();
+
+        return Excel::download(
+            new BorrowerReportExport($borrowers, $reportType),
+            'borrowers-report-'.now()->format('Y-m-d-His').'.xlsx'
+        );
     }
 
     public function store(StoreBorrowerSurveyRequest $request, BorrowerRiskAnalysisService $riskAnalysis): JsonResponse
@@ -361,6 +366,32 @@ class BorrowerSurveyController extends Controller
                     'boq_total_ils' => round((float) $borrower->boq_total_usd * $exchangeRate, 2),
                 ])->save();
             });
+    }
+
+    private function borrowersQuery(Request $request): Builder
+    {
+        $query = DamageAssessmentBorrower::query()->with('submitter:id,name');
+
+        if ($request->filled('risk_level')) {
+            $query->where('risk_level', (string) $request->string('risk_level'));
+        }
+
+        if ($request->string('damage_status')->toString() === 'partial') {
+            $query->whereIn('loan_unit_damage_status', ['severe_uninhabitable', 'severe_habitable', 'minor']);
+        } elseif ($request->filled('damage_status')) {
+            $query->where('loan_unit_damage_status', (string) $request->string('damage_status'));
+        }
+
+        if ($request->filled('q')) {
+            $search = (string) $request->string('q');
+            $query->where(function (Builder $query) use ($search): void {
+                $query->where('borrower_name', 'like', "%{$search}%")
+                    ->orWhere('borrower_id_number', 'like', "%{$search}%")
+                    ->orWhere('phone_primary', 'like', "%{$search}%");
+            });
+        }
+
+        return $query;
     }
 
     /**

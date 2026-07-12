@@ -521,6 +521,9 @@
                 <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#borrowersImportModal">
                     استيراد من Excel
                 </button>
+                <button type="button" class="btn btn-light-success" data-bs-toggle="modal" data-bs-target="#borrowersExportModal">
+                    تصدير التقرير
+                </button>
                 <a href="{{ route('damage-assessment-borrowers.create') }}" class="btn btn-light">
                     تعبئة استبيان جديد
                 </a>
@@ -946,6 +949,9 @@
                                 <option value="destroyed">ضرر كلي</option>
                                 <option value="partial">ضرر جزئي</option>
                             </select>
+                            <button type="button" class="btn btn-sm btn-light-success" data-bs-toggle="modal" data-bs-target="#borrowersExportModal">
+                                تصدير
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1037,6 +1043,71 @@
             </div>
         </div>
 
+        <div class="modal fade" id="borrowersExportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form id="borrowersExportForm">
+                        <div class="modal-header">
+                            <h2 class="fw-bold mb-0">تصدير بيانات المقترضين</h2>
+                            <button type="button" class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="إغلاق">
+                                <i class="ki-duotone ki-cross fs-1">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-primary d-flex align-items-start gap-3 mb-5">
+                                <i class="ki-duotone ki-filter fs-2x text-primary">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                <div>
+                                    <div class="fw-bold mb-1">سيتم تصدير النتائج حسب الفلاتر الحالية</div>
+                                    <div class="text-gray-700 fs-7" id="borrowersExportScope">كل السجلات المعروضة في قائمة العمل.</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-5">
+                                <label class="form-label fw-semibold">نوع التقرير</label>
+                                <div class="d-grid gap-3">
+                                    <label class="form-check form-check-custom form-check-solid border rounded p-4">
+                                        <input class="form-check-input" type="radio" name="report_type" value="compact" checked>
+                                        <span class="form-check-label ms-3">
+                                            <span class="fw-bold d-block">تقرير مختصر مطابق للقالب</span>
+                                            <span class="text-muted fs-7">الكود، الاسم، الهوية، قيمة القرض، المبلغ المتبقي، قيمة الضرر، نوع الضرر، الملاحظات.</span>
+                                        </span>
+                                    </label>
+                                    <label class="form-check form-check-custom form-check-solid border rounded p-4">
+                                        <input class="form-check-input" type="radio" name="report_type" value="detailed">
+                                        <span class="form-check-label ms-3">
+                                            <span class="fw-bold d-block">تقرير تفصيلي</span>
+                                            <span class="text-muted fs-7">يشمل المساحة، الطابق، سعر المتر، قيمة الضرر بالدولار والشيكل، الخطورة وعدد الصور.</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="rounded border bg-light p-4">
+                                <div class="fw-bold mb-2">أعمدة التقرير المختصر</div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (['الكود', 'اسم المقترض', 'رقم الهوية', 'قيمة القرض', 'المبلغ المتبقي', 'قيمة الضرر', 'نوع الضرر', 'الملاحظات'] as $column)
+                                        <span class="badge badge-light-primary">{{ $column }}</span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="submit" class="btn btn-success">
+                                تحميل Excel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         @if ($canManagePricing)
             <div class="modal fade" id="globalExchangeRateModal" tabindex="-1" aria-labelledby="globalExchangeRateModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
@@ -1074,6 +1145,7 @@
     <script>
         const borrowerRoutes = {
             data: @json(route('damage-assessment-borrowers.data')),
+            export: @json(route('damage-assessment-borrowers.export')),
             store: @json(route('damage-assessment-borrowers.store')),
             import: @json(route('damage-assessment-borrowers.import')),
             previewImport: @json(route('damage-assessment-borrowers.import.preview')),
@@ -1388,10 +1460,40 @@
             }
         }
 
+        function currentBorrowerFilterParams() {
+            const params = new URLSearchParams();
+            const q = document.getElementById('borrowerSearch')?.value;
+            const riskLevel = document.getElementById('borrowerRiskFilter')?.value;
+            const damageStatus = document.getElementById('borrowerDamageFilter')?.value;
+
+            if (q) params.set('q', q);
+            if (riskLevel) params.set('risk_level', riskLevel);
+            if (damageStatus) params.set('damage_status', damageStatus);
+
+            return params;
+        }
+
+        function updateBorrowersExportScope() {
+            const scope = document.getElementById('borrowersExportScope');
+            if (!scope) return;
+
+            const parts = [];
+            const q = document.getElementById('borrowerSearch')?.value;
+            const riskText = document.getElementById('borrowerRiskFilter')?.selectedOptions?.[0]?.textContent?.trim();
+            const damageText = document.getElementById('borrowerDamageFilter')?.selectedOptions?.[0]?.textContent?.trim();
+
+            if (q) parts.push(`بحث: ${q}`);
+            if (riskText && document.getElementById('borrowerRiskFilter')?.value) parts.push(`الخطورة: ${riskText}`);
+            if (damageText && document.getElementById('borrowerDamageFilter')?.value) parts.push(`الضرر: ${damageText}`);
+
+            scope.textContent = parts.length ? parts.join('، ') : 'كل السجلات المعروضة في قائمة العمل.';
+        }
+
         const borrowerSurveyForm = document.getElementById('borrowerSurveyForm');
         const borrowerSearch = document.getElementById('borrowerSearch');
         const borrowerRiskFilter = document.getElementById('borrowerRiskFilter');
         const borrowerDamageFilter = document.getElementById('borrowerDamageFilter');
+        const borrowersExportForm = document.getElementById('borrowersExportForm');
         const borrowersImportForm = document.getElementById('borrowersImportForm');
         const borrowersFile = document.getElementById('borrowersFile');
         const borrowersImportDropzone = document.getElementById('borrowersImportDropzone');
@@ -1491,6 +1593,20 @@
 
         borrowerRiskFilter?.addEventListener('change', loadBorrowers);
         borrowerDamageFilter?.addEventListener('change', loadBorrowers);
+
+        borrowersExportForm?.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const params = currentBorrowerFilterParams();
+            const reportType = new FormData(borrowersExportForm).get('report_type') || 'compact';
+            params.set('report_type', reportType);
+
+            const url = new URL(borrowerRoutes.export, window.location.origin);
+            params.forEach((value, key) => url.searchParams.set(key, value));
+            window.location.href = url.toString();
+        });
+
+        document.getElementById('borrowersExportModal')?.addEventListener('show.bs.modal', updateBorrowersExportScope);
 
         document.querySelectorAll('[data-risk-filter]').forEach((button) => {
             button.addEventListener('click', () => {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\BorrowerReportExport;
 use App\Models\User;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
@@ -9,6 +10,7 @@ use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportServ
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Maatwebsite\Excel\Facades\Excel;
 use Mockery\MockInterface;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -25,6 +27,8 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertDontSee('<form id="borrowerSurveyForm"', false)
         ->assertSee('استيراد من Excel', false)
         ->assertSee('borrowersImportModal', false)
+        ->assertSee('borrowersExportModal', false)
+        ->assertSee(route('damage-assessment-borrowers.export'), false)
         ->assertSee('borrowers-import-dropzone', false)
         ->assertSee('borrowersPreviewBtn', false)
         ->assertSee('borrowersImportPreview', false)
@@ -39,6 +43,8 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('borrower-worklist-toolbar', false)
         ->assertSee("$('.borrower-filter-select').each", false)
         ->assertSee('اسحب ملف Excel هنا أو اضغط للاختيار', false)
+        ->assertSee('تصدير التقرير', false)
+        ->assertSee('تقرير مختصر مطابق للقالب', false)
         ->assertSee('تعبئة استبيان جديد', false)
         ->assertSee('استبيان المقترضين', false);
 });
@@ -249,6 +255,63 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('data.0.loan_portfolio_amount', 4896.81)
         ->assertJsonPath('stats.partial_damage', 1)
         ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
+});
+
+it('exports borrower report using the current filters', function () {
+    Excel::fake();
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB-EXPORT',
+        'borrower_name' => 'Export Borrower',
+        'borrower_id_number' => '820000001',
+        'loan_total_amount' => 28075,
+        'loan_balance' => 4908,
+        'is_borrower_alive' => true,
+        'loan_unit_area' => 260,
+        'loan_unit_floor_type' => 'ground',
+        'loan_unit_damage_status' => 'destroyed',
+        'boq_total_usd' => 84500,
+        'boq_total_ils' => 245050,
+        'risk_level' => 'high',
+        'risk_score' => 70,
+        'attachments_count' => 2,
+        'notes' => 'Export notes',
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB-SKIP',
+        'borrower_name' => 'Partial Borrower',
+        'borrower_id_number' => '820000002',
+        'is_borrower_alive' => true,
+        'loan_unit_damage_status' => 'minor',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.export', [
+            'damage_status' => 'destroyed',
+            'report_type' => 'compact',
+        ]))
+        ->assertOk();
+
+    Excel::assertDownloaded('borrowers-report-'.now()->format('Y-m-d-His').'.xlsx', function (BorrowerReportExport $export): bool {
+        return $export->headings() === [
+            'الكود',
+            'اسم المقترض',
+            'رقم الهوية',
+            'قيمة القرض',
+            'المبلغ المتبقي',
+            'قيمة الضرر',
+            'نوع الضرر',
+            'الملاحظات',
+        ]
+            && $export->collection()->count() === 1
+            && $export->map($export->collection()->first())[0] === 'IDB-EXPORT'
+            && $export->map($export->collection()->first())[5] === 84500.0;
+    });
 });
 
 it('opens borrower details page with survey data attachments and boq items', function () {
