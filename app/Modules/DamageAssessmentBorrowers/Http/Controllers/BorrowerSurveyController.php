@@ -12,6 +12,7 @@ use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqItem;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
+use App\Modules\DamageAssessmentBorrowers\Services\BorrowerDamageValuationService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use Illuminate\Http\JsonResponse;
@@ -91,6 +92,7 @@ class BorrowerSurveyController extends Controller
     public function store(StoreBorrowerSurveyRequest $request, BorrowerRiskAnalysisService $riskAnalysis): JsonResponse
     {
         $validated = $request->validated();
+        $validated = $this->applyFullDemolitionValuation($validated);
         $analysis = $riskAnalysis->analyze($validated);
 
         $borrower = DamageAssessmentBorrower::query()->create(array_merge($validated, $analysis, [
@@ -402,6 +404,8 @@ class BorrowerSurveyController extends Controller
             'governorate' => $borrower->displaced_to_governorate,
             'loan_unit_damage_status' => $borrower->loan_unit_damage_status,
             'damage_label' => $this->optionLabel($borrower->loan_unit_damage_status),
+            'loan_unit_floor_type' => $borrower->loan_unit_floor_type,
+            'floor_type_label' => $this->optionLabel($borrower->loan_unit_floor_type),
             'boq_total_usd' => (float) $borrower->boq_total_usd,
             'exchange_rate' => (float) $borrower->exchange_rate,
             'boq_total_ils' => (float) $borrower->boq_total_ils,
@@ -430,6 +434,7 @@ class BorrowerSurveyController extends Controller
             'displaced_to_governorate' => $this->optionLabel($borrower->displaced_to_governorate),
             'loan_unit_occupancy_status' => $this->optionLabel($borrower->loan_unit_occupancy_status),
             'loan_unit_damage_status' => $this->optionLabel($borrower->loan_unit_damage_status),
+            'loan_unit_floor_type' => $this->optionLabel($borrower->loan_unit_floor_type),
             'risk_level' => $this->riskLabel($borrower->risk_level),
             'submitted_by' => $borrower->submitter?->name ?? $borrower->submitted_by_name ?? '-',
         ];
@@ -563,10 +568,37 @@ class BorrowerSurveyController extends Controller
             'heirs' => 'وارثين',
             'none_due_damage' => 'لا يوجد بسبب الضرر',
             'destroyed' => 'هدم كلي',
+            'ground' => 'ارضي',
+            'repeated' => 'متكرر',
             'severe_uninhabitable' => 'متضرر بليغ غير صالح للسكن',
             'severe_habitable' => 'متضرر بليغ صالح للسكن',
             'minor' => 'أضرار طفيفة',
             default => $value ?? '-',
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function applyFullDemolitionValuation(array $validated): array
+    {
+        $value = app(BorrowerDamageValuationService::class)->fullDemolitionValueUsd(
+            isset($validated['loan_unit_area']) ? (float) $validated['loan_unit_area'] : null,
+            $validated['loan_unit_floor_type'] ?? null,
+            $validated['loan_unit_damage_status'] ?? null,
+        );
+
+        if ($value === null) {
+            return $validated;
+        }
+
+        $exchangeRate = $this->globalExchangeRate();
+
+        return array_merge($validated, [
+            'boq_total_usd' => $value,
+            'exchange_rate' => $exchangeRate,
+            'boq_total_ils' => round($value * $exchangeRate, 2),
+        ]);
     }
 }

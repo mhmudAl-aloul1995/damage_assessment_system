@@ -308,6 +308,10 @@
                                 <div class="borrower-detail-value">{{ $value($borrower->loan_unit_area) }}</div>
                             </div>
                             <div class="borrower-detail-item">
+                                <div class="borrower-detail-label">الطابق</div>
+                                <div class="borrower-detail-value">{{ $labels['loan_unit_floor_type'] }}</div>
+                            </div>
+                            <div class="borrower-detail-item">
                                 <div class="borrower-detail-label">رقم القطعة</div>
                                 <div class="borrower-detail-value">{{ $value($borrower->parcel_number) }}</div>
                             </div>

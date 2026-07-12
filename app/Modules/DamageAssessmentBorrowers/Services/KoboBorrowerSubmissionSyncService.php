@@ -16,6 +16,7 @@ class KoboBorrowerSubmissionSyncService
     {
         $payload = $submission->payload ?? [];
         $data = $this->borrowerData($payload, $borrowerNameField, $fieldMap);
+        $data = $this->applyFullDemolitionValuation($data);
 
         if (blank($data['borrower_name'] ?? null)) {
             return [
@@ -100,6 +101,7 @@ class KoboBorrowerSubmissionSyncService
             'phone_secondary' => $this->text($this->mappedValue($payload, $fieldMap, 'phone_secondary', ['phone_secondary'])),
             'loan_unit_address' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_address', ['loan_unit_address', 'address'])),
             'loan_unit_area' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_unit_area', ['loan_unit_area'])),
+            'loan_unit_floor_type' => app(BorrowerDamageValuationService::class)->normalizeFloorType($this->mappedValue($payload, $fieldMap, 'loan_unit_floor_type', ['loan_unit_floor_type', 'floor_type', 'floor', 'الطابق'])),
             'parcel_number' => $this->text($this->mappedValue($payload, $fieldMap, 'parcel_number', ['parcel_number'])),
             'plot_number' => $this->text($this->mappedValue($payload, $fieldMap, 'plot_number', ['plot_number'])),
             'loan_unit_occupancy_status' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_occupancy_status', ['loan_unit_occupancy_status'])),
@@ -107,6 +109,31 @@ class KoboBorrowerSubmissionSyncService
             'loan_unit_damage_status' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_damage_status', ['loan_unit_damage_status', 'damage_status'])),
             'notes' => $this->text($this->mappedValue($payload, $fieldMap, 'notes', ['notes', 'note'])),
         ], fn (mixed $value): bool => $value !== null && $value !== []);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function applyFullDemolitionValuation(array $data): array
+    {
+        $value = app(BorrowerDamageValuationService::class)->fullDemolitionValueUsd(
+            $data['loan_unit_area'] ?? null,
+            $data['loan_unit_floor_type'] ?? null,
+            $data['loan_unit_damage_status'] ?? null,
+        );
+
+        if ($value === null) {
+            return $data;
+        }
+
+        $exchangeRate = (float) ($data['exchange_rate'] ?? 3.2);
+
+        return array_merge($data, [
+            'boq_total_usd' => $value,
+            'exchange_rate' => $exchangeRate,
+            'boq_total_ils' => round($value * $exchangeRate, 2),
+        ]);
     }
 
     /**

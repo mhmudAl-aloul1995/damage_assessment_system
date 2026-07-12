@@ -824,6 +824,14 @@
                             <input type="number" step="0.01" min="0" class="form-control" name="loan_unit_area">
                         </div>
                         <div class="col-md-2">
+                            <label class="form-label">الطابق</label>
+                            <select class="form-select" name="loan_unit_floor_type">
+                                <option value="">اختر</option>
+                                <option value="ground">ارضي</option>
+                                <option value="repeated">متكرر</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label">رقم القطعة</label>
                             <input class="form-control" name="parcel_number">
                         </div>
@@ -1200,6 +1208,7 @@
                 borrower_id_number: payload.borrower_id_number,
                 displacement_label: payload.displacement_status || '-',
                 damage_label: payload.loan_unit_damage_status || '-',
+                floor_type_label: payload.loan_unit_floor_type || '-',
                 risk_level: 'medium',
                 risk_label: @json(app()->getLocale() === 'ar' ? 'بانتظار المزامنة' : 'Pending sync'),
                 risk_score: '-',

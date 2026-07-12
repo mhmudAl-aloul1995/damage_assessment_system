@@ -53,6 +53,7 @@ class StoreBorrowerSurveyRequest extends FormRequest
             'phone_secondary' => ['nullable', 'string', 'max:50'],
             'loan_unit_address' => ['nullable', 'string'],
             'loan_unit_area' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'loan_unit_floor_type' => ['nullable', 'in:ground,repeated'],
             'parcel_number' => ['nullable', 'string', 'max:100'],
             'plot_number' => ['nullable', 'string', 'max:100'],
             'loan_unit_occupancy_status' => ['nullable', 'string', 'max:80'],
