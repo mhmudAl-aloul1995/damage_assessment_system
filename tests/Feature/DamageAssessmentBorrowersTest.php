@@ -769,3 +769,50 @@ it('updates an existing borrower by identity instead of skipping it', function (
         @unlink($path);
     }
 });
+
+it('prefers the existing source uuid record over another identity match during import', function () {
+    $identityMatch = DamageAssessmentBorrower::query()->create([
+        'source_uuid' => 'identity-match-old-uuid',
+        'borrower_name' => 'Identity Match Borrower',
+        'borrower_id_number' => '8881',
+        'is_borrower_alive' => true,
+        'risk_level' => 'low',
+        'risk_score' => 0,
+    ]);
+
+    $sourceUuidMatch = DamageAssessmentBorrower::query()->create([
+        'source_uuid' => 'uuid-owned-by-existing-row',
+        'borrower_name' => 'Source Uuid Borrower',
+        'borrower_id_number' => '9991',
+        'is_borrower_alive' => true,
+        'risk_level' => 'low',
+        'risk_score' => 0,
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-import-source-conflict-').'.json';
+    file_put_contents($path, json_encode([
+        'records' => [
+            [
+                'row_number' => 2,
+                'source_uuid' => 'uuid-owned-by-existing-row',
+                'source_submission_id' => 20,
+                'borrower_name' => 'Updated Source Uuid Borrower',
+                'borrower_id_number' => '8881',
+                'employment_status_label' => 'متقاعد',
+                'alive_label' => 'نعم',
+            ],
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+
+    try {
+        $summary = app(BorrowerSpreadsheetImportService::class)->import($path);
+
+        expect($summary['updated'])->toBe(1)
+            ->and($identityMatch->refresh()->source_uuid)->toBe('identity-match-old-uuid')
+            ->and($sourceUuidMatch->refresh()->borrower_name)->toBe('Updated Source Uuid Borrower')
+            ->and($sourceUuidMatch->source_uuid)->toBe('uuid-owned-by-existing-row')
+            ->and($sourceUuidMatch->source_submission_id)->toBe(20);
+    } finally {
+        @unlink($path);
+    }
+});
