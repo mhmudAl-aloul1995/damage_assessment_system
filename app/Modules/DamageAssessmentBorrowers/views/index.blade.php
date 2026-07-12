@@ -109,6 +109,25 @@
             gap: 0.35rem;
         }
 
+        .damage-assessment-borrowers-page .borrower-pricing-header {
+            align-items: flex-start;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-pricing-header .badge {
+            line-height: 1.45;
+            max-width: 100%;
+            text-align: start;
+            white-space: normal;
+        }
+
+        .damage-assessment-borrowers-page .borrower-pricing-exchange {
+            display: block;
+            line-height: 1.2;
+        }
+
         .damage-assessment-borrowers-page .borrower-pricing-amounts > span {
             align-items: center;
             display: flex;
@@ -1233,9 +1252,9 @@
 
             return `
                 <div class="borrower-pricing-cell">
-                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                    <div class="borrower-pricing-header mb-3">
                         <span class="badge badge-light-${badgeColor}">${badgeText}</span>
-                        ${row.exchange_rate ? `<span class="text-muted small">صرف ${Number(row.exchange_rate).toFixed(4)}</span>` : ''}
+                        ${row.exchange_rate ? `<span class="borrower-pricing-exchange text-muted small">صرف ${Number(row.exchange_rate).toFixed(4)}</span>` : ''}
                     </div>
                     <div class="borrower-pricing-amounts mb-3">
                         <span><span class="text-muted">USD</span><strong>${formatMoney(usd)} $</strong></span>
