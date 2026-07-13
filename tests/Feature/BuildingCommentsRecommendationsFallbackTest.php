@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\EditAssessment;
+use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
@@ -80,6 +81,133 @@ it('shows the latest edited value as the audit answer for read only field engine
     expect($ownerRow['answer'] ?? null)
         ->toBe('Latest Edited Owner')
         ->and($ownerRow['editAnswer'] ?? null)
+        ->toBeNull();
+});
+
+it('shows the latest edited housing value as the audit answer for read only field engineers', function (): void {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'fake-token',
+        ], 200),
+        '*' => Http::response([
+            'attachmentInfos' => [],
+        ], 200),
+    ]);
+
+    Role::query()->create([
+        'name' => 'Field Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create([
+        'username_arcgis' => 'field.engineer',
+    ]);
+    $user->assignRole('Field Engineer');
+
+    Assessment::query()->create([
+        'name' => 'unit_owner',
+        'label' => 'Unit Owner',
+        'hint' => 'Housing unit owner',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 990007,
+        'globalid' => 'read-only-latest-edit-housing-building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 990008,
+        'globalid' => 'read-only-latest-edit-housing-unit',
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Original Unit Owner',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $housingUnit->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_owner',
+        'field_value' => 'First Edited Unit Owner',
+        'user_id' => $user->id,
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $housingUnit->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_owner',
+        'field_value' => 'Latest Edited Unit Owner',
+        'user_id' => $user->id,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->getJson('/damage-assessment/showHousings?globalid='.$housingUnit->globalid);
+
+    $response->assertOk();
+
+    $ownerRow = collect($response->json('data'))->firstWhere('name', 'unit_owner');
+
+    expect($ownerRow['answer'] ?? null)
+        ->toBe('Latest Edited Unit Owner')
+        ->and($ownerRow['editAnswer'] ?? null)
+        ->toBeNull();
+});
+
+it('shows the latest edited housing value for users without edit permission', function (): void {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'fake-token',
+        ], 200),
+        '*' => Http::response([
+            'attachmentInfos' => [],
+        ], 200),
+    ]);
+
+    $user = User::factory()->create();
+
+    Assessment::query()->create([
+        'name' => 'housing_unit_group',
+        'label' => 'Housing Unit',
+        'hint' => '',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'unit_damage_status',
+        'label' => 'Unit Damage Status',
+        'hint' => 'Damage status',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 990009,
+        'globalid' => 'read-only-no-edit-housing-building',
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 990010,
+        'globalid' => 'read-only-no-edit-housing-unit',
+        'parentglobalid' => $building->globalid,
+        'unit_damage_status' => 'Partially Damaged',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $housingUnit->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_damage_status',
+        'field_value' => 'Totally Damaged',
+        'user_id' => $user->id,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->getJson('/damage-assessment/showHousings?globalid='.$housingUnit->globalid);
+
+    $response->assertOk();
+
+    $damageStatusRow = collect($response->json('data'))->firstWhere('name', 'unit_damage_status');
+
+    expect($damageStatusRow['answer'] ?? null)
+        ->toBe('Totally Damaged')
+        ->and($damageStatusRow['editAnswer'] ?? null)
         ->toBeNull();
 });
 

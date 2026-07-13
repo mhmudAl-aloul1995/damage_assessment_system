@@ -1171,10 +1171,7 @@ class DamageAssessmentController extends Controller
             ? $model
             : Building::query()->where('globalid', $model?->parentglobalid)->first();
         $canEditAssessment = $this->canEditAssessmentForBuilding($user, $building);
-        $isAssessmentReadOnly = (
-            ($user?->hasRole('Team Leader') ?? false)
-            || ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) ?? false)
-        ) && ! $canEditAssessment;
+        $isAssessmentReadOnly = ! $canEditAssessment;
 
         if ($globalid) {
             $edits = EditAssessment::with('user')
