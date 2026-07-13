@@ -1256,6 +1256,7 @@ class HeksController extends Controller
         $seen = [];
         $displayLabels = $this->surveyDisplayLabels(array_keys($rawData));
         $choiceLabels = $this->surveyChoiceLabels(array_keys($rawData));
+        $sortOrders = $this->surveySortOrders(array_keys($rawData));
         $histories = $beneficiary->surveyValueHistories
             ->groupBy(fn (HeksSurveyValueHistory $history): string => $history->source.'|'.$history->field_key);
 
@@ -1291,6 +1292,7 @@ class HeksController extends Controller
                     'field_key' => $key,
                     'value' => $displayValue,
                     'choices' => $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels),
+                    'sort_order' => $this->surveySortOrder($key, (string) $source, $sortOrders),
                     'source' => (string) $source,
                     'editable' => array_key_exists($key, $originalValues) && is_scalar($originalValues[$key]),
                     'history' => $histories->get((string) $source.'|'.$key, collect())
@@ -1310,6 +1312,7 @@ class HeksController extends Controller
         return $sections
             ->filter(fn (array $section): bool => $section['items'] !== [])
             ->map(fn (array $section, string $sectionKey): array => $this->resolveSurveySectionLabels($section, $sectionKey))
+            ->map(fn (array $section): array => $this->sortSurveySectionItems($section))
             ->sortBy(fn (array $section, string $sectionKey): int => $this->surveySectionSortOrder($section, $sectionKey))
             ->all();
     }
@@ -1539,6 +1542,48 @@ class HeksController extends Controller
     }
 
     /**
+     * @param  array<int, string|int>  $sources
+     * @return array<string, array<string, int>>
+     */
+    private function surveySortOrders(array $sources): array
+    {
+        $serviceNames = collect($sources)
+            ->map(fn (string|int $source): string => (string) $source)
+            ->flatMap(fn (string $source): array => $this->surveySourceLookupKeys($source))
+            ->unique()
+            ->values()
+            ->all();
+
+        return HeksKoboFieldMapping::query()
+            ->whereIn('service_name', $serviceNames)
+            ->whereNotNull('notes')
+            ->get(['service_name', 'kobo_field', 'notes'])
+            ->groupBy('service_name')
+            ->map(fn ($mappings): array => $mappings
+                ->flatMap(function (HeksKoboFieldMapping $mapping): array {
+                    $formOrder = $this->mappingFormOrder((string) $mapping->notes);
+
+                    if ($formOrder === null) {
+                        return [];
+                    }
+
+                    return collect($this->surveyFieldLookupKeys((string) $mapping->kobo_field))
+                        ->mapWithKeys(fn (string $lookupKey): array => [$lookupKey => $formOrder])
+                        ->all();
+                })
+                ->all())
+            ->all();
+    }
+
+    private function mappingFormOrder(string $notes): ?int
+    {
+        $decoded = json_decode($notes, true);
+        $formOrder = is_array($decoded) ? ($decoded['form_order'] ?? null) : null;
+
+        return is_numeric($formOrder) ? (int) $formOrder : null;
+    }
+
+    /**
      * @param  array<string, array<string, string>>  $displayLabels
      */
     private function surveyQuestionLabel(string $key, string $source, array $displayLabels): string
@@ -1554,6 +1599,38 @@ class HeksController extends Controller
         }
 
         return $key;
+    }
+
+    /**
+     * @param  array<string, array<string, int>>  $sortOrders
+     */
+    private function surveySortOrder(string $key, string $source, array $sortOrders): int
+    {
+        foreach ($this->surveySourceLookupKeys($source) as $serviceName) {
+            foreach ($this->surveyFieldLookupKeys($key) as $lookupKey) {
+                $sortOrder = $sortOrders[$serviceName][$lookupKey] ?? null;
+
+                if (is_int($sortOrder)) {
+                    return $sortOrder;
+                }
+            }
+        }
+
+        return PHP_INT_MAX;
+    }
+
+    /**
+     * @param  array{title: string, description: string, tone: string, items: array<int, mixed>}  $section
+     * @return array{title: string, description: string, tone: string, items: array<int, mixed>}
+     */
+    private function sortSurveySectionItems(array $section): array
+    {
+        $section['items'] = collect($section['items'])
+            ->sortBy(fn (array $item): int => (int) ($item['sort_order'] ?? PHP_INT_MAX))
+            ->values()
+            ->all();
+
+        return $section;
     }
 
     /**

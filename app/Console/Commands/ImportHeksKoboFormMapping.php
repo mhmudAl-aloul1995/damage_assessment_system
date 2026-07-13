@@ -125,8 +125,11 @@ class ImportHeksKoboFormMapping extends Command
         $created = 0;
         $updated = 0;
         $skipped = 0;
+        $formOrder = 0;
 
         foreach ($survey as $row) {
+            $formOrder++;
+
             if (! is_array($row)) {
                 $skipped++;
 
@@ -182,7 +185,7 @@ class ImportHeksKoboFormMapping extends Command
                         'data_type' => $type ?: null,
                         'mapping_status' => 'kobo_form',
                         'confidence' => 'high',
-                        'notes' => $this->mappingNotes($mapping, $field, $name, $choiceLabels),
+                        'notes' => $this->mappingNotes($mapping, $field, $name, $choiceLabels, $formOrder),
                     ])->save();
                 }
 
@@ -239,9 +242,10 @@ class ImportHeksKoboFormMapping extends Command
     /**
      * @param  array<string, string>  $choiceLabels
      */
-    private function mappingNotes(HeksKoboFieldMapping $mapping, string $field, string $name, array $choiceLabels): ?string
+    private function mappingNotes(HeksKoboFieldMapping $mapping, string $field, string $name, array $choiceLabels, int $formOrder): ?string
     {
         $notes = $this->existingNotes($mapping);
+        $notes['form_order'] = $formOrder;
 
         if ($field !== $name) {
             $notes['source'] = 'Imported from nested Kobo form path.';

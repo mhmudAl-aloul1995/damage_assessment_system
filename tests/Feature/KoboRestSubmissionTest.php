@@ -479,7 +479,8 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
     expect($choiceNotes['choice_labels'] ?? [])->toBe([
         'yes' => 'نعم',
         'no' => 'لا',
-    ]);
+    ])
+        ->and($choiceNotes['form_order'] ?? null)->toBe(4);
 });
 
 test('heks kobo sync fills basic beneficiary fields from imported Kobo labels', function () {
