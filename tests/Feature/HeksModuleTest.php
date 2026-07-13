@@ -557,6 +557,9 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
                 'identification' => [
                     'application_code' => 'GDE7',
                 ],
+                'family_info' => [
+                    'has_disability' => 'yes',
+                ],
                 'group_vb7yr42' => [
                     'safe_unit' => 'نعم',
                 ],
@@ -595,6 +598,15 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         'display_label' => 'الوحدة السكنية تقع في محيط آمن',
     ]);
 
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'family_info/has_disability',
+        'column_name' => 'family_info_has_disability',
+        'display_label' => 'يوجد أشخاص ذوي إعاقة',
+        'notes' => json_encode(['choice_labels' => ['yes' => 'نعم', 'no' => 'لا']], JSON_UNESCAPED_UNICODE),
+    ]);
+
     $this->actingAs($user)
         ->get(route('heks.beneficiaries.edit', $beneficiary))
         ->assertOk()
@@ -607,6 +619,8 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('معلومات الحماية')
         ->assertDontSee('Group Vb7yr42')
         ->assertSee('الوحدة السكنية تقع في محيط آمن')
+        ->assertSee('يوجد أشخاص ذوي إعاقة')
+        ->assertSee('نعم')
         ->assertSee('Photo Group')
         ->assertSee('photo_group[1]/photo')
         ->assertSee('first-photo.jpg')

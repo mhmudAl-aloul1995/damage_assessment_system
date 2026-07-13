@@ -1255,6 +1255,7 @@ class HeksController extends Controller
 
         $seen = [];
         $displayLabels = $this->surveyDisplayLabels(array_keys($rawData));
+        $choiceLabels = $this->surveyChoiceLabels(array_keys($rawData));
         $histories = $beneficiary->surveyValueHistories
             ->groupBy(fn (HeksSurveyValueHistory $history): string => $history->source.'|'.$history->field_key);
 
@@ -1269,7 +1270,7 @@ class HeksController extends Controller
                     continue;
                 }
 
-                $displayValue = $this->surveyDisplayValue($value);
+                $displayValue = $this->surveyDisplayValue($value, $key, (string) $source, $choiceLabels);
 
                 if ($displayValue === '') {
                     continue;
@@ -1482,6 +1483,57 @@ class HeksController extends Controller
                         ->all();
                 })
                 ->all())
+            ->all();
+    }
+
+    /**
+     * @param  array<int, string|int>  $sources
+     * @return array<string, array<string, array<string, string>>>
+     */
+    private function surveyChoiceLabels(array $sources): array
+    {
+        $serviceNames = collect($sources)
+            ->map(fn (string|int $source): string => (string) $source)
+            ->flatMap(fn (string $source): array => $this->surveySourceLookupKeys($source))
+            ->unique()
+            ->values()
+            ->all();
+
+        return HeksKoboFieldMapping::query()
+            ->whereIn('service_name', $serviceNames)
+            ->whereNotNull('notes')
+            ->get(['service_name', 'kobo_field', 'notes'])
+            ->groupBy('service_name')
+            ->map(fn ($mappings): array => $mappings
+                ->flatMap(function (HeksKoboFieldMapping $mapping): array {
+                    $choiceLabels = $this->mappingChoiceLabels((string) $mapping->notes);
+
+                    if ($choiceLabels === []) {
+                        return [];
+                    }
+
+                    return collect($this->surveyFieldLookupKeys((string) $mapping->kobo_field))
+                        ->mapWithKeys(fn (string $lookupKey): array => [$lookupKey => $choiceLabels])
+                        ->all();
+                })
+                ->all())
+            ->all();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function mappingChoiceLabels(string $notes): array
+    {
+        $decoded = json_decode($notes, true);
+
+        if (! is_array($decoded) || ! is_array($decoded['choice_labels'] ?? null)) {
+            return [];
+        }
+
+        return collect($decoded['choice_labels'])
+            ->filter(fn (mixed $label, mixed $value): bool => is_string($value) && is_string($label) && trim($label) !== '')
+            ->mapWithKeys(fn (string $label, string $value): array => [$value => trim($label)])
             ->all();
     }
 
@@ -1742,17 +1794,58 @@ class HeksController extends Controller
             ->toString();
     }
 
-    private function surveyDisplayValue(mixed $value): string
+    /**
+     * @param  array<string, array<string, array<string, string>>>  $choiceLabels
+     */
+    private function surveyDisplayValue(mixed $value, ?string $key = null, ?string $source = null, array $choiceLabels = []): string
     {
         if (is_bool($value)) {
             return $value ? 'نعم' : 'لا';
         }
 
         if (is_scalar($value)) {
-            return trim((string) $value);
+            $value = trim((string) $value);
+
+            return $this->surveyChoiceDisplayValue($value, $key, $source, $choiceLabels) ?: $value;
         }
 
         return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+    }
+
+    /**
+     * @param  array<string, array<string, array<string, string>>>  $choiceLabels
+     */
+    private function surveyChoiceDisplayValue(string $value, ?string $key, ?string $source, array $choiceLabels): string
+    {
+        if ($value === '' || $key === null || $source === null) {
+            return '';
+        }
+
+        foreach ($this->surveySourceLookupKeys($source) as $serviceName) {
+            foreach ($this->surveyFieldLookupKeys($key) as $lookupKey) {
+                $choices = $choiceLabels[$serviceName][$lookupKey] ?? null;
+
+                if (! is_array($choices) || $choices === []) {
+                    continue;
+                }
+
+                if (isset($choices[$value])) {
+                    return $choices[$value];
+                }
+
+                $parts = preg_split('/\s+/', $value) ?: [];
+                $labels = collect($parts)
+                    ->filter()
+                    ->map(fn (string $part): string => $choices[$part] ?? $part)
+                    ->all();
+
+                if ($labels !== [] && $labels !== $parts) {
+                    return implode('، ', $labels);
+                }
+            }
+        }
+
+        return '';
     }
 
     private function isHiddenSurveyKey(string $key): bool

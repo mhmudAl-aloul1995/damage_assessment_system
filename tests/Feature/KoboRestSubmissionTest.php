@@ -418,12 +418,29 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
                         'label' => ['Arabic' => 'العمر'],
                     ],
                     [
+                        'type' => 'select_one yes_no',
+                        'name' => 'has_disability',
+                        'label' => ['Arabic' => 'يوجد أشخاص ذوي إعاقة'],
+                    ],
+                    [
                         'type' => 'end_group',
                     ],
                     [
                         'type' => 'note',
                         'name' => 'readonly_note',
                         'label' => ['Arabic' => 'ملاحظة فقط'],
+                    ],
+                ],
+                'choices' => [
+                    [
+                        'list_name' => 'yes_no',
+                        'name' => 'yes',
+                        'label' => ['Arabic' => 'نعم'],
+                    ],
+                    [
+                        'list_name' => 'yes_no',
+                        'name' => 'no',
+                        'label' => ['Arabic' => 'لا'],
                     ],
                 ],
             ],
@@ -434,7 +451,7 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
         'service' => 'heks-main',
         'asset' => 'asset123',
     ])
-        ->expectsOutputToContain('HEKS Kobo form mapping imported. Created: 4, updated: 0, skipped: 1.')
+        ->expectsOutputToContain('HEKS Kobo form mapping imported. Created: 6, updated: 0, skipped: 1.')
         ->assertSuccessful();
 
     expect(HeksKoboFieldMapping::query()
@@ -453,6 +470,16 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
             ->where('service_name', 'heks-main')
             ->where('kobo_field', 'readonly_note')
             ->exists())->toBeFalse();
+
+    $choiceNotes = json_decode((string) HeksKoboFieldMapping::query()
+        ->where('service_name', 'heks-main')
+        ->where('kobo_field', 'family_info/has_disability')
+        ->value('notes'), true);
+
+    expect($choiceNotes['choice_labels'] ?? [])->toBe([
+        'yes' => 'نعم',
+        'no' => 'لا',
+    ]);
 });
 
 test('heks kobo sync fills basic beneficiary fields from imported Kobo labels', function () {

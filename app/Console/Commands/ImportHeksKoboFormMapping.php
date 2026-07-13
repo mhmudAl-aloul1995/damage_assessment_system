@@ -77,7 +77,9 @@ class ImportHeksKoboFormMapping extends Command
             return self::FAILURE;
         }
 
-        $survey = Arr::get($response->json(), 'content.survey', []);
+        $body = $response->json();
+        $survey = Arr::get($body, 'content.survey', []);
+        $choices = Arr::get($body, 'content.choices', []);
 
         if (! is_array($survey) || $survey === []) {
             $this->components->error('Kobo response did not include content.survey rows.');
@@ -85,7 +87,12 @@ class ImportHeksKoboFormMapping extends Command
             return self::FAILURE;
         }
 
-        [$created, $updated, $skipped] = $this->importSurvey($mappingService, $tableName, $survey);
+        [$created, $updated, $skipped] = $this->importSurvey(
+            $mappingService,
+            $tableName,
+            $survey,
+            is_array($choices) ? $this->choiceLabelsByList($choices) : []
+        );
 
         $this->components->info(
             $this->option('dry-run')
@@ -109,9 +116,10 @@ class ImportHeksKoboFormMapping extends Command
 
     /**
      * @param  array<int, mixed>  $survey
+     * @param  array<string, array<string, string>>  $choiceLabelsByList
      * @return array{0: int, 1: int, 2: int}
      */
-    private function importSurvey(string $service, string $tableName, array $survey): array
+    private function importSurvey(string $service, string $tableName, array $survey, array $choiceLabelsByList): array
     {
         $groupStack = [];
         $created = 0;
@@ -157,6 +165,7 @@ class ImportHeksKoboFormMapping extends Command
             }
 
             $fields = $this->fieldKeys($name, $groupStack);
+            $choiceLabels = $this->choiceLabelsForType($type, $choiceLabelsByList);
 
             foreach ($fields as $field) {
                 $mapping = HeksKoboFieldMapping::query()->firstOrNew([
@@ -173,7 +182,7 @@ class ImportHeksKoboFormMapping extends Command
                         'data_type' => $type ?: null,
                         'mapping_status' => 'kobo_form',
                         'confidence' => 'high',
-                        'notes' => $field === $name ? null : 'Imported from nested Kobo form path.',
+                        'notes' => $this->mappingNotes($mapping, $field, $name, $choiceLabels),
                     ])->save();
                 }
 
@@ -182,6 +191,83 @@ class ImportHeksKoboFormMapping extends Command
         }
 
         return [$created, $updated, $skipped];
+    }
+
+    /**
+     * @param  array<int, mixed>  $choices
+     * @return array<string, array<string, string>>
+     */
+    private function choiceLabelsByList(array $choices): array
+    {
+        $choiceLabelsByList = [];
+
+        foreach ($choices as $choice) {
+            if (! is_array($choice)) {
+                continue;
+            }
+
+            $listName = trim((string) Arr::get($choice, 'list_name', ''));
+            $name = trim((string) Arr::get($choice, 'name', ''));
+            $label = $this->displayLabel($choice);
+
+            if ($listName === '' || $name === '' || $label === '') {
+                continue;
+            }
+
+            $choiceLabelsByList[$listName][$name] = $label;
+        }
+
+        return $choiceLabelsByList;
+    }
+
+    /**
+     * @param  array<string, array<string, string>>  $choiceLabelsByList
+     * @return array<string, string>
+     */
+    private function choiceLabelsForType(string $type, array $choiceLabelsByList): array
+    {
+        $parts = preg_split('/\s+/', $type) ?: [];
+        $listName = $parts[1] ?? '';
+
+        if (! in_array($parts[0] ?? '', ['select_one', 'select_multiple'], true) || $listName === '') {
+            return [];
+        }
+
+        return $choiceLabelsByList[$listName] ?? [];
+    }
+
+    /**
+     * @param  array<string, string>  $choiceLabels
+     */
+    private function mappingNotes(HeksKoboFieldMapping $mapping, string $field, string $name, array $choiceLabels): ?string
+    {
+        $notes = $this->existingNotes($mapping);
+
+        if ($field !== $name) {
+            $notes['source'] = 'Imported from nested Kobo form path.';
+        }
+
+        if ($choiceLabels !== []) {
+            $notes['choice_labels'] = $choiceLabels;
+        }
+
+        return $notes === [] ? null : json_encode($notes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function existingNotes(HeksKoboFieldMapping $mapping): array
+    {
+        $notes = trim((string) $mapping->notes);
+
+        if ($notes === '') {
+            return [];
+        }
+
+        $decoded = json_decode($notes, true);
+
+        return is_array($decoded) ? $decoded : ['source' => $notes];
     }
 
     private function startsGroup(string $type): bool
