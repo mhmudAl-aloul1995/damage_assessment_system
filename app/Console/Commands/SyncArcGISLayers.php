@@ -274,6 +274,8 @@ class SyncArcGISLayers extends Command
                         ) {
                             $row['end'] = $row['creationdate'] ?? null;
                         }
+
+                        $row = $this->applyCompletedSubmissionDateFallback($row, $tableColumns, $table);
                     }
 
                     if ($table === 'housing_units') {
@@ -655,6 +657,30 @@ class SyncArcGISLayers extends Command
             $row = $this->applyFallbackColumn($row, $arcgisMap, $syncColumns, $table, $column, [
                 $column.'_v1',
             ]);
+        }
+
+        return $row;
+    }
+
+    private function applyCompletedSubmissionDateFallback(array $row, array $tableColumns, string $table): array
+    {
+        if (strtoupper((string) ($row['field_status'] ?? '')) !== 'COMPLETED') {
+            return $row;
+        }
+
+        $fallbackValue = $row['end'] ?? $row['creationdate'] ?? null;
+
+        if ($this->isBlankSyncValue($fallbackValue)) {
+            return $row;
+        }
+
+        foreach (['submition_date', 'submission_date', 'submissiondate'] as $column) {
+            if (
+                in_array($column, $tableColumns, true)
+                && $this->isBlankSyncValue($row[$column] ?? null)
+            ) {
+                $row[$column] = $this->normalizeValue($fallbackValue, $column, $table);
+            }
         }
 
         return $row;

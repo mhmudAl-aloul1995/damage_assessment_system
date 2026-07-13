@@ -27,6 +27,7 @@ beforeEach(function (): void {
         $table->string('owner_mobile_v_1')->nullable();
         $table->string('end')->nullable();
         $table->string('creationdate')->nullable();
+        $table->string('submissiondate')->nullable();
         $table->double('latitude')->nullable();
         $table->double('longitude')->nullable();
     });
@@ -69,6 +70,7 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
                 ['name' => 'building_name', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'end', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'creationdate', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'submissiondate', 'type' => 'esriFieldTypeDate'],
                 ['name' => 'New_ArcGIS_Field', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'Shape__Area', 'type' => 'esriFieldTypeDouble'],
                 ['name' => 'Shape__Length', 'type' => 'esriFieldTypeDouble'],
@@ -115,6 +117,17 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
                             ],
                         ],
                     ],
+                    [
+                        'attributes' => [
+                            'objectid' => 503,
+                            'globalid' => 'building-completed-with-end-globalid',
+                            'field_status' => 'COMPLETED',
+                            'building_name' => 'Completed Building With End',
+                            'end' => '2026-05-12 11:15:00',
+                            'creationdate' => '2026-05-10 09:30:00',
+                            'submissiondate' => null,
+                        ],
+                    ],
                 ],
                 'exceededTransferLimit' => false,
             ]);
@@ -127,6 +140,7 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
 
     $pointBuilding = DB::table('buildings')->where('objectid', 501)->first();
     $polygonBuilding = DB::table('buildings')->where('objectid', 502)->first();
+    $completedBuildingWithEnd = DB::table('buildings')->where('objectid', 503)->first();
 
     expect((float) $pointBuilding->latitude)->toBe(31.501);
     expect((float) $pointBuilding->longitude)->toBe(34.501);
@@ -135,8 +149,10 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
     expect($pointBuilding->new_arcgis_field)->toBe('new dynamic value');
     expect((float) $pointBuilding->shape__length)->toBe(123.45);
     expect($pointBuilding->end)->toBe('2026-05-10 09:30:00');
+    expect($pointBuilding->submissiondate)->toBe('2026-05-10 09:30:00');
     expect((float) $polygonBuilding->latitude)->toBe(31.5);
     expect((float) $polygonBuilding->longitude)->toBe(34.5);
+    expect($completedBuildingWithEnd->submissiondate)->toBe('2026-05-12 11:15:00');
 });
 
 it('fills missing owner mobile from alternate arcgis owner mobile fields', function (): void {
