@@ -73,6 +73,12 @@ it('exports productivity report using the same housing-unit date filter as the t
         'submition_date' => '2026-06-01 10:00:00',
     ]);
 
+    $this->actingAs($user)
+        ->get('damage-assessment/reports/productivity?minDate=2026-05-01&maxDate=2026-05-31')
+        ->assertOk()
+        ->assertSee('productivity-table', false)
+        ->assertSee('productivity-sticky-yellow', false);
+
     Excel::fake();
 
     $this->actingAs($user)

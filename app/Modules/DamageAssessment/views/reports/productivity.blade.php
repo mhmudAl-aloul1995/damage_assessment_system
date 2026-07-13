@@ -46,22 +46,43 @@
                 <!--end::Card header-->
                 <!--begin::Card body-->
                 <style>
-                    /* Keeps the first few columns visible while scrolling right */
-                    .sticky-col {
+                    .productivity-table {
+                        border-collapse: separate;
+                        border-spacing: 0;
+                    }
+
+                    .productivity-table thead {
                         position: sticky;
-                        left: 0;
-                        background-color: white !important;
-                        z-index: 2;
-                        border-right: 2px solid #ebedf3;
+                        top: 0;
+                        z-index: 20;
                     }
 
-                    /* Offset for the second sticky column */
-                    .sticky-col-2 {
-                        left: 50px;
+                    .productivity-table tfoot {
+                        position: sticky;
+                        bottom: 0;
+                        z-index: 18;
                     }
 
-                    .sticky-col-3 {
-                        left: 150px;
+                    .productivity-table thead th,
+                    .productivity-table tfoot td,
+                    .productivity-sticky-yellow {
+                        background-color: #ffc107 !important;
+                    }
+
+                    .productivity-table th:first-child,
+                    .productivity-table td:first-child {
+                        position: sticky;
+                        right: 0;
+                        z-index: 12;
+                        box-shadow: -2px 0 0 #ebedf3;
+                    }
+
+                    .productivity-table thead th:first-child {
+                        z-index: 30;
+                    }
+
+                    .productivity-table tfoot td:first-child {
+                        z-index: 28;
                     }
                 </style>
 
@@ -69,8 +90,8 @@
                     <!-- .table-responsive enables horizontal scrolling -->
 
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped text-center align-middle">
-                            <thead style="  background-color: #ffc107;"> 
+                        <table class="table table-bordered table-striped text-center align-middle productivity-table">
+                            <thead>
                                 <tr>
                                     <th>Day</th>
                                     @foreach ($period as $date)
@@ -99,7 +120,7 @@
 
                                 @foreach ($assignedto as $val)
                                     <tr>
-                                        <td class="bg-warning">{{ $val }}</td>
+                                        <td class="productivity-sticky-yellow">{{ $val }}</td>
                                         @foreach ($period as $date)
                                             @php
                                                 $dateStr = $date->format('Y-m-d');
@@ -133,7 +154,7 @@
                             </tbody>
 
                            <tfoot>
-    <tr style="background-color: #ffc107; font-weight: bold;">
+    <tr class="productivity-sticky-yellow" style="font-weight: bold;">
         <td>الإجمالي (Total)</td>
         @foreach ($period as $date)
             @php $dateStr = $date->format('Y-m-d'); @endphp
