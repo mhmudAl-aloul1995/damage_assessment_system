@@ -965,6 +965,8 @@
                                     <th>النزوح</th>
                                     <th>الوحدة</th>
                                     <th>القرض</th>
+                                    <th>صافي مبلغ القرض</th>
+                                    <th>الرصيد الإجمالي الحالي</th>
                                     <th>BOQ</th>
                                     <th>صور</th>
                                     <th>الخطورة</th>
@@ -972,7 +974,7 @@
                             </thead>
                             <tbody id="borrowersTableBody">
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">جاري التحميل...</td>
+                                    <td colspan="9" class="text-center text-muted">جاري التحميل...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1361,13 +1363,19 @@
             </div>`;
         }
 
+        function loanAmount(value, colorClass = '') {
+            const classes = colorClass ? ` class="${colorClass}"` : '';
+
+            return `<strong${classes}>${value === null ? 'غير متوفر' : formatMoney(value)}</strong>`;
+        }
+
         function renderRows(rows) {
             const body = document.getElementById('borrowersTableBody');
             const mobileList = document.getElementById('borrowersMobileList');
             const allRows = [...pendingRows(), ...(rows || [])];
 
             if (!allRows.length) {
-                body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
+                body.innerHTML = '<tr><td colspan="9" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
                 mobileList.innerHTML = '<div class="text-center text-muted py-4">لا توجد بيانات بعد</div>';
                 return;
             }
@@ -1385,6 +1393,8 @@
                     <td>${row.displacement_label || '-'}</td>
                     <td>${row.damage_label || '-'}</td>
                     <td>${loanSummary(row)}</td>
+                    <td>${loanAmount(row.loan_net_amount)}</td>
+                    <td>${loanAmount(row.loan_balance, 'text-success')}</td>
                     <td>${pricingSummary(row)}</td>
                     <td>${row.attachments_count || 0}</td>
                     <td><span class="badge badge-light-${color}">${row.risk_label} (${row.risk_score})</span></td>
