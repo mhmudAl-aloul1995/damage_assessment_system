@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncHeksKoboSubmission;
 use App\Models\KoboRestSubmission;
 use App\Modules\DamageAssessmentBorrowers\Services\KoboBorrowerSubmissionSyncService;
+use App\Modules\Heks\Services\HeksKoboServiceRegistry;
 use App\Modules\Heks\Services\HeksKoboSubmissionSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +19,8 @@ class KoboRestSubmissionController extends Controller
         Request $request,
         string $service,
         KoboBorrowerSubmissionSyncService $borrowerSyncService,
-        HeksKoboSubmissionSyncService $heksSyncService
+        HeksKoboSubmissionSyncService $heksSyncService,
+        HeksKoboServiceRegistry $heksServices
     ): JsonResponse {
         $configuredToken = (string) config('services.kobotoolbox.rest_service_token', '');
         $requestToken = (string) $request->header('X-Kobo-Token', '');
@@ -40,12 +43,30 @@ class KoboRestSubmissionController extends Controller
             'received_at' => now(),
         ];
 
+        $isHeksSubmission = $heksServices->accepts($service);
+
         $submission = filled($submissionUuid)
             ? KoboRestSubmission::query()->updateOrCreate([
                 'service_name' => $service,
                 'submission_uuid' => $submissionUuid,
             ], $attributes)
             : KoboRestSubmission::query()->create($attributes);
+
+        if ($isHeksSubmission) {
+            $submission->forceFill([
+                'sync_status' => 'queued',
+                'sync_error' => null,
+                'synced_at' => null,
+            ])->save();
+
+            SyncHeksKoboSubmission::dispatch($submission->id)->onQueue((string) config('heks_kobo.queue', 'heks'));
+
+            return response()->json([
+                'message' => 'HEKS Kobo submission queued.',
+                'id' => $submission->id,
+                'sync_status' => 'queued',
+            ], 202);
+        }
 
         try {
             $sync = $heksSyncService->sync($submission) ?? $borrowerSyncService->sync(

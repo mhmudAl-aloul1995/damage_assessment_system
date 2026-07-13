@@ -44,6 +44,28 @@ test('heks webhook queues submission on heks queue', function () {
     Queue::assertPushedOn('heks', SyncHeksKoboSubmission::class);
 });
 
+test('legacy kobo heks style url queues heks submissions', function () {
+    Queue::fake();
+    config(['services.kobotoolbox.rest_service_token' => 'secret']);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'secret')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:kobo-style-webhook-001',
+            'code' => 'WEB2',
+            'beneficiary_name' => 'Kobo Style Webhook Beneficiary',
+        ])
+        ->assertAccepted()
+        ->assertJsonPath('sync_status', 'queued');
+
+    $submission = KoboRestSubmission::query()->where('submission_uuid', 'uuid:kobo-style-webhook-001')->sole();
+
+    expect($submission->service_name)->toBe('heks-main')
+        ->and($submission->sync_status)->toBe('queued');
+
+    Queue::assertPushedOn('heks', SyncHeksKoboSubmission::class);
+});
+
 test('kobo rest submissions allow same uuid for different services', function () {
     KoboRestSubmission::query()->create([
         'service_name' => 'heks-main',
