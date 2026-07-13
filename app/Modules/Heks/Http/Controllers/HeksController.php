@@ -22,6 +22,7 @@ use App\Modules\Heks\Models\HeksBoqCatalogItem;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksImport;
+use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksPayment;
 use App\Modules\Heks\Models\HeksScore;
@@ -1253,6 +1254,7 @@ class HeksController extends Controller
         ]);
 
         $seen = [];
+        $displayLabels = $this->surveyDisplayLabels(array_keys($rawData));
         $histories = $beneficiary->surveyValueHistories
             ->groupBy(fn (HeksSurveyValueHistory $history): string => $history->source.'|'.$history->field_key);
 
@@ -1282,8 +1284,10 @@ class HeksController extends Controller
                 $seen[$uniqueKey] = true;
                 $sectionKey = $this->surveySectionKey($key);
                 $section = $sections->get($sectionKey) ?? $this->koboSurveySection($sectionKey);
+                $questionLabel = $this->surveyQuestionLabel($key, (string) $source, $displayLabels);
                 $section['items'][] = [
-                    'question' => $key,
+                    'question' => $questionLabel,
+                    'field_key' => $key,
                     'value' => $displayValue,
                     'source' => (string) $source,
                     'editable' => array_key_exists($key, $originalValues) && is_scalar($originalValues[$key]),
@@ -1303,6 +1307,7 @@ class HeksController extends Controller
 
         return $sections
             ->filter(fn (array $section): bool => $section['items'] !== [])
+            ->map(fn (array $section, string $sectionKey): array => $this->resolveSurveySectionLabels($section, $sectionKey))
             ->all();
     }
 
@@ -1434,6 +1439,109 @@ class HeksController extends Controller
     }
 
     /**
+     * @param  array<int, string|int>  $sources
+     * @return array<string, array<string, string>>
+     */
+    private function surveyDisplayLabels(array $sources): array
+    {
+        $serviceNames = collect($sources)
+            ->map(fn (string|int $source): string => (string) $source)
+            ->flatMap(fn (string $source): array => array_values(array_filter([
+                $source,
+                str_replace('_', '-', $source),
+                str_replace('-', '_', $source),
+                match ($source) {
+                    'heks_main' => 'heks-main',
+                    'heks_followup' => 'heks-followups',
+                    'heks_boq' => 'heks-boq',
+                    'heks_followup_boq' => 'heks-followup-boq',
+                    default => null,
+                },
+            ])))
+            ->unique()
+            ->values()
+            ->all();
+
+        return HeksKoboFieldMapping::query()
+            ->whereIn('service_name', $serviceNames)
+            ->whereNotNull('display_label')
+            ->get(['service_name', 'kobo_field', 'display_label'])
+            ->groupBy('service_name')
+            ->map(fn ($mappings): array => $mappings
+                ->flatMap(function (HeksKoboFieldMapping $mapping): array {
+                    $field = (string) $mapping->kobo_field;
+                    $label = trim((string) $mapping->display_label);
+
+                    if ($field === '' || $label === '') {
+                        return [];
+                    }
+
+                    return collect($this->surveyFieldLookupKeys($field))
+                        ->mapWithKeys(fn (string $lookupKey): array => [$lookupKey => $label])
+                        ->all();
+                })
+                ->all())
+            ->all();
+    }
+
+    /**
+     * @param  array<string, array<string, string>>  $displayLabels
+     */
+    private function surveyQuestionLabel(string $key, string $source, array $displayLabels): string
+    {
+        foreach ($this->surveySourceLookupKeys($source) as $serviceName) {
+            foreach ($this->surveyFieldLookupKeys($key) as $lookupKey) {
+                $label = $displayLabels[$serviceName][$lookupKey] ?? null;
+
+                if (is_string($label) && trim($label) !== '') {
+                    return trim($label);
+                }
+            }
+        }
+
+        return $key;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function surveySourceLookupKeys(string $source): array
+    {
+        return array_values(array_unique(array_filter([
+            $source,
+            str_replace('_', '-', $source),
+            str_replace('-', '_', $source),
+            match ($source) {
+                'heks_main' => 'heks-main',
+                'heks_followup' => 'heks-followups',
+                'heks_boq' => 'heks-boq',
+                'heks_followup_boq' => 'heks-followup-boq',
+                default => null,
+            },
+        ])));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function surveyFieldLookupKeys(string $field): array
+    {
+        $keys = [$field];
+        $withoutListIndexes = preg_replace('/\[\d+\]/', '', $field);
+
+        if (is_string($withoutListIndexes) && $withoutListIndexes !== $field) {
+            $keys[] = $withoutListIndexes;
+        }
+
+        if (str_contains($field, '/')) {
+            $keys[] = substr($field, strpos($field, '/') + 1);
+            $keys[] = str($field)->afterLast('/')->toString();
+        }
+
+        return array_values(array_unique(array_filter($keys)));
+    }
+
+    /**
      * @return array{title: string, description: string, tone: string, items: array<int, mixed>}
      */
     private function koboSurveySection(string $sectionKey): array
@@ -1441,28 +1549,157 @@ class HeksController extends Controller
         $section = str_starts_with($sectionKey, 'kobo:')
             ? substr($sectionKey, 5)
             : $sectionKey;
+        $label = $this->configuredKoboSectionLabel($section);
 
         return [
-            'title' => $this->humanizeKoboSection($section),
-            'description' => 'قسم مستورد من بنية نموذج Kobo الأصلية.',
+            'title' => $label['title'] ?? $this->humanizeKoboSection($section),
+            'description' => $label['description'] ?? 'قسم مستورد من بنية نموذج Kobo الأصلية.',
             'tone' => 'secondary',
             'items' => [],
         ];
     }
 
+    /**
+     * @param  array{title: string, description: string, tone: string, items: array<int, mixed>}  $section
+     * @return array{title: string, description: string, tone: string, items: array<int, mixed>}
+     */
+    private function resolveSurveySectionLabels(array $section, string $sectionKey): array
+    {
+        $sectionName = str_starts_with($sectionKey, 'kobo:')
+            ? substr($sectionKey, 5)
+            : $sectionKey;
+        $configuredLabel = $this->configuredKoboSectionLabel($sectionName);
+
+        if ($configuredLabel !== null) {
+            $section['title'] = $configuredLabel['title'];
+            $section['description'] = $configuredLabel['description'] ?? $section['description'];
+
+            return $section;
+        }
+
+        $inferredLabel = $this->inferSurveySectionLabel($section['items']);
+
+        if ($inferredLabel !== null) {
+            $section['title'] = $inferredLabel['title'];
+            $section['description'] = $inferredLabel['description'];
+        }
+
+        return $section;
+    }
+
+    /**
+     * @return array{title: string, description?: string}|null
+     */
+    private function configuredKoboSectionLabel(string $section): ?array
+    {
+        $labels = (array) config('heks_kobo.section_labels', []);
+        $normalizedSection = str($section)->replace('-', '_')->lower()->toString();
+        $label = $labels[$normalizedSection] ?? $labels[$section] ?? null;
+
+        if (! is_array($label)) {
+            return null;
+        }
+
+        $title = trim((string) ($label['title'] ?? ''));
+
+        if ($title === '') {
+            return null;
+        }
+
+        return [
+            'title' => $title,
+            'description' => trim((string) ($label['description'] ?? '')),
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array{title: string, description: string}|null
+     */
+    private function inferSurveySectionLabel(array $items): ?array
+    {
+        $text = str(collect($items)
+            ->flatMap(fn (array $item): array => [
+                (string) ($item['question'] ?? ''),
+                (string) ($item['field_key'] ?? ''),
+            ])
+            ->implode(' '))
+            ->lower()
+            ->toString();
+
+        return match (true) {
+            str_contains($text, 'الحماية')
+                || str_contains($text, 'آمن')
+                || str_contains($text, 'امن')
+                || str_contains($text, 'uxo')
+                || str_contains($text, 'erw')
+                || str_contains($text, 'مخلفات')
+                || str_contains($text, 'إحالة')
+                || str_contains($text, 'احالة') => [
+                    'title' => 'معلومات الحماية',
+                    'description' => 'سلامة الوحدة، المخاطر، الإحالات، وسهولة الوصول الآمن.',
+                ],
+            str_contains($text, 'التكوين')
+                || str_contains($text, 'أفراد الأسرة')
+                || str_contains($text, 'افراد الاسرة')
+                || str_contains($text, 'ذوي إعاقة')
+                || str_contains($text, 'ذوي اعاقة')
+                || str_contains($text, 'أمراض مزمنة')
+                || str_contains($text, 'امراض مزمنة')
+                || str_contains($text, 'مصابين') => [
+                    'title' => 'معلومات التكوين الأسري',
+                    'description' => 'توزيع أفراد الأسرة حسب العمر، الجنس، الإعاقة، الأمراض، والإصابات.',
+                ],
+            str_contains($text, 'دخل')
+                || str_contains($text, 'العمل')
+                || str_contains($text, 'المساعدات')
+                || str_contains($text, 'الخصوصية')
+                || str_contains($text, 'المعيشية') => [
+                    'title' => 'تقييم الظروف المعيشية للأسرة',
+                    'description' => 'الدخل، العمل، المساعدات الغذائية، الاحتياجات الأساسية، والخصوصية.',
+                ],
+            str_contains($text, 'السقف')
+                || str_contains($text, 'الجدران')
+                || str_contains($text, 'الأبواب')
+                || str_contains($text, 'الابواب')
+                || str_contains($text, 'النوافذ')
+                || str_contains($text, 'المياه')
+                || str_contains($text, 'المطبخ')
+                || str_contains($text, 'الحمام')
+                || str_contains($text, 'المأوى')
+                || str_contains($text, 'المأوي') => [
+                    'title' => 'تقييم حالة المأوى',
+                    'description' => 'حالة الضرر، السقف، الجدران، الغرف، الأبواب، المياه، المطبخ، والحمام.',
+                ],
+            str_contains($text, 'المستندات')
+                || str_contains($text, 'ملكية')
+                || str_contains($text, 'عقد')
+                || str_contains($text, 'بنكي') => [
+                    'title' => 'المستندات',
+                    'description' => 'أوراق الملكية، العقود، المستندات الثبوتية، والحسابات البنكية.',
+                ],
+            str_contains($text, 'صور الوحدة')
+                || str_contains($text, 'تصوير')
+                || str_contains($text, 'upload file') => [
+                    'title' => 'صور الوحدة السكنية',
+                    'description' => 'صور المبنى والوحدة السكنية من الداخل والخارج.',
+                ],
+            str_contains($text, 'توصيات')
+                || str_contains($text, 'التدخل')
+                || str_contains($text, 'ملاحظات') => [
+                    'title' => 'توصيات نهائية',
+                    'description' => 'حالة التدخل، المستندات، الملاحظات، والتوصيات النهائية.',
+                ],
+            default => null,
+        };
+    }
+
     private function humanizeKoboSection(string $section): string
     {
-        $known = [
-            'identification' => 'بيانات التعريف والزيارة',
-            'family_info' => 'بيانات الأسرة',
-            'housing_info' => 'بيانات السكن والضرر',
-            'technical_assessment' => 'التقييم الفني',
-            'social_assessment' => 'التقييم الاجتماعي',
-            'recommendations' => 'التوصيات',
-        ];
+        $configuredLabel = $this->configuredKoboSectionLabel($section);
 
-        if (isset($known[$section])) {
-            return $known[$section];
+        if ($configuredLabel !== null) {
+            return $configuredLabel['title'];
         }
 
         return str($section)

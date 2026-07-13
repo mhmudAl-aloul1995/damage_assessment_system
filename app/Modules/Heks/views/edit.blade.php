@@ -766,13 +766,16 @@
                                     <div id="{{ $sectionId }}" class="collapse {{ $isOpen ? 'show' : '' }}" data-bs-parent="#heksSurveyAccordion">
                                         @foreach ($section['items'] as $item)
                                             @php
-                                                $historyId = 'heks_survey_history_'.md5($item['source'].'|'.$item['question']);
+                                                $historyId = 'heks_survey_history_'.md5($item['source'].'|'.$item['field_key']);
                                                 $historyCount = count($item['history']);
                                             @endphp
                                             <div class="survey-item">
                                                 <div class="row g-4 align-items-start">
                                                     <div class="col-lg-5">
                                                         <div class="survey-question">{{ $item['question'] }}</div>
+                                                        @if (($item['field_key'] ?? $item['question']) !== $item['question'])
+                                                            <div class="text-muted small mt-1">{{ $item['field_key'] }}</div>
+                                                        @endif
                                                     </div>
                                                     <div class="col-lg-7">
                                                         <div class="survey-answer mb-3">{{ $item['value'] }}</div>
@@ -781,7 +784,7 @@
                                                                 @csrf
                                                                 @method('PUT')
                                                                 <input type="hidden" name="source" value="{{ $item['source'] }}">
-                                                                <input type="hidden" name="field_key" value="{{ $item['question'] }}">
+                                                                <input type="hidden" name="field_key" value="{{ $item['field_key'] }}">
                                                                 <div class="d-flex flex-column flex-md-row gap-2">
                                                                     <input name="value" class="form-control form-control-sm" value="{{ $item['value'] }}" aria-label="تعديل قيمة الاستبيان">
                                                                     <button class="btn btn-sm btn-light-primary flex-shrink-0">حفظ</button>

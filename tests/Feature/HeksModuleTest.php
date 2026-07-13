@@ -5,6 +5,7 @@ use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
+use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksPayment;
 use App\Modules\Heks\Models\HeksScore;
@@ -553,6 +554,12 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         'raw_data' => [
             'heks-main' => [
                 'plain_question' => 'plain answer',
+                'identification' => [
+                    'application_code' => 'GDE7',
+                ],
+                'group_vb7yr42' => [
+                    'safe_unit' => 'نعم',
+                ],
                 'photo_group' => [
                     ['photo' => 'first-photo.jpg'],
                     ['photo' => 'second-photo.jpg'],
@@ -564,17 +571,49 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ],
     ]);
 
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'nested_group/inner_question',
+        'column_name' => 'nested_group_inner_question',
+        'display_label' => 'Inner Question Label',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'application_code',
+        'column_name' => 'application_code',
+        'display_label' => 'رقم الطلب/الكود',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'safe_unit',
+        'column_name' => 'safe_unit',
+        'display_label' => 'الوحدة السكنية تقع في محيط آمن',
+    ]);
+
     $this->actingAs($user)
         ->get(route('heks.beneficiaries.edit', $beneficiary))
         ->assertOk()
         ->assertSee('plain_question')
         ->assertSee('plain answer')
+        ->assertSee('معلومات التعريف')
+        ->assertSee('رقم الطلب/الكود')
+        ->assertSee('identification/application_code')
+        ->assertSee('GDE7')
+        ->assertSee('معلومات الحماية')
+        ->assertDontSee('Group Vb7yr42')
+        ->assertSee('الوحدة السكنية تقع في محيط آمن')
         ->assertSee('Photo Group')
         ->assertSee('photo_group[1]/photo')
         ->assertSee('first-photo.jpg')
         ->assertSee('photo_group[2]/photo')
         ->assertSee('second-photo.jpg')
         ->assertSee('Nested Group')
+        ->assertSee('Inner Question Label')
         ->assertSee('nested_group/inner_question')
         ->assertSee('inner answer');
 });
