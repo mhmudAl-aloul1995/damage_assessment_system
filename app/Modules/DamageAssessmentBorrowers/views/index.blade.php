@@ -1343,7 +1343,9 @@
             }
 
             const status = row.loan_status === 'active' ? 'نشط' : 'مغلق';
-            const color = row.loan_status === 'active' ? 'success' : 'secondary';
+            const color = row.loan_status === 'active' ? 'success' : 'danger';
+            const primaryAmountLabel = row.loan_status === 'active' ? 'صافي مبلغ القرض' : 'المبلغ الكلي';
+            const primaryAmount = row.loan_status === 'active' ? row.loan_net_amount : row.loan_total_amount;
 
             const amount = (value) => value === null ? 'غير متوفر' : formatMoney(value);
 
@@ -1353,7 +1355,7 @@
                     <strong>${row.loan_number}</strong>
                 </div>
                 <div class="borrower-loan-summary-grid">
-                    <div><span>صافي مبلغ القرض</span><strong>${amount(row.loan_net_amount)}</strong></div>
+                    <div><span>${primaryAmountLabel}</span><strong>${amount(primaryAmount)}</strong></div>
                     <div><span>الرصيد الإجمالي الحالي</span><strong class="text-success">${amount(row.loan_balance)}</strong></div>
                 </div>
             </div>`;
