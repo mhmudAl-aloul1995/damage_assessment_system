@@ -28,7 +28,7 @@ Schedule::command('queue:work database --queue=exports --stop-when-empty --tries
 | يعمل كل ساعة من 01:00 حتى 23:00
 */
 Schedule::command('sync:arcgis-layers')
-    ->cron('0 1-23 * * *')
+    ->cron('0 16-23 * * *')
     ->withoutOverlapping(120)
     ->name('sync-arcgis-layers')
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
