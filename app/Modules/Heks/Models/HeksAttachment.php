@@ -10,6 +10,7 @@ class HeksAttachment extends Model
     protected $fillable = [
         'heks_beneficiary_id',
         'source',
+        'source_record_key',
         'filename',
         'url',
         'source_index',

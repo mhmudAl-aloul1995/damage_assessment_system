@@ -12,6 +12,8 @@ class HeksFollowUp extends Model
     protected $fillable = [
         'heks_beneficiary_id',
         'code',
+        'submission_uuid',
+        'source_record_key',
         'visit_number',
         'visit_date',
         'engineer_name',

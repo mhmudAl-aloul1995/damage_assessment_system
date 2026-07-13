@@ -41,7 +41,10 @@ class KoboRestSubmissionController extends Controller
         ];
 
         $submission = filled($submissionUuid)
-            ? KoboRestSubmission::query()->updateOrCreate(['submission_uuid' => $submissionUuid], $attributes)
+            ? KoboRestSubmission::query()->updateOrCreate([
+                'service_name' => $service,
+                'submission_uuid' => $submissionUuid,
+            ], $attributes)
             : KoboRestSubmission::query()->create($attributes);
 
         try {

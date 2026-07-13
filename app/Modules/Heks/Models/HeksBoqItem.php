@@ -11,6 +11,8 @@ class HeksBoqItem extends Model
         'heks_beneficiary_id',
         'heks_follow_up_id',
         'source',
+        'submission_uuid',
+        'source_record_key',
         'section',
         'item_code',
         'description',

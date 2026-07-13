@@ -11,6 +11,7 @@ class HeksImport extends Model
     protected $fillable = [
         'user_id',
         'type',
+        'status',
         'filename',
         'sheet_name',
         'total_rows',
@@ -18,6 +19,7 @@ class HeksImport extends Model
         'updated_rows',
         'skipped_rows',
         'summary',
+        'error_report',
     ];
 
     public function user(): BelongsTo
@@ -34,6 +36,7 @@ class HeksImport extends Model
             'updated_rows' => 'integer',
             'skipped_rows' => 'integer',
             'summary' => 'array',
+            'error_report' => 'array',
         ];
     }
 }

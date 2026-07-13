@@ -11,7 +11,6 @@ use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
-use Carbon\Carbon;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -24,14 +23,18 @@ class HeksKoboSubmissionSyncService
      */
     private array $displayLabelCache = [];
 
-    public function __construct(private HeksEngineerUserResolver $engineerUserResolver) {}
+    public function __construct(
+        private HeksEngineerUserResolver $engineerUserResolver,
+        private HeksKoboServiceRegistry $serviceRegistry,
+        private HeksValueNormalizer $normalizer,
+    ) {}
 
     /**
      * @return array{status: string, error: ?string, beneficiary: ?HeksBeneficiary, follow_up: ?HeksFollowUp, boq_items: int}|null
      */
     public function sync(KoboRestSubmission $submission): ?array
     {
-        if (! Str::startsWith($submission->service_name, 'heks-')) {
+        if (! $this->isHeksService($submission->service_name)) {
             return null;
         }
 
@@ -59,11 +62,11 @@ class HeksKoboSubmissionSyncService
         $followUp = null;
         $boqItems = 0;
 
-        if (in_array($service, ['heks-followups', 'heks-followup-boq'], true)) {
+        if (in_array($this->handler($service), ['followup', 'followup_boq'], true)) {
             $followUp = $this->syncFollowUp($beneficiary, $flatPayload, $service);
         }
 
-        if (in_array($service, ['heks-main', 'heks-boq', 'heks-followup-boq'], true)) {
+        if (in_array($this->handler($service), ['main', 'boq', 'followup_boq'], true)) {
             $boqItems = $this->syncBoqItems($beneficiary, $payload, $flatPayload, $service, $followUp);
         }
 
@@ -719,14 +722,27 @@ class HeksKoboSubmissionSyncService
                 'service_name' => $submission->service_name,
                 'received_at' => $submission->received_at,
                 'synced_at' => $now,
+                'source_record_key' => $this->sourceRecordKey($submission),
+                'raw_data' => json_encode($submission->payload ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'created_at' => $existingId === null ? $now : DB::raw('created_at'),
                 'updated_at' => $now,
             ], $fieldValues)
         );
     }
 
+    private function sourceRecordKey(KoboRestSubmission $submission): string
+    {
+        return $submission->service_name.':'.($submission->submission_uuid ?: $submission->id);
+    }
+
     private function koboRecordTable(string $service): ?string
     {
+        $configuredTable = $this->serviceRegistry->wideTable($service);
+
+        if ($configuredTable !== null) {
+            return $configuredTable;
+        }
+
         return match ($service) {
             'heks-main' => 'heks_main_kobo_records',
             'heks-followups' => 'heks_followups_kobo_records',
@@ -765,6 +781,9 @@ class HeksKoboSubmissionSyncService
                 'table_name' => $tableName,
                 'kobo_field' => $field,
                 'column_name' => $column,
+                'data_type' => $this->detectedDataType($field),
+                'mapping_status' => 'wide_only',
+                'confidence' => 'low',
             ]
         );
 
@@ -919,6 +938,46 @@ class HeksKoboSubmissionSyncService
     private function normalizeKey(string $value): string
     {
         return Str::lower((string) preg_replace('/[^\pL\pN]+/u', '', $value));
+    }
+
+    private function isHeksService(string $service): bool
+    {
+        return Str::startsWith($service, 'heks-') || $this->serviceRegistry->accepts($service);
+    }
+
+    private function handler(string $service): string
+    {
+        $configured = $this->serviceRegistry->service($service);
+
+        if (is_string($configured['normalized_handler'] ?? null)) {
+            return $configured['normalized_handler'];
+        }
+
+        return match ($service) {
+            'heks-followups' => 'followup',
+            'heks-boq' => 'boq',
+            'heks-followup-boq' => 'followup_boq',
+            default => 'main',
+        };
+    }
+
+    private function detectedDataType(string $field): string
+    {
+        $normalized = Str::lower($field);
+
+        if (str_contains($normalized, 'date')) {
+            return 'date';
+        }
+
+        if (str_contains($normalized, 'amount') || str_contains($normalized, 'payment') || str_contains($normalized, 'grant')) {
+            return 'number';
+        }
+
+        if (str_contains($normalized, 'photo') || str_contains($normalized, 'attachment') || str_contains($normalized, '_url')) {
+            return 'attachment';
+        }
+
+        return 'text';
     }
 
     /**
@@ -1142,26 +1201,12 @@ class HeksKoboSubmissionSyncService
 
     private function decimal(string $value): ?float
     {
-        if ($value === '') {
-            return null;
-        }
-
-        $normalized = preg_replace('/[^\d.\-]/', '', str_replace(',', '', $value));
-
-        return is_numeric($normalized) ? (float) $normalized : null;
+        return $this->normalizer->money($value);
     }
 
     private function date(string $value): ?string
     {
-        if ($value === '') {
-            return null;
-        }
-
-        try {
-            return Carbon::parse($value)->toDateString();
-        } catch (\Throwable) {
-            return null;
-        }
+        return $this->normalizer->date($value);
     }
 
     private function looksLikeAttachment(string $key, string $value): bool
