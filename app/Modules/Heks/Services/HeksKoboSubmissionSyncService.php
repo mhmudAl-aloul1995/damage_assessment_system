@@ -151,21 +151,21 @@ class HeksKoboSubmissionSyncService
             'field_engineer' => $fieldEngineer,
             'field_engineer_user_id' => $this->engineerUserResolver->resolve($fieldEngineer),
             'visit_date' => $this->date($this->first($payload, ['visit_date', 'Visit Date', 'تاريخ الزيارة', '_submission_time'])),
-            'governorate' => $this->first($payload, ['governorate', 'المحافظة']),
-            'area' => $this->first($payload, ['area_001', 'area', 'community', 'المنطقة', 'التجمع']),
-            'address' => $this->first($payload, ['address_001', 'address', 'العنوان', 'العنوان بالتفصيل']),
+            'governorate' => $this->firstMapped($payload, $service, ['governorate', 'المحافظة']),
+            'area' => $this->firstMapped($payload, $service, ['area_001', 'area', 'community', 'المنطقة', 'التجمع/ المنطقة', 'التجمع']),
+            'address' => $this->firstMapped($payload, $service, ['address_001', 'address', 'العنوان', 'العنوان بالتفصيل']),
             'household_head_gender' => $this->first($payload, ['head_gender', 'household_head_gender', 'gender', 'جنس رب الأسرة']),
             'marital_status' => $this->first($payload, ['marital_status', 'الحالة الاجتماعية']),
-            'displacement_status' => $this->first($payload, ['displacement_status', 'حالة النزوح']),
-            'occupancy_status' => $this->first($payload, ['occupancy_type', 'occupancy_status', 'حالة الإشغال الحالي للوحدة السكنية', 'نوع الإشغال الحالي:', 'حالة الإشغال']),
-            'damage_status' => $this->first($payload, ['damage_status', 'Damage assessment', 'تقييم حالة ضرر المأوى']),
-            'grant_amount' => $this->decimal($this->first($payload, ['grant_amount', 'grant', 'GRANT', 'Intervention (ILS)', "Intervention \n(ILS)", 'المنحة', 'قيمة العقد ILS'])),
-            'payment_1' => $this->decimal($this->first($payload, ['payment_1', 'Payment_1', '30%'])),
-            'payment_2' => $this->decimal($this->first($payload, ['payment_2', 'Payment_2', '50%'])),
-            'payment_3' => $this->decimal($this->first($payload, ['payment_3', 'Payment_3', '20%'])),
-            'recommendations' => $this->first($payload, ['recommendations', 'final_recommendation', 'توصيات']),
-            'social_notes' => $this->first($payload, ['social_notes', "\u{0645}\u{0644}\u{0627}\u{062D}\u{0638}\u{0627}\u{062A} \u{0625}\u{062C}\u{062A}\u{0645}\u{0627}\u{0639}\u{064A}\u{0629}", 'ملاحظات إجتماعية']),
-            'engineer_notes' => $this->first($payload, ['engineer_notes', "\u{0645}\u{0644}\u{0627}\u{062D}\u{0638}\u{0627}\u{062A} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}\u{064A}\u{0646}", 'ملاحظات المهندسين']),
+            'displacement_status' => $this->firstMapped($payload, $service, ['displacement_status', 'حالة النزوح حاليا للأسرة', 'حالة النزوح']),
+            'occupancy_status' => $this->firstMapped($payload, $service, ['occupancy_type', 'occupancy_status', 'حالة الإشغال الحالي للوحدة السكنية', 'نوع الإشغال الحالي:', 'حالة الإشغال']),
+            'damage_status' => $this->firstMapped($payload, $service, ['damage_status', 'Damage assessment', 'تقييم حالة ضرر المأوى']),
+            'grant_amount' => $this->decimal($this->firstMapped($payload, $service, ['grant_amount', 'grant', 'GRANT', 'Intervention (ILS)', "Intervention \n(ILS)", 'المنحة', 'قيمة العقد ILS'])),
+            'payment_1' => $this->decimal($this->firstMapped($payload, $service, ['payment_1', 'Payment_1', '30%', 'دفعة 30%'])),
+            'payment_2' => $this->decimal($this->firstMapped($payload, $service, ['payment_2', 'Payment_2', '50%', 'دفعة 50%'])),
+            'payment_3' => $this->decimal($this->firstMapped($payload, $service, ['payment_3', 'Payment_3', '20%', 'دفعة 20%'])),
+            'recommendations' => $this->firstMapped($payload, $service, ['recommendations', 'final_recommendation', 'توصيات نهائية', 'توصيات']),
+            'social_notes' => $this->firstMapped($payload, $service, ['social_notes', "\u{0645}\u{0644}\u{0627}\u{062D}\u{0638}\u{0627}\u{062A} \u{0625}\u{062C}\u{062A}\u{0645}\u{0627}\u{0639}\u{064A}\u{0629}", 'ملاحظات إجتماعية']),
+            'engineer_notes' => $this->firstMapped($payload, $service, ['engineer_notes', "\u{0645}\u{0644}\u{0627}\u{062D}\u{0638}\u{0627}\u{062A} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}\u{064A}\u{0646}", 'ملاحظات المهندسين']),
             'raw_data' => array_merge($beneficiary->raw_data ?? [], [$service => $payload]),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
 
@@ -853,6 +853,48 @@ class HeksKoboSubmissionSyncService
                     ->all();
             })
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, string>  $candidates
+     */
+    private function firstMapped(array $payload, string $service, array $candidates): string
+    {
+        return $this->first($payload, $this->mappedCandidates($service, $candidates));
+    }
+
+    /**
+     * @param  array<int, string>  $candidates
+     * @return array<int, string>
+     */
+    private function mappedCandidates(string $service, array $candidates): array
+    {
+        $mappedCandidates = $candidates;
+        $normalizedCandidates = collect($candidates)
+            ->map(fn (string $candidate): string => $this->normalizeKey($candidate))
+            ->filter()
+            ->values()
+            ->all();
+
+        foreach ($this->displayLabels($service) as $field => $label) {
+            $normalizedLabel = $this->normalizeKey($label);
+
+            if ($normalizedLabel === '') {
+                continue;
+            }
+
+            foreach ($normalizedCandidates as $candidate) {
+                if (! str_contains($normalizedLabel, $candidate) && ! str_contains($candidate, $normalizedLabel)) {
+                    continue;
+                }
+
+                $mappedCandidates[] = $field;
+                $mappedCandidates[] = $label;
+            }
+        }
+
+        return array_values(array_unique(array_filter($mappedCandidates)));
     }
 
     /**

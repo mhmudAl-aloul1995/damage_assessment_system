@@ -11,6 +11,7 @@ use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
+use App\Modules\Heks\Services\HeksKoboSubmissionSyncService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -452,6 +453,55 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
             ->where('service_name', 'heks-main')
             ->where('kobo_field', 'readonly_note')
             ->exists())->toBeFalse();
+});
+
+test('heks kobo sync fills basic beneficiary fields from imported Kobo labels', function () {
+    foreach ([
+        'q_gov' => 'المحافظة',
+        'q_displacement' => 'حالة النزوح حاليا للأسرة',
+        'q_occupancy' => 'حالة الإشغال الحالي للوحدة السكنية',
+        'q_damage' => 'تقييم حالة ضرر المأوى',
+        'q_grant' => 'المنحة',
+        'q_payment_30' => 'دفعة 30%',
+        'q_recommendation' => 'توصيات نهائية',
+    ] as $field => $label) {
+        HeksKoboFieldMapping::query()->create([
+            'service_name' => 'heks-main',
+            'table_name' => 'heks_main_kobo_records',
+            'kobo_field' => $field,
+            'column_name' => $field,
+            'display_label' => $label,
+        ]);
+    }
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-main',
+        'submission_uuid' => 'uuid:heks-basic-label-fields',
+        'payload' => [
+            'application_code' => 'BASIC-LABELS',
+            'head_name' => 'Basic Labels Beneficiary',
+            'q_gov' => 'غزة',
+            'q_displacement' => 'نازح',
+            'q_occupancy' => 'مأهولة من قبل الأسرة المالكة',
+            'q_damage' => 'أضرار جزئية متوسطة',
+            'q_grant' => '1200.50',
+            'q_payment_30' => '360.15',
+            'q_recommendation' => 'يحتاج إلى تدخل طارئ',
+        ],
+        'sync_status' => 'pending',
+    ]);
+
+    app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'BASIC-LABELS')->sole();
+
+    expect($beneficiary->governorate)->toBe('غزة')
+        ->and($beneficiary->displacement_status)->toBe('نازح')
+        ->and($beneficiary->occupancy_status)->toBe('مأهولة من قبل الأسرة المالكة')
+        ->and($beneficiary->damage_status)->toBe('أضرار جزئية متوسطة')
+        ->and((float) $beneficiary->grant_amount)->toBe(1200.5)
+        ->and((float) $beneficiary->payment_1)->toBe(360.15)
+        ->and($beneficiary->recommendations)->toBe('يحتاج إلى تدخل طارئ');
 });
 
 test('kobo rest submission stores every HEKS KoBo field in service record columns', function () {
