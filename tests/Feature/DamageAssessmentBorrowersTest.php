@@ -43,6 +43,8 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('borrower-worklist-toolbar', false)
         ->assertSee('صافي مبلغ القرض', false)
         ->assertSee('الرصيد الإجمالي الحالي', false)
+        ->assertDontSee('<th>صافي مبلغ القرض</th>', false)
+        ->assertDontSee('<th>الرصيد الإجمالي الحالي</th>', false)
         ->assertSee("$('.borrower-filter-select').each", false)
         ->assertSee('اسحب ملف Excel هنا أو اضغط للاختيار', false)
         ->assertSee('تصدير التقرير', false)
