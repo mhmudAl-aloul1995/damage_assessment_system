@@ -6,24 +6,28 @@ return [
     'services' => [
         'heks_main' => [
             'aliases' => ['heks-main'],
+            'asset_uid' => env('HEKS_MAIN_KOBO_ASSET'),
             'wide_table' => 'heks_main_kobo_records',
             'normalized_handler' => 'main',
             'allow_create_beneficiary' => true,
         ],
         'heks_followup' => [
             'aliases' => ['heks-followups', 'heks-followup'],
+            'asset_uid' => env('HEKS_FOLLOWUP_KOBO_ASSET'),
             'wide_table' => 'heks_followups_kobo_records',
             'normalized_handler' => 'followup',
             'allow_create_beneficiary' => false,
         ],
         'heks_boq' => [
             'aliases' => ['heks-boq'],
+            'asset_uid' => env('HEKS_BOQ_KOBO_ASSET'),
             'wide_table' => 'heks_boq_kobo_records',
             'normalized_handler' => 'boq',
             'allow_create_beneficiary' => false,
         ],
         'heks_followup_boq' => [
             'aliases' => ['heks-followup-boq'],
+            'asset_uid' => env('HEKS_FOLLOWUP_BOQ_KOBO_ASSET'),
             'wide_table' => 'heks_followup_boq_kobo_records',
             'normalized_handler' => 'followup_boq',
             'allow_create_beneficiary' => false,

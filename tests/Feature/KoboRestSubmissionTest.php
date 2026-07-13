@@ -394,6 +394,66 @@ test('heks kobo field label import command builds mappings from paired exports',
         ->and($beneficiary->field_engineer)->toBe('م. نعيم شاهين');
 });
 
+test('heks kobo form mapping import command builds mappings from Kobo API', function () {
+    config(['services.kobotoolbox.token' => 'api-token']);
+
+    Http::fake([
+        'https://kf.kobotoolbox.org/api/v2/assets/asset123/?format=json' => Http::response([
+            'content' => [
+                'survey' => [
+                    [
+                        'type' => 'begin_group',
+                        'name' => 'family_info',
+                        'label' => ['Arabic' => 'تقييم الهشاشة الاجتماعية'],
+                    ],
+                    [
+                        'type' => 'text',
+                        'name' => 'head_name',
+                        'label' => ['Arabic' => 'اسم رب الأسرة'],
+                    ],
+                    [
+                        'type' => 'integer',
+                        'name' => 'Age',
+                        'label' => ['Arabic' => 'العمر'],
+                    ],
+                    [
+                        'type' => 'end_group',
+                    ],
+                    [
+                        'type' => 'note',
+                        'name' => 'readonly_note',
+                        'label' => ['Arabic' => 'ملاحظة فقط'],
+                    ],
+                ],
+            ],
+        ]),
+    ]);
+
+    $this->artisan('heks:kobo-import-form-mapping', [
+        'service' => 'heks-main',
+        'asset' => 'asset123',
+    ])
+        ->expectsOutputToContain('HEKS Kobo form mapping imported. Created: 4, updated: 0, skipped: 1.')
+        ->assertSuccessful();
+
+    expect(HeksKoboFieldMapping::query()
+        ->where('service_name', 'heks-main')
+        ->where('kobo_field', 'family_info/head_name')
+        ->value('display_label'))->toBe('اسم رب الأسرة')
+        ->and(HeksKoboFieldMapping::query()
+            ->where('service_name', 'heks-main')
+            ->where('kobo_field', 'head_name')
+            ->value('display_label'))->toBe('اسم رب الأسرة')
+        ->and(HeksKoboFieldMapping::query()
+            ->where('service_name', 'heks-main')
+            ->where('kobo_field', 'family_info/Age')
+            ->value('data_type'))->toBe('integer')
+        ->and(HeksKoboFieldMapping::query()
+            ->where('service_name', 'heks-main')
+            ->where('kobo_field', 'readonly_note')
+            ->exists())->toBeFalse();
+});
+
 test('kobo rest submission stores every HEKS KoBo field in service record columns', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')

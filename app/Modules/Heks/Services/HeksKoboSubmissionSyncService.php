@@ -838,7 +838,7 @@ class HeksKoboSubmissionSyncService
         }
 
         return $this->displayLabelCache[$service] = HeksKoboFieldMapping::query()
-            ->where('service_name', $service)
+            ->whereIn('service_name', $this->serviceLookupKeys($service))
             ->whereNotNull('display_label')
             ->get(['kobo_field', 'display_label'])
             ->flatMap(function (HeksKoboFieldMapping $mapping): array {
@@ -853,6 +853,29 @@ class HeksKoboSubmissionSyncService
                     ->all();
             })
             ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function serviceLookupKeys(string $service): array
+    {
+        return array_values(array_unique(array_filter([
+            $service,
+            str_replace('_', '-', $service),
+            str_replace('-', '_', $service),
+            match ($service) {
+                'heks_main' => 'heks-main',
+                'heks-main' => 'heks_main',
+                'heks_followup' => 'heks-followups',
+                'heks-followups', 'heks-followup' => 'heks_followup',
+                'heks_boq' => 'heks-boq',
+                'heks-boq' => 'heks_boq',
+                'heks_followup_boq' => 'heks-followup-boq',
+                'heks-followup-boq' => 'heks_followup_boq',
+                default => null,
+            },
+        ])));
     }
 
     /**
