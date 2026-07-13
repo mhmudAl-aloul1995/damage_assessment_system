@@ -63,7 +63,7 @@ class HeksKoboSubmissionSyncService
             $followUp = $this->syncFollowUp($beneficiary, $flatPayload, $service);
         }
 
-        if (in_array($service, ['heks-boq', 'heks-followup-boq'], true)) {
+        if (in_array($service, ['heks-main', 'heks-boq', 'heks-followup-boq'], true)) {
             $boqItems = $this->syncBoqItems($beneficiary, $payload, $flatPayload, $service, $followUp);
         }
 
@@ -609,7 +609,7 @@ class HeksKoboSubmissionSyncService
                 continue;
             }
 
-            if (! $this->looksLikeQuantityKey($key) && ! str_contains($normalizedKey, 'boq')) {
+            if (! $this->looksLikeQuantityKey($key) && ! str_contains($normalizedKey, 'boq') && ! $this->looksLikeTechnicalItemCodeKey($key, $itemCode)) {
                 continue;
             }
 
@@ -660,6 +660,22 @@ class HeksKoboSubmissionSyncService
             || str_contains($normalized, 'item')
             || str_contains($normalized, 'كمية')
             || str_contains($normalized, 'البند');
+    }
+
+    private function looksLikeTechnicalItemCodeKey(string $key, string $itemCode): bool
+    {
+        if (! str_contains($itemCode, '.')) {
+            return false;
+        }
+
+        $normalizedCode = $this->normalizeKey($itemCode);
+
+        if ($normalizedCode === '') {
+            return false;
+        }
+
+        return collect(explode('/', $key))
+            ->contains(fn (string $segment): bool => $this->normalizeKey($segment) === $normalizedCode);
     }
 
     /**

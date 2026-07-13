@@ -529,6 +529,37 @@ test('kobo rest submission builds HEKS BOQ rows from catalog quantity fields', f
         ->and((float) $item->total_price_ils)->toBe(1020.0);
 });
 
+test('kobo rest submission builds HEKS main BOQ rows from technical item code fields', function () {
+    HeksBoqCatalogItem::query()->create([
+        'section' => 'Block work',
+        'item_code' => '3.1',
+        'description' => 'Concrete block work',
+        'unit' => 'M2',
+        'unit_price_ils' => 85,
+        'is_active' => true,
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-main-technical-boq',
+            'identification/application_code' => 'MAINBOQ1',
+            'family_info/head_name' => 'Main BOQ Beneficiary',
+            'group_fj7vq52/group_op9xp69/_3_1' => '__2',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'MAINBOQ1')->sole();
+    $item = HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect($item->source)->toBe('heks-main')
+        ->and($item->item_code)->toBe('3.1')
+        ->and($item->description)->toBe('Concrete block work')
+        ->and((float) $item->quantity)->toBe(2.0)
+        ->and((float) $item->total_price_ils)->toBe(170.0);
+});
+
 test('kobo rest submission keeps unmapped HEKS BOQ quantity fields visible', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')
