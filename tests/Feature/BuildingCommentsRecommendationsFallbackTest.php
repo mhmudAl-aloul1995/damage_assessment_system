@@ -7,6 +7,7 @@ use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
+use Spatie\Permission\Models\Role;
 
 it('uses comments recommendations v1 when comments recommendations is null', function (): void {
     $building = Building::query()->create([
@@ -17,6 +18,69 @@ it('uses comments recommendations v1 when comments recommendations is null', fun
     ]);
 
     expect($building->refresh()->comments_recommendations)->toBe('Fallback recommendation');
+});
+
+it('shows the latest edited value as the audit answer for read only field engineers', function (): void {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'fake-token',
+        ], 200),
+        '*' => Http::response([
+            'attachmentInfos' => [],
+        ], 200),
+    ]);
+
+    Role::query()->create([
+        'name' => 'Field Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create([
+        'username_arcgis' => 'field.engineer',
+    ]);
+    $user->assignRole('Field Engineer');
+
+    Assessment::query()->create([
+        'name' => 'owner_name',
+        'label' => 'Owner Name',
+        'hint' => 'Owner full name',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 990006,
+        'globalid' => 'read-only-latest-edit-building',
+        'owner_name' => 'Original Owner',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'owner_name',
+        'field_value' => 'First Edited Owner',
+        'user_id' => $user->id,
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'owner_name',
+        'field_value' => 'Latest Edited Owner',
+        'user_id' => $user->id,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->getJson('/damage-assessment/showBuildings?globalid='.$building->globalid);
+
+    $response->assertOk();
+
+    $ownerRow = collect($response->json('data'))->firstWhere('name', 'owner_name');
+
+    expect($ownerRow['answer'] ?? null)
+        ->toBe('Latest Edited Owner')
+        ->and($ownerRow['editAnswer'] ?? null)
+        ->toBeNull();
 });
 
 it('keeps comments recommendations value when it exists', function (): void {

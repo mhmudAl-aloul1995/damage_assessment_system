@@ -1170,8 +1170,11 @@ class DamageAssessmentController extends Controller
         $building = $model instanceof Building
             ? $model
             : Building::query()->where('globalid', $model?->parentglobalid)->first();
-        $isAssessmentReadOnly = ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) ?? false)
-            && ! $this->canEditAssessmentForBuilding($user, $building);
+        $canEditAssessment = $this->canEditAssessmentForBuilding($user, $building);
+        $isAssessmentReadOnly = (
+            ($user?->hasRole('Team Leader') ?? false)
+            || ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) ?? false)
+        ) && ! $canEditAssessment;
 
         if ($globalid) {
             $edits = EditAssessment::with('user')
@@ -1319,7 +1322,7 @@ class DamageAssessmentController extends Controller
                     $this->filterLabelForAssessmentValue($filtersByList, $row->name, $rawValue)
                 );
             })
-            ->addColumn('answer', function ($row) use ($record, $allEdits, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList) {
+            ->addColumn('answer', function ($row) use ($record, $allEdits, $isAssessmentReadOnly, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList) {
                 if ($row->name === 'attachments') {
                     if (! $model || ! $model->objectid || ! $token || $attachments->isEmpty()) {
                         return '<span class="text-muted">'.e(__('ui.damage_common.no_attachments')).'</span>';
@@ -1377,6 +1380,10 @@ class DamageAssessmentController extends Controller
 
                 if ((is_null($originalValue) || $originalValue === '') && $fieldEdits->isEmpty()) {
                     return '<span class="text-muted">-</span>';
+                }
+
+                if ($isAssessmentReadOnly && ! $fieldEdits->isEmpty()) {
+                    return e($editedValue ?? '-');
                 }
 
                 if ($fieldEdits->isEmpty() || ! $canViewHistory) {
