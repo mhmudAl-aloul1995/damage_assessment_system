@@ -569,10 +569,12 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertOk()
         ->assertSee('plain_question')
         ->assertSee('plain answer')
+        ->assertSee('Photo Group')
         ->assertSee('photo_group[1]/photo')
         ->assertSee('first-photo.jpg')
         ->assertSee('photo_group[2]/photo')
         ->assertSee('second-photo.jpg')
+        ->assertSee('Nested Group')
         ->assertSee('nested_group/inner_question')
         ->assertSee('inner answer');
 });

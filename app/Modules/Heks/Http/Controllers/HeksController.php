@@ -1281,7 +1281,7 @@ class HeksController extends Controller
 
                 $seen[$uniqueKey] = true;
                 $sectionKey = $this->surveySectionKey($key);
-                $section = $sections->get($sectionKey);
+                $section = $sections->get($sectionKey) ?? $this->koboSurveySection($sectionKey);
                 $section['items'][] = [
                     'question' => $key,
                     'value' => $displayValue,
@@ -1346,6 +1346,12 @@ class HeksController extends Controller
 
     private function surveySectionKey(string $key): string
     {
+        $pathSection = $this->surveyPathSectionKey($key);
+
+        if ($pathSection !== null) {
+            return $pathSection;
+        }
+
         $normalized = $this->normalizedDashboardText($key);
 
         return match (true) {
@@ -1409,6 +1415,60 @@ class HeksController extends Controller
                 || str_contains($normalized, 'حساب') => 'management',
             default => 'other',
         };
+    }
+
+    private function surveyPathSectionKey(string $key): ?string
+    {
+        if (! str_contains($key, '/')) {
+            return null;
+        }
+
+        $section = preg_replace('/\[\d+\]$/', '', explode('/', $key)[0]) ?: '';
+        $section = trim($section);
+
+        if ($section === '' || str_starts_with($section, '_')) {
+            return null;
+        }
+
+        return 'kobo:'.$section;
+    }
+
+    /**
+     * @return array{title: string, description: string, tone: string, items: array<int, mixed>}
+     */
+    private function koboSurveySection(string $sectionKey): array
+    {
+        $section = str_starts_with($sectionKey, 'kobo:')
+            ? substr($sectionKey, 5)
+            : $sectionKey;
+
+        return [
+            'title' => $this->humanizeKoboSection($section),
+            'description' => 'قسم مستورد من بنية نموذج Kobo الأصلية.',
+            'tone' => 'secondary',
+            'items' => [],
+        ];
+    }
+
+    private function humanizeKoboSection(string $section): string
+    {
+        $known = [
+            'identification' => 'بيانات التعريف والزيارة',
+            'family_info' => 'بيانات الأسرة',
+            'housing_info' => 'بيانات السكن والضرر',
+            'technical_assessment' => 'التقييم الفني',
+            'social_assessment' => 'التقييم الاجتماعي',
+            'recommendations' => 'التوصيات',
+        ];
+
+        if (isset($known[$section])) {
+            return $known[$section];
+        }
+
+        return str($section)
+            ->replace(['_', '-'], ' ')
+            ->headline()
+            ->toString();
     }
 
     private function surveyDisplayValue(mixed $value): string
