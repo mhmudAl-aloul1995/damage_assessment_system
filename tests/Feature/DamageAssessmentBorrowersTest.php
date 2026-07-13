@@ -229,6 +229,29 @@ it('previews and imports active Kuwait loan records from the selected worksheet'
     unlink($path);
 });
 
+it('previews borrower survey workbooks without requiring Kuwait loan sheets', function () {
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Heks Final V1');
+    $sheet->fromArray([
+        ['_uuid', 'اسم المقترض/ة رباعي:', 'رقم هوية المقترض/ة:', 'الطابق'],
+        ['uuid-1', 'مقترض تجريبي', '900000001', 'متكرر'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-survey-');
+    (new Xlsx($spreadsheet))->save($path);
+
+    $preview = app(BorrowerSpreadsheetImportService::class)->previewWorkbook($path);
+
+    expect($preview['source'])->toBe('borrower-survey')
+        ->and($preview['sheets'][0]['name'])->toBe('Heks Final V1')
+        ->and($preview['sheets'][0]['status'])->toBe('survey')
+        ->and($preview['sheets'][0]['ready'])->toBe(1)
+        ->and($preview['sheets'][0]['sample'][0]['loan_unit_floor_type'])->toBe('متكرر');
+
+    unlink($path);
+});
+
 it('lists borrower surveys as json rows', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

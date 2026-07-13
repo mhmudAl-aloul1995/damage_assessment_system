@@ -1656,6 +1656,25 @@
                 return;
             }
 
+            if (preview.source === 'borrower-survey') {
+                const sheet = sheets[0];
+                borrowersImportPreview.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                        <div>
+                            <div class="fw-bold">تمت قراءة ملف الاستبيان بنجاح</div>
+                            <div class="text-muted fs-7">سيتم استيراد أول شيت كبيانات مستفيدين، بما يشمل عمود الطابق إذا كان موجودًا.</div>
+                        </div>
+                        <span class="badge badge-light-success">معاينة فقط</span>
+                    </div>
+                    <div class="border rounded p-3">
+                        <div class="fw-bold mb-1">${sheet.name} — ملف استبيان</div>
+                        <div class="text-muted fs-7">${sheet.ready} سجل جاهز من أصل ${sheet.total}${sheet.skipped ? `، ${sheet.skipped} بحاجة مراجعة` : ''}</div>
+                    </div>
+                `;
+                borrowersImportPreview.classList.add('is-visible');
+                return;
+            }
+
             borrowersImportPreview.innerHTML = `
                 <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                     <div>

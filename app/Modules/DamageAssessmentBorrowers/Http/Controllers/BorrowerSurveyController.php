@@ -154,21 +154,37 @@ class BorrowerSurveyController extends Controller
 
     public function previewImport(ImportBorrowerSpreadsheetRequest $request, BorrowerSpreadsheetImportService $importer): JsonResponse
     {
+        $filePath = $request->file('borrowers_file')->getRealPath();
+
         try {
             return response()->json([
                 'status' => true,
-                'preview' => $importer->previewLoanWorkbook($request->file('borrowers_file')->getRealPath()),
+                'preview' => $importer->previewLoanWorkbook($filePath),
             ]);
         } catch (RuntimeException $exception) {
-            return response()->json([
-                'status' => false,
-                'message' => $exception->getMessage(),
-            ], 422);
+            try {
+                return response()->json([
+                    'status' => true,
+                    'preview' => $importer->previewWorkbook($filePath),
+                ]);
+            } catch (Throwable) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $exception->getMessage(),
+                ], 422);
+            }
         } catch (Throwable) {
-            return response()->json([
-                'status' => false,
-                'message' => 'تعذرت معاينة ملف Excel. تأكد من سلامة الملف وصيغته.',
-            ], 422);
+            try {
+                return response()->json([
+                    'status' => true,
+                    'preview' => $importer->previewWorkbook($filePath),
+                ]);
+            } catch (Throwable) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'تعذرت معاينة ملف Excel. تأكد من سلامة الملف وصيغته.',
+                ], 422);
+            }
         }
     }
 

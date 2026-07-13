@@ -258,6 +258,47 @@ class BorrowerSpreadsheetImportService
     }
 
     /**
+     * @return array{source: string, sheets: array<int, array{name: string, status: string, total: int, ready: int, skipped: int, sample: array<int, array<string, mixed>>}>}
+     */
+    public function previewWorkbook(string $path): array
+    {
+        if (! class_exists(\ZipArchive::class)) {
+            throw new RuntimeException('تعذر قراءة ملف Excel على الخادم لأن امتداد PHP Zip غير مفعّل.');
+        }
+
+        $spreadsheet = IOFactory::load($path);
+        $sheet = $spreadsheet->getSheet(0);
+        $rows = $sheet->toArray(null, true, true, false);
+        $headers = $this->headers(array_shift($rows) ?? []);
+        $sourceRows = collect($this->sourceRowsFromWorksheet($rows, $headers, [], [], [], []))
+            ->map(fn (array $sourceRow): array => $this->sourceRow($sourceRow))
+            ->values();
+
+        if ($sourceRows->isEmpty()) {
+            throw new RuntimeException('لم يتم العثور على صفوف استبيان قابلة للمعاينة داخل الملف.');
+        }
+
+        $readyRows = $sourceRows->filter(fn (array $row): bool => $row['borrower_name'] !== '' && $row['borrower_id_number'] !== '');
+
+        return [
+            'source' => 'borrower-survey',
+            'sheets' => [[
+                'name' => $sheet->getTitle(),
+                'status' => 'survey',
+                'total' => $sourceRows->count(),
+                'ready' => $readyRows->count(),
+                'skipped' => $sourceRows->count() - $readyRows->count(),
+                'sample' => $readyRows->take(5)->map(fn (array $row): array => [
+                    'form_number' => $row['form_number'],
+                    'borrower_name' => $row['borrower_name'],
+                    'borrower_id_number' => $row['borrower_id_number'],
+                    'loan_unit_floor_type' => $row['loan_unit_floor_type_label'],
+                ])->values()->all(),
+            ]],
+        ];
+    }
+
+    /**
      * @return array{total: int, ready: int, created: int, updated: int, skipped: int, issues: array<int, array{row: int, reasons: array<int, string>}>, duplicate_form_numbers: int, risk_levels: array{critical: int, high: int, medium: int, low: int}}
      */
     public function importLoanWorkbook(string $path, string $sheetName): array
