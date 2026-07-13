@@ -20,6 +20,10 @@
                     <label class="form-label">الملف</label>
                     <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
                 </div>
+                <div class="col-lg-5">
+                    <label class="form-label">ملف KoBo labels المطابق</label>
+                    <input type="file" name="labels_file" class="form-control" accept=".xlsx,.xls">
+                </div>
                 <div class="col-lg-4">
                     <label class="form-label">نوع الملف</label>
                     <select name="type" class="form-select">

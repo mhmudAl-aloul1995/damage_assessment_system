@@ -796,6 +796,64 @@ it('imports follow up spreadsheets without downloading BOQ files when disabled',
     }
 });
 
+it('imports HEKS Kobo paired labels workbooks with display values', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $technicalPath = heksWorkbookPath('kobo-technical');
+    $labelsPath = heksWorkbookPath('kobo-labels');
+    $technicalWorkbook = new Spreadsheet;
+    $labelsWorkbook = new Spreadsheet;
+
+    try {
+        $technicalWorkbook->getActiveSheet()
+            ->setTitle('Heks Final V1')
+            ->fromArray([
+                ['application_code', 'q_087', 'q_092', 'q_100'],
+                ['DGN1L', '1', '9', 'raw_choice'],
+            ]);
+
+        $labelsWorkbook->getActiveSheet()
+            ->setTitle('Heks Final V1')
+            ->fromArray([
+                ['رقم الطلب/الكود', 'اسم المهندس الميداني', 'تقييم حالة ضرر المأوى:', 'حالة الإشغال الحالي للوحدة السكنية'],
+                ['DGN1L', 'م. نعيم شاهين', 'أضرار جزئية متوسطة', 'مستأجرة'],
+            ]);
+
+        (new Xlsx($technicalWorkbook))->save($technicalPath);
+        (new Xlsx($labelsWorkbook))->save($labelsPath);
+
+        app(HeksSpreadsheetImportService::class)->import(
+            new UploadedFile($technicalPath, 'heks-technical.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
+            'scores',
+            $user->id,
+            false,
+            new UploadedFile($labelsPath, 'heks-labels.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
+        );
+
+        $beneficiary = HeksBeneficiary::query()->where('code', 'DGN1L')->sole();
+
+        expect($beneficiary->field_engineer)->toBe('م. نعيم شاهين')
+            ->and($beneficiary->damage_status)->toBe('أضرار جزئية متوسطة')
+            ->and($beneficiary->occupancy_status)->toBe('مستأجرة')
+            ->and($beneficiary->raw_data['Heks Final V1'])->toHaveKey('تقييم حالة ضرر المأوى:')
+            ->and($beneficiary->raw_data['Heks Final V1'])->not->toHaveKey('q_092');
+
+        $this->actingAs($user)
+            ->get(route('heks.beneficiaries.edit', $beneficiary))
+            ->assertOk()
+            ->assertSee('تقييم حالة ضرر المأوى:')
+            ->assertSee('أضرار جزئية متوسطة')
+            ->assertDontSee('q_092');
+    } finally {
+        $technicalWorkbook->disconnectWorksheets();
+        $labelsWorkbook->disconnectWorksheets();
+        @unlink($technicalPath);
+        @unlink($labelsPath);
+    }
+});
+
 function heksWorkbookPath(string $name): string
 {
     return sys_get_temp_dir().DIRECTORY_SEPARATOR.$name.'-'.Str::random(8).'.xlsx';

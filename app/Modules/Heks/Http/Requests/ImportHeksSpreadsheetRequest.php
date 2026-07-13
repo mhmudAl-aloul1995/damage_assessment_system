@@ -18,6 +18,7 @@ class ImportHeksSpreadsheetRequest extends FormRequest
     {
         return [
             'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:51200'],
+            'labels_file' => ['nullable', 'file', 'mimes:xlsx,xls', 'max:51200'],
             'type' => ['required', 'in:auto,labels,followups,scores'],
         ];
     }

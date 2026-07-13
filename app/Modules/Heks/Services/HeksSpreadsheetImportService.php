@@ -39,6 +39,7 @@ class HeksSpreadsheetImportService
 
     private const SELECTED_SHEETS = [
         '125 BNFs -Data',
+        "HEKS -  BOQ2 (With BNF's Data)",
     ];
 
     private const PAYMENT_SHEETS = [
@@ -83,9 +84,10 @@ class HeksSpreadsheetImportService
     /**
      * @return array{import: HeksImport, summary: array<string, mixed>}
      */
-    public function import(UploadedFile $file, string $type, ?int $userId = null, bool $autoImportFollowUpBoqs = true): array
+    public function import(UploadedFile $file, string $type, ?int $userId = null, bool $autoImportFollowUpBoqs = true, ?UploadedFile $labelsFile = null): array
     {
         $spreadsheet = IOFactory::load($file->getRealPath());
+        $labelsSpreadsheet = $labelsFile instanceof UploadedFile ? IOFactory::load($labelsFile->getRealPath()) : null;
         $parentCodes = $this->parentCodes($spreadsheet);
         $previousAutoImportFollowUpBoqs = $this->autoImportFollowUpBoqs;
         $this->autoImportFollowUpBoqs = $autoImportFollowUpBoqs;
@@ -99,7 +101,7 @@ class HeksSpreadsheetImportService
         $createdImport = null;
 
         try {
-            DB::transaction(function () use ($spreadsheet, $file, $type, $userId, $parentCodes, &$summary, &$createdImport): void {
+            DB::transaction(function () use ($spreadsheet, $labelsSpreadsheet, $file, $labelsFile, $type, $userId, $parentCodes, &$summary, &$createdImport): void {
                 foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
                     $sheetType = $type === 'auto' ? $this->detectType($sheet) : $this->normalizeRequestedType($type, $sheet);
 
@@ -107,7 +109,7 @@ class HeksSpreadsheetImportService
                         continue;
                     }
 
-                    $sheetSummary = $this->importSheet($sheet, $sheetType, $parentCodes);
+                    $sheetSummary = $this->importSheet($sheet, $sheetType, $parentCodes, $labelsSpreadsheet?->getSheetByName($sheet->getTitle()));
                     $summary['total_rows'] += $sheetSummary['total'];
                     $summary['created_rows'] += $sheetSummary['created'];
                     $summary['updated_rows'] += $sheetSummary['updated'];
@@ -118,7 +120,9 @@ class HeksSpreadsheetImportService
                 $createdImport = HeksImport::query()->create([
                     'user_id' => $userId,
                     'type' => $type,
-                    'filename' => $file->getClientOriginalName(),
+                    'filename' => $labelsFile instanceof UploadedFile
+                        ? $file->getClientOriginalName().' + '.$labelsFile->getClientOriginalName()
+                        : $file->getClientOriginalName(),
                     'sheet_name' => collect($summary['sheets'])->pluck('name')->implode(', '),
                     'total_rows' => $summary['total_rows'],
                     'created_rows' => $summary['created_rows'],
@@ -130,6 +134,7 @@ class HeksSpreadsheetImportService
         } finally {
             $this->autoImportFollowUpBoqs = $previousAutoImportFollowUpBoqs;
             $spreadsheet->disconnectWorksheets();
+            $labelsSpreadsheet?->disconnectWorksheets();
         }
 
         return [
@@ -333,6 +338,7 @@ class HeksSpreadsheetImportService
     private function detectTypeFromSheetName(string $sheetName): ?string
     {
         return match (true) {
+            $sheetName === "\u{062A}\u{0642}\u{0631}\u{064A}\u{0631} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}\u{0629} -\u{0647}\u{064A}\u{0643}\u{0633} 125" => 'followups',
             in_array($sheetName, self::FOLLOW_UP_SHEETS, true) => 'followups',
             in_array($sheetName, self::PAYMENT_SHEETS, true) => 'payments',
             in_array($sheetName, self::WORK_GROUP_SHEETS, true) => 'work_groups',
@@ -363,7 +369,7 @@ class HeksSpreadsheetImportService
      * @param  array<int, string>  $parentCodes
      * @return array{total: int, created: int, updated: int, skipped: int}
      */
-    private function importSheet(Worksheet $sheet, string $type, array $parentCodes): array
+    private function importSheet(Worksheet $sheet, string $type, array $parentCodes, ?Worksheet $labelsSheet = null): array
     {
         if ($type === 'weights') {
             return $this->weights($sheet);
@@ -372,7 +378,7 @@ class HeksSpreadsheetImportService
         $headers = $this->headers($sheet);
         $summary = ['total' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0];
 
-        foreach ($this->rows($sheet, $headers) as $row) {
+        foreach ($this->rows($sheet, $headers, $labelsSheet) as $row) {
             $summary['total']++;
 
             if ($type === 'attachments') {
@@ -442,23 +448,48 @@ class HeksSpreadsheetImportService
      * @param  array<string, int>  $headers
      * @return iterable<int, array<string, mixed>>
      */
-    private function rows(Worksheet $sheet, array $headers): iterable
+    private function rows(Worksheet $sheet, array $headers, ?Worksheet $labelsSheet = null): iterable
     {
         $headerRow = $headers['_header_row'] ?? 1;
         unset($headers['_header_row']);
+        $labelHeadingsByColumn = [];
+
+        if ($labelsSheet instanceof Worksheet) {
+            $labelHeaders = $this->headers($labelsSheet);
+            unset($labelHeaders['_header_row']);
+
+            foreach ($labelHeaders as $labelHeading => $column) {
+                $labelHeadingsByColumn[$column] = $labelHeading;
+            }
+        }
 
         for ($rowNumber = $headerRow + 1; $rowNumber <= $sheet->getHighestDataRow(); $rowNumber++) {
             $row = ['_row_number' => $rowNumber];
             $hasValue = false;
 
             foreach ($headers as $heading => $column) {
-                $value = $this->text($sheet->getCell([$column, $rowNumber]));
-                $row[$heading] = $value;
+                $rawValue = $this->text($sheet->getCell([$column, $rowNumber]));
+                $labelValue = $labelsSheet instanceof Worksheet
+                    ? $this->text($labelsSheet->getCell([$column, $rowNumber]))
+                    : '';
+                $value = $labelValue !== '' ? $labelValue : $rawValue;
+                $labelHeading = $labelHeadingsByColumn[$column] ?? $heading;
+
+                if ($labelHeading !== $heading) {
+                    $row[$labelHeading] = $value;
+                } else {
+                    $row[$heading] = $value;
+                }
+
                 $hasValue = $hasValue || $value !== '';
             }
 
             for ($column = 1; $column <= $this->highestColumnIndex($sheet); $column++) {
-                $value = $this->text($sheet->getCell([$column, $rowNumber]));
+                $rawValue = $this->text($sheet->getCell([$column, $rowNumber]));
+                $labelValue = $labelsSheet instanceof Worksheet
+                    ? $this->text($labelsSheet->getCell([$column, $rowNumber]))
+                    : '';
+                $value = $labelValue !== '' ? $labelValue : $rawValue;
                 $row["column_{$column}"] = $value;
                 $hasValue = $hasValue || $value !== '';
             }
@@ -1053,6 +1084,8 @@ class HeksSpreadsheetImportService
      */
     private function first(array $row, array $keys): string
     {
+        $keys = $this->expandedLookupKeys($keys);
+
         foreach ($keys as $key) {
             if (($row[$key] ?? '') !== '') {
                 return trim((string) $row[$key]);
@@ -1072,6 +1105,106 @@ class HeksSpreadsheetImportService
         }
 
         return '';
+    }
+
+    /**
+     * @param  array<int, string>  $keys
+     * @return array<int, string>
+     */
+    private function expandedLookupKeys(array $keys): array
+    {
+        $expanded = $keys;
+
+        foreach ($keys as $key) {
+            $normalized = $this->normalizedIdentifier($key);
+
+            if (str_contains($normalized, 'code') || str_contains($normalized, 'ظƒظˆط¯')) {
+                $expanded[] = 'رقم الطلب/الكود';
+                $expanded[] = 'الكود';
+                $expanded[] = 'كود';
+            }
+
+            if (str_contains($normalized, 'name') || str_contains($normalized, 'ط§ط³ظ…') || str_contains($normalized, 'ظ…ط³طھظپظٹط¯')) {
+                $expanded[] = 'اسم المستفيد';
+                $expanded[] = 'المستفيد';
+                $expanded[] = 'اسم رب الأسرة';
+                $expanded[] = 'اسم الشخص المقابل';
+            }
+
+            if (str_contains($normalized, 'engineer') || str_contains($normalized, 'ظ…ظ‡ظ†ط¯ط³')) {
+                $expanded[] = 'اسم المهندس الميداني';
+                $expanded[] = 'المهندس المتابع';
+                $expanded[] = 'حدد اسم :';
+            }
+
+            if (str_contains($normalized, 'id') || str_contains($normalized, 'ظ‡ظˆظٹ')) {
+                $expanded[] = 'ID';
+                $expanded[] = 'الهوية';
+                $expanded[] = 'هوية المستفيد';
+                $expanded[] = 'رقم هوية رب الأسرة';
+                $expanded[] = 'رقم الهوية';
+            }
+
+            if (str_contains($normalized, 'phone') || str_contains($normalized, 'mobile') || str_contains($normalized, 'طھظˆط§طµ')) {
+                $expanded[] = 'Mobile';
+                $expanded[] = 'رقم التواصل';
+                $expanded[] = 'رقم التواصل2';
+                $expanded[] = 'رقم الجوال';
+            }
+
+            if (str_contains($normalized, 'date') || str_contains($normalized, 'ط²ظٹط§ط±')) {
+                $expanded[] = 'تاريخ الزيارة';
+            }
+
+            if (str_contains($normalized, 'governorate') || str_contains($normalized, 'ظ…ط­ط§ظپط¸')) {
+                $expanded[] = 'المحافظة';
+            }
+
+            if (str_contains($normalized, 'area') || str_contains($normalized, 'community') || str_contains($normalized, 'ظ…ظ†ط·ظ‚')) {
+                $expanded[] = 'المنطقة/التجمع';
+                $expanded[] = 'المنطقة';
+                $expanded[] = 'التجمع';
+            }
+
+            if (str_contains($normalized, 'address') || str_contains($normalized, 'ط¹ظ†ظˆط§ظ†')) {
+                $expanded[] = 'Adress';
+                $expanded[] = 'Address';
+                $expanded[] = 'العنوان بالتفصيل';
+                $expanded[] = 'العنوان';
+            }
+
+            if (str_contains($normalized, 'gender') || str_contains($normalized, 'ط¬ظ†ط³')) {
+                $expanded[] = 'جنس رب الأسرة';
+            }
+
+            if (str_contains($normalized, 'marital') || str_contains($normalized, 'ط§ط¬طھظ…ط§ط¹')) {
+                $expanded[] = 'الحالة الاجتماعية';
+            }
+
+            if (str_contains($normalized, 'displacement') || str_contains($normalized, 'ظ†ط²ظˆط­')) {
+                $expanded[] = 'حالة النزوح للأسرة حالياً';
+                $expanded[] = 'حالة النزوح للأسرة حاليا';
+                $expanded[] = 'حالة النزوح';
+            }
+
+            if (str_contains($normalized, 'occupancy') || str_contains($normalized, 'ط¥ط´ط؛ط§ظ„')) {
+                $expanded[] = 'حالة الإشغال الحالي للوحدة السكنية';
+                $expanded[] = 'نوع الإشغال الحالي:';
+                $expanded[] = 'حالة الإشغال';
+            }
+
+            if (str_contains($normalized, 'damage') || str_contains($normalized, 'ط¶ط±ط±')) {
+                $expanded[] = 'تقييم حالة ضرر المأوى:';
+                $expanded[] = 'تقييم حالة ضرر المأوى';
+            }
+
+            if (str_contains($normalized, 'recommend') || str_contains($normalized, 'طھظˆطµظٹ')) {
+                $expanded[] = 'توصيات المهندس للزيارة';
+                $expanded[] = 'توصيات نهائية';
+            }
+        }
+
+        return array_values(array_unique($expanded));
     }
 
     /**

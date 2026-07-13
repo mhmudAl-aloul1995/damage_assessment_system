@@ -126,7 +126,13 @@ class HeksController extends Controller
 
     public function import(ImportHeksSpreadsheetRequest $request, HeksSpreadsheetImportService $importer): RedirectResponse
     {
-        $result = $importer->import($request->file('file'), (string) $request->validated('type'), $request->user()?->id, false);
+        $result = $importer->import(
+            $request->file('file'),
+            (string) $request->validated('type'),
+            $request->user()?->id,
+            false,
+            $request->file('labels_file')
+        );
 
         return redirect()
             ->route('heks.imports')
