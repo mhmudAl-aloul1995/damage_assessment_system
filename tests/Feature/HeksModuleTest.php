@@ -621,6 +621,8 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('الوحدة السكنية تقع في محيط آمن')
         ->assertSee('يوجد أشخاص ذوي إعاقة')
         ->assertSee('نعم')
+        ->assertSee('لا')
+        ->assertSee('survey-choice selected', false)
         ->assertSee('Photo Group')
         ->assertSee('photo_group[1]/photo')
         ->assertSee('first-photo.jpg')

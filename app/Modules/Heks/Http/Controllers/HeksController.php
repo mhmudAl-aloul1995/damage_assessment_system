@@ -1290,6 +1290,7 @@ class HeksController extends Controller
                     'question' => $questionLabel,
                     'field_key' => $key,
                     'value' => $displayValue,
+                    'choices' => $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels),
                     'source' => (string) $source,
                     'editable' => array_key_exists($key, $originalValues) && is_scalar($originalValues[$key]),
                     'history' => $histories->get((string) $source.'|'.$key, collect())
@@ -1846,6 +1847,53 @@ class HeksController extends Controller
         }
 
         return '';
+    }
+
+    /**
+     * @param  array<string, array<string, array<string, string>>>  $choiceLabels
+     * @return array<int, array{value: string, label: string, selected: bool}>
+     */
+    private function surveyChoiceOptions(mixed $value, string $key, string $source, array $choiceLabels): array
+    {
+        if (! is_scalar($value)) {
+            return [];
+        }
+
+        $rawValue = trim((string) $value);
+
+        if ($rawValue === '') {
+            return [];
+        }
+
+        foreach ($this->surveySourceLookupKeys($source) as $serviceName) {
+            foreach ($this->surveyFieldLookupKeys($key) as $lookupKey) {
+                $choices = $choiceLabels[$serviceName][$lookupKey] ?? null;
+
+                if (! is_array($choices) || $choices === []) {
+                    continue;
+                }
+
+                $selectedValues = collect(preg_split('/\s+/', $rawValue) ?: [])
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                if ($selectedValues === []) {
+                    $selectedValues = [$rawValue];
+                }
+
+                return collect($choices)
+                    ->map(fn (string $label, string $choiceValue): array => [
+                        'value' => $choiceValue,
+                        'label' => $label,
+                        'selected' => in_array($choiceValue, $selectedValues, true),
+                    ])
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return [];
     }
 
     private function isHiddenSurveyKey(string $key): bool

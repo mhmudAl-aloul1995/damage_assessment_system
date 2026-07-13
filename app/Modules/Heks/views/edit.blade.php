@@ -37,6 +37,9 @@
         .heks-case-page .survey-item:hover { background: #f8fbff; }
         .heks-case-page .survey-question { font-weight: 800; color: var(--bs-gray-800); line-height: 1.6; overflow-wrap: anywhere; }
         .heks-case-page .survey-answer { font-weight: 700; color: var(--bs-gray-700); line-height: 1.6; overflow-wrap: anywhere; }
+        .heks-case-page .survey-choices { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+        .heks-case-page .survey-choice { border: 1px solid #e4ebf3; border-radius: 999px; color: var(--bs-gray-600); background: #fff; padding: .35rem .7rem; font-size: .78rem; font-weight: 700; }
+        .heks-case-page .survey-choice.selected { border-color: rgba(var(--bs-primary-rgb), .25); color: var(--bs-primary); background: rgba(var(--bs-primary-rgb), .08); }
         .heks-case-page .survey-edit-box { border: 1px solid #e8eef7; border-radius: .75rem; background: #fff; padding: .75rem; }
         .heks-case-page .survey-history-card { border: 1px solid #edf1f5; border-radius: .65rem; background: #fff; padding: .75rem; }
         .heks-case-page .survey-history-label { color: var(--bs-gray-600); font-size: .75rem; font-weight: 800; }
@@ -776,6 +779,15 @@
                                                     </div>
                                                     <div class="col-lg-7">
                                                         <div class="survey-answer mb-3">{{ $item['value'] }}</div>
+                                                        @if (!empty($item['choices']))
+                                                            <div class="survey-choices" aria-label="خيارات السؤال">
+                                                                @foreach ($item['choices'] as $choice)
+                                                                    <span class="survey-choice {{ $choice['selected'] ? 'selected' : '' }}">
+                                                                        {{ $choice['label'] }}
+                                                                    </span>
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
                                                         @if ($item['editable'] ?? false)
                                                             <form method="POST" action="{{ route('heks.beneficiaries.survey-values.update', $beneficiary) }}" class="survey-edit-box">
                                                                 @csrf
