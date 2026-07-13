@@ -6,6 +6,7 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Role;
 
@@ -14,6 +15,10 @@ beforeEach(function () {
     config()->set('database.default', 'mysql');
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+
+    Schema::table('housing_units', function ($table): void {
+        $table->dateTime('submition_date')->nullable();
+    });
 });
 
 it('exports productivity report using the same housing-unit date filter as the table', function () {
@@ -46,7 +51,8 @@ it('exports productivity report using the same housing-unit date filter as the t
         'globalid' => 'productivity-housing-fully',
         'parentglobalid' => 'productivity-building-may',
         'unit_damage_status' => 'fully_damaged2',
-        'creationdate' => '2026-05-15 10:00:00',
+        'creationdate' => '2026-04-15 10:00:00',
+        'submition_date' => '2026-05-15 10:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -54,7 +60,8 @@ it('exports productivity report using the same housing-unit date filter as the t
         'globalid' => 'productivity-housing-partial',
         'parentglobalid' => 'productivity-building-may',
         'unit_damage_status' => 'partially_damaged2',
-        'creationdate' => '2026-05-15 11:00:00',
+        'creationdate' => '2026-04-15 11:00:00',
+        'submition_date' => '2026-05-15 11:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -62,7 +69,8 @@ it('exports productivity report using the same housing-unit date filter as the t
         'globalid' => 'productivity-housing-outside-filter',
         'parentglobalid' => 'productivity-building-may',
         'unit_damage_status' => 'fully_damaged2',
-        'creationdate' => '2026-06-01 10:00:00',
+        'creationdate' => '2026-05-15 12:00:00',
+        'submition_date' => '2026-06-01 10:00:00',
     ]);
 
     Excel::fake();
