@@ -11,6 +11,7 @@ use App\Models\Filter;
 use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
+use App\Models\User;
 use App\Modules\DamageAssessment\Http\Requests\HudBuildingUnitsRequest;
 use App\Services\ArcgisService;
 use Carbon\Carbon;
@@ -28,6 +29,20 @@ use Yajra\Datatables\Datatables;
 
 class DamageAssessmentController extends Controller
 {
+    private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES = [
+        'ياسمين ماهر مصطفى ابومدللة',
+        'غادة محمود عبدالحي الهباش',
+        'رانيه سليمان راشد شعت',
+    ];
+
+    private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS = [
+        '800409062',
+        '400940623',
+        '803275288',
+        '800900607',
+        '801773987',
+    ];
+
     public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse
     {
         if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
@@ -1319,7 +1334,7 @@ class DamageAssessmentController extends Controller
                     $this->filterLabelForAssessmentValue($filtersByList, $row->name, $rawValue)
                 );
             })
-            ->addColumn('answer', function ($row) use ($record, $allEdits, $isAssessmentReadOnly, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList) {
+            ->addColumn('answer', function ($row) use ($record, $allEdits, $canEditAssessment, $isAssessmentReadOnly, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList) {
                 if ($row->name === 'attachments') {
                     if (! $model || ! $model->objectid || ! $token || $attachments->isEmpty()) {
                         return '<span class="text-muted">'.e(__('ui.damage_common.no_attachments')).'</span>';
@@ -1373,7 +1388,7 @@ class DamageAssessmentController extends Controller
                     'QC/QA Engineer',
                     'Legal Auditor',
                     'Auditing Supervisor',
-                ]);
+                ]) || $canEditAssessment;
 
                 if ((is_null($originalValue) || $originalValue === '') && $fieldEdits->isEmpty()) {
                     return '<span class="text-muted">-</span>';
@@ -1630,11 +1645,15 @@ class DamageAssessmentController extends Controller
 
     private function canEditAssessmentForBuilding($user, ?Building $building): bool
     {
-        if (! $user instanceof \App\Models\User || ! $building instanceof Building) {
+        if (! $user instanceof User || ! $building instanceof Building) {
             return false;
         }
 
         if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+            return true;
+        }
+
+        if ($this->hasTemporaryStatusAssignmentException($user)) {
             return true;
         }
 
@@ -1657,6 +1676,12 @@ class DamageAssessmentController extends Controller
             ->where('user_id', $user->id)
             ->whereIn('type', $assignmentTypes)
             ->exists();
+    }
+
+    private function hasTemporaryStatusAssignmentException(User $user): bool
+    {
+        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
+            || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);
     }
 
     private function withSummaryAssessmentRows($assessmentRows, string $type, array $record, $allEdits, ?string $search)

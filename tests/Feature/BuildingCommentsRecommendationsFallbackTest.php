@@ -211,6 +211,68 @@ it('shows the latest edited housing value for users without edit permission', fu
         ->toBeNull();
 });
 
+it('keeps temporary exception users editable in the audit assessment table', function (): void {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'fake-token',
+        ], 200),
+        '*' => Http::response([
+            'attachmentInfos' => [],
+        ], 200),
+    ]);
+
+    $user = User::factory()->create([
+        'id_no' => '800409062',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'housing_unit_group',
+        'label' => 'Housing Unit',
+        'hint' => '',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'unit_damage_status',
+        'label' => 'Unit Damage Status',
+        'hint' => 'Damage status',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 990011,
+        'globalid' => 'temporary-exception-housing-building',
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 990012,
+        'globalid' => 'temporary-exception-housing-unit',
+        'parentglobalid' => $building->globalid,
+        'unit_damage_status' => 'Partially Damaged',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $housingUnit->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_damage_status',
+        'field_value' => 'Totally Damaged',
+        'user_id' => $user->id,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->getJson('/damage-assessment/showHousings?globalid='.$housingUnit->globalid);
+
+    $response->assertOk();
+
+    $damageStatusRow = collect($response->json('data'))->firstWhere('name', 'unit_damage_status');
+
+    expect($damageStatusRow['answer'] ?? '')
+        ->toContain('Partially Damaged')
+        ->toContain('Totally Damaged')
+        ->and($damageStatusRow['editAnswer'] ?? '')
+        ->toContain('inline-edit-input')
+        ->toContain('Totally Damaged');
+});
+
 it('keeps comments recommendations value when it exists', function (): void {
     $building = Building::query()->create([
         'objectid' => 990002,
