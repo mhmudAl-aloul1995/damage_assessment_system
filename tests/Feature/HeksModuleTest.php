@@ -602,7 +602,7 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('plain answer')
         ->assertSee('معلومات التعريف')
         ->assertSee('رقم الطلب/الكود')
-        ->assertSee('identification/application_code')
+        ->assertDontSee('identification/application_code')
         ->assertSee('GDE7')
         ->assertSee('معلومات الحماية')
         ->assertDontSee('Group Vb7yr42')
@@ -614,7 +614,7 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('second-photo.jpg')
         ->assertSee('Nested Group')
         ->assertSee('Inner Question Label')
-        ->assertSee('nested_group/inner_question')
+        ->assertDontSee('nested_group/inner_question')
         ->assertSee('inner answer');
 });
 

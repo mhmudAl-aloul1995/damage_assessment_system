@@ -773,9 +773,6 @@
                                                 <div class="row g-4 align-items-start">
                                                     <div class="col-lg-5">
                                                         <div class="survey-question">{{ $item['question'] }}</div>
-                                                        @if (($item['field_key'] ?? $item['question']) !== $item['question'])
-                                                            <div class="text-muted small mt-1">{{ $item['field_key'] }}</div>
-                                                        @endif
                                                     </div>
                                                     <div class="col-lg-7">
                                                         <div class="survey-answer mb-3">{{ $item['value'] }}</div>

@@ -1308,6 +1308,7 @@ class HeksController extends Controller
         return $sections
             ->filter(fn (array $section): bool => $section['items'] !== [])
             ->map(fn (array $section, string $sectionKey): array => $this->resolveSurveySectionLabels($section, $sectionKey))
+            ->sortBy(fn (array $section, string $sectionKey): int => $this->surveySectionSortOrder($section, $sectionKey))
             ->all();
     }
 
@@ -1610,6 +1611,39 @@ class HeksController extends Controller
             'title' => $title,
             'description' => trim((string) ($label['description'] ?? '')),
         ];
+    }
+
+    /**
+     * @param  array{title: string, description: string, tone: string, items: array<int, mixed>}  $section
+     */
+    private function surveySectionSortOrder(array $section, string $sectionKey): int
+    {
+        $sectionName = str_starts_with($sectionKey, 'kobo:')
+            ? substr($sectionKey, 5)
+            : $sectionKey;
+        $sectionName = str($sectionName)->replace('-', '_')->lower()->toString();
+        $orders = (array) config('heks_kobo.section_order', []);
+
+        if (isset($orders[$sectionName]) && is_numeric($orders[$sectionName])) {
+            return (int) $orders[$sectionName];
+        }
+
+        $title = (string) $section['title'];
+
+        return match (true) {
+            str_contains($title, 'التعريف') => 10,
+            str_contains($title, 'الهشاشة') => 20,
+            str_contains($title, 'الحماية') => 30,
+            str_contains($title, 'التكوين') => 40,
+            str_contains($title, 'الوحدة السكنية') => 50,
+            str_contains($title, 'المعيشية') => 60,
+            str_contains($title, 'المأوى') || str_contains($title, 'المأوي') => 70,
+            str_contains($title, 'المستندات') => 80,
+            str_contains($title, 'صور') => 90,
+            str_contains($title, 'توصيات') => 100,
+            str_contains($title, 'النظام') => 110,
+            default => 500,
+        };
     }
 
     /**
