@@ -134,6 +134,7 @@ class HeksKoboSubmissionSyncService
         $fieldEngineer = $this->cleanEngineerName($this->first($payload, [
             'engineer_name',
             'field_engineer',
+            'q_093',
             'Engineer Name',
             "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
             "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
@@ -142,7 +143,7 @@ class HeksKoboSubmissionSyncService
         $data = array_filter([
             'name' => $beneficiaryName,
             'identity_number' => $this->first($payload, ['identity_number', 'id_number', 'beneficiary_id_number', '_003', "\u{0631}\u{0642}\u{0645} \u{0647}\u{0648}\u{064A}\u{0629} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}", "\u{0631}\u{0642}\u{0645} \u{0627}\u{0644}\u{0647}\u{0648}\u{064A}\u{0629}", "\u{0627}\u{0644}\u{0647}\u{0648}\u{064A}\u{0629}", 'رقم هوية رب الأسرة', 'رقم الهوية', 'الهوية']),
-            'phone' => $this->first($payload, ['phone', 'phone_number', 'mobile', 'رقم التواصل', 'رقم الجوال']),
+            'phone' => $this->first($payload, ['phone', 'phone_number', 'mobile', 'q_103', 'q_095', 'رقم التواصل', 'رقم الجوال']),
             'alternate_phone' => $this->first($payload, ['alternate_phone', 'رقم تواصل بديل', 'رقم التواصل2']),
             'field_engineer' => $fieldEngineer,
             'field_engineer_user_id' => $this->engineerUserResolver->resolve($fieldEngineer),
@@ -1064,7 +1065,8 @@ class HeksKoboSubmissionSyncService
 
         return in_array($normalized, ['na', 'n/a', 'n/a#', 'na#', '#na', '#n/a', 'null', 'undefined'], true)
             || str_starts_with($normalized, 'na')
-            || str_starts_with($normalized, '#na');
+            || str_starts_with($normalized, '#na')
+            || preg_match('/^[\s_\-]+$/u', $value) === 1;
     }
 
     private function isInvalidBeneficiaryName(string $value): bool

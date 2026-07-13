@@ -256,6 +256,35 @@ test('kobo rest submission syncs HEKS main KoBo field names from api backfill pa
         ->and($beneficiary->occupancy_status)->toBe('56');
 });
 
+test('kobo rest submission syncs current HEKS main technical contact fields', function () {
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-main', [
+            '_uuid' => 'uuid:heks-main-current-technical-fields',
+            'identification/application_code' => 'GDE7',
+            'identification/q_093' => 'Engineer Name',
+            'identification/q_103' => '0599465783',
+            'family_info/head_name' => 'Current Technical Beneficiary',
+            'family_info/_003' => '906762851',
+            'family_info/q_095' => '0599465784',
+            'family_info/area_001' => 'Beach Camp',
+            'family_info/address_001' => 'West of mosque',
+            'housing_info/occupancy_type' => '________________',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'GDE7')->sole();
+
+    expect($beneficiary->name)->toBe('Current Technical Beneficiary')
+        ->and($beneficiary->identity_number)->toBe('906762851')
+        ->and($beneficiary->phone)->toBe('0599465783')
+        ->and($beneficiary->field_engineer)->toBe('Engineer Name')
+        ->and($beneficiary->area)->toBe('Beach Camp')
+        ->and($beneficiary->address)->toBe('West of mosque')
+        ->and($beneficiary->occupancy_status)->toBeNull();
+});
+
 test('kobo rest submission applies configured HEKS Kobo display labels to technical fields', function () {
     HeksKoboFieldMapping::query()->create([
         'service_name' => 'heks-main',
