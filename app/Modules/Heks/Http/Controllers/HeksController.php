@@ -1251,7 +1251,8 @@ class HeksController extends Controller
             ->groupBy(fn (HeksSurveyValueHistory $history): string => $history->source.'|'.$history->field_key);
 
         foreach ($rawData as $source => $values) {
-            $values = is_array($values) ? $values : ['value' => $values];
+            $originalValues = is_array($values) ? $values : ['value' => $values];
+            $values = $this->flattenSurveyValues($originalValues);
 
             foreach ($values as $key => $value) {
                 $key = (string) $key;
@@ -1279,6 +1280,7 @@ class HeksController extends Controller
                     'question' => $key,
                     'value' => $displayValue,
                     'source' => (string) $source,
+                    'editable' => array_key_exists($key, $originalValues) && is_scalar($originalValues[$key]),
                     'history' => $histories->get((string) $source.'|'.$key, collect())
                         ->map(fn (HeksSurveyValueHistory $history): array => [
                             'old_value' => $history->old_value,
@@ -1296,6 +1298,44 @@ class HeksController extends Controller
         return $sections
             ->filter(fn (array $section): bool => $section['items'] !== [])
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function flattenSurveyValues(array $values, string $prefix = ''): array
+    {
+        $flat = [];
+
+        foreach ($values as $key => $value) {
+            $key = (string) $key;
+            $path = $prefix === '' ? $key : "{$prefix}/{$key}";
+
+            if (is_array($value)) {
+                if (array_is_list($value)) {
+                    foreach ($value as $index => $item) {
+                        $itemPath = $path.'['.($index + 1).']';
+
+                        if (is_array($item)) {
+                            $flat = array_replace($flat, $this->flattenSurveyValues($item, $itemPath));
+                        } else {
+                            $flat[$itemPath] = $item;
+                        }
+                    }
+
+                    continue;
+                }
+
+                $flat = array_replace($flat, $this->flattenSurveyValues($value, $path));
+
+                continue;
+            }
+
+            $flat[$path] = $value;
+        }
+
+        return $flat;
     }
 
     private function surveySectionKey(string $key): string

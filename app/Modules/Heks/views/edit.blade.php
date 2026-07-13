@@ -776,16 +776,18 @@
                                                     </div>
                                                     <div class="col-lg-7">
                                                         <div class="survey-answer mb-3">{{ $item['value'] }}</div>
-                                                        <form method="POST" action="{{ route('heks.beneficiaries.survey-values.update', $beneficiary) }}" class="survey-edit-box">
-                                                            @csrf
-                                                            @method('PUT')
-                                                            <input type="hidden" name="source" value="{{ $item['source'] }}">
-                                                            <input type="hidden" name="field_key" value="{{ $item['question'] }}">
-                                                            <div class="d-flex flex-column flex-md-row gap-2">
-                                                                <input name="value" class="form-control form-control-sm" value="{{ $item['value'] }}" aria-label="تعديل قيمة الاستبيان">
-                                                                <button class="btn btn-sm btn-light-primary flex-shrink-0">حفظ</button>
-                                                            </div>
-                                                        </form>
+                                                        @if ($item['editable'] ?? false)
+                                                            <form method="POST" action="{{ route('heks.beneficiaries.survey-values.update', $beneficiary) }}" class="survey-edit-box">
+                                                                @csrf
+                                                                @method('PUT')
+                                                                <input type="hidden" name="source" value="{{ $item['source'] }}">
+                                                                <input type="hidden" name="field_key" value="{{ $item['question'] }}">
+                                                                <div class="d-flex flex-column flex-md-row gap-2">
+                                                                    <input name="value" class="form-control form-control-sm" value="{{ $item['value'] }}" aria-label="تعديل قيمة الاستبيان">
+                                                                    <button class="btn btn-sm btn-light-primary flex-shrink-0">حفظ</button>
+                                                                </div>
+                                                            </form>
+                                                        @endif
 
                                                         @if ($historyCount > 0)
                                                             <button class="btn btn-sm btn-light mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $historyId }}" aria-expanded="false" aria-controls="{{ $historyId }}">

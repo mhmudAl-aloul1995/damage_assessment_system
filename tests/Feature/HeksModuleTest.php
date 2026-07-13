@@ -540,6 +540,41 @@ it('updates HEKS survey values and stores previous values in history', function 
     expect(HeksSurveyValueHistory::query()->where('heks_beneficiary_id', $beneficiary->id)->count())->toBe(1);
 });
 
+it('shows nested HEKS Kobo survey answers as individual rows', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY-NESTED',
+        'name' => 'Nested Survey Beneficiary',
+        'raw_data' => [
+            'heks-main' => [
+                'plain_question' => 'plain answer',
+                'photo_group' => [
+                    ['photo' => 'first-photo.jpg'],
+                    ['photo' => 'second-photo.jpg'],
+                ],
+                'nested_group' => [
+                    'inner_question' => 'inner answer',
+                ],
+            ],
+        ],
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.edit', $beneficiary))
+        ->assertOk()
+        ->assertSee('plain_question')
+        ->assertSee('plain answer')
+        ->assertSee('photo_group[1]/photo')
+        ->assertSee('first-photo.jpg')
+        ->assertSee('photo_group[2]/photo')
+        ->assertSee('second-photo.jpg')
+        ->assertSee('nested_group/inner_question')
+        ->assertSee('inner answer');
+});
+
 it('shows follow-up BOQ items directly on the follow-ups page', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
