@@ -126,11 +126,11 @@ class HeksController extends Controller
 
     public function import(ImportHeksSpreadsheetRequest $request, HeksSpreadsheetImportService $importer): RedirectResponse
     {
-        $result = $importer->import($request->file('file'), (string) $request->validated('type'), $request->user()?->id);
+        $result = $importer->import($request->file('file'), (string) $request->validated('type'), $request->user()?->id, false);
 
         return redirect()
             ->route('heks.imports')
-            ->with('success', "تم الاستيراد: {$result['summary']['created_rows']} جديد، {$result['summary']['updated_rows']} تحديث، {$result['summary']['skipped_rows']} متجاوز.");
+            ->with('success', "تم الاستيراد: {$result['summary']['created_rows']} جديد، {$result['summary']['updated_rows']} تحديث، {$result['summary']['skipped_rows']} متجاوز. تم حفظ روابط BOQ للمتابعات دون تنزيل جماعي لتجنب انقطاع الطلب.");
     }
 
     public function beneficiaries(Request $request): View

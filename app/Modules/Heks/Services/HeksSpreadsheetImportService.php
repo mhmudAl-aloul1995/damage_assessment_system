@@ -26,6 +26,8 @@ use Throwable;
 
 class HeksSpreadsheetImportService
 {
+    private bool $autoImportFollowUpBoqs = true;
+
     public function __construct(private HeksEngineerUserResolver $engineerUserResolver) {}
 
     private const ASSESSMENT_SHEETS = [
@@ -81,10 +83,12 @@ class HeksSpreadsheetImportService
     /**
      * @return array{import: HeksImport, summary: array<string, mixed>}
      */
-    public function import(UploadedFile $file, string $type, ?int $userId = null): array
+    public function import(UploadedFile $file, string $type, ?int $userId = null, bool $autoImportFollowUpBoqs = true): array
     {
         $spreadsheet = IOFactory::load($file->getRealPath());
         $parentCodes = $this->parentCodes($spreadsheet);
+        $previousAutoImportFollowUpBoqs = $this->autoImportFollowUpBoqs;
+        $this->autoImportFollowUpBoqs = $autoImportFollowUpBoqs;
         $summary = [
             'total_rows' => 0,
             'created_rows' => 0,
@@ -94,36 +98,39 @@ class HeksSpreadsheetImportService
         ];
         $createdImport = null;
 
-        DB::transaction(function () use ($spreadsheet, $file, $type, $userId, $parentCodes, &$summary, &$createdImport): void {
-            foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
-                $sheetType = $type === 'auto' ? $this->detectType($sheet) : $this->normalizeRequestedType($type, $sheet);
+        try {
+            DB::transaction(function () use ($spreadsheet, $file, $type, $userId, $parentCodes, &$summary, &$createdImport): void {
+                foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
+                    $sheetType = $type === 'auto' ? $this->detectType($sheet) : $this->normalizeRequestedType($type, $sheet);
 
-                if ($sheetType === null) {
-                    continue;
+                    if ($sheetType === null) {
+                        continue;
+                    }
+
+                    $sheetSummary = $this->importSheet($sheet, $sheetType, $parentCodes);
+                    $summary['total_rows'] += $sheetSummary['total'];
+                    $summary['created_rows'] += $sheetSummary['created'];
+                    $summary['updated_rows'] += $sheetSummary['updated'];
+                    $summary['skipped_rows'] += $sheetSummary['skipped'];
+                    $summary['sheets'][] = array_merge(['name' => $sheet->getTitle(), 'type' => $sheetType], $sheetSummary);
                 }
 
-                $sheetSummary = $this->importSheet($sheet, $sheetType, $parentCodes);
-                $summary['total_rows'] += $sheetSummary['total'];
-                $summary['created_rows'] += $sheetSummary['created'];
-                $summary['updated_rows'] += $sheetSummary['updated'];
-                $summary['skipped_rows'] += $sheetSummary['skipped'];
-                $summary['sheets'][] = array_merge(['name' => $sheet->getTitle(), 'type' => $sheetType], $sheetSummary);
-            }
-
-            $createdImport = HeksImport::query()->create([
-                'user_id' => $userId,
-                'type' => $type,
-                'filename' => $file->getClientOriginalName(),
-                'sheet_name' => collect($summary['sheets'])->pluck('name')->implode(', '),
-                'total_rows' => $summary['total_rows'],
-                'created_rows' => $summary['created_rows'],
-                'updated_rows' => $summary['updated_rows'],
-                'skipped_rows' => $summary['skipped_rows'],
-                'summary' => $summary,
-            ]);
-        });
-
-        $spreadsheet->disconnectWorksheets();
+                $createdImport = HeksImport::query()->create([
+                    'user_id' => $userId,
+                    'type' => $type,
+                    'filename' => $file->getClientOriginalName(),
+                    'sheet_name' => collect($summary['sheets'])->pluck('name')->implode(', '),
+                    'total_rows' => $summary['total_rows'],
+                    'created_rows' => $summary['created_rows'],
+                    'updated_rows' => $summary['updated_rows'],
+                    'skipped_rows' => $summary['skipped_rows'],
+                    'summary' => $summary,
+                ]);
+            });
+        } finally {
+            $this->autoImportFollowUpBoqs = $previousAutoImportFollowUpBoqs;
+            $spreadsheet->disconnectWorksheets();
+        }
 
         return [
             'import' => $createdImport,
@@ -555,7 +562,7 @@ class HeksSpreadsheetImportService
 
         $attachment = $this->followUpBoqAttachment($beneficiary, $followUp, $row, $source);
 
-        if ($attachment !== null) {
+        if ($attachment !== null && $this->autoImportFollowUpBoqs) {
             $summary = $this->importFollowUpBoqWorkbook($beneficiary, $followUp, $attachment);
 
             if ($summary !== null) {

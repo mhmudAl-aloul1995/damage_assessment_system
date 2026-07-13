@@ -712,6 +712,29 @@ it('renders HEKS pagination with compact bootstrap controls', function () {
         ->assertDontSee('<svg', false);
 });
 
+it('imports follow up spreadsheets without downloading BOQ files when disabled', function () {
+    $importer = app(HeksSpreadsheetImportService::class);
+    $followUpPath = heksWorkbookPath('followups-no-boq-download');
+
+    try {
+        heksWriteFollowUpsWorkbook($followUpPath);
+        Http::preventStrayRequests();
+
+        $summary = $importer->import(
+            new UploadedFile($followUpPath, 'heks-followups.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true),
+            'followups',
+            null,
+            false
+        )['summary'];
+
+        expect($summary['created_rows'] + $summary['updated_rows'])->toBe(1)
+            ->and(HeksAttachment::query()->where('attachment_type', 'follow_up_boq')->where('filename', 'boq.xlsx')->exists())->toBeTrue()
+            ->and(HeksBoqItem::query()->count())->toBe(0);
+    } finally {
+        @unlink($followUpPath);
+    }
+});
+
 function heksWorkbookPath(string $name): string
 {
     return sys_get_temp_dir().DIRECTORY_SEPARATOR.$name.'-'.Str::random(8).'.xlsx';
