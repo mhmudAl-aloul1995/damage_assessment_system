@@ -71,7 +71,8 @@
                             @endif
                         </td>
                         <td>
-                            <span class="badge badge-light">{{ $beneficiary->scores_count }} تقييم</span>
+                            <span class="badge badge-light-primary">{{ $beneficiary->labels_count }} استبيان</span>
+                            <span class="badge badge-light">{{ $beneficiary->scores_count }} درجات</span>
                             <span class="badge badge-light">{{ $beneficiary->payments_count }} دفعة</span>
                             <span class="badge badge-light">{{ $beneficiary->work_assignments_count }} توزيع</span>
                             <span class="badge badge-light">{{ $beneficiary->follow_ups_count }} متابعة</span>

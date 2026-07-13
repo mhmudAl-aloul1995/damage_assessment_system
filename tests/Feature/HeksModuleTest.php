@@ -121,6 +121,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->get(route('heks.beneficiaries', ['q' => 'DGN1', 'selected' => 1]))
             ->assertOk()
             ->assertSee('DGN1')
+            ->assertSee('استبيان')
+            ->assertSee('درجات')
             ->assertSee('مختار')
             ->assertSee('مدفوع كامل');
 
@@ -573,6 +575,30 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('second-photo.jpg')
         ->assertSee('nested_group/inner_question')
         ->assertSee('inner answer');
+});
+
+it('shows HEKS survey and score counts separately on the beneficiaries list', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'LIST-COUNTS',
+        'name' => 'List Counts Beneficiary',
+    ]);
+
+    HeksLabel::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'source' => 'heks-main',
+        'label_key' => 'survey:question',
+        'label_value' => 'answer',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries', ['q' => 'LIST-COUNTS']))
+        ->assertOk()
+        ->assertSee('1 استبيان')
+        ->assertSee('0 درجات');
 });
 
 it('shows follow-up BOQ items directly on the follow-ups page', function () {
