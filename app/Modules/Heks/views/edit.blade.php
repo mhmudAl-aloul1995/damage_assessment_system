@@ -736,7 +736,7 @@
                                     $itemsCount = count($section['items']);
                                     $answeredCount = collect($section['items'])->filter(fn ($item) => filled($item['value']))->count();
                                     $completionPercent = $itemsCount > 0 ? (int) round(($answeredCount / $itemsCount) * 100) : 0;
-                                    $isOpen = false;
+                                    $isOpen = $loop->first;
                                 @endphp
                                 <div class="survey-section mb-4">
                                     <div class="survey-section-header {{ $isOpen ? '' : 'collapsed' }} d-flex justify-content-between align-items-center flex-wrap gap-3"
