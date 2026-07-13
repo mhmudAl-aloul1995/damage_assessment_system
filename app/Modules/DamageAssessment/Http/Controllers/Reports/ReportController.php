@@ -119,10 +119,10 @@ class ReportController extends Controller
 
         $stats = HousingUnit::join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
             ->whereIn('buildings.assignedto', $assignedto)
-            ->whereBetween('housing_units.submition_date', [$start, $end])
+            ->whereBetween('housing_units.creationdate', [$start, $end])
             ->selectRaw("
             buildings.assignedto, 
-            DATE(housing_units.submition_date) as date, 
+            DATE(housing_units.creationdate) as date, 
             COUNT(CASE WHEN housing_units.unit_damage_status = 'fully_damaged2' THEN 1 END) as tda, 
             COUNT(CASE WHEN housing_units.unit_damage_status = 'partially_damaged2' THEN 1 END) as pda
         ")
