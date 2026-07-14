@@ -211,6 +211,7 @@ class HeksKoboValueDisplayService
             str_replace('_', '-', $serviceName),
             str_replace('-', '_', $serviceName),
             match ($serviceName) {
+                'Heks Final V1' => 'heks-main',
                 'heks_main' => 'heks-main',
                 'heks-main' => 'heks_main',
                 'heks_followup' => 'heks-followups',
