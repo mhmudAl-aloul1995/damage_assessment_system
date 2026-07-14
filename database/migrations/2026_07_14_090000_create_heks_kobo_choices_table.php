@@ -8,23 +8,25 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('heks_kobo_choices', function (Blueprint $table): void {
-            $table->id();
-            $table->string('service_name')->index();
-            $table->text('question_key');
-            $table->string('list_name')->nullable()->index();
-            $table->string('choice_name')->index();
-            $table->text('choice_label')->nullable();
-            $table->string('language')->nullable();
-            $table->string('version')->nullable();
-            $table->unsignedInteger('sort_order')->default(0);
-            $table->boolean('is_active')->default(true)->index();
-            $table->json('raw_data')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('heks_kobo_choices')) {
+            Schema::create('heks_kobo_choices', function (Blueprint $table): void {
+                $table->id();
+                $table->string('service_name')->index();
+                $table->string('question_key', 512);
+                $table->string('list_name')->nullable()->index();
+                $table->string('choice_name')->index();
+                $table->text('choice_label')->nullable();
+                $table->string('language')->nullable();
+                $table->string('version')->nullable();
+                $table->unsignedInteger('sort_order')->default(0);
+                $table->boolean('is_active')->default(true)->index();
+                $table->json('raw_data')->nullable();
+                $table->timestamps();
 
-            $table->unique(['service_name', 'question_key', 'choice_name', 'language'], 'heks_kobo_choices_question_unique');
-            $table->index(['service_name', 'question_key'], 'heks_kobo_choices_question_idx');
-        });
+                $table->unique(['service_name', 'question_key', 'choice_name', 'language'], 'heks_kobo_choices_question_unique');
+                $table->index(['service_name', 'question_key'], 'heks_kobo_choices_question_idx');
+            });
+        }
 
         Schema::table('heks_kobo_field_mappings', function (Blueprint $table): void {
             if (! Schema::hasColumn('heks_kobo_field_mappings', 'field_type')) {
