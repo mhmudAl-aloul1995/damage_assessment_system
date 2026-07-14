@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\ExportDataJob;
+use App\Models\Building;
 use App\Models\Export;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -88,10 +89,13 @@ it('marks an orphaned processing export as failed when checking status', functio
     expect($export->fresh()->status)->toBe('failed');
 });
 
-it('requeues an orphaned pending export when checking status', function () {
-    Queue::fake();
-
+it('runs an orphaned pending export inline when checking status', function () {
     $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 9001,
+        'globalid' => 'pending-export-building',
+    ]);
 
     $export = Export::query()->create([
         'status' => 'pending',
@@ -116,10 +120,14 @@ it('requeues an orphaned pending export when checking status', function () {
 
     $response
         ->assertOk()
-        ->assertJsonPath('status', 'pending');
+        ->assertJsonPath('status', 'done')
+        ->assertJsonPath('processed', 1);
 
-    Queue::assertPushed(
-        ExportDataJob::class,
-        fn (ExportDataJob $job): bool => $job->exportId === $export->id,
-    );
+    $export->refresh();
+
+    expect($export->file_name)->not->toBeNull();
+
+    if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+        unlink(storage_path('app/public/'.$export->file_name));
+    }
 });

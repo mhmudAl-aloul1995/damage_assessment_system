@@ -100,9 +100,9 @@ class ExportDataController extends Controller
             ->where('user_id', auth()->id())
             ->findOrFail($id);
 
-        if ($this->isOrphanedPendingExport($export)) {
-            ExportDataJob::dispatch($export->id)->onQueue('exports');
-            $export->touch();
+        if ($this->shouldRunPendingExportInline($export)) {
+            (new ExportDataJob($export->id))->handle();
+
             $export->refresh();
         }
 
@@ -317,7 +317,7 @@ class ExportDataController extends Controller
             && ! $this->hasExportsQueueJob();
     }
 
-    private function isOrphanedPendingExport(Export $export): bool
+    private function shouldRunPendingExportInline(Export $export): bool
     {
         return $export->status === 'pending'
             && $export->file_name === null
