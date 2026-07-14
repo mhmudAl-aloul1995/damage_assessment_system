@@ -1348,7 +1348,7 @@ class HeksController extends Controller
                 $questionLabel = $this->surveyQuestionLabel($key, (string) $source, $displayLabels);
                 $questionSignature = $this->surveyQuestionSignature($questionLabel);
 
-                if ($questionSignature !== '' && isset($seenQuestionLabels[$questionSignature]) && ! $this->isStructuredSurveyKey($key)) {
+                if ($questionSignature !== '' && isset($seenQuestionLabels[$questionSignature]) && ! $this->isRepeatableSurveyKey($key)) {
                     continue;
                 }
 
@@ -1758,9 +1758,9 @@ class HeksController extends Controller
             ->toString();
     }
 
-    private function isStructuredSurveyKey(string $key): bool
+    private function isRepeatableSurveyKey(string $key): bool
     {
-        return str_contains($key, '/') || str_contains($key, '[');
+        return str_contains($key, '[');
     }
 
     /**

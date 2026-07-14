@@ -682,10 +682,6 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
 });
 
 it('hides duplicate raw Kobo survey values from the display', function () {
-    $role = Role::findOrCreate('Database Officer', 'web');
-    $user = User::factory()->create();
-    $user->assignRole($role);
-
     $beneficiary = HeksBeneficiary::query()->create([
         'code' => 'SURVEY-RAW',
         'name' => 'Raw Survey Beneficiary',
@@ -694,7 +690,11 @@ it('hides duplicate raw Kobo survey values from the display', function () {
                 'identification' => [
                     'application_code' => 'GDE7',
                 ],
+                'family_info' => [
+                    'has_children' => 'yes',
+                ],
                 'application_code' => 'RAW-DUPLICATE-CODE',
+                'has_children' => 'RAW-FAMILY-SCORE',
             ],
         ],
     ]);
@@ -716,13 +716,41 @@ it('hides duplicate raw Kobo survey values from the display', function () {
         'display_label' => 'Application Code',
     ]);
 
-    $this->actingAs($user)
-        ->get(route('heks.beneficiaries.edit', $beneficiary))
-        ->assertOk()
-        ->assertSee('Application Code')
-        ->assertSee('GDE7')
-        ->assertDontSee('RAW-DUPLICATE-CODE')
-        ->assertDontSee('Raw Kobo:');
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'family_info/has_children',
+        'column_name' => 'family_info_has_children',
+        'display_label' => 'Has Children',
+        'notes' => json_encode(['form_order' => 2]),
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'has_children',
+        'column_name' => 'has_children',
+        'display_label' => 'Has Children',
+    ]);
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'surveySections');
+    $method->setAccessible(true);
+
+    $sections = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary->load('surveyValueHistories'),
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+    $values = collect($sections)
+        ->flatMap(fn (array $section): array => $section['items'])
+        ->pluck('value')
+        ->all();
+
+    expect($values)
+        ->toContain('GDE7')
+        ->toContain('yes')
+        ->not->toContain('RAW-DUPLICATE-CODE')
+        ->not->toContain('RAW-FAMILY-SCORE');
 });
 
 it('resolves Kobo choice labels without guessing ordinary numeric values', function () {
