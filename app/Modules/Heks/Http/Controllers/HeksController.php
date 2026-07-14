@@ -1784,7 +1784,30 @@ class HeksController extends Controller
             return false;
         }
 
-        return in_array($value, $this->surveyFieldLookupKeys($key), true);
+        return in_array($value, $this->surveyFieldLookupKeys($key), true)
+            || $this->isKoboTechnicalFieldToken($value);
+    }
+
+    private function isKoboTechnicalFieldToken(string $value): bool
+    {
+        if (preg_match('/^q_\d+(?:_\d+)?$/i', $value) === 1) {
+            return true;
+        }
+
+        if (preg_match('/^_\d{3}$/', $value) === 1) {
+            return true;
+        }
+
+        return in_array(strtolower($value), [
+            'id',
+            'gps',
+            'visit_date',
+            'application_code',
+            'respondent_name',
+            'head_name',
+            'area_001',
+            'address_001',
+        ], true);
     }
 
     private function surveyContextualQuestionLabel(string $key, string $label): string

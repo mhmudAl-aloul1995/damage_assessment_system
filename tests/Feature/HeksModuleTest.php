@@ -760,6 +760,8 @@ it('suppresses technical placeholders and disambiguates repeated family composit
         'raw_data' => [
             'Heks Final V1' => [
                 'رقم الطلب/الكود' => 'application_code',
+                'اسم رب الأسرة' => 'head_name',
+                'متوسط الدخل بالشيكل' => 'q_041',
                 'group_rs8tf50' => [
                     'group_hg1bp50' => [
                         'q_024' => '1',
@@ -806,6 +808,8 @@ it('suppresses technical placeholders and disambiguates repeated family composit
         ->not->toBeNull()
         ->and($applicationCode['value'])->toBe('')
         ->and($items->pluck('value')->all())->not->toContain('application_code')
+        ->and($items->pluck('value')->all())->not->toContain('head_name')
+        ->and($items->pluck('value')->all())->not->toContain('q_041')
         ->and($underEightMale['question'])->toBe('أفراد الأسرة 8 سنوات وأقل - ذكور')
         ->and($eightToSeventeenMale['question'])->toBe('أفراد الأسرة 8-17 سنة - ذكور');
 });
