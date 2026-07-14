@@ -542,6 +542,33 @@ it('updates HEKS survey values and stores previous values in history', function 
     ]);
 
     expect(HeksSurveyValueHistory::query()->where('heks_beneficiary_id', $beneficiary->id)->count())->toBe(1);
+})->skip('Survey value editing is temporarily disabled.');
+
+it('blocks HEKS survey value edits while editing is temporarily disabled', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY-BLOCKED',
+        'name' => 'Survey Blocked Beneficiary',
+        'raw_data' => [
+            'KOBO_List' => [
+                'roof_status' => 'needs repair',
+            ],
+        ],
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('heks.beneficiaries.survey-values.update', $beneficiary), [
+            'source' => 'KOBO_List',
+            'field_key' => 'roof_status',
+            'value' => 'fixed',
+        ])
+        ->assertForbidden();
+
+    expect($beneficiary->refresh()->raw_data['KOBO_List']['roof_status'])->toBe('needs repair')
+        ->and(HeksSurveyValueHistory::query()->where('heks_beneficiary_id', $beneficiary->id)->count())->toBe(0);
 });
 
 it('shows nested HEKS Kobo survey answers as individual rows', function () {

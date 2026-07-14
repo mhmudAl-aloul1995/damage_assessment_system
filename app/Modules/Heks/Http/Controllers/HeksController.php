@@ -43,6 +43,8 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class HeksController extends Controller
 {
+    private const SURVEY_VALUE_EDITING_ENABLED = false;
+
     public function dashboard(Request $request): View
     {
         $this->authorizeAccess();
@@ -258,6 +260,7 @@ class HeksController extends Controller
     public function updateSurveyValue(UpdateHeksSurveyValueRequest $request, HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): RedirectResponse
     {
         $this->authorizeAccess();
+        abort_unless(self::SURVEY_VALUE_EDITING_ENABLED, 403);
 
         $data = $request->validated();
         $rawData = $beneficiary->raw_data ?? [];
@@ -1304,7 +1307,9 @@ class HeksController extends Controller
                         : $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels),
                     'sort_order' => $this->surveySortOrder($key, (string) $source, $sortOrders),
                     'source' => (string) $source,
-                    'editable' => array_key_exists($key, $originalValues) && is_scalar($originalValues[$key]),
+                    'editable' => self::SURVEY_VALUE_EDITING_ENABLED
+                        && array_key_exists($key, $originalValues)
+                        && is_scalar($originalValues[$key]),
                     'history' => $histories->get((string) $source.'|'.$key, collect())
                         ->map(fn (HeksSurveyValueHistory $history): array => [
                             'old_value' => $history->old_value,
