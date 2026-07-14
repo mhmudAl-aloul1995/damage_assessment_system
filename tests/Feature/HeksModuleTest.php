@@ -805,8 +805,7 @@ it('suppresses technical placeholders and disambiguates repeated family composit
     $eightToSeventeenMale = $items->firstWhere('field_key', 'group_rs8tf50/group_og8mf61/q_026');
 
     expect($applicationCode)
-        ->not->toBeNull()
-        ->and($applicationCode['value'])->toBe('')
+        ->toBeNull()
         ->and($items->pluck('value')->all())->not->toContain('application_code')
         ->and($items->pluck('value')->all())->not->toContain('head_name')
         ->and($items->pluck('value')->all())->not->toContain('q_041')

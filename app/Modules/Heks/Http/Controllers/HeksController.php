@@ -1289,7 +1289,10 @@ class HeksController extends Controller
                 }
 
                 if ($this->isTechnicalSurveyPlaceholderValue($value, $key)) {
-                    $value = null;
+                    $seen[(string) $source.'|'.$valueKey] = true;
+                    $seenQuestionLabels[$this->surveyQuestionSignature($question)] = true;
+
+                    continue;
                 }
 
                 $resolvedValue = $displayService->resolve((string) $source, $key, $value);
