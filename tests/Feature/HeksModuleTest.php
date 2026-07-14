@@ -813,6 +813,63 @@ it('suppresses technical placeholders and disambiguates repeated family composit
         ->and($eightToSeventeenMale['question'])->toBe('أفراد الأسرة 8-17 سنة - ذكور');
 });
 
+it('does not apply stale Kobo choice labels to text and numeric survey fields', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY-TEXT-CHOICES',
+        'name' => 'Survey Text Choices Beneficiary',
+        'raw_data' => [
+            'heks-main' => [
+                'identification' => [
+                    'application_code' => 'GDE7',
+                    'q_103' => '599465783',
+                ],
+            ],
+        ],
+    ]);
+
+    foreach ([
+        ['identification/application_code', 'Application code', 'text', ['GDE7' => 'application_code'], 1],
+        ['identification/q_103', 'Phone number', 'integer', ['599465783' => 'q_103'], 2],
+    ] as [$field, $label, $type, $choiceLabels, $order]) {
+        HeksKoboFieldMapping::query()->create([
+            'service_name' => 'heks-main',
+            'table_name' => 'heks_main_kobo_records',
+            'kobo_field' => $field,
+            'column_name' => str_replace('/', '_', $field),
+            'display_label' => $label,
+            'field_type' => $type,
+            'data_type' => $type,
+            'notes' => json_encode([
+                'form_order' => $order,
+                'choice_labels' => $choiceLabels,
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'surveySections');
+    $method->setAccessible(true);
+
+    $sections = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary->load('surveyValueHistories'),
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+    $items = collect($sections)->flatMap(fn (array $section): array => $section['items'])->values();
+    $applicationCode = $items->firstWhere('field_key', 'identification/application_code');
+    $phoneNumber = $items->firstWhere('field_key', 'identification/q_103');
+
+    expect($applicationCode)
+        ->not->toBeNull()
+        ->and($applicationCode['value'])->toBe('GDE7')
+        ->and($applicationCode['choices'])->toBe([])
+        ->and($phoneNumber)->not->toBeNull()
+        ->and($phoneNumber['value'])->toBe('599465783')
+        ->and($phoneNumber['choices'])->toBe([])
+        ->and($items->pluck('value')->all())
+        ->not->toContain('application_code')
+        ->not->toContain('q_103');
+});
+
 it('uses template field choices when raw HEKS survey data is keyed by question label', function () {
     $beneficiary = HeksBeneficiary::query()->create([
         'code' => 'SURVEY-LABEL-KEY',

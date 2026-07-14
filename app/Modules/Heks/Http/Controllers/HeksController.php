@@ -1296,9 +1296,15 @@ class HeksController extends Controller
                 }
 
                 $resolvedValue = $displayService->resolve((string) $source, $key, $value);
+                $usesChoices = $this->usesSurveyChoiceDisplay($resolvedValue['type']);
                 $displayValue = $resolvedValue['resolved']
                     ? $resolvedValue['display']
-                    : $this->surveyDisplayValue($value, $key, (string) $source, $choiceLabels);
+                    : $this->surveyDisplayValue(
+                        $value,
+                        $usesChoices ? $key : null,
+                        $usesChoices ? (string) $source : null,
+                        $choiceLabels
+                    );
                 $uniqueKey = (string) $source.'|'.$key;
 
                 if (isset($seen[$uniqueKey])) {
@@ -1317,9 +1323,11 @@ class HeksController extends Controller
                     'raw_value' => $this->surveyDisplayValue($value),
                     'field_type' => $resolvedValue['type'],
                     'warning' => $resolvedValue['warning'],
-                    'choices' => $resolvedValue['choices'] !== []
-                        ? $resolvedValue['choices']
-                        : $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels),
+                    'choices' => $usesChoices
+                        ? ($resolvedValue['choices'] !== []
+                            ? $resolvedValue['choices']
+                            : $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels))
+                        : [],
                     'sort_order' => $templateItem['sort_order'],
                     'source' => (string) $source,
                     'editable' => false,
@@ -1348,9 +1356,15 @@ class HeksController extends Controller
                 }
 
                 $resolvedValue = $displayService->resolve((string) $source, $key, $value);
+                $usesChoices = $this->usesSurveyChoiceDisplay($resolvedValue['type']);
                 $displayValue = $resolvedValue['resolved']
                     ? $resolvedValue['display']
-                    : $this->surveyDisplayValue($value, $key, (string) $source, $choiceLabels);
+                    : $this->surveyDisplayValue(
+                        $value,
+                        $usesChoices ? $key : null,
+                        $usesChoices ? (string) $source : null,
+                        $choiceLabels
+                    );
 
                 if ($displayValue === '') {
                     continue;
@@ -1380,9 +1394,11 @@ class HeksController extends Controller
                     'raw_value' => $this->surveyDisplayValue($value),
                     'field_type' => $resolvedValue['type'],
                     'warning' => $resolvedValue['warning'],
-                    'choices' => $resolvedValue['choices'] !== []
-                        ? $resolvedValue['choices']
-                        : $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels),
+                    'choices' => $usesChoices
+                        ? ($resolvedValue['choices'] !== []
+                            ? $resolvedValue['choices']
+                            : $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels))
+                        : [],
                     'sort_order' => $this->surveySortOrder($key, (string) $source, $sortOrders),
                     'source' => (string) $source,
                     'editable' => self::SURVEY_VALUE_EDITING_ENABLED
@@ -1709,6 +1725,11 @@ class HeksController extends Controller
         $formOrder = is_array($decoded) ? ($decoded['form_order'] ?? null) : null;
 
         return is_numeric($formOrder) ? (int) $formOrder : null;
+    }
+
+    private function usesSurveyChoiceDisplay(?string $fieldType): bool
+    {
+        return in_array($fieldType, ['select_one', 'select_multiple'], true);
     }
 
     /**
