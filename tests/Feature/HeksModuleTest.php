@@ -885,29 +885,16 @@ it('does not apply stale Kobo choice labels to text and numeric survey fields', 
         ->not->toContain('q_103');
 });
 
-it('merges Kobo survey sections that resolve to the same display title', function () {
-    config([
-        'heks_kobo.section_labels.alpha' => [
-            'title' => 'Shared Shelter Title',
-            'description' => 'First section.',
-        ],
-        'heks_kobo.section_labels.beta' => [
-            'title' => 'Shared Shelter Title',
-            'description' => 'Second section.',
-        ],
-        'heks_kobo.section_order.alpha' => 70,
-        'heks_kobo.section_order.beta' => 70,
-    ]);
-
+it('keeps similar Kobo sections separate with clearer display titles', function () {
     $beneficiary = HeksBeneficiary::query()->create([
-        'code' => 'SURVEY-MERGED-SECTIONS',
-        'name' => 'Survey Merged Sections Beneficiary',
+        'code' => 'SURVEY-CLEAR-SECTIONS',
+        'name' => 'Survey Clear Sections Beneficiary',
         'raw_data' => [
             'heks-main' => [
-                'alpha' => [
+                'technical_assessment' => [
                     'roof_status' => 'good',
                 ],
-                'beta' => [
+                'group_fj7vq52' => [
                     'wall_status' => 'fair',
                 ],
             ],
@@ -915,8 +902,8 @@ it('merges Kobo survey sections that resolve to the same display title', functio
     ]);
 
     foreach ([
-        ['alpha/roof_status', 'Roof status', 1],
-        ['beta/wall_status', 'Wall status', 2],
+        ['technical_assessment/roof_status', 'Roof status', 1],
+        ['group_fj7vq52/wall_status', 'Wall status', 2],
     ] as [$field, $label, $order]) {
         HeksKoboFieldMapping::query()->create([
             'service_name' => 'heks-main',
@@ -938,16 +925,14 @@ it('merges Kobo survey sections that resolve to the same display title', functio
         $beneficiary->load('surveyValueHistories'),
         app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
     );
-    $matchingSections = collect($sections)
-        ->filter(fn (array $section): bool => $section['title'] === 'Shared Shelter Title')
-        ->values();
-    $items = collect($matchingSections->first()['items'] ?? []);
+    $titles = collect($sections)->pluck('title');
 
-    expect($matchingSections)
-        ->toHaveCount(1)
-        ->and($items->pluck('question')->all())
-        ->toContain('Roof status')
-        ->toContain('Wall status');
+    expect($titles->filter(fn (string $title): bool => str_contains($title, 'المأوى')))
+        ->toHaveCount(2)
+        ->and($titles)->toContain('تقييم المأوى - الحالة الفنية العامة')
+        ->and($titles)->toContain('تفاصيل حالة المأوى والمرافق')
+        ->and($titles->filter(fn (string $title): bool => $title === 'تقييم حالة المأوى'))
+        ->toHaveCount(0);
 });
 
 it('uses template field choices when raw HEKS survey data is keyed by question label', function () {
