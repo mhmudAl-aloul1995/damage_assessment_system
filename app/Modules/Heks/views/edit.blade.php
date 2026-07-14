@@ -64,7 +64,6 @@
         .heks-case-page .kobo-pdf-choice-marker.selected::after { content: ""; width: .62rem; height: .62rem; display: block; background: #fff; }
         .heks-case-page .kobo-pdf-choice-marker.radio.selected::after { border-radius: 50%; }
         .heks-case-page .kobo-pdf-choice-marker.checkbox.selected::after { width: .78rem; height: .45rem; border-left: 3px solid #fff; border-bottom: 3px solid #fff; background: transparent; transform: rotate(-45deg); margin-top: -.2rem; }
-        .heks-case-page .kobo-pdf-raw { direction: ltr; text-align: left; color: var(--bs-gray-600); font-size: .75rem; margin-top: .35rem; }
         @media (max-width: 767.98px) {
             .heks-case-page .kobo-paper { padding: 1.25rem; }
             .heks-case-page .kobo-paper-title { font-size: 1.35rem; }
@@ -789,8 +788,6 @@
 
                                             @if (!empty($item['warning']))
                                                 <div class="badge badge-light-warning mt-2">{{ $item['warning'] }}</div>
-                                            @elseif (($item['raw_value'] ?? '') !== '' && ($item['raw_value'] ?? '') !== ($item['value'] ?? ''))
-                                                <div class="kobo-pdf-raw">Raw Kobo: {{ $item['raw_value'] }}</div>
                                             @endif
 
                                             @if ($historyCount > 0)

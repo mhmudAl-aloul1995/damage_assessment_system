@@ -1263,6 +1263,7 @@ class HeksController extends Controller
         $choiceLabels = $this->surveyChoiceLabels(array_keys($rawData));
         $sortOrders = $this->surveySortOrders(array_keys($rawData));
         $templateMappings = $this->surveyTemplateMappings(array_keys($rawData));
+        $seenQuestionLabels = [];
         $histories = $beneficiary->surveyValueHistories
             ->groupBy(fn (HeksSurveyValueHistory $history): string => $history->source.'|'.$history->field_key);
 
@@ -1290,6 +1291,7 @@ class HeksController extends Controller
                 }
 
                 $seen[$uniqueKey] = true;
+                $seenQuestionLabels[$this->surveyQuestionSignature((string) $templateItem['question'])] = true;
                 $sectionKey = $this->surveySectionKey($key);
                 $section = $sections->get($sectionKey) ?? $this->koboSurveySection($sectionKey);
                 $section['items'][] = [
@@ -1344,6 +1346,13 @@ class HeksController extends Controller
                 $sectionKey = $this->surveySectionKey($key);
                 $section = $sections->get($sectionKey) ?? $this->koboSurveySection($sectionKey);
                 $questionLabel = $this->surveyQuestionLabel($key, (string) $source, $displayLabels);
+                $questionSignature = $this->surveyQuestionSignature($questionLabel);
+
+                if ($questionSignature !== '' && isset($seenQuestionLabels[$questionSignature]) && ! $this->isStructuredSurveyKey($key)) {
+                    continue;
+                }
+
+                $seenQuestionLabels[$questionSignature] = true;
                 $section['items'][] = [
                     'question' => $questionLabel,
                     'field_key' => $key,
@@ -1738,6 +1747,20 @@ class HeksController extends Controller
             ->all();
 
         return $section;
+    }
+
+    private function surveyQuestionSignature(string $question): string
+    {
+        return str($question)
+            ->replaceMatches('/\s+/u', ' ')
+            ->trim()
+            ->lower()
+            ->toString();
+    }
+
+    private function isStructuredSurveyKey(string $key): bool
+    {
+        return str_contains($key, '/') || str_contains($key, '[');
     }
 
     /**

@@ -585,6 +585,7 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
                 'identification' => [
                     'application_code' => 'GDE7',
                 ],
+                'application_code' => 'RAW-DUPLICATE-CODE',
                 'family_info' => [
                     'has_disability' => 'yes',
                     'split_choice_question' => [
@@ -657,6 +658,7 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('رقم الطلب/الكود')
         ->assertDontSee('identification/application_code')
         ->assertSee('GDE7')
+        ->assertDontSee('RAW-DUPLICATE-CODE')
         ->assertSee('معلومات الحماية')
         ->assertDontSee('Group Vb7yr42')
         ->assertSee('الوحدة السكنية تقع في محيط آمن')
@@ -667,6 +669,7 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('kobo-paper', false)
         ->assertSee('kobo-pdf-choice is-selected', false)
         ->assertSee('kobo-pdf-choice-marker radio selected', false)
+        ->assertDontSee('Raw Kobo:')
         ->assertSee('Photo Group')
         ->assertSee('photo_group[1]/photo')
         ->assertSee('first-photo.jpg')
@@ -676,6 +679,50 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('Inner Question Label')
         ->assertDontSee('nested_group/inner_question')
         ->assertSee('inner answer');
+});
+
+it('hides duplicate raw Kobo survey values from the display', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY-RAW',
+        'name' => 'Raw Survey Beneficiary',
+        'raw_data' => [
+            'heks-main' => [
+                'identification' => [
+                    'application_code' => 'GDE7',
+                ],
+                'application_code' => 'RAW-DUPLICATE-CODE',
+            ],
+        ],
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'identification/application_code',
+        'column_name' => 'identification_application_code',
+        'display_label' => 'Application Code',
+        'notes' => json_encode(['form_order' => 1]),
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'application_code',
+        'column_name' => 'application_code',
+        'display_label' => 'Application Code',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.edit', $beneficiary))
+        ->assertOk()
+        ->assertSee('Application Code')
+        ->assertSee('GDE7')
+        ->assertDontSee('RAW-DUPLICATE-CODE')
+        ->assertDontSee('Raw Kobo:');
 });
 
 it('resolves Kobo choice labels without guessing ordinary numeric values', function () {
