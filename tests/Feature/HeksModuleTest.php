@@ -804,6 +804,17 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
         'list_name' => 'documents',
     ]);
 
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_059',
+        'column_name' => 'q_059',
+        'display_label' => 'Damage status',
+        'data_type' => 'select_one damage_status',
+        'field_type' => 'select_one',
+        'list_name' => 'damage_status',
+    ]);
+
     foreach ([
         ['family_info/marital_status', 'marital_status', '18', 'متزوج/ة', 1],
         ['family_info/marital_status', 'marital_status', '19', 'أعزب/عزباء', 2],
@@ -822,11 +833,34 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
         ]);
     }
 
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'damage_status',
+        'choice_name' => '_____1',
+        'choice_label' => 'أضرار جزئية طفيفة',
+        'language' => 'ar',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'damage_status',
+        'choice_name' => '____',
+        'choice_label' => 'لا يوجد ضرر',
+        'language' => 'ar',
+        'sort_order' => 2,
+        'is_active' => true,
+    ]);
+
     $displayService = app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class);
 
     $maritalStatus = $displayService->resolve('heks-main', 'family_info/marital_status', '18');
     $age = $displayService->resolve('heks-main', 'family_info/age', '23');
     $documents = $displayService->resolve('heks-main', 'family_info/documents', 'id_card ownership');
+    $underscoreChoice = $displayService->resolve('heks-main', 'q_059', '_____1');
 
     expect($maritalStatus)
         ->display->toBe('متزوج/ة')
@@ -844,7 +878,17 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
         ->and($documents)
         ->display->toBe('هوية شخصية، أوراق ملكية')
         ->type->toBe('select_multiple')
-        ->resolved->toBeTrue();
+        ->resolved->toBeTrue()
+        ->and($underscoreChoice)
+        ->display->toBe('أضرار جزئية طفيفة')
+        ->type->toBe('select_one')
+        ->resolved->toBeTrue()
+        ->warning->toBeNull()
+        ->and($underscoreChoice['choices'][0])->toMatchArray([
+            'value' => '_____1',
+            'label' => 'أضرار جزئية طفيفة',
+            'selected' => true,
+        ]);
 });
 
 it('shows HEKS survey and score counts separately on the beneficiaries list', function () {

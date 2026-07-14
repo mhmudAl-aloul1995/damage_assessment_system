@@ -89,6 +89,7 @@ class HeksKoboChoiceSyncService
         if (! $dryRun) {
             HeksKoboChoice::query()
                 ->where('service_name', $serviceName)
+                ->whereNotNull('raw_data')
                 ->get()
                 ->each(function (HeksKoboChoice $choice) use ($seen, &$stats): void {
                     $key = $choice->service_name.'|'.$choice->question_key.'|'.$choice->choice_name.'|'.$choice->language;

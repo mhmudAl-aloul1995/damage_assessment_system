@@ -608,6 +608,59 @@ test('heks kobo field label import command imports observed select choices', fun
             ->exists())->toBeFalse();
 });
 
+test('heks kobo form choice sync keeps observed choices active', function () {
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'damage_status',
+        'choice_name' => '_____1',
+        'choice_label' => 'أضرار جزئية طفيفة',
+        'language' => 'ar',
+        'sort_order' => 1,
+        'is_active' => true,
+        'raw_data' => null,
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'damage_status',
+        'choice_name' => 'old-form-choice',
+        'choice_label' => 'Old form choice',
+        'language' => 'ar',
+        'sort_order' => 2,
+        'is_active' => true,
+        'raw_data' => ['name' => 'old-form-choice'],
+    ]);
+
+    app(\App\Modules\Heks\Services\HeksKoboChoiceSyncService::class)->sync(
+        'heks-main',
+        [
+            ['type' => 'select_one damage_status', 'name' => 'q_059', 'label' => ['Arabic' => 'Damage status']],
+        ],
+        [
+            ['list_name' => 'damage_status', 'name' => 'new-form-choice', 'label' => ['Arabic' => 'New form choice']],
+        ],
+        dryRun: false
+    );
+
+    expect(HeksKoboChoice::query()
+        ->where('service_name', 'heks-main')
+        ->where('question_key', 'q_059')
+        ->where('choice_name', '_____1')
+        ->value('is_active'))->toBeTrue()
+        ->and(HeksKoboChoice::query()
+            ->where('service_name', 'heks-main')
+            ->where('question_key', 'q_059')
+            ->where('choice_name', 'old-form-choice')
+            ->value('is_active'))->toBeFalse()
+        ->and(HeksKoboChoice::query()
+            ->where('service_name', 'heks-main')
+            ->where('question_key', 'q_059')
+            ->where('choice_name', 'new-form-choice')
+            ->value('is_active'))->toBeTrue();
+});
+
 test('heks kobo sync fills basic beneficiary fields from imported Kobo labels', function () {
     foreach ([
         'q_gov' => 'المحافظة',
