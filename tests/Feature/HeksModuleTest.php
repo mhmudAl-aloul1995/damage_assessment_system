@@ -861,6 +861,7 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
     $age = $displayService->resolve('heks-main', 'family_info/age', '23');
     $documents = $displayService->resolve('heks-main', 'family_info/documents', 'id_card ownership');
     $underscoreChoice = $displayService->resolve('heks-main', 'q_059', '_____1');
+    $titleSourceChoice = $displayService->resolve('Heks Final V1', 'q_059', '_____1');
 
     expect($maritalStatus)
         ->display->toBe('متزوج/ة')
@@ -888,7 +889,10 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
             'value' => '_____1',
             'label' => 'أضرار جزئية طفيفة',
             'selected' => true,
-        ]);
+        ])
+        ->and($titleSourceChoice)
+        ->display->toBe('أضرار جزئية طفيفة')
+        ->resolved->toBeTrue();
 });
 
 it('shows HEKS survey and score counts separately on the beneficiaries list', function () {

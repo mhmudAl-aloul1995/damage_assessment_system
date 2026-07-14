@@ -1573,6 +1573,7 @@ class HeksController extends Controller
                 str_replace('_', '-', $source),
                 str_replace('-', '_', $source),
                 match ($source) {
+                    'Heks Final V1' => 'heks-main',
                     'heks_main' => 'heks-main',
                     'heks_followup' => 'heks-followups',
                     'heks_boq' => 'heks-boq',
@@ -1773,6 +1774,7 @@ class HeksController extends Controller
             str_replace('_', '-', $source),
             str_replace('-', '_', $source),
             match ($source) {
+                'Heks Final V1' => 'heks-main',
                 'heks_main' => 'heks-main',
                 'heks_followup' => 'heks-followups',
                 'heks_boq' => 'heks-boq',
