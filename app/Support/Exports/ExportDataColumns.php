@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Schema;
 
 class ExportDataColumns
 {
-    public const BUILDINGS_TABLE = 'buildings';
+    public const BUILDINGS_TABLE = 'v_buildings_audited';
 
-    public const HOUSING_UNITS_TABLE = 'housing_units';
+    public const HOUSING_UNITS_TABLE = 'v_housing_units_audited';
 
     public const BUILDING_UNITS_COUNT_COLUMN = 'housing_units_count';
 
@@ -66,14 +66,17 @@ class ExportDataColumns
             ->all();
     }
 
+    public static function hasColumn(string $table, string $column): bool
+    {
+        return in_array($column, self::tableColumns($table), true);
+    }
+
     /**
      * @return array<int, string>
      */
     private static function visibleTableColumns(string $table): array
     {
-        $columns = Schema::hasTable($table)
-            ? Schema::getColumnListing($table)
-            : self::informationSchemaColumns($table);
+        $columns = self::tableColumns($table);
 
         if (empty($columns)) {
             return [];
@@ -86,6 +89,24 @@ class ExportDataColumns
             ->filter(fn ($column) => $column !== '' && ! isset($hidden[$column]))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function tableColumns(string $table): array
+    {
+        try {
+            $columns = Schema::getColumnListing($table);
+        } catch (\Throwable) {
+            $columns = [];
+        }
+
+        if (! empty($columns)) {
+            return $columns;
+        }
+
+        return self::informationSchemaColumns($table);
     }
 
     /**

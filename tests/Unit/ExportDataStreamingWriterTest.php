@@ -2,6 +2,7 @@
 
 use App\Jobs\ExportDataJob;
 use App\Models\Building;
+use App\Models\EditAssessment;
 use App\Models\Export;
 use App\Models\User;
 use OpenSpout\Reader\XLSX\Reader;
@@ -74,19 +75,27 @@ test('it streams export rows to an xlsx file without internal columns', function
     }
 });
 
-test('it filters building exports by the building end date range', function () {
+test('it filters building exports by audited building end date range', function () {
     $user = User::factory()->create();
 
     Building::query()->create([
         'objectid' => 2001,
-        'globalid' => 'building-before-range',
+        'globalid' => 'building-audited-into-range',
         'end' => '2026-04-30 10:00:00',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => 'building-audited-into-range',
+        'type' => 'building_table',
+        'field_name' => 'end',
+        'field_value' => '2026-05-10 10:00:00',
+        'user_id' => $user->id,
     ]);
 
     Building::query()->create([
         'objectid' => 2002,
-        'globalid' => 'building-in-range',
-        'end' => '2026-05-10 10:00:00',
+        'globalid' => 'building-before-range',
+        'end' => '2026-04-29 10:00:00',
     ]);
 
     Building::query()->create([
@@ -132,7 +141,7 @@ test('it filters building exports by the building end date range', function () {
 
         $reader->close();
 
-        expect($rows[1])->toBe([2002, '2026-05-10 10:00:00']);
+        expect($rows[1])->toBe([2001, '2026-05-10 10:00:00']);
     } finally {
         $export->refresh();
 

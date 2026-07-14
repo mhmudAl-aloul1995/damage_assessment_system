@@ -12,7 +12,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\CellAlignment;
 use OpenSpout\Common\Entity\Style\Style;
@@ -84,6 +83,8 @@ class ExportDataJob implements ShouldQueue
             $needsHousingJoin = ! empty($housingColumns);
             $needsFamily = ! is_null($familyMembersFrom) || ! is_null($familyMembersTo);
             $paginateByHousing = $needsHousingJoin;
+            $buildingsSource = ExportDataColumns::BUILDINGS_TABLE;
+            $housingUnitsSource = ExportDataColumns::HOUSING_UNITS_TABLE;
 
             $assessmentLabels = DB::table('assessments')
                 ->whereNotNull('name')
@@ -95,8 +96,8 @@ class ExportDataJob implements ShouldQueue
                 ->toArray();
 
             $query = $needsHousingJoin
-                ? DB::table('housing_units as h')->join('buildings as b', 'b.globalid', '=', 'h.parentglobalid')
-                : DB::table('buildings as b');
+                ? DB::table("{$housingUnitsSource} as h")->join("{$buildingsSource} as b", 'b.globalid', '=', 'h.parentglobalid')
+                : DB::table("{$buildingsSource} as b");
 
             if ($buildingEndFrom !== null && $buildingEndFrom !== '') {
                 $query->whereDate('b.end', '>=', $buildingEndFrom);
@@ -107,7 +108,7 @@ class ExportDataJob implements ShouldQueue
             }
 
             if ($needsFamily) {
-                $familySub = DB::table('housing_units as hf')
+                $familySub = DB::table("{$housingUnitsSource} as hf")
                     ->selectRaw("
                         hf.parentglobalid,
                         (
@@ -146,18 +147,18 @@ class ExportDataJob implements ShouldQueue
 
             foreach ($buildingColumns as $column) {
                 if ($column === $buildingUnitsCountColumn) {
-                    $selects[] = '(SELECT COUNT(*) FROM housing_units hu_count WHERE hu_count.parentglobalid = b.globalid) as `building_housing_units_count`';
+                    $selects[] = "(SELECT COUNT(*) FROM {$housingUnitsSource} hu_count WHERE hu_count.parentglobalid = b.globalid) as `building_housing_units_count`";
 
                     continue;
                 }
 
-                if (Schema::hasColumn('buildings', $column)) {
+                if (ExportDataColumns::hasColumn($buildingsSource, $column)) {
                     $selects[] = "b.`{$column}` as `building_{$column}`";
                 }
             }
 
             foreach ($housingColumns as $column) {
-                if (Schema::hasColumn('housing_units', $column)) {
+                if (ExportDataColumns::hasColumn($housingUnitsSource, $column)) {
                     $selects[] = "h.`{$column}` as `housing_{$column}`";
                 }
             }
@@ -186,9 +187,9 @@ class ExportDataJob implements ShouldQueue
                     continue;
                 }
 
-                if (Schema::hasColumn('buildings', $field)) {
+                if (ExportDataColumns::hasColumn($buildingsSource, $field)) {
                     $query->whereIn("b.$field", $values);
-                } elseif (Schema::hasColumn('housing_units', $field)) {
+                } elseif (ExportDataColumns::hasColumn($housingUnitsSource, $field)) {
                     $query->whereIn("h.$field", $values);
                 }
             }

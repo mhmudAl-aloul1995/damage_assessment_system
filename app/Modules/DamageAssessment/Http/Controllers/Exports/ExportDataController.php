@@ -7,7 +7,6 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Exports;
 use App\Http\Controllers\Controller;
 use App\Jobs\ExportDataJob;
 use App\Models\Assessment;
-use App\Models\Building;
 use App\Models\Export;
 use App\Modules\DamageAssessment\Http\Requests\ObjectIdImportRequest;
 use App\Support\Exports\ExportDataColumns;
@@ -49,7 +48,7 @@ class ExportDataController extends Controller
             ->get()
             ->groupBy('list_name');
 
-        $filters['neighborhood'] = Building::query()
+        $filters['neighborhood'] = DB::table(ExportDataColumns::BUILDINGS_TABLE)
             ->select('neighborhood')
             ->whereNotNull('neighborhood')
             ->where('neighborhood', '<>', '')
