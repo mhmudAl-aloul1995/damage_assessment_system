@@ -1667,7 +1667,6 @@ class HeksController extends Controller
         if (str_contains($field, '/')) {
             $keys[] = substr($field, strpos($field, '/') + 1);
             $keys[] = str($field)->beforeLast('/')->toString();
-            $keys[] = str($field)->afterLast('/')->toString();
         }
 
         return array_values(array_unique(array_filter($keys)));
@@ -1943,10 +1942,17 @@ class HeksController extends Controller
             ->all();
 
         if (str_contains($key, '/')) {
-            $lookupSets[] = [
-                'key' => str($key)->beforeLast('/')->toString(),
-                'choice' => str($key)->afterLast('/')->toString(),
-            ];
+            $segments = explode('/', $key);
+            $choice = array_pop($segments);
+
+            while ($segments !== []) {
+                $lookupSets[] = [
+                    'key' => implode('/', $segments),
+                    'choice' => $choice,
+                ];
+
+                array_shift($segments);
+            }
         }
 
         return collect($lookupSets)

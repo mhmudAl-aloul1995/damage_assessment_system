@@ -451,7 +451,7 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
         'service' => 'heks-main',
         'asset' => 'asset123',
     ])
-        ->expectsOutputToContain('HEKS Kobo form mapping imported. Created: 6, updated: 0, skipped: 1.')
+        ->expectsOutputToContain('HEKS Kobo form mapping imported. Created: 3, updated: 0, skipped: 1.')
         ->assertSuccessful();
 
     expect(HeksKoboFieldMapping::query()
@@ -461,7 +461,7 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
         ->and(HeksKoboFieldMapping::query()
             ->where('service_name', 'heks-main')
             ->where('kobo_field', 'head_name')
-            ->value('display_label'))->toBe('اسم رب الأسرة')
+            ->exists())->toBeFalse()
         ->and(HeksKoboFieldMapping::query()
             ->where('service_name', 'heks-main')
             ->where('kobo_field', 'family_info/Age')

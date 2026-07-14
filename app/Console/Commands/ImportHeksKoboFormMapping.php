@@ -365,13 +365,11 @@ class ImportHeksKoboFormMapping extends Command
      */
     private function fieldKeys(string $name, array $groupStack): array
     {
-        $fieldKeys = [$name];
-
         if ($groupStack !== [] && ! str_contains($name, '/')) {
-            $fieldKeys[] = implode('/', [...$groupStack, $name]);
+            return [implode('/', [...$groupStack, $name])];
         }
 
-        return array_values(array_unique($fieldKeys));
+        return [$name];
     }
 
     private function columnName(string $field): string
