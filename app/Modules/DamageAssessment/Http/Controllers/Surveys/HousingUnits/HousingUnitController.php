@@ -245,6 +245,21 @@ class HousingUnitController extends Controller
             });
         }
 
+        $endFrom = $filters['end_from'] ?? null;
+        $endTo = $filters['end_to'] ?? null;
+
+        if (($endFrom !== null && $endFrom !== '') || ($endTo !== null && $endTo !== '')) {
+            $query->whereHas('building', function (Builder $buildingQuery) use ($endFrom, $endTo): void {
+                if ($endFrom !== null && $endFrom !== '') {
+                    $buildingQuery->whereDate('end', '>=', $endFrom);
+                }
+
+                if ($endTo !== null && $endTo !== '') {
+                    $buildingQuery->whereDate('end', '<=', $endTo);
+                }
+            });
+        }
+
         $selectFilters = [
             'housing_unit_type',
             'unit_damage_status',

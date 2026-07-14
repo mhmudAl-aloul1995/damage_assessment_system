@@ -94,6 +94,14 @@
                         <label class="form-label">{{ __('ui.housing_page.submission_date_to') }}</label>
                         <input type="text" name="filters[submission_date_to]" class="form-control form-control-solid housing-filter-control housing-date-filter" placeholder="yyyy-mm-dd">
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">تاريخ الحفظ من</label>
+                        <input type="text" name="filters[end_from]" class="form-control form-control-solid housing-filter-control housing-date-filter" placeholder="yyyy-mm-dd">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">تاريخ الحفظ إلى</label>
+                        <input type="text" name="filters[end_to]" class="form-control form-control-solid housing-filter-control housing-date-filter" placeholder="yyyy-mm-dd">
+                    </div>
                     <div class="col-md-3 d-flex gap-2">
                         <button type="submit" class="btn btn-primary flex-grow-1" data-kt-Housing-table-filter="filter">
                             <span class="indicator-label">{{ __('ui.housing_page.search') }}</span>

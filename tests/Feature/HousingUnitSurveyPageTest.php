@@ -156,7 +156,8 @@ it('filters housing unit datatable records by housing unit objectid', function (
     $response->assertOk();
     $response->assertJsonPath('recordsFiltered', 1);
     $response->assertSee('12');
-    $response->assertDontSee('13');
+    expect(collect($response->json('data'))->pluck('housing_unit_number')->all())
+        ->toBe(['12']);
 });
 
 it('filters housing unit datatable records by submission date range', function () {
@@ -248,6 +249,59 @@ it('filters housing unit datatable records by the assigned building researcher',
     $response->assertSee('Engineer One');
     $response->assertDontSee('Assigned Two');
     $response->assertDontSee('Engineer Two');
+});
+
+it('filters housing unit datatable records by the building save date', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 2301,
+        'globalid' => 'building-save-date-inside',
+        'assignedto' => 'Engineer Inside',
+        'end' => '2026-06-15 09:00:00',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 2302,
+        'globalid' => 'building-save-date-outside',
+        'assignedto' => 'Engineer Outside',
+        'end' => '2026-06-30 09:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3301,
+        'globalid' => 'housing-unit-save-date-inside',
+        'parentglobalid' => 'building-save-date-inside',
+        'housing_unit_number' => '41',
+        'q_9_3_1_first_name' => 'Saved',
+        'q_9_3_4_last_name' => 'Inside',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3302,
+        'globalid' => 'housing-unit-save-date-outside',
+        'parentglobalid' => 'building-save-date-outside',
+        'housing_unit_number' => '42',
+        'q_9_3_1_first_name' => 'Saved',
+        'q_9_3_4_last_name' => 'Outside',
+    ]);
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'end_from' => '2026-06-01',
+            'end_to' => '2026-06-20',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/housing/show?'.$query);
+
+    $response->assertOk();
+    $response->assertJsonPath('recordsFiltered', 1);
+    $response->assertSee('Saved Inside');
+    $response->assertDontSee('Saved Outside');
 });
 
 function seedHousingFilterOptions(): void
