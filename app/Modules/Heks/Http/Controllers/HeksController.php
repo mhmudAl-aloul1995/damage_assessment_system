@@ -1420,6 +1420,8 @@ class HeksController extends Controller
                 $this->surveySectionSortOrder($section, $sectionKey),
                 str_starts_with($sectionKey, 'kobo:') ? 0 : 1
             ))
+            ->pipe(fn ($sections) => $this->mergeSurveySectionsByTitle($sections))
+            ->map(fn (array $section): array => $this->sortSurveySectionItems($section))
             ->all();
     }
 
@@ -1827,6 +1829,42 @@ class HeksController extends Controller
             }, []));
 
         return $section;
+    }
+
+    private function mergeSurveySectionsByTitle(\Illuminate\Support\Collection $sections): \Illuminate\Support\Collection
+    {
+        return $sections->reduce(function ($merged, array $section, string $sectionKey) {
+            $signature = $this->surveyQuestionSignature((string) ($section['title'] ?? ''));
+
+            if ($signature === '') {
+                $merged->put($sectionKey, $section);
+
+                return $merged;
+            }
+
+            $existingKey = $merged->keys()
+                ->first(fn (string $key): bool => $this->surveyQuestionSignature((string) ($merged->get($key)['title'] ?? '')) === $signature);
+
+            if ($existingKey === null) {
+                $merged->put($sectionKey, $section);
+
+                return $merged;
+            }
+
+            $existing = $merged->get($existingKey);
+            $existing['items'] = array_values([
+                ...($existing['items'] ?? []),
+                ...($section['items'] ?? []),
+            ]);
+
+            if (trim((string) ($existing['description'] ?? '')) === '' && trim((string) ($section['description'] ?? '')) !== '') {
+                $existing['description'] = $section['description'];
+            }
+
+            $merged->put($existingKey, $existing);
+
+            return $merged;
+        }, collect());
     }
 
     private function surveyItemHasMeaningfulValue(array $item): bool

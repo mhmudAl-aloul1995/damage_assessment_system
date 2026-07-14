@@ -885,6 +885,71 @@ it('does not apply stale Kobo choice labels to text and numeric survey fields', 
         ->not->toContain('q_103');
 });
 
+it('merges Kobo survey sections that resolve to the same display title', function () {
+    config([
+        'heks_kobo.section_labels.alpha' => [
+            'title' => 'Shared Shelter Title',
+            'description' => 'First section.',
+        ],
+        'heks_kobo.section_labels.beta' => [
+            'title' => 'Shared Shelter Title',
+            'description' => 'Second section.',
+        ],
+        'heks_kobo.section_order.alpha' => 70,
+        'heks_kobo.section_order.beta' => 70,
+    ]);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY-MERGED-SECTIONS',
+        'name' => 'Survey Merged Sections Beneficiary',
+        'raw_data' => [
+            'heks-main' => [
+                'alpha' => [
+                    'roof_status' => 'good',
+                ],
+                'beta' => [
+                    'wall_status' => 'fair',
+                ],
+            ],
+        ],
+    ]);
+
+    foreach ([
+        ['alpha/roof_status', 'Roof status', 1],
+        ['beta/wall_status', 'Wall status', 2],
+    ] as [$field, $label, $order]) {
+        HeksKoboFieldMapping::query()->create([
+            'service_name' => 'heks-main',
+            'table_name' => 'heks_main_kobo_records',
+            'kobo_field' => $field,
+            'column_name' => str_replace('/', '_', $field),
+            'display_label' => $label,
+            'field_type' => 'text',
+            'data_type' => 'text',
+            'notes' => json_encode(['form_order' => $order], JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'surveySections');
+    $method->setAccessible(true);
+
+    $sections = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary->load('surveyValueHistories'),
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+    $matchingSections = collect($sections)
+        ->filter(fn (array $section): bool => $section['title'] === 'Shared Shelter Title')
+        ->values();
+    $items = collect($matchingSections->first()['items'] ?? []);
+
+    expect($matchingSections)
+        ->toHaveCount(1)
+        ->and($items->pluck('question')->all())
+        ->toContain('Roof status')
+        ->toContain('Wall status');
+});
+
 it('uses template field choices when raw HEKS survey data is keyed by question label', function () {
     $beneficiary = HeksBeneficiary::query()->create([
         'code' => 'SURVEY-LABEL-KEY',
