@@ -21,7 +21,7 @@ class ExportDataController extends Controller
 {
     private const OBJECT_ID_FILTER_SESSION_KEY = 'exports.imported_object_ids';
 
-    private const STALE_PENDING_MINUTES = 10;
+    private const ORPHANED_PENDING_MINUTES = 1;
 
     private const ORPHANED_PROCESSING_MINUTES = 2;
 
@@ -99,6 +99,12 @@ class ExportDataController extends Controller
         $export = Export::query()
             ->where('user_id', auth()->id())
             ->findOrFail($id);
+
+        if ($this->isOrphanedPendingExport($export)) {
+            ExportDataJob::dispatch($export->id)->onQueue('exports');
+            $export->touch();
+            $export->refresh();
+        }
 
         if ($this->isOrphanedProcessingExport($export)) {
             $export->update([
@@ -285,15 +291,6 @@ class ExportDataController extends Controller
         Export::query()
             ->where('user_id', auth()->id())
             ->whereNull('file_name')
-            ->where('status', 'pending')
-            ->where('updated_at', '<', now()->subMinutes(self::STALE_PENDING_MINUTES))
-            ->update([
-                'status' => 'failed',
-            ]);
-
-        Export::query()
-            ->where('user_id', auth()->id())
-            ->whereNull('file_name')
             ->where('status', 'processing')
             ->where('progress', '<=', 1)
             ->where('processed', 0)
@@ -317,6 +314,16 @@ class ExportDataController extends Controller
             && (int) ($export->progress ?? 0) <= 1
             && (int) ($export->processed ?? 0) === 0
             && $export->updated_at?->lt(now()->subMinutes(self::ORPHANED_PROCESSING_MINUTES))
+            && ! $this->hasExportsQueueJob();
+    }
+
+    private function isOrphanedPendingExport(Export $export): bool
+    {
+        return $export->status === 'pending'
+            && $export->file_name === null
+            && (int) ($export->progress ?? 0) === 0
+            && (int) ($export->processed ?? 0) === 0
+            && $export->updated_at?->lt(now()->subMinutes(self::ORPHANED_PENDING_MINUTES))
             && ! $this->hasExportsQueueJob();
     }
 

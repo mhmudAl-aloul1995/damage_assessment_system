@@ -87,3 +87,39 @@ it('marks an orphaned processing export as failed when checking status', functio
 
     expect($export->fresh()->status)->toBe('failed');
 });
+
+it('requeues an orphaned pending export when checking status', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    $export->forceFill([
+        'created_at' => now()->subMinutes(5),
+        'updated_at' => now()->subMinutes(5),
+    ])->save();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.status', $export));
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', 'pending');
+
+    Queue::assertPushed(
+        ExportDataJob::class,
+        fn (ExportDataJob $job): bool => $job->exportId === $export->id,
+    );
+});
