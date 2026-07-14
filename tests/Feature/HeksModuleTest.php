@@ -665,6 +665,7 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('نعم')
         ->assertSee('لا')
         ->assertSee('kobo-paper', false)
+        ->assertSee('kobo-pdf-choice is-selected', false)
         ->assertSee('kobo-pdf-choice-marker radio selected', false)
         ->assertSee('Photo Group')
         ->assertSee('photo_group[1]/photo')

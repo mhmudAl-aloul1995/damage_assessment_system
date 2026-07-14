@@ -43,23 +43,28 @@
         .heks-case-page .survey-edit-box { border: 1px solid #e8eef7; border-radius: .75rem; background: #fff; padding: .75rem; }
         .heks-case-page .survey-history-card { border: 1px solid #edf1f5; border-radius: .65rem; background: #fff; padding: .75rem; }
         .heks-case-page .survey-history-label { color: var(--bs-gray-600); font-size: .75rem; font-weight: 800; }
-        .heks-case-page .kobo-paper { max-width: 980px; margin-inline: auto; border: 1px solid #d8d8d8; background: #fff; padding: 2.25rem 2.75rem; color: #111; direction: rtl; font-family: Arial, "Noto Naskh Arabic", "Tahoma", sans-serif; }
-        .heks-case-page .kobo-paper-title { text-align: center; font-size: 1.7rem; font-weight: 800; margin-bottom: 2rem; direction: ltr; }
-        .heks-case-page .kobo-pdf-section { break-inside: avoid; margin-bottom: 2rem; }
-        .heks-case-page .kobo-pdf-section-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 1.25rem; }
-        .heks-case-page .kobo-pdf-item { margin-bottom: 1.45rem; page-break-inside: avoid; }
-        .heks-case-page .kobo-pdf-question { font-size: .95rem; font-weight: 600; line-height: 1.9; margin-bottom: .45rem; color: #222; }
-        .heks-case-page .kobo-pdf-answer-line { min-height: 2.15rem; border-bottom: 2px solid #333; display: flex; align-items: flex-end; padding: 0 .25rem .25rem; font-size: .95rem; line-height: 1.7; color: #111; overflow-wrap: anywhere; }
-        .heks-case-page .kobo-pdf-answer-line.is-empty { color: transparent; }
-        .heks-case-page .kobo-pdf-choice-list { display: flex; flex-direction: column; gap: .7rem; margin-top: .55rem; }
-        .heks-case-page .kobo-pdf-choice { display: flex; align-items: flex-start; gap: .85rem; line-height: 1.8; font-size: .95rem; color: #111; }
-        .heks-case-page .kobo-pdf-choice-marker { width: 1.45rem; height: 1.45rem; border: 1.5px solid #777; flex: 0 0 1.45rem; margin-top: .15rem; display: inline-flex; align-items: center; justify-content: center; background: #fff; }
+        .heks-case-page .kobo-paper { max-width: 980px; margin-inline: auto; border: 1px solid var(--bs-gray-200); border-radius: .95rem; background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), .045), #fff 15rem); padding: 2rem 2.5rem; color: var(--bs-gray-800); direction: rtl; box-shadow: 0 .65rem 1.8rem rgba(15, 23, 42, .07); }
+        .heks-case-page .kobo-paper-title { text-align: center; font-size: 1.7rem; font-weight: 800; margin-bottom: 2rem; direction: ltr; color: var(--bs-primary); letter-spacing: 0; }
+        .heks-case-page .kobo-pdf-section { break-inside: avoid; margin-bottom: 2rem; border-top: 1px solid var(--bs-gray-200); padding-top: 1.35rem; }
+        .heks-case-page .kobo-pdf-section:first-of-type { border-top: 0; padding-top: 0; }
+        .heks-case-page .kobo-pdf-section-title { display: flex; align-items: center; gap: .7rem; font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem; color: var(--bs-gray-900); }
+        .heks-case-page .kobo-pdf-section-title::before { content: ""; width: .45rem; height: 1.65rem; border-radius: 1rem; background: linear-gradient(180deg, var(--bs-primary), var(--bs-success)); flex: 0 0 auto; }
+        .heks-case-page .kobo-pdf-item { margin-bottom: 0; padding: 1rem 0; border-bottom: 1px dashed var(--bs-gray-200); page-break-inside: avoid; }
+        .heks-case-page .kobo-pdf-item:last-child { border-bottom: 0; }
+        .heks-case-page .kobo-pdf-question { font-size: .96rem; font-weight: 700; line-height: 1.9; margin-bottom: .65rem; color: var(--bs-gray-800); }
+        .heks-case-page .kobo-pdf-answer-line { min-height: 2.35rem; border: 1px solid var(--bs-gray-200); border-bottom: 2px solid rgba(var(--bs-primary-rgb), .28); border-radius: .55rem .55rem .35rem .35rem; background: rgba(var(--bs-light-rgb), .75); display: flex; align-items: center; padding: .45rem .75rem; font-size: .95rem; line-height: 1.7; color: var(--bs-gray-800); overflow-wrap: anywhere; }
+        .heks-case-page .kobo-pdf-answer-line.is-empty { color: transparent; background: #fff; }
+        .heks-case-page .kobo-pdf-choice-list { display: flex; flex-direction: column; gap: .55rem; margin-top: .55rem; }
+        .heks-case-page .kobo-pdf-choice { display: flex; align-items: flex-start; gap: .8rem; line-height: 1.8; font-size: .95rem; color: var(--bs-gray-700); border: 1px solid var(--bs-gray-200); border-radius: .6rem; background: #fff; padding: .55rem .7rem; transition: border-color .2s ease, background-color .2s ease, color .2s ease; }
+        .heks-case-page .kobo-pdf-choice.is-selected { border-color: rgba(var(--bs-primary-rgb), .3); background: rgba(var(--bs-primary-rgb), .075); color: var(--bs-gray-900); font-weight: 700; }
+        .heks-case-page .kobo-pdf-choice-marker { width: 1.35rem; height: 1.35rem; border: 1.5px solid var(--bs-gray-400); flex: 0 0 1.35rem; margin-top: .2rem; display: inline-flex; align-items: center; justify-content: center; background: #fff; }
         .heks-case-page .kobo-pdf-choice-marker.radio { border-radius: 50%; }
         .heks-case-page .kobo-pdf-choice-marker.checkbox { border-radius: .18rem; }
-        .heks-case-page .kobo-pdf-choice-marker.selected::after { content: ""; width: .72rem; height: .72rem; display: block; background: #111; }
+        .heks-case-page .kobo-pdf-choice-marker.selected { border-color: var(--bs-primary); background: var(--bs-primary); }
+        .heks-case-page .kobo-pdf-choice-marker.selected::after { content: ""; width: .62rem; height: .62rem; display: block; background: #fff; }
         .heks-case-page .kobo-pdf-choice-marker.radio.selected::after { border-radius: 50%; }
-        .heks-case-page .kobo-pdf-choice-marker.checkbox.selected::after { width: .82rem; height: .5rem; border-left: 3px solid #111; border-bottom: 3px solid #111; background: transparent; transform: rotate(-45deg); margin-top: -.2rem; }
-        .heks-case-page .kobo-pdf-raw { direction: ltr; text-align: left; color: #666; font-size: .75rem; margin-top: .35rem; }
+        .heks-case-page .kobo-pdf-choice-marker.checkbox.selected::after { width: .78rem; height: .45rem; border-left: 3px solid #fff; border-bottom: 3px solid #fff; background: transparent; transform: rotate(-45deg); margin-top: -.2rem; }
+        .heks-case-page .kobo-pdf-raw { direction: ltr; text-align: left; color: var(--bs-gray-600); font-size: .75rem; margin-top: .35rem; }
         @media (max-width: 767.98px) {
             .heks-case-page .kobo-paper { padding: 1.25rem; }
             .heks-case-page .kobo-paper-title { font-size: 1.35rem; }
@@ -772,7 +777,7 @@
                                             @if ($hasChoices && in_array($fieldType, ['select_one', 'select_multiple'], true))
                                                 <div class="kobo-pdf-choice-list" aria-label="خيارات السؤال">
                                                     @foreach ($item['choices'] as $choice)
-                                                        <div class="kobo-pdf-choice">
+                                                        <div class="kobo-pdf-choice {{ $choice['selected'] ? 'is-selected' : '' }}">
                                                             <span class="kobo-pdf-choice-marker {{ $markerType }} {{ $choice['selected'] ? 'selected' : '' }}"></span>
                                                             <span>{{ $choice['label'] }}</span>
                                                         </div>
