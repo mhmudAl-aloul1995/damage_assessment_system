@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Modules\Heks\Models\HeksKoboChoice;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -56,6 +57,7 @@ class ImportHeksKoboFieldLabels extends Command
         $created = 0;
         $updated = 0;
         $skipped = 0;
+        $choices = 0;
 
         foreach ($technicalWorkbook->getWorksheetIterator() as $technicalSheet) {
             if ($sheetFilter->isNotEmpty() && ! $sheetFilter->contains($technicalSheet->getTitle())) {
@@ -70,22 +72,24 @@ class ImportHeksKoboFieldLabels extends Command
                 continue;
             }
 
-            [$sheetCreated, $sheetUpdated, $sheetSkipped] = $this->importSheet($service, $technicalSheet, $labelsSheet);
+            [$sheetCreated, $sheetUpdated, $sheetSkipped, $sheetChoices] = $this->importSheet($service, $technicalSheet, $labelsSheet);
             $created += $sheetCreated;
             $updated += $sheetUpdated;
             $skipped += $sheetSkipped;
+            $choices += $sheetChoices;
         }
 
         $technicalWorkbook->disconnectWorksheets();
         $labelsWorkbook->disconnectWorksheets();
 
         $this->components->info("HEKS Kobo field labels imported. Created: {$created}, updated: {$updated}, skipped: {$skipped}.");
+        $this->components->info("HEKS Kobo choices imported from paired exports: {$choices}.");
 
         return self::SUCCESS;
     }
 
     /**
-     * @return array{0: int, 1: int, 2: int}
+     * @return array{0: int, 1: int, 2: int, 3: int}
      */
     private function importSheet(string $service, Worksheet $technicalSheet, Worksheet $labelsSheet): array
     {
@@ -96,6 +100,7 @@ class ImportHeksKoboFieldLabels extends Command
         $created = 0;
         $updated = 0;
         $skipped = 0;
+        $choices = 0;
 
         for ($column = 1; $column <= $lastColumn; $column++) {
             $technicalField = $this->cellText($technicalSheet, $column, $technicalHeaderRow);
@@ -119,10 +124,101 @@ class ImportHeksKoboFieldLabels extends Command
                 'display_label' => $displayLabel,
             ])->save();
 
+            $choices += $this->importChoices($service, $mapping, $technicalField, $displayLabel, $technicalSheet, $labelsSheet, $technicalHeaderRow, $labelsHeaderRow, $column);
             $wasRecentlyCreated ? $created++ : $updated++;
         }
 
-        return [$created, $updated, $skipped];
+        return [$created, $updated, $skipped, $choices];
+    }
+
+    private function importChoices(
+        string $service,
+        HeksKoboFieldMapping $mapping,
+        string $technicalField,
+        string $displayLabel,
+        Worksheet $technicalSheet,
+        Worksheet $labelsSheet,
+        int $technicalHeaderRow,
+        int $labelsHeaderRow,
+        int $column
+    ): int {
+        if (str_contains($technicalField, '/')) {
+            [$questionKey, $choiceName] = explode('/', $technicalField, 2);
+
+            if ($questionKey !== '' && $choiceName !== '' && $this->looksLikeCheckboxChoice($technicalSheet, $column, $technicalHeaderRow)) {
+                return $this->storeChoice($service, $questionKey, $mapping->list_name, $choiceName, $this->choiceLabelFromPath($displayLabel));
+            }
+        }
+
+        $fieldType = (string) ($mapping->field_type ?: $mapping->data_type);
+
+        if (! str_starts_with($fieldType, 'select_one') && ! str_starts_with($fieldType, 'select_multiple')) {
+            return 0;
+        }
+
+        $imported = 0;
+        $seen = [];
+        $highestRow = max($technicalSheet->getHighestDataRow(), $labelsSheet->getHighestDataRow());
+
+        for ($row = max($technicalHeaderRow, $labelsHeaderRow) + 1; $row <= $highestRow; $row++) {
+            $choiceName = $this->cellText($technicalSheet, $column, $row);
+            $choiceLabel = $this->cellText($labelsSheet, $column, $row);
+
+            if (
+                $choiceName === ''
+                || $choiceLabel === ''
+                || $choiceName === $choiceLabel
+                || isset($seen[$choiceName])
+                || (str_starts_with($fieldType, 'select_multiple') && preg_match('/\s+/', $choiceName) === 1)
+            ) {
+                continue;
+            }
+
+            $seen[$choiceName] = true;
+            $imported += $this->storeChoice($service, $technicalField, $mapping->list_name, $choiceName, $choiceLabel);
+        }
+
+        return $imported;
+    }
+
+    private function looksLikeCheckboxChoice(Worksheet $sheet, int $column, int $headerRow): bool
+    {
+        $highestRow = $sheet->getHighestDataRow();
+
+        for ($row = $headerRow + 1; $row <= min($highestRow, $headerRow + 25); $row++) {
+            $value = $this->cellText($sheet, $column, $row);
+
+            if ($value !== '' && ! in_array($value, ['0', '1'], true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function choiceLabelFromPath(string $displayLabel): string
+    {
+        if (! str_contains($displayLabel, '/')) {
+            return $displayLabel;
+        }
+
+        return trim((string) Str::of($displayLabel)->afterLast('/'));
+    }
+
+    private function storeChoice(string $service, string $questionKey, ?string $listName, string $choiceName, string $choiceLabel): int
+    {
+        $choice = HeksKoboChoice::query()->updateOrCreate([
+            'service_name' => $service,
+            'question_key' => $questionKey,
+            'choice_name' => $choiceName,
+            'language' => 'ar',
+        ], [
+            'list_name' => $listName,
+            'choice_label' => $choiceLabel,
+            'is_active' => true,
+        ]);
+
+        return $choice->wasRecentlyCreated ? 1 : 0;
     }
 
     private function headerRow(Worksheet $sheet): int

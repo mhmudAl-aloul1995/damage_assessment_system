@@ -9,6 +9,8 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ImportHeksKoboFormMapping extends Command
 {
@@ -20,6 +22,7 @@ class ImportHeksKoboFormMapping extends Command
     protected $signature = 'heks:kobo-import-form-mapping
         {service : HEKS service name, for example heks-main}
         {asset? : KoboToolbox asset UID. If omitted, the configured asset for the service is used}
+        {--xlsform= : Read survey and choices sheets from a local XLSForm file instead of Kobo API}
         {--dry-run : Read the Kobo form and report what would be imported without saving}';
 
     /**
@@ -40,18 +43,19 @@ class ImportHeksKoboFormMapping extends Command
             return self::FAILURE;
         }
 
+        $xlsform = (string) ($this->option('xlsform') ?: '');
         $asset = (string) ($this->argument('asset') ?: config("heks_kobo.services.{$canonicalService}.asset_uid", ''));
         $mappingService = $this->mappingServiceName($service, $canonicalService);
         $token = (string) config('services.kobotoolbox.token', '');
         $tableName = $services->wideTable($canonicalService);
 
-        if ($asset === '') {
+        if ($asset === '' && $xlsform === '') {
             $this->components->error('Kobo asset UID is required. Pass it as the second argument or configure it in .env.');
 
             return self::FAILURE;
         }
 
-        if ($token === '') {
+        if ($token === '' && $xlsform === '') {
             $this->components->error('KOBOTOOLBOX_TOKEN is not configured.');
 
             return self::FAILURE;
@@ -63,22 +67,14 @@ class ImportHeksKoboFormMapping extends Command
             return self::FAILURE;
         }
 
-        $response = Http::timeout((int) config('services.kobotoolbox.timeout', 60))
-            ->withHeader('Authorization', "Token {$token}")
-            ->acceptJson()
-            ->get("https://kf.kobotoolbox.org/api/v2/assets/{$asset}/?format=json");
+        $body = $xlsform !== ''
+            ? $this->readXlsForm($xlsform)
+            : $this->readKoboForm($asset, $token);
 
-        if (! $response->successful()) {
-            $this->components->error("Kobo form request failed with status {$response->status()}.");
-
-            if ($response->status() === 404) {
-                $this->components->warn('Check that the asset UID belongs to the same Kobo account as KOBOTOOLBOX_TOKEN, or share the project with that account.');
-            }
-
+        if ($body === null) {
             return self::FAILURE;
         }
 
-        $body = $response->json();
         $survey = Arr::get($body, 'content.survey', []);
         $choices = Arr::get($body, 'content.choices', []);
 
@@ -112,6 +108,103 @@ class ImportHeksKoboFormMapping extends Command
         $this->components->info("HEKS Kobo choices synced. Select one: {$choiceStats['select_one']}, select multiple: {$choiceStats['select_multiple']}, choices: {$choiceStats['choices']}, inactive: {$choiceStats['inactive']}.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function readKoboForm(string $asset, string $token): ?array
+    {
+        $response = Http::timeout((int) config('services.kobotoolbox.timeout', 60))
+            ->withHeader('Authorization', "Token {$token}")
+            ->acceptJson()
+            ->get("https://kf.kobotoolbox.org/api/v2/assets/{$asset}/?format=json");
+
+        if (! $response->successful()) {
+            $this->components->error("Kobo form request failed with status {$response->status()}.");
+
+            if ($response->status() === 404) {
+                $this->components->warn('Check that the asset UID belongs to the same Kobo account as KOBOTOOLBOX_TOKEN, or share the project with that account.');
+            }
+
+            return null;
+        }
+
+        $body = $response->json();
+
+        return is_array($body) ? $body : null;
+    }
+
+    /**
+     * @return array{content: array{survey: array<int, array<string, mixed>>, choices: array<int, array<string, mixed>>}, version_id: string|null}|null
+     */
+    private function readXlsForm(string $path): ?array
+    {
+        if (! is_file($path)) {
+            $this->components->error("XLSForm file was not found: {$path}");
+
+            return null;
+        }
+
+        $workbook = IOFactory::load($path);
+        $surveySheet = $workbook->getSheetByName('survey');
+        $choicesSheet = $workbook->getSheetByName('choices');
+
+        if (! $surveySheet instanceof Worksheet || ! $choicesSheet instanceof Worksheet) {
+            $this->components->error("XLSForm must include 'survey' and 'choices' sheets.");
+
+            return null;
+        }
+
+        return [
+            'content' => [
+                'survey' => $this->sheetRows($surveySheet),
+                'choices' => $this->sheetRows($choicesSheet),
+            ],
+            'version_id' => basename($path),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function sheetRows(Worksheet $sheet): array
+    {
+        $rows = $sheet->toArray(null, true, true, true);
+        $headers = [];
+        $payload = [];
+
+        foreach ($rows as $index => $row) {
+            if ($index === 1) {
+                foreach ($row as $column => $value) {
+                    $header = trim((string) $value);
+
+                    if ($header !== '') {
+                        $headers[$column] = $header;
+                    }
+                }
+
+                continue;
+            }
+
+            $item = [];
+
+            foreach ($headers as $column => $header) {
+                $value = $row[$column] ?? null;
+
+                if ($value === null || trim((string) $value) === '') {
+                    continue;
+                }
+
+                Arr::set($item, $header, is_string($value) ? trim($value) : $value);
+            }
+
+            if ($item !== []) {
+                $payload[] = $item;
+            }
+        }
+
+        return $payload;
     }
 
     private function mappingServiceName(string $service, string $canonicalService): string

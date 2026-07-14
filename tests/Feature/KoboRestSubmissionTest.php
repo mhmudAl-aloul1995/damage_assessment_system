@@ -498,6 +498,116 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
             ->value('choice_label'))->toBe('نعم');
 });
 
+test('heks kobo form mapping import command builds mappings from a local xlsform', function () {
+    $workbook = new Spreadsheet;
+    $survey = $workbook->getActiveSheet();
+    $survey->setTitle('survey');
+    $survey->fromArray([
+        ['type', 'name', 'label::Arabic'],
+        ['begin_group', 'family_info', 'Family information'],
+        ['select_one yes_no', 'has_disability', 'Has disability'],
+        ['end_group', null, null],
+    ]);
+
+    $choices = $workbook->createSheet();
+    $choices->setTitle('choices');
+    $choices->fromArray([
+        ['list_name', 'name', 'label::Arabic'],
+        ['yes_no', 'yes', 'Yes'],
+        ['yes_no', 'no', 'No'],
+    ]);
+
+    $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'heks-xlsform-'.\Illuminate\Support\Str::random(8).'.xlsx';
+    IOFactory::createWriter($workbook, 'Xlsx')->save($path);
+
+    $this->artisan('heks:kobo-import-form-mapping', [
+        'service' => 'heks-main',
+        '--xlsform' => $path,
+    ])
+        ->expectsOutputToContain('HEKS Kobo form mapping imported. Created: 1, updated: 0, skipped: 0.')
+        ->expectsOutputToContain('HEKS Kobo choices synced. Select one: 1, select multiple: 0, choices: 2, inactive: 0.')
+        ->assertSuccessful();
+
+    expect(HeksKoboFieldMapping::query()
+        ->where('service_name', 'heks-main')
+        ->where('kobo_field', 'family_info/has_disability')
+        ->value('list_name'))->toBe('yes_no')
+        ->and(HeksKoboChoice::query()
+            ->where('service_name', 'heks-main')
+            ->where('question_key', 'family_info/has_disability')
+            ->where('choice_name', 'yes')
+            ->value('choice_label'))->toBe('Yes');
+});
+
+test('heks kobo field label import command imports observed select choices', function () {
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'marital_status',
+        'column_name' => 'marital_status',
+        'display_label' => 'Marital status',
+        'data_type' => 'select_one',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_092',
+        'column_name' => 'q_092',
+        'display_label' => 'Safety issues',
+        'data_type' => 'select_multiple',
+    ]);
+
+    $technicalWorkbook = new Spreadsheet;
+    $technicalSheet = $technicalWorkbook->getActiveSheet();
+    $technicalSheet->setTitle('Heks Final V1');
+    $technicalSheet->fromArray([
+        ['marital_status', 'q_092', 'q_092/9'],
+        ['18', '9', '1'],
+        ['19', '9 10', '0'],
+    ]);
+
+    $labelsWorkbook = new Spreadsheet;
+    $labelsSheet = $labelsWorkbook->getActiveSheet();
+    $labelsSheet->setTitle('Heks Final V1');
+    $labelsSheet->fromArray([
+        ['Marital status', 'Safety issues', 'Safety issues/No issue'],
+        ['Married', 'No issue', '1'],
+        ['Single', 'No issue Legal issue', '0'],
+    ]);
+
+    $technicalPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'heks-technical-'.\Illuminate\Support\Str::random(8).'.xlsx';
+    $labelsPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'heks-labels-'.\Illuminate\Support\Str::random(8).'.xlsx';
+    IOFactory::createWriter($technicalWorkbook, 'Xlsx')->save($technicalPath);
+    IOFactory::createWriter($labelsWorkbook, 'Xlsx')->save($labelsPath);
+
+    $this->artisan('heks:kobo-import-field-labels', [
+        'service' => 'heks-main',
+        'technical_file' => $technicalPath,
+        'labels_file' => $labelsPath,
+    ])
+        ->expectsOutputToContain('HEKS Kobo choices imported from paired exports: 3.')
+        ->assertSuccessful();
+
+    expect(HeksKoboChoice::query()
+        ->where('question_key', 'marital_status')
+        ->pluck('choice_label', 'choice_name')
+        ->all())->toBe([
+            18 => 'Married',
+            19 => 'Single',
+        ])
+        ->and(HeksKoboChoice::query()
+            ->where('question_key', 'q_092')
+            ->pluck('choice_label', 'choice_name')
+            ->all())->toBe([
+                9 => 'No issue',
+            ])
+        ->and(HeksKoboChoice::query()
+            ->where('question_key', 'q_092')
+            ->where('choice_name', '9 10')
+            ->exists())->toBeFalse();
+});
+
 test('heks kobo sync fills basic beneficiary fields from imported Kobo labels', function () {
     foreach ([
         'q_gov' => 'المحافظة',
