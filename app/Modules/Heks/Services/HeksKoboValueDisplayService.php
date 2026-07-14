@@ -9,6 +9,11 @@ use Illuminate\Support\Collection;
 class HeksKoboValueDisplayService
 {
     /**
+     * @var array<string, Collection<int, HeksKoboFieldMapping>>
+     */
+    private array $displayLabelMappingsByService = [];
+
+    /**
      * @return array{raw: mixed, display: string, type: ?string, resolved: bool, choices: array<int, array{value: string, label: string, selected: bool}>, warning: ?string}
      */
     public function resolve(string $serviceName, string $questionKey, mixed $rawValue, string $locale = 'ar'): array
@@ -27,7 +32,10 @@ class HeksKoboValueDisplayService
             ];
         }
 
-        $choices = $this->choices($serviceName, $questionKey, $mapping?->list_name, $locale);
+        $choiceQuestionKey = $mapping instanceof HeksKoboFieldMapping
+            ? (string) $mapping->kobo_field
+            : $questionKey;
+        $choices = $this->choices($serviceName, $choiceQuestionKey, $mapping?->list_name, $locale);
         $selectedValues = $fieldType === 'select_multiple'
             ? $this->multipleValues($rawValue)
             : [$this->stringValue($rawValue)];
@@ -100,9 +108,47 @@ class HeksKoboValueDisplayService
                     return $mapping;
                 }
             }
+
+            $mapping = HeksKoboFieldMapping::query()
+                ->where('service_name', $service)
+                ->where('display_label', trim($questionKey))
+                ->first();
+
+            if ($mapping instanceof HeksKoboFieldMapping) {
+                return $mapping;
+            }
+
+            $labelSignature = $this->labelSignature($questionKey);
+            $mapping = $this->displayLabelMappings($service)
+                ->first(fn (HeksKoboFieldMapping $mapping): bool => $this->labelSignature((string) $mapping->display_label) === $labelSignature);
+
+            if ($mapping instanceof HeksKoboFieldMapping) {
+                return $mapping;
+            }
         }
 
         return null;
+    }
+
+    /**
+     * @return Collection<int, HeksKoboFieldMapping>
+     */
+    private function displayLabelMappings(string $service): Collection
+    {
+        return $this->displayLabelMappingsByService[$service] ??= HeksKoboFieldMapping::query()
+            ->where('service_name', $service)
+            ->whereNotNull('display_label')
+            ->get();
+    }
+
+    private function labelSignature(string $label): string
+    {
+        return str($label)
+            ->lower()
+            ->replace([':', '：', '؟', '?'], '')
+            ->replaceMatches('/\s+/u', ' ')
+            ->trim()
+            ->toString();
     }
 
     private function fieldType(?HeksKoboFieldMapping $mapping): ?string

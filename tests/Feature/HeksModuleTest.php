@@ -753,6 +753,74 @@ it('hides duplicate raw Kobo survey values from the display', function () {
         ->not->toContain('RAW-FAMILY-SCORE');
 });
 
+it('uses template field choices when raw HEKS survey data is keyed by question label', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY-LABEL-KEY',
+        'name' => 'Survey Label Key Beneficiary',
+        'raw_data' => [
+            'Heks Final V1' => [
+                'Damage status' => '_____1',
+            ],
+        ],
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_059',
+        'column_name' => 'q_059',
+        'display_label' => 'Damage status',
+        'data_type' => 'select_one oc3zr08',
+        'field_type' => 'select_one',
+        'list_name' => 'oc3zr08',
+        'notes' => json_encode(['form_order' => 1]),
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'oc3zr08',
+        'choice_name' => '_____1',
+        'choice_label' => 'أضرار جزئية طفيفة',
+        'language' => 'ar',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'oc3zr08',
+        'choice_name' => '____',
+        'choice_label' => 'لا يوجد ضرر',
+        'language' => 'ar',
+        'sort_order' => 2,
+        'is_active' => true,
+    ]);
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'surveySections');
+    $method->setAccessible(true);
+
+    $sections = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary->load('surveyValueHistories'),
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+    $items = collect($sections)->flatMap(fn (array $section): array => $section['items'])->values();
+    $item = $items->firstWhere('field_key', 'q_059');
+
+    expect($item)
+        ->not->toBeNull()
+        ->and($item['value'])->toBe('أضرار جزئية طفيفة')
+        ->and($item['warning'])->toBeNull()
+        ->and($item['choices'][0])->toMatchArray([
+            'value' => '_____1',
+            'label' => 'أضرار جزئية طفيفة',
+            'selected' => true,
+        ])
+        ->and($items->pluck('value')->all())->not->toContain('_____1');
+});
+
 it('resolves Kobo choice labels without guessing ordinary numeric values', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
@@ -863,6 +931,8 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
     $underscoreChoice = $displayService->resolve('heks-main', 'q_059', '_____1');
     $titleSourceChoice = $displayService->resolve('Heks Final V1', 'q_059', '_____1');
     $looseTitleSourceChoice = $displayService->resolve(' Heks_Final_V1 ', 'q_059', '_____1');
+    $displayLabelChoice = $displayService->resolve('Heks Final V1', 'Damage status', '_____1');
+    $punctuatedDisplayLabelChoice = $displayService->resolve('Heks Final V1', 'Damage status:', '_____1');
 
     expect($maritalStatus)
         ->display->toBe('متزوج/ة')
@@ -895,6 +965,12 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
         ->display->toBe('أضرار جزئية طفيفة')
         ->resolved->toBeTrue()
         ->and($looseTitleSourceChoice)
+        ->display->toBe('أضرار جزئية طفيفة')
+        ->resolved->toBeTrue()
+        ->and($displayLabelChoice)
+        ->display->toBe('أضرار جزئية طفيفة')
+        ->resolved->toBeTrue()
+        ->and($punctuatedDisplayLabelChoice)
         ->display->toBe('أضرار جزئية طفيفة')
         ->resolved->toBeTrue();
 });

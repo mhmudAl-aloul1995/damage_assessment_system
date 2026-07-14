@@ -1,0 +1,2413 @@
+<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+  <h:head>
+    <h:title>Heks Final V1</h:title>
+    <model odk:xforms-version="1.0.0">
+      <instance>
+        <azqpYPtnuEk8yfHRoBvV4K id="social_technical_assessment_sa">
+          <identification>
+            <application_code/>
+            <q_087/>
+            <q_093/>
+            <visit_date/>
+            <gps/>
+            <q_092/>
+            <respondent_name/>
+            <q_103/>
+          </identification>
+          <family_info>
+            <head_name/>
+            <_003/>
+            <head_gender/>
+            <marital_status/>
+            <Age/>
+            <has_disability/>
+            <has_chronic/>
+            <__002/>
+            <__003/>
+            <__004/>
+            <_18_/>
+            <q_008/>
+            <ID/>
+            <q_094/>
+            <q_095/>
+            <q_009/>
+            <area_001/>
+            <address_001/>
+            <q_003/>
+            <_/>
+            <q_001/>
+            <q_007/>
+            <q_011/>
+            <q_010/>
+            <q_012/>
+            <q_017/>
+            <q_002/>
+            <q_013/>
+            <q_014/>
+            <has_pregnant/>
+          </family_info>
+          <group_wb7yr42>
+            <q_015/>
+            <q_016/>
+            <q_018/>
+            <q_021/>
+            <q_022/>
+            <q_023/>
+            <_UNMASS_/>
+          </group_wb7yr42>
+          <group_rs8tf50>
+            <Family_1/>
+            <group_hg1bp50>
+              <q_024/>
+              <q_025/>
+            </group_hg1bp50>
+            <group_og8mf61>
+              <q_026/>
+              <q_027/>
+            </group_og8mf61>
+            <group_sa8tl07>
+              <q_028/>
+              <q_029/>
+            </group_sa8tl07>
+            <group_lx0gs10>
+              <q_030/>
+              <q_031/>
+              <calculation_F/>
+              <_calculation_F_/>
+            </group_lx0gs10>
+            <PWD/>
+            <group_yc1bi89>
+              <q_032/>
+              <q_033/>
+            </group_yc1bi89>
+            <group_rv05e07>
+              <q_034/>
+              <q_035/>
+            </group_rv05e07>
+            <group_ko8jy58>
+              <q_036/>
+              <q_037_001/>
+            </group_ko8jy58>
+            <group_tn2fj34>
+              <q_036_001/>
+              <q_037/>
+            </group_tn2fj34>
+            <calculation_PWD/>
+            <_calculation_PWD_/>
+            <Chronic_Diseases/>
+            <group_ch1ve28>
+              <q_019/>
+              <q_020/>
+            </group_ch1ve28>
+            <group_wl5vo92>
+              <q_039/>
+              <q_040/>
+            </group_wl5vo92>
+            <group_ny7er61>
+              <q_047/>
+              <q_048/>
+            </group_ny7er61>
+            <group_kt4pe39>
+              <q_049/>
+              <q_050/>
+              <calculation_Sick/>
+              <_calculation_Sick_/>
+            </group_kt4pe39>
+            <Injured_Individuals/>
+            <group_bf8it91>
+              <q_051/>
+              <q_052/>
+            </group_bf8it91>
+            <group_zi8md17>
+              <q_053/>
+              <q_054/>
+            </group_zi8md17>
+            <group_sr9gf28>
+              <q_055/>
+              <q_056/>
+            </group_sr9gf28>
+            <group_wk1zf21>
+              <q_057/>
+              <q_058/>
+              <calculation_Inj/>
+              <_calculation_Inj_/>
+            </group_wk1zf21>
+            <Lactating_Women/>
+            <group_fa5xa06>
+              <Num_Extended_Family/>
+              <Extended_Family/>
+              <_8_/>
+              <_8__001/>
+              <_8_17_/>
+              <_8_17__001/>
+              <_18_59_/>
+              <_18_59__001/>
+              <_60_/>
+              <_60__001/>
+              <calculation_Extended_1/>
+              <_calculation_Extended_1_/>
+            </group_fa5xa06>
+          </group_rs8tf50>
+          <housing_info>
+            <occupancy_type/>
+            <q_038/>
+            <q_004/>
+            <_Num_Extended_Family/>
+            <Extended_Famil_family/>
+            <_Extended_Famil_family/>
+            <_2/>
+          </housing_info>
+          <group_bm8ij61>
+            <q_005/>
+            <q_041/>
+            <_005/>
+            <q_042/>
+            <q_043/>
+            <q_044/>
+            <q_045/>
+            <q_046/>
+          </group_bm8ij61>
+          <group_fj7vq52>
+            <group_cw9ag90>
+              <q_059/>
+              <q_060/>
+              <__005/>
+              <q_062/>
+              <q_063/>
+              <q_064/>
+              <q_065/>
+              <q_066/>
+              <_5_5_2_/>
+              <q_067/>
+              <q_068/>
+            </group_cw9ag90>
+            <group_jn2bl34>
+              <q_069/>
+              <q_070/>
+              <q_071/>
+            </group_jn2bl34>
+            <group_jh0ue24>
+              <q_072/>
+              <q_073/>
+              <_1000_/>
+              <_200_/>
+            </group_jh0ue24>
+            <group_op9xp69>
+              <q_074/>
+              <_3_2/>
+              <q_075/>
+              <q_076/>
+            </group_op9xp69>
+            <group_kt2zg04>
+              <q_077/>
+              <_3_5_4_2_/>
+              <q_078/>
+              <q_079/>
+              <q_080/>
+              <q_081/>
+              <q_082/>
+              <q_083/>
+              <_160_/>
+            </group_kt2zg04>
+            <group_kc5to42>
+              <q_084/>
+              <q_085/>
+              <q_086/>
+            </group_kc5to42>
+            <q_088/>
+            <q_089/>
+            <q_090/>
+          </group_fj7vq52>
+          <group_ng8dw05>
+            <q_006/>
+            <q_091/>
+            <q_096/>
+            <q_097/>
+            <group_un2xy00 jr:template="">
+              <q_098/>
+            </group_un2xy00>
+            <group_un2xy00>
+              <q_098/>
+            </group_un2xy00>
+          </group_ng8dw05>
+          <group_lm1ok19 jr:template="">
+            <__001/>
+          </group_lm1ok19>
+          <group_lm1ok19>
+            <__001/>
+          </group_lm1ok19>
+          <engineer_notes/>
+          <engineer_notes_001/>
+          <meta>
+            <instanceID/>
+          </meta>
+        </azqpYPtnuEk8yfHRoBvV4K>
+      </instance>
+      <instance id="kx0yx98">
+        <root>
+          <item>
+            <name>1</name>
+            <label>م. نعيم شاهين</label>
+          </item>
+          <item>
+            <name>2</name>
+            <label>م. محمد الشيخ</label>
+            <order>1</order>
+          </item>
+          <item>
+            <name>____</name>
+            <label>م.محمد ابو فوز</label>
+            <order>2</order>
+          </item>
+          <item>
+            <name>445665</name>
+            <label>م. محب المصري</label>
+            <order>3</order>
+          </item>
+          <item>
+            <name>99987745</name>
+            <label>م. مصطفى رضوان</label>
+            <order>4</order>
+          </item>
+          <item>
+            <name>3</name>
+            <label>آخرون /حدد:</label>
+            <order>5</order>
+          </item>
+        </root>
+      </instance>
+      <instance id="su0ot98">
+        <root>
+          <item>
+            <name>9</name>
+            <label>لا توجد أي مشاكل، والوحدة السكنية مؤهلة لاستكمال التقييم و الوحدة السكنية تقع في محيط آمن (لا يوجد خطر خارجي نتيجة الاستخدام او سهولة الوصول اليه بأمان)</label>
+          </item>
+          <item>
+            <name>10</name>
+            <label>توجد تعقيدات قانونية تمنع المضي قدمًا في المشروع أو تعيق الحصول على موافقة المالك لإجراء الإصلاحات.</label>
+            <order>2</order>
+          </item>
+          <item>
+            <name>12</name>
+            <label>الوحدة السكنية غير آمنة إنشائيًا.</label>
+            <order>3</order>
+          </item>
+          <item>
+            <name>13</name>
+            <label>يوجد ضرر إنشائي جسيم في الأعمدة أو السقف.</label>
+            <order>4</order>
+          </item>
+          <item>
+            <name>14</name>
+            <label>يوجد خطر مخلفات حرب غير منفجرة (UXO) أو ذخائر متفجرة (ERW) داخل الوحدة أو بالقرب منها.</label>
+            <order>5</order>
+          </item>
+          <item>
+            <name>11</name>
+            <label>تقع الوحدة السكنية في موقع غير آمن.</label>
+            <order>6</order>
+          </item>
+          <item>
+            <name>________________</name>
+            <label>لا حاجة للتدخل (لايوجد أضرار)  - أو تلقت الأسرة مساعدة مشابهة من مؤسسات أو جهات أخرى </label>
+          </item>
+        </root>
+      </instance>
+      <instance id="gender">
+        <root>
+          <item>
+            <name>15</name>
+            <label>ذكر</label>
+          </item>
+          <item>
+            <name>16</name>
+            <label>أنثى</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="marital_status">
+        <root>
+          <item>
+            <name>17</name>
+            <label>أعزب/آنسة</label>
+          </item>
+          <item>
+            <name>18</name>
+            <label>متزوج/ـة</label>
+          </item>
+          <item>
+            <name>19</name>
+            <label>أرمل/ـة</label>
+          </item>
+          <item>
+            <name>20</name>
+            <label>مطلق/ـة</label>
+          </item>
+          <item>
+            <name>21</name>
+            <label>منفصل/ـة أو مهجورة</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="jk4hk51">
+        <root>
+          <item>
+            <name>22</name>
+            <label>أقل من 17</label>
+          </item>
+          <item>
+            <name>23</name>
+            <label>17-60</label>
+          </item>
+          <item>
+            <name>24</name>
+            <label>أكبر من 60</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="yes_no">
+        <root>
+          <item>
+            <name>25</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>26</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ek0kl61">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>123456</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="wh4ro95">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ef0dv58">
+        <root>
+          <item>
+            <name>778899</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>445566</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="gi4fr99">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="mt31q90">
+        <root>
+          <item>
+            <name>4</name>
+            <label>شمال غزة</label>
+          </item>
+          <item>
+            <name>5</name>
+            <label>غزة</label>
+          </item>
+          <item>
+            <name>6</name>
+            <label>دير البلح</label>
+          </item>
+          <item>
+            <name>7</name>
+            <label>خانيونس</label>
+          </item>
+          <item>
+            <name>8</name>
+            <label>رفح</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="wq1fl01">
+        <root>
+          <item>
+            <name>27</name>
+            <label>ملك</label>
+          </item>
+          <item>
+            <name>28</name>
+            <label>إيجار</label>
+          </item>
+          <item>
+            <name>29</name>
+            <label>إستضافة (نازح/ مضيف)</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="yj43o30">
+        <root>
+          <item>
+            <name>______________</name>
+            <label>مأهولة من قبل الأسرة المالكة (كلياً أو جزئياً)</label>
+          </item>
+          <item>
+            <name>________________</name>
+            <label>مأهولة من قبل آخرين (أقارب / نازحين / مستأجرين)</label>
+          </item>
+          <item>
+            <name>__</name>
+            <label>غير مأهولة</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="sh9tx88">
+        <root>
+          <item>
+            <name>________</name>
+            <label>الأسرة نازحة في مكان آخر</label>
+          </item>
+          <item>
+            <name>159753</name>
+            <label>غير صالحة للسكن بسبب الضرر</label>
+          </item>
+          <item>
+            <name>_</name>
+            <label>مهجورة</label>
+          </item>
+          <item>
+            <name>951753</name>
+            <label>قيد الترميم / إعادة الإعمار</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>أسباب أخرى (يرجى التحديد)</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="fw7yl87">
+        <root>
+          <item>
+            <name>__________</name>
+            <label>غير نازح - مقيم بالوحدة السكنية</label>
+          </item>
+          <item>
+            <name>_</name>
+            <label>نازح</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="nk9me03">
+        <root>
+          <item>
+            <name>30</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>31</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="cq8yl59">
+        <root>
+          <item>
+            <name>32</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>33</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="eo7ak62">
+        <root>
+          <item>
+            <name>34</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>35</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="nn1dx34">
+        <root>
+          <item>
+            <name>36</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>37</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="mc13s38">
+        <root>
+          <item>
+            <name>38</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>39</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="yr6gh20">
+        <root>
+          <item>
+            <name>42</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>43</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="gh74k37">
+        <root>
+          <item>
+            <name>48</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>49</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="pm69u67">
+        <root>
+          <item>
+            <name>50</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>51</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="hm64f70">
+        <root>
+          <item>
+            <name>52</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>53</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ix1ae52">
+        <root>
+          <item>
+            <name>54</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>55</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="occupancy">
+        <root>
+          <item>
+            <name>56</name>
+            <label>منزل باطون مستقل</label>
+          </item>
+          <item>
+            <name>57</name>
+            <label>شقة باطون في عمارة/برج</label>
+            <order>1</order>
+          </item>
+          <item>
+            <name>58</name>
+            <label>منزل مستقل بسقف من الأسبست أو الزينكو</label>
+            <order>2</order>
+          </item>
+          <item>
+            <name>________________</name>
+            <label>منزل مركب بسقف من الباطون و الأسبست أو الزينكو</label>
+            <order>3</order>
+          </item>
+          <item>
+            <name>59</name>
+            <label>حاصل</label>
+            <order>4</order>
+          </item>
+          <item>
+            <name>60</name>
+            <label>أخرى، حدد/ي: ..............</label>
+            <order>5</order>
+          </item>
+        </root>
+      </instance>
+      <instance id="ow8hj23">
+        <root>
+          <item>
+            <name>61</name>
+            <label>مساحة منفصلة للأسرة</label>
+          </item>
+          <item>
+            <name>62</name>
+            <label>مساحة مشتركة بين أكثر من أسرة</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="zz5tw50">
+        <root>
+          <item>
+            <name>63</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>64</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ob2vu45">
+        <root>
+          <item>
+            <name>65</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>66</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="dn7rs02">
+        <root>
+          <item>
+            <name>67</name>
+            <label>بشكل كامل</label>
+          </item>
+          <item>
+            <name>68</name>
+            <label>بشكل جزئي</label>
+          </item>
+          <item>
+            <name>69</name>
+            <label>لا تعتمد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="kv65e91">
+        <root>
+          <item>
+            <name>70</name>
+            <label>نعم، بشكل كافي</label>
+          </item>
+          <item>
+            <name>71</name>
+            <label>نعم، بشكل غير كافي</label>
+          </item>
+          <item>
+            <name>72</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="bd6pe21">
+        <root>
+          <item>
+            <name>_</name>
+            <label>كافية</label>
+          </item>
+          <item>
+            <name>74</name>
+            <label>فواصل جزئية</label>
+            <order>1</order>
+          </item>
+          <item>
+            <name>73</name>
+            <label>لا توجد فواصل</label>
+            <order>2</order>
+          </item>
+        </root>
+      </instance>
+      <instance id="on8ps92">
+        <root>
+          <item>
+            <name>75</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>76</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="oc3zr08">
+        <root>
+          <item>
+            <name>____</name>
+            <label>لا يوجد ضرر</label>
+          </item>
+          <item>
+            <name>_____1</name>
+            <label>أضرار جزئية طفيفة</label>
+          </item>
+          <item>
+            <name>_____2</name>
+            <label>أضرار جزئية متوسطة</label>
+          </item>
+          <item>
+            <name>_____3</name>
+            <label>ضرر جزئي بليغ</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="bo62z63">
+        <root>
+          <item>
+            <name>____</name>
+            <label>لا حاجة للصيانة</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>بحاجة الى صيانة بسيطة</label>
+          </item>
+          <item>
+            <name>_______1</name>
+            <label>بحاجة الى  صيانة كبيرة</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="xx1ie48">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>__2</name>
+            <label>سيئ</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="pm82l00">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>__2</name>
+            <label>سيئ</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ak2cd90">
+        <root>
+          <item>
+            <name>_</name>
+            <label>حاجة عالية</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>حاجة متوسطة</label>
+          </item>
+          <item>
+            <name>____</name>
+            <label>لا توجد حاجة</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ed2jo31">
+        <root>
+          <item>
+            <name>_</name>
+            <label>اكتظاظ شديد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>اكتظاظ متوسط</label>
+          </item>
+          <item>
+            <name>__</name>
+            <label>مساحة كافية</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="uk9ju65">
+        <root>
+          <item>
+            <name>_</name>
+            <label>غير محكمة الإغلاق</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>يمكن إغلاقها جزئيًا</label>
+          </item>
+          <item>
+            <name>____</name>
+            <label>محكمة الإغلاق بالكامل</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="rl6zw75">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>__2</name>
+            <label>سيئ</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="pp8vs38">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>__2</name>
+            <label>سيئ</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ga8pe99">
+        <root>
+          <item>
+            <name>__</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>___1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>____</name>
+            <label>سيئ</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="cq6xu04">
+        <root>
+          <item>
+            <name>__</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>___1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>____</name>
+            <label>سيئ</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="uw6hj62">
+        <root>
+          <item>
+            <name>__</name>
+            <label>بشكل جيد</label>
+          </item>
+          <item>
+            <name>___1</name>
+            <label>بشكل متوسط</label>
+          </item>
+          <item>
+            <name>____</name>
+            <label>سيئة (لا يوجد)</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ac73y33">
+        <root>
+          <item>
+            <name>__</name>
+            <label>بشكل جيد</label>
+          </item>
+          <item>
+            <name>___1</name>
+            <label>بشكل متوسط</label>
+          </item>
+          <item>
+            <name>____</name>
+            <label>سيئة (لا يوجد)</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="vp1kz74">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="bz2qx98">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="nu4lh21">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>__2</name>
+            <label>سيئ</label>
+          </item>
+          <item>
+            <name>__</name>
+            <label>لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="do6ne66">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ie3gi15">
+        <root>
+          <item>
+            <name>_</name>
+            <label>موجودين</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>موجودين بشكل جزئي ويحتاج لصيانة</label>
+          </item>
+          <item>
+            <name>__</name>
+            <label>غير موجود</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="wx79r06">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>سئ / لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="xz4rx97">
+        <root>
+          <item>
+            <name>_</name>
+            <label>غير صالح للاستخدام</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>صالح للاستخدام جزئيًا</label>
+          </item>
+          <item>
+            <name>____</name>
+            <label>صالح للاستخدام بالكامل</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="wr1we66">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>سئ / لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="qd5dj18">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>سئ / لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="vs5iz20">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>سئ / لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="yp2kh64">
+        <root>
+          <item>
+            <name>__</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>___1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>____</name>
+            <label>سئ / لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="jj3aj21">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متزسط</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>سئ / لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ud4uk22">
+        <root>
+          <item>
+            <name>_</name>
+            <label>جيد</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>سئ / لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="cw2bq60">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>متوسط</label>
+          </item>
+          <item>
+            <name>______</name>
+            <label>سئ / لا يوجد</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="fa7tk10">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="jv7ea72">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="rm3ls22">
+        <root>
+          <item>
+            <name>_</name>
+            <label>نعم</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>لا</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="ze1fl02">
+        <root>
+          <item>
+            <name>_</name>
+            <label>لا يوجد وصول آمن</label>
+          </item>
+          <item>
+            <name>__1</name>
+            <label>وصول جزئي</label>
+          </item>
+          <item>
+            <name>__</name>
+            <label>وصول آمن</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="tb0op75">
+        <root>
+          <item>
+            <name>______</name>
+            <label>نعم، الوصول آمن بالكامل</label>
+          </item>
+          <item>
+            <name>________</name>
+            <label>الوصول ممكن ولكن مع بعض المخاطر</label>
+          </item>
+          <item>
+            <name>_______1</name>
+            <label>لا يمكن الوصول نهائياً</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="hg3ob27">
+        <root>
+          <item>
+            <name>____</name>
+            <label>سليم وآمن بالكامل</label>
+          </item>
+          <item>
+            <name>________</name>
+            <label>الوصول ممكن ولكن مع بعض المخاطر</label>
+          </item>
+          <item>
+            <name>_________1</name>
+            <label>متضرر بشكل شديد (غير آمن)/ غير موجود</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="um9gb92">
+        <root>
+          <item>
+            <name>__________</name>
+            <label>أوراق ملكية تثبت ملكيتك للوحدة السكنية</label>
+          </item>
+          <item>
+            <name>___________1</name>
+            <label>عقد ايجار او استضافة للوحدة السكنية</label>
+            <order>1</order>
+          </item>
+          <item>
+            <name>______</name>
+            <label>أوراق ومستندات ثبوتية شخصية</label>
+            <order>2</order>
+          </item>
+          <item>
+            <name>_______1</name>
+            <label>حساب بنكي ساري المفعول</label>
+            <order>3</order>
+          </item>
+          <item>
+            <name>____</name>
+            <label>أوراق اخرى (حدد)</label>
+            <order>5</order>
+          </item>
+          <item>
+            <name>_____</name>
+            <label>لا يوجد/وضح السبب</label>
+          </item>
+        </root>
+      </instance>
+      <instance id="fu9pp75">
+        <root>
+          <item>
+            <name>1</name>
+            <label>المنزل  يحتاج الى تدخل لاعادة التأهيل والتطوير</label>
+          </item>
+          <item>
+            <name>2</name>
+            <label>بحاجة لاعمال تشطيبات فقط</label>
+          </item>
+          <item>
+            <name>3</name>
+            <label>الوحدة تحتاح دراسة فنية لدراسة الحالة - لا ينصح بالتدخل قبل دراسة الحالة من قبل لجنة مختصة</label>
+          </item>
+          <item>
+            <name>__________________________________</name>
+            <label>الوحدة موجودة بعمارة سكنية مع وحدات اخرى مطابقة للمعايير بشكل مبدئي (عمارة سكنية لنفس العائلة وأكثر من حالة)</label>
+          </item>
+          <item>
+            <name>____________________________</name>
+            <label>ينصح بتوفير كفيل للقيام بأعمال الإصلاح - الوحدة مطابقة ولا يوجد قدرة على ادارة المنحة</label>
+          </item>
+        </root>
+      </instance>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification/application_code" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification/q_087" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification/q_093" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/identification/q_087  = '3'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification/visit_date" type="date" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification/gps" type="geopoint" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification/q_092" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification/respondent_name" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/identification/q_103" type="int" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/head_name" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '10') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '11') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '12') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '13') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '14') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '________________')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/_003" type="int" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '10') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '11') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '12') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '13') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '14') or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '________________')" required="true()" constraint=". &gt; 100000000 and . &lt; 1000000000" jr:constraintMsg="الهوية تحتوي على 9 أرقام"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/head_gender" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/marital_status" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/Age" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/has_disability" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/has_chronic" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/__002" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/__003" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/__004" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/_18_" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_008" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/marital_status  = '18' and selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/ID" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/marital_status  = '18' and selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()" constraint=". &gt; 100000000 and . &gt; 100000000" jr:constraintMsg="الهوية تحتوي على 9 أرقام"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_094" type="int" required="true()" constraint=". &gt; 100000000 and . &lt; 1000000000"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_095" type="int" required="false()" constraint=". &gt; 100000000 and . &lt; 1000000000"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_009" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/area_001" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/address_001" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_003" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/_" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_001" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/_  = '__'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_007" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/q_001  = '______'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_011" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_010" readonly="true()" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/q_003  = '29' and selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_012" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/q_003  = '29' and selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_017" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/q_003  = '29' and selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_002" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/q_003  = '27' or  /azqpYPtnuEk8yfHRoBvV4K/family_info/q_003  = '28' or  /azqpYPtnuEk8yfHRoBvV4K/family_info/q_003  = '29' or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_013" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/q_003  = '28' or  /azqpYPtnuEk8yfHRoBvV4K/family_info/q_003  = '29' or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_014" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/q_002  = '30' or selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/family_info/has_pregnant" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_015" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_016" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_018" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_021" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_022" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_023" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/_UNMASS_" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Family_1" type="int" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_hg1bp50" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Family_1  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_hg1bp50/q_024" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_hg1bp50/q_025" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_og8mf61" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Family_1  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_og8mf61/q_026" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_og8mf61/q_027" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sa8tl07" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Family_1  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sa8tl07/q_028" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sa8tl07/q_029" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Family_1  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/q_030" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/q_031" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/calculation_F" type="string" required="false()" calculate=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_hg1bp50/q_024  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_hg1bp50/q_025  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_og8mf61/q_026  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_og8mf61/q_027  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sa8tl07/q_028  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sa8tl07/q_029  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/q_030  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/q_031 "/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/_calculation_F_" readonly="true()" type="string" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/PWD" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/has_disability  = '25'" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_yc1bi89" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/PWD  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_yc1bi89/q_032" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_yc1bi89/q_033" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_rv05e07" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/PWD  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_rv05e07/q_034" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_rv05e07/q_035" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ko8jy58" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/PWD  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ko8jy58/q_036" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ko8jy58/q_037_001" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_tn2fj34" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/has_disability  = '25'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_tn2fj34/q_036_001" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_tn2fj34/q_037" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/calculation_PWD" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/has_disability  = '25'" required="false()" calculate=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_yc1bi89/q_032  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_yc1bi89/q_033  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_rv05e07/q_034  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_rv05e07/q_035  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ko8jy58/q_036  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_tn2fj34/q_037  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_tn2fj34/q_036_001  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ko8jy58/q_037_001 "/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/_calculation_PWD_" readonly="true()" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/has_disability  = '25'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Chronic_Diseases" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__002  = '_'" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ch1ve28" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__002  = '_'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ch1ve28/q_019" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ch1ve28/q_020" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wl5vo92" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__002  = '_'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wl5vo92/q_039" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wl5vo92/q_040" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ny7er61" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__002  = '_'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ny7er61/q_047" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ny7er61/q_048" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__002  = '_'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/q_049" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/q_050" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/calculation_Sick" type="string" required="false()" calculate=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ch1ve28/q_019  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ch1ve28/q_020  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wl5vo92/q_039  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wl5vo92/q_040  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ny7er61/q_047  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ny7er61/q_048  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/q_049 +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/q_050 "/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/_calculation_Sick_" readonly="true()" type="string" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Injured_Individuals" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__003  = '_'" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_bf8it91" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__003  = '_'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_bf8it91/q_051" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_bf8it91/q_052" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_zi8md17" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__003  = '_'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_zi8md17/q_053" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_zi8md17/q_054" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sr9gf28" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__003  = '_'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sr9gf28/q_055" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sr9gf28/q_056" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__003  = '_'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/q_057" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/q_058" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/calculation_Inj" type="string" required="false()" calculate=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_bf8it91/q_051  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_bf8it91/q_052  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_zi8md17/q_053  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_zi8md17/q_054  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sr9gf28/q_055  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sr9gf28/q_056  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/q_057 +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/q_058 "/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/_calculation_Inj_" readonly="true()" type="string" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Lactating_Women" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/has_pregnant  = '25'" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06" relevant=" /azqpYPtnuEk8yfHRoBvV4K/family_info/__004  = '778899'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Num_Extended_Family" type="int" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Num_Extended_Family  &gt; 0" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8__001" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_17_" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_17__001" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_18_59_" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_18_59__001" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_60_" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_60__001" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/calculation_Extended_1" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Num_Extended_Family  &gt; 0" required="false()" calculate=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8__001  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_17_  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_17__001  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_18_59_  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_18_59__001  +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_60_ +  /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_60__001 "/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_calculation_Extended_1_" readonly="true()" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Num_Extended_Family  &gt; 0" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/housing_info" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/housing_info/occupancy_type" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/housing_info/q_038" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/housing_info/occupancy_type  = '60'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/housing_info/q_004" type="string" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/housing_info/_Num_Extended_Family" readonly="true()" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/housing_info/q_004  = '62'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/housing_info/Extended_Famil_family" type="string" required="false()" calculate="coalesce( /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Family_1 , 0) + coalesce( /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family , 0)"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/housing_info/_Extended_Famil_family" readonly="true()" type="string" relevant=" /azqpYPtnuEk8yfHRoBvV4K/housing_info/q_004  = '62'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/housing_info/_2" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/housing_info/q_004  = '62'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_005" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_041" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_005  = '63'" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/_005" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_042" type="int" relevant=" /azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/_005  = '65'" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_043" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_044" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_045" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_046" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_059" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_060" type="int" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/__005" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_062" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_063" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_064" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_065" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_066" type="int" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/_5_5_2_" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_067" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_068" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jn2bl34" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jn2bl34/q_069" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jn2bl34/q_070" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jn2bl34/q_071" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24/q_072" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24/q_073" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24/_1000_" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24/_200_" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69/q_074" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69/_3_2" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69/q_075" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69/q_076" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_077" type="int" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/_3_5_4_2_" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_078" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_079" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_080" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_081" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_082" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_083" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/_160_" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kc5to42" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kc5to42/q_084" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kc5to42/q_085" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kc5to42/q_086" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/q_088" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/q_089" type="string" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/q_090" type="string" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/identification/q_092 , '9')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_091" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_096" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006 , '____')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_097" type="string" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006 , '_____')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/group_un2xy00" relevant="selected( /azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006 , '__________') or selected( /azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006 , '___________1') or selected( /azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006 , '______') or selected( /azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006 , '_______1') or selected( /azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006 , '____')" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/group_un2xy00/q_098" type="binary" required="true()" orx:max-pixels="1024"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_lm1ok19" required="false()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_lm1ok19/__001" type="binary" required="false()" orx:max-pixels="1024"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/engineer_notes" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/engineer_notes_001" type="string" required="true()"/>
+      <bind nodeset="/azqpYPtnuEk8yfHRoBvV4K/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/identification">
+      <label>معلومات التعريف</label>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/identification/application_code">
+        <label>رقم الطلب/الكود</label>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/identification/q_087">
+        <label>اسم المهندس الميداني</label>
+        <itemset nodeset="instance('kx0yx98')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/identification/q_093">
+        <label>حدد اسم :</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/identification/visit_date">
+        <label>تاريخ الزيارة</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/identification/gps">
+        <label>الإحداثيات</label>
+      </input>
+      <select ref="/azqpYPtnuEk8yfHRoBvV4K/identification/q_092">
+        <label>يرجى تحديد ما إذا كانت هناك أي من الحالات التالية تنطبق على الوحدة السكنية.</label>
+        <hint>في حال اختيار أي من الخيارات التي تشير إلى وجود مشكلة، يتم إيقاف التقييم فورًا وعدم استكمال الاستبيان. ✅ فقط في حال اختيار الخيار الأول يتم استكمال الإستبيام كاملاً</hint>
+        <itemset nodeset="instance('su0ot98')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/identification/respondent_name">
+        <label>اسم الشخص المقابل</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/identification/q_103">
+        <label>رقم التواصل</label>
+      </input>
+    </group>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/family_info">
+      <label>1) تقييم الهشاشة الاجتماعية:</label>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/head_name">
+        <label>اسم رب الأسرة</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/_003">
+        <label>رقم هوية رب الأسرة</label>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/head_gender">
+        <label>جنس رب الأسرة</label>
+        <itemset nodeset="instance('gender')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/marital_status">
+        <label>الحالة الاجتماعية</label>
+        <itemset nodeset="instance('marital_status')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/Age">
+        <label>العمر</label>
+        <itemset nodeset="instance('jk4hk51')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/has_disability">
+        <label>يوجد أشخاص ذوي إعاقة</label>
+        <itemset nodeset="instance('yes_no')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/has_chronic">
+        <label>هل يعاني من معيل الأسرة من مرض مزمن</label>
+        <itemset nodeset="instance('yes_no')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/__002">
+        <label>يوجد بالأسرة أفراد لديهم أمراض مزمنة</label>
+        <itemset nodeset="instance('ek0kl61')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/__003">
+        <label>هل يوجد أفراد مصابين في الحرب من الأسرة</label>
+        <itemset nodeset="instance('wh4ro95')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/__004">
+        <label>هل يوجد أسر ممتدة متواجدة بنفس الوحدة السكنية</label>
+        <itemset nodeset="instance('ef0dv58')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/_18_">
+        <label>هل يوجد أطفال أقل من 18 سنة بالأسرة ؟</label>
+        <itemset nodeset="instance('gi4fr99')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_008">
+        <label>اسم الزوج/ـة رباعياً:</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/ID">
+        <label>رقم هوية الزوج/ة:</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_094">
+        <label>رقم التواصل</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_095">
+        <label>رقم تواصل بديل</label>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_009">
+        <label>المحافظة</label>
+        <itemset nodeset="instance('mt31q90')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/area_001">
+        <label>المنطقة/التجمع</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/address_001">
+        <label>العنوان بالتفصيل</label>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_003">
+        <label>نوع الإشغال الحالي:</label>
+        <itemset nodeset="instance('wq1fl01')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/_">
+        <label>حالة الإشغال الحالي للوحدة السكنية</label>
+        <itemset nodeset="instance('yj43o30')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_001">
+        <label>ما سبب عدم إشغال الوحدة السكنية؟</label>
+        <itemset nodeset="instance('sh9tx88')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_007">
+        <label>حدد الأسباب الأخرى</label>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_011">
+        <label>حالة النزوح للأسرة حالياً</label>
+        <itemset nodeset="instance('fw7yl87')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_010">
+        <label>في حال كانت الأسرة نازحة، حدد/ي بيانات الأسرة المستضيفة:</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_012">
+        <label>اسم رب الأسرة:</label>
+        <hint>العائلة المستضيفة</hint>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_017">
+        <label>رقم الهوية:</label>
+        <hint>رب الأسرة للعائلة المستضيفة</hint>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_002">
+        <label>يتوفر إثبات ساري المفعول للملكية/الإيجار/اتفاقية الاستضافة</label>
+        <itemset nodeset="instance('nk9me03')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_013">
+        <label>هل يوجد أي مشاكل قانونية بين صاحب الوحدة السكنية والمستأجر</label>
+        <itemset nodeset="instance('cq8yl59')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/q_014">
+        <label>هل يوجد أي تحديات تعيق توفير إثبات سماح المالك بالإصلاحات</label>
+        <itemset nodeset="instance('eo7ak62')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/family_info/has_pregnant">
+        <label>يوجد نساء حوامل أو مرضعات</label>
+        <itemset nodeset="instance('yes_no')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+    </group>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42">
+      <label>2) معلومات الحماية:</label>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_015">
+        <label>الوحدة السكنية تقع في محيط آمن (لا يوجد خطر خارجي نتيجة الاستخدام او سهولة الوصول اليه بأمان)</label>
+        <itemset nodeset="instance('nn1dx34')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_016">
+        <label>الوحدة آمنة من الناحية الهيكلية للدخول إليها وإصلاحها؟</label>
+        <itemset nodeset="instance('mc13s38')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_018">
+        <label>المأوى آمن انشائيا؟</label>
+        <itemset nodeset="instance('yr6gh20')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_021">
+        <label>هناك حطام يحتاج إلى إزالة؟</label>
+        <itemset nodeset="instance('gh74k37')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_022">
+        <label>تستطيع الأسرة تنظيم أعمال الصيانة بنفسها إذا مُنحت مبلغاً نقدياً؟</label>
+        <itemset nodeset="instance('pm69u67')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/q_023">
+        <label>يوجد شخص بالغ واحد على الأقل في المنزل يمكنه المساعدة في الإصلاح أو الصيانة؟</label>
+        <itemset nodeset="instance('hm64f70')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_wb7yr42/_UNMASS_">
+        <label>مطلوب الإحالة متعددة الاحتياج / UNMASS / لقطاع الحماية / إحالة قانونية</label>
+        <hint>توجد أي مؤشرات على وجود ذخائر غير منفجرة/مخلفات حرب في المبنى أو بالقرب منه</hint>
+        <itemset nodeset="instance('ix1ae52')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+    </group>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50">
+      <label>3) معلومات التكوين الأسري (يشمل رب الأسرة):</label>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Family_1">
+        <label>إجمالي عدد أفراد الأسرة الأساسية</label>
+        <hint>لا تقم بإضافة أي من الاسر الاخرى (فقط الأسرى الأساسية)</hint>
+      </input>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_hg1bp50">
+        <label>أفراد الأسرة 8 سنوات وأقل</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_hg1bp50/q_024">
+          <label>ذكور</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_hg1bp50/q_025">
+          <label>إناث</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_og8mf61">
+        <label>أفراد الأسرة 8-17 سنة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_og8mf61/q_026">
+          <label>ذكور</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_og8mf61/q_027">
+          <label>إناث</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sa8tl07">
+        <label>عدد البالغين 18-59 سنة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sa8tl07/q_028">
+          <label>ذكور</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sa8tl07/q_029">
+          <label>إناث</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10">
+        <label>عدد كبار السن 60+</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/q_030">
+          <label>ذكور</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/q_031">
+          <label>إناث</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/_calculation_F_">
+          <label><output value=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_lx0gs10/calculation_F "/> إجمالي التوزيع الأسري للأفراد حسب المدخل هو </label>
+        </input>
+      </group>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/PWD">
+        <label>أفراد من ذوي الإعاقة</label>
+        <hint>في حال عدم وجود أفراد ذوي إعاقة بالأسرة ضع (صفر)</hint>
+      </input>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_yc1bi89">
+        <label>أفراد من ذوي الإعاقة - 8 سنوات وأقل</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_yc1bi89/q_032">
+          <label>ذكور</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_yc1bi89/q_033">
+          <label>إناث</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_rv05e07">
+        <label>أفراد من ذوي الإعاقة - 8-17 سنة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_rv05e07/q_034">
+          <label>ذكور</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_rv05e07/q_035">
+          <label>إناث</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ko8jy58">
+        <label>أفراد من ذوي الإعاقة 18-59 سنة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ko8jy58/q_036">
+          <label>ذكور</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ko8jy58/q_037_001">
+          <label>إناث</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_tn2fj34">
+        <label>أفراد من ذوي الإعاقة كبار السن 60+</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_tn2fj34/q_036_001">
+          <label>ذكور</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_tn2fj34/q_037">
+          <label>إناث</label>
+        </input>
+      </group>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/_calculation_PWD_">
+        <label><output value=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/calculation_PWD "/> إجمالي التوزيع الأسري للأفراد ذوي الإعاقة حسب المدخل هو </label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Chronic_Diseases">
+        <label>أفراد لديهم أمراض مزمنة</label>
+        <hint>في حال لا يوجد أفراد لديهم امراض مزمنة ضع (صفر)</hint>
+      </input>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ch1ve28">
+        <label>أفراد لديهم أمراض مزمنة 8 سنوات فما أقل</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ch1ve28/q_019">
+          <label>ذكر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ch1ve28/q_020">
+          <label>انثى</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wl5vo92">
+        <label>أفراد لديهم أمراض مزمنة 8-17 سنة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wl5vo92/q_039">
+          <label>ذكر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wl5vo92/q_040">
+          <label>انثى</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ny7er61">
+        <label>أفراد لديهم أمراض 18-59 سنة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ny7er61/q_047">
+          <label>ذكر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_ny7er61/q_048">
+          <label>انثى</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39">
+        <label>أفراد لديهم أمراض 60 فما أكبر</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/q_049">
+          <label>ذكر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/q_050">
+          <label>انثى</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/_calculation_Sick_">
+          <label><output value=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_kt4pe39/calculation_Sick "/> إجمالي التوزيع الأسري للأفراد ذوي الإعاقة حسب المدخل هو </label>
+        </input>
+      </group>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Injured_Individuals">
+        <label>أفراد مصابين في الحرب</label>
+        <hint>في حال لا يوجد أفراد مصابين ضع (صفر)</hint>
+      </input>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_bf8it91">
+        <label>أفراد مصابين في الحرب 8 سنوات فما أقل</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_bf8it91/q_051">
+          <label>ذكر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_bf8it91/q_052">
+          <label>انثى</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_zi8md17">
+        <label>أفراد مصابين في الحرب 8-17 سنة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_zi8md17/q_053">
+          <label>ذكر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_zi8md17/q_054">
+          <label>انثى</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sr9gf28">
+        <label>أفراد مصابين في الحرب 18-59 سنة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sr9gf28/q_055">
+          <label>ذكر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_sr9gf28/q_056">
+          <label>انثى</label>
+        </input>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21">
+        <label>أفراد مصابين في الحرب 60 فما أكبر</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/q_057">
+          <label>ذكر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/q_058">
+          <label>انثى</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/_calculation_Inj_">
+          <label><output value=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_wk1zf21/calculation_Inj "/> إجمالي التوزيع الأسري للأفراد المصابين حسب المدخل هو </label>
+        </input>
+      </group>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/Lactating_Women">
+        <label>عدد السيدات المرضعات</label>
+        <hint>حدد عدد السيدات مرضعات</hint>
+      </input>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06">
+        <label>التكوين الاسري للأسر الممتدة</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Num_Extended_Family">
+          <label>عدد الأسر الممتدة</label>
+          <hint>في حال عدم وجود اسر ممتدة ضع (صفر)</hint>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Extended_Family">
+          <label>إجمالي عدد الأفراد للأسر الممتدة</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_">
+          <label>ذكر - 8 سنوات فما أقل</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8__001">
+          <label>انثى - 8 سنوات فما أقل</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_17_">
+          <label>ذكر - 8-17 سنة</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_8_17__001">
+          <label>انثى - 8-17 سنة</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_18_59_">
+          <label>ذكر - 18-59 سنة</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_18_59__001">
+          <label>انثى - 18-59 سنة</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_60_">
+          <label>ذكر - 60 فما أكبر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_60__001">
+          <label>انثى - 60 فما أكبر</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/_calculation_Extended_1_">
+          <label><output value=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/calculation_Extended_1 "/> إجمالي التوزيع الأسري للأسرة الممتدة حسب المدخل هو </label>
+        </input>
+      </group>
+    </group>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/housing_info">
+      <label>4) معلومات الوحدة السكنية:</label>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/housing_info/occupancy_type">
+        <label>نوع الوحدة السكنية:</label>
+        <itemset nodeset="instance('occupancy')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/housing_info/q_038">
+        <label>اخرى،حدد/ي:</label>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/housing_info/q_004">
+        <label>نوع المساحة المستخدمة:</label>
+        <itemset nodeset="instance('ow8hj23')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/housing_info/_Num_Extended_Family">
+        <label> عدد الأسر الممتدة المدخل هو: <output value=" /azqpYPtnuEk8yfHRoBvV4K/group_rs8tf50/group_fa5xa06/Num_Extended_Family "/> </label>
+        <hint>في حال تم اختيار (مساحة مشتركة بين أكثر من أسرة )</hint>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/housing_info/_Extended_Famil_family">
+        <label> عدد الأفراد الكلي في نفس المساحة: <output value=" /azqpYPtnuEk8yfHRoBvV4K/housing_info/Extended_Famil_family "/> </label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/housing_info/_2">
+        <label>المساحة المستخدمة للسكن من قبل الأسرة بالنسبة للمساحة الكلية : _____ م2</label>
+        <hint>في حال تم اختيار (مساحة مشتركة بين أكثر من أسرة )</hint>
+      </input>
+    </group>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61">
+      <label>5) تقييم الظروف المعيشية للأسرة</label>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_005">
+        <label>هل تمتلك الأسرة مصدر دخل ثابت أو منتظم؟</label>
+        <itemset nodeset="instance('zz5tw50')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_041">
+        <label>متوسط الدخل بالشيكل</label>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/_005">
+        <label>هل يوجد أفراد عاطلين عن العمل (18-60 سنة) باستثناء معيل الأسرة</label>
+        <itemset nodeset="instance('ob2vu45')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_042">
+        <label>العدد</label>
+        <hint>عدد الأفراد البالغين العاطلين عن العمل فقط - او من لديهم القدرة على العمل</hint>
+      </input>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_043">
+        <label>هل تعتمد الأسرة في توفير الطعام على التكية و/أو المساعدات الغذائية؟</label>
+        <itemset nodeset="instance('dn7rs02')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_044">
+        <label>هل يتوفر لدى الأسرة الاحتياجات الأساسية للمعيشة مثل مواد الفراش وأدوات المطبخ؟</label>
+        <itemset nodeset="instance('kv65e91')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_045">
+        <label>هل المساحة التي تقيم فيها الأسرة تفتقر إلى الفصل أو الخصوصية أثناء النوم أو تغيير الملابس؟</label>
+        <itemset nodeset="instance('bd6pe21')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_bm8ij61/q_046">
+        <label>هل يوجد حمام محكم الاغلاق ويوفر الخصوصية لأفراد الأسرة وخاصة السيدات و/أو الفتيات؟ (سيتم تقييمه باستفاضة لاحقا)</label>
+        <itemset nodeset="instance('on8ps92')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+    </group>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52">
+      <label>6) تقييم حالة المأوى:</label>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90">
+        <label>معلومات الوحدة السكنية</label>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_059">
+          <label>تقييم حالة ضرر المأوى:</label>
+          <itemset nodeset="instance('oc3zr08')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_060">
+          <label>مساحة الوحدة السكنية بالمتر المربع:</label>
+        </input>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/__005">
+          <label>حدد الطابق للوحدة السكنية</label>
+        </input>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_062">
+          <label>حالة السقف</label>
+          <itemset nodeset="instance('bo62z63')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_063">
+          <label>حالة الجدران الخارجية</label>
+          <itemset nodeset="instance('xx1ie48')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_064">
+          <label>حالة الجدران الداخلية</label>
+          <hint>لغرفة واحدة ع الأقل</hint>
+          <itemset nodeset="instance('pm82l00')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_065">
+          <label>يوجد مشكلة في الفواصل والقواطع بين الغرف وخدمات الوحدة:</label>
+          <hint>الحماية والخصوصية</hint>
+          <itemset nodeset="instance('ak2cd90')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_066">
+          <label>عدد الغرف</label>
+        </input>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/_5_5_2_">
+          <label>المساحة تكفي لعدد الأفراد (مساحة الفرد أكثر أو أقل من 5.5 م2 من مساحة الوحدة):</label>
+          <itemset nodeset="instance('ed2jo31')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_067">
+          <label>يوجد على الأقل غرفة واحدة معزولة ومحكمة الإغلاق ومؤمنة ضد الحرارة والبرودة:</label>
+          <itemset nodeset="instance('uk9ju65')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_cw9ag90/q_068">
+          <label>بلاط الارضيات ماعدا (المطبخ والحمام)</label>
+          <hint>لا تضف تصنيف البلاط الخاص بالمطبخ والحمام هنا يوجد بنود اخرى للمطبخ والحمام</hint>
+          <itemset nodeset="instance('rl6zw75')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jn2bl34">
+        <label>الأبواب والنوافذ بالوحدة السكنية</label>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jn2bl34/q_069">
+          <label>يوجد باب رئيسي محكم الإغلاق للوحدة السكنية</label>
+          <itemset nodeset="instance('pp8vs38')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jn2bl34/q_070">
+          <label>إحكام إغلاق أبواب غرف النوم:</label>
+          <itemset nodeset="instance('ga8pe99')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jn2bl34/q_071">
+          <label>إحكام إغلاق نوافذ غرف النوم:</label>
+          <itemset nodeset="instance('cq6xu04')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24">
+        <label>شبكة المياه والصرف الصحي للوحدة</label>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24/q_072">
+          <label>الوحدة متصلة بشبكة امداد المياه في الوحدة السكنية</label>
+          <hint>متصلة بخزان مياه - مع وصف الحالة</hint>
+          <itemset nodeset="instance('uw6hj62')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24/q_073">
+          <label>الوحدة متصلة بشبكة الصرف الصحي الرئيسية</label>
+          <itemset nodeset="instance('ac73y33')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24/_1000_">
+          <label>كحد أدني يوجد خزان مياه سعة 1000 لتر بحالة جيدة</label>
+          <hint>لزوم الاستخدامات المنزلية (الغسيل، الجلي،الحمام...الخ)</hint>
+          <itemset nodeset="instance('vp1kz74')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_jh0ue24/_200_">
+          <label>يوجد خزان سعة 200 لتر مع صنبور في مكان امن</label>
+          <hint>مياه الشرب (الحلوه)</hint>
+          <itemset nodeset="instance('bz2qx98')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69">
+        <label>المطبخ</label>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69/q_074">
+          <label>حالة المطبخ:</label>
+          <itemset nodeset="instance('nu4lh21')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69/_3_2">
+          <label>يوجد مطبخ مع مساحة كافيه كحد أدني 3 م2</label>
+          <itemset nodeset="instance('do6ne66')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69/q_075">
+          <label>يوجد حوض مجلى وطاولة إعداد طعام داخل المطبخ؟</label>
+          <itemset nodeset="instance('ie3gi15')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_op9xp69/q_076">
+          <label>أرضية المطبخ مبلطة بسيراميك أو بلاط؟</label>
+          <itemset nodeset="instance('wx79r06')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04">
+        <label>الحمام</label>
+        <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_077">
+          <label>عدد الحمامات بالمنزل</label>
+        </input>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/_3_5_4_2_">
+          <label>كحد أدني يوجد مرحاض في الوحدة السكنية بمساحة 3.5 الي 4 م2، مع تهويه للخارج صالح للإستخدام لأفراد الأسرة</label>
+          <hint>الحمام جاهز للاستخدام</hint>
+          <itemset nodeset="instance('xz4rx97')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_078">
+          <label>يتواجد في الحمام كرسي حمام مع نيجارا بحالة جيدة</label>
+          <itemset nodeset="instance('wr1we66')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_079">
+          <label>يتواجد في الحمام مغسلة لدورة المياه</label>
+          <itemset nodeset="instance('qd5dj18')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_080">
+          <label>يتواجد في الحمام دش/خلاط</label>
+          <itemset nodeset="instance('vs5iz20')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_081">
+          <label>إحكام إغلاق باب دورة المياه:</label>
+          <itemset nodeset="instance('yp2kh64')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_082">
+          <label>يوجد بالمرحاض نافذه قابله للفتح والإغلاق ومحكمة</label>
+          <itemset nodeset="instance('jj3aj21')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/q_083">
+          <label>أرضيه الحمام مبلطة بسيراميك غير قابل للانزلاق؟</label>
+          <itemset nodeset="instance('ud4uk22')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kt2zg04/_160_">
+          <label>حوائط منطقه الدش مبلطة ببلاط سيراميك لارتفاع 160 سم؟</label>
+          <itemset nodeset="instance('cw2bq60')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+      </group>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kc5to42">
+        <label>الإنارة والتهوية بالوحدة السكنية</label>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kc5to42/q_084">
+          <label>تسمح الفتحات بالإنارة الكافية بشكل طبيعي لجميع الغرف المتاحة بشكل كاف (المعيشة, المطبخ, الحمام)</label>
+          <itemset nodeset="instance('fa7tk10')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kc5to42/q_085">
+          <label>يوجد مصدر انارة ليلى في الوحدة السكنية؟</label>
+          <itemset nodeset="instance('jv7ea72')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+        <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/group_kc5to42/q_086">
+          <label>تسمح الفتحات بالتهوية الكافية بشكل طبيعي لجميع الغرف المتاحة بشكل كاف (المعيشة, المطبخ, الحمام)</label>
+          <itemset nodeset="instance('rm3ls22')/root/item">
+            <value ref="name"/>
+            <label ref="label"/>
+          </itemset>
+        </select1>
+      </group>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/q_088">
+        <label>اذا كان هناك أشخاص ذوي اعاقه فهم لديهم امكانيه الوصول الآمن الي مرافق الوحدة السكنية (الحمام والمطبخ)</label>
+        <itemset nodeset="instance('ze1fl02')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/q_089">
+        <label>هل يمكن الوصول إلى الوحدة السكنية بشكل آمن حالياً</label>
+        <hint>الوصل الآمن لجميع أفراد الأسرة</hint>
+        <itemset nodeset="instance('tb0op75')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+      <select1 ref="/azqpYPtnuEk8yfHRoBvV4K/group_fj7vq52/q_090">
+        <label>ما هي حالة الدرج المؤدي إلى الوحدة السكنية</label>
+        <itemset nodeset="instance('hg3ob27')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select1>
+    </group>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05">
+      <label>المستندات</label>
+      <select ref="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_006">
+        <label>الأوراق الثبوتية المتوفرة والحسابات البنكية</label>
+        <itemset nodeset="instance('um9gb92')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select>
+      <select ref="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_091">
+        <label>توصيات نهائية</label>
+        <itemset nodeset="instance('fu9pp75')/root/item">
+          <value ref="name"/>
+          <label ref="label"/>
+        </itemset>
+      </select>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_096">
+        <label>أوراق اخرى /حدد</label>
+      </input>
+      <input ref="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/q_097">
+        <label>لا يوجد/وضح السبب</label>
+      </input>
+      <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/group_un2xy00">
+        <label>المستندات</label>
+        <repeat nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/group_un2xy00">
+          <upload mediatype="image/*" ref="/azqpYPtnuEk8yfHRoBvV4K/group_ng8dw05/group_un2xy00/q_098">
+            <label>قم بتصوير المستندات المتوفرة</label>
+          </upload>
+        </repeat>
+      </group>
+    </group>
+    <group ref="/azqpYPtnuEk8yfHRoBvV4K/group_lm1ok19">
+      <label>صور الوحدة السكنية</label>
+      <repeat nodeset="/azqpYPtnuEk8yfHRoBvV4K/group_lm1ok19">
+        <upload mediatype="image/*" ref="/azqpYPtnuEk8yfHRoBvV4K/group_lm1ok19/__001">
+          <label>صور الوحدة السكنية</label>
+          <hint>قم بتصوير الوحدة السكنية - صورة للمبنى من الخارج + صور من الداخل بحال كون الوحدة آمنة</hint>
+        </upload>
+      </repeat>
+    </group>
+    <input ref="/azqpYPtnuEk8yfHRoBvV4K/engineer_notes">
+      <label>ملاحظات إجتماعية</label>
+    </input>
+    <input ref="/azqpYPtnuEk8yfHRoBvV4K/engineer_notes_001">
+      <label>ملاحظات المهندسين</label>
+    </input>
+  </h:body>
+</h:html>

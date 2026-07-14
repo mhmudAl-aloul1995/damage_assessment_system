@@ -1274,12 +1274,20 @@ class HeksController extends Controller
 
             foreach ($templateItems as $templateItem) {
                 $key = (string) $templateItem['field_key'];
+                $question = (string) $templateItem['question'];
 
                 if ($this->isHiddenSurveyKey($key)) {
                     continue;
                 }
 
+                $valueKey = $key;
                 $value = $values[$key] ?? null;
+
+                if (! array_key_exists($key, $values) && array_key_exists($question, $values)) {
+                    $valueKey = $question;
+                    $value = $values[$question];
+                }
+
                 $resolvedValue = $displayService->resolve((string) $source, $key, $value);
                 $displayValue = $resolvedValue['resolved']
                     ? $resolvedValue['display']
@@ -1291,11 +1299,12 @@ class HeksController extends Controller
                 }
 
                 $seen[$uniqueKey] = true;
-                $seenQuestionLabels[$this->surveyQuestionSignature((string) $templateItem['question'])] = true;
+                $seen[(string) $source.'|'.$valueKey] = true;
+                $seenQuestionLabels[$this->surveyQuestionSignature($question)] = true;
                 $sectionKey = $this->surveySectionKey($key);
                 $section = $sections->get($sectionKey) ?? $this->koboSurveySection($sectionKey);
                 $section['items'][] = [
-                    'question' => $templateItem['question'],
+                    'question' => $question,
                     'field_key' => $key,
                     'value' => $displayValue,
                     'raw_value' => $this->surveyDisplayValue($value),
