@@ -753,6 +753,63 @@ it('hides duplicate raw Kobo survey values from the display', function () {
         ->not->toContain('RAW-FAMILY-SCORE');
 });
 
+it('suppresses technical placeholders and disambiguates repeated family composition labels', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY-CONTEXT',
+        'name' => 'Survey Context Beneficiary',
+        'raw_data' => [
+            'Heks Final V1' => [
+                'رقم الطلب/الكود' => 'application_code',
+                'group_rs8tf50' => [
+                    'group_hg1bp50' => [
+                        'q_024' => '1',
+                        'q_025' => '2',
+                    ],
+                    'group_og8mf61' => [
+                        'q_026' => '3',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    foreach ([
+        ['application_code', 'رقم الطلب/الكود', 1],
+        ['group_rs8tf50/group_hg1bp50/q_024', 'ذكور', 2],
+        ['group_rs8tf50/group_hg1bp50/q_025', 'إناث', 3],
+        ['group_rs8tf50/group_og8mf61/q_026', 'ذكور', 4],
+    ] as [$field, $label, $order]) {
+        HeksKoboFieldMapping::query()->create([
+            'service_name' => 'heks-main',
+            'table_name' => 'heks_main_kobo_records',
+            'kobo_field' => $field,
+            'column_name' => str_replace('/', '_', $field),
+            'display_label' => $label,
+            'notes' => json_encode(['form_order' => $order], JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'surveySections');
+    $method->setAccessible(true);
+
+    $sections = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary->load('surveyValueHistories'),
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+    $items = collect($sections)->flatMap(fn (array $section): array => $section['items'])->values();
+    $applicationCode = $items->firstWhere('field_key', 'application_code');
+    $underEightMale = $items->firstWhere('field_key', 'group_rs8tf50/group_hg1bp50/q_024');
+    $eightToSeventeenMale = $items->firstWhere('field_key', 'group_rs8tf50/group_og8mf61/q_026');
+
+    expect($applicationCode)
+        ->not->toBeNull()
+        ->and($applicationCode['value'])->toBe('')
+        ->and($items->pluck('value')->all())->not->toContain('application_code')
+        ->and($underEightMale['question'])->toBe('أفراد الأسرة 8 سنوات وأقل - ذكور')
+        ->and($eightToSeventeenMale['question'])->toBe('أفراد الأسرة 8-17 سنة - ذكور');
+});
+
 it('uses template field choices when raw HEKS survey data is keyed by question label', function () {
     $beneficiary = HeksBeneficiary::query()->create([
         'code' => 'SURVEY-LABEL-KEY',

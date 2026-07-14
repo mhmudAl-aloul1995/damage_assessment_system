@@ -1288,6 +1288,10 @@ class HeksController extends Controller
                     $value = $values[$question];
                 }
 
+                if ($this->isTechnicalSurveyPlaceholderValue($value, $key)) {
+                    $value = null;
+                }
+
                 $resolvedValue = $displayService->resolve((string) $source, $key, $value);
                 $displayValue = $resolvedValue['resolved']
                     ? $resolvedValue['display']
@@ -1336,6 +1340,10 @@ class HeksController extends Controller
                     continue;
                 }
 
+                if ($this->isTechnicalSurveyPlaceholderValue($value, $key)) {
+                    continue;
+                }
+
                 $resolvedValue = $displayService->resolve((string) $source, $key, $value);
                 $displayValue = $resolvedValue['resolved']
                     ? $resolvedValue['display']
@@ -1363,7 +1371,7 @@ class HeksController extends Controller
 
                 $seenQuestionLabels[$questionSignature] = true;
                 $section['items'][] = [
-                    'question' => $questionLabel,
+                    'question' => $this->surveyContextualQuestionLabel($key, $questionLabel),
                     'field_key' => $key,
                     'value' => $displayValue,
                     'raw_value' => $this->surveyDisplayValue($value),
@@ -1429,7 +1437,10 @@ class HeksController extends Controller
                     ->map(function (HeksKoboFieldMapping $mapping): array {
                         return [
                             'field_key' => (string) $mapping->kobo_field,
-                            'question' => trim((string) $mapping->display_label),
+                            'question' => $this->surveyContextualQuestionLabel(
+                                (string) $mapping->kobo_field,
+                                trim((string) $mapping->display_label)
+                            ),
                             'sort_order' => $this->mappingFormOrder((string) $mapping->notes) ?? PHP_INT_MAX,
                         ];
                     })
@@ -1759,6 +1770,70 @@ class HeksController extends Controller
     private function isRepeatableSurveyKey(string $key): bool
     {
         return str_contains($key, '[');
+    }
+
+    private function isTechnicalSurveyPlaceholderValue(mixed $value, string $key): bool
+    {
+        if (! is_scalar($value)) {
+            return false;
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        return in_array($value, $this->surveyFieldLookupKeys($key), true);
+    }
+
+    private function surveyContextualQuestionLabel(string $key, string $label): string
+    {
+        $context = $this->surveyFamilyCompositionContext($key);
+
+        if ($context === null) {
+            return $label;
+        }
+
+        $label = trim($label);
+
+        if ($label === '' || str_contains($label, $context)) {
+            return $label;
+        }
+
+        return "{$context} - {$label}";
+    }
+
+    private function surveyFamilyCompositionContext(string $key): ?string
+    {
+        $key = str($key)->replace('\\', '/')->toString();
+        $contexts = [
+            'group_hg1bp50' => 'أفراد الأسرة 8 سنوات وأقل',
+            'group_og8mf61' => 'أفراد الأسرة 8-17 سنة',
+            'group_sa8tl07' => 'أفراد الأسرة 18-59 سنة',
+            'group_lx0gs10' => 'أفراد الأسرة 60 سنة فأكبر',
+            'group_yc1bi89' => 'أفراد من ذوي الإعاقة 8 سنوات وأقل',
+            'group_rv05e07' => 'أفراد من ذوي الإعاقة 8-17 سنة',
+            'group_ko8jy58' => 'أفراد من ذوي الإعاقة 18-59 سنة',
+            'group_tn2fj34' => 'أفراد من ذوي الإعاقة 60 سنة فأكبر',
+            'group_ch1ve28' => 'أفراد لديهم أمراض مزمنة 8 سنوات وأقل',
+            'group_wl5vo92' => 'أفراد لديهم أمراض مزمنة 8-17 سنة',
+            'group_ny7er61' => 'أفراد لديهم أمراض مزمنة 18-59 سنة',
+            'group_kt4pe39' => 'أفراد لديهم أمراض مزمنة 60 سنة فأكبر',
+            'group_bf8it91' => 'أفراد مصابين في الحرب 8 سنوات وأقل',
+            'group_zi8md17' => 'أفراد مصابين في الحرب 8-17 سنة',
+            'group_sr9gf28' => 'أفراد مصابين في الحرب 18-59 سنة',
+            'group_wk1zf21' => 'أفراد مصابين في الحرب 60 سنة فأكبر',
+            'group_fa5xa06' => 'التكوين الأسري للأسر الممتدة',
+        ];
+
+        foreach ($contexts as $group => $context) {
+            if (str_contains($key, "/{$group}/")) {
+                return $context;
+            }
+        }
+
+        return null;
     }
 
     /**
