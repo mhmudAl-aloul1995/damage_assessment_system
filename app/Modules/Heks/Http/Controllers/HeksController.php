@@ -1568,19 +1568,7 @@ class HeksController extends Controller
     {
         $serviceNames = collect($sources)
             ->map(fn (string|int $source): string => (string) $source)
-            ->flatMap(fn (string $source): array => array_values(array_filter([
-                $source,
-                str_replace('_', '-', $source),
-                str_replace('-', '_', $source),
-                match ($source) {
-                    'Heks Final V1' => 'heks-main',
-                    'heks_main' => 'heks-main',
-                    'heks_followup' => 'heks-followups',
-                    'heks_boq' => 'heks-boq',
-                    'heks_followup_boq' => 'heks-followup-boq',
-                    default => null,
-                },
-            ])))
+            ->flatMap(fn (string $source): array => $this->surveySourceLookupKeys($source))
             ->unique()
             ->values()
             ->all();
@@ -1769,10 +1757,18 @@ class HeksController extends Controller
      */
     private function surveySourceLookupKeys(string $source): array
     {
+        $normalizedSource = str($source)
+            ->lower()
+            ->replace(['_', '-'], ' ')
+            ->replaceMatches('/\s+/', ' ')
+            ->trim()
+            ->toString();
+
         return array_values(array_unique(array_filter([
             $source,
             str_replace('_', '-', $source),
             str_replace('-', '_', $source),
+            str_contains($normalizedSource, 'heks') && str_contains($normalizedSource, 'final') ? 'heks-main' : null,
             match ($source) {
                 'Heks Final V1' => 'heks-main',
                 'heks_main' => 'heks-main',

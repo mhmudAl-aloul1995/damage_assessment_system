@@ -206,10 +206,18 @@ class HeksKoboValueDisplayService
      */
     private function serviceLookupKeys(string $serviceName): array
     {
+        $normalizedServiceName = str($serviceName)
+            ->lower()
+            ->replace(['_', '-'], ' ')
+            ->replaceMatches('/\s+/', ' ')
+            ->trim()
+            ->toString();
+
         return array_values(array_unique(array_filter([
             $serviceName,
             str_replace('_', '-', $serviceName),
             str_replace('-', '_', $serviceName),
+            str_contains($normalizedServiceName, 'heks') && str_contains($normalizedServiceName, 'final') ? 'heks-main' : null,
             match ($serviceName) {
                 'Heks Final V1' => 'heks-main',
                 'heks_main' => 'heks-main',

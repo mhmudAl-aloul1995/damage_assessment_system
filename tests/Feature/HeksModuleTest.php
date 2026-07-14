@@ -862,6 +862,7 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
     $documents = $displayService->resolve('heks-main', 'family_info/documents', 'id_card ownership');
     $underscoreChoice = $displayService->resolve('heks-main', 'q_059', '_____1');
     $titleSourceChoice = $displayService->resolve('Heks Final V1', 'q_059', '_____1');
+    $looseTitleSourceChoice = $displayService->resolve(' Heks_Final_V1 ', 'q_059', '_____1');
 
     expect($maritalStatus)
         ->display->toBe('متزوج/ة')
@@ -891,6 +892,9 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
             'selected' => true,
         ])
         ->and($titleSourceChoice)
+        ->display->toBe('أضرار جزئية طفيفة')
+        ->resolved->toBeTrue()
+        ->and($looseTitleSourceChoice)
         ->display->toBe('أضرار جزئية طفيفة')
         ->resolved->toBeTrue();
 });
