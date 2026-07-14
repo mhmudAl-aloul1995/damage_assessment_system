@@ -107,27 +107,19 @@ class ExportDataJob implements ShouldQueue
                 ? DB::table("{$housingUnitsSource} as h")->join("{$buildingsSource} as b", 'b.globalid', '=', 'h.parentglobalid')
                 : DB::table("{$buildingsSource} as b");
 
+            $buildingEndExpression = $this->editedColumnExpression('building_table', 'b', 'globalid', 'end');
+
             if ($buildingEndFrom !== null && $buildingEndFrom !== '') {
-                $query->whereDate('b.end', '>=', $buildingEndFrom);
+                $query->whereDate(DB::raw($buildingEndExpression), '>=', $buildingEndFrom);
             }
 
             if ($buildingEndTo !== null && $buildingEndTo !== '') {
-                $query->whereDate('b.end', '<=', $buildingEndTo);
+                $query->whereDate(DB::raw($buildingEndExpression), '<=', $buildingEndTo);
             }
 
             if ($needsFamily) {
                 $familySub = DB::table("{$housingUnitsSource} as hf")
-                    ->selectRaw("
-                        hf.parentglobalid,
-                        (
-                            COALESCE(CAST(NULLIF(hf.mchildren_001, '') AS UNSIGNED), 0) +
-                            COALESCE(CAST(NULLIF(hf.melderly, '') AS UNSIGNED), 0) +
-                            COALESCE(CAST(NULLIF(hf.myoung, '') AS UNSIGNED), 0) +
-                            COALESCE(CAST(NULLIF(hf.fchildren, '') AS UNSIGNED), 0) +
-                            COALESCE(CAST(NULLIF(hf.fyoung_001, '') AS UNSIGNED), 0) +
-                            COALESCE(CAST(NULLIF(hf.felderly, '') AS UNSIGNED), 0)
-                        ) as family_members_total
-                    ");
+                    ->selectRaw($this->familyMembersSelectExpression());
 
                 $query->leftJoinSub($familySub, 'fam', function ($join) {
                     $join->on('b.globalid', '=', 'fam.parentglobalid');
@@ -161,13 +153,13 @@ class ExportDataJob implements ShouldQueue
                 }
 
                 if (ExportDataColumns::hasColumn($buildingsSource, $column)) {
-                    $selects[] = "b.`{$column}` as `building_{$column}`";
+                    $selects[] = $this->editedColumnExpression('building_table', 'b', 'globalid', $column)." as `building_{$column}`";
                 }
             }
 
             foreach ($housingColumns as $column) {
                 if (ExportDataColumns::hasColumn($housingUnitsSource, $column)) {
-                    $selects[] = "h.`{$column}` as `housing_{$column}`";
+                    $selects[] = $this->editedColumnExpression('housing_table', 'h', 'globalid', $column)." as `housing_{$column}`";
                 }
             }
 
@@ -196,9 +188,9 @@ class ExportDataJob implements ShouldQueue
                 }
 
                 if (ExportDataColumns::hasColumn($buildingsSource, $field)) {
-                    $query->whereIn("b.$field", $values);
+                    $query->whereIn(DB::raw($this->editedColumnExpression('building_table', 'b', 'globalid', $field)), $values);
                 } elseif (ExportDataColumns::hasColumn($housingUnitsSource, $field)) {
-                    $query->whereIn("h.$field", $values);
+                    $query->whereIn(DB::raw($this->editedColumnExpression('housing_table', 'h', 'globalid', $field)), $values);
                 }
             }
 
@@ -401,6 +393,42 @@ class ExportDataJob implements ShouldQueue
         }
 
         return $processed;
+    }
+
+    private function editedColumnExpression(string $type, string $tableAlias, string $globalIdColumn, string $field): string
+    {
+        return 'COALESCE('.
+            $this->latestEditValueExpression($type, $tableAlias, $globalIdColumn, $field).
+            ", {$tableAlias}.`{$field}`)";
+    }
+
+    private function latestEditValueExpression(string $type, string $tableAlias, string $globalIdColumn, string $field): string
+    {
+        $escapedType = str_replace("'", "''", $type);
+        $escapedField = str_replace("'", "''", $field);
+
+        return "(SELECT ea.field_value FROM edit_assessments ea WHERE ea.type = '{$escapedType}' AND ea.global_id = {$tableAlias}.`{$globalIdColumn}` AND ea.field_name = '{$escapedField}' ORDER BY ea.id DESC LIMIT 1)";
+    }
+
+    private function familyMembersSelectExpression(): string
+    {
+        $fields = [
+            'mchildren_001',
+            'melderly',
+            'myoung',
+            'fchildren',
+            'fyoung_001',
+            'felderly',
+        ];
+
+        $membersExpression = collect($fields)
+            ->map(fn (string $field): string => 'COALESCE(CAST(NULLIF('.$this->editedColumnExpression('housing_table', 'hf', 'globalid', $field).", '') AS UNSIGNED), 0)")
+            ->implode(' + ');
+
+        return "
+            hf.parentglobalid,
+            ({$membersExpression}) as family_members_total
+        ";
     }
 
     /**
