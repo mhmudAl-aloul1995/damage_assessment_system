@@ -1262,12 +1262,61 @@ class HeksController extends Controller
         $displayLabels = $this->surveyDisplayLabels(array_keys($rawData));
         $choiceLabels = $this->surveyChoiceLabels(array_keys($rawData));
         $sortOrders = $this->surveySortOrders(array_keys($rawData));
+        $templateMappings = $this->surveyTemplateMappings(array_keys($rawData));
         $histories = $beneficiary->surveyValueHistories
             ->groupBy(fn (HeksSurveyValueHistory $history): string => $history->source.'|'.$history->field_key);
 
         foreach ($rawData as $source => $values) {
             $originalValues = is_array($values) ? $values : ['value' => $values];
             $values = $this->flattenSurveyValues($originalValues);
+            $templateItems = $templateMappings[(string) $source] ?? [];
+
+            foreach ($templateItems as $templateItem) {
+                $key = (string) $templateItem['field_key'];
+
+                if ($this->isHiddenSurveyKey($key)) {
+                    continue;
+                }
+
+                $value = $values[$key] ?? null;
+                $resolvedValue = $displayService->resolve((string) $source, $key, $value);
+                $displayValue = $resolvedValue['resolved']
+                    ? $resolvedValue['display']
+                    : $this->surveyDisplayValue($value, $key, (string) $source, $choiceLabels);
+                $uniqueKey = (string) $source.'|'.$key;
+
+                if (isset($seen[$uniqueKey])) {
+                    continue;
+                }
+
+                $seen[$uniqueKey] = true;
+                $sectionKey = $this->surveySectionKey($key);
+                $section = $sections->get($sectionKey) ?? $this->koboSurveySection($sectionKey);
+                $section['items'][] = [
+                    'question' => $templateItem['question'],
+                    'field_key' => $key,
+                    'value' => $displayValue,
+                    'raw_value' => $this->surveyDisplayValue($value),
+                    'field_type' => $resolvedValue['type'],
+                    'warning' => $resolvedValue['warning'],
+                    'choices' => $resolvedValue['choices'] !== []
+                        ? $resolvedValue['choices']
+                        : $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels),
+                    'sort_order' => $templateItem['sort_order'],
+                    'source' => (string) $source,
+                    'editable' => false,
+                    'history' => $histories->get((string) $source.'|'.$key, collect())
+                        ->map(fn (HeksSurveyValueHistory $history): array => [
+                            'old_value' => $history->old_value,
+                            'new_value' => $history->new_value,
+                            'user' => $history->user?->name,
+                            'created_at' => $history->created_at?->format('Y-m-d H:i'),
+                        ])
+                        ->values()
+                        ->all(),
+                ];
+                $sections->put($sectionKey, $section);
+            }
 
             foreach ($values as $key => $value) {
                 $key = (string) $key;
@@ -1285,7 +1334,7 @@ class HeksController extends Controller
                     continue;
                 }
 
-                $uniqueKey = $key.'|'.$displayValue;
+                $uniqueKey = (string) $source.'|'.$key;
 
                 if (isset($seen[$uniqueKey])) {
                     continue;
@@ -1328,7 +1377,50 @@ class HeksController extends Controller
             ->filter(fn (array $section): bool => $section['items'] !== [])
             ->map(fn (array $section, string $sectionKey): array => $this->resolveSurveySectionLabels($section, $sectionKey))
             ->map(fn (array $section): array => $this->sortSurveySectionItems($section))
-            ->sortBy(fn (array $section, string $sectionKey): int => $this->surveySectionSortOrder($section, $sectionKey))
+            ->sortBy(fn (array $section, string $sectionKey): string => sprintf(
+                '%04d-%d',
+                $this->surveySectionSortOrder($section, $sectionKey),
+                str_starts_with($sectionKey, 'kobo:') ? 0 : 1
+            ))
+            ->all();
+    }
+
+    /**
+     * @param  array<int, string|int>  $sources
+     * @return array<string, array<int, array{field_key: string, question: string, sort_order: int}>>
+     */
+    private function surveyTemplateMappings(array $sources): array
+    {
+        $serviceNamesBySource = collect($sources)
+            ->mapWithKeys(fn (string|int $source): array => [(string) $source => $this->surveySourceLookupKeys((string) $source)])
+            ->all();
+        $serviceNames = collect($serviceNamesBySource)->flatten()->unique()->values()->all();
+
+        $mappingsByService = HeksKoboFieldMapping::query()
+            ->whereIn('service_name', $serviceNames)
+            ->whereNotNull('display_label')
+            ->whereNotNull('notes')
+            ->get(['service_name', 'kobo_field', 'display_label', 'notes'])
+            ->filter(fn (HeksKoboFieldMapping $mapping): bool => $this->mappingFormOrder((string) $mapping->notes) !== null)
+            ->groupBy('service_name');
+
+        return collect($serviceNamesBySource)
+            ->map(function (array $lookupServices) use ($mappingsByService): array {
+                return collect($lookupServices)
+                    ->flatMap(fn (string $service): array => ($mappingsByService->get($service) ?? collect())->all())
+                    ->map(function (HeksKoboFieldMapping $mapping): array {
+                        return [
+                            'field_key' => (string) $mapping->kobo_field,
+                            'question' => trim((string) $mapping->display_label),
+                            'sort_order' => $this->mappingFormOrder((string) $mapping->notes) ?? PHP_INT_MAX,
+                        ];
+                    })
+                    ->filter(fn (array $mapping): bool => $mapping['field_key'] !== '' && $mapping['question'] !== '')
+                    ->unique('field_key')
+                    ->sortBy('sort_order')
+                    ->values()
+                    ->all();
+            })
             ->all();
     }
 
@@ -1892,6 +1984,10 @@ class HeksController extends Controller
      */
     private function surveyDisplayValue(mixed $value, ?string $key = null, ?string $source = null, array $choiceLabels = []): string
     {
+        if ($value === null) {
+            return '';
+        }
+
         if (is_bool($value)) {
             return $value ? 'نعم' : 'لا';
         }

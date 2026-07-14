@@ -43,6 +43,27 @@
         .heks-case-page .survey-edit-box { border: 1px solid #e8eef7; border-radius: .75rem; background: #fff; padding: .75rem; }
         .heks-case-page .survey-history-card { border: 1px solid #edf1f5; border-radius: .65rem; background: #fff; padding: .75rem; }
         .heks-case-page .survey-history-label { color: var(--bs-gray-600); font-size: .75rem; font-weight: 800; }
+        .heks-case-page .kobo-paper { max-width: 980px; margin-inline: auto; border: 1px solid #d8d8d8; background: #fff; padding: 2.25rem 2.75rem; color: #111; direction: rtl; font-family: Arial, "Noto Naskh Arabic", "Tahoma", sans-serif; }
+        .heks-case-page .kobo-paper-title { text-align: center; font-size: 1.7rem; font-weight: 800; margin-bottom: 2rem; direction: ltr; }
+        .heks-case-page .kobo-pdf-section { break-inside: avoid; margin-bottom: 2rem; }
+        .heks-case-page .kobo-pdf-section-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 1.25rem; }
+        .heks-case-page .kobo-pdf-item { margin-bottom: 1.45rem; page-break-inside: avoid; }
+        .heks-case-page .kobo-pdf-question { font-size: .95rem; font-weight: 600; line-height: 1.9; margin-bottom: .45rem; color: #222; }
+        .heks-case-page .kobo-pdf-answer-line { min-height: 2.15rem; border-bottom: 2px solid #333; display: flex; align-items: flex-end; padding: 0 .25rem .25rem; font-size: .95rem; line-height: 1.7; color: #111; overflow-wrap: anywhere; }
+        .heks-case-page .kobo-pdf-answer-line.is-empty { color: transparent; }
+        .heks-case-page .kobo-pdf-choice-list { display: flex; flex-direction: column; gap: .7rem; margin-top: .55rem; }
+        .heks-case-page .kobo-pdf-choice { display: flex; align-items: flex-start; gap: .85rem; line-height: 1.8; font-size: .95rem; color: #111; }
+        .heks-case-page .kobo-pdf-choice-marker { width: 1.45rem; height: 1.45rem; border: 1.5px solid #777; flex: 0 0 1.45rem; margin-top: .15rem; display: inline-flex; align-items: center; justify-content: center; background: #fff; }
+        .heks-case-page .kobo-pdf-choice-marker.radio { border-radius: 50%; }
+        .heks-case-page .kobo-pdf-choice-marker.checkbox { border-radius: .18rem; }
+        .heks-case-page .kobo-pdf-choice-marker.selected::after { content: ""; width: .72rem; height: .72rem; display: block; background: #111; }
+        .heks-case-page .kobo-pdf-choice-marker.radio.selected::after { border-radius: 50%; }
+        .heks-case-page .kobo-pdf-choice-marker.checkbox.selected::after { width: .82rem; height: .5rem; border-left: 3px solid #111; border-bottom: 3px solid #111; background: transparent; transform: rotate(-45deg); margin-top: -.2rem; }
+        .heks-case-page .kobo-pdf-raw { direction: ltr; text-align: left; color: #666; font-size: .75rem; margin-top: .35rem; }
+        @media (max-width: 767.98px) {
+            .heks-case-page .kobo-paper { padding: 1.25rem; }
+            .heks-case-page .kobo-paper-title { font-size: 1.35rem; }
+        }
         .heks-case-page .photo-card { border: 1px solid var(--bs-gray-200); border-radius: .85rem; overflow: hidden; background: #fff; height: 100%; }
         .heks-case-page .photo-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--bs-gray-100); }
         .heks-case-page .photo-card-body { padding: 1rem; }
@@ -732,142 +753,77 @@
                             </div>
                         </div>
 
-                        <div class="accordion accordion-icon-toggle" id="heksSurveyAccordion">
+                        <div class="kobo-paper">
+                            <div class="kobo-paper-title">Heks Final V1</div>
                             @forelse ($surveySections as $sectionIndex => $section)
-                                @php
-                                    $sectionId = 'heks_survey_section_'.$sectionIndex;
-                                    $itemsCount = count($section['items']);
-                                    $answeredCount = collect($section['items'])->filter(fn ($item) => filled($item['value']))->count();
-                                    $completionPercent = $itemsCount > 0 ? (int) round(($answeredCount / $itemsCount) * 100) : 0;
-                                    $isOpen = $loop->first;
-                                @endphp
-                                <div class="survey-section mb-4">
-                                    <div class="survey-section-header {{ $isOpen ? '' : 'collapsed' }} d-flex justify-content-between align-items-center flex-wrap gap-3"
-                                         data-bs-toggle="collapse"
-                                         data-bs-target="#{{ $sectionId }}"
-                                         role="button"
-                                         aria-expanded="{{ $isOpen ? 'true' : 'false' }}"
-                                         aria-controls="{{ $sectionId }}">
-                                        <div class="d-flex align-items-start gap-3">
-                                            <span class="survey-collapse-indicator survey-collapse-open">-</span>
-                                            <span class="survey-collapse-indicator survey-collapse-closed">+</span>
-                                            <div>
-                                                <div class="fw-bold fs-5 text-gray-800">{{ $section['title'] }}</div>
-                                                <div class="text-muted mt-1">{{ $section['description'] }}</div>
-                                                <div class="survey-progress-bar mt-3">
-                                                    <div class="survey-progress-fill" style="width: {{ $completionPercent }}%"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <span class="badge badge-light-primary">{{ number_format($answeredCount) }} / {{ number_format($itemsCount) }}</span>
-                                            <span class="badge badge-light-success">{{ $completionPercent }}% مكتمل</span>
-                                            <span class="badge badge-light survey-state-badge">اضغط للعرض</span>
-                                        </div>
-                                    </div>
+                                <section class="kobo-pdf-section">
+                                    <h4 class="kobo-pdf-section-title">{{ $section['title'] }}</h4>
+                                    @foreach ($section['items'] as $item)
+                                        @php
+                                            $historyId = 'heks_survey_history_'.md5($item['source'].'|'.$item['field_key']);
+                                            $historyCount = count($item['history']);
+                                            $fieldType = $item['field_type'] ?? null;
+                                            $hasChoices = !empty($item['choices']);
+                                            $markerType = $fieldType === 'select_multiple' ? 'checkbox' : 'radio';
+                                        @endphp
+                                        <div class="kobo-pdf-item">
+                                            <div class="kobo-pdf-question">{{ $item['question'] }}</div>
 
-                                    <div id="{{ $sectionId }}" class="collapse {{ $isOpen ? 'show' : '' }}" data-bs-parent="#heksSurveyAccordion">
-                                        @foreach ($section['items'] as $item)
-                                            @php
-                                                $historyId = 'heks_survey_history_'.md5($item['source'].'|'.$item['field_key']);
-                                                $historyCount = count($item['history']);
-                                            @endphp
-                                            <div class="survey-item">
-                                                <div class="row g-4 align-items-start">
-                                                    <div class="col-lg-5">
-                                                        <div class="survey-question">{{ $item['question'] }}</div>
-                                                    </div>
-                                                    <div class="col-lg-7">
-                                                        <div class="survey-answer mb-2">{{ $item['value'] }}</div>
-                                                        @if (!empty($item['warning']))
-                                                            <div class="badge badge-light-warning mb-3">{{ $item['warning'] }}</div>
-                                                        @elseif (($item['raw_value'] ?? '') !== '' && ($item['raw_value'] ?? '') !== ($item['value'] ?? ''))
-                                                            <div class="text-muted fs-8 mb-3">Raw Kobo: {{ $item['raw_value'] }}</div>
-                                                        @endif
-                                                        @if (!empty($item['choices']))
-                                                            <div class="survey-choices" aria-label="خيارات السؤال">
-                                                                @foreach ($item['choices'] as $choice)
-                                                                    <span class="survey-choice {{ $choice['selected'] ? 'selected' : '' }}">
-                                                                        {{ $choice['label'] }}
-                                                                    </span>
-                                                                @endforeach
-                                                            </div>
-                                                        @endif
-                                                        @if ($item['editable'] ?? false)
-                                                            <form method="POST" action="{{ route('heks.beneficiaries.survey-values.update', $beneficiary) }}" class="survey-edit-box">
-                                                                @csrf
-                                                                @method('PUT')
-                                                                <input type="hidden" name="source" value="{{ $item['source'] }}">
-                                                                <input type="hidden" name="field_key" value="{{ $item['field_key'] }}">
-                                                                <input type="hidden" name="field_type" value="{{ $item['field_type'] }}">
-                                                                <div class="d-flex flex-column gap-2">
-                                                                    @if (($item['field_type'] ?? null) === 'select_one' && !empty($item['choices']))
-                                                                        <select name="value" class="form-select form-select-sm" aria-label="تعديل قيمة الاستبيان">
-                                                                            <option value="">-</option>
-                                                                            @foreach ($item['choices'] as $choice)
-                                                                                <option value="{{ $choice['value'] }}" @selected($choice['selected'])>{{ $choice['label'] }}</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                    @elseif (($item['field_type'] ?? null) === 'select_multiple' && !empty($item['choices']))
-                                                                        <div class="d-flex flex-wrap gap-3">
-                                                                            @foreach ($item['choices'] as $choice)
-                                                                                <label class="form-check form-check-sm">
-                                                                                    <input class="form-check-input" type="checkbox" name="value[]" value="{{ $choice['value'] }}" @checked($choice['selected'])>
-                                                                                    <span class="form-check-label">{{ $choice['label'] }}</span>
-                                                                                </label>
-                                                                            @endforeach
-                                                                        </div>
-                                                                    @else
-                                                                        <input name="value" class="form-control form-control-sm" value="{{ $item['raw_value'] ?? $item['value'] }}" aria-label="تعديل قيمة الاستبيان">
-                                                                    @endif
-                                                                    <div>
-                                                                    <button class="btn btn-sm btn-light-primary flex-shrink-0">حفظ</button>
+                                            @if ($hasChoices && in_array($fieldType, ['select_one', 'select_multiple'], true))
+                                                <div class="kobo-pdf-choice-list" aria-label="خيارات السؤال">
+                                                    @foreach ($item['choices'] as $choice)
+                                                        <div class="kobo-pdf-choice">
+                                                            <span class="kobo-pdf-choice-marker {{ $markerType }} {{ $choice['selected'] ? 'selected' : '' }}"></span>
+                                                            <span>{{ $choice['label'] }}</span>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <div class="kobo-pdf-answer-line {{ filled($item['value']) ? '' : 'is-empty' }}">{{ filled($item['value']) ? $item['value'] : '-' }}</div>
+                                            @endif
+
+                                            @if (!empty($item['warning']))
+                                                <div class="badge badge-light-warning mt-2">{{ $item['warning'] }}</div>
+                                            @elseif (($item['raw_value'] ?? '') !== '' && ($item['raw_value'] ?? '') !== ($item['value'] ?? ''))
+                                                <div class="kobo-pdf-raw">Raw Kobo: {{ $item['raw_value'] }}</div>
+                                            @endif
+
+                                            @if ($historyCount > 0)
+                                                <button class="btn btn-sm btn-light mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $historyId }}" aria-expanded="false" aria-controls="{{ $historyId }}">
+                                                    سجل التعديلات ({{ $historyCount }})
+                                                </button>
+                                                <div class="collapse mt-3" id="{{ $historyId }}">
+                                                    <div class="d-flex flex-column gap-2">
+                                                        @foreach ($item['history'] as $history)
+                                                            <div class="survey-history-card">
+                                                                <div class="row g-3">
+                                                                    <div class="col-md-6">
+                                                                        <div class="survey-history-label">القيمة السابقة</div>
+                                                                        <div>{{ $history['old_value'] ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <div class="survey-history-label">القيمة الجديدة</div>
+                                                                        <div class="fw-bold">{{ $history['new_value'] ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <div class="survey-history-label">المستخدم</div>
+                                                                        <div>{{ $history['user'] ?? '-' }}</div>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <div class="survey-history-label">الوقت</div>
+                                                                        <div>{{ $history['created_at'] ?? '-' }}</div>
                                                                     </div>
                                                                 </div>
-                                                            </form>
-                                                        @endif
-
-                                                        @if ($historyCount > 0)
-                                                            <button class="btn btn-sm btn-light mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $historyId }}" aria-expanded="false" aria-controls="{{ $historyId }}">
-                                                                سجل التعديلات ({{ $historyCount }})
-                                                            </button>
-                                                            <div class="collapse mt-3" id="{{ $historyId }}">
-                                                                <div class="d-flex flex-column gap-2">
-                                                                    @foreach ($item['history'] as $history)
-                                                                        <div class="survey-history-card">
-                                                                            <div class="row g-3">
-                                                                                <div class="col-md-6">
-                                                                                    <div class="survey-history-label">القيمة السابقة</div>
-                                                                                    <div>{{ $history['old_value'] ?? '-' }}</div>
-                                                                                </div>
-                                                                                <div class="col-md-6">
-                                                                                    <div class="survey-history-label">القيمة الجديدة</div>
-                                                                                    <div class="fw-bold">{{ $history['new_value'] ?? '-' }}</div>
-                                                                                </div>
-                                                                                <div class="col-md-6">
-                                                                                    <div class="survey-history-label">المستخدم</div>
-                                                                                    <div>{{ $history['user'] ?? '-' }}</div>
-                                                                                </div>
-                                                                                <div class="col-md-6">
-                                                                                    <div class="survey-history-label">الوقت</div>
-                                                                                    <div>{{ $history['created_at'] ?? '-' }}</div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    @endforeach
-                                                                </div>
                                                             </div>
-                                                        @endif
+                                                        @endforeach
                                                     </div>
                                                 </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </section>
                             @empty
-                                <div class="survey-section">
-                                    <div class="survey-item text-muted">لا توجد بيانات استبيان محفوظة لهذه الحالة.</div>
-                                </div>
+                                <div class="text-muted">لا توجد بيانات استبيان محفوظة لهذه الحالة.</div>
                             @endforelse
                         </div>
                     </div>
