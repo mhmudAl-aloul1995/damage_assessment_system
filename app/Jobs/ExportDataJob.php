@@ -35,24 +35,32 @@ class ExportDataJob implements ShouldQueue
 
     public function handle(): void
     {
-        $export = Export::find($this->exportId);
+        $claimed = Export::query()
+            ->whereKey($this->exportId)
+            ->where('status', 'pending')
+            ->update([
+                'status' => 'processing',
+                'progress' => 0,
+                'processed' => 0,
+                'file_name' => null,
+            ]);
 
-        if (! $export || in_array($export->status, ['cancelled', 'done', 'failed'], true)) {
+        if ($claimed === 0) {
             return;
         }
+
+        $export = Export::find($this->exportId);
+
+        if (! $export) {
+            return;
+        }
+
         /**f */
         try {
             ini_set('memory_limit', '-1');
             set_time_limit(0);
 
             Log::info('Export started', ['id' => $export->id]);
-
-            $export->update([
-                'status' => 'processing',
-                'progress' => 0,
-                'processed' => 0,
-                'file_name' => null,
-            ]);
 
             $params = json_decode($export->filters, true) ?: [];
 

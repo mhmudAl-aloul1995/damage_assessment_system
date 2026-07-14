@@ -75,17 +75,17 @@ test('it streams export rows to an xlsx file without internal columns', function
     }
 });
 
-test('it filters building exports by audited building end date range', function () {
+test('it filters building exports by the base building end date range', function () {
     $user = User::factory()->create();
 
     Building::query()->create([
         'objectid' => 2001,
-        'globalid' => 'building-audited-into-range',
+        'globalid' => 'building-before-range',
         'end' => '2026-04-30 10:00:00',
     ]);
 
     EditAssessment::query()->create([
-        'global_id' => 'building-audited-into-range',
+        'global_id' => 'building-before-range',
         'type' => 'building_table',
         'field_name' => 'end',
         'field_value' => '2026-05-10 10:00:00',
@@ -94,8 +94,8 @@ test('it filters building exports by audited building end date range', function 
 
     Building::query()->create([
         'objectid' => 2002,
-        'globalid' => 'building-before-range',
-        'end' => '2026-04-29 10:00:00',
+        'globalid' => 'building-in-range',
+        'end' => '2026-05-10 10:00:00',
     ]);
 
     Building::query()->create([
@@ -141,7 +141,7 @@ test('it filters building exports by audited building end date range', function 
 
         $reader->close();
 
-        expect($rows[1])->toBe([2001, '2026-05-10 10:00:00']);
+        expect($rows[1])->toBe([2002, '2026-05-10 10:00:00']);
     } finally {
         $export->refresh();
 
@@ -149,4 +149,26 @@ test('it filters building exports by audited building end date range', function 
             unlink(storage_path('app/public/'.$export->file_name));
         }
     }
+});
+
+test('it skips exports that are already claimed by another worker', function () {
+    $user = User::factory()->create();
+
+    $export = Export::query()->create([
+        'status' => 'processing',
+        'filters' => json_encode([
+            'building_columns' => ['objectid'],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 1,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    (new ExportDataJob($export->id))->handle();
+
+    $export->refresh();
+
+    expect($export->status)->toBe('processing');
+    expect($export->file_name)->toBeNull();
 });

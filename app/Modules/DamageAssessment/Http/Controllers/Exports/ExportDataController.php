@@ -323,8 +323,7 @@ class ExportDataController extends Controller
             && $export->file_name === null
             && (int) ($export->progress ?? 0) === 0
             && (int) ($export->processed ?? 0) === 0
-            && $export->updated_at?->lt(now()->subMinutes(self::ORPHANED_PENDING_MINUTES))
-            && ! $this->hasExportsQueueJob();
+            && $export->updated_at?->lt(now()->subMinutes(self::ORPHANED_PENDING_MINUTES));
     }
 
     private function hasExportsQueueJob(): bool
