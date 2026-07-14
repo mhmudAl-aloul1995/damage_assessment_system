@@ -19,7 +19,9 @@ class UpdateHeksSurveyValueRequest extends FormRequest
         return [
             'source' => ['required', 'string', 'max:255'],
             'field_key' => ['required', 'string', 'max:255'],
-            'value' => ['nullable', 'string'],
+            'field_type' => ['nullable', 'string', 'max:255'],
+            'value' => ['nullable'],
+            'value.*' => ['nullable', 'string'],
         ];
     }
 }

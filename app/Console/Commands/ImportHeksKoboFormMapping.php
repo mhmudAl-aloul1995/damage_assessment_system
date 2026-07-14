@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
+use App\Modules\Heks\Services\HeksKoboChoiceSyncService;
 use App\Modules\Heks\Services\HeksKoboServiceRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
@@ -28,7 +29,7 @@ class ImportHeksKoboFormMapping extends Command
      */
     protected $description = 'Import HEKS Kobo field display labels directly from the KoboToolbox form definition';
 
-    public function handle(HeksKoboServiceRegistry $services): int
+    public function handle(HeksKoboServiceRegistry $services, HeksKoboChoiceSyncService $choiceSyncService): int
     {
         $service = (string) $this->argument('service');
         $canonicalService = $services->canonical($service);
@@ -91,7 +92,16 @@ class ImportHeksKoboFormMapping extends Command
             $mappingService,
             $tableName,
             $survey,
-            is_array($choices) ? $this->choiceLabelsByList($choices) : []
+            is_array($choices) ? $this->choiceLabelsByList($choices) : [],
+            $choiceSyncService
+        );
+
+        $choiceStats = $choiceSyncService->sync(
+            $mappingService,
+            $survey,
+            is_array($choices) ? $choices : [],
+            is_string($body['version_id'] ?? null) ? $body['version_id'] : null,
+            (bool) $this->option('dry-run')
         );
 
         $this->components->info(
@@ -99,6 +109,7 @@ class ImportHeksKoboFormMapping extends Command
                 ? "HEKS Kobo form mapping dry run. New: {$created}, existing: {$updated}, skipped: {$skipped}."
                 : "HEKS Kobo form mapping imported. Created: {$created}, updated: {$updated}, skipped: {$skipped}."
         );
+        $this->components->info("HEKS Kobo choices synced. Select one: {$choiceStats['select_one']}, select multiple: {$choiceStats['select_multiple']}, choices: {$choiceStats['choices']}, inactive: {$choiceStats['inactive']}.");
 
         return self::SUCCESS;
     }
@@ -119,7 +130,7 @@ class ImportHeksKoboFormMapping extends Command
      * @param  array<string, array<string, string>>  $choiceLabelsByList
      * @return array{0: int, 1: int, 2: int}
      */
-    private function importSurvey(string $service, string $tableName, array $survey, array $choiceLabelsByList): array
+    private function importSurvey(string $service, string $tableName, array $survey, array $choiceLabelsByList, HeksKoboChoiceSyncService $choiceSyncService): array
     {
         $groupStack = [];
         $created = 0;
@@ -169,6 +180,7 @@ class ImportHeksKoboFormMapping extends Command
 
             $fields = $this->fieldKeys($name, $groupStack);
             $choiceLabels = $this->choiceLabelsForType($type, $choiceLabelsByList);
+            [$fieldType, $listName] = $choiceSyncService->selectTypeAndList($type);
 
             foreach ($fields as $field) {
                 $mapping = HeksKoboFieldMapping::query()->firstOrNew([
@@ -183,6 +195,8 @@ class ImportHeksKoboFormMapping extends Command
                         'column_name' => $mapping->column_name ?: $this->uniqueColumnName($service, $tableName, $field),
                         'display_label' => $label,
                         'data_type' => $type ?: null,
+                        'field_type' => $fieldType,
+                        'list_name' => $listName !== '' ? $listName : null,
                         'mapping_status' => 'kobo_form',
                         'confidence' => 'high',
                         'notes' => $this->mappingNotes($mapping, $field, $name, $choiceLabels, $formOrder),

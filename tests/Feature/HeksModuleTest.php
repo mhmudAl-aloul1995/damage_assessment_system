@@ -5,6 +5,7 @@ use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
+use App\Modules\Heks\Models\HeksKoboChoice;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksPayment;
@@ -646,6 +647,100 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertSee('Inner Question Label')
         ->assertDontSee('nested_group/inner_question')
         ->assertSee('inner answer');
+});
+
+it('resolves Kobo choice labels without guessing ordinary numeric values', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'CHOICE-LABELS',
+        'name' => 'Choice Labels Beneficiary',
+        'raw_data' => [
+            'heks-main' => [
+                'family_info' => [
+                    'marital_status' => '18',
+                    'age' => '23',
+                    'documents' => 'id_card ownership',
+                ],
+            ],
+        ],
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'family_info/marital_status',
+        'column_name' => 'family_info_marital_status',
+        'display_label' => 'الحالة الاجتماعية',
+        'data_type' => 'select_one marital_status',
+        'field_type' => 'select_one',
+        'list_name' => 'marital_status',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'family_info/age',
+        'column_name' => 'family_info_age',
+        'display_label' => 'العمر',
+        'data_type' => 'integer',
+        'field_type' => 'integer',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'family_info/documents',
+        'column_name' => 'family_info_documents',
+        'display_label' => 'المستندات',
+        'data_type' => 'select_multiple documents',
+        'field_type' => 'select_multiple',
+        'list_name' => 'documents',
+    ]);
+
+    foreach ([
+        ['family_info/marital_status', 'marital_status', '18', 'متزوج/ة', 1],
+        ['family_info/marital_status', 'marital_status', '19', 'أعزب/عزباء', 2],
+        ['family_info/documents', 'documents', 'id_card', 'هوية شخصية', 1],
+        ['family_info/documents', 'documents', 'ownership', 'أوراق ملكية', 2],
+    ] as [$questionKey, $listName, $choiceName, $label, $order]) {
+        HeksKoboChoice::query()->create([
+            'service_name' => 'heks-main',
+            'question_key' => $questionKey,
+            'list_name' => $listName,
+            'choice_name' => $choiceName,
+            'choice_label' => $label,
+            'language' => 'ar',
+            'sort_order' => $order,
+            'is_active' => true,
+        ]);
+    }
+
+    $displayService = app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class);
+
+    $maritalStatus = $displayService->resolve('heks-main', 'family_info/marital_status', '18');
+    $age = $displayService->resolve('heks-main', 'family_info/age', '23');
+    $documents = $displayService->resolve('heks-main', 'family_info/documents', 'id_card ownership');
+
+    expect($maritalStatus)
+        ->display->toBe('متزوج/ة')
+        ->type->toBe('select_one')
+        ->resolved->toBeTrue()
+        ->and($maritalStatus['choices'][0])->toMatchArray([
+            'value' => '18',
+            'label' => 'متزوج/ة',
+            'selected' => true,
+        ])
+        ->and($age)
+        ->display->toBe('23')
+        ->type->toBe('integer')
+        ->resolved->toBeFalse()
+        ->and($documents)
+        ->display->toBe('هوية شخصية، أوراق ملكية')
+        ->type->toBe('select_multiple')
+        ->resolved->toBeTrue();
 });
 
 it('shows HEKS survey and score counts separately on the beneficiaries list', function () {

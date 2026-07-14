@@ -778,7 +778,12 @@
                                                         <div class="survey-question">{{ $item['question'] }}</div>
                                                     </div>
                                                     <div class="col-lg-7">
-                                                        <div class="survey-answer mb-3">{{ $item['value'] }}</div>
+                                                        <div class="survey-answer mb-2">{{ $item['value'] }}</div>
+                                                        @if (!empty($item['warning']))
+                                                            <div class="badge badge-light-warning mb-3">{{ $item['warning'] }}</div>
+                                                        @elseif (($item['raw_value'] ?? '') !== '' && ($item['raw_value'] ?? '') !== ($item['value'] ?? ''))
+                                                            <div class="text-muted fs-8 mb-3">Raw Kobo: {{ $item['raw_value'] }}</div>
+                                                        @endif
                                                         @if (!empty($item['choices']))
                                                             <div class="survey-choices" aria-label="خيارات السؤال">
                                                                 @foreach ($item['choices'] as $choice)
@@ -794,9 +799,30 @@
                                                                 @method('PUT')
                                                                 <input type="hidden" name="source" value="{{ $item['source'] }}">
                                                                 <input type="hidden" name="field_key" value="{{ $item['field_key'] }}">
-                                                                <div class="d-flex flex-column flex-md-row gap-2">
-                                                                    <input name="value" class="form-control form-control-sm" value="{{ $item['value'] }}" aria-label="تعديل قيمة الاستبيان">
+                                                                <input type="hidden" name="field_type" value="{{ $item['field_type'] }}">
+                                                                <div class="d-flex flex-column gap-2">
+                                                                    @if (($item['field_type'] ?? null) === 'select_one' && !empty($item['choices']))
+                                                                        <select name="value" class="form-select form-select-sm" aria-label="تعديل قيمة الاستبيان">
+                                                                            <option value="">-</option>
+                                                                            @foreach ($item['choices'] as $choice)
+                                                                                <option value="{{ $choice['value'] }}" @selected($choice['selected'])>{{ $choice['label'] }}</option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                    @elseif (($item['field_type'] ?? null) === 'select_multiple' && !empty($item['choices']))
+                                                                        <div class="d-flex flex-wrap gap-3">
+                                                                            @foreach ($item['choices'] as $choice)
+                                                                                <label class="form-check form-check-sm">
+                                                                                    <input class="form-check-input" type="checkbox" name="value[]" value="{{ $choice['value'] }}" @checked($choice['selected'])>
+                                                                                    <span class="form-check-label">{{ $choice['label'] }}</span>
+                                                                                </label>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    @else
+                                                                        <input name="value" class="form-control form-control-sm" value="{{ $item['raw_value'] ?? $item['value'] }}" aria-label="تعديل قيمة الاستبيان">
+                                                                    @endif
+                                                                    <div>
                                                                     <button class="btn btn-sm btn-light-primary flex-shrink-0">حفظ</button>
+                                                                    </div>
                                                                 </div>
                                                             </form>
                                                         @endif

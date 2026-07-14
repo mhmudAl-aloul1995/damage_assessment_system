@@ -30,6 +30,7 @@ use App\Modules\Heks\Models\HeksScoringWeight;
 use App\Modules\Heks\Models\HeksSurveyValueHistory;
 use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksEngineerUserResolver;
+use App\Modules\Heks\Services\HeksKoboValueDisplayService;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
@@ -177,7 +178,7 @@ class HeksController extends Controller
         ]);
     }
 
-    public function edit(HeksBeneficiary $beneficiary): View
+    public function edit(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): View
     {
         $this->authorizeAccess();
         $beneficiary->load([
@@ -199,7 +200,7 @@ class HeksController extends Controller
             'boqSections' => $this->boqCatalog()->pluck('section')->filter()->unique()->sort()->values(),
             'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
             'rawDataSections' => $this->rawDataSections($beneficiary),
-            'surveySections' => $this->surveySections($beneficiary),
+            'surveySections' => $this->surveySections($beneficiary, $displayService),
             'imageAttachments' => $this->imageAttachments($beneficiary),
             'scoringComponents' => $this->scoringComponents(),
             'priorityMatrix' => $this->priorityMatrix(),
@@ -254,7 +255,7 @@ class HeksController extends Controller
         return back()->with('success', 'تم تحديث بيانات المستفيد.');
     }
 
-    public function updateSurveyValue(UpdateHeksSurveyValueRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
+    public function updateSurveyValue(UpdateHeksSurveyValueRequest $request, HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): RedirectResponse
     {
         $this->authorizeAccess();
 
@@ -267,7 +268,8 @@ class HeksController extends Controller
         abort_unless(is_array($rawData) && array_key_exists($source, $rawData) && is_array($rawData[$source]) && array_key_exists($fieldKey, $rawData[$source]), 404);
 
         $oldValue = $this->surveyDisplayValue($rawData[$source][$fieldKey] ?? null);
-        $newValue = $newValue !== null ? trim($newValue) : null;
+        $fieldType = (string) ($data['field_type'] ?? '');
+        $newValue = $displayService->rawValueForStorage($newValue, $fieldType);
 
         if ($oldValue === ($newValue ?? '')) {
             return back()->with('success', 'لا يوجد تغيير على قيمة الاستبيان.');
@@ -1206,7 +1208,7 @@ class HeksController extends Controller
     /**
      * @return array<string, array<string, mixed>>
      */
-    private function surveySections(HeksBeneficiary $beneficiary): array
+    private function surveySections(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): array
     {
         $rawData = $beneficiary->raw_data;
 
@@ -1271,7 +1273,10 @@ class HeksController extends Controller
                     continue;
                 }
 
-                $displayValue = $this->surveyDisplayValue($value, $key, (string) $source, $choiceLabels);
+                $resolvedValue = $displayService->resolve((string) $source, $key, $value);
+                $displayValue = $resolvedValue['resolved']
+                    ? $resolvedValue['display']
+                    : $this->surveyDisplayValue($value, $key, (string) $source, $choiceLabels);
 
                 if ($displayValue === '') {
                     continue;
@@ -1291,7 +1296,12 @@ class HeksController extends Controller
                     'question' => $questionLabel,
                     'field_key' => $key,
                     'value' => $displayValue,
-                    'choices' => $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels),
+                    'raw_value' => $this->surveyDisplayValue($value),
+                    'field_type' => $resolvedValue['type'],
+                    'warning' => $resolvedValue['warning'],
+                    'choices' => $resolvedValue['choices'] !== []
+                        ? $resolvedValue['choices']
+                        : $this->surveyChoiceOptions($value, $key, (string) $source, $choiceLabels),
                     'sort_order' => $this->surveySortOrder($key, (string) $source, $sortOrders),
                     'source' => (string) $source,
                     'editable' => array_key_exists($key, $originalValues) && is_scalar($originalValues[$key]),

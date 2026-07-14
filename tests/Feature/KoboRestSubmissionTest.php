@@ -8,6 +8,7 @@ use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksBoqCatalogItem;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
+use App\Modules\Heks\Models\HeksKoboChoice;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
@@ -452,6 +453,7 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
         'asset' => 'asset123',
     ])
         ->expectsOutputToContain('HEKS Kobo form mapping imported. Created: 3, updated: 0, skipped: 1.')
+        ->expectsOutputToContain('HEKS Kobo choices synced. Select one: 1, select multiple: 0, choices: 2, inactive: 0.')
         ->assertSuccessful();
 
     expect(HeksKoboFieldMapping::query()
@@ -468,6 +470,14 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
             ->value('data_type'))->toBe('integer')
         ->and(HeksKoboFieldMapping::query()
             ->where('service_name', 'heks-main')
+            ->where('kobo_field', 'family_info/has_disability')
+            ->value('field_type'))->toBe('select_one')
+        ->and(HeksKoboFieldMapping::query()
+            ->where('service_name', 'heks-main')
+            ->where('kobo_field', 'family_info/has_disability')
+            ->value('list_name'))->toBe('yes_no')
+        ->and(HeksKoboFieldMapping::query()
+            ->where('service_name', 'heks-main')
             ->where('kobo_field', 'readonly_note')
             ->exists())->toBeFalse();
 
@@ -480,7 +490,12 @@ test('heks kobo form mapping import command builds mappings from Kobo API', func
         'yes' => 'نعم',
         'no' => 'لا',
     ])
-        ->and($choiceNotes['form_order'] ?? null)->toBe(4);
+        ->and($choiceNotes['form_order'] ?? null)->toBe(4)
+        ->and(HeksKoboChoice::query()
+            ->where('service_name', 'heks-main')
+            ->where('question_key', 'family_info/has_disability')
+            ->where('choice_name', 'yes')
+            ->value('choice_label'))->toBe('نعم');
 });
 
 test('heks kobo sync fills basic beneficiary fields from imported Kobo labels', function () {
