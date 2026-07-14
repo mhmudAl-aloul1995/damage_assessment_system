@@ -46,7 +46,8 @@ it('exports productivity report using the same housing-unit date filter as the t
         'globalid' => 'productivity-housing-fully',
         'parentglobalid' => 'productivity-building-may',
         'unit_damage_status' => 'fully_damaged2',
-        'creationdate' => '2026-05-15 10:00:00',
+        'building_submit_date' => '2026-05-15 10:00:00',
+        'creationdate' => '2026-06-15 10:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -54,7 +55,8 @@ it('exports productivity report using the same housing-unit date filter as the t
         'globalid' => 'productivity-housing-partial',
         'parentglobalid' => 'productivity-building-may',
         'unit_damage_status' => 'partially_damaged2',
-        'creationdate' => '2026-05-15 11:00:00',
+        'building_submit_date' => '2026-05-15 11:00:00',
+        'creationdate' => '2026-06-15 11:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -62,7 +64,8 @@ it('exports productivity report using the same housing-unit date filter as the t
         'globalid' => 'productivity-housing-outside-filter',
         'parentglobalid' => 'productivity-building-may',
         'unit_damage_status' => 'fully_damaged2',
-        'creationdate' => '2026-06-01 10:00:00',
+        'building_submit_date' => '2026-06-01 10:00:00',
+        'creationdate' => '2026-05-15 12:00:00',
     ]);
 
     $this->actingAs($user)
@@ -88,6 +91,7 @@ it('exports productivity report using the same housing-unit date filter as the t
             && (int) $mayData->pda === 1
             && (int) $stats['eng-may']['engineer_total'] === 2
             && ! isset($stats['eng-may']['daily_breakdown']['2026-06-01'])
+            && ! isset($stats['eng-may']['daily_breakdown']['2026-06-15'])
             && ! isset($stats['eng-building-only']);
     });
 });
