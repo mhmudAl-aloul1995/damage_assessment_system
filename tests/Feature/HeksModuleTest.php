@@ -935,6 +935,58 @@ it('keeps similar Kobo sections separate with clearer display titles', function 
         ->toHaveCount(0);
 });
 
+it('displays beneficiary damage status as the Kobo choice label', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'DAMAGE-LABEL',
+        'name' => 'Damage Label Beneficiary',
+        'damage_status' => '_____2',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_059',
+        'column_name' => 'q_059',
+        'display_label' => 'Damage status',
+        'data_type' => 'select_one damage_status',
+        'field_type' => 'select_one',
+        'list_name' => 'damage_status',
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'damage_status',
+        'choice_name' => '_____2',
+        'choice_label' => 'أضرار جزئية متوسطة',
+        'language' => 'ar',
+        'sort_order' => 2,
+        'is_active' => true,
+    ]);
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'beneficiaryDamageStatusDisplay');
+    $method->setAccessible(true);
+
+    $display = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary,
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+
+    $beneficiary->forceFill(['damage_status' => 'قيمة قديمة'])->save();
+
+    $fallback = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary,
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+
+    expect($display)
+        ->toBe('أضرار جزئية متوسطة')
+        ->and($fallback)
+        ->toBe('قيمة قديمة');
+});
+
 it('uses template field choices when raw HEKS survey data is keyed by question label', function () {
     $beneficiary = HeksBeneficiary::query()->create([
         'code' => 'SURVEY-LABEL-KEY',

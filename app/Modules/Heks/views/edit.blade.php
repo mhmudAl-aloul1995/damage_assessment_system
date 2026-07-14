@@ -124,7 +124,7 @@
                 ['label' => 'BOQ الأساسي', 'value' => number_format($baseBoqCount).' بند', 'tone' => 'success'],
                 ['label' => 'BOQ الزيارات', 'value' => number_format($followUpBoqCount).' بند', 'tone' => 'info'],
                 ['label' => 'آخر متابعة', 'value' => $latestFollowUp?->visit_date?->format('Y-m-d') ?? '-', 'tone' => 'warning'],
-                ['label' => 'حالة الضرر', 'value' => $beneficiary->damage_status ?? '-', 'tone' => 'danger'],
+                ['label' => 'حالة الضرر', 'value' => $damageStatusDisplay ?? '-', 'tone' => 'danger'],
             ] as $card)
                 <div class="col-xl col-md-4 col-6">
                     <div class="case-kpi">

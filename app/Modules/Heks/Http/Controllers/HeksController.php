@@ -201,6 +201,7 @@ class HeksController extends Controller
             'boqCatalog' => $this->boqCatalog(),
             'boqSections' => $this->boqCatalog()->pluck('section')->filter()->unique()->sort()->values(),
             'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
+            'damageStatusDisplay' => $this->beneficiaryDamageStatusDisplay($beneficiary, $displayService),
             'rawDataSections' => $this->rawDataSections($beneficiary),
             'surveySections' => $this->surveySections($beneficiary, $displayService),
             'imageAttachments' => $this->imageAttachments($beneficiary),
@@ -209,6 +210,26 @@ class HeksController extends Controller
             'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
             'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary),
         ]);
+    }
+
+    private function beneficiaryDamageStatusDisplay(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): string
+    {
+        $rawValue = trim((string) ($beneficiary->damage_status ?? ''));
+
+        if ($rawValue === '') {
+            return '-';
+        }
+
+        foreach (['q_059', 'Damage status', 'Damage assessment', 'تقييم حالة ضرر المأوى', 'تقييم حالة ضرر المأوى:'] as $fieldKey) {
+            $resolved = $displayService->resolve('heks-main', $fieldKey, $rawValue);
+            $display = trim((string) ($resolved['display'] ?? ''));
+
+            if (($resolved['resolved'] ?? false) && $display !== '') {
+                return $display;
+            }
+        }
+
+        return $rawValue;
     }
 
     public function attachment(HeksBeneficiary $beneficiary, HeksAttachment $attachment): Response
