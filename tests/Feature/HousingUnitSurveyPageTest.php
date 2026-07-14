@@ -41,6 +41,7 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Support and safety');
     $response->assertSee('Apartment');
     $response->assertSee('Totally Damaged');
+    $response->assertSee('Engineer One');
 });
 
 it('filters housing unit datatable records using grouped filters and ranges', function () {
@@ -195,6 +196,58 @@ it('filters housing unit datatable records by submission date range', function (
     $response->assertJsonPath('recordsFiltered', 1);
     $response->assertSee('Inside Range');
     $response->assertDontSee('Outside Range');
+});
+
+it('filters housing unit datatable records by the assigned building researcher', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 2201,
+        'globalid' => 'building-assigned-one',
+        'assignedto' => 'Engineer One',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 2202,
+        'globalid' => 'building-assigned-two',
+        'assignedto' => 'Engineer Two',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3201,
+        'globalid' => 'housing-unit-assigned-one',
+        'parentglobalid' => 'building-assigned-one',
+        'housing_unit_number' => '31',
+        'q_9_3_1_first_name' => 'Assigned',
+        'q_9_3_4_last_name' => 'One',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3202,
+        'globalid' => 'housing-unit-assigned-two',
+        'parentglobalid' => 'building-assigned-two',
+        'housing_unit_number' => '32',
+        'q_9_3_1_first_name' => 'Assigned',
+        'q_9_3_4_last_name' => 'Two',
+    ]);
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'assignedto' => ['Engineer One'],
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/housing/show?'.$query);
+
+    $response->assertOk();
+    $response->assertJsonPath('recordsFiltered', 1);
+    $response->assertSee('Assigned One');
+    $response->assertSee('Engineer One');
+    $response->assertDontSee('Assigned Two');
+    $response->assertDontSee('Engineer Two');
 });
 
 function seedHousingFilterOptions(): void

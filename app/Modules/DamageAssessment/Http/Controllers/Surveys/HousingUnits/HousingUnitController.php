@@ -231,6 +231,20 @@ class HousingUnitController extends Controller
 
     private function applyHousingFilters(Builder $query, array $filters): void
     {
+        $assignedTo = $filters['assignedto'] ?? null;
+
+        if (is_array($assignedTo)) {
+            $assignedTo = array_values(array_filter($assignedTo, fn ($item): bool => $item !== null && $item !== ''));
+        }
+
+        if ($assignedTo !== null && $assignedTo !== '' && $assignedTo !== []) {
+            $query->whereHas('building', function (Builder $buildingQuery) use ($assignedTo): void {
+                is_array($assignedTo)
+                    ? $buildingQuery->whereIn('assignedto', $assignedTo)
+                    : $buildingQuery->where('assignedto', $assignedTo);
+            });
+        }
+
         $selectFilters = [
             'housing_unit_type',
             'unit_damage_status',
