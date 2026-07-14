@@ -1798,12 +1798,47 @@ class HeksController extends Controller
      */
     private function sortSurveySectionItems(array $section): array
     {
-        $section['items'] = collect($section['items'])
+        $section['items'] = array_values(collect($section['items'])
             ->sortBy(fn (array $item): int => (int) ($item['sort_order'] ?? PHP_INT_MAX))
-            ->values()
-            ->all();
+            ->reduce(function (array $items, array $item): array {
+                $signature = $this->surveyQuestionSignature((string) ($item['question'] ?? ''));
+
+                if ($signature === '' || $this->isRepeatableSurveyKey((string) ($item['field_key'] ?? ''))) {
+                    $items[] = $item;
+
+                    return $items;
+                }
+
+                foreach ($items as $index => $existing) {
+                    if ($this->surveyQuestionSignature((string) ($existing['question'] ?? '')) !== $signature) {
+                        continue;
+                    }
+
+                    if ($this->surveyItemHasMeaningfulValue($item) && ! $this->surveyItemHasMeaningfulValue($existing)) {
+                        $items[$index] = $item;
+                    }
+
+                    return $items;
+                }
+
+                $items[] = $item;
+
+                return $items;
+            }, []));
 
         return $section;
+    }
+
+    private function surveyItemHasMeaningfulValue(array $item): bool
+    {
+        $value = trim((string) ($item['value'] ?? ''));
+
+        if ($value !== '') {
+            return true;
+        }
+
+        return collect($item['choices'] ?? [])
+            ->contains(fn (array $choice): bool => (bool) ($choice['selected'] ?? false));
     }
 
     private function surveyQuestionSignature(string $question): string
