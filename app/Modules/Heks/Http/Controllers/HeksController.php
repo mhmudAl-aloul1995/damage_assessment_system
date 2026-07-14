@@ -1666,6 +1666,7 @@ class HeksController extends Controller
 
         if (str_contains($field, '/')) {
             $keys[] = substr($field, strpos($field, '/') + 1);
+            $keys[] = str($field)->beforeLast('/')->toString();
             $keys[] = str($field)->afterLast('/')->toString();
         }
 
@@ -1900,11 +1901,17 @@ class HeksController extends Controller
         }
 
         foreach ($this->surveySourceLookupKeys($source) as $serviceName) {
-            foreach ($this->surveyFieldLookupKeys($key) as $lookupKey) {
-                $choices = $choiceLabels[$serviceName][$lookupKey] ?? null;
+            foreach ($this->surveyChoiceLookupSets($key) as $lookupSet) {
+                $choices = $choiceLabels[$serviceName][$lookupSet['key']] ?? null;
 
                 if (! is_array($choices) || $choices === []) {
                     continue;
+                }
+
+                if ($lookupSet['choice'] !== null) {
+                    return $this->isSelectedKoboChoiceValue($value)
+                        ? (string) ($choices[$lookupSet['choice']] ?? $lookupSet['choice'])
+                        : '';
                 }
 
                 if (isset($choices[$value])) {
@@ -1927,6 +1934,41 @@ class HeksController extends Controller
     }
 
     /**
+     * @return array<int, array{key: string, choice: ?string}>
+     */
+    private function surveyChoiceLookupSets(string $key): array
+    {
+        $lookupSets = collect($this->surveyFieldLookupKeys($key))
+            ->map(fn (string $lookupKey): array => ['key' => $lookupKey, 'choice' => null])
+            ->all();
+
+        if (str_contains($key, '/')) {
+            $lookupSets[] = [
+                'key' => str($key)->beforeLast('/')->toString(),
+                'choice' => str($key)->afterLast('/')->toString(),
+            ];
+        }
+
+        return collect($lookupSets)
+            ->unique(fn (array $lookupSet): string => $lookupSet['key'].'|'.($lookupSet['choice'] ?? ''))
+            ->values()
+            ->all();
+    }
+
+    private function isSelectedKoboChoiceValue(string $value): bool
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        $normalized = str($value)->lower()->trim()->toString();
+
+        return ! in_array($normalized, ['0', '0_', '_', 'false', 'no', 'n', 'not_selected', 'لا'], true);
+    }
+
+    /**
      * @param  array<string, array<string, array<string, string>>>  $choiceLabels
      * @return array<int, array{value: string, label: string, selected: bool}>
      */
@@ -1943,11 +1985,26 @@ class HeksController extends Controller
         }
 
         foreach ($this->surveySourceLookupKeys($source) as $serviceName) {
-            foreach ($this->surveyFieldLookupKeys($key) as $lookupKey) {
-                $choices = $choiceLabels[$serviceName][$lookupKey] ?? null;
+            foreach ($this->surveyChoiceLookupSets($key) as $lookupSet) {
+                $choices = $choiceLabels[$serviceName][$lookupSet['key']] ?? null;
 
                 if (! is_array($choices) || $choices === []) {
                     continue;
+                }
+
+                if ($lookupSet['choice'] !== null) {
+                    if (! $this->isSelectedKoboChoiceValue($rawValue)) {
+                        return [];
+                    }
+
+                    return collect($choices)
+                        ->map(fn (string $label, string $choiceValue): array => [
+                            'value' => $choiceValue,
+                            'label' => $label,
+                            'selected' => $choiceValue === $lookupSet['choice'],
+                        ])
+                        ->values()
+                        ->all();
                 }
 
                 $selectedValues = collect(preg_split('/\s+/', $rawValue) ?: [])

@@ -559,6 +559,10 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
                 ],
                 'family_info' => [
                     'has_disability' => 'yes',
+                    'split_choice_question' => [
+                        'yes' => '1',
+                        'no' => '_',
+                    ],
                 ],
                 'group_vb7yr42' => [
                     'safe_unit' => 'نعم',
@@ -607,6 +611,15 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         'notes' => json_encode(['choice_labels' => ['yes' => 'نعم', 'no' => 'لا']], JSON_UNESCAPED_UNICODE),
     ]);
 
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'family_info/split_choice_question',
+        'column_name' => 'family_info_split_choice_question',
+        'display_label' => 'سؤال اختيار فرعي',
+        'notes' => json_encode(['choice_labels' => ['yes' => 'نعم', 'no' => 'لا']], JSON_UNESCAPED_UNICODE),
+    ]);
+
     $this->actingAs($user)
         ->get(route('heks.beneficiaries.edit', $beneficiary))
         ->assertOk()
@@ -620,6 +633,7 @@ it('shows nested HEKS Kobo survey answers as individual rows', function () {
         ->assertDontSee('Group Vb7yr42')
         ->assertSee('الوحدة السكنية تقع في محيط آمن')
         ->assertSee('يوجد أشخاص ذوي إعاقة')
+        ->assertSee('سؤال اختيار فرعي')
         ->assertSee('نعم')
         ->assertSee('لا')
         ->assertSee('survey-choice selected', false)
