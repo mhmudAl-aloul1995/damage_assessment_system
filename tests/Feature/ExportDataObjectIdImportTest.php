@@ -37,7 +37,7 @@ it('passes imported objectids into the export payload', function () {
         'exports.imported_object_ids' => ['1001', '1002', '1002', '1003'],
     ]);
 
-    $response = $this->post('/exports/start', [
+    $response = $this->post(route('export.start'), [
         'export_type' => 'excel',
         'building_columns' => ['objectid'],
     ]);
@@ -55,4 +55,35 @@ it('passes imported objectids into the export payload', function () {
     expect($payload['imported_object_ids'])->toBe(['1001', '1002', '1003']);
 
     Queue::assertPushed(ExportDataJob::class);
+});
+
+it('marks an orphaned processing export as failed when checking status', function () {
+    $user = User::factory()->create();
+
+    $export = Export::query()->create([
+        'status' => 'processing',
+        'filters' => json_encode([
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 1,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    $export->forceFill([
+        'created_at' => now()->subMinutes(5),
+        'updated_at' => now()->subMinutes(5),
+    ])->save();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.status', $export));
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', 'failed');
+
+    expect($export->fresh()->status)->toBe('failed');
 });

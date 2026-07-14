@@ -13,12 +13,17 @@ use App\Support\Exports\ExportDataColumns;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ExportDataController extends Controller
 {
     private const OBJECT_ID_FILTER_SESSION_KEY = 'exports.imported_object_ids';
+
+    private const STALE_PENDING_MINUTES = 10;
+
+    private const ORPHANED_PROCESSING_MINUTES = 2;
 
     public function index()
     {
@@ -89,25 +94,19 @@ class ExportDataController extends Controller
 
     public function check(int $id): JsonResponse
     {
-        Export::query()
-            ->where('user_id', auth()->id())
-            ->whereNull('file_name')
-            ->where(function ($query) {
-                $query->where(function ($pending) {
-                    $pending->where('status', 'pending')
-                        ->where('updated_at', '<', now()->subMinutes(10));
-                })->orWhere(function ($processing) {
-                    $processing->where('status', 'processing')
-                        ->where('updated_at', '<', now()->subHours(2));
-                });
-            })
-            ->update([
-                'status' => 'failed',
-            ]);
+        $this->failStaleExports();
 
         $export = Export::query()
             ->where('user_id', auth()->id())
             ->findOrFail($id);
+
+        if ($this->isOrphanedProcessingExport($export)) {
+            $export->update([
+                'status' => 'failed',
+            ]);
+
+            $export->refresh();
+        }
 
         return response()->json([
             'status' => $export->status,
@@ -123,21 +122,7 @@ class ExportDataController extends Controller
     public function export(Request $request): JsonResponse
     {
         try {
-            Export::query()
-                ->where('user_id', auth()->id())
-                ->whereNull('file_name')
-                ->where(function ($query) {
-                    $query->where(function ($pending) {
-                        $pending->where('status', 'pending')
-                            ->where('updated_at', '<', now()->subMinutes(10));
-                    })->orWhere(function ($processing) {
-                        $processing->where('status', 'processing')
-                            ->where('updated_at', '<', now()->subHours(2));
-                    });
-                })
-                ->update([
-                    'status' => 'failed',
-                ]);
+            $this->failStaleExports();
 
             $runningExport = Export::query()
                 ->where('user_id', auth()->id())
@@ -293,5 +278,56 @@ class ExportDataController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function failStaleExports(): void
+    {
+        Export::query()
+            ->where('user_id', auth()->id())
+            ->whereNull('file_name')
+            ->where('status', 'pending')
+            ->where('updated_at', '<', now()->subMinutes(self::STALE_PENDING_MINUTES))
+            ->update([
+                'status' => 'failed',
+            ]);
+
+        Export::query()
+            ->where('user_id', auth()->id())
+            ->whereNull('file_name')
+            ->where('status', 'processing')
+            ->where('progress', '<=', 1)
+            ->where('processed', 0)
+            ->where('updated_at', '<', now()->subMinutes(self::ORPHANED_PROCESSING_MINUTES))
+            ->get()
+            ->each(function (Export $export): void {
+                if ($this->hasExportsQueueJob()) {
+                    return;
+                }
+
+                $export->update([
+                    'status' => 'failed',
+                ]);
+            });
+    }
+
+    private function isOrphanedProcessingExport(Export $export): bool
+    {
+        return $export->status === 'processing'
+            && $export->file_name === null
+            && (int) ($export->progress ?? 0) <= 1
+            && (int) ($export->processed ?? 0) === 0
+            && $export->updated_at?->lt(now()->subMinutes(self::ORPHANED_PROCESSING_MINUTES))
+            && ! $this->hasExportsQueueJob();
+    }
+
+    private function hasExportsQueueJob(): bool
+    {
+        if (! Schema::hasTable('jobs')) {
+            return false;
+        }
+
+        return DB::table('jobs')
+            ->where('queue', 'exports')
+            ->exists();
     }
 }
