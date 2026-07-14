@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Schema;
 
 class ExportDataColumns
 {
-    public const BUILDINGS_TABLE = 'buildings';
+    public const BUILDINGS_TABLE = 'v_buildings_audited';
 
-    public const HOUSING_UNITS_TABLE = 'housing_units';
+    public const HOUSING_UNITS_TABLE = 'v_housing_units_audited';
 
     public const BUILDING_UNITS_COUNT_COLUMN = 'housing_units_count';
 
