@@ -759,7 +759,7 @@
                         </div>
 
                         <div class="kobo-paper">
-                            <div class="kobo-paper-title">Heks Final V1</div>
+                            <div class="kobo-paper-title">{{ $beneficiary->name ?: $beneficiary->code }}</div>
                             @forelse ($surveySections as $sectionIndex => $section)
                                 <section class="kobo-pdf-section">
                                     <h4 class="kobo-pdf-section-title">{{ $section['title'] }}</h4>
