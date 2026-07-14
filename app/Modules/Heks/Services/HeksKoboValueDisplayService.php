@@ -79,7 +79,7 @@ class HeksKoboValueDisplayService
             'type' => $fieldType,
             'resolved' => false,
             'choices' => $choiceOptions,
-            'warning' => $rawDisplay === '' ? null : "خيار غير معروف: {$rawDisplay}",
+            'warning' => $rawDisplay === '' || $this->isLegacyScoreToken($rawDisplay) ? null : "خيار غير معروف: {$rawDisplay}",
         ];
     }
 
@@ -245,6 +245,11 @@ class HeksKoboValueDisplayService
         }
 
         return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+    }
+
+    private function isLegacyScoreToken(string $value): bool
+    {
+        return in_array($value, ['0', '5'], true);
     }
 
     /**

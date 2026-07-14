@@ -823,13 +823,17 @@ it('does not apply stale Kobo choice labels to text and numeric survey fields', 
                     'application_code' => 'GDE7',
                     'q_103' => '599465783',
                 ],
+                'application_code' => 'GDQ3',
+                'q_093' => 'Rania',
+                'q_103' => '597106204',
             ],
         ],
     ]);
 
     foreach ([
         ['identification/application_code', 'Application code', 'text', ['GDE7' => 'application_code'], 1],
-        ['identification/q_103', 'Phone number', 'integer', ['599465783' => 'q_103'], 2],
+        ['identification/q_093', 'Other engineer', 'text', [], 2],
+        ['identification/q_103', 'Phone number', 'integer', ['599465783' => 'q_103'], 3],
     ] as [$field, $label, $type, $choiceLabels, $order]) {
         HeksKoboFieldMapping::query()->create([
             'service_name' => 'heks-main',
@@ -856,17 +860,22 @@ it('does not apply stale Kobo choice labels to text and numeric survey fields', 
     );
     $items = collect($sections)->flatMap(fn (array $section): array => $section['items'])->values();
     $applicationCode = $items->firstWhere('field_key', 'identification/application_code');
+    $otherEngineer = $items->firstWhere('field_key', 'identification/q_093');
     $phoneNumber = $items->firstWhere('field_key', 'identification/q_103');
 
     expect($applicationCode)
         ->not->toBeNull()
         ->and($applicationCode['value'])->toBe('GDE7')
         ->and($applicationCode['choices'])->toBe([])
+        ->and($otherEngineer)->not->toBeNull()
+        ->and($otherEngineer['value'])->toBe('Rania')
         ->and($phoneNumber)->not->toBeNull()
         ->and($phoneNumber['value'])->toBe('599465783')
         ->and($phoneNumber['choices'])->toBe([])
         ->and($items->pluck('value')->all())
         ->not->toContain('application_code')
+        ->not->toContain('GDQ3')
+        ->not->toContain('597106204')
         ->not->toContain('q_103');
 });
 
@@ -1043,6 +1052,7 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
     $displayService = app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class);
 
     $maritalStatus = $displayService->resolve('heks-main', 'family_info/marital_status', '18');
+    $legacyScore = $displayService->resolve('heks-main', 'family_info/marital_status', '0');
     $age = $displayService->resolve('heks-main', 'family_info/age', '23');
     $documents = $displayService->resolve('heks-main', 'family_info/documents', 'id_card ownership');
     $underscoreChoice = $displayService->resolve('heks-main', 'q_059', '_____1');
@@ -1060,6 +1070,9 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
             'label' => 'متزوج/ة',
             'selected' => true,
         ])
+        ->and($legacyScore)
+        ->resolved->toBeFalse()
+        ->warning->toBeNull()
         ->and($age)
         ->display->toBe('23')
         ->type->toBe('integer')

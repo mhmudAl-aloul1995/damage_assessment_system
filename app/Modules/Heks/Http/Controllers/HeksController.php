@@ -1280,16 +1280,10 @@ class HeksController extends Controller
                     continue;
                 }
 
-                $valueKey = $key;
-                $value = $values[$key] ?? null;
-
-                if (! array_key_exists($key, $values) && array_key_exists($question, $values)) {
-                    $valueKey = $question;
-                    $value = $values[$question];
-                }
+                [$valueKey, $value] = $this->surveyTemplateValue($values, $key, $question);
 
                 if ($this->isTechnicalSurveyPlaceholderValue($value, $key)) {
-                    $seen[(string) $source.'|'.$valueKey] = true;
+                    $this->markSurveySeenKeys($seen, (string) $source, $key, $valueKey);
                     $seenQuestionLabels[$this->surveyQuestionSignature($question)] = true;
 
                     continue;
@@ -1311,8 +1305,7 @@ class HeksController extends Controller
                     continue;
                 }
 
-                $seen[$uniqueKey] = true;
-                $seen[(string) $source.'|'.$valueKey] = true;
+                $this->markSurveySeenKeys($seen, (string) $source, $key, $valueKey);
                 $seenQuestionLabels[$this->surveyQuestionSignature($question)] = true;
                 $sectionKey = $this->surveySectionKey($key);
                 $section = $sections->get($sectionKey) ?? $this->koboSurveySection($sectionKey);
@@ -1730,6 +1723,37 @@ class HeksController extends Controller
     private function usesSurveyChoiceDisplay(?string $fieldType): bool
     {
         return in_array($fieldType, ['select_one', 'select_multiple'], true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array{0: string, 1: mixed}
+     */
+    private function surveyTemplateValue(array $values, string $key, string $question): array
+    {
+        foreach ($this->surveyFieldLookupKeys($key) as $lookupKey) {
+            if (array_key_exists($lookupKey, $values)) {
+                return [$lookupKey, $values[$lookupKey]];
+            }
+        }
+
+        if (array_key_exists($question, $values)) {
+            return [$question, $values[$question]];
+        }
+
+        return [$key, null];
+    }
+
+    /**
+     * @param  array<string, bool>  $seen
+     */
+    private function markSurveySeenKeys(array &$seen, string $source, string $key, string $valueKey): void
+    {
+        foreach ([...$this->surveyFieldLookupKeys($key), $valueKey] as $seenKey) {
+            if ($seenKey !== '') {
+                $seen[$source.'|'.$seenKey] = true;
+            }
+        }
     }
 
     /**
