@@ -42,10 +42,21 @@ it('uploads audited views to arcgis and copies attachments', function () {
     });
 
     Schema::table('housing_units', function (Blueprint $table): void {
-        $table->string('unit_governorate')->nullable();
-        $table->string('unit_municipalitie')->nullable();
-        $table->string('unit_neighborhood')->nullable();
-        $table->string('unit_building_name')->nullable();
+        if (! Schema::hasColumn('housing_units', 'unit_governorate')) {
+            $table->string('unit_governorate')->nullable();
+        }
+
+        if (! Schema::hasColumn('housing_units', 'unit_municipalitie')) {
+            $table->string('unit_municipalitie')->nullable();
+        }
+
+        if (! Schema::hasColumn('housing_units', 'unit_neighborhood')) {
+            $table->string('unit_neighborhood')->nullable();
+        }
+
+        if (! Schema::hasColumn('housing_units', 'unit_building_name')) {
+            $table->string('unit_building_name')->nullable();
+        }
     });
 
     DB::table('v_buildings_audited')->insert([
