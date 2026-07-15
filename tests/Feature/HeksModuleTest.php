@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
 use Spatie\Permission\Models\Role;
 
 it('imports and manages the HEKS operational workbook', function () {
@@ -936,6 +938,64 @@ it('keeps similar Kobo sections separate with clearer display titles', function 
         ->and($titles)->toContain('تفاصيل حالة المأوى والمرافق')
         ->and($titles->filter(fn (string $title): bool => $title === 'تقييم حالة المأوى'))
         ->toHaveCount(0);
+});
+
+it('exports the displayed HEKS beneficiary survey as a pdf', function () {
+    Pdf::fake();
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'PDF1',
+        'name' => 'PDF Beneficiary',
+        'raw_data' => [
+            'heks-main' => [
+                'q_059' => '_____1',
+            ],
+        ],
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_059',
+        'column_name' => 'q_059',
+        'display_label' => 'Damage status',
+        'data_type' => 'select_one damage_status',
+        'field_type' => 'select_one',
+        'list_name' => 'damage_status',
+        'notes' => json_encode(['form_order' => 1], JSON_UNESCAPED_UNICODE),
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'damage_status',
+        'choice_name' => '_____1',
+        'choice_label' => 'أضرار جزئية طفيفة',
+        'language' => 'ar',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.edit', $beneficiary))
+        ->assertOk()
+        ->assertSee(route('heks.beneficiaries.pdf', $beneficiary), false)
+        ->assertSee('تصدير PDF');
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.pdf', $beneficiary))
+        ->assertOk();
+
+    Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf): bool {
+        return $pdf->viewName === 'heks::pdf.beneficiary-survey'
+            && $pdf->contains('PDF Beneficiary')
+            && $pdf->contains('Damage status')
+            && $pdf->contains('أضرار جزئية طفيفة');
+    });
 });
 
 it('displays beneficiary damage status as the Kobo choice label', function () {

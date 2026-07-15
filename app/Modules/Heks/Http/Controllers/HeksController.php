@@ -32,6 +32,7 @@ use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksEngineerUserResolver;
 use App\Modules\Heks\Services\HeksKoboValueDisplayService;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
+use App\Support\BrowsershotConfiguration;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,9 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
+use Spatie\Browsershot\Browsershot;
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class HeksController extends Controller
@@ -210,6 +214,28 @@ class HeksController extends Controller
             'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
             'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary),
         ]);
+    }
+
+    public function exportSurveyPdf(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): PdfBuilder
+    {
+        $this->authorizeAccess();
+        $beneficiary->load([
+            'fieldEngineerUser:id,name,name_en,username_arcgis',
+            'surveyValueHistories' => fn ($query) => $query->with('user')->latest(),
+        ]);
+
+        $filename = 'heks-survey-'.preg_replace('/[^A-Za-z0-9_-]+/', '-', (string) ($beneficiary->code ?: $beneficiary->id)).'.pdf';
+
+        return Pdf::view('heks::pdf.beneficiary-survey', [
+            'beneficiary' => $beneficiary,
+            'surveySections' => $this->surveySections($beneficiary, $displayService),
+            'generatedAt' => now()->format('Y-m-d H:i'),
+        ])
+            ->format('a4')
+            ->name($filename)
+            ->withBrowsershot(function (Browsershot $browsershot): void {
+                app(BrowsershotConfiguration::class)->apply($browsershot);
+            });
     }
 
     private function beneficiaryDamageStatusDisplay(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): string

@@ -111,6 +111,7 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-start gap-2">
+                    <a href="{{ route('heks.beneficiaries.pdf', $beneficiary) }}" target="_blank" rel="noopener" class="btn btn-light-success">تصدير PDF</a>
                     <a href="{{ route('heks.beneficiaries.pricing', $beneficiary) }}" class="btn btn-primary">فتح شاشة التسعير</a>
                     <a href="{{ route('heks.follow-ups') }}" class="btn btn-light-primary">المتابعات</a>
                     <a href="{{ route('heks.beneficiaries') }}" class="btn btn-light">رجوع</a>
