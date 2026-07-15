@@ -837,6 +837,7 @@ it('does not apply stale Kobo choice labels to text and numeric survey fields', 
         ['identification/q_103', 'Phone number', 'integer', ['599465783' => 'q_103'], 3],
         ['identification/visit_date', 'Visit date', 'date', [], 4],
         ['visit_date', 'Visit date', 'date', [], 5],
+        ['identification/q_094', 'Other engineer / specify', 'text', [], 6],
     ] as [$field, $label, $type, $choiceLabels, $order]) {
         HeksKoboFieldMapping::query()->create([
             'service_name' => 'heks-main',
@@ -864,6 +865,7 @@ it('does not apply stale Kobo choice labels to text and numeric survey fields', 
     $items = collect($sections)->flatMap(fn (array $section): array => $section['items'])->values();
     $applicationCode = $items->firstWhere('field_key', 'identification/application_code');
     $otherEngineer = $items->firstWhere('field_key', 'identification/q_093');
+    $blankOtherEngineer = $items->firstWhere('field_key', 'identification/q_094');
     $phoneNumber = $items->firstWhere('field_key', 'identification/q_103');
     $visitDates = $items->where('question', 'Visit date')->values();
 
@@ -873,6 +875,7 @@ it('does not apply stale Kobo choice labels to text and numeric survey fields', 
         ->and($applicationCode['choices'])->toBe([])
         ->and($otherEngineer)->not->toBeNull()
         ->and($otherEngineer['value'])->toBe('Rania')
+        ->and($blankOtherEngineer)->toBeNull()
         ->and($phoneNumber)->not->toBeNull()
         ->and($phoneNumber['value'])->toBe('599465783')
         ->and($phoneNumber['choices'])->toBe([])

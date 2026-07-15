@@ -287,6 +287,58 @@ test('kobo rest submission syncs current HEKS main technical contact fields', fu
         ->and($beneficiary->occupancy_status)->toBeNull();
 });
 
+test('heks kobo sync resolves field engineer choice codes from mapping', function () {
+    foreach ([
+        ['2', 'م. محمد الشيخ', 2],
+        ['3', 'آخرون /حدد:', 3],
+    ] as [$choiceName, $choiceLabel, $order]) {
+        HeksKoboChoice::query()->create([
+            'service_name' => 'heks-main',
+            'question_key' => 'identification/q_087',
+            'list_name' => 'kx0yx98',
+            'choice_name' => $choiceName,
+            'choice_label' => $choiceLabel,
+            'language' => 'ar',
+            'sort_order' => $order,
+            'is_active' => true,
+        ]);
+    }
+
+    $selectedSubmission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-main',
+        'submission_uuid' => 'uuid:heks-engineer-choice-code',
+        'payload' => [
+            '_uuid' => 'uuid:heks-engineer-choice-code',
+            'identification/application_code' => 'ENG-CODE-1',
+            'family_info/head_name' => 'Engineer Choice Beneficiary',
+            'identification/q_087' => '2',
+        ],
+        'received_at' => now(),
+    ]);
+
+    app(HeksKoboSubmissionSyncService::class)->sync($selectedSubmission);
+
+    $otherSubmission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-main',
+        'submission_uuid' => 'uuid:heks-engineer-other-choice',
+        'payload' => [
+            '_uuid' => 'uuid:heks-engineer-other-choice',
+            'identification/application_code' => 'ENG-CODE-2',
+            'family_info/head_name' => 'Engineer Other Beneficiary',
+            'identification/q_087' => '3',
+            'identification/q_093' => 'م. مهندس آخر',
+        ],
+        'received_at' => now(),
+    ]);
+
+    app(HeksKoboSubmissionSyncService::class)->sync($otherSubmission);
+
+    expect(HeksBeneficiary::query()->where('code', 'ENG-CODE-1')->value('field_engineer'))
+        ->toBe('م. محمد الشيخ')
+        ->and(HeksBeneficiary::query()->where('code', 'ENG-CODE-2')->value('field_engineer'))
+        ->toBe('م. مهندس آخر');
+});
+
 test('kobo rest submission applies configured HEKS Kobo display labels to technical fields', function () {
     HeksKoboFieldMapping::query()->create([
         'service_name' => 'heks-main',

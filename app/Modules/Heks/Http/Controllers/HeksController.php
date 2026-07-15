@@ -1303,6 +1303,12 @@ class HeksController extends Controller
 
                 [$valueKey, $value] = $this->surveyTemplateValue($values, $key, $question);
 
+                if ($this->shouldHideUnansweredOtherSpecifyField($key, $question, $value)) {
+                    $this->markSurveySeenKeys($seen, (string) $source, $key, $valueKey);
+
+                    continue;
+                }
+
                 if ($this->isTechnicalSurveyPlaceholderValue($value, $key)) {
                     $this->markSurveySeenKeys($seen, (string) $source, $key, $valueKey);
                     $seenQuestionLabels[$this->surveyQuestionSignature($question)] = true;
@@ -1763,6 +1769,23 @@ class HeksController extends Controller
         }
 
         return [$key, null];
+    }
+
+    private function shouldHideUnansweredOtherSpecifyField(string $key, string $question, mixed $value): bool
+    {
+        if ($this->surveyDisplayValue($value) !== '') {
+            return false;
+        }
+
+        $normalized = str($key.' '.$question)
+            ->lower()
+            ->replace(['أ', 'إ', 'آ'], 'ا')
+            ->toString();
+
+        return str_contains($normalized, 'other')
+            || str_contains($normalized, 'specify')
+            || str_contains($normalized, 'اخر')
+            || str_contains($normalized, 'حدد');
     }
 
     /**

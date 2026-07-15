@@ -8,6 +8,7 @@ use App\Modules\Heks\Models\HeksBeneficiary;
 use App\Modules\Heks\Models\HeksBoqCatalogItem;
 use App\Modules\Heks\Models\HeksBoqItem;
 use App\Modules\Heks\Models\HeksFollowUp;
+use App\Modules\Heks\Models\HeksKoboChoice;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
@@ -134,14 +135,7 @@ class HeksKoboSubmissionSyncService
     private function syncBeneficiary(HeksBeneficiary $beneficiary, array $payload, string $service): void
     {
         $beneficiaryName = $this->beneficiaryName($payload);
-        $fieldEngineer = $this->cleanEngineerName($this->first($payload, [
-            'engineer_name',
-            'field_engineer',
-            'q_093',
-            'Engineer Name',
-            "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
-            "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
-        ]));
+        $fieldEngineer = $this->beneficiaryFieldEngineer($payload, $service);
 
         $data = array_filter([
             'name' => $beneficiaryName,
@@ -178,6 +172,35 @@ class HeksKoboSubmissionSyncService
         }
 
         $beneficiary->fill($data)->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function beneficiaryFieldEngineer(array $payload, string $service): string
+    {
+        $selectedEngineer = $this->firstChoiceLabel($payload, $service, [
+            'identification/q_087',
+            'q_087',
+            '__087',
+            "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{064A}\u{062F}\u{0627}\u{0646}\u{064A}",
+        ]);
+
+        if ($selectedEngineer !== '' && ! $this->isOtherChoiceLabel($selectedEngineer)) {
+            return $this->cleanEngineerName($selectedEngineer);
+        }
+
+        return $this->cleanEngineerName($this->first($payload, [
+            'engineer_name',
+            'field_engineer',
+            'identification/q_093',
+            'q_093',
+            '__093',
+            'Engineer Name',
+            "\u{062D}\u{062F}\u{062F} \u{0627}\u{0633}\u{0645}",
+            "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
+            "\u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0627}\u{0644}\u{0645}\u{062A}\u{0627}\u{0628}\u{0639}",
+        ]));
     }
 
     /**
@@ -862,6 +885,63 @@ class HeksKoboSubmissionSyncService
     private function firstMapped(array $payload, string $service, array $candidates): string
     {
         return $this->first($payload, $this->mappedCandidates($service, $candidates));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, string>  $fields
+     */
+    private function firstChoiceLabel(array $payload, string $service, array $fields): string
+    {
+        foreach ($fields as $field) {
+            foreach ($this->fieldLookupKeys($field) as $lookupKey) {
+                if (! array_key_exists($lookupKey, $payload) || ! filled($payload[$lookupKey]) || is_array($payload[$lookupKey])) {
+                    continue;
+                }
+
+                $value = trim((string) $payload[$lookupKey]);
+                $label = $this->choiceLabel($service, $field, $value);
+
+                return $label !== '' ? $label : $value;
+            }
+        }
+
+        return '';
+    }
+
+    private function choiceLabel(string $service, string $field, string $value): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        foreach ($this->serviceLookupKeys($service) as $serviceName) {
+            foreach ($this->fieldLookupKeys($field) as $questionKey) {
+                $label = HeksKoboChoice::query()
+                    ->where('service_name', $serviceName)
+                    ->where('question_key', $questionKey)
+                    ->where('choice_name', $value)
+                    ->where('is_active', true)
+                    ->value('choice_label');
+
+                if (is_string($label) && trim($label) !== '') {
+                    return trim($label);
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function isOtherChoiceLabel(string $value): bool
+    {
+        $normalized = Str::of($value)
+            ->lower()
+            ->replace(['أ', 'إ', 'آ'], 'ا')
+            ->toString();
+
+        return str_contains($normalized, 'other')
+            || str_contains($normalized, 'اخر');
     }
 
     /**
