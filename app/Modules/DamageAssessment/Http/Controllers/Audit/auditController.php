@@ -48,7 +48,7 @@ class auditController extends Controller
         '400940623',
         '803275288',
         '800900607',
-        '801773987'
+        '801773987',
     ];
 
     private const LEGAL_CHALLENGES = [
@@ -5171,7 +5171,7 @@ COALESCE(
             'unit_owner',
             'damaged_area_m2',
             'floor_number',
-            'housing_unit_number',
+            'objectid',
             'external_finishing_of_the_unit',
             'internal_finishing_of_the_unit',
             'reh_kitchen',
@@ -5183,7 +5183,7 @@ COALESCE(
             'unit_owner',
             'damaged_area_m2',
             'floor_number',
-            'housing_unit_number',
+            'objectid',
             'external_finishing_of_the_unit',
             'internal_finishing_of_the_unit',
         ];
@@ -5236,14 +5236,14 @@ COALESCE(
             'external_finishing_of_the_unit' => 'تشطيب الوحدة من الخارج',
             'internal_finishing_of_the_unit' => 'تشطيب الوحدة من الداخل',
             'floor_number' => 'رقم الطابق',
-            'housing_unit_number' => 'رقم الوحدة',
+            'objectid' => 'رقم الوحدة',
         ];
 
         $summaryLabels = [
             'unit_owner' => 'اسم مالك الوحدة',
             'damaged_area_m2' => 'مساحة الوحدة',
             'floor_number' => 'رقم الطابق',
-            'housing_unit_number' => 'رقم الوحدة',
+            'objectid' => 'رقم الوحدة',
             'external_finishing_of_the_unit' => 'التشطيب الخارجي',
             'internal_finishing_of_the_unit' => 'التشطيب الداخلي',
             'reh_kitchen' => 'تأهيل مطبخ',

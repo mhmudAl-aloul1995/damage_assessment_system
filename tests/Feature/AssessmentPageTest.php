@@ -253,11 +253,18 @@ it('shows only total damage housing fields in the sidebar summary', function () 
     expect(collect($response->json('summary_items'))->pluck('field')->all())->toBe([
         'unit_owner',
         'damaged_area_m2',
+        'floor_number',
+        'objectid',
         'external_finishing_of_the_unit',
         'internal_finishing_of_the_unit',
-        'floor_number',
-        'housing_unit_number',
     ]);
+
+    $unitNumberItem = collect($response->json('summary_items'))->firstWhere('field', 'objectid');
+
+    expect($unitNumberItem)
+        ->not->toBeNull()
+        ->and($unitNumberItem['label'])->toBe('رقم الوحدة')
+        ->and($unitNumberItem['value'])->toBe(3201);
 });
 
 it('keeps the existing partial damage housing fields in the sidebar summary', function () {
@@ -282,17 +289,26 @@ it('keeps the existing partial damage housing fields in the sidebar summary', fu
         ->getJson(route('housing.summary', ['globalid' => $housing->globalid]))
         ->assertOk()
         ->assertJsonPath('summary_mode', 'partial')
-        ->assertJsonCount(7, 'summary_items');
+        ->assertJsonCount(9, 'summary_items');
 
     expect(collect($response->json('summary_items'))->pluck('field')->all())->toBe([
         'unit_owner',
         'damaged_area_m2',
+        'floor_number',
+        'objectid',
+        'external_finishing_of_the_unit',
+        'internal_finishing_of_the_unit',
         'reh_kitchen',
         'reh_bathroom',
         'is_the_housing_unit_or_living_habitable',
-        'external_finishing_of_the_unit',
-        'internal_finishing_of_the_unit',
     ]);
+
+    $unitNumberItem = collect($response->json('summary_items'))->firstWhere('field', 'objectid');
+
+    expect($unitNumberItem)
+        ->not->toBeNull()
+        ->and($unitNumberItem['label'])->toBe('رقم الوحدة')
+        ->and($unitNumberItem['value'])->toBe(3202);
 });
 
 it('allows auditing supervisors to final approve from the assessment audit page', function () {

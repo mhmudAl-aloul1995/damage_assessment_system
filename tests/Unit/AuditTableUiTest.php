@@ -246,7 +246,7 @@ test('assessment status actions are limited to the matching audit role', functio
         ->toContain('You cannot set this status unless this assessment type is assigned to you.')
         ->toContain("->where('type', \$type)")
         ->toContain("'fully_damaged2'")
-        ->toContain("'floor_number',\n            'housing_unit_number',\n            'external_finishing_of_the_unit'")
+        ->toContain("'floor_number',\n            'objectid',\n            'external_finishing_of_the_unit'")
         ->toContain("'is_the_housing_unit_or_living_habitable' => 'هل الوحدة مناسبة للسكن'")
         ->toContain("'Legal Auditor' => in_array(\$status, ['accepted', 'legal_notes'], true)")
         ->toContain("'QC/QA Engineer' => in_array(\$status, ['accepted', 'rejected', 'need_review'], true)");
