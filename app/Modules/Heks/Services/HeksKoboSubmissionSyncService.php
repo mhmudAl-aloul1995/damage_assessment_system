@@ -756,7 +756,7 @@ class HeksKoboSubmissionSyncService
      */
     private function syncBoqItems(HeksBeneficiary $beneficiary, array $payload, array $flatPayload, string $service, ?HeksFollowUp $followUp): int
     {
-        $rows = $this->boqRows($payload, $flatPayload);
+        $rows = $this->boqRows($payload, $flatPayload, $service);
         $saved = 0;
 
         foreach ($rows as $index => $row) {
@@ -802,7 +802,7 @@ class HeksKoboSubmissionSyncService
      * @param  array<string, mixed>  $flatPayload
      * @return array<int, array<string, mixed>>
      */
-    private function boqRows(array $payload, array $flatPayload): array
+    private function boqRows(array $payload, array $flatPayload, string $service): array
     {
         foreach (['boq_items', 'items', 'BOQ', 'جدول_الكميات'] as $key) {
             $rows = Arr::get($payload, $key);
@@ -818,56 +818,111 @@ class HeksKoboSubmissionSyncService
             return [$flatPayload];
         }
 
-        $catalogRows = $this->catalogQuantityRows($flatPayload);
-
-        if ($catalogRows !== []) {
-            return $catalogRows;
-        }
-
-        return $this->questionQuantityRows($flatPayload);
+        return $this->quantityRows($flatPayload, $service);
     }
 
     /**
      * @param  array<string, mixed>  $flatPayload
      * @return array<int, array<string, mixed>>
      */
-    private function catalogQuantityRows(array $flatPayload): array
+    private function quantityRows(array $flatPayload, string $service): array
     {
         $catalogItems = HeksBoqCatalogItem::query()
             ->where('is_active', true)
             ->whereNotNull('item_code')
             ->orderBy('sort_order')
-            ->get();
+            ->get()
+            ->keyBy(fn (HeksBoqCatalogItem $item): string => $this->normalizeKey((string) $item->item_code));
         $rows = [];
+        $seen = [];
 
-        foreach ($catalogItems as $catalogItem) {
-            $itemCode = trim((string) $catalogItem->item_code);
-
-            if ($itemCode === '') {
+        foreach ($flatPayload as $key => $value) {
+            if (! is_scalar($value)) {
                 continue;
             }
 
-            $quantity = $this->quantityForCatalogItem($flatPayload, $itemCode);
+            $quantity = $this->decimal((string) $value);
 
             if ($quantity === null || $quantity <= 0) {
                 continue;
             }
 
-            $unitPrice = (float) $catalogItem->unit_price_ils;
+            $itemCode = $this->boqItemCodeForQuantityField($service, (string) $key);
+
+            if ($itemCode === null && ! $this->looksLikeQuantityKey((string) $key)) {
+                continue;
+            }
+
+            $signature = $itemCode !== null ? 'code:'.$itemCode : 'key:'.$key;
+
+            if (isset($seen[$signature])) {
+                continue;
+            }
+
+            $seen[$signature] = true;
+            $catalogItem = $itemCode !== null ? $catalogItems->get($this->normalizeKey($itemCode)) : null;
+            $unitPrice = $catalogItem instanceof HeksBoqCatalogItem ? (float) $catalogItem->unit_price_ils : 0.0;
 
             $rows[] = [
-                'section' => $catalogItem->section,
-                'item_code' => $itemCode,
-                'description' => $catalogItem->description,
-                'unit' => $catalogItem->unit,
+                'section' => $catalogItem instanceof HeksBoqCatalogItem ? $catalogItem->section : $this->boqSectionFromQuantityKey((string) $key),
+                'item_code' => $catalogItem instanceof HeksBoqCatalogItem ? $catalogItem->item_code : $itemCode,
+                'description' => $catalogItem instanceof HeksBoqCatalogItem ? $catalogItem->description : $this->boqQuantityDescription($service, (string) $key),
+                'unit' => $catalogItem instanceof HeksBoqCatalogItem ? $catalogItem->unit : '',
                 'quantity' => $quantity,
                 'unit_price_ils' => $unitPrice,
                 'total_price_ils' => $quantity * $unitPrice,
-                'notes' => 'Imported from KoBo quantity field',
+                'notes' => $catalogItem instanceof HeksBoqCatalogItem
+                    ? 'Imported from KoBo quantity field'
+                    : 'Imported from unmapped KoBo BOQ quantity field',
             ];
         }
 
         return $rows;
+    }
+
+    private function boqItemCodeForQuantityField(string $service, string $key): ?string
+    {
+        foreach (array_filter([$this->displayLabelForField($service, $key), $key]) as $value) {
+            $code = $this->boqItemCodeFromText((string) $value);
+
+            if ($code !== null) {
+                return $code;
+            }
+        }
+
+        return null;
+    }
+
+    private function boqItemCodeFromText(string $value): ?string
+    {
+        if (preg_match('/(?:البند|item)\s*([0-9]+(?:[\.,][0-9]+)?)/iu', $value, $matches) === 1) {
+            return str_replace(',', '.', $matches[1]);
+        }
+
+        $lastSegment = Str::afterLast($value, '/');
+
+        if (preg_match('/(?:^|_)([0-9]+)_([0-9]+)(?:_|$)/', $lastSegment, $matches) === 1) {
+            return $matches[1].'.'.$matches[2];
+        }
+
+        return null;
+    }
+
+    private function boqSectionFromQuantityKey(string $key): string
+    {
+        $segment = Str::before($key, '/');
+
+        if (preg_match('/sec_([0-9]+)/', $segment, $matches) === 1) {
+            return 'Section '.$matches[1];
+        }
+
+        return '';
+    }
+
+    private function boqQuantityDescription(string $service, string $key): string
+    {
+        return $this->displayLabelForField($service, $key)
+            ?? Str::of($key)->replace(['/', '_'], ' ')->squish()->toString();
     }
 
     /**

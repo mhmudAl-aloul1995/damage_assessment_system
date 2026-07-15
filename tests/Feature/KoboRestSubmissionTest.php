@@ -940,6 +940,62 @@ test('kobo rest submission builds HEKS BOQ rows from catalog quantity fields', f
         ->and((float) $item->total_price_ils)->toBe(1020.0);
 });
 
+test('kobo rest submission keeps all HEKS BOQ quantity fields when only some match the catalog', function () {
+    HeksBoqCatalogItem::query()->create([
+        'section' => 'Block work',
+        'item_code' => '3.2',
+        'description' => 'Concrete block 15 cm',
+        'unit' => 'M2',
+        'unit_price_ils' => 585,
+        'is_active' => true,
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-boq',
+        'table_name' => 'heks_boq_kobo_records',
+        'kobo_field' => 'sec_03/qty_3_2',
+        'column_name' => 'sec_03_qty_3_2',
+        'display_label' => 'الكمية - البند 3.2',
+        'data_type' => 'decimal',
+        'field_type' => 'decimal',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-boq',
+        'table_name' => 'heks_boq_kobo_records',
+        'kobo_field' => 'sec_08/qty_8_12_001',
+        'column_name' => 'sec_08_qty_8_12_001',
+        'display_label' => 'الكمية - البند 8.13',
+        'data_type' => 'decimal',
+        'field_type' => 'decimal',
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/heks-boq', [
+            '_uuid' => 'uuid:heks-boq-mixed-catalog',
+            'meta_group/Code' => 'MIXEDBOQ',
+            'sec_03/qty_3_2' => '1',
+            'sec_08/qty_8_12_001' => '4',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'MIXEDBOQ')->sole();
+    $items = HeksBoqItem::query()
+        ->where('heks_beneficiary_id', $beneficiary->id)
+        ->orderBy('item_code')
+        ->get()
+        ->keyBy('item_code');
+
+    expect($items)->toHaveCount(2)
+        ->and((float) $items->get('3.2')->quantity)->toBe(1.0)
+        ->and((float) $items->get('3.2')->total_price_ils)->toBe(585.0)
+        ->and((float) $items->get('8.13')->quantity)->toBe(4.0)
+        ->and((float) $items->get('8.13')->total_price_ils)->toBe(0.0)
+        ->and($items->get('8.13')->description)->toBe('الكمية - البند 8.13');
+});
+
 test('kobo rest submission builds HEKS main BOQ rows from technical item code fields', function () {
     HeksBoqCatalogItem::query()->create([
         'section' => 'Block work',
