@@ -293,7 +293,7 @@ class HeksKoboSubmissionSyncService
             return;
         }
 
-        $classification = $this->first($payload, ['classification', 'Classification', 'priority', "\u{0627}\u{0644}\u{062A}\u{0635}\u{0646}\u{064A}\u{0641}", "\u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0648}\u{064A}\u{0629}", 'ط§ظ„طھطµظ†ظٹظپ', 'ط§ظ„ط£ظˆظ„ظˆظٹط©']);
+        $classification = $this->first($payload, ['classification', 'Classification', 'priority', "\u{0627}\u{0644}\u{062A}\u{0635}\u{0646}\u{064A}\u{0641}", "\u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0648}\u{064A}\u{0629}"]);
         $classification = $classification !== '' ? $classification : $this->classificationForScore($total);
 
         HeksScore::query()->updateOrCreate(

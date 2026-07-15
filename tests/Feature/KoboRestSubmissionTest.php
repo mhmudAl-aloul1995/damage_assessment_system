@@ -12,6 +12,7 @@ use App\Modules\Heks\Models\HeksKoboChoice;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
+use App\Modules\Heks\Models\HeksScoringWeight;
 use App\Modules\Heks\Services\HeksKoboSubmissionSyncService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -146,6 +147,48 @@ test('kobo rest submission maps HEKS scoring workbook column names', function ()
         ->and((float) $score->technical_score)->toBe(42.0)
         ->and((float) $score->total_score)->toBe(72.0)
         ->and($score->classification)->toBe('Very High');
+});
+
+test('kobo rest submission calculates HEKS scores from scoring weights when totals are missing', function () {
+    HeksScoringWeight::query()->create([
+        'source' => 'S-V',
+        'question_key' => 'social_need',
+        'option_value' => 'vulnerable',
+        'option_score' => 10,
+    ]);
+    HeksScoringWeight::query()->create([
+        'source' => 'T-V',
+        'question_key' => 'damage_level',
+        'option_value' => 'moderate',
+        'option_score' => 42,
+    ]);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-main',
+        'submission_uuid' => 'uuid:heks-calculated-score',
+        'payload' => [
+            '_uuid' => 'uuid:heks-calculated-score',
+            'code' => 'CALC1',
+            'beneficiary_name' => 'Calculated Score Beneficiary',
+            'social_need' => 'vulnerable',
+            'damage_level' => 'moderate',
+        ],
+        'received_at' => now(),
+    ]);
+
+    $sync = app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    expect($sync['status'])->toBe('synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'CALC1')->sole();
+    $score = HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect((float) $score->social_score)->toBe(10.0)
+        ->and((float) $score->technical_score)->toBe(42.0)
+        ->and((float) $score->total_score)->toBe(52.0)
+        ->and($score->classification)->toBe('High')
+        ->and($score->raw_data['_heks_score_calculation']['social_weights'])->not->toBeEmpty()
+        ->and($score->raw_data['_heks_score_calculation']['technical_weights'])->not->toBeEmpty();
 });
 
 test('kobo rest submission ignores computed HEKS display columns and invalid values', function () {
