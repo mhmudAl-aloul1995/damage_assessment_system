@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as ViewResponse;
@@ -159,6 +160,8 @@ class DamageAssessmentController extends Controller
             'uxo_present' => $this->dashboardPublicBuildingQuery($request)
                 ->where('is_uxo', 'yes')
                 ->count(),
+
+            'completed_road_length_km' => $this->dashboardCompletedRoadLengthKilometers($request),
         ];
 
         $roadFacilityStats = [
@@ -2070,6 +2073,22 @@ class DamageAssessmentController extends Controller
         $this->applyDashboardMapFilters($query, $request, '', 'creationdate');
 
         return $query;
+    }
+
+    private function dashboardCompletedRoadLengthKilometers(Request $request): float
+    {
+        $lengthColumn = collect(['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'])
+            ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
+
+        if ($lengthColumn === null) {
+            return 0.0;
+        }
+
+        $shapeLength = (float) $this->dashboardRoadFacilityQuery($request)
+            ->where('field_status', 'COMPLETED')
+            ->sum($lengthColumn);
+
+        return $shapeLength * 111;
     }
 
     private function applyDashboardHousingFilters(Builder $query, Request $request): void

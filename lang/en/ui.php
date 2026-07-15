@@ -359,6 +359,7 @@ return [
         'neighborhood' => 'Neighborhood',
         'assigned_staff' => 'Assigned Staff',
         'occupied' => 'Occupied',
+        'street_length' => 'Street Length',
         'bodies' => 'Bodies',
         'uxo' => 'UXO',
         'road_facilities' => 'Road Facilities',

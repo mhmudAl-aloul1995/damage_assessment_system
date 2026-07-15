@@ -356,6 +356,7 @@ return [
         'neighborhoods' => 'الأحياء',
         'assigned_staff' => 'الطاقم المكلّف',
         'occupied' => 'مشغولة',
+        'street_length' => 'طول الشوارع',
         'bodies' => 'جثث',
         'uxo' => 'ذخائر',
         'road_facilities' => 'مرافق الطرق',

@@ -21,7 +21,7 @@ afterEach(function () {
     Carbon::setTestNow();
 });
 
-it('shows eight summary statistics for public buildings and road facilities on the main dashboard', function () {
+it('shows summary statistics for public buildings and road facilities on the main dashboard', function () {
     $user = User::factory()->create();
 
     $this->app->instance(ArcgisService::class, new class extends ArcgisService
@@ -51,11 +51,24 @@ it('shows eight summary statistics for public buildings and road facilities on t
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => Carbon::today()->toDateString(),
+        'field_status' => 'COMPLETED',
+        'shape__length' => 0.1,
         'road_damage_level' => 'severe',
         'potholes_exist' => 'yes',
         'obstacle_exist' => 'yes',
         'buried_bodies' => 'yes',
         'uxo_present' => 'yes',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 2002,
+        'str_name' => 'Road B',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'creationdate' => Carbon::today()->toDateString(),
+        'field_status' => 'Not_Completed',
+        'shape__length' => 0.2,
+        'road_damage_level' => 'moderate',
     ]);
 
     $response = $this->actingAs($user)->get('/damage-assessment/damageAssessment');
@@ -65,6 +78,8 @@ it('shows eight summary statistics for public buildings and road facilities on t
         ->assertSee('Neighborhoods')
         ->assertSee('Assigned Staff')
         ->assertSee('Occupied')
+        ->assertSee('Street Length')
+        ->assertSee('11.10 كم')
         ->assertSee('Bodies')
         ->assertSee('UXO')
         ->assertSee('Potholes')
