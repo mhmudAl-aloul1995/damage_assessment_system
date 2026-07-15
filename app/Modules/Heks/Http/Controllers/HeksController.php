@@ -212,7 +212,7 @@ class HeksController extends Controller
             'scoringComponents' => $this->scoringComponents(),
             'priorityMatrix' => $this->priorityMatrix(),
             'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
-            'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary),
+            'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary, $displayService),
         ]);
     }
 
@@ -2492,7 +2492,7 @@ class HeksController extends Controller
     /**
      * @return \Illuminate\Support\Collection<int, array{category: ?string, indicator: ?string, question: ?string, weight: mixed, max: mixed, avg: mixed, min: mixed, value: mixed, score: mixed, source: string}>
      */
-    private function technicalAssessmentRows(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection
+    private function technicalAssessmentRows(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): \Illuminate\Support\Collection
     {
         $labels = $beneficiary->labels->keyBy('label_key');
         $rawData = collect($beneficiary->raw_data ?? [])
@@ -2503,13 +2503,21 @@ class HeksController extends Controller
             ->where('source', 'Shelter Technical Weights')
             ->orderBy('id')
             ->get()
-            ->map(function (HeksScoringWeight $weight) use ($labels, $rawData): array {
+            ->map(function (HeksScoringWeight $weight) use ($labels, $rawData, $displayService): array {
                 $weightRawData = is_array($weight->raw_data) ? $weight->raw_data : [];
                 $category = $weight->category ?: ($weightRawData['Category'] ?? $weightRawData['column_1'] ?? null);
                 $indicator = $weight->indicator ?: ($weightRawData['Indicator'] ?? $weightRawData['column_2'] ?? null);
                 $question = $weight->question_key ?: ($weightRawData['Question'] ?? $weightRawData['column_8'] ?? $indicator);
                 $label = $question ? $labels->get($question) : null;
                 $rawValue = $question ? $rawData->get($question) : null;
+                $value = $label?->label_value ?? $rawValue;
+                $source = $label ? (string) $label->source : ($rawValue !== null ? 'raw_data' : '');
+                $displayValue = $this->technicalAssessmentDisplayValue(
+                    $displayService,
+                    str_starts_with($source, 'heks-') ? $source : 'heks-main',
+                    (string) ($question ?? ''),
+                    $value
+                );
 
                 return [
                     'category' => $category,
@@ -2519,11 +2527,22 @@ class HeksController extends Controller
                     'max' => $weightRawData['Max'] ?? $weightRawData['column_4'] ?? null,
                     'avg' => $weightRawData['AVG'] ?? $weightRawData['column_5'] ?? null,
                     'min' => $weightRawData['Min'] ?? $weightRawData['column_6'] ?? null,
-                    'value' => $label?->label_value ?? $rawValue,
-                    'score' => $label?->label_value ?? $rawValue,
-                    'source' => $label ? (string) $label->source : ($rawValue !== null ? 'raw_data' : ''),
+                    'value' => $displayValue,
+                    'score' => $displayValue,
+                    'source' => $source,
                 ];
             });
+    }
+
+    private function technicalAssessmentDisplayValue(HeksKoboValueDisplayService $displayService, string $source, string $question, mixed $value): mixed
+    {
+        if (! is_scalar($value) || trim((string) $value) === '' || $question === '') {
+            return $value;
+        }
+
+        $resolved = $displayService->resolve($source, $question, trim((string) $value));
+
+        return ($resolved['resolved'] ?? false) ? $resolved['display'] : $value;
     }
 
     private function socialAssessmentRows(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection

@@ -1050,6 +1050,60 @@ it('displays beneficiary damage status as the Kobo choice label', function () {
         ->toBe('قيمة قديمة');
 });
 
+it('displays technical assessment choice values as Kobo labels', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'TECH-LABEL',
+        'name' => 'Technical Label Beneficiary',
+        'raw_data' => [
+            'heks-main' => [
+                'q_059' => '_____2',
+            ],
+        ],
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_059',
+        'column_name' => 'q_059',
+        'display_label' => 'تقييم حالة ضرر المأوى',
+        'data_type' => 'select_one damage_status',
+        'field_type' => 'select_one',
+        'list_name' => 'damage_status',
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'q_059',
+        'list_name' => 'damage_status',
+        'choice_name' => '_____2',
+        'choice_label' => 'أضرار جزئية متوسطة',
+        'language' => 'ar',
+        'sort_order' => 2,
+        'is_active' => true,
+    ]);
+
+    HeksScoringWeight::query()->create([
+        'source' => 'Shelter Technical Weights',
+        'category' => 'Sealing & Internal Privacy',
+        'indicator' => 'Damage assessment',
+        'weight' => 10,
+        'question_key' => 'q_059',
+    ]);
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'technicalAssessmentRows');
+    $method->setAccessible(true);
+
+    $rows = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary,
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+
+    expect($rows->first()['value'])->toBe('أضرار جزئية متوسطة')
+        ->and($rows->first()['score'])->toBe('أضرار جزئية متوسطة');
+});
+
 it('uses template field choices when raw HEKS survey data is keyed by question label', function () {
     $beneficiary = HeksBeneficiary::query()->create([
         'code' => 'SURVEY-LABEL-KEY',
