@@ -160,10 +160,10 @@
                     <div class="tab-pane fade show active" id="summary" role="tabpanel">
                         <div class="row g-4">
                             @foreach ([
-                                'المحافظة' => $beneficiary->governorate ?? '-',
-                                'المنطقة' => $beneficiary->area ?? '-',
-                                'حالة النزوح' => $beneficiary->displacement_status ?? '-',
-                                'حالة الإشغال' => $beneficiary->occupancy_status ?? '-',
+                                'المحافظة' => $basicDisplay['governorate'] ?? $beneficiary->governorate ?? '-',
+                                'المنطقة' => $basicDisplay['area'] ?? $beneficiary->area ?? '-',
+                                'حالة النزوح' => $basicDisplay['displacement_status'] ?? $beneficiary->displacement_status ?? '-',
+                                'حالة الإشغال' => $basicDisplay['occupancy_status'] ?? $beneficiary->occupancy_status ?? '-',
                                 'دفعة 30%' => $beneficiary->payment_1 ? number_format((float) $beneficiary->payment_1, 2) : '-',
                                 'دفعة 50%' => $beneficiary->payment_2 ? number_format((float) $beneficiary->payment_2, 2) : '-',
                                 'دفعة 20%' => $beneficiary->payment_3 ? number_format((float) $beneficiary->payment_3, 2) : '-',
@@ -185,7 +185,7 @@
                             <div class="col-md-6">
                                 <div class="case-kpi">
                                     <div class="text-muted small mb-2">التوصيات</div>
-                                    <div class="fw-semibold">{{ $beneficiary->recommendations ?: '-' }}</div>
+                                    <div class="fw-semibold">{{ ($basicDisplay['recommendations'] ?? $beneficiary->recommendations) ?: '-' }}</div>
                                 </div>
                             </div>
                         </div>
@@ -215,13 +215,13 @@
                                 ] as $field => $label)
                                     <div class="col-md-4">
                                         <label class="form-label">{{ $label }}</label>
-                                        <input name="{{ $field }}" class="form-control" value="{{ old($field, $field === 'visit_date' ? $beneficiary->{$field}?->format('Y-m-d') : $beneficiary->{$field}) }}">
+                                        <input name="{{ $field }}" class="form-control" value="{{ old($field, $field === 'visit_date' ? $beneficiary->{$field}?->format('Y-m-d') : ($basicDisplay[$field] ?? $beneficiary->{$field})) }}">
                                     </div>
                                 @endforeach
                                 @foreach (['address' => 'العنوان', 'social_notes' => 'ملاحظات اجتماعية', 'engineer_notes' => 'ملاحظات هندسية', 'recommendations' => 'التوصيات'] as $field => $label)
                                     <div class="col-md-6">
                                         <label class="form-label">{{ $label }}</label>
-                                        <textarea name="{{ $field }}" class="form-control" rows="3">{{ old($field, $beneficiary->{$field}) }}</textarea>
+                                        <textarea name="{{ $field }}" class="form-control" rows="3">{{ old($field, $basicDisplay[$field] ?? $beneficiary->{$field}) }}</textarea>
                                     </div>
                                 @endforeach
                                 <div class="col-12 text-end">

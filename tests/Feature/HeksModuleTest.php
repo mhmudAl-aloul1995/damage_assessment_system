@@ -1104,6 +1104,64 @@ it('displays technical assessment choice values as Kobo labels', function () {
         ->and($rows->first()['score'])->toBe('أضرار جزئية متوسطة');
 });
 
+it('resolves basic beneficiary select codes for display', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'BASIC-DISPLAY',
+        'name' => 'Basic Display Beneficiary',
+        'governorate' => '5',
+        'occupancy_status' => '56',
+        'recommendations' => 'rec_1',
+        'raw_data' => [
+            'heks-main' => [
+                'family_info/governorate' => '5',
+                'housing_info/occupancy_type' => '56',
+                'recommendations' => 'rec_1',
+            ],
+        ],
+    ]);
+
+    foreach ([
+        ['field' => 'family_info/governorate', 'list' => 'governorates', 'choice' => '5', 'label' => 'غزة'],
+        ['field' => 'housing_info/occupancy_type', 'list' => 'occupancy', 'choice' => '56', 'label' => 'مستأجرة'],
+        ['field' => 'recommendations', 'list' => 'recommendations', 'choice' => 'rec_1', 'label' => 'يحتاج إلى تدخل'],
+    ] as $mapping) {
+        HeksKoboFieldMapping::query()->create([
+            'service_name' => 'heks-main',
+            'table_name' => 'heks_main_kobo_records',
+            'kobo_field' => $mapping['field'],
+            'column_name' => str_replace(['/', '-'], '_', $mapping['field']),
+            'display_label' => $mapping['field'],
+            'data_type' => 'select_one '.$mapping['list'],
+            'field_type' => 'select_one',
+            'list_name' => $mapping['list'],
+        ]);
+
+        HeksKoboChoice::query()->create([
+            'service_name' => 'heks-main',
+            'question_key' => $mapping['field'],
+            'list_name' => $mapping['list'],
+            'choice_name' => $mapping['choice'],
+            'choice_label' => $mapping['label'],
+            'language' => 'ar',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+    }
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'beneficiaryBasicDisplayValues');
+    $method->setAccessible(true);
+
+    $display = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary,
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+
+    expect($display['governorate'])->toBe('غزة')
+        ->and($display['occupancy_status'])->toBe('مستأجرة')
+        ->and($display['recommendations'])->toBe('يحتاج إلى تدخل');
+});
+
 it('uses template field choices when raw HEKS survey data is keyed by question label', function () {
     $beneficiary = HeksBeneficiary::query()->create([
         'code' => 'SURVEY-LABEL-KEY',

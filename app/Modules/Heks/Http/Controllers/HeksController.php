@@ -206,6 +206,7 @@ class HeksController extends Controller
             'boqSections' => $this->boqCatalog()->pluck('section')->filter()->unique()->sort()->values(),
             'boqUnits' => $this->boqCatalog()->pluck('unit')->filter()->unique()->sort()->values(),
             'damageStatusDisplay' => $this->beneficiaryDamageStatusDisplay($beneficiary, $displayService),
+            'basicDisplay' => $this->beneficiaryBasicDisplayValues($beneficiary, $displayService),
             'rawDataSections' => $this->rawDataSections($beneficiary),
             'surveySections' => $this->surveySections($beneficiary, $displayService),
             'imageAttachments' => $this->imageAttachments($beneficiary),
@@ -256,6 +257,111 @@ class HeksController extends Controller
         }
 
         return $rawValue;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function beneficiaryBasicDisplayValues(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): array
+    {
+        $fields = [
+            'field_engineer' => ['identification/q_087', 'q_087', 'اسم المهندس الميداني'],
+            'governorate' => ['governorate', 'المحافظة'],
+            'area' => ['area_001', 'area', 'community', 'المنطقة', 'التجمع/ المنطقة', 'التجمع'],
+            'displacement_status' => ['displacement_status', 'حالة النزوح حاليا للأسرة', 'حالة النزوح'],
+            'occupancy_status' => ['occupancy_type', 'occupancy_status', 'حالة الإشغال الحالي للوحدة السكنية', 'نوع الإشغال الحالي:', 'حالة الإشغال'],
+            'damage_status' => ['q_059', 'damage_status', 'Damage assessment', 'تقييم حالة ضرر المأوى', 'تقييم حالة ضرر المأوى:', 'حالة الضرر'],
+            'recommendations' => ['recommendations', 'final_recommendation', 'توصيات نهائية', 'التوصيات'],
+        ];
+
+        return collect($fields)
+            ->mapWithKeys(fn (array $candidates, string $field): array => [
+                $field => $this->beneficiaryBasicDisplayValue($beneficiary, $displayService, $field, $candidates),
+            ])
+            ->all();
+    }
+
+    /**
+     * @param  array<int, string>  $candidates
+     */
+    private function beneficiaryBasicDisplayValue(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService, string $field, array $candidates): string
+    {
+        $rawValue = trim((string) ($beneficiary->{$field} ?? ''));
+
+        if ($rawValue === '') {
+            return '';
+        }
+
+        foreach ($this->beneficiaryRawDataSources($beneficiary) as $source) {
+            foreach ($candidates as $candidate) {
+                $resolved = $displayService->resolve($source, $candidate, $rawValue);
+                $display = trim((string) ($resolved['display'] ?? ''));
+
+                if (($resolved['resolved'] ?? false) && $display !== '') {
+                    return $display;
+                }
+            }
+        }
+
+        foreach ($this->beneficiaryRawDataValuesMatching($beneficiary, $rawValue) as $match) {
+            $resolved = $displayService->resolve($match['source'], $match['field'], $rawValue);
+            $display = trim((string) ($resolved['display'] ?? ''));
+
+            if (($resolved['resolved'] ?? false) && $display !== '') {
+                return $display;
+            }
+        }
+
+        return $rawValue;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function beneficiaryRawDataSources(HeksBeneficiary $beneficiary): array
+    {
+        $rawData = $beneficiary->raw_data;
+
+        if (! is_array($rawData)) {
+            return ['heks-main'];
+        }
+
+        return collect(array_keys($rawData))
+            ->filter(fn (string|int $source): bool => is_string($source) && $source !== '')
+            ->push('heks-main')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{source: string, field: string}>
+     */
+    private function beneficiaryRawDataValuesMatching(HeksBeneficiary $beneficiary, string $rawValue): array
+    {
+        $rawData = $beneficiary->raw_data;
+
+        if (! is_array($rawData)) {
+            return [];
+        }
+
+        $matches = [];
+
+        foreach ($rawData as $source => $values) {
+            if (! is_string($source) || ! is_array($values)) {
+                continue;
+            }
+
+            foreach ($this->flattenSurveyValues($values) as $field => $value) {
+                if (! is_scalar($value) || trim((string) $value) !== $rawValue) {
+                    continue;
+                }
+
+                $matches[] = ['source' => $source, 'field' => (string) $field];
+            }
+        }
+
+        return $matches;
     }
 
     public function attachment(HeksBeneficiary $beneficiary, HeksAttachment $attachment): Response
