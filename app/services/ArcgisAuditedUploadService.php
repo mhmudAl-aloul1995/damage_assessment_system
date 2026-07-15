@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\HousingUnit;
 use App\Models\VBuildingAudited;
 use App\Models\VHousingUnitAudited;
 use Closure;
@@ -176,6 +177,7 @@ class ArcgisAuditedUploadService
         $attributes['old_global_id_U'] = $unit->getAttribute('globalid');
         $attributes['is_audited'] = 1;
         $attributes = $this->moveCommentsRecommendations($attributes);
+        $attributes = $this->applyUnitAttributes($attributes, $unit);
 
         $parentGlobalId = $unit->getAttribute('parentglobalid');
 
@@ -196,6 +198,33 @@ class ArcgisAuditedUploadService
         }
 
         return $feature;
+    }
+
+    private function applyUnitAttributes(array $attributes, VHousingUnitAudited $unit): array
+    {
+        $housingUnit = HousingUnit::query()
+            ->where(function (Builder $query) use ($unit): void {
+                $query->where('objectid', $unit->getAttribute('objectid'));
+
+                $globalId = $unit->getAttribute('globalid');
+
+                if (is_string($globalId) && $globalId !== '') {
+                    $query->orWhere('globalid', $globalId);
+                }
+            })
+            ->first();
+
+        if ($housingUnit === null) {
+            return $attributes;
+        }
+
+        foreach (['unit_governorate', 'unit_municipalitie', 'unit_neighborhood', 'unit_building_name'] as $field) {
+            if (($attributes[$field] ?? null) === null) {
+                $attributes[$field] = $housingUnit->getAttribute($field);
+            }
+        }
+
+        return $attributes;
     }
 
     private function uploadBuilding(

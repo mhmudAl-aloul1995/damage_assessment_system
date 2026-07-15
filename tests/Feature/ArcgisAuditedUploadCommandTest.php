@@ -41,6 +41,13 @@ it('uploads audited views to arcgis and copies attachments', function () {
         $table->decimal('latitude', 10, 7)->nullable();
     });
 
+    Schema::table('housing_units', function (Blueprint $table): void {
+        $table->string('unit_governorate')->nullable();
+        $table->string('unit_municipalitie')->nullable();
+        $table->string('unit_neighborhood')->nullable();
+        $table->string('unit_building_name')->nullable();
+    });
+
     DB::table('v_buildings_audited')->insert([
         'objectid' => 100,
         'globalid' => 'building-globalid',
@@ -59,6 +66,25 @@ it('uploads audited views to arcgis and copies attachments', function () {
         'unit_damage_status' => 'minor',
         'longitude' => 34.1234560,
         'latitude' => 31.6543210,
+    ]);
+
+    DB::table('buildings')->insert([
+        'objectid' => 100,
+        'globalid' => 'building-globalid',
+        'building_name' => 'Uploaded Parent Building',
+        'governorate' => 'Gaza Governorate',
+        'municipalitie' => 'Gaza Municipality',
+        'neighborhood' => 'Rimal',
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 200,
+        'globalid' => 'unit-globalid',
+        'parentglobalid' => 'building-globalid',
+        'unit_governorate' => 'ArcGIS Unit Governorate',
+        'unit_municipalitie' => 'ArcGIS Unit Municipality',
+        'unit_neighborhood' => 'ArcGIS Unit Neighborhood',
+        'unit_building_name' => 'ArcGIS Unit Building',
     ]);
 
     Http::fake([
@@ -86,6 +112,10 @@ it('uploads audited views to arcgis and copies attachments', function () {
                 ['name' => 'globalid'],
                 ['name' => 'parentglobalid'],
                 ['name' => 'unit_damage_status'],
+                ['name' => 'unit_governorate'],
+                ['name' => 'unit_municipalitie'],
+                ['name' => 'unit_neighborhood'],
+                ['name' => 'unit_building_name'],
                 ['name' => 'is_audited'],
             ],
         ]),
@@ -156,6 +186,10 @@ it('uploads audited views to arcgis and copies attachments', function () {
                 'old_global_id_U' => 'unit-globalid',
                 'parentglobalid' => 'target-building-globalid',
                 'unit_damage_status' => 'minor',
+                'unit_governorate' => 'ArcGIS Unit Governorate',
+                'unit_municipalitie' => 'ArcGIS Unit Municipality',
+                'unit_neighborhood' => 'ArcGIS Unit Neighborhood',
+                'unit_building_name' => 'ArcGIS Unit Building',
                 'is_audited' => 1,
             ]);
             expect($features[0]['geometry']['spatialReference']['wkid'])->toBe(4326);

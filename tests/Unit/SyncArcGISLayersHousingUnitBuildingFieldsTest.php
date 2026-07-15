@@ -87,6 +87,10 @@ it('copies building location fields and submit date when syncing housing units',
                 ['name' => 'municipalitie', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'locality', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'neighborhood', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'unit_governorate', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'unit_municipalitie', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'unit_neighborhood', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'unit_building_name', 'type' => 'esriFieldTypeString', 'length' => 255],
             ],
         ]),
         'https://example.com/HousingUnits/FeatureServer/1/query*' => Http::response([
@@ -100,6 +104,10 @@ it('copies building location fields and submit date when syncing housing units',
                         'municipalitie' => 'Wrong Municipality',
                         'locality' => 'Original Locality',
                         'neighborhood' => 'Wrong Neighborhood',
+                        'unit_governorate' => 'ArcGIS Unit Governorate',
+                        'unit_municipalitie' => 'ArcGIS Unit Municipality',
+                        'unit_neighborhood' => 'ArcGIS Unit Neighborhood',
+                        'unit_building_name' => 'ArcGIS Unit Building',
                     ],
                 ],
             ],
@@ -119,5 +127,9 @@ it('copies building location fields and submit date when syncing housing units',
     expect($housingUnit->municipalitie)->toBe('Gaza Municipality');
     expect($housingUnit->locality)->toBe('Original Locality');
     expect($housingUnit->neighborhood)->toBe('Old City');
+    expect($housingUnit->unit_governorate)->toBe('ArcGIS Unit Governorate');
+    expect($housingUnit->unit_municipalitie)->toBe('ArcGIS Unit Municipality');
+    expect($housingUnit->unit_neighborhood)->toBe('ArcGIS Unit Neighborhood');
+    expect($housingUnit->unit_building_name)->toBe('ArcGIS Unit Building');
     expect($housingUnit->building_submit_date)->toBe('2026-05-10 08:45:00');
 });
