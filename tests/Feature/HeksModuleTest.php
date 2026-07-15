@@ -1230,6 +1230,74 @@ it('uses template field choices when raw HEKS survey data is keyed by question l
         ->and($items->pluck('value')->all())->not->toContain('_____1');
 });
 
+it('uses beneficiary model values when template survey raw value is missing', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SURVEY-MODEL-FALLBACK',
+        'name' => 'Survey Model Fallback Beneficiary',
+        'household_head_gender' => '15',
+        'raw_data' => [
+            'heks-main' => [
+                'application_code' => 'SURVEY-MODEL-FALLBACK',
+            ],
+        ],
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-main',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'family_info/head_gender',
+        'column_name' => 'family_info_head_gender',
+        'display_label' => 'جنس رب الأسرة',
+        'data_type' => 'select_one gender',
+        'field_type' => 'select_one',
+        'list_name' => 'gender',
+        'notes' => json_encode(['form_order' => 1], JSON_UNESCAPED_UNICODE),
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'family_info/head_gender',
+        'list_name' => 'gender',
+        'choice_name' => '15',
+        'choice_label' => 'ذكر',
+        'language' => 'ar',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-main',
+        'question_key' => 'family_info/head_gender',
+        'list_name' => 'gender',
+        'choice_name' => '16',
+        'choice_label' => 'أنثى',
+        'language' => 'ar',
+        'sort_order' => 2,
+        'is_active' => true,
+    ]);
+
+    $method = new ReflectionMethod(\App\Modules\Heks\Http\Controllers\HeksController::class, 'surveySections');
+    $method->setAccessible(true);
+
+    $sections = $method->invoke(
+        app(\App\Modules\Heks\Http\Controllers\HeksController::class),
+        $beneficiary->load('surveyValueHistories'),
+        app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class)
+    );
+    $items = collect($sections)->flatMap(fn (array $section): array => $section['items'])->values();
+    $item = $items->firstWhere('field_key', 'family_info/head_gender');
+
+    expect($item)
+        ->not->toBeNull()
+        ->and($item['value'])->toBe('ذكر')
+        ->and($item['raw_value'])->toBe('15')
+        ->and($item['choices'][0])->toMatchArray([
+            'value' => '15',
+            'label' => 'ذكر',
+            'selected' => true,
+        ]);
+});
+
 it('resolves Kobo choice labels without guessing ordinary numeric values', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

@@ -1433,7 +1433,7 @@ class HeksController extends Controller
                     continue;
                 }
 
-                [$valueKey, $value] = $this->surveyTemplateValue($values, $key, $question);
+                [$valueKey, $value] = $this->surveyTemplateValue($beneficiary, $values, $key, $question);
 
                 if ($this->shouldHideUnansweredOtherSpecifyField($key, $question, $value)) {
                     $this->markSurveySeenKeys($seen, (string) $source, $key, $valueKey);
@@ -1888,7 +1888,7 @@ class HeksController extends Controller
      * @param  array<string, mixed>  $values
      * @return array{0: string, 1: mixed}
      */
-    private function surveyTemplateValue(array $values, string $key, string $question): array
+    private function surveyTemplateValue(HeksBeneficiary $beneficiary, array $values, string $key, string $question): array
     {
         foreach ($this->surveyFieldLookupKeys($key) as $lookupKey) {
             if (array_key_exists($lookupKey, $values)) {
@@ -1900,7 +1900,40 @@ class HeksController extends Controller
             return [$question, $values[$question]];
         }
 
+        $fallbackValue = $this->surveyBeneficiaryFallbackValue($beneficiary, $key, $question);
+
+        if ($fallbackValue !== null && $fallbackValue !== '') {
+            return [$key, $fallbackValue];
+        }
+
         return [$key, null];
+    }
+
+    private function surveyBeneficiaryFallbackValue(HeksBeneficiary $beneficiary, string $key, string $question): mixed
+    {
+        $signature = $this->normalizedDashboardText($key.' '.$question);
+        $fallbacks = [
+            'household_head_gender' => ['family_info/head_gender', 'head_gender', 'جنس رب الأسرة'],
+            'marital_status' => ['family_info/marital_status', 'marital_status', 'الحالة الاجتماعية'],
+            'governorate' => ['governorate', 'family_info/governorate', 'المحافظة'],
+            'area' => ['area_001', 'area', 'family_info/area', 'المنطقة'],
+            'displacement_status' => ['displacement_status', 'حالة النزوح'],
+            'occupancy_status' => ['occupancy_type', 'occupancy_status', 'housing_info/occupancy_type', 'حالة الإشغال'],
+            'damage_status' => ['q_059', 'damage_status', 'حالة الضرر', 'تقييم حالة ضرر المأوى'],
+            'recommendations' => ['recommendations', 'final_recommendation', 'التوصيات'],
+        ];
+
+        foreach ($fallbacks as $attribute => $needles) {
+            foreach ($needles as $needle) {
+                $normalizedNeedle = $this->normalizedDashboardText($needle);
+
+                if ($normalizedNeedle !== '' && str_contains($signature, $normalizedNeedle)) {
+                    return $beneficiary->{$attribute};
+                }
+            }
+        }
+
+        return null;
     }
 
     private function shouldHideUnansweredOtherSpecifyField(string $key, string $question, mixed $value): bool
