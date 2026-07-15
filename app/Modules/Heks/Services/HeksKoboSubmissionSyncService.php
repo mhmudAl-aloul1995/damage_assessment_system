@@ -316,6 +316,252 @@ class HeksKoboSubmissionSyncService
 
     /**
      * @param  array<string, mixed>  $payload
+     * @return array{social_score: ?float, technical_score: ?float, details: array<string, mixed>}
+     */
+    private function calculatedScores(array $payload, string $service): array
+    {
+        $socialFromWeights = $this->scoreFromOptionWeights($payload, $service, ['S-V'], 30);
+        $technicalFromWeights = $this->scoreFromOptionWeights($payload, $service, ['T-V', 'Shelter Technical Weights'], 70);
+        $socialFromMatrix = $socialFromWeights['score'] === null
+            ? $this->socialMatrixScore($payload)
+            : ['score' => null, 'matches' => []];
+
+        return [
+            'social_score' => $socialFromWeights['score'] ?? $socialFromMatrix['score'],
+            'technical_score' => $technicalFromWeights['score'],
+            'details' => [
+                'social_weights' => $socialFromWeights['matches'],
+                'social_matrix' => $socialFromMatrix['matches'],
+                'technical_weights' => $technicalFromWeights['matches'],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, string>  $sources
+     * @return array{score: ?float, matches: array<int, array<string, mixed>>}
+     */
+    private function scoreFromOptionWeights(array $payload, string $service, array $sources, float $maxScore): array
+    {
+        $score = 0.0;
+        $matches = [];
+
+        $weights = HeksScoringWeight::query()
+            ->whereIn('source', $sources)
+            ->whereNotNull('question_key')
+            ->orderBy('id')
+            ->get()
+            ->groupBy(fn (HeksScoringWeight $weight): string => trim((string) $weight->question_key));
+
+        foreach ($weights as $questionKey => $questionWeights) {
+            if ($questionKey === '') {
+                continue;
+            }
+
+            $answer = $this->scoringAnswer($payload, $service, $questionKey);
+
+            if ($answer === null) {
+                continue;
+            }
+
+            $questionScore = 0.0;
+            $questionMatches = [];
+
+            foreach ($questionWeights as $weight) {
+                $optionValue = trim((string) $weight->option_value);
+
+                if ($optionValue !== '' && ! $this->answerMatchesScoringOption((string) $answer['value'], $service, $questionKey, $optionValue)) {
+                    continue;
+                }
+
+                $points = $this->pointsForScoringWeight($weight);
+
+                if ($points === null) {
+                    continue;
+                }
+
+                $questionScore += $points;
+                $questionMatches[] = [
+                    'source' => $weight->source,
+                    'question_key' => $questionKey,
+                    'answer_key' => $answer['key'],
+                    'answer' => $answer['value'],
+                    'option_value' => $optionValue !== '' ? $optionValue : null,
+                    'points' => $points,
+                ];
+            }
+
+            if ($questionMatches === []) {
+                continue;
+            }
+
+            $score += $questionScore;
+            array_push($matches, ...$questionMatches);
+        }
+
+        if ($matches === []) {
+            return ['score' => null, 'matches' => []];
+        }
+
+        return [
+            'score' => round(min($score, $maxScore), 2),
+            'matches' => $matches,
+        ];
+    }
+
+    private function pointsForScoringWeight(HeksScoringWeight $weight): ?float
+    {
+        $optionScore = $weight->option_score !== null ? (float) $weight->option_score : null;
+        $weightScore = $weight->weight !== null ? (float) $weight->weight : null;
+
+        return $optionScore ?? $weightScore;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{key: string, value: string}|null
+     */
+    private function scoringAnswer(array $payload, string $service, string $questionKey): ?array
+    {
+        foreach ($this->mappedCandidates($service, [$questionKey]) as $candidate) {
+            foreach ($this->fieldLookupKeys($candidate) as $lookupKey) {
+                if (! array_key_exists($lookupKey, $payload) || ! filled($payload[$lookupKey]) || is_array($payload[$lookupKey])) {
+                    continue;
+                }
+
+                $value = trim((string) $payload[$lookupKey]);
+
+                if (! $this->isInvalidValue($value)) {
+                    return ['key' => $lookupKey, 'value' => $value];
+                }
+            }
+        }
+
+        $value = $this->first($payload, $this->mappedCandidates($service, [$questionKey]));
+
+        return $value !== '' ? ['key' => $questionKey, 'value' => $value] : null;
+    }
+
+    private function answerMatchesScoringOption(string $answer, string $service, string $questionKey, string $optionValue): bool
+    {
+        $optionLabel = $this->choiceLabel($service, $questionKey, $optionValue);
+        $optionTokens = array_filter([$optionValue, $optionLabel]);
+
+        foreach ($this->scoringAnswerParts($answer) as $answerPart) {
+            $answerLabel = $this->choiceLabel($service, $questionKey, $answerPart);
+            $answerTokens = array_filter([$answerPart, $answerLabel]);
+
+            foreach ($answerTokens as $answerToken) {
+                foreach ($optionTokens as $optionToken) {
+                    if ($this->normalizeScoreToken($answerToken) === $this->normalizeScoreToken($optionToken)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function scoringAnswerParts(string $answer): array
+    {
+        $parts = preg_split('/[\s,;|]+/u', $answer, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return array_values(array_unique(array_filter(array_merge([$answer], $parts))));
+    }
+
+    private function normalizeScoreToken(string $value): string
+    {
+        return Str::lower((string) preg_replace('/[^\pL\pN]+/u', '', $value));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{score: ?float, matches: array<int, array<string, mixed>>}
+     */
+    private function socialMatrixScore(array $payload): array
+    {
+        $score = 0.0;
+        $matches = [];
+
+        foreach ($this->socialScoringCriteria() as $criterion) {
+            $answer = $this->first($payload, $criterion['keys']);
+
+            if ($answer === '' || ! $this->isPositiveScoreValue($answer, $criterion['positive_terms'])) {
+                continue;
+            }
+
+            $score += 5;
+            $matches[] = [
+                'criterion' => $criterion['label'],
+                'answer' => $answer,
+                'points' => 5,
+            ];
+        }
+
+        if ($matches === []) {
+            return ['score' => null, 'matches' => []];
+        }
+
+        return ['score' => round(min($score, 30), 2), 'matches' => $matches];
+    }
+
+    /**
+     * @return array<int, array{label: string, keys: array<int, string>, positive_terms: array<int, string>}>
+     */
+    private function socialScoringCriteria(): array
+    {
+        return [
+            ['label' => 'Female-headed household', 'keys' => ['head_gender', 'household_head_gender', 'gender'], 'positive_terms' => ['female', 'woman', 'انثى', 'أنثى']],
+            ['label' => 'Children under 18 present', 'keys' => ['children_under_18', 'children', 'under_18'], 'positive_terms' => ['yes', 'يوجد', 'نعم']],
+            ['label' => 'Disability present', 'keys' => ['disability', 'pwd', 'people_with_disability'], 'positive_terms' => ['yes', 'يوجد', 'نعم']],
+            ['label' => 'Chronic disease present', 'keys' => ['chronic_disease', 'chronic', 'illness'], 'positive_terms' => ['yes', 'يوجد', 'نعم']],
+            ['label' => 'Pregnant or lactating women', 'keys' => ['pregnant', 'lactating', 'pregnant_lactating'], 'positive_terms' => ['yes', 'يوجد', 'نعم']],
+            ['label' => 'No stable income', 'keys' => ['stable_income', 'fixed_income', 'regular_income'], 'positive_terms' => ['no', 'لا']],
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $positiveTerms
+     */
+    private function isPositiveScoreValue(string $value, array $positiveTerms): bool
+    {
+        $normalized = $this->normalizeScoreToken($value);
+
+        if (is_numeric(str_replace([',', ' '], '', $value))) {
+            return (float) str_replace([',', ' '], '', $value) > 0;
+        }
+
+        foreach ($positiveTerms as $term) {
+            if (str_contains($normalized, $this->normalizeScoreToken($term))) {
+                return true;
+            }
+        }
+
+        return in_array($normalized, ['1', 'true', 'yes', 'نعم'], true);
+    }
+
+    private function classificationForScore(?float $total): string
+    {
+        if ($total === null) {
+            return '';
+        }
+
+        return match (true) {
+            $total >= 80 => 'Extreme',
+            $total >= 65 => 'Very High',
+            $total >= 50 => 'High',
+            $total >= 35 => 'Moderate',
+            default => 'Low',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
      */
     private function syncLabels(HeksBeneficiary $beneficiary, array $payload, string $service): void
     {
