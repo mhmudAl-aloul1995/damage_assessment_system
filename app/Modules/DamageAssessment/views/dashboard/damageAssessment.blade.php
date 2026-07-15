@@ -1492,21 +1492,6 @@
 						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-route"><span
-											class="path1"></span><span class="path2"></span><span class="path3"></span><span
-											class="path4"></span></i></span>
-							</div>
-							<div class="d-flex align-items-center flex-wrap w-100">
-								<div class="mb-1 pe-3 flex-grow-1">
-									<span class="fs-10 fs-lg-7 text-gray-800 fw-bold">{{ __('ui.damage_dashboard.street_length') }}</span>
-								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ number_format($publicBuildingStats['completed_road_length_km'], 2) }} كم
-								</div>
-							</div>
-						</div>
-						<div class="d-flex align-items-center mb-6">
-							<div class="symbol symbol-25px w-25px me-5">
 								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-people"><span
 											class="path1"></span><span class="path2"></span><span class="path3"></span><span
 											class="path4"></span><span class="path5"></span></i></span>
@@ -1593,6 +1578,21 @@
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
 									{{ $roadFacilityStats['damaged_roads'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-route"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span><span
+											class="path4"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<span class="fs-10 fs-lg-7 text-gray-800 fw-bold">{{ __('ui.damage_dashboard.street_length') }}</span>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ number_format($roadFacilityStats['completed_road_length_km'], 2) }} كم
 								</div>
 							</div>
 						</div>

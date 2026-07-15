@@ -160,8 +160,6 @@ class DamageAssessmentController extends Controller
             'uxo_present' => $this->dashboardPublicBuildingQuery($request)
                 ->where('is_uxo', 'yes')
                 ->count(),
-
-            'completed_road_length_km' => $this->dashboardCompletedRoadLengthKilometers($request),
         ];
 
         $roadFacilityStats = [
@@ -174,6 +172,8 @@ class DamageAssessmentController extends Controller
                 ->whereNotNull('road_damage_level')
                 ->where('road_damage_level', '!=', '')
                 ->count(),
+
+            'completed_road_length_km' => $this->dashboardCompletedRoadLengthKilometers($request),
 
             'total_items' => (int) $this->dashboardRoadFacilityQuery($request)
                 ->withCount('items')
