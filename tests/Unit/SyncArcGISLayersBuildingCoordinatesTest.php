@@ -30,6 +30,8 @@ beforeEach(function (): void {
         $table->string('submissiondate')->nullable();
         $table->double('latitude')->nullable();
         $table->double('longitude')->nullable();
+        $table->string('arcgis_hash', 64)->nullable();
+        $table->timestamp('arcgis_synced_at')->nullable();
     });
 
     Schema::connection('mysql')->create('system_operation_logs', function (Blueprint $table): void {
@@ -210,4 +212,62 @@ it('fills missing owner mobile from alternate arcgis owner mobile fields', funct
     expect(DB::table('buildings')->where('objectid', 601)->value('owner_mobile'))->toBe('599854475');
     expect(DB::table('buildings')->where('objectid', 602)->value('owner_mobile'))->toBe('599854476');
     expect(DB::table('buildings')->where('objectid', 603)->value('owner_mobile'))->toBe('599854477');
+});
+
+it('forces updates when arcgis hash already matches', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.buildings_url', 'https://example.com/FeatureServer/0');
+
+    $incomingRow = [
+        'objectid' => 701,
+        'globalid' => 'force-update-globalid',
+        'building_name' => 'Updated Building Name',
+        'latitude' => null,
+        'longitude' => null,
+    ];
+    $hashRow = $incomingRow;
+    ksort($hashRow);
+    $matchingHash = hash('sha256', json_encode($hashRow, JSON_UNESCAPED_UNICODE));
+
+    DB::table('buildings')->insert([
+        'objectid' => 701,
+        'globalid' => 'force-update-globalid',
+        'building_name' => 'Stale Building Name',
+        'arcgis_hash' => $matchingHash,
+        'arcgis_synced_at' => '2026-05-01 00:00:00',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/FeatureServer/0?*' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'globalid', 'type' => 'esriFieldTypeString', 'length' => 64],
+                ['name' => 'building_name', 'type' => 'esriFieldTypeString', 'length' => 255],
+            ],
+        ]),
+        'https://example.com/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                [
+                    'attributes' => [
+                        'objectid' => 701,
+                        'globalid' => 'force-update-globalid',
+                        'building_name' => 'Updated Building Name',
+                    ],
+                ],
+            ],
+            'exceededTransferLimit' => false,
+        ]),
+    ]);
+
+    $exitCode = Artisan::call('sync:arcgis-layers', [
+        'table' => 'buildings',
+        '--force' => true,
+    ]);
+
+    expect($exitCode)->toBe(0);
+    expect(DB::table('buildings')->where('objectid', 701)->value('building_name'))->toBe('Updated Building Name');
 });

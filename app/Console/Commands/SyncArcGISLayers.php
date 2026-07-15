@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
 
 class SyncArcGISLayers extends Command
 {
-    protected $signature = 'sync:arcgis-layers {table?} {--chunk=1000}';
+    protected $signature = 'sync:arcgis-layers {table?} {--chunk=1000} {--force : Update records even when the ArcGIS hash has not changed}';
 
     /**s */
     protected $description = 'Sync ArcGIS layers';
@@ -117,6 +117,7 @@ class SyncArcGISLayers extends Command
         $updated = 0;
         $skipped = 0;
         $deleted = 0;
+        $force = (bool) $this->option('force');
         $arcgisObjectIds = [];
 
         try {
@@ -368,7 +369,7 @@ class SyncArcGISLayers extends Command
                         continue;
                     }
 
-                    if ($hasArcgisHashColumn && ($existing->arcgis_hash ?? null) === $newHash) {
+                    if (! $force && $hasArcgisHashColumn && ($existing->arcgis_hash ?? null) === $newHash) {
                         $skipped++;
 
                         continue;

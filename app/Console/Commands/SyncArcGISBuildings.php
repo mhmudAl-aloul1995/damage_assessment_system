@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 
 class SyncArcGISBuildings extends Command
 {
-    protected $signature = 'sync:buildings';
+    protected $signature = 'sync:buildings {--force : Update records even when the ArcGIS hash has not changed}';
 
     public function handle()
     {
@@ -26,6 +26,7 @@ class SyncArcGISBuildings extends Command
 
         if (isset($tokenData['error'])) {
             $this->error('ArcGIS Token Error: '.$tokenData['error']['message']);
+
             return self::FAILURE;
         }
 
@@ -33,6 +34,7 @@ class SyncArcGISBuildings extends Command
 
         if (! $token) {
             $this->error('Could not retrieve token.');
+
             return self::FAILURE;
         }
 
@@ -59,6 +61,7 @@ class SyncArcGISBuildings extends Command
         $inserted = 0;
         $updated = 0;
         $skipped = 0;
+        $force = (bool) $this->option('force');
 
         while (true) {
             $this->info("Fetching records from offset: {$offset}");
@@ -78,6 +81,7 @@ class SyncArcGISBuildings extends Command
 
             if (isset($data['error'])) {
                 $this->error('ArcGIS Query Error: '.($data['error']['message'] ?? 'Unknown error'));
+
                 return self::FAILURE;
             }
 
@@ -127,11 +131,13 @@ class SyncArcGISBuildings extends Command
 
                     Building::create($row);
                     $inserted++;
+
                     continue;
                 }
 
-                if ($building->arcgis_hash === $newHash) {
+                if (! $force && $building->arcgis_hash === $newHash) {
                     $skipped++;
+
                     continue;
                 }
 
