@@ -119,6 +119,7 @@ class DamageAssessmentController extends Controller
 
         $publicBuildingStats = [
             'total_surveys' => $this->dashboardPublicBuildingQuery($request)
+                ->where('field_status', 'COMPLETED')
                 ->count(),
 
             'damaged_buildings' => $this->dashboardPublicBuildingQuery($request)
@@ -164,8 +165,7 @@ class DamageAssessmentController extends Controller
 
         $roadFacilityStats = [
             'total_surveys' => $this->dashboardRoadFacilityQuery($request)
-                ->whereNotNull('road_damage_level')
-                ->where('road_damage_level', '!=', '')
+                ->where('field_status', 'COMPLETED')
                 ->count(),
 
             'damaged_roads' => $this->dashboardRoadFacilityQuery($request)

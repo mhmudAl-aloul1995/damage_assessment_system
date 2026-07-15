@@ -12,6 +12,7 @@ use App\Modules\Heks\Models\HeksKoboChoice;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
+use App\Modules\Heks\Models\HeksScoringWeight;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -281,9 +282,19 @@ class HeksKoboSubmissionSyncService
         $technical = $this->decimal($this->first($payload, ['technical_score', 'Technical Score', "\u{062A}\u{0642}\u{064A}\u{064A}\u{0645} \u{0627}\u{0644}\u{062D}\u{0627}\u{0644}\u{0629} \u{0627}\u{0644}\u{0641}\u{0646}\u{064A}\u{0629} (70)", "\u{062A}\u{0642}\u{064A}\u{064A}\u{0645} \u{0627}\u{0644}\u{062D}\u{0627}\u{0644}\u{0629}\n\u{0627}\u{0644}\u{0641}\u{0646}\u{064A}\u{0629} (70)", 'تقييم الحالة الفنية (70)', "تقييم الحالة \nالفنية (70)", 'التقييم الفني']));
         $total = $this->decimal($this->first($payload, ['total_score', 'final_score', 'Total Score', "\u{0627}\u{0644}\u{062A}\u{0642}\u{064A}\u{064A}\u{0645} \u{0627}\u{0644}\u{0643}\u{0644}\u{064A}", 'التقييم الكلي']));
 
+        $calculated = $this->calculatedScores($payload, $service);
+        $social ??= $calculated['social_score'];
+        $technical ??= $calculated['technical_score'];
+        $total ??= $social !== null || $technical !== null
+            ? round((float) ($social ?? 0) + (float) ($technical ?? 0), 2)
+            : null;
+
         if ($social === null && $technical === null && $total === null) {
             return;
         }
+
+        $classification = $this->first($payload, ['classification', 'Classification', 'priority', "\u{0627}\u{0644}\u{062A}\u{0635}\u{0646}\u{064A}\u{0641}", "\u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0648}\u{064A}\u{0629}", 'ط§ظ„طھطµظ†ظٹظپ', 'ط§ظ„ط£ظˆظ„ظˆظٹط©']);
+        $classification = $classification !== '' ? $classification : $this->classificationForScore($total);
 
         HeksScore::query()->updateOrCreate(
             ['heks_beneficiary_id' => $beneficiary->id, 'source' => $service],
@@ -294,9 +305,11 @@ class HeksKoboSubmissionSyncService
                 'payment_3' => $this->decimal($this->first($payload, ['payment_3', 'Payment_3', '20%'])),
                 'social_score' => $social,
                 'technical_score' => $technical,
-                'total_score' => $total ?? (($social ?? 0) + ($technical ?? 0)),
-                'classification' => $this->first($payload, ['classification', 'Classification', 'priority', "\u{0627}\u{0644}\u{062A}\u{0635}\u{0646}\u{064A}\u{0641}", "\u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0648}\u{064A}\u{0629}", 'التصنيف', 'الأولوية']),
-                'raw_data' => $payload,
+                'total_score' => $total,
+                'classification' => $classification,
+                'raw_data' => array_merge($payload, [
+                    '_heks_score_calculation' => $calculated['details'],
+                ]),
             ]
         );
     }

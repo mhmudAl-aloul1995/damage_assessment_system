@@ -39,10 +39,20 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'neighborhood' => 'Rimal',
         'creationdate' => Carbon::today()->toDateString(),
         'assignedto' => 'Field Team 1',
+        'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
         'is_building_occupied' => 'yes',
         'is_bodies' => 'yes',
         'is_uxo' => 'yes',
+    ]);
+
+    PublicBuildingSurvey::query()->create([
+        'objectid' => 1002,
+        'building_name' => 'Clinic B',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'creationdate' => Carbon::today()->toDateString(),
+        'field_status' => 'Not_Completed',
     ]);
 
     RoadFacilitySurvey::query()->create([
@@ -58,6 +68,15 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'obstacle_exist' => 'yes',
         'buried_bodies' => 'yes',
         'uxo_present' => 'yes',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 2003,
+        'str_name' => 'Road C',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'creationdate' => Carbon::today()->toDateString(),
+        'field_status' => 'COMPLETED',
     ]);
 
     RoadFacilitySurvey::query()->create([
@@ -90,6 +109,8 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertSee('Select neighborhood')
         ->assertSee('All neighborhoods')
         ->assertSee('Date range')
+        ->assertViewHas('publicBuildingStats', fn (array $stats): bool => $stats['total_surveys'] === 1)
+        ->assertViewHas('roadFacilityStats', fn (array $stats): bool => $stats['total_surveys'] === 2)
         ->assertSee('data-period="day"', false)
         ->assertSee('data-period="all"', false)
         ->assertSee('Rimal');
