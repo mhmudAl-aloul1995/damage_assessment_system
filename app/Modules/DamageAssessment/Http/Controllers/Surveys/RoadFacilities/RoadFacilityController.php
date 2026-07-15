@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\DamageAssessment\Http\Controllers\Surveys\RoadFacilities;
 
+use App\Exports\RoadFacilityNeighborhoodLengthsExport;
 use App\Exports\RoadFacilitySurveysExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RoadFacility\RoadFacilityFilterRequest;
@@ -100,6 +101,53 @@ class RoadFacilityController extends Controller
             new RoadFacilitySurveysExport($surveys),
             $fileBaseName.'.'.$format,
             $format === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX,
+        );
+    }
+
+    public function exportNeighborhoodLengths(RoadFacilityFilterRequest $request): BinaryFileResponse
+    {
+        $lengthColumn = $this->roadLengthColumn();
+        $fileBaseName = 'road_facility_neighborhood_lengths_'.now()->format('Ymd_His');
+
+        $rows = $this->filteredQuery($request)
+            ->where('field_status', 'COMPLETED')
+            ->select(['municipalitie', 'neighborhood'])
+            ->selectRaw('COUNT(*) as completed_roads_count')
+            ->when(
+                $lengthColumn !== null,
+                fn (Builder $query): Builder => $query->selectRaw("COALESCE(SUM(COALESCE({$lengthColumn}, 0)), 0) as shape_length_total"),
+                fn (Builder $query): Builder => $query->selectRaw('0 as shape_length_total'),
+            )
+            ->groupBy('municipalitie', 'neighborhood')
+            ->orderBy('municipalitie')
+            ->orderBy('neighborhood')
+            ->get()
+            ->map(function (RoadFacilitySurvey $row): array {
+                $streetLengthKilometers = round((float) $row->shape_length_total * 111, 2);
+
+                return [
+                    $row->municipalitie ?: '-',
+                    $row->neighborhood ?: '-',
+                    $streetLengthKilometers,
+                    (int) $row->completed_roads_count,
+                ];
+            });
+
+        $rows->push([
+            __('multilingual.road_facilities_page.total'),
+            '',
+            round((float) $rows->sum(fn (array $row): float => (float) $row[2]), 2),
+            (int) $rows->sum(fn (array $row): int => (int) $row[3]),
+        ]);
+
+        return Excel::download(
+            new RoadFacilityNeighborhoodLengthsExport($rows, [
+                __('multilingual.road_facilities_page.municipality'),
+                __('multilingual.road_facilities_page.neighborhood'),
+                __('multilingual.road_facilities_page.completed_street_length_km'),
+                __('multilingual.road_facilities_page.completed_streets_count'),
+            ]),
+            $fileBaseName.'.xlsx',
         );
     }
 
@@ -358,6 +406,12 @@ class RoadFacilityController extends Controller
         }
 
         return null;
+    }
+
+    private function roadLengthColumn(): ?string
+    {
+        return collect(['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'])
+            ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
     }
 
     /**

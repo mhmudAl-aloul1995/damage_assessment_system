@@ -98,6 +98,7 @@
                 <button type="button" class="btn btn-light-primary road-facilities-export" data-format="xlsx">{{ __('multilingual.road_facilities_page.export_excel') }}</button>
                 <button type="button" class="btn btn-light-success road-facilities-export" data-format="csv">{{ __('multilingual.road_facilities_page.export_csv') }}</button>
                 <button type="button" class="btn btn-light-danger road-facilities-export" data-format="pdf">{{ __('multilingual.road_facilities_page.export_pdf') }}</button>
+                <button type="button" id="export_neighborhood_lengths" class="btn btn-light-info">{{ __('multilingual.road_facilities_page.export_neighborhood_lengths') }}</button>
                 <button type="button" id="reset_filters" class="btn btn-light">{{ __('multilingual.road_facilities_page.reset_filters') }}</button>
             </div>
         </div>
@@ -128,6 +129,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const exportRouteTemplate = @json(route('road-facilities.export', ['format' => '__FORMAT__']));
+            const neighborhoodLengthsExportRoute = @json(route('road-facilities.neighborhood-lengths.export'));
 
             $('.road-select2').each(function () {
                 const placeholder = $(this).data('placeholder') || 'Select an option';
@@ -248,8 +250,7 @@
                 table.draw();
             });
 
-            $('.road-facilities-export').on('click', function () {
-                const format = $(this).data('format');
+            const buildExportQuery = function () {
                 const filters = currentFilters();
                 const query = new URLSearchParams();
 
@@ -273,7 +274,18 @@
                     }
                 });
 
+                return query;
+            };
+
+            $('.road-facilities-export').on('click', function () {
+                const format = $(this).data('format');
+                const query = buildExportQuery();
+
                 window.location.href = exportRouteTemplate.replace('__FORMAT__', format) + '?' + query.toString();
+            });
+
+            $('#export_neighborhood_lengths').on('click', function () {
+                window.location.href = neighborhoodLengthsExportRoute + '?' + buildExportQuery().toString();
             });
 
             $('#reset_filters').on('click', function () {

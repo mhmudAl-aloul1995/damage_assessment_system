@@ -141,6 +141,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/road-facilities', [RoadFacilityController::class, 'index'])->name('road-facilities.index');
     Route::get('/road-facilities/data', [RoadFacilityController::class, 'data'])->name('road-facilities.data');
     Route::get('/road-facilities/export/{format}', [RoadFacilityController::class, 'export'])->name('road-facilities.export');
+    Route::get('/road-facilities/neighborhood-lengths/export', [RoadFacilityController::class, 'exportNeighborhoodLengths'])->name('road-facilities.neighborhood-lengths.export');
     Route::get('/road-facilities/{roadFacility:globalid}', [RoadFacilityController::class, 'show'])->name('road-facilities.show');
 
     Route::prefix('inf-audit')->name('inf-audit.')->group(function () {

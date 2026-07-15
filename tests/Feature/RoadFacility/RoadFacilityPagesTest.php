@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\RoadFacilityNeighborhoodLengthsExport;
 use App\Models\RoadFacilityFilter;
 use App\Models\RoadFacilitySurvey;
 use App\Models\RoadFacilitySurveyItem;
@@ -8,6 +9,7 @@ use Database\Seeders\RoadFacilityFilterSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 it('shows the road facility survey page with all dynamic road filters and exports', function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
@@ -28,6 +30,8 @@ it('shows the road facility survey page with all dynamic road filters and export
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'assignedto' => 'Engineer Roads',
+        'field_status' => 'COMPLETED',
+        'shape__length' => 0.1,
         'road_damage_level' => 'severe',
         'road_access' => 'partial',
         'lane_count' => 'two',
@@ -63,6 +67,8 @@ it('shows the road facility survey page with all dynamic road filters and export
         'municipalitie' => 'North Gaza',
         'neighborhood' => 'Camp',
         'assignedto' => 'Engineer Other',
+        'field_status' => 'Not_Completed',
+        'shape__length' => 0.2,
         'road_damage_level' => 'minor',
         'road_access' => 'open',
         'lane_count' => 'one',
@@ -92,6 +98,7 @@ it('shows the road facility survey page with all dynamic road filters and export
     $indexResponse->assertSee('Whole');
     $indexResponse->assertSee('Galvanized steel pole');
     $indexResponse->assertSee('High voltage');
+    $indexResponse->assertSee('Export Neighborhood Lengths');
 
     $dataResponse = $this->actingAs($user)->get(route('road-facilities.data', [
         'draw' => 1,
@@ -126,6 +133,28 @@ it('shows the road facility survey page with all dynamic road filters and export
     $csvResponse->assertOk();
     $csvResponse->assertHeader('content-disposition', 'attachment; filename=road_facilities_20260414_113000.csv');
 
+    Excel::fake();
+
+    $this->actingAs($user)->get(route('road-facilities.neighborhood-lengths.export', [
+        'municipalitie' => 'Gaza',
+        'filters' => [
+            'traffic_signs_type' => 'guide',
+            'demolition_type' => 'whole',
+            'pole_material' => 'galvanized',
+        ],
+    ]));
+
+    Excel::assertDownloaded(
+        'road_facility_neighborhood_lengths_20260414_113000.xlsx',
+        function (RoadFacilityNeighborhoodLengthsExport $export): bool {
+            $rows = $export->collection();
+
+            return $rows->count() === 2
+                && $rows->get(0) === ['Gaza', 'Rimal', 11.1, 1]
+                && $rows->get(1) === ['Total', '', 11.1, 1];
+        }
+    );
+
     $showResponse = $this->actingAs($user)->get(route('road-facilities.show', $survey));
     $showResponse->assertOk();
     $showResponse->assertSee('Coastal Road');
@@ -142,8 +171,7 @@ it('shows the road facility survey page with all dynamic road filters and export
     expect(RoadFacilitySurvey::query()->withCount('items')->find($survey->id)->items_count)->toBe(1);
 
     $globalIdResponse = $this->actingAs($user)->get('/road-facilities/'.$survey->globalid);
-    $globalIdResponse->assertOk();
-    $globalIdResponse->assertSee('Coastal Road');
+    $globalIdResponse->assertRedirect(route('road-facilities.show', $survey));
 
     expect(RoadFacilityFilter::query()->count())->toBeGreaterThan(10);
     expect(RoadFacilityFilter::query()->where('list_name', 'traffic_signs_type')->count())->toBeGreaterThan(0);
