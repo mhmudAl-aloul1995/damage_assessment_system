@@ -532,7 +532,7 @@
     </section>
 
     <div class="row g-5 mb-6" id="borrowerStats">
-        <div class="col-md-3 col-6">
+        <div class="col-xl col-md-4 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">الإجمالي</div>
@@ -540,7 +540,15 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-xl col-md-4 col-6">
+            <div class="card card-flush h-100 borrower-stat-card">
+                <div class="card-body">
+                    <div class="text-gray-500 fw-semibold">تمت زيارته</div>
+                    <div class="fs-2hx fw-bold text-success" data-stat="visited_total">{{ $stats['visited_total'] }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl col-md-4 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">داخل الخط الأصفر وتمت زيارته</div>
@@ -548,7 +556,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-xl col-md-4 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">تمت زيارته - هدم كلي</div>
@@ -556,7 +564,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-xl col-md-4 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
                     <div class="text-gray-500 fw-semibold">تمت زيارته - هدم جزئي</div>

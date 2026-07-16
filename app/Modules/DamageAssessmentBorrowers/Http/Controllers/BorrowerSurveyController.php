@@ -433,6 +433,7 @@ class BorrowerSurveyController extends Controller
 
         return [
             'total' => $this->uniqueBorrowersQuery()->count(),
+            'visited_total' => $visitedQuery()->count(),
             'inside_yellow_line_visited' => $visitedQuery()->where('is_inside_yellow_line', true)->count(),
             'visited_destroyed' => $visitedQuery()->where('loan_unit_damage_status', 'destroyed')->count(),
             'visited_partial_damage' => $visitedQuery()->whereIn('loan_unit_damage_status', $partialDamageStatuses)->count(),
