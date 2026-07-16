@@ -462,11 +462,24 @@ class BorrowerSurveyController extends Controller
 
     private function visitedBorrowersQuery(): Builder
     {
+        if (Schema::hasTable('kobo_rest_submissions') && Schema::hasColumn('kobo_rest_submissions', 'damage_assessment_borrower_id')) {
+            return $this->uniqueBorrowersQuery()
+                ->whereIn('id', $this->visitedBorrowerIdSubquery());
+        }
+
         return $this->uniqueBorrowersQuery()
             ->where(function (Builder $query): void {
                 $query->whereNotNull('surveyed_at')
                     ->orWhereNotNull('loan_unit_damage_status');
             });
+    }
+
+    private function visitedBorrowerIdSubquery(): QueryBuilder
+    {
+        return DB::table('kobo_rest_submissions')
+            ->select('damage_assessment_borrower_id')
+            ->whereNotNull('damage_assessment_borrower_id')
+            ->distinct();
     }
 
     private function latestBorrowerIdSubquery(): QueryBuilder

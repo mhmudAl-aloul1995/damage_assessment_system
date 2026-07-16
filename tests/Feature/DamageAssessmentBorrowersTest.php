@@ -1,6 +1,7 @@
 <?php
 
 use App\Exports\BorrowerReportExport;
+use App\Models\KoboRestSubmission;
 use App\Models\User;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
@@ -380,7 +381,7 @@ it('lists borrower surveys as json rows', function () {
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    DamageAssessmentBorrower::query()->create([
+    $visitedBorrower = DamageAssessmentBorrower::query()->create([
         'submitted_by' => $user->id,
         'borrower_name' => 'Mona Borrower',
         'borrower_id_number' => '800000001',
@@ -395,6 +396,22 @@ it('lists borrower surveys as json rows', function () {
         'loan_unit_damage_status' => 'minor',
     ]);
 
+    DamageAssessmentBorrower::query()->create([
+        'submitted_by' => $user->id,
+        'borrower_name' => 'Local Damage Borrower',
+        'borrower_id_number' => '800000002',
+        'is_borrower_alive' => true,
+        'loan_unit_damage_status' => 'destroyed',
+    ]);
+
+    KoboRestSubmission::query()->create([
+        'service_name' => 'borrowers',
+        'submission_uuid' => 'uuid-borrower-visited-001',
+        'payload' => ['borrower_name' => 'Mona Borrower'],
+        'damage_assessment_borrower_id' => $visitedBorrower->id,
+        'sync_status' => 'synced',
+    ]);
+
     $this->actingAs($user)
         ->getJson(route('damage-assessment-borrowers.data', ['q' => 'Mona', 'damage_status' => 'partial']))
         ->assertOk()
@@ -405,6 +422,7 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('stats.partial_damage', 1)
         ->assertJsonPath('stats.visited_total', 1)
         ->assertJsonPath('stats.inside_yellow_line_visited', 1)
+        ->assertJsonPath('stats.visited_destroyed', 0)
         ->assertJsonPath('stats.visited_partial_damage', 1)
         ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
 });
