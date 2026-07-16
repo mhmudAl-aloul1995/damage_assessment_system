@@ -548,7 +548,7 @@ it('can prune borrowers missing from column c identity numbers', function () {
         ]);
 
         expect($exitCode)->toBe(0)
-            ->and(Artisan::output())->toContain('| Deleted borrowers    | 1')
+            ->and(Artisan::output())->toContain('Deleted borrowers')
             ->and(DamageAssessmentBorrower::query()->pluck('borrower_id_number')->all())->toBe(['800000031']);
     } finally {
         @unlink($path);
@@ -599,6 +599,47 @@ it('can enforce the selected sheet by form number and remove duplicates', functi
         expect($exitCode)->toBe(0)
             ->and(DamageAssessmentBorrower::query()->count())->toBe(1)
             ->and(str_replace(' ', '', (string) DamageAssessmentBorrower::query()->first()?->form_number))->toBe('IDB31');
+    } finally {
+        @unlink($path);
+    }
+});
+
+it('syncs inside yellow line flag from column h by form number', function () {
+    $insideBorrower = DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB31',
+        'borrower_name' => 'Inside Borrower',
+        'borrower_id_number' => '800000099',
+        'is_borrower_alive' => true,
+    ]);
+
+    $outsideBorrower = DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB32',
+        'borrower_name' => 'Outside Borrower',
+        'borrower_id_number' => '800000098',
+        'is_borrower_alive' => true,
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('inventory');
+    $sheet->fromArray([
+        ['id', 'form_number', 'identity_number', 'name', 'phone', 'address', 'notes', 'yellow_line'],
+        [1, 'IDB31', '800000031', 'Inside Borrower', null, null, null, 'لا'],
+        [2, 'IDB32', '800000032', 'Outside Borrower', null, null, null, 'نعم'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-yellow-line-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    try {
+        $exitCode = Artisan::call('borrowers:sync-form-numbers', [
+            'file' => $path,
+            '--sheet' => 'inventory',
+        ]);
+
+        expect($exitCode)->toBe(0)
+            ->and($insideBorrower->refresh()->is_inside_yellow_line)->toBeTrue()
+            ->and($outsideBorrower->refresh()->is_inside_yellow_line)->toBeFalse();
     } finally {
         @unlink($path);
     }

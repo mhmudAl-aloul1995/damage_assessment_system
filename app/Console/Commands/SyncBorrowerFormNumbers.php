@@ -66,6 +66,7 @@ class SyncBorrowerFormNumbers extends Command
             'skipped' => 0,
             'deleted' => 0,
             'deduped' => 0,
+            'yellow_line_updated' => 0,
         ];
         $sheetIdentityNumbers = [];
         $sheetFormNumbers = [];
@@ -95,6 +96,7 @@ class SyncBorrowerFormNumbers extends Command
             ['Skipped rows', $summary['skipped']],
             ['Deleted borrowers', $summary['deleted']],
             ['Deduped borrowers', $summary['deduped']],
+            ['Updated yellow line flags', $summary['yellow_line_updated']],
         ]);
 
         $this->info((bool) $this->option('dry-run')
@@ -105,7 +107,7 @@ class SyncBorrowerFormNumbers extends Command
     }
 
     /**
-     * @param  array{rows: int, matched: int, updated: int, unchanged: int, missing: int, skipped: int, deleted: int, deduped: int}  $summary
+     * @param  array{rows: int, matched: int, updated: int, unchanged: int, missing: int, skipped: int, deleted: int, deduped: int, yellow_line_updated: int}  $summary
      * @param  array<string, bool>  $sheetIdentityNumbers
      * @param  array<string, bool>  $sheetFormNumbers
      */
@@ -130,6 +132,7 @@ class SyncBorrowerFormNumbers extends Command
 
             $formNumber = $this->text($row[$formColumn] ?? null);
             $identityNumber = $this->identity($row[$identityColumn] ?? null);
+            $insideYellowLine = $this->insideYellowLineValue($row['H'] ?? null);
 
             if ($formNumber !== '') {
                 $sheetFormNumbers[$this->formNumberKey($formNumber)] = true;
@@ -145,9 +148,8 @@ class SyncBorrowerFormNumbers extends Command
                 continue;
             }
 
-            $borrower = DamageAssessmentBorrower::query()
-                ->where('borrower_id_number', $identityNumber)
-                ->first();
+            $borrowers = $this->matchingBorrowers($identityNumber, $formNumber);
+            $borrower = $borrowers->first();
 
             if (! $borrower instanceof DamageAssessmentBorrower) {
                 $summary['missing']++;
@@ -156,6 +158,20 @@ class SyncBorrowerFormNumbers extends Command
             }
 
             $summary['matched']++;
+
+            if ($insideYellowLine !== null) {
+                $yellowLineUpdates = $borrowers
+                    ->filter(fn (DamageAssessmentBorrower $borrower): bool => $borrower->is_inside_yellow_line !== $insideYellowLine)
+                    ->values();
+
+                $summary['yellow_line_updated'] += $yellowLineUpdates->count();
+
+                if ($yellowLineUpdates->isNotEmpty() && ! (bool) $this->option('dry-run')) {
+                    DamageAssessmentBorrower::query()
+                        ->whereIn('id', $yellowLineUpdates->pluck('id')->all())
+                        ->update(['is_inside_yellow_line' => $insideYellowLine]);
+                }
+            }
 
             if ((string) $borrower->form_number === $formNumber) {
                 $summary['unchanged']++;
@@ -277,6 +293,19 @@ class SyncBorrowerFormNumbers extends Command
     }
 
     /**
+     * @return Collection<int, DamageAssessmentBorrower>
+     */
+    private function matchingBorrowers(string $identityNumber, string $formNumber): Collection
+    {
+        return DamageAssessmentBorrower::query()
+            ->get()
+            ->filter(fn (DamageAssessmentBorrower $borrower): bool => $this->identity($borrower->borrower_id_number) === $identityNumber
+                || $this->formNumberKey($borrower->form_number) === $this->formNumberKey($formNumber)
+            )
+            ->values();
+    }
+
+    /**
      * @param  array<string, mixed>  $headerRow
      * @param  array<int, string>  $needles
      */
@@ -313,5 +342,16 @@ class SyncBorrowerFormNumbers extends Command
     private function formNumberKey(mixed $value): string
     {
         return strtoupper(preg_replace('/\s+/u', '', $this->text($value)) ?? '');
+    }
+
+    private function insideYellowLineValue(mixed $value): ?bool
+    {
+        $text = $this->normalizedHeading($value);
+
+        return match ($text) {
+            'لا' => true,
+            'نعم' => false,
+            default => null,
+        };
     }
 }
