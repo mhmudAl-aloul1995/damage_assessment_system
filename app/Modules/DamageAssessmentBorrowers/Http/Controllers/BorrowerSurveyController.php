@@ -428,14 +428,20 @@ class BorrowerSurveyController extends Controller
      */
     private function stats(): array
     {
+        $visitedQuery = fn (): Builder => $this->visitedBorrowersQuery();
+        $partialDamageStatuses = ['severe_uninhabitable', 'severe_habitable', 'minor'];
+
         return [
             'total' => $this->uniqueBorrowersQuery()->count(),
+            'inside_yellow_line_visited' => $visitedQuery()->where('is_inside_yellow_line', true)->count(),
+            'visited_destroyed' => $visitedQuery()->where('loan_unit_damage_status', 'destroyed')->count(),
+            'visited_partial_damage' => $visitedQuery()->whereIn('loan_unit_damage_status', $partialDamageStatuses)->count(),
             'critical' => $this->uniqueBorrowersQuery()->where('risk_level', 'critical')->count(),
             'high' => $this->uniqueBorrowersQuery()->where('risk_level', 'high')->count(),
             'displaced' => $this->uniqueBorrowersQuery()->where('displacement_status', 'displaced')->count(),
             'destroyed' => $this->uniqueBorrowersQuery()->where('loan_unit_damage_status', 'destroyed')->count(),
             'partial_damage' => $this->uniqueBorrowersQuery()
-                ->whereIn('loan_unit_damage_status', ['severe_uninhabitable', 'severe_habitable', 'minor'])
+                ->whereIn('loan_unit_damage_status', $partialDamageStatuses)
                 ->count(),
             'inactive_guarantors' => $this->uniqueBorrowersQuery()
                 ->whereIn('guarantors_alive_status', ['no', 'none'])
@@ -450,6 +456,15 @@ class BorrowerSurveyController extends Controller
                 $query->whereIn('id', $this->latestBorrowerIdSubquery())
                     ->orWhereNull('borrower_id_number')
                     ->orWhere('borrower_id_number', '');
+            });
+    }
+
+    private function visitedBorrowersQuery(): Builder
+    {
+        return $this->uniqueBorrowersQuery()
+            ->where(function (Builder $query): void {
+                $query->whereNotNull('surveyed_at')
+                    ->orWhereNotNull('loan_unit_damage_status');
             });
     }
 

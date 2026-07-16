@@ -385,6 +385,7 @@ it('lists borrower surveys as json rows', function () {
         'borrower_name' => 'Mona Borrower',
         'borrower_id_number' => '800000001',
         'is_borrower_alive' => true,
+        'is_inside_yellow_line' => true,
         'loan_balance' => 4908,
         'loan_total_amount' => 28075,
         'loan_portfolio_amount' => 4896.81,
@@ -402,6 +403,8 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('data.0.loan_balance', 4908)
         ->assertJsonPath('data.0.loan_portfolio_amount', 4896.81)
         ->assertJsonPath('stats.partial_damage', 1)
+        ->assertJsonPath('stats.inside_yellow_line_visited', 1)
+        ->assertJsonPath('stats.visited_partial_damage', 1)
         ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
 });
 

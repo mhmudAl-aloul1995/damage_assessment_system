@@ -532,6 +532,41 @@
     </section>
 
     <div class="row g-5 mb-6" id="borrowerStats">
+        <div class="col-md-3 col-6">
+            <div class="card card-flush h-100 borrower-stat-card">
+                <div class="card-body">
+                    <div class="text-gray-500 fw-semibold">الإجمالي</div>
+                    <div class="fs-2hx fw-bold" data-stat="total">{{ $stats['total'] }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-flush h-100 borrower-stat-card">
+                <div class="card-body">
+                    <div class="text-gray-500 fw-semibold">داخل الخط الأصفر وتمت زيارته</div>
+                    <div class="fs-2hx fw-bold text-warning" data-stat="inside_yellow_line_visited">{{ $stats['inside_yellow_line_visited'] }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-flush h-100 borrower-stat-card">
+                <div class="card-body">
+                    <div class="text-gray-500 fw-semibold">تمت زيارته - هدم كلي</div>
+                    <div class="fs-2hx fw-bold text-danger" data-stat="visited_destroyed">{{ $stats['visited_destroyed'] }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-flush h-100 borrower-stat-card">
+                <div class="card-body">
+                    <div class="text-gray-500 fw-semibold">تمت زيارته - هدم جزئي</div>
+                    <div class="fs-2hx fw-bold text-primary" data-stat="visited_partial_damage">{{ $stats['visited_partial_damage'] }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-5 mb-6 d-none" id="borrowerStatsLegacy">
         <div class="col-md-2 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
