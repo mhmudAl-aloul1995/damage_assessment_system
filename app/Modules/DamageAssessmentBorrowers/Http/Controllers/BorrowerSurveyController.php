@@ -429,14 +429,17 @@ class BorrowerSurveyController extends Controller
     private function stats(): array
     {
         $visitedQuery = fn (): Builder => $this->visitedBorrowersQuery();
+        $visitedSubmissionsQuery = $this->visitedKoboSubmissionsQuery();
         $partialDamageStatuses = ['severe_uninhabitable', 'severe_habitable', 'minor'];
 
         return [
             'total' => $this->uniqueBorrowersQuery()->count(),
-            'visited_total' => $visitedQuery()->count(),
+            'visited_total' => $visitedSubmissionsQuery?->count() ?? $visitedQuery()->count(),
             'inside_yellow_line' => $this->uniqueBorrowersQuery()->where('is_inside_yellow_line', true)->count(),
-            'visited_destroyed' => $visitedQuery()->where('loan_unit_damage_status', 'destroyed')->count(),
-            'visited_partial_damage' => $visitedQuery()->whereIn('loan_unit_damage_status', $partialDamageStatuses)->count(),
+            'visited_destroyed' => $visitedSubmissionsQuery?->clone()->where('damage_assessment_borrowers.loan_unit_damage_status', 'destroyed')->count()
+                ?? $visitedQuery()->where('loan_unit_damage_status', 'destroyed')->count(),
+            'visited_partial_damage' => $visitedSubmissionsQuery?->clone()->whereIn('damage_assessment_borrowers.loan_unit_damage_status', $partialDamageStatuses)->count()
+                ?? $visitedQuery()->whereIn('loan_unit_damage_status', $partialDamageStatuses)->count(),
             'critical' => $this->uniqueBorrowersQuery()->where('risk_level', 'critical')->count(),
             'high' => $this->uniqueBorrowersQuery()->where('risk_level', 'high')->count(),
             'displaced' => $this->uniqueBorrowersQuery()->where('displacement_status', 'displaced')->count(),
@@ -472,6 +475,18 @@ class BorrowerSurveyController extends Controller
                 $query->whereNotNull('surveyed_at')
                     ->orWhereNotNull('loan_unit_damage_status');
             });
+    }
+
+    private function visitedKoboSubmissionsQuery(): ?QueryBuilder
+    {
+        if (! Schema::hasTable('kobo_rest_submissions') || ! Schema::hasColumn('kobo_rest_submissions', 'damage_assessment_borrower_id')) {
+            return null;
+        }
+
+        return DB::table('kobo_rest_submissions')
+            ->join('damage_assessment_borrowers', 'damage_assessment_borrowers.id', '=', 'kobo_rest_submissions.damage_assessment_borrower_id')
+            ->whereNotNull('kobo_rest_submissions.damage_assessment_borrower_id')
+            ->where('kobo_rest_submissions.service_name', 'not like', 'heks-%');
     }
 
     private function visitedBorrowerIdSubquery(): QueryBuilder

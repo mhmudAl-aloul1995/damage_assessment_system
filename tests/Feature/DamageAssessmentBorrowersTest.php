@@ -412,6 +412,14 @@ it('lists borrower surveys as json rows', function () {
         'sync_status' => 'synced',
     ]);
 
+    KoboRestSubmission::query()->create([
+        'service_name' => 'borrowers',
+        'submission_uuid' => 'uuid-borrower-visited-002',
+        'payload' => ['borrower_name' => 'Mona Borrower'],
+        'damage_assessment_borrower_id' => $visitedBorrower->id,
+        'sync_status' => 'synced',
+    ]);
+
     $this->actingAs($user)
         ->getJson(route('damage-assessment-borrowers.data', ['q' => 'Mona', 'damage_status' => 'partial']))
         ->assertOk()
@@ -420,10 +428,10 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('data.0.loan_balance', 4908)
         ->assertJsonPath('data.0.loan_portfolio_amount', 4896.81)
         ->assertJsonPath('stats.partial_damage', 1)
-        ->assertJsonPath('stats.visited_total', 1)
+        ->assertJsonPath('stats.visited_total', 2)
         ->assertJsonPath('stats.inside_yellow_line', 1)
         ->assertJsonPath('stats.visited_destroyed', 0)
-        ->assertJsonPath('stats.visited_partial_damage', 1)
+        ->assertJsonPath('stats.visited_partial_damage', 2)
         ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
 });
 
