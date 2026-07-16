@@ -481,6 +481,52 @@ it('shows HEKS BOQ pricing as grouped catalog sections', function () {
     expect(HeksBoqItem::query()->whereKey($item->id)->exists())->toBeFalse();
 });
 
+it('shows imported HEKS BOQ items as read only on beneficiary details', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'LOCK1',
+        'name' => 'Locked BOQ Beneficiary',
+    ]);
+
+    $lockedItem = HeksBoqItem::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'source' => 'heks-main',
+        'section' => 'اعمال البلوك',
+        'item_code' => '3.1',
+        'description' => 'بند مستورد من الصفحة الرئيسية',
+        'unit' => 'M2',
+        'quantity' => 2,
+        'unit_price_ils' => 610,
+        'total_price_ils' => 1220,
+    ]);
+
+    $editableItem = HeksBoqItem::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'source' => 'manual',
+        'section' => 'اعمال البلوك',
+        'item_code' => '3.2',
+        'description' => 'بند يدوي قابل للتعديل',
+        'unit' => 'M2',
+        'quantity' => 1,
+        'unit_price_ils' => 585,
+        'total_price_ils' => 585,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.edit', $beneficiary))
+        ->assertOk()
+        ->assertSee('case-boq-table', false)
+        ->assertSee('case-boq-section-row', false)
+        ->assertSee('عرض فقط')
+        ->assertDontSee("update-boq-{$lockedItem->id}", false)
+        ->assertDontSee("delete-boq-{$lockedItem->id}", false)
+        ->assertSee("update-boq-{$editableItem->id}", false)
+        ->assertSee("delete-boq-{$editableItem->id}", false);
+});
+
 it('manages the HEKS BOQ pricing catalog', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

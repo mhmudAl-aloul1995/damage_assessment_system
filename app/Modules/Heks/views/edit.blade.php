@@ -12,6 +12,24 @@
         .heks-case-page .case-tabs .nav-link { border-radius: .65rem; color: var(--bs-gray-700); font-weight: 600; }
         .heks-case-page .case-tabs .nav-link.active { background: var(--bs-primary); color: #fff; }
         .heks-case-page .table-fixed-wide { min-width: 980px; }
+        .heks-case-page .case-boq-table { min-width: 1220px; table-layout: fixed; }
+        .heks-case-page .case-boq-table thead th { background: var(--bs-body-bg); position: sticky; top: 0; z-index: 1; }
+        .heks-case-page .case-boq-table tbody tr.is-readonly-row { background: rgba(var(--bs-primary-rgb), .025); }
+        .heks-case-page .case-boq-table tbody tr.is-editable-row { background: rgba(var(--bs-success-rgb), .035); }
+        .heks-case-page .case-boq-table tbody tr.case-boq-section-row { background: #f8fbff; }
+        .heks-case-page .case-boq-table-wrap { border: 1px solid var(--bs-gray-200); border-radius: .75rem; max-height: calc(100vh - 18rem); overflow: auto; }
+        .heks-case-page .case-boq-section-strip { border-inline-start: 4px solid var(--bs-primary); padding: .75rem 1rem; }
+        .heks-case-page .case-boq-col-code { width: 88px; }
+        .heks-case-page .case-boq-col-section { width: 150px; }
+        .heks-case-page .case-boq-col-item { width: 34%; }
+        .heks-case-page .case-boq-col-unit { width: 80px; }
+        .heks-case-page .case-boq-col-money { width: 130px; }
+        .heks-case-page .case-boq-col-quantity { width: 105px; }
+        .heks-case-page .case-boq-col-notes { width: 180px; }
+        .heks-case-page .case-boq-col-actions { width: 115px; }
+        .heks-case-page .case-boq-description { line-height: 1.55; overflow-wrap: anywhere; }
+        .heks-case-page .case-boq-readonly-value { border: 1px solid var(--bs-gray-200); border-radius: .475rem; background: var(--bs-gray-100); min-height: calc(1.5em + 1.1rem + 2px); padding: .55rem .75rem; display: flex; align-items: center; color: var(--bs-gray-700); }
+        .heks-case-page .case-boq-number { direction: ltr; text-align: right; font-variant-numeric: tabular-nums; unicode-bidi: plaintext; }
         .heks-case-page .text-soft { color: var(--bs-gray-600); }
         .heks-case-page .assessment-list { border: 1px solid var(--bs-gray-200); border-radius: .75rem; max-height: 34rem; overflow-y: auto; overflow-x: hidden; }
         .heks-case-page .assessment-list-header,
@@ -316,50 +334,147 @@
                             </div>
                         </form>
 
-                        <div class="table-responsive">
-                            <table class="table table-row-dashed align-middle table-fixed-wide">
+                        @php
+                            $lockedBoqSources = ['heks-main', 'heks-boq'];
+                            $boqSectionSummaries = $beneficiary->boqItems
+                                ->groupBy(fn ($item) => filled($item->section) ? (string) $item->section : 'بدون قسم')
+                                ->map(fn ($items) => [
+                                    'items_count' => $items->count(),
+                                    'editable_count' => $items->reject(fn ($item) => in_array((string) $item->source, $lockedBoqSources, true))->count(),
+                                    'total' => (float) $items->sum('total_price_ils'),
+                                ]);
+                        @endphp
+
+                        <div class="table-responsive case-boq-table-wrap">
+                            <table class="table table-row-dashed align-middle case-boq-table">
+                                <colgroup>
+                                    <col class="case-boq-col-code">
+                                    <col class="case-boq-col-section">
+                                    <col class="case-boq-col-item">
+                                    <col class="case-boq-col-unit">
+                                    <col class="case-boq-col-money">
+                                    <col class="case-boq-col-quantity">
+                                    <col class="case-boq-col-money">
+                                    <col class="case-boq-col-notes">
+                                    <col class="case-boq-col-actions">
+                                </colgroup>
                                 <thead>
                                 <tr class="fw-bold text-muted">
+                                    <th>الكود</th>
                                     <th>القسم</th>
-                                    <th>رقم</th>
-                                    <th class="min-w-300px">الوصف</th>
+                                    <th>البند</th>
                                     <th>الوحدة</th>
-                                    <th>الكمية</th>
                                     <th>سعر الوحدة ILS</th>
+                                    <th>الكمية</th>
                                     <th>الإجمالي ILS</th>
                                     <th>ملاحظات</th>
-                                    <th></th>
+                                    <th>الإجراء</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                @forelse ($beneficiary->boqItems as $item)
-                                    <form id="update-boq-{{ $item->id }}" method="POST" action="{{ route('heks.boq-items.update', $item) }}">
-                                        @csrf
-                                        @method('PUT')
-                                    </form>
-                                    <form id="delete-boq-{{ $item->id }}" method="POST" action="{{ route('heks.boq-items.destroy', $item) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                    </form>
-                                    <tr>
-                                        <td><input form="update-boq-{{ $item->id }}" name="section" class="form-control form-control-sm" value="{{ $item->section }}"></td>
-                                        <td><input form="update-boq-{{ $item->id }}" name="item_code" class="form-control form-control-sm" value="{{ $item->item_code }}"></td>
-                                        <td><textarea form="update-boq-{{ $item->id }}" name="description" class="form-control form-control-sm" rows="2" required>{{ $item->description }}</textarea></td>
-                                        <td><input form="update-boq-{{ $item->id }}" name="unit" class="form-control form-control-sm" value="{{ $item->unit }}"></td>
-                                        <td><input form="update-boq-{{ $item->id }}" name="quantity" type="number" min="0" step="0.001" class="form-control form-control-sm" value="{{ $item->quantity }}" required></td>
-                                        <td><input form="update-boq-{{ $item->id }}" name="unit_price_ils" type="number" min="0" step="0.01" class="form-control form-control-sm" value="{{ $item->unit_price_ils }}" required></td>
-                                        <td class="fw-bold">{{ number_format((float) $item->total_price_ils, 2) }}</td>
+                                @forelse ($beneficiary->boqItems as $index => $item)
+                                    @php
+                                        $sectionName = filled($item->section) ? (string) $item->section : 'بدون قسم';
+                                        $previousItem = $beneficiary->boqItems->get($index - 1);
+                                        $previousSection = $previousItem ? (filled($previousItem->section) ? (string) $previousItem->section : 'بدون قسم') : null;
+                                        $sectionSummary = $boqSectionSummaries->get($sectionName, ['items_count' => 0, 'editable_count' => 0, 'total' => 0]);
+                                        $isLockedBoqItem = in_array((string) $item->source, $lockedBoqSources, true);
+                                    @endphp
+
+                                    @if ($index === 0 || $previousSection !== $sectionName)
+                                        <tr class="case-boq-section-row">
+                                            <td colspan="9">
+                                                <div class="case-boq-section-strip d-flex flex-column flex-md-row justify-content-between gap-2">
+                                                    <div>
+                                                        <div class="fw-bold text-gray-800">{{ $sectionName }}</div>
+                                                        <div class="text-muted small">البنود المستوردة من KoBo أو BOQ الأساسي للعرض فقط، والبنود اليدوية قابلة للتعديل.</div>
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-2">
+                                                        <span class="badge badge-light-primary">{{ number_format($sectionSummary['items_count']) }} بند</span>
+                                                        <span class="badge badge-light-success">{{ number_format($sectionSummary['editable_count']) }} قابل للتعديل</span>
+                                                        <span class="badge badge-light">{{ number_format((float) $sectionSummary['total'], 2) }} ILS</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endif
+
+                                    @if (! $isLockedBoqItem)
+                                        <form id="update-boq-{{ $item->id }}" method="POST" action="{{ route('heks.boq-items.update', $item) }}">
+                                            @csrf
+                                            @method('PUT')
+                                        </form>
+                                        <form id="delete-boq-{{ $item->id }}" method="POST" action="{{ route('heks.boq-items.destroy', $item) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                        </form>
+                                    @endif
+
+                                    <tr class="{{ $isLockedBoqItem ? 'is-readonly-row' : 'is-editable-row' }}">
                                         <td>
-                                            <input form="update-boq-{{ $item->id }}" type="hidden" name="source" value="{{ $item->source }}">
-                                            <input form="update-boq-{{ $item->id }}" name="notes" class="form-control form-control-sm" value="{{ $item->notes }}">
+                                            @if ($isLockedBoqItem)
+                                                <div class="case-boq-readonly-value case-boq-number">{{ $item->item_code ?: '-' }}</div>
+                                            @else
+                                                <input form="update-boq-{{ $item->id }}" name="item_code" class="form-control form-control-sm form-control-solid case-boq-number" value="{{ $item->item_code }}">
+                                            @endif
                                         </td>
-                                        <td class="text-nowrap">
-                                            <button form="update-boq-{{ $item->id }}" class="btn btn-sm btn-light-primary">حفظ</button>
-                                            <button form="delete-boq-{{ $item->id }}" class="btn btn-sm btn-light-danger">حذف</button>
+                                        <td>
+                                            @if ($isLockedBoqItem)
+                                                <div class="case-boq-readonly-value">{{ $item->section ?: '-' }}</div>
+                                            @else
+                                                <input form="update-boq-{{ $item->id }}" name="section" class="form-control form-control-sm form-control-solid" value="{{ $item->section }}">
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($isLockedBoqItem)
+                                                <div class="fw-semibold case-boq-description">{{ $item->description }}</div>
+                                            @else
+                                                <textarea form="update-boq-{{ $item->id }}" name="description" class="form-control form-control-sm" rows="2" required>{{ $item->description }}</textarea>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($isLockedBoqItem)
+                                                <div class="case-boq-readonly-value case-boq-number">{{ $item->unit ?: '-' }}</div>
+                                            @else
+                                                <input form="update-boq-{{ $item->id }}" name="unit" class="form-control form-control-sm form-control-solid" value="{{ $item->unit }}">
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($isLockedBoqItem)
+                                                <div class="case-boq-readonly-value case-boq-number">{{ number_format((float) $item->unit_price_ils, 2) }}</div>
+                                            @else
+                                                <input form="update-boq-{{ $item->id }}" name="unit_price_ils" type="number" min="0" step="0.01" class="form-control form-control-sm case-boq-number" value="{{ $item->unit_price_ils }}" required>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($isLockedBoqItem)
+                                                <div class="case-boq-readonly-value case-boq-number">{{ number_format((float) $item->quantity, 3) }}</div>
+                                            @else
+                                                <input form="update-boq-{{ $item->id }}" name="quantity" type="number" min="0" step="0.001" class="form-control form-control-sm case-boq-number" value="{{ $item->quantity }}" required>
+                                            @endif
+                                        </td>
+                                        <td class="fw-bold case-boq-number text-success">{{ number_format((float) $item->total_price_ils, 2) }}</td>
+                                        <td>
+                                            @if ($isLockedBoqItem)
+                                                <div class="case-boq-readonly-value">{{ $item->notes ?: '-' }}</div>
+                                            @else
+                                                <input form="update-boq-{{ $item->id }}" type="hidden" name="source" value="{{ $item->source }}">
+                                                <input form="update-boq-{{ $item->id }}" name="notes" class="form-control form-control-sm" value="{{ $item->notes }}" placeholder="ملاحظة">
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($isLockedBoqItem)
+                                                <span class="badge badge-light-primary w-100 justify-content-center">عرض فقط</span>
+                                            @else
+                                                <div class="d-flex flex-column gap-2">
+                                                    <button form="update-boq-{{ $item->id }}" class="btn btn-sm btn-light-primary">حفظ</button>
+                                                    <button form="delete-boq-{{ $item->id }}" class="btn btn-sm btn-light-danger">حذف</button>
+                                                </div>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="9" class="text-center text-muted">لا توجد بنود جدول كميات لهذا المستفيد بعد.</td></tr>
+                                    <tr><td colspan="9" class="text-center text-muted py-10">لا توجد بنود جدول كميات لهذا المستفيد بعد.</td></tr>
                                 @endforelse
                                 </tbody>
                             </table>
