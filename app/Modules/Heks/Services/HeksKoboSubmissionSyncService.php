@@ -285,8 +285,8 @@ class HeksKoboSubmissionSyncService
         $calculated = $this->calculatedScores($payload, $service);
         $social ??= $calculated['social_score'];
         $technical ??= $calculated['technical_score'];
-        $total ??= $social !== null || $technical !== null
-            ? round((float) ($social ?? 0) + (float) ($technical ?? 0), 2)
+        $total ??= $social !== null && $technical !== null
+            ? round((float) $social + (float) $technical, 2)
             : null;
 
         if ($social === null && $technical === null && $total === null) {
@@ -532,8 +532,16 @@ class HeksKoboSubmissionSyncService
     {
         $normalized = $this->normalizeScoreToken($value);
 
-        if (is_numeric(str_replace([',', ' '], '', $value))) {
-            return (float) str_replace([',', ' '], '', $value) > 0;
+        $normalizedNumber = str_replace([',', ' '], '', $value);
+
+        if (is_numeric($normalizedNumber)) {
+            $number = (float) $normalizedNumber;
+
+            if (in_array('>60', $positiveTerms, true) || in_array('<18', $positiveTerms, true)) {
+                return $number > 60 || $number < 18;
+            }
+
+            return in_array($normalizedNumber, ['1', '5'], true);
         }
 
         foreach ($positiveTerms as $term) {

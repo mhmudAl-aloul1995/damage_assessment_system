@@ -1296,8 +1296,10 @@ class HeksController extends Controller
 
         $normalized = mb_strtolower($value);
 
-        if (is_numeric(str_replace([',', ' '], '', $value))) {
-            return (float) str_replace([',', ' '], '', $value) > 0;
+        $normalizedNumber = str_replace([',', ' '], '', $value);
+
+        if (is_numeric($normalizedNumber)) {
+            return in_array($normalizedNumber, ['1', '5'], true);
         }
 
         return str_contains($normalized, 'نعم')
@@ -2771,8 +2773,16 @@ class HeksController extends Controller
     {
         $normalized = $this->normalizedDashboardText($value);
 
-        if (is_numeric(str_replace([',', ' '], '', $value))) {
-            return (float) str_replace([',', ' '], '', $value) > 0;
+        $normalizedNumber = str_replace([',', ' '], '', $value);
+
+        if (is_numeric($normalizedNumber)) {
+            $number = (float) $normalizedNumber;
+
+            if (in_array('>60', $positiveTerms, true) || in_array('<18', $positiveTerms, true)) {
+                return $number > 60 || $number < 18;
+            }
+
+            return in_array($normalizedNumber, ['1', '5'], true);
         }
 
         foreach ($positiveTerms as $term) {

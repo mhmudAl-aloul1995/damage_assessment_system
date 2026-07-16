@@ -424,14 +424,17 @@
                             ) ?? $beneficiary->scores->first();
                             $technicalWeightTotal = $technicalAssessmentRows->sum(fn ($row) => (float) ($row['weight'] ?? 0));
                             $answeredTechnicalRows = $technicalAssessmentRows->filter(fn ($row) => filled($row['value']));
+                            $hasCompleteScore = $latestScore?->social_score !== null && $latestScore?->technical_score !== null;
+                            $displayTotalScore = $hasCompleteScore && $latestScore?->total_score !== null ? number_format((float) $latestScore->total_score, 2) : '-';
+                            $displayClassification = $hasCompleteScore ? ($latestScore?->classification ?: '-') : '-';
                         @endphp
 
                         <div class="row g-4 mb-6">
                             @foreach ([
                                 ['label' => 'التقييم الاجتماعي', 'value' => $latestScore?->social_score !== null ? number_format((float) $latestScore->social_score, 2) : '-', 'hint' => 'من 30', 'tone' => 'info'],
                                 ['label' => 'التقييم الفني', 'value' => $latestScore?->technical_score !== null ? number_format((float) $latestScore->technical_score, 2) : '-', 'hint' => 'من 70', 'tone' => 'primary'],
-                                ['label' => 'التقييم النهائي', 'value' => $latestScore?->total_score !== null ? number_format((float) $latestScore->total_score, 2) : '-', 'hint' => 'Social + Technical', 'tone' => 'success'],
-                                ['label' => 'التصنيف', 'value' => $latestScore?->classification ?: '-', 'hint' => $latestScore?->source ?: 'Scoring', 'tone' => 'warning'],
+                                ['label' => 'التقييم النهائي', 'value' => $displayTotalScore, 'hint' => 'Social + Technical', 'tone' => 'success'],
+                                ['label' => 'التصنيف', 'value' => $displayClassification, 'hint' => $hasCompleteScore ? ($latestScore?->source ?: 'Scoring') : 'غير مكتمل', 'tone' => 'warning'],
                             ] as $scoreCard)
                                 <div class="col-xl-3 col-md-6">
                                     <div class="case-kpi">
@@ -503,7 +506,7 @@
                                         </div>
                                         <div class="case-kpi py-3 min-w-125px">
                                             <div class="text-muted small">قيم موجودة</div>
-                                            <div class="fs-4 fw-bold text-success">{{ number_format($answeredTechnicalRows->count()) }} / {{ number_format($technicalAssessmentRows->count()) }}</div>
+                                            <div class="fs-4 fw-bold text-success">{{ number_format($answeredTechnicalRows->count()) }} من {{ number_format($technicalAssessmentRows->count()) }}</div>
                                         </div>
                                     </div>
                                 </div>

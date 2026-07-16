@@ -191,6 +191,39 @@ test('kobo rest submission calculates HEKS scores from scoring weights when tota
         ->and($score->raw_data['_heks_score_calculation']['technical_weights'])->not->toBeEmpty();
 });
 
+test('kobo rest submission does not total incomplete HEKS score components', function () {
+    HeksScoringWeight::query()->create([
+        'source' => 'T-V',
+        'question_key' => 'damage_level',
+        'option_value' => 'moderate',
+        'option_score' => 27,
+    ]);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-boq',
+        'submission_uuid' => 'uuid:heks-incomplete-score',
+        'payload' => [
+            '_uuid' => 'uuid:heks-incomplete-score',
+            'code' => 'PARTIAL1',
+            'beneficiary_name' => 'Partial Score Beneficiary',
+            'damage_level' => 'moderate',
+        ],
+        'received_at' => now(),
+    ]);
+
+    $sync = app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    expect($sync['status'])->toBe('synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'PARTIAL1')->sole();
+    $score = HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect($score->social_score)->toBeNull()
+        ->and((float) $score->technical_score)->toBe(27.0)
+        ->and($score->total_score)->toBeNull()
+        ->and($score->classification)->toBe('');
+});
+
 test('kobo rest submission ignores computed HEKS display columns and invalid values', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')
