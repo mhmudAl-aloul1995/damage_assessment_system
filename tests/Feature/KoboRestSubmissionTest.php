@@ -1304,7 +1304,7 @@ test('kobo rest submission falls back to form number when borrower identity diff
         ->withHeader('X-Kobo-Token', 'test-kobo-token')
         ->postJson('/api/kobo/iqrad', [
             '_uuid' => 'uuid:form-number-fallback',
-            'form_number' => 'IDB 303',
+            'رقم الاستمارة ' => 'IDB 303',
             'borrower_name' => 'Visited Borrower',
             'borrower_id_number' => '922435423',
         ])

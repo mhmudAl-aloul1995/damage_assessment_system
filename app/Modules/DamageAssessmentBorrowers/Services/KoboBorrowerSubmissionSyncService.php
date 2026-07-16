@@ -117,7 +117,7 @@ class KoboBorrowerSubmissionSyncService
             'location_longitude' => $this->geolocationPart($payload, 1),
             'location_altitude' => $this->geolocationPart($payload, 2),
             'location_precision' => $this->geolocationPart($payload, 3),
-            'form_number' => $this->text($this->mappedValue($payload, $fieldMap, 'form_number', ['form_number', 'form_id', 'form_no'])),
+            'form_number' => $this->formNumber($payload, $fieldMap),
             'loan_number' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_number', ['loan_number', 'loan_no'])),
             'loan_status' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_status', ['loan_status'])),
             'loan_original_amount' => $this->decimal($this->mappedValue($payload, $fieldMap, 'loan_original_amount', ['loan_original_amount'])),
@@ -284,6 +284,54 @@ class KoboBorrowerSubmissionSyncService
         usort($candidates, fn (array $first, array $second): int => $second['score'] <=> $first['score']);
 
         return $candidates[0]['value'] ?? null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $fieldMap
+     */
+    private function formNumber(array $payload, array $fieldMap): ?string
+    {
+        $explicitValue = $this->text($this->mappedValue($payload, $fieldMap, 'form_number', [
+            'form_number',
+            'form_id',
+            'form_no',
+            'رقم الاستمارة',
+            'رقم الاستمارة ',
+        ]));
+
+        if ($explicitValue !== null) {
+            return $explicitValue;
+        }
+
+        foreach ($this->lookup($payload) as $key => $value) {
+            $text = $this->text($value);
+
+            if ($text === null || ! $this->looksLikeFormNumber($text)) {
+                continue;
+            }
+
+            $normalizedKey = mb_strtolower(str_replace(['-', '_'], ' ', (string) $key));
+
+            if (str_contains($normalizedKey, 'form') || str_contains($normalizedKey, 'استمارة')) {
+                return $text;
+            }
+        }
+
+        foreach ($this->lookup($payload) as $value) {
+            $text = $this->text($value);
+
+            if ($text !== null && $this->looksLikeFormNumber($text)) {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
+    private function looksLikeFormNumber(string $value): bool
+    {
+        return preg_match('/^\s*I\s*D\s*B\s*\d+\s*$/i', $value) === 1;
     }
 
     private function borrowerNameKeyScore(string $key): int
