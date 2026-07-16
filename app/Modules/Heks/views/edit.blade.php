@@ -446,43 +446,6 @@
                         </div>
 
                         <div class="row g-5 mb-7">
-                            <div class="col-xl-5">
-                                <h3 class="fs-5 fw-bold mb-4">مكونات التقييم</h3>
-                                <div class="table-responsive">
-                                    <table class="table table-row-dashed align-middle">
-                                        <thead><tr class="fw-bold text-muted"><th>المكون</th><th>الوزن</th><th>الحد الأعلى</th></tr></thead>
-                                        <tbody>
-                                        @foreach ($scoringComponents as $component)
-                                            <tr>
-                                                <td class="fw-semibold">{{ $component['component'] }}</td>
-                                                <td><span class="badge badge-light-primary">{{ $component['weight'] }}</span></td>
-                                                <td>{{ $component['max_points'] }} points</td>
-                                            </tr>
-                                        @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="col-xl-7">
-                                <h3 class="fs-5 fw-bold mb-4">تصنيف الأولوية والتدخل</h3>
-                                <div class="table-responsive">
-                                    <table class="table table-row-dashed align-middle">
-                                        <thead><tr class="fw-bold text-muted"><th>النقاط</th><th>الأولوية</th><th>التدخل</th></tr></thead>
-                                        <tbody>
-                                        @foreach ($priorityMatrix as $priority)
-                                            <tr>
-                                                <td><span class="badge badge-light">{{ $priority['score'] }}</span></td>
-                                                <td class="fw-bold">{{ $priority['priority'] }}</td>
-                                                <td>{{ $priority['intervention'] }}</td>
-                                            </tr>
-                                        @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row g-5 mb-7">
                             <div class="col-xl-6">
                                 <div class="d-flex flex-column flex-md-row justify-content-between gap-4 mb-5">
                                     <div>
