@@ -10,6 +10,21 @@ use Illuminate\Support\Facades\DB;
 class KoboBorrowerSubmissionSyncService
 {
     /**
+     * @var array<string, string>
+     */
+    private const DAMAGE_STATUSES = [
+        'هدم كلي' => 'destroyed',
+        'متضرر بليغ غير صالح للسكن' => 'severe_uninhabitable',
+        'متضرر بليغ صالح للسكن' => 'severe_habitable',
+        'متضرر أضرار طفيفة' => 'minor',
+        'أضرار طفيفة' => 'minor',
+        'destroyed' => 'destroyed',
+        'severe_uninhabitable' => 'severe_uninhabitable',
+        'severe_habitable' => 'severe_habitable',
+        'minor' => 'minor',
+    ];
+
+    /**
      * @return array{borrower: DamageAssessmentBorrower|null, status: string, error: string|null}
      */
     public function sync(KoboRestSubmission $submission, ?string $borrowerNameField = null, ?array $fieldMap = null): array
@@ -156,9 +171,29 @@ class KoboBorrowerSubmissionSyncService
             'plot_number' => $this->text($this->mappedValue($payload, $fieldMap, 'plot_number', ['plot_number'])),
             'loan_unit_occupancy_status' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_occupancy_status', ['loan_unit_occupancy_status'])),
             'resident_households' => $this->arrayValue($this->mappedValue($payload, $fieldMap, 'resident_households', ['resident_households'])),
-            'loan_unit_damage_status' => $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_damage_status', ['loan_unit_damage_status', 'damage_status'])),
+            'loan_unit_damage_status' => $this->damageStatus($payload, $fieldMap),
             'notes' => $this->text($this->mappedValue($payload, $fieldMap, 'notes', ['notes', 'note'])),
         ], fn (mixed $value): bool => $value !== null && $value !== []);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $fieldMap
+     */
+    private function damageStatus(array $payload, array $fieldMap): ?string
+    {
+        $value = $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_damage_status', [
+            'loan_unit_damage_status',
+            'damage_status',
+            'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض',
+            'المعلومات الفنية للوحدة المستهدفة / الوضع الانشائي للوحدة السكنية المستهدفة بالقرض',
+        ]));
+
+        if ($value === null) {
+            return null;
+        }
+
+        return self::DAMAGE_STATUSES[$value] ?? $value;
     }
 
     /**

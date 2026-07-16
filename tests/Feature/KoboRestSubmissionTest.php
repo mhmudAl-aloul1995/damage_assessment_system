@@ -1307,6 +1307,7 @@ test('kobo rest submission falls back to form number when borrower identity diff
             'رقم الاستمارة ' => 'IDB 303',
             'borrower_name' => 'Visited Borrower',
             'borrower_id_number' => '922435423',
+            'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض' => 'هدم كلي',
         ])
         ->assertCreated()
         ->assertJsonPath('sync_status', 'synced');
@@ -1316,6 +1317,7 @@ test('kobo rest submission falls back to form number when borrower identity diff
     expect(DamageAssessmentBorrower::query()->count())->toBe(1)
         ->and($submission->damage_assessment_borrower_id)->toBe($borrower->id)
         ->and($borrower->refresh()->borrower_id_number)->toBe('922435243')
+        ->and($borrower->loan_unit_damage_status)->toBe('destroyed')
         ->and($borrower->source_uuid)->toBe('uuid:form-number-fallback');
 });
 
