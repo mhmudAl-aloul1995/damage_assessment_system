@@ -115,13 +115,15 @@ class SyncBorrowerFormNumbers extends Command
             $formNumber = $this->text($row[$formColumn] ?? null);
             $identityNumber = $this->identity($row[$identityColumn] ?? null);
 
+            if ($identityNumber !== '') {
+                $sheetIdentityNumbers[$identityNumber] = true;
+            }
+
             if ($formNumber === '' || $identityNumber === '') {
                 $summary['skipped']++;
 
                 continue;
             }
-
-            $sheetIdentityNumbers[$identityNumber] = true;
 
             $borrower = DamageAssessmentBorrower::query()
                 ->where('borrower_id_number', $identityNumber)
@@ -160,14 +162,13 @@ class SyncBorrowerFormNumbers extends Command
             return 0;
         }
 
-        $query = DamageAssessmentBorrower::query()
+        $borrowers = DamageAssessmentBorrower::query()
             ->whereNotNull('borrower_id_number')
             ->where('borrower_id_number', '<>', '')
-            ->whereNotIn('borrower_id_number', $identityNumbers);
-
-        $borrowers = (clone $query)
             ->orderBy('borrower_name')
-            ->get(['id', 'borrower_name', 'borrower_id_number', 'form_number']);
+            ->get(['id', 'borrower_name', 'borrower_id_number', 'form_number'])
+            ->filter(fn (DamageAssessmentBorrower $borrower): bool => ! isset($sheetIdentityNumbers[$this->identity($borrower->borrower_id_number)]))
+            ->values();
 
         $count = $borrowers->count();
 
@@ -185,7 +186,9 @@ class SyncBorrowerFormNumbers extends Command
         }
 
         if (! (bool) $this->option('dry-run')) {
-            $query->delete();
+            DamageAssessmentBorrower::query()
+                ->whereIn('id', $borrowers->pluck('id'))
+                ->delete();
         }
 
         return $count;

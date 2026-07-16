@@ -472,7 +472,7 @@ it('syncs borrower form numbers from Excel by identity number', function () {
 it('can prune borrowers missing from the selected form number sheet', function () {
     $keptBorrower = DamageAssessmentBorrower::query()->create([
         'borrower_name' => 'Kept Borrower',
-        'borrower_id_number' => '800000031',
+        'borrower_id_number' => '800000031 ',
         'is_borrower_alive' => true,
     ]);
 
@@ -503,7 +503,7 @@ it('can prune borrowers missing from the selected form number sheet', function (
             ->expectsOutputToContain('Deleted Borrower')
             ->assertSuccessful();
 
-        expect(DamageAssessmentBorrower::query()->pluck('borrower_id_number')->all())->toBe(['800000031', '800000032'])
+        expect(DamageAssessmentBorrower::query()->pluck('borrower_id_number')->all())->toBe(['800000031 ', '800000032'])
             ->and($keptBorrower->refresh()->form_number)->toBeNull();
     } finally {
         @unlink($path);
