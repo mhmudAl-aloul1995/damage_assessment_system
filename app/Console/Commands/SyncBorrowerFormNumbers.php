@@ -15,9 +15,9 @@ class SyncBorrowerFormNumbers extends Command
      * @var string
      */
     protected $signature = 'borrowers:sync-form-numbers
-        {file : Absolute path to the Excel workbook containing form numbers and identity numbers}
+        {file : Absolute path to the Excel workbook containing form numbers}
         {--sheet= : Optional worksheet name. If omitted, all worksheets are scanned}
-        {--delete-missing-from-sheet : Delete borrower records whose identity number is not present in the selected sheet}
+        {--delete-missing-from-sheet : Delete borrower records whose form number is not present in the selected sheet}
         {--dry-run : Preview matches without updating the database}';
 
     /**
@@ -25,7 +25,7 @@ class SyncBorrowerFormNumbers extends Command
      *
      * @var string
      */
-    protected $description = 'Sync borrower form numbers from Excel by matching borrower identity numbers';
+    protected $description = 'Sync borrower form numbers from Excel and prune borrowers missing from a sheet';
 
     /**
      * Execute the console command.
@@ -62,17 +62,18 @@ class SyncBorrowerFormNumbers extends Command
             'deleted' => 0,
         ];
         $sheetIdentityNumbers = [];
+        $sheetFormNumbers = [];
 
         foreach ($sheets as $sheet) {
             if (! $sheet instanceof Worksheet) {
                 continue;
             }
 
-            $this->syncSheet($sheet, $summary, $sheetIdentityNumbers);
+            $this->syncSheet($sheet, $summary, $sheetIdentityNumbers, $sheetFormNumbers);
         }
 
         if ((bool) $this->option('delete-missing-from-sheet')) {
-            $summary['deleted'] = $this->deleteBorrowersMissingFromSheet($sheetIdentityNumbers);
+            $summary['deleted'] = $this->deleteBorrowersMissingFromSheet($sheetFormNumbers);
         }
 
         $this->table(['Indicator', 'Count'], [
@@ -95,15 +96,16 @@ class SyncBorrowerFormNumbers extends Command
     /**
      * @param  array{rows: int, matched: int, updated: int, unchanged: int, missing: int, skipped: int, deleted: int}  $summary
      * @param  array<string, bool>  $sheetIdentityNumbers
+     * @param  array<string, bool>  $sheetFormNumbers
      */
-    private function syncSheet(Worksheet $sheet, array &$summary, array &$sheetIdentityNumbers): void
+    private function syncSheet(Worksheet $sheet, array &$summary, array &$sheetIdentityNumbers, array &$sheetFormNumbers): void
     {
         $rows = $sheet->toArray(null, true, true, true);
         $headerRow = $rows[1] ?? [];
         $formColumn = $this->findColumn($headerRow, ['رقم الاستمارة']);
         $identityColumn = $this->findColumn($headerRow, ['رقم هوية المقترض', 'هوية المقترض']);
 
-        if ($formColumn === null || $identityColumn === null) {
+        if ($formColumn === null) {
             $summary['skipped'] += max(count($rows) - 1, 0);
 
             return;
@@ -113,7 +115,11 @@ class SyncBorrowerFormNumbers extends Command
             $summary['rows']++;
 
             $formNumber = $this->text($row[$formColumn] ?? null);
-            $identityNumber = $this->identity($row[$identityColumn] ?? null);
+            $identityNumber = $identityColumn === null ? '' : $this->identity($row[$identityColumn] ?? null);
+
+            if ($formNumber !== '') {
+                $sheetFormNumbers[$this->formNumberKey($formNumber)] = true;
+            }
 
             if ($identityNumber !== '') {
                 $sheetIdentityNumbers[$identityNumber] = true;
@@ -152,28 +158,24 @@ class SyncBorrowerFormNumbers extends Command
     }
 
     /**
-     * @param  array<string, bool>  $sheetIdentityNumbers
+     * @param  array<string, bool>  $sheetFormNumbers
      */
-    private function deleteBorrowersMissingFromSheet(array $sheetIdentityNumbers): int
+    private function deleteBorrowersMissingFromSheet(array $sheetFormNumbers): int
     {
-        $identityNumbers = array_keys($sheetIdentityNumbers);
-
-        if ($identityNumbers === []) {
+        if ($sheetFormNumbers === []) {
             return 0;
         }
 
         $borrowers = DamageAssessmentBorrower::query()
-            ->whereNotNull('borrower_id_number')
-            ->where('borrower_id_number', '<>', '')
             ->orderBy('borrower_name')
             ->get(['id', 'borrower_name', 'borrower_id_number', 'form_number'])
-            ->filter(fn (DamageAssessmentBorrower $borrower): bool => ! isset($sheetIdentityNumbers[$this->identity($borrower->borrower_id_number)]))
+            ->filter(fn (DamageAssessmentBorrower $borrower): bool => ! isset($sheetFormNumbers[$this->formNumberKey($borrower->form_number)]))
             ->values();
 
         $count = $borrowers->count();
 
         if ($count > 0 && (bool) $this->option('dry-run')) {
-            $this->warn('Borrowers that would be deleted because they are missing from the sheet:');
+            $this->warn('Borrowers that would be deleted because their form number is missing from the sheet:');
             $this->table(
                 ['ID', 'Borrower name', 'Identity number', 'Form number'],
                 $borrowers->map(fn (DamageAssessmentBorrower $borrower): array => [
@@ -226,5 +228,10 @@ class SyncBorrowerFormNumbers extends Command
     private function identity(mixed $value): string
     {
         return preg_replace('/\D+/', '', $this->text($value)) ?? '';
+    }
+
+    private function formNumberKey(mixed $value): string
+    {
+        return strtoupper(preg_replace('/\s+/u', '', $this->text($value)) ?? '');
     }
 }
