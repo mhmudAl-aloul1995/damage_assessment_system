@@ -1292,6 +1292,33 @@ test('kobo rest submission uses configured borrower field map automatically', fu
         ->and($borrower->notes)->toBe('Mapped notes');
 });
 
+test('kobo rest submission falls back to form number when borrower identity differs', function () {
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB303',
+        'borrower_name' => 'Approved Borrower',
+        'borrower_id_number' => '922435243',
+        'is_borrower_alive' => true,
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/iqrad', [
+            '_uuid' => 'uuid:form-number-fallback',
+            'form_number' => 'IDB 303',
+            'borrower_name' => 'Visited Borrower',
+            'borrower_id_number' => '922435423',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $submission = KoboRestSubmission::query()->where('submission_uuid', 'uuid:form-number-fallback')->sole();
+
+    expect(DamageAssessmentBorrower::query()->count())->toBe(1)
+        ->and($submission->damage_assessment_borrower_id)->toBe($borrower->id)
+        ->and($borrower->refresh()->borrower_id_number)->toBe('922435243')
+        ->and($borrower->source_uuid)->toBe('uuid:form-number-fallback');
+});
+
 test('kobo rest submission stores raw payload and skips borrower sync when borrower name is missing', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')

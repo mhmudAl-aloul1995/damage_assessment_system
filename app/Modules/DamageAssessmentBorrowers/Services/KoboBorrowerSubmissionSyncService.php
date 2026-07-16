@@ -43,6 +43,12 @@ class KoboBorrowerSubmissionSyncService
                     ->where('borrower_id_number', $attributes['borrower_id_number'])
                     ->first()
                 : null;
+            $matchedByFormNumber = false;
+
+            if (! $borrower instanceof DamageAssessmentBorrower && filled($attributes['form_number'] ?? null)) {
+                $borrower = $this->borrowerByFormNumber((string) $attributes['form_number']);
+                $matchedByFormNumber = $borrower instanceof DamageAssessmentBorrower;
+            }
 
             if ($borrower instanceof DamageAssessmentBorrower && $sourceUuidBorrower instanceof DamageAssessmentBorrower && ! $sourceUuidBorrower->is($borrower)) {
                 $sourceUuidBorrower->forceFill(['source_uuid' => null])->save();
@@ -53,6 +59,10 @@ class KoboBorrowerSubmissionSyncService
             }
 
             if ($borrower instanceof DamageAssessmentBorrower) {
+                if ($matchedByFormNumber && filled($borrower->borrower_id_number) && filled($attributes['borrower_id_number'] ?? null) && $borrower->borrower_id_number !== $attributes['borrower_id_number']) {
+                    unset($attributes['borrower_id_number']);
+                }
+
                 $borrower->fill($attributes)->save();
             } else {
                 $borrower = DamageAssessmentBorrower::query()->create($attributes);
@@ -69,6 +79,26 @@ class KoboBorrowerSubmissionSyncService
                 'error' => null,
             ];
         });
+    }
+
+    private function borrowerByFormNumber(string $formNumber): ?DamageAssessmentBorrower
+    {
+        $formNumberKey = $this->formNumberKey($formNumber);
+
+        if ($formNumberKey === '') {
+            return null;
+        }
+
+        return DamageAssessmentBorrower::query()
+            ->whereNotNull('form_number')
+            ->where('form_number', '<>', '')
+            ->whereRaw("UPPER(REPLACE(form_number, ' ', '')) = ?", [$formNumberKey])
+            ->first();
+    }
+
+    private function formNumberKey(mixed $value): string
+    {
+        return strtoupper(preg_replace('/\s+/u', '', $this->text($value) ?? '') ?? '');
     }
 
     /**

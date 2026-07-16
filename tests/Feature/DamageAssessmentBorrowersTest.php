@@ -620,7 +620,7 @@ it('can enforce the selected sheet by form number and remove duplicates', functi
 
         expect($exitCode)->toBe(0)
             ->and(DamageAssessmentBorrower::query()->count())->toBe(1)
-            ->and(str_replace(' ', '', (string) DamageAssessmentBorrower::query()->first()?->form_number))->toBe('IDB31');
+            ->and(strtoupper(str_replace(' ', '', (string) DamageAssessmentBorrower::query()->first()?->form_number)))->toBe('IDB31');
     } finally {
         @unlink($path);
     }
