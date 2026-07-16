@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
+use App\Modules\DamageAssessmentBorrowers\Services\BorrowerDuplicateMergeService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
@@ -187,6 +188,87 @@ it('updates an existing borrower survey instead of duplicating the beneficiary',
 
     expect($borrower->borrower_name)->toBe('Updated Borrower')
         ->and($borrower->employment_status)->toBe('not_working');
+});
+
+it('merges all duplicate borrower rows into one complete beneficiary record', function () {
+    Schema::table('damage_assessment_borrowers', function ($table): void {
+        $table->dropUnique('damage_assessment_borrowers_borrower_id_number_unique');
+    });
+
+    $loanRow = DamageAssessmentBorrower::query()->create([
+        'source_uuid' => 'loan-row',
+        'borrower_name' => 'Loan Borrower',
+        'borrower_id_number' => '900000003',
+        'loan_number' => '0000900999',
+        'loan_status' => 'active',
+        'loan_total_amount' => 30000,
+        'loan_balance' => 13750,
+        'is_borrower_alive' => true,
+        'risk_level' => 'low',
+        'risk_score' => 0,
+        'notes' => 'Loan note',
+        'updated_at' => now()->subDay(),
+    ]);
+
+    $surveyRow = DamageAssessmentBorrower::query()->create([
+        'source_uuid' => 'survey-row',
+        'borrower_name' => 'Survey Borrower',
+        'borrower_id_number' => '900000003',
+        'is_borrower_alive' => true,
+        'displacement_status' => 'displaced',
+        'loan_unit_damage_status' => 'destroyed',
+        'vulnerability_types' => ['disabled'],
+        'risk_level' => 'critical',
+        'risk_score' => 80,
+        'risk_reasons' => ['High risk reason'],
+        'notes' => 'Survey note',
+        'updated_at' => now(),
+    ]);
+
+    $loanRow->attachments()->create([
+        'filename' => 'loan.jpg',
+        'url' => 'https://example.test/loan.jpg',
+        'source_index' => 1,
+    ]);
+
+    $surveyRow->attachments()->create([
+        'filename' => 'survey.jpg',
+        'url' => 'https://example.test/survey.jpg',
+        'source_index' => 2,
+    ]);
+
+    $loanRow->boqItems()->create([
+        'source_column' => 'Loan BOQ',
+        'source_key' => 'loan-boq',
+        'description' => 'Loan BOQ',
+        'quantity' => 1,
+        'unit_price' => 10,
+        'total_price' => 10,
+        'sort_order' => 1,
+    ]);
+
+    app(BorrowerDuplicateMergeService::class)->merge();
+
+    expect(DamageAssessmentBorrower::query()->where('borrower_id_number', '900000003')->count())->toBe(1);
+
+    $borrower = DamageAssessmentBorrower::query()
+        ->where('borrower_id_number', '900000003')
+        ->with(['attachments', 'boqItems'])
+        ->sole();
+
+    expect($borrower->borrower_name)->toBe('Survey Borrower')
+        ->and($borrower->loan_number)->toBe('0000900999')
+        ->and((float) $borrower->loan_balance)->toBe(13750.0)
+        ->and($borrower->displacement_status)->toBe('displaced')
+        ->and($borrower->loan_unit_damage_status)->toBe('destroyed')
+        ->and($borrower->vulnerability_types)->toBe(['disabled'])
+        ->and($borrower->risk_level)->toBe('critical')
+        ->and($borrower->risk_score)->toBe(80)
+        ->and($borrower->notes)->toContain('Loan note')
+        ->and($borrower->notes)->toContain('Survey note')
+        ->and($borrower->attachments)->toHaveCount(2)
+        ->and($borrower->boqItems)->toHaveCount(1)
+        ->and($borrower->attachments_count)->toBe(2);
 });
 
 it('imports an uploaded borrower workbook through ajax', function () {
