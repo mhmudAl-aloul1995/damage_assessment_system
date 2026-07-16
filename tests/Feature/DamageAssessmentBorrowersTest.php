@@ -404,6 +404,42 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
 });
 
+it('filters borrower worklist to full demolition damage only', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Destroyed Borrower',
+        'borrower_id_number' => '800000011',
+        'is_borrower_alive' => true,
+        'loan_unit_damage_status' => 'destroyed',
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Loan Only Borrower',
+        'borrower_id_number' => '800000012',
+        'is_borrower_alive' => true,
+        'loan_unit_damage_status' => null,
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Minor Damage Borrower',
+        'borrower_id_number' => '800000013',
+        'is_borrower_alive' => true,
+        'loan_unit_damage_status' => 'minor',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->getJson(route('damage-assessment-borrowers.data', ['damage_status' => 'destroyed']))
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    expect($response->json('data'))->toHaveCount(1)
+        ->and($response->json('data.0.borrower_name'))->toBe('Destroyed Borrower')
+        ->and($response->json('data.0.loan_unit_damage_status'))->toBe('destroyed');
+});
+
 it('exports borrower report using the current filters', function () {
     Excel::fake();
 

@@ -1364,7 +1364,7 @@
         function renderRows(rows) {
             const body = document.getElementById('borrowersTableBody');
             const mobileList = document.getElementById('borrowersMobileList');
-            const allRows = [...pendingRows(), ...(rows || [])];
+            const allRows = [...pendingRows(), ...(rows || [])].filter(rowMatchesActiveFilters);
 
             if (!allRows.length) {
                 body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد بيانات بعد</td></tr>';
@@ -1430,6 +1430,38 @@
                     <div class="mt-3">${pricingSummary(row)}</div>
                 </article>`;
             }).join('');
+        }
+
+        function rowMatchesActiveFilters(row) {
+            const q = document.getElementById('borrowerSearch')?.value?.trim()?.toLowerCase();
+            const riskLevel = document.getElementById('borrowerRiskFilter')?.value;
+            const damageStatus = document.getElementById('borrowerDamageFilter')?.value;
+
+            if (q) {
+                const haystack = [
+                    row.borrower_name,
+                    row.borrower_id_number,
+                    row.phone_primary,
+                ].filter(Boolean).join(' ').toLowerCase();
+
+                if (!haystack.includes(q)) {
+                    return false;
+                }
+            }
+
+            if (riskLevel && row.risk_level !== riskLevel) {
+                return false;
+            }
+
+            if (damageStatus === 'destroyed') {
+                return row.loan_unit_damage_status === 'destroyed';
+            }
+
+            if (damageStatus === 'partial') {
+                return ['severe_uninhabitable', 'severe_habitable', 'minor'].includes(row.loan_unit_damage_status);
+            }
+
+            return true;
         }
 
         async function loadBorrowers() {
