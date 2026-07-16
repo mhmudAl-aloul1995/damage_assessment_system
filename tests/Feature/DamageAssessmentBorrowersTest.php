@@ -469,6 +469,44 @@ it('syncs borrower form numbers from Excel by identity number', function () {
     }
 });
 
+it('can prune borrowers missing from the selected form number sheet', function () {
+    $keptBorrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Kept Borrower',
+        'borrower_id_number' => '800000031',
+        'is_borrower_alive' => true,
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Deleted Borrower',
+        'borrower_id_number' => '800000032',
+        'is_borrower_alive' => true,
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('الحصر الجديد');
+    $sheet->fromArray([
+        ['الرقم', 'رقم الاستمارة', 'رقم هوية المقترض', 'الاسم'],
+        [1, 'IDB31', '800000031', 'Kept Borrower'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-form-number-prune-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    try {
+        $this->artisan('borrowers:sync-form-numbers', [
+            'file' => $path,
+            '--sheet' => 'الحصر الجديد',
+            '--delete-missing-from-sheet' => true,
+        ])->assertSuccessful();
+
+        expect(DamageAssessmentBorrower::query()->pluck('borrower_id_number')->all())->toBe(['800000031'])
+            ->and($keptBorrower->refresh()->form_number)->toBe('IDB31');
+    } finally {
+        @unlink($path);
+    }
+});
+
 it('exports borrower report using the current filters', function () {
     Excel::fake();
 

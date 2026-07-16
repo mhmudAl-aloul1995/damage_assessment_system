@@ -17,6 +17,7 @@ class SyncBorrowerFormNumbers extends Command
     protected $signature = 'borrowers:sync-form-numbers
         {file : Absolute path to the Excel workbook containing form numbers and identity numbers}
         {--sheet= : Optional worksheet name. If omitted, all worksheets are scanned}
+        {--delete-missing-from-sheet : Delete borrower records whose identity number is not present in the selected sheet}
         {--dry-run : Preview matches without updating the database}';
 
     /**
@@ -58,14 +59,20 @@ class SyncBorrowerFormNumbers extends Command
             'unchanged' => 0,
             'missing' => 0,
             'skipped' => 0,
+            'deleted' => 0,
         ];
+        $sheetIdentityNumbers = [];
 
         foreach ($sheets as $sheet) {
             if (! $sheet instanceof Worksheet) {
                 continue;
             }
 
-            $this->syncSheet($sheet, $summary);
+            $this->syncSheet($sheet, $summary, $sheetIdentityNumbers);
+        }
+
+        if ((bool) $this->option('delete-missing-from-sheet')) {
+            $summary['deleted'] = $this->deleteBorrowersMissingFromSheet($sheetIdentityNumbers);
         }
 
         $this->table(['Indicator', 'Count'], [
@@ -75,6 +82,7 @@ class SyncBorrowerFormNumbers extends Command
             ['Already correct', $summary['unchanged']],
             ['Missing borrowers', $summary['missing']],
             ['Skipped rows', $summary['skipped']],
+            ['Deleted borrowers', $summary['deleted']],
         ]);
 
         $this->info((bool) $this->option('dry-run')
@@ -85,9 +93,10 @@ class SyncBorrowerFormNumbers extends Command
     }
 
     /**
-     * @param  array{rows: int, matched: int, updated: int, unchanged: int, missing: int, skipped: int}  $summary
+     * @param  array{rows: int, matched: int, updated: int, unchanged: int, missing: int, skipped: int, deleted: int}  $summary
+     * @param  array<string, bool>  $sheetIdentityNumbers
      */
-    private function syncSheet(Worksheet $sheet, array &$summary): void
+    private function syncSheet(Worksheet $sheet, array &$summary, array &$sheetIdentityNumbers): void
     {
         $rows = $sheet->toArray(null, true, true, true);
         $headerRow = $rows[1] ?? [];
@@ -111,6 +120,8 @@ class SyncBorrowerFormNumbers extends Command
 
                 continue;
             }
+
+            $sheetIdentityNumbers[$identityNumber] = true;
 
             $borrower = DamageAssessmentBorrower::query()
                 ->where('borrower_id_number', $identityNumber)
@@ -136,6 +147,31 @@ class SyncBorrowerFormNumbers extends Command
                 $borrower->forceFill(['form_number' => $formNumber])->save();
             }
         }
+    }
+
+    /**
+     * @param  array<string, bool>  $sheetIdentityNumbers
+     */
+    private function deleteBorrowersMissingFromSheet(array $sheetIdentityNumbers): int
+    {
+        $identityNumbers = array_keys($sheetIdentityNumbers);
+
+        if ($identityNumbers === []) {
+            return 0;
+        }
+
+        $query = DamageAssessmentBorrower::query()
+            ->whereNotNull('borrower_id_number')
+            ->where('borrower_id_number', '<>', '')
+            ->whereNotIn('borrower_id_number', $identityNumbers);
+
+        $count = (clone $query)->count();
+
+        if (! (bool) $this->option('dry-run')) {
+            $query->delete();
+        }
+
+        return $count;
     }
 
     /**
