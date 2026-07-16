@@ -440,6 +440,35 @@ it('filters borrower worklist to full demolition damage only', function () {
         ->and($response->json('data.0.loan_unit_damage_status'))->toBe('destroyed');
 });
 
+it('syncs borrower form numbers from Excel by identity number', function () {
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Form Number Borrower',
+        'borrower_id_number' => '800000021',
+        'is_borrower_alive' => true,
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('القائمة الاولية');
+    $sheet->fromArray([
+        ['الرقم', 'رقم الاستمارة', 'رقم هوية المقترض', 'الاسم'],
+        [1, 'IDB21', '800000021', 'Form Number Borrower'],
+        [2, 'IDB22', '800000022', 'Missing Borrower'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-form-numbers-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    try {
+        $this->artisan('borrowers:sync-form-numbers', ['file' => $path])
+            ->assertSuccessful();
+
+        expect($borrower->refresh()->form_number)->toBe('IDB21');
+    } finally {
+        @unlink($path);
+    }
+});
+
 it('exports borrower report using the current filters', function () {
     Excel::fake();
 
