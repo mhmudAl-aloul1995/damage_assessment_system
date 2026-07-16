@@ -405,7 +405,7 @@ it('lists borrower surveys as json rows', function () {
     ]);
 
     KoboRestSubmission::query()->create([
-        'service_name' => 'borrowers',
+        'service_name' => 'iqrad',
         'submission_uuid' => 'uuid-borrower-visited-001',
         'payload' => ['borrower_name' => 'Mona Borrower'],
         'damage_assessment_borrower_id' => $visitedBorrower->id,
@@ -413,7 +413,7 @@ it('lists borrower surveys as json rows', function () {
     ]);
 
     KoboRestSubmission::query()->create([
-        'service_name' => 'borrowers',
+        'service_name' => 'iqrad',
         'submission_uuid' => 'uuid-borrower-visited-002',
         'payload' => ['borrower_name' => 'Mona Borrower'],
         'damage_assessment_borrower_id' => $visitedBorrower->id,

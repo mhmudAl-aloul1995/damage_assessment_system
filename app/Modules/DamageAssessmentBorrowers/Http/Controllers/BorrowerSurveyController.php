@@ -486,7 +486,7 @@ class BorrowerSurveyController extends Controller
         return DB::table('kobo_rest_submissions')
             ->join('damage_assessment_borrowers', 'damage_assessment_borrowers.id', '=', 'kobo_rest_submissions.damage_assessment_borrower_id')
             ->whereNotNull('kobo_rest_submissions.damage_assessment_borrower_id')
-            ->where('kobo_rest_submissions.service_name', 'not like', 'heks-%');
+            ->where('kobo_rest_submissions.service_name', 'iqrad');
     }
 
     private function visitedBorrowerIdSubquery(): QueryBuilder
