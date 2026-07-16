@@ -38,6 +38,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
         if ($this->reportType === 'detailed') {
             return [
                 'الكود',
+                'كود المستفيد',
                 'اسم المقترض',
                 'رقم الهوية',
                 'رقم القرض',
@@ -58,6 +59,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
 
         return [
             'الكود',
+            'كود المستفيد',
             'اسم المقترض',
             'رقم الهوية',
             'قيمة القرض',
@@ -76,6 +78,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
         if ($this->reportType === 'detailed') {
             return [
                 $this->borrowerCode($row),
+                $row->form_number,
                 $row->borrower_name,
                 $row->borrower_id_number,
                 $row->loan_number,
@@ -96,6 +99,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
 
         return [
             $this->borrowerCode($row),
+            $row->form_number,
             $row->borrower_name,
             $row->borrower_id_number,
             $this->numberOrNull($row->loan_total_amount),
@@ -157,7 +161,11 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
                     ->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
-                foreach (['D', 'E', 'F', 'G', 'I', 'J', 'K'] as $column) {
+                $numberColumns = $this->reportType === 'detailed'
+                    ? ['F', 'G', 'H', 'J', 'K', 'L']
+                    : ['E', 'F', 'G'];
+
+                foreach ($numberColumns as $column) {
                     $sheet->getStyle("{$column}2:{$column}{$highestRow}")
                         ->getNumberFormat()
                         ->setFormatCode('#,##0.00');

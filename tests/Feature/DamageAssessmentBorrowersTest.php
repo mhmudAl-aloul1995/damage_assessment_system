@@ -483,6 +483,7 @@ it('exports borrower report using the current filters', function () {
     Excel::assertDownloaded('borrowers-report-'.now()->format('Y-m-d-His').'.xlsx', function (BorrowerReportExport $export): bool {
         return $export->headings() === [
             'الكود',
+            'كود المستفيد',
             'اسم المقترض',
             'رقم الهوية',
             'قيمة القرض',
@@ -493,7 +494,8 @@ it('exports borrower report using the current filters', function () {
         ]
             && $export->collection()->count() === 1
             && $export->map($export->collection()->first())[0] === 'IDB-EXPORT'
-            && $export->map($export->collection()->first())[5] === 84500.0;
+            && $export->map($export->collection()->first())[1] === 'IDB-EXPORT'
+            && $export->map($export->collection()->first())[6] === 84500.0;
     });
 });
 
