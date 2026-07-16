@@ -407,7 +407,10 @@ it('lists borrower surveys as json rows', function () {
     KoboRestSubmission::query()->create([
         'service_name' => 'iqrad',
         'submission_uuid' => 'uuid-borrower-visited-001',
-        'payload' => ['borrower_name' => 'Mona Borrower'],
+        'payload' => [
+            'borrower_name' => 'Mona Borrower',
+            'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض' => 'هدم كلي',
+        ],
         'damage_assessment_borrower_id' => $visitedBorrower->id,
         'sync_status' => 'synced',
     ]);
@@ -415,7 +418,10 @@ it('lists borrower surveys as json rows', function () {
     KoboRestSubmission::query()->create([
         'service_name' => 'iqrad',
         'submission_uuid' => 'uuid-borrower-visited-002',
-        'payload' => ['borrower_name' => 'Mona Borrower'],
+        'payload' => [
+            'borrower_name' => 'Mona Borrower',
+            'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض' => 'متضرر أضرار طفيفة',
+        ],
         'damage_assessment_borrower_id' => $visitedBorrower->id,
         'sync_status' => 'synced',
     ]);
@@ -430,8 +436,8 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('stats.partial_damage', 1)
         ->assertJsonPath('stats.visited_total', 2)
         ->assertJsonPath('stats.inside_yellow_line', 1)
-        ->assertJsonPath('stats.visited_destroyed', 0)
-        ->assertJsonPath('stats.visited_partial_damage', 2)
+        ->assertJsonPath('stats.visited_destroyed', 1)
+        ->assertJsonPath('stats.visited_partial_damage', 1)
         ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
 });
 

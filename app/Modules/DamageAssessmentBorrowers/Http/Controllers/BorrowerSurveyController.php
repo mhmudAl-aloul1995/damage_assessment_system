@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\ImportBorrowerSpreadsheetRequest;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateBorrowerPricingRequest;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateGlobalBorrowerExchangeRateRequest;
+use App\Models\KoboRestSubmission;
 use App\Modules\DamageAssessmentBorrowers\Http\Requests\StoreBorrowerSurveyRequest;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerAttachment;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
@@ -429,17 +430,15 @@ class BorrowerSurveyController extends Controller
     private function stats(): array
     {
         $visitedQuery = fn (): Builder => $this->visitedBorrowersQuery();
-        $visitedSubmissionsQuery = $this->visitedKoboSubmissionsQuery();
+        $visitedSubmissionStats = $this->visitedKoboSubmissionStats();
         $partialDamageStatuses = ['severe_uninhabitable', 'severe_habitable', 'minor'];
 
         return [
             'total' => $this->uniqueBorrowersQuery()->count(),
-            'visited_total' => $visitedSubmissionsQuery?->count() ?? $visitedQuery()->count(),
+            'visited_total' => $visitedSubmissionStats['total'] ?? $visitedQuery()->count(),
             'inside_yellow_line' => $this->uniqueBorrowersQuery()->where('is_inside_yellow_line', true)->count(),
-            'visited_destroyed' => $visitedSubmissionsQuery?->clone()->where('damage_assessment_borrowers.loan_unit_damage_status', 'destroyed')->count()
-                ?? $visitedQuery()->where('loan_unit_damage_status', 'destroyed')->count(),
-            'visited_partial_damage' => $visitedSubmissionsQuery?->clone()->whereIn('damage_assessment_borrowers.loan_unit_damage_status', $partialDamageStatuses)->count()
-                ?? $visitedQuery()->whereIn('loan_unit_damage_status', $partialDamageStatuses)->count(),
+            'visited_destroyed' => $visitedSubmissionStats['destroyed'] ?? $visitedQuery()->where('loan_unit_damage_status', 'destroyed')->count(),
+            'visited_partial_damage' => $visitedSubmissionStats['partial_damage'] ?? $visitedQuery()->whereIn('loan_unit_damage_status', $partialDamageStatuses)->count(),
             'critical' => $this->uniqueBorrowersQuery()->where('risk_level', 'critical')->count(),
             'high' => $this->uniqueBorrowersQuery()->where('risk_level', 'high')->count(),
             'displaced' => $this->uniqueBorrowersQuery()->where('displacement_status', 'displaced')->count(),
@@ -477,16 +476,84 @@ class BorrowerSurveyController extends Controller
             });
     }
 
-    private function visitedKoboSubmissionsQuery(): ?QueryBuilder
+    /**
+     * @return array{total: int, destroyed: int, partial_damage: int}|null
+     */
+    private function visitedKoboSubmissionStats(): ?array
     {
         if (! Schema::hasTable('kobo_rest_submissions') || ! Schema::hasColumn('kobo_rest_submissions', 'damage_assessment_borrower_id')) {
             return null;
         }
 
-        return DB::table('kobo_rest_submissions')
-            ->join('damage_assessment_borrowers', 'damage_assessment_borrowers.id', '=', 'kobo_rest_submissions.damage_assessment_borrower_id')
+        $stats = ['total' => 0, 'destroyed' => 0, 'partial_damage' => 0];
+        $partialDamageStatuses = ['severe_uninhabitable', 'severe_habitable', 'minor'];
+
+        KoboRestSubmission::query()
             ->whereNotNull('kobo_rest_submissions.damage_assessment_borrower_id')
-            ->where('kobo_rest_submissions.service_name', 'iqrad');
+            ->where('kobo_rest_submissions.service_name', 'iqrad')
+            ->get(['payload'])
+            ->each(function (KoboRestSubmission $submission) use (&$stats, $partialDamageStatuses): void {
+                $stats['total']++;
+
+                $damageStatus = $this->koboPayloadDamageStatus($submission->payload ?? []);
+
+                if ($damageStatus === 'destroyed') {
+                    $stats['destroyed']++;
+                } elseif (in_array($damageStatus, $partialDamageStatuses, true)) {
+                    $stats['partial_damage']++;
+                }
+            });
+
+        return $stats;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function koboPayloadDamageStatus(array $payload): ?string
+    {
+        $lookup = $this->flattenPayload($payload);
+        $value = $lookup['loan_unit_damage_status']
+            ?? $lookup['damage_status']
+            ?? $lookup['الوضع الانشائي للوحدة السكنية المستهدفة بالقرض']
+            ?? $lookup['المعلومات الفنية للوحدة المستهدفة / الوضع الانشائي للوحدة السكنية المستهدفة بالقرض']
+            ?? null;
+
+        if ($value === null || is_array($value)) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return match ($value) {
+            'هدم كلي', 'destroyed' => 'destroyed',
+            'متضرر بليغ غير صالح للسكن', 'severe_uninhabitable' => 'severe_uninhabitable',
+            'متضرر بليغ صالح للسكن', 'severe_habitable' => 'severe_habitable',
+            'متضرر أضرار طفيفة', 'أضرار طفيفة', 'minor' => 'minor',
+            default => $value === '' ? null : $value,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function flattenPayload(array $payload, string $prefix = ''): array
+    {
+        $lookup = [];
+
+        foreach ($payload as $key => $value) {
+            $fullKey = $prefix === '' ? (string) $key : $prefix.'/'.$key;
+            $lookup[$fullKey] = $value;
+            $lookup[(string) $key] = $value;
+            $lookup[basename((string) $key)] = $value;
+
+            if (is_array($value) && ! array_is_list($value)) {
+                $lookup = array_replace($lookup, $this->flattenPayload($value, $fullKey));
+            }
+        }
+
+        return $lookup;
     }
 
     private function visitedBorrowerIdSubquery(): QueryBuilder
