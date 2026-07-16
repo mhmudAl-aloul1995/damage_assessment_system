@@ -17,6 +17,7 @@ use App\Modules\DamageAssessmentBorrowers\Services\BorrowerDamageValuationServic
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -398,7 +399,7 @@ class BorrowerSurveyController extends Controller
 
     private function borrowersQuery(Request $request): Builder
     {
-        $query = DamageAssessmentBorrower::query()->with('submitter:id,name');
+        $query = $this->uniqueBorrowersQuery()->with('submitter:id,name');
 
         if ($request->filled('risk_level')) {
             $query->where('risk_level', (string) $request->string('risk_level'));
@@ -428,18 +429,37 @@ class BorrowerSurveyController extends Controller
     private function stats(): array
     {
         return [
-            'total' => DamageAssessmentBorrower::query()->count(),
-            'critical' => DamageAssessmentBorrower::query()->where('risk_level', 'critical')->count(),
-            'high' => DamageAssessmentBorrower::query()->where('risk_level', 'high')->count(),
-            'displaced' => DamageAssessmentBorrower::query()->where('displacement_status', 'displaced')->count(),
-            'destroyed' => DamageAssessmentBorrower::query()->where('loan_unit_damage_status', 'destroyed')->count(),
-            'partial_damage' => DamageAssessmentBorrower::query()
+            'total' => $this->uniqueBorrowersQuery()->count(),
+            'critical' => $this->uniqueBorrowersQuery()->where('risk_level', 'critical')->count(),
+            'high' => $this->uniqueBorrowersQuery()->where('risk_level', 'high')->count(),
+            'displaced' => $this->uniqueBorrowersQuery()->where('displacement_status', 'displaced')->count(),
+            'destroyed' => $this->uniqueBorrowersQuery()->where('loan_unit_damage_status', 'destroyed')->count(),
+            'partial_damage' => $this->uniqueBorrowersQuery()
                 ->whereIn('loan_unit_damage_status', ['severe_uninhabitable', 'severe_habitable', 'minor'])
                 ->count(),
-            'inactive_guarantors' => DamageAssessmentBorrower::query()
+            'inactive_guarantors' => $this->uniqueBorrowersQuery()
                 ->whereIn('guarantors_alive_status', ['no', 'none'])
                 ->count(),
         ];
+    }
+
+    private function uniqueBorrowersQuery(): Builder
+    {
+        return DamageAssessmentBorrower::query()
+            ->where(function (Builder $query): void {
+                $query->whereIn('id', $this->latestBorrowerIdSubquery())
+                    ->orWhereNull('borrower_id_number')
+                    ->orWhere('borrower_id_number', '');
+            });
+    }
+
+    private function latestBorrowerIdSubquery(): QueryBuilder
+    {
+        return DB::table('damage_assessment_borrowers')
+            ->selectRaw('MAX(id)')
+            ->whereNotNull('borrower_id_number')
+            ->where('borrower_id_number', '!=', '')
+            ->groupBy('borrower_id_number');
     }
 
     /**
