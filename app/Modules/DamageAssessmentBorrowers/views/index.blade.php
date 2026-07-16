@@ -551,8 +551,8 @@
         <div class="col-xl col-md-4 col-6">
             <div class="card card-flush h-100 borrower-stat-card">
                 <div class="card-body">
-                    <div class="text-gray-500 fw-semibold">داخل الخط الأصفر وتمت زيارته</div>
-                    <div class="fs-2hx fw-bold text-warning" data-stat="inside_yellow_line_visited">{{ $stats['inside_yellow_line_visited'] }}</div>
+                    <div class="text-gray-500 fw-semibold">داخل الخط الأصفر</div>
+                    <div class="fs-2hx fw-bold text-warning" data-stat="inside_yellow_line">{{ $stats['inside_yellow_line'] }}</div>
                 </div>
             </div>
         </div>

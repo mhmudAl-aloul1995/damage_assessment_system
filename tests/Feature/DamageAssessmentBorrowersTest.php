@@ -421,7 +421,7 @@ it('lists borrower surveys as json rows', function () {
         ->assertJsonPath('data.0.loan_portfolio_amount', 4896.81)
         ->assertJsonPath('stats.partial_damage', 1)
         ->assertJsonPath('stats.visited_total', 1)
-        ->assertJsonPath('stats.inside_yellow_line_visited', 1)
+        ->assertJsonPath('stats.inside_yellow_line', 1)
         ->assertJsonPath('stats.visited_destroyed', 0)
         ->assertJsonPath('stats.visited_partial_damage', 1)
         ->assertJsonPath('data.0.show_url', route('damage-assessment-borrowers.show', DamageAssessmentBorrower::query()->where('borrower_id_number', '800000001')->first()));
