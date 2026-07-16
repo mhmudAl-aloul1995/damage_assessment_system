@@ -543,66 +543,6 @@
                             </div>
                         </div>
 
-                        <div class="row g-5">
-                            <div class="col-xl-6">
-                                <h3 class="fs-5 fw-bold mb-4">التقييم والدرجات</h3>
-                                <div class="table-responsive">
-                                    <table class="table table-row-dashed align-middle">
-                                        <thead><tr class="fw-bold text-muted"><th>المصدر</th><th>اجتماعي</th><th>فني</th><th>نهائي</th><th>التصنيف</th><th>المنحة</th><th></th></tr></thead>
-                                        <tbody>
-                                        @forelse ($beneficiary->scores as $score)
-                                            <tr>
-                                                <form method="POST" action="{{ route('heks.scores.update', $score) }}">
-                                                    @csrf
-                                                    @method('PUT')
-                                                    <td><input name="source" class="form-control form-control-sm" value="{{ $score->source }}" aria-label="Score source"></td>
-                                                    <td><input name="social_score" type="number" step="0.01" class="form-control form-control-sm" value="{{ $score->social_score }}" aria-label="Social score"></td>
-                                                    <td><input name="technical_score" type="number" step="0.01" class="form-control form-control-sm" value="{{ $score->technical_score }}" aria-label="Technical score"></td>
-                                                    <td><input name="total_score" type="number" step="0.01" class="form-control form-control-sm fw-bold" value="{{ $score->total_score }}" aria-label="Total score"></td>
-                                                    <td><input name="classification" class="form-control form-control-sm" value="{{ $score->classification }}" aria-label="Classification"></td>
-                                                    <td><input name="grant_amount" type="number" step="0.01" class="form-control form-control-sm" value="{{ $score->grant_amount }}" aria-label="Grant amount"></td>
-                                                    <td><button class="btn btn-sm btn-light-primary">حفظ</button></td>
-                                                </form>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="7" class="text-center text-muted">لا توجد درجات.</td></tr>
-                                        @endforelse
-                                        <tr>
-                                            <form method="POST" action="{{ route('heks.beneficiaries.scores.store', $beneficiary) }}">
-                                                @csrf
-                                                <td><input name="source" class="form-control form-control-sm" value="manual" aria-label="New score source"></td>
-                                                <td><input name="social_score" type="number" step="0.01" class="form-control form-control-sm" placeholder="30" aria-label="New social score"></td>
-                                                <td><input name="technical_score" type="number" step="0.01" class="form-control form-control-sm" placeholder="70" aria-label="New technical score"></td>
-                                                <td><input name="total_score" type="number" step="0.01" class="form-control form-control-sm fw-bold" placeholder="100" aria-label="New total score"></td>
-                                                <td><input name="classification" class="form-control form-control-sm" placeholder="High" aria-label="New classification"></td>
-                                                <td><input name="grant_amount" type="number" step="0.01" class="form-control form-control-sm" placeholder="ILS" aria-label="New grant amount"></td>
-                                                <td><button class="btn btn-sm btn-primary">إضافة</button></td>
-                                            </form>
-                                        </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="col-xl-6">
-                                <h3 class="fs-5 fw-bold mb-4">معايير ونتائج التقييم</h3>
-                                <div class="table-responsive">
-                                    <table class="table table-row-dashed align-middle">
-                                        <thead><tr class="fw-bold text-muted"><th>المعيار</th><th>القيمة</th><th>المصدر</th></tr></thead>
-                                        <tbody>
-                                        @forelse ($beneficiary->labels as $label)
-                                            <tr>
-                                                <td class="fw-semibold">{{ $label->label_key }}</td>
-                                                <td>{{ $label->label_value ?? '-' }}</td>
-                                                <td class="text-muted">{{ $label->source ?? '-' }}</td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="3" class="text-center text-muted">لا توجد معايير.</td></tr>
-                                        @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="tab-pane fade" id="finance" role="tabpanel">
