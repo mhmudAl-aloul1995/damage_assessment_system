@@ -348,10 +348,14 @@ class SyncBorrowerFormNumbers extends Command
     {
         $text = $this->normalizedHeading($value);
 
-        return match ($text) {
-            'لا' => true,
-            'نعم' => false,
-            default => null,
-        };
+        if (str_starts_with($text, 'لا')) {
+            return true;
+        }
+
+        if (str_starts_with($text, 'نعم')) {
+            return false;
+        }
+
+        return null;
     }
 }

@@ -647,7 +647,7 @@ it('syncs inside yellow line flag from column h by form number', function () {
     $sheet->fromArray([
         ['id', 'form_number', 'identity_number', 'name', 'phone', 'address', 'notes', 'yellow_line'],
         [1, 'IDB31', '800000031', 'Inside Borrower', null, null, null, 'لا'],
-        [2, 'IDB32', '800000032', 'Outside Borrower', null, null, null, 'نعم'],
+        [2, 'IDB32', '800000032', 'Outside Borrower', null, null, null, 'نعم*'],
     ]);
 
     $path = tempnam(sys_get_temp_dir(), 'borrower-yellow-line-').'.xlsx';
