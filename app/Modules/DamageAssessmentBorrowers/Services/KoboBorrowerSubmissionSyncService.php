@@ -34,9 +34,29 @@ class KoboBorrowerSubmissionSyncService
         return DB::transaction(function () use ($attributes, $payload): array {
             $sourceUuid = $attributes['source_uuid'] ?? null;
 
-            $borrower = filled($sourceUuid)
-                ? DamageAssessmentBorrower::query()->updateOrCreate(['source_uuid' => $sourceUuid], $attributes)
-                : DamageAssessmentBorrower::query()->create($attributes);
+            $sourceUuidBorrower = filled($sourceUuid)
+                ? DamageAssessmentBorrower::query()->where('source_uuid', $sourceUuid)->first()
+                : null;
+
+            $borrower = filled($attributes['borrower_id_number'] ?? null)
+                ? DamageAssessmentBorrower::query()
+                    ->where('borrower_id_number', $attributes['borrower_id_number'])
+                    ->first()
+                : null;
+
+            if ($borrower instanceof DamageAssessmentBorrower && $sourceUuidBorrower instanceof DamageAssessmentBorrower && ! $sourceUuidBorrower->is($borrower)) {
+                $sourceUuidBorrower->forceFill(['source_uuid' => null])->save();
+            }
+
+            if (! $borrower instanceof DamageAssessmentBorrower) {
+                $borrower = $sourceUuidBorrower;
+            }
+
+            if ($borrower instanceof DamageAssessmentBorrower) {
+                $borrower->fill($attributes)->save();
+            } else {
+                $borrower = DamageAssessmentBorrower::query()->create($attributes);
+            }
 
             $this->syncAttachments($borrower, $payload);
             $borrower->forceFill([

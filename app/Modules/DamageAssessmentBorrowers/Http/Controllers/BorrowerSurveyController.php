@@ -100,10 +100,22 @@ class BorrowerSurveyController extends Controller
         $validated = $this->applyFullDemolitionValuation($validated);
         $analysis = $riskAnalysis->analyze($validated);
 
-        $borrower = DamageAssessmentBorrower::query()->create(array_merge($validated, $analysis, [
+        $attributes = array_merge($validated, $analysis, [
             'submitted_by' => $request->user()->id,
             'submitted_by_name' => $request->user()->name,
-        ]));
+        ]);
+
+        $borrower = filled($validated['borrower_id_number'] ?? null)
+            ? DamageAssessmentBorrower::query()
+                ->where('borrower_id_number', $validated['borrower_id_number'])
+                ->first()
+            : null;
+
+        if ($borrower instanceof DamageAssessmentBorrower) {
+            $borrower->fill($attributes)->save();
+        } else {
+            $borrower = DamageAssessmentBorrower::query()->create($attributes);
+        }
 
         $borrower->load([
             'attachments',

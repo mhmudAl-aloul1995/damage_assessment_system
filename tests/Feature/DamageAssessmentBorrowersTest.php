@@ -154,6 +154,41 @@ it('stores borrower surveys through ajax and returns risk analysis', function ()
         ->and($borrower->loan_unit_floor_type)->toBe('repeated');
 });
 
+it('updates an existing borrower survey instead of duplicating the beneficiary', function () {
+    $role = Role::findOrCreate('Field Engineer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $payload = [
+        'borrower_name' => 'Original Borrower',
+        'borrower_id_number' => '900000002',
+        'is_borrower_alive' => true,
+        'employment_status' => 'working',
+        'loan_unit_damage_status' => 'minor',
+    ];
+
+    $this->actingAs($user)
+        ->postJson(route('damage-assessment-borrowers.store'), $payload)
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    $this->actingAs($user)
+        ->postJson(route('damage-assessment-borrowers.store'), array_merge($payload, [
+            'borrower_name' => 'Updated Borrower',
+            'employment_status' => 'not_working',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('borrower.borrower_name', 'Updated Borrower');
+
+    expect(DamageAssessmentBorrower::query()->where('borrower_id_number', '900000002')->count())->toBe(1);
+
+    $borrower = DamageAssessmentBorrower::query()->where('borrower_id_number', '900000002')->sole();
+
+    expect($borrower->borrower_name)->toBe('Updated Borrower')
+        ->and($borrower->employment_status)->toBe('not_working');
+});
+
 it('imports an uploaded borrower workbook through ajax', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
@@ -888,7 +923,7 @@ it('updates an existing borrower by identity instead of skipping it', function (
     }
 });
 
-it('prefers the existing source uuid record over another identity match during import', function () {
+it('prefers the existing borrower identity over another source uuid match during import', function () {
     $identityMatch = DamageAssessmentBorrower::query()->create([
         'source_uuid' => 'identity-match-old-uuid',
         'borrower_name' => 'Identity Match Borrower',
@@ -926,10 +961,11 @@ it('prefers the existing source uuid record over another identity match during i
         $summary = app(BorrowerSpreadsheetImportService::class)->import($path);
 
         expect($summary['updated'])->toBe(1)
-            ->and($identityMatch->refresh()->source_uuid)->toBe('identity-match-old-uuid')
-            ->and($sourceUuidMatch->refresh()->borrower_name)->toBe('Updated Source Uuid Borrower')
-            ->and($sourceUuidMatch->source_uuid)->toBe('uuid-owned-by-existing-row')
-            ->and($sourceUuidMatch->source_submission_id)->toBe(20);
+            ->and($identityMatch->refresh()->borrower_name)->toBe('Updated Source Uuid Borrower')
+            ->and($identityMatch->source_uuid)->toBe('uuid-owned-by-existing-row')
+            ->and($identityMatch->source_submission_id)->toBe(20)
+            ->and($sourceUuidMatch->refresh()->source_uuid)->toBeNull()
+            ->and($sourceUuidMatch->borrower_id_number)->toBe('9991');
     } finally {
         @unlink($path);
     }

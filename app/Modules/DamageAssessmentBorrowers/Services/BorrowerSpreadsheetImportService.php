@@ -709,18 +709,28 @@ class BorrowerSpreadsheetImportService
      */
     private function saveImportedBorrower(array $data): DamageAssessmentBorrower
     {
-        $borrower = null;
+        $sourceUuidBorrower = null;
 
         if (($data['source_uuid'] ?? '') !== '') {
-            $borrower = DamageAssessmentBorrower::query()
+            $sourceUuidBorrower = DamageAssessmentBorrower::query()
                 ->where('source_uuid', $data['source_uuid'])
                 ->first();
         }
 
-        if (! $borrower instanceof DamageAssessmentBorrower) {
-            $borrower = DamageAssessmentBorrower::query()
+        $borrower = ($data['borrower_id_number'] ?? '') !== ''
+            ? DamageAssessmentBorrower::query()
                 ->where('borrower_id_number', $data['borrower_id_number'])
-                ->firstOrNew();
+                ->first()
+            : null;
+
+        if ($borrower instanceof DamageAssessmentBorrower && $sourceUuidBorrower instanceof DamageAssessmentBorrower && ! $sourceUuidBorrower->is($borrower)) {
+            $sourceUuidBorrower->forceFill(['source_uuid' => null])->save();
+        }
+
+        if (! $borrower instanceof DamageAssessmentBorrower) {
+            $borrower = $sourceUuidBorrower instanceof DamageAssessmentBorrower
+                ? $sourceUuidBorrower
+                : new DamageAssessmentBorrower;
         }
 
         $borrower->fill($data);
