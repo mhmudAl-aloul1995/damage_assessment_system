@@ -812,13 +812,31 @@ class HeksKoboSubmissionSyncService
             }
         }
 
-        $description = $this->first($flatPayload, ['description', 'item_description', 'وصف البند', 'البند']);
-
-        if ($description !== '') {
+        if ($this->hasFilledScalarField($flatPayload, ['description', 'item_description'])
+            && $this->hasFilledScalarField($flatPayload, ['quantity', 'qty'])) {
             return [$flatPayload];
         }
 
         return $this->quantityRows($flatPayload, $service);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, string>  $fields
+     */
+    private function hasFilledScalarField(array $payload, array $fields): bool
+    {
+        foreach ($fields as $field) {
+            if (! array_key_exists($field, $payload) || ! filled($payload[$field]) || is_array($payload[$field])) {
+                continue;
+            }
+
+            if (! $this->isInvalidValue(trim((string) $payload[$field]))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

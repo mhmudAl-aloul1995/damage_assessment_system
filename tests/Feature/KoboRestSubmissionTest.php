@@ -996,6 +996,52 @@ test('kobo rest submission keeps all HEKS BOQ quantity fields when only some mat
         ->and($items->get('8.13')->description)->toBe('الكمية - البند 8.13');
 });
 
+test('kobo rest submission does not collapse BOQ quantity fields into one noisy description row', function () {
+    HeksBoqCatalogItem::query()->create([
+        'section' => 'Block work',
+        'item_code' => '3.2',
+        'description' => 'Concrete block 15 cm',
+        'unit' => 'M2',
+        'unit_price_ils' => 585,
+        'is_active' => true,
+    ]);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-boq',
+        'submission_uuid' => 'uuid:heks-boq-description-noise',
+        'payload' => [
+            '_uuid' => 'uuid:heks-boq-description-noise',
+            'meta_group/Code' => 'NOISEBOQ',
+            'description' => '3',
+            'sec_01/qty_1_1' => '3',
+            'sec_03/qty_3_2' => '1',
+        ],
+        'received_at' => now(),
+    ]);
+
+    $sync = app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    expect($sync['status'])->toBe('synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'NOISEBOQ')->sole();
+    $items = HeksBoqItem::query()
+        ->where('heks_beneficiary_id', $beneficiary->id)
+        ->orderBy('item_code')
+        ->get()
+        ->keyBy('item_code');
+
+    expect($items)->toHaveCount(2)
+        ->and($items->has('1.1'))->toBeTrue()
+        ->and((float) $items->get('1.1')->quantity)->toBe(3.0)
+        ->and($items->has('3.2'))->toBeTrue()
+        ->and((float) $items->get('3.2')->quantity)->toBe(1.0)
+        ->and(HeksBoqItem::query()
+            ->where('heks_beneficiary_id', $beneficiary->id)
+            ->whereNull('item_code')
+            ->where('description', '3')
+            ->exists())->toBeFalse();
+});
+
 test('kobo rest submission builds HEKS main BOQ rows from technical item code fields', function () {
     HeksBoqCatalogItem::query()->create([
         'section' => 'Block work',
