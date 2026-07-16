@@ -10,6 +10,7 @@ use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Maatwebsite\Excel\Facades\Excel;
 use Mockery\MockInterface;
@@ -507,6 +508,48 @@ it('can prune borrowers missing from the selected form number sheet', function (
 
         expect(DamageAssessmentBorrower::query()->orderBy('borrower_id_number')->pluck('borrower_id_number')->all())->toBe(['800000032', '800000099'])
             ->and($keptBorrower->refresh()->form_number)->toBe('IDB 31');
+    } finally {
+        @unlink($path);
+    }
+});
+
+it('can prune borrowers missing from column c identity numbers', function () {
+    DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB31',
+        'borrower_name' => 'Kept Borrower',
+        'borrower_id_number' => '800000031',
+        'is_borrower_alive' => true,
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB32',
+        'borrower_name' => 'Deleted Borrower',
+        'borrower_id_number' => '800000032',
+        'is_borrower_alive' => true,
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('inventory');
+    $sheet->fromArray([
+        ['ط§ظ„ط±ظ‚ظ…', 'ط±ظ‚ظ… ط§ظ„ط§ط³طھظ…ط§ط±ط©', 'ط±ظ‚ظ… ظ‡ظˆظٹط© ط§ظ„ظ…ظ‚طھط±ط¶', 'ط§ظ„ط§ط³ظ…'],
+        [1, 'IDB32', '800000031', 'Kept Borrower'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-identity-prune-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    try {
+        $exitCode = Artisan::call('borrowers:sync-form-numbers', [
+            'file' => $path,
+            '--sheet' => 'inventory',
+            '--delete-missing-from-sheet' => true,
+            '--delete-missing-by-identity' => true,
+        ]);
+
+        expect($exitCode)->toBe(0)
+            ->and(Artisan::output())->toContain('| Deleted borrowers    | 1')
+            ->and(DamageAssessmentBorrower::query()->pluck('borrower_id_number')->all())->toBe(['800000031']);
     } finally {
         @unlink($path);
     }

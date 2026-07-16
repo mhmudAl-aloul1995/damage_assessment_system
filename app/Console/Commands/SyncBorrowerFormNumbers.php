@@ -18,6 +18,8 @@ class SyncBorrowerFormNumbers extends Command
         {file : Absolute path to the Excel workbook containing form numbers}
         {--sheet= : Optional worksheet name. If omitted, all worksheets are scanned}
         {--delete-missing-from-sheet : Delete borrower records whose form number is not present in the selected sheet}
+        {--delete-missing-by=form_number : Compare missing borrowers by form_number or identity_number}
+        {--delete-missing-by-identity : Compare missing borrowers by identity number from column C}
         {--dry-run : Preview matches without updating the database}';
 
     /**
@@ -73,7 +75,7 @@ class SyncBorrowerFormNumbers extends Command
         }
 
         if ((bool) $this->option('delete-missing-from-sheet')) {
-            $summary['deleted'] = $this->deleteBorrowersMissingFromSheet($sheetFormNumbers);
+            $summary['deleted'] = $this->deleteBorrowersMissingFromSheet($sheetIdentityNumbers, $sheetFormNumbers);
         }
 
         $this->table(['Indicator', 'Count'], [
@@ -105,6 +107,9 @@ class SyncBorrowerFormNumbers extends Command
         $formColumn = $this->findColumn($headerRow, ['رقم الاستمارة']);
         $identityColumn = $this->findColumn($headerRow, ['رقم هوية المقترض', 'هوية المقترض']);
 
+        $formColumn ??= 'B';
+        $identityColumn ??= 'C';
+
         if ($formColumn === null) {
             $summary['skipped'] += max(count($rows) - 1, 0);
 
@@ -115,7 +120,7 @@ class SyncBorrowerFormNumbers extends Command
             $summary['rows']++;
 
             $formNumber = $this->text($row[$formColumn] ?? null);
-            $identityNumber = $identityColumn === null ? '' : $this->identity($row[$identityColumn] ?? null);
+            $identityNumber = $this->identity($row[$identityColumn] ?? null);
 
             if ($formNumber !== '') {
                 $sheetFormNumbers[$this->formNumberKey($formNumber)] = true;
@@ -158,24 +163,45 @@ class SyncBorrowerFormNumbers extends Command
     }
 
     /**
+     * @param  array<string, bool>  $sheetIdentityNumbers
      * @param  array<string, bool>  $sheetFormNumbers
      */
-    private function deleteBorrowersMissingFromSheet(array $sheetFormNumbers): int
+    private function deleteBorrowersMissingFromSheet(array $sheetIdentityNumbers, array $sheetFormNumbers): int
     {
-        if ($sheetFormNumbers === []) {
+        $deleteMissingBy = (bool) $this->option('delete-missing-by-identity')
+            ? 'identity_number'
+            : (string) $this->option('delete-missing-by');
+
+        if (! in_array($deleteMissingBy, ['form_number', 'identity_number'], true)) {
+            $this->error('The --delete-missing-by option must be form_number or identity_number.');
+
+            return 0;
+        }
+
+        if ($deleteMissingBy === 'identity_number' && $sheetIdentityNumbers === []) {
+            return 0;
+        }
+
+        if ($deleteMissingBy === 'form_number' && $sheetFormNumbers === []) {
             return 0;
         }
 
         $borrowers = DamageAssessmentBorrower::query()
             ->orderBy('borrower_name')
             ->get(['id', 'borrower_name', 'borrower_id_number', 'form_number'])
-            ->filter(fn (DamageAssessmentBorrower $borrower): bool => ! isset($sheetFormNumbers[$this->formNumberKey($borrower->form_number)]))
+            ->filter(fn (DamageAssessmentBorrower $borrower): bool => $deleteMissingBy === 'identity_number'
+                ? ! isset($sheetIdentityNumbers[$this->identity($borrower->borrower_id_number)])
+                : ! isset($sheetFormNumbers[$this->formNumberKey($borrower->form_number)])
+            )
             ->values();
 
         $count = $borrowers->count();
 
         if ($count > 0 && (bool) $this->option('dry-run')) {
-            $this->warn('Borrowers that would be deleted because their form number is missing from the sheet:');
+            $this->warn($deleteMissingBy === 'identity_number'
+                ? 'Borrowers that would be deleted because their identity number is missing from column C:'
+                : 'Borrowers that would be deleted because their form number is missing from the sheet:'
+            );
             $this->table(
                 ['ID', 'Borrower name', 'Identity number', 'Form number'],
                 $borrowers->map(fn (DamageAssessmentBorrower $borrower): array => [
@@ -189,7 +215,7 @@ class SyncBorrowerFormNumbers extends Command
 
         if (! (bool) $this->option('dry-run')) {
             DamageAssessmentBorrower::query()
-                ->whereIn('id', $borrowers->pluck('id'))
+                ->whereIn('id', $borrowers->pluck('id')->all())
                 ->delete();
         }
 
