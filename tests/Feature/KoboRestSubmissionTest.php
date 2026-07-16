@@ -76,6 +76,35 @@ test('kobo rest submission stores json payload', function () {
         ->and($borrower->attachments()->first()->url)->toBe('https://kf.example.test/media/damage.jpg');
 });
 
+test('kobo asset submissions can be fetched into stored rest submissions', function () {
+    config(['services.kobotoolbox.token' => 'api-token']);
+
+    Http::fake([
+        'https://kf.example.test/api/v2/assets/asset123/data/*' => Http::sequence()
+            ->push([
+                'results' => [
+                    ['_uuid' => 'uuid:iqrad-fetch-001', '_id' => 1, 'borrower_name' => 'First Borrower'],
+                ],
+                'next' => 'https://kf.example.test/api/v2/assets/asset123/data/?page=2',
+            ])
+            ->push([
+                'results' => [
+                    ['_uuid' => 'uuid:iqrad-fetch-002', '_id' => 2, 'borrower_name' => 'Second Borrower'],
+                ],
+                'next' => null,
+            ]),
+    ]);
+
+    $this->artisan('kobo:fetch-asset-submissions', [
+        'asset_uid' => 'asset123',
+        '--service' => 'iqrad',
+        '--base-url' => 'https://kf.example.test',
+    ])->assertSuccessful();
+
+    expect(KoboRestSubmission::query()->where('service_name', 'iqrad')->count())->toBe(2)
+        ->and(KoboRestSubmission::query()->where('submission_uuid', 'uuid:iqrad-fetch-001')->value('sync_status'))->toBe('pending');
+});
+
 test('kobo rest submission syncs HEKS main survey payload', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')
