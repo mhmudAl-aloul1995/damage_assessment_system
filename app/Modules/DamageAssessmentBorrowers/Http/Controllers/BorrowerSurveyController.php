@@ -86,9 +86,7 @@ class BorrowerSurveyController extends Controller
         ]);
 
         $reportType = $validated['report_type'] ?? 'compact';
-        $borrowers = $this->borrowersQuery($request)
-            ->latest()
-            ->get();
+        $borrowers = $this->exportBorrowers($request);
 
         return Excel::download(
             new BorrowerReportExport($borrowers, $reportType),
@@ -422,6 +420,89 @@ class BorrowerSurveyController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * @return Collection<int, DamageAssessmentBorrower>
+     */
+    private function exportBorrowers(Request $request): Collection
+    {
+        $damageStatus = $request->string('damage_status')->toString();
+
+        if (in_array($damageStatus, ['destroyed', 'partial', 'severe_uninhabitable', 'severe_habitable', 'minor'], true)) {
+            $borrowers = $this->visitedKoboBorrowersByDamageStatus($damageStatus, $request);
+
+            if ($borrowers !== null) {
+                return $borrowers;
+            }
+        }
+
+        return $this->borrowersQuery($request)
+            ->latest()
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, DamageAssessmentBorrower>|null
+     */
+    private function visitedKoboBorrowersByDamageStatus(string $damageStatus, Request $request): ?Collection
+    {
+        if (! Schema::hasTable('kobo_rest_submissions') || ! Schema::hasColumn('kobo_rest_submissions', 'damage_assessment_borrower_id')) {
+            return null;
+        }
+
+        $partialDamageStatuses = ['severe_uninhabitable', 'severe_habitable', 'minor'];
+        $rows = KoboRestSubmission::query()
+            ->whereNotNull('damage_assessment_borrower_id')
+            ->where('service_name', 'iqrad')
+            ->get(['payload', 'damage_assessment_borrower_id'])
+            ->filter(function (KoboRestSubmission $submission) use ($damageStatus, $partialDamageStatuses): bool {
+                $submissionDamageStatus = $this->koboPayloadDamageStatus($submission->payload ?? []);
+
+                if ($damageStatus === 'partial') {
+                    return in_array($submissionDamageStatus, $partialDamageStatuses, true);
+                }
+
+                return $submissionDamageStatus === $damageStatus;
+            });
+
+        $borrowerIds = $rows
+            ->pluck('damage_assessment_borrower_id')
+            ->filter()
+            ->map(fn (mixed $id): int => (int) $id)
+            ->values();
+
+        if ($borrowerIds->isEmpty()) {
+            return collect();
+        }
+
+        $borrowersById = DamageAssessmentBorrower::query()
+            ->whereIn('id', $borrowerIds->unique()->all())
+            ->get()
+            ->keyBy('id');
+
+        return $borrowerIds
+            ->map(fn (int $id): ?DamageAssessmentBorrower => $borrowersById->get($id))
+            ->filter(fn (?DamageAssessmentBorrower $borrower): bool => $borrower instanceof DamageAssessmentBorrower)
+            ->filter(fn (DamageAssessmentBorrower $borrower): bool => $this->matchesExportFilters($borrower, $request))
+            ->values();
+    }
+
+    private function matchesExportFilters(DamageAssessmentBorrower $borrower, Request $request): bool
+    {
+        if ($request->filled('risk_level') && $borrower->risk_level !== $request->string('risk_level')->toString()) {
+            return false;
+        }
+
+        if (! $request->filled('q')) {
+            return true;
+        }
+
+        $search = $request->string('q')->toString();
+
+        return str_contains((string) $borrower->borrower_name, $search)
+            || str_contains((string) $borrower->borrower_id_number, $search)
+            || str_contains((string) $borrower->phone_primary, $search);
     }
 
     /**

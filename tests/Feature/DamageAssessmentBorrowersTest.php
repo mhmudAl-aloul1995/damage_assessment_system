@@ -688,7 +688,7 @@ it('exports borrower report using the current filters', function () {
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    DamageAssessmentBorrower::query()->create([
+    $exportBorrower = DamageAssessmentBorrower::query()->create([
         'form_number' => 'IDB-EXPORT',
         'borrower_name' => 'Export Borrower',
         'borrower_id_number' => '820000001',
@@ -707,11 +707,27 @@ it('exports borrower report using the current filters', function () {
     ]);
 
     DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB-LOCAL-DESTROYED',
+        'borrower_name' => 'Local Destroyed Borrower',
+        'borrower_id_number' => '820000099',
+        'is_borrower_alive' => true,
+        'loan_unit_damage_status' => 'destroyed',
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
         'form_number' => 'IDB-SKIP',
         'borrower_name' => 'Partial Borrower',
         'borrower_id_number' => '820000002',
         'is_borrower_alive' => true,
         'loan_unit_damage_status' => 'minor',
+    ]);
+
+    KoboRestSubmission::query()->create([
+        'service_name' => 'iqrad',
+        'submission_uuid' => 'uuid-export-destroyed',
+        'payload' => ['group_lv9gw32/__007' => '1'],
+        'damage_assessment_borrower_id' => $exportBorrower->id,
+        'sync_status' => 'synced',
     ]);
 
     $this->actingAs($user)
