@@ -57,6 +57,9 @@ class DamageAssessmentController extends Controller
         $selectedNeighborhood = $request->filled('neighborhood')
             ? (string) $request->string('neighborhood')
             : '';
+        $selectedGovernorate = $request->filled('governorate')
+            ? (string) $request->string('governorate')
+            : '';
 
         $buildingQuery = Building::query();
         $this->applyDashboardMapFilters($buildingQuery, $request, '', 'end');
@@ -210,8 +213,9 @@ class DamageAssessmentController extends Controller
         ];
         $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
         $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
+        $governorates = $this->dashboardGovernorates();
         $neighborhoods = $this->dashboardNeighborhoods();
-        $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedNeighborhood');
+        $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedGovernorate', 'selectedNeighborhood');
 
         return View::make(
             'damage-assessment::dashboard.damageAssessment',
@@ -223,6 +227,7 @@ class DamageAssessmentController extends Controller
                 'roadFacilityStats',
                 'publicBuildingLayerUrl',
                 'roadFacilityLayerUrl',
+                'governorates',
                 'neighborhoods',
                 'dashboardFilters',
             )
@@ -2019,6 +2024,19 @@ class DamageAssessmentController extends Controller
             ->values();
     }
 
+    private function dashboardGovernorates(): Collection
+    {
+        return collect()
+            ->merge(Building::query()->whereNotNull('governorate')->where('governorate', '!=', '')->distinct()->pluck('governorate'))
+            ->merge(HousingUnit::query()->whereNotNull('governorate')->where('governorate', '!=', '')->distinct()->pluck('governorate'))
+            ->merge(PublicBuildingSurvey::query()->whereNotNull('governorate')->where('governorate', '!=', '')->distinct()->pluck('governorate'))
+            ->merge(RoadFacilitySurvey::query()->whereNotNull('governorate')->where('governorate', '!=', '')->distinct()->pluck('governorate'))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
     private function dashboardDateRange(Request $request): array
     {
         $requestedPeriod = (string) $request->string('period');
@@ -2103,6 +2121,10 @@ class DamageAssessmentController extends Controller
             $query->whereDate('building_submit_date', '<=', $endDate);
         }
 
+        if ($request->filled('governorate')) {
+            $query->where('governorate', (string) $request->string('governorate'));
+        }
+
         if ($request->filled('neighborhood')) {
             $query->whereIn('parentglobalid', Building::query()
                 ->select('globalid')
@@ -2116,6 +2138,10 @@ class DamageAssessmentController extends Controller
 
         if ($request->filled('neighborhood')) {
             $query->where('buildings.neighborhood', (string) $request->string('neighborhood'));
+        }
+
+        if ($request->filled('governorate')) {
+            $query->where('housing_units.governorate', (string) $request->string('governorate'));
         }
 
         if ($startDate !== null && $endDate !== null) {
@@ -2146,6 +2172,10 @@ class DamageAssessmentController extends Controller
 
         if ($request->filled('neighborhood')) {
             $query->where($tablePrefix.'neighborhood', (string) $request->string('neighborhood'));
+        }
+
+        if ($request->filled('governorate')) {
+            $query->where($tablePrefix.'governorate', (string) $request->string('governorate'));
         }
 
         if ($startDate !== null) {

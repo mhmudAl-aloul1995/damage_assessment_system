@@ -567,6 +567,25 @@
 			<div class="damage-dashboard-toolbar-actions">
 
 
+				<div class="toolbar-control-group toolbar-governorate-group">
+					<div class="toolbar-neighborhood-wrap">
+						<select id="dashboard_toolbar_governorate"
+							class="form-select form-select-sm toolbar-neighborhood-select" data-control="select2"
+							data-placeholder="{{ __('ui.damage_dashboard.select_governorate') }}" data-allow-clear="true">
+							<option value="">{{ __('ui.damage_dashboard.all_governorates') }}</option>
+							@foreach ($governorates as $governorate)
+								<option value="{{ $governorate }}"
+									@selected($dashboardFilters['selectedGovernorate'] === $governorate)>
+									{{ $governorate }}
+								</option>
+							@endforeach
+						</select>
+					</div>
+					<span class="toolbar-label">{{ __('ui.damage_dashboard.period_by_governorate') }}:</span>
+				</div>
+
+				<div class="separator separator-vertical h-30px d-none d-md-block"></div>
+
 				<div class="toolbar-control-group toolbar-neighborhood-group">
 					<div class="toolbar-neighborhood-wrap">
 						<select id="dashboard_toolbar_neighborhood"
@@ -3129,6 +3148,7 @@
 				period: period,
 				from_date: fromDate,
 				to_date: toDate,
+				governorate: $('#dashboard_toolbar_governorate').val() || '',
 				neighborhood: $('#dashboard_toolbar_neighborhood').val() || ''
 			};
 		}
@@ -3139,6 +3159,7 @@
 			data.period = filters.period;
 			data.from_date = filters.from_date;
 			data.to_date = filters.to_date;
+			data.governorate = filters.governorate;
 			data.neighborhood = filters.neighborhood;
 		}
 
@@ -3165,6 +3186,12 @@
 				url.searchParams.delete('to_date');
 			}
 
+			if (filters.governorate) {
+				url.searchParams.set('governorate', filters.governorate);
+			} else {
+				url.searchParams.delete('governorate');
+			}
+
 			if (filters.neighborhood) {
 				url.searchParams.set('neighborhood', filters.neighborhood);
 			} else {
@@ -3180,6 +3207,10 @@
 
 			if (filters.neighborhood) {
 				clauses.push("neighborhood = '" + String(filters.neighborhood).replace(/'/g, "''") + "'");
+			}
+
+			if (filters.governorate) {
+				clauses.push("governorate = '" + String(filters.governorate).replace(/'/g, "''") + "'");
 			}
 
 			if (filters.from_date) {
@@ -3217,6 +3248,11 @@
 			}
 
 			$('#dashboard_toolbar_neighborhood').on('change', function () {
+				notifyDashboardToolbarChanged();
+				reloadDashboardWithToolbarFilters();
+			});
+
+			$('#dashboard_toolbar_governorate').on('change', function () {
 				notifyDashboardToolbarChanged();
 				reloadDashboardWithToolbarFilters();
 			});
@@ -3340,7 +3376,16 @@
 		const latestStatsUrl = @json(route('damageAssessment.latest-stats', [], false));
 
 		setInterval(function () {
-			fetch(latestStatsUrl, {
+			const latestStatsRequestUrl = new URL(latestStatsUrl, window.location.origin);
+			const latestStatsFilters = getDashboardToolbarFilters();
+
+			Object.keys(latestStatsFilters).forEach(function (key) {
+				if (latestStatsFilters[key]) {
+					latestStatsRequestUrl.searchParams.set(key, latestStatsFilters[key]);
+				}
+			});
+
+			fetch(latestStatsRequestUrl.toString(), {
 				headers: {
 					'Accept': 'application/json'
 				},

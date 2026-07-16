@@ -35,6 +35,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
     PublicBuildingSurvey::query()->create([
         'objectid' => 1001,
         'building_name' => 'Clinic A',
+        'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => Carbon::today()->toDateString(),
@@ -49,6 +50,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
     PublicBuildingSurvey::query()->create([
         'objectid' => 1002,
         'building_name' => 'Clinic B',
+        'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => Carbon::today()->toDateString(),
@@ -58,6 +60,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
     RoadFacilitySurvey::query()->create([
         'objectid' => 2001,
         'str_name' => 'Road A',
+        'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => Carbon::today()->toDateString(),
@@ -73,6 +76,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
     RoadFacilitySurvey::query()->create([
         'objectid' => 2003,
         'str_name' => 'Road C',
+        'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => Carbon::today()->toDateString(),
@@ -82,6 +86,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
     RoadFacilitySurvey::query()->create([
         'objectid' => 2002,
         'str_name' => 'Road B',
+        'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => Carbon::today()->toDateString(),
@@ -105,7 +110,10 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertSee('Obstacles')
         ->assertSee('Buried Bodies')
         ->assertSee('Period by neighborhood')
+        ->assertSee('Period by governorate')
         ->assertSee('Filter By')
+        ->assertSee('Select governorate')
+        ->assertSee('All governorates')
         ->assertSee('Select neighborhood')
         ->assertSee('All neighborhoods')
         ->assertSee('Date range')
@@ -205,6 +213,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
         'objectid' => 501,
         'globalid' => 'building-rimal',
         'building_name' => 'Home A',
+        'governorate' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => '2026-01-01',
         'editdate' => $today,
@@ -215,6 +224,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
         'objectid' => 502,
         'globalid' => 'building-sabra',
         'building_name' => 'Home B',
+        'governorate' => 'North Gaza',
         'neighborhood' => 'Sabra',
         'creationdate' => '2026-01-01',
         'editdate' => $today,
@@ -225,6 +235,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
         'objectid' => 601,
         'globalid' => 'unit-rimal',
         'parentglobalid' => 'building-rimal',
+        'governorate' => 'Gaza',
         'unit_damage_status' => 'fully_damaged2',
         'creationdate' => '2026-01-01',
         'building_submit_date' => $today,
@@ -235,6 +246,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
         'objectid' => 602,
         'globalid' => 'unit-sabra',
         'parentglobalid' => 'building-sabra',
+        'governorate' => 'North Gaza',
         'unit_damage_status' => 'partially_damaged2',
         'creationdate' => '2026-01-01',
         'building_submit_date' => $today,
@@ -244,6 +256,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
     PublicBuildingSurvey::query()->create([
         'objectid' => 1001,
         'building_name' => 'Clinic A',
+        'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => $today,
@@ -253,6 +266,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
     PublicBuildingSurvey::query()->create([
         'objectid' => 1002,
         'building_name' => 'Clinic B',
+        'governorate' => 'North Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Sabra',
         'creationdate' => $today,
@@ -262,6 +276,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
     RoadFacilitySurvey::query()->create([
         'objectid' => 2001,
         'str_name' => 'Road A',
+        'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'creationdate' => $today,
@@ -271,6 +286,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
     RoadFacilitySurvey::query()->create([
         'objectid' => 2002,
         'str_name' => 'Road B',
+        'governorate' => 'North Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Sabra',
         'creationdate' => $today,
@@ -278,6 +294,7 @@ it('filters dashboard map tables by period and neighborhood', function () {
     ]);
 
     $filters = [
+        'governorate' => 'Gaza',
         'neighborhood' => 'Rimal',
         'from_date' => $today,
         'to_date' => $today,
@@ -407,6 +424,97 @@ it('filters dashboard housing totals by the building submit date', function () {
                 && (int) $unitStats['fully_damaged'] === 1
                 && (int) $unitStats['partially_damaged'] === 0;
         });
+});
+
+it('filters the main dashboard statistics by governorate', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    Building::query()->create([
+        'objectid' => 10001,
+        'globalid' => 'gaza-building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'governorate' => 'Gaza',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 10002,
+        'globalid' => 'north-building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'partially_damaged',
+        'governorate' => 'North Gaza',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 11001,
+        'globalid' => 'gaza-unit',
+        'unit_damage_status' => 'fully_damaged2',
+        'governorate' => 'Gaza',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 11002,
+        'globalid' => 'north-unit',
+        'unit_damage_status' => 'partially_damaged2',
+        'governorate' => 'North Gaza',
+    ]);
+
+    PublicBuildingSurvey::query()->create([
+        'objectid' => 12001,
+        'building_name' => 'Gaza Clinic',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'governorate' => 'Gaza',
+    ]);
+
+    PublicBuildingSurvey::query()->create([
+        'objectid' => 12002,
+        'building_name' => 'North Clinic',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'governorate' => 'North Gaza',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 13001,
+        'str_name' => 'Gaza Road',
+        'field_status' => 'COMPLETED',
+        'road_damage_level' => 'severe',
+        'governorate' => 'Gaza',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 13002,
+        'str_name' => 'North Road',
+        'field_status' => 'COMPLETED',
+        'road_damage_level' => 'severe',
+        'governorate' => 'North Gaza',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index', ['governorate' => 'Gaza']))
+        ->assertOk()
+        ->assertViewHas('dashboardFilters', fn (array $filters): bool => $filters['selectedGovernorate'] === 'Gaza')
+        ->assertViewHas('buildingStats', function (array $buildingStats): bool {
+            return (int) $buildingStats['completed'] === 1
+                && (int) $buildingStats['fully_damaged'] === 1
+                && (int) $buildingStats['partially_damaged'] === 0;
+        })
+        ->assertViewHas('unitStats', function (array $unitStats): bool {
+            return (int) $unitStats['total_units'] === 1
+                && (int) $unitStats['fully_damaged'] === 1
+                && (int) $unitStats['partially_damaged'] === 0;
+        })
+        ->assertViewHas('publicBuildingStats', fn (array $stats): bool => $stats['total_surveys'] === 1)
+        ->assertViewHas('roadFacilityStats', fn (array $stats): bool => $stats['total_surveys'] === 1);
 });
 
 it('returns latest dashboard stats as json', function () {
