@@ -517,23 +517,13 @@ class BorrowerSurveyController extends Controller
         $lookup = $this->flattenPayload($payload);
         $value = $lookup['loan_unit_damage_status']
             ?? $lookup['damage_status']
+            ?? $lookup['group_lv9gw32/__007']
+            ?? $lookup['__007']
             ?? $lookup['الوضع الانشائي للوحدة السكنية المستهدفة بالقرض']
             ?? $lookup['المعلومات الفنية للوحدة المستهدفة / الوضع الانشائي للوحدة السكنية المستهدفة بالقرض']
             ?? null;
 
         if ($value === null || is_array($value)) {
-            foreach ($lookup as $candidate) {
-                if ($candidate === null || is_array($candidate)) {
-                    continue;
-                }
-
-                $damageStatus = $this->normalizeKoboDamageStatus((string) $candidate);
-
-                if ($damageStatus !== null) {
-                    return $damageStatus;
-                }
-            }
-
             return null;
         }
 

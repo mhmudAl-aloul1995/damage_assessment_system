@@ -189,6 +189,8 @@ class KoboBorrowerSubmissionSyncService
         $value = $this->text($this->mappedValue($payload, $fieldMap, 'loan_unit_damage_status', [
             'loan_unit_damage_status',
             'damage_status',
+            'group_lv9gw32/__007',
+            '__007',
             'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض',
             'المعلومات الفنية للوحدة المستهدفة / الوضع الانشائي للوحدة السكنية المستهدفة بالقرض',
         ]));
