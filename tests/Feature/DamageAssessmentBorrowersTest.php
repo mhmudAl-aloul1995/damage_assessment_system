@@ -409,7 +409,7 @@ it('lists borrower surveys as json rows', function () {
         'submission_uuid' => 'uuid-borrower-visited-001',
         'payload' => [
             'borrower_name' => 'Mona Borrower',
-            'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض' => 'هدم كلي',
+            'group_lv9gw32' => ['__007' => '1'],
         ],
         'damage_assessment_borrower_id' => $visitedBorrower->id,
         'sync_status' => 'synced',
@@ -420,7 +420,7 @@ it('lists borrower surveys as json rows', function () {
         'submission_uuid' => 'uuid-borrower-visited-002',
         'payload' => [
             'borrower_name' => 'Mona Borrower',
-            'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض' => 'متضرر أضرار طفيفة',
+            'group_lv9gw32' => ['__007' => '4'],
         ],
         'damage_assessment_borrower_id' => $visitedBorrower->id,
         'sync_status' => 'synced',

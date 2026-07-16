@@ -545,10 +545,10 @@ class BorrowerSurveyController extends Controller
         $value = trim($value);
 
         return match ($value) {
-            'هدم كلي', 'destroyed' => 'destroyed',
-            'متضرر بليغ غير صالح للسكن', 'severe_uninhabitable' => 'severe_uninhabitable',
-            'متضرر بليغ صالح للسكن', 'severe_habitable' => 'severe_habitable',
-            'متضرر أضرار طفيفة', 'أضرار طفيفة', 'minor' => 'minor',
+            '1', 'هدم كلي', 'destroyed' => 'destroyed',
+            '2', 'متضرر بليغ غير صالح للسكن', 'severe_uninhabitable' => 'severe_uninhabitable',
+            '3', 'متضرر بليغ صالح للسكن', 'severe_habitable' => 'severe_habitable',
+            '4', 'متضرر أضرار طفيفة', 'أضرار طفيفة', 'minor' => 'minor',
             default => null,
         };
     }

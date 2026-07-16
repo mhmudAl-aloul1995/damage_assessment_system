@@ -14,10 +14,14 @@ class KoboBorrowerSubmissionSyncService
      */
     private const DAMAGE_STATUSES = [
         'هدم كلي' => 'destroyed',
+        '1' => 'destroyed',
         'متضرر بليغ غير صالح للسكن' => 'severe_uninhabitable',
+        '2' => 'severe_uninhabitable',
         'متضرر بليغ صالح للسكن' => 'severe_habitable',
+        '3' => 'severe_habitable',
         'متضرر أضرار طفيفة' => 'minor',
         'أضرار طفيفة' => 'minor',
+        '4' => 'minor',
         'destroyed' => 'destroyed',
         'severe_uninhabitable' => 'severe_uninhabitable',
         'severe_habitable' => 'severe_habitable',

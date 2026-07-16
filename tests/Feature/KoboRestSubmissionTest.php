@@ -1307,7 +1307,7 @@ test('kobo rest submission falls back to form number when borrower identity diff
             'رقم الاستمارة ' => 'IDB 303',
             'borrower_name' => 'Visited Borrower',
             'borrower_id_number' => '922435423',
-            'الوضع الانشائي للوحدة السكنية المستهدفة بالقرض' => 'هدم كلي',
+            'group_lv9gw32' => ['__007' => '1'],
         ])
         ->assertCreated()
         ->assertJsonPath('sync_status', 'synced');
