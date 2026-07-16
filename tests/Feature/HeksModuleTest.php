@@ -527,6 +527,51 @@ it('shows imported HEKS BOQ items as read only on beneficiary details', function
         ->assertSee("delete-boq-{$editableItem->id}", false);
 });
 
+it('renders HEKS BOQ pricing PDF header with full beneficiary name and prominent code', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'A123',
+        'name' => 'احمد',
+        'identity_number' => '123456789',
+        'raw_data' => [
+            'heks-main' => [
+                'اسم رب الأسرة' => 'محمد احمد محمود',
+            ],
+        ],
+    ]);
+
+    $html = view('heks::pdf.boq-pricing', [
+        'beneficiary' => $beneficiary,
+        'pricingRows' => collect([
+            [
+                'section' => 'اعمال البلوك',
+                'item_code' => '3.2',
+                'description' => 'توريد و بناء بلوك اسمنتي',
+                'unit' => 'M2',
+                'quantity' => 1,
+                'unit_price_ils' => 585,
+                'total_price_ils' => 585,
+                'notes' => null,
+            ],
+        ]),
+        'pricingSections' => collect([
+            [
+                'section' => 'اعمال البلوك',
+                'items_count' => 1,
+                'priced_count' => 1,
+                'total' => 585,
+            ],
+        ]),
+        'boqTotal' => 585,
+        'generatedAt' => '2026-07-16 10:00',
+    ])->render();
+
+    expect($html)
+        ->toContain('A123')
+        ->toContain('محمد احمد محمود')
+        ->toContain('عدد الأقسام')
+        ->not->toContain('قيمة المنحة');
+});
+
 it('manages the HEKS BOQ pricing catalog', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

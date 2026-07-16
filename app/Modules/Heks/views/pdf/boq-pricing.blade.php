@@ -12,6 +12,9 @@
         .brand { min-width: 260px; }
         .eyebrow { color: #1b84ff; font-weight: 800; font-size: 11px; margin-bottom: 4px; }
         h1 { margin: 0 0 6px; color: #0f172a; font-size: 24px; font-weight: 900; }
+        .beneficiary-heading { display: flex; align-items: center; justify-content: flex-start; gap: 10px; flex-wrap: wrap; }
+        .beneficiary-code { direction: ltr; display: inline-flex; align-items: center; justify-content: center; min-width: 92px; border: 1px solid rgba(27, 132, 255, .25); border-radius: 10px; background: #edf6ff; color: #1b84ff; padding: 6px 10px; font-size: 22px; font-weight: 900; }
+        .beneficiary-name { margin: 0; color: #0f172a; font-size: 22px; font-weight: 900; }
         .meta { color: #64748b; font-size: 11px; }
         .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
         .card { border: 1px solid #e5eaf2; border-radius: 10px; padding: 10px 12px; background: #fbfdff; }
@@ -36,6 +39,26 @@
     </style>
 </head>
 <body>
+    @php
+        $rawValues = collect($beneficiary->raw_data ?? [])
+            ->filter(fn ($section) => is_array($section))
+            ->flatMap(fn ($section) => $section);
+        $nameCandidates = collect([
+            $beneficiary->name,
+            $rawValues->get('beneficiary_name'),
+            $rawValues->get('Name'),
+            $rawValues->get('اسم رب الأسرة'),
+            $rawValues->get('اسم رب الأسرة:'),
+            $rawValues->get('اسم المستفيد'),
+            $rawValues->get('اسم الشخص المقابل'),
+        ])
+            ->map(fn ($value) => trim((string) $value))
+            ->filter();
+        $displayName = $nameCandidates
+            ->sortByDesc(fn ($value) => count(preg_split('/\s+/u', $value, -1, PREG_SPLIT_NO_EMPTY) ?: []))
+            ->first() ?: '-';
+    @endphp
+
     <main class="paper">
         <header class="header">
             <div class="brand">
@@ -50,7 +73,10 @@
             </div>
             <div class="brand">
                 <div class="eyebrow">بيانات المستفيد</div>
-                <h1 style="font-size: 18px;">{{ $beneficiary->name ?: '-' }}</h1>
+                <div class="beneficiary-heading">
+                    <span class="beneficiary-code">{{ $beneficiary->code ?: '-' }}</span>
+                    <h2 class="beneficiary-name">{{ $displayName }}</h2>
+                </div>
                 <div class="meta">
                     @if ($beneficiary->phone)
                         جوال: {{ $beneficiary->phone }}
@@ -72,8 +98,8 @@
                 <div class="card-value">{{ number_format($pricingRows->count()) }}</div>
             </div>
             <div class="card">
-                <div class="card-label">قيمة المنحة</div>
-                <div class="card-value">{{ $beneficiary->grant_amount ? number_format((float) $beneficiary->grant_amount, 2).' ILS' : '-' }}</div>
+                <div class="card-label">عدد الأقسام</div>
+                <div class="card-value">{{ number_format($pricingSections->count()) }}</div>
             </div>
         </section>
 
