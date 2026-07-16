@@ -165,7 +165,24 @@ class SyncBorrowerFormNumbers extends Command
             ->where('borrower_id_number', '<>', '')
             ->whereNotIn('borrower_id_number', $identityNumbers);
 
-        $count = (clone $query)->count();
+        $borrowers = (clone $query)
+            ->orderBy('borrower_name')
+            ->get(['id', 'borrower_name', 'borrower_id_number', 'form_number']);
+
+        $count = $borrowers->count();
+
+        if ($count > 0 && (bool) $this->option('dry-run')) {
+            $this->warn('Borrowers that would be deleted because they are missing from the sheet:');
+            $this->table(
+                ['ID', 'Borrower name', 'Identity number', 'Form number'],
+                $borrowers->map(fn (DamageAssessmentBorrower $borrower): array => [
+                    $borrower->id,
+                    $borrower->borrower_name,
+                    $borrower->borrower_id_number,
+                    $borrower->form_number,
+                ])->all()
+            );
+        }
 
         if (! (bool) $this->option('dry-run')) {
             $query->delete();

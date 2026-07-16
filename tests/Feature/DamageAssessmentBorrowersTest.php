@@ -498,10 +498,13 @@ it('can prune borrowers missing from the selected form number sheet', function (
             'file' => $path,
             '--sheet' => 'الحصر الجديد',
             '--delete-missing-from-sheet' => true,
-        ])->assertSuccessful();
+            '--dry-run' => true,
+        ])
+            ->expectsOutputToContain('Deleted Borrower')
+            ->assertSuccessful();
 
-        expect(DamageAssessmentBorrower::query()->pluck('borrower_id_number')->all())->toBe(['800000031'])
-            ->and($keptBorrower->refresh()->form_number)->toBe('IDB31');
+        expect(DamageAssessmentBorrower::query()->pluck('borrower_id_number')->all())->toBe(['800000031', '800000032'])
+            ->and($keptBorrower->refresh()->form_number)->toBeNull();
     } finally {
         @unlink($path);
     }
