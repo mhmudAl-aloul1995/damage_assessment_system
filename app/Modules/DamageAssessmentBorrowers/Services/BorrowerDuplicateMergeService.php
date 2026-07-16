@@ -58,7 +58,7 @@ class BorrowerDuplicateMergeService
     /**
      * @param  Collection<int, DamageAssessmentBorrower>  $borrowers
      */
-    private function mergeBorrowerGroup(Collection $borrowers): int
+    public function mergeBorrowerGroup(Collection $borrowers): int
     {
         /** @var DamageAssessmentBorrower $keeper */
         $keeper = $borrowers->first();

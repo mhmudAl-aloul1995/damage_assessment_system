@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
+use App\Modules\DamageAssessmentBorrowers\Services\BorrowerDuplicateMergeService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -20,6 +22,7 @@ class SyncBorrowerFormNumbers extends Command
         {--delete-missing-from-sheet : Delete borrower records whose form number is not present in the selected sheet}
         {--delete-missing-by=form_number : Compare missing borrowers by form_number or identity_number}
         {--delete-missing-by-identity : Compare missing borrowers by identity number from column C}
+        {--dedupe-form-numbers : Keep one borrower per form number after applying the selected sheet}
         {--dry-run : Preview matches without updating the database}';
 
     /**
@@ -62,6 +65,7 @@ class SyncBorrowerFormNumbers extends Command
             'missing' => 0,
             'skipped' => 0,
             'deleted' => 0,
+            'deduped' => 0,
         ];
         $sheetIdentityNumbers = [];
         $sheetFormNumbers = [];
@@ -78,6 +82,10 @@ class SyncBorrowerFormNumbers extends Command
             $summary['deleted'] = $this->deleteBorrowersMissingFromSheet($sheetIdentityNumbers, $sheetFormNumbers);
         }
 
+        if ((bool) $this->option('dedupe-form-numbers')) {
+            $summary['deduped'] = $this->dedupeBorrowersByFormNumber($sheetFormNumbers);
+        }
+
         $this->table(['Indicator', 'Count'], [
             ['Scanned rows', $summary['rows']],
             ['Matched borrowers', $summary['matched']],
@@ -86,6 +94,7 @@ class SyncBorrowerFormNumbers extends Command
             ['Missing borrowers', $summary['missing']],
             ['Skipped rows', $summary['skipped']],
             ['Deleted borrowers', $summary['deleted']],
+            ['Deduped borrowers', $summary['deduped']],
         ]);
 
         $this->info((bool) $this->option('dry-run')
@@ -96,7 +105,7 @@ class SyncBorrowerFormNumbers extends Command
     }
 
     /**
-     * @param  array{rows: int, matched: int, updated: int, unchanged: int, missing: int, skipped: int, deleted: int}  $summary
+     * @param  array{rows: int, matched: int, updated: int, unchanged: int, missing: int, skipped: int, deleted: int, deduped: int}  $summary
      * @param  array<string, bool>  $sheetIdentityNumbers
      * @param  array<string, bool>  $sheetFormNumbers
      */
@@ -220,6 +229,51 @@ class SyncBorrowerFormNumbers extends Command
         }
 
         return $count;
+    }
+
+    /**
+     * @param  array<string, bool>  $sheetFormNumbers
+     */
+    private function dedupeBorrowersByFormNumber(array $sheetFormNumbers): int
+    {
+        if ($sheetFormNumbers === []) {
+            return 0;
+        }
+
+        $groups = DamageAssessmentBorrower::query()
+            ->whereNotNull('form_number')
+            ->where('form_number', '<>', '')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->get()
+            ->filter(fn (DamageAssessmentBorrower $borrower): bool => isset($sheetFormNumbers[$this->formNumberKey($borrower->form_number)]))
+            ->groupBy(fn (DamageAssessmentBorrower $borrower): string => $this->formNumberKey($borrower->form_number))
+            ->filter(fn (Collection $borrowers): bool => $borrowers->count() > 1);
+
+        $duplicates = $groups
+            ->flatMap(fn (Collection $borrowers): Collection => $borrowers->slice(1))
+            ->values();
+
+        if ($duplicates->isNotEmpty() && (bool) $this->option('dry-run')) {
+            $this->warn('Duplicate borrowers that would be merged by form number:');
+            $this->table(
+                ['ID', 'Borrower name', 'Identity number', 'Form number'],
+                $duplicates->map(fn (DamageAssessmentBorrower $borrower): array => [
+                    $borrower->id,
+                    $borrower->borrower_name,
+                    $borrower->borrower_id_number,
+                    $borrower->form_number,
+                ])->all()
+            );
+        }
+
+        if (! (bool) $this->option('dry-run')) {
+            $mergeService = app(BorrowerDuplicateMergeService::class);
+
+            $groups->each(fn (Collection $borrowers): int => $mergeService->mergeBorrowerGroup($borrowers->values()));
+        }
+
+        return $duplicates->count();
     }
 
     /**

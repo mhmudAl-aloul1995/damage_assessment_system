@@ -555,6 +555,55 @@ it('can prune borrowers missing from column c identity numbers', function () {
     }
 });
 
+it('can enforce the selected sheet by form number and remove duplicates', function () {
+    DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB31',
+        'borrower_name' => 'Kept Borrower',
+        'borrower_id_number' => '800000031',
+        'is_borrower_alive' => true,
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB 31',
+        'borrower_name' => 'Duplicate Borrower',
+        'borrower_id_number' => '800000099',
+        'is_borrower_alive' => true,
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB32',
+        'borrower_name' => 'Missing Form Borrower',
+        'borrower_id_number' => '800000032',
+        'is_borrower_alive' => true,
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('inventory');
+    $sheet->fromArray([
+        ['id', 'form_number', 'identity_number', 'name'],
+        [1, 'idb31', '800000031', 'Kept Borrower'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-form-enforce-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    try {
+        $exitCode = Artisan::call('borrowers:sync-form-numbers', [
+            'file' => $path,
+            '--sheet' => 'inventory',
+            '--delete-missing-from-sheet' => true,
+            '--dedupe-form-numbers' => true,
+        ]);
+
+        expect($exitCode)->toBe(0)
+            ->and(DamageAssessmentBorrower::query()->count())->toBe(1)
+            ->and(str_replace(' ', '', (string) DamageAssessmentBorrower::query()->first()?->form_number))->toBe('IDB31');
+    } finally {
+        @unlink($path);
+    }
+});
+
 it('exports borrower report using the current filters', function () {
     Excel::fake();
 
