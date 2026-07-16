@@ -471,6 +471,42 @@ class HeksController extends Controller
         ]);
     }
 
+    public function exportPricingPdf(HeksBeneficiary $beneficiary): PdfBuilder
+    {
+        $this->authorizeAccess();
+        $beneficiary->load(['boqItems' => fn ($query) => $query->whereNull('heks_follow_up_id')->orderBy('section')->orderBy('item_code')->orderBy('id')]);
+
+        $pricingRows = $this->heksPricingRows($beneficiary)
+            ->filter(fn (array $row): bool => (float) $row['quantity'] > 0)
+            ->values();
+
+        $pricingSections = $pricingRows
+            ->groupBy('section')
+            ->map(fn (\Illuminate\Support\Collection $rows, string $section): array => [
+                'section' => $section !== '' ? $section : 'بدون قسم',
+                'items_count' => $rows->count(),
+                'priced_count' => $rows->filter(fn (array $row): bool => (float) $row['quantity'] > 0)->count(),
+                'total' => (float) $rows->sum('total_price_ils'),
+            ])
+            ->values();
+
+        $filenameCode = preg_replace('/[^A-Za-z0-9_-]+/', '-', (string) ($beneficiary->code ?: $beneficiary->id));
+
+        return Pdf::view('heks::pdf.boq-pricing', [
+            'beneficiary' => $beneficiary,
+            'pricingRows' => $pricingRows,
+            'pricingSections' => $pricingSections,
+            'boqTotal' => (float) $pricingRows->sum('total_price_ils'),
+            'generatedAt' => now()->format('Y-m-d H:i'),
+        ])
+            ->format('a4')
+            ->landscape()
+            ->name("heks-boq-{$filenameCode}.pdf")
+            ->withBrowsershot(function (Browsershot $browsershot): void {
+                app(BrowsershotConfiguration::class)->apply($browsershot);
+            });
+    }
+
     public function updateBoqPricing(UpdateHeksBoqPricingRequest $request, HeksBeneficiary $beneficiary): RedirectResponse
     {
         $items = collect($request->validated('items') ?? [])

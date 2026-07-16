@@ -49,6 +49,7 @@
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('heks.beneficiaries.edit', $beneficiary) }}" class="btn btn-light">بيانات المستفيد</a>
                     <a href="{{ route('heks.beneficiaries') }}" class="btn btn-light-primary">رجوع</a>
+                    <a href="{{ route('heks.beneficiaries.pricing.pdf', $beneficiary) }}" class="btn btn-light-success" target="_blank" rel="noopener">تصدير PDF</a>
                     <button type="submit" form="heksPricingForm" class="btn btn-primary">حفظ التعديلات</button>
                 </div>
             </div>

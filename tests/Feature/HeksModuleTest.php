@@ -250,6 +250,8 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertSee('heksPricingForm', false)
             ->assertSee('pricing-table', false)
             ->assertSee('pricingSearchInput', false)
+            ->assertSee(route('heks.beneficiaries.pricing.pdf', $beneficiary), false)
+            ->assertSee('تصدير PDF')
             ->assertSee('عرض البنود المسعّرة فقط')
             ->assertSee('توريد و بناء بلوك اسمنتي');
 
@@ -271,6 +273,36 @@ it('imports and manages the HEKS operational workbook', function () {
             ->assertRedirect(route('heks.beneficiaries.pricing', $beneficiary));
 
         expect((float) HeksBoqItem::query()->whereNull('heks_follow_up_id')->where('description', 'توريد و بناء بلوك اسمنتي')->value('total_price_ils'))->toBe(2440.0);
+
+        $pricingPdfHtml = view('heks::pdf.boq-pricing', [
+            'beneficiary' => $beneficiary->refresh(),
+            'pricingRows' => collect([
+                [
+                    'section' => 'اعمال البلوك',
+                    'item_code' => '3.1',
+                    'description' => 'توريد و بناء بلوك اسمنتي',
+                    'unit' => 'M2',
+                    'quantity' => 4,
+                    'unit_price_ils' => 610,
+                    'total_price_ils' => 2440,
+                    'notes' => null,
+                ],
+            ]),
+            'pricingSections' => collect([
+                [
+                    'section' => 'اعمال البلوك',
+                    'items_count' => 1,
+                    'priced_count' => 1,
+                    'total' => 2440,
+                ],
+            ]),
+            'boqTotal' => 2440,
+            'generatedAt' => '2026-07-16 10:00',
+        ])->render();
+
+        expect($pricingPdfHtml)
+            ->toContain('جدول الكميات والتسعير BOQ')
+            ->toContain('2,440.00 ILS');
 
         $this->actingAs($user)
             ->post(route('heks.beneficiaries.boq-items.store', $beneficiary), [
