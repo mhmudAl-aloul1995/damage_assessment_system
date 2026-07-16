@@ -489,13 +489,15 @@ class BorrowerSurveyController extends Controller
         $partialDamageStatuses = ['severe_uninhabitable', 'severe_habitable', 'minor'];
 
         KoboRestSubmission::query()
+            ->leftJoin('damage_assessment_borrowers', 'damage_assessment_borrowers.id', '=', 'kobo_rest_submissions.damage_assessment_borrower_id')
             ->whereNotNull('kobo_rest_submissions.damage_assessment_borrower_id')
             ->where('kobo_rest_submissions.service_name', 'iqrad')
-            ->get(['payload'])
+            ->get(['kobo_rest_submissions.payload', 'damage_assessment_borrowers.loan_unit_damage_status'])
             ->each(function (KoboRestSubmission $submission) use (&$stats, $partialDamageStatuses): void {
                 $stats['total']++;
 
-                $damageStatus = $this->koboPayloadDamageStatus($submission->payload ?? []);
+                $damageStatus = $this->koboPayloadDamageStatus($submission->payload ?? [])
+                    ?? $submission->loan_unit_damage_status;
 
                 if ($damageStatus === 'destroyed') {
                     $stats['destroyed']++;
@@ -520,17 +522,34 @@ class BorrowerSurveyController extends Controller
             ?? null;
 
         if ($value === null || is_array($value)) {
+            foreach ($lookup as $candidate) {
+                if ($candidate === null || is_array($candidate)) {
+                    continue;
+                }
+
+                $damageStatus = $this->normalizeKoboDamageStatus((string) $candidate);
+
+                if ($damageStatus !== null) {
+                    return $damageStatus;
+                }
+            }
+
             return null;
         }
 
-        $value = trim((string) $value);
+        return $this->normalizeKoboDamageStatus((string) $value);
+    }
+
+    private function normalizeKoboDamageStatus(string $value): ?string
+    {
+        $value = trim($value);
 
         return match ($value) {
             'هدم كلي', 'destroyed' => 'destroyed',
             'متضرر بليغ غير صالح للسكن', 'severe_uninhabitable' => 'severe_uninhabitable',
             'متضرر بليغ صالح للسكن', 'severe_habitable' => 'severe_habitable',
             'متضرر أضرار طفيفة', 'أضرار طفيفة', 'minor' => 'minor',
-            default => $value === '' ? null : $value,
+            default => null,
         };
     }
 
