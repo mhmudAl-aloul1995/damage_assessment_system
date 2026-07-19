@@ -853,13 +853,14 @@ class DamageAssessmentController extends Controller
         }
 
         [$startDate, $endDate] = $this->dashboardDateRange($request);
+        $approvalDateColumn = $this->hudBuildingApprovalDateColumn();
 
         if ($startDate !== null) {
-            $query->whereDate('end', '>=', $startDate);
+            $query->whereDate($approvalDateColumn, '>=', $startDate);
         }
 
         if ($endDate !== null) {
-            $query->whereDate('end', '<=', $endDate);
+            $query->whereDate($approvalDateColumn, '<=', $endDate);
         }
 
         [$savedStartDate, $savedEndDate] = $this->hudSavedDateRange($request);
@@ -918,6 +919,17 @@ class DamageAssessmentController extends Controller
             $fromDateInput !== '' ? Carbon::parse($fromDateInput)->toDateString() : null,
             $toDateInput !== '' ? Carbon::parse($toDateInput)->toDateString() : null,
         ];
+    }
+
+    private function hudBuildingApprovalDateColumn(): string
+    {
+        foreach (['submission_date', 'submition_date', 'submissiondate', 'end'] as $column) {
+            if (Schema::hasColumn('buildings', $column)) {
+                return $column;
+            }
+        }
+
+        return 'end';
     }
 
     public function search(Request $request)

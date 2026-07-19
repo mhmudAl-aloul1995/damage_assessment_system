@@ -1586,7 +1586,10 @@
                     return hudArcgisDateField;
                 }
 
-                hudArcgisDateField = getArcgisField('end')
+                hudArcgisDateField = getArcgisField('submission_date')
+                    || getArcgisField('submition_date')
+                    || getArcgisField('submissiondate')
+                    || getArcgisField('end')
                     || getArcgisField('editdate')
                     || getArcgisField('creationdate');
 

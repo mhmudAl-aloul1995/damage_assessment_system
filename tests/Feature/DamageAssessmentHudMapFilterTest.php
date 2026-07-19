@@ -88,6 +88,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('hudArcgisSecurityPriorityExpression', false)
         ->assertSee('hudArcgisHasDisputeExpression', false)
         ->assertSee('resolveHudArcgisSavedDateField', false)
+        ->assertSee("getArcgisField('submission_date')", false)
         ->assertSee("hudArcgisFieldName('field_status') + \" = 'COMPLETED'\"", false)
         ->assertSee('buildingsLayer.definitionExpression = whereExpression', false)
         ->assertSee('assessment_obstacle', false)
@@ -247,6 +248,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         'neighborhood' => 'Rimal',
         'building_debris_qty' => '10',
         'end' => '2026-05-19 08:00:00',
+        'submission_date' => '2026-05-22 08:00:00',
         'editdate' => '2026-05-20 09:00:00',
     ]);
 
@@ -273,6 +275,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         'neighborhood' => 'Jabalia',
         'building_debris_qty' => '5',
         'end' => '2026-05-18 08:00:00',
+        'submission_date' => '2026-05-23 08:00:00',
         'editdate' => '2026-05-20 10:00:00',
     ]);
 
@@ -289,6 +292,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         'neighborhood' => 'Rimal',
         'building_debris_qty' => '7',
         'end' => '2026-05-17 08:00:00',
+        'submission_date' => '2026-05-24 08:00:00',
         'editdate' => '2026-05-21 08:00:00',
     ]);
 
@@ -349,6 +353,17 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertOk()
         ->assertJsonPath('summaryStats.total_buildings', 3)
         ->assertJsonPath('assessedUnitsTotal', 3);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats', [
+            'from_date' => '2026-05-22',
+            'to_date' => '2026-05-22',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 1)
+        ->assertJsonPath('summaryStats.assessed_buildings', 1)
+        ->assertJsonPath('buildingDamageChart.data.0', 1)
+        ->assertJsonPath('buildingDamageChart.data.2', 0);
 
     $this->actingAs($user)
         ->getJson(route('damageAssessment.hud.stats', ['security_priority' => '1']))
