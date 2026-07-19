@@ -199,6 +199,8 @@ return [
             'engineer_status' => 'Engineer Status',
             'legal_status' => 'Legal Status',
             'final_status' => 'Final Status',
+            'approval_date' => 'Approval Date',
+            'saved_date' => 'Saved Date',
             'from_date' => 'From Date',
             'to_date' => 'To Date',
             'search' => 'General Search',

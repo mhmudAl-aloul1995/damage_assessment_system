@@ -6,6 +6,12 @@
 @php
     $isArabic = app()->getLocale() === 'ar';
     $currentTab = request('tab', 'buildings');
+    $approvalDateRangeLabel = $filters['from_date'] && $filters['to_date']
+        ? $filters['from_date'] . ' - ' . $filters['to_date']
+        : '';
+    $savedDateRangeLabel = $filters['saved_from_date'] && $filters['saved_to_date']
+        ? $filters['saved_from_date'] . ' - ' . $filters['saved_to_date']
+        : '';
     $summaryCards = [
         ['key' => 'total_buildings', 'class' => 'primary'],
         ['key' => 'total_housing_units', 'class' => 'info'],
@@ -182,6 +188,13 @@
             <div class="collapse show" id="fieldEngineerFilters">
                 <div class="card-body pt-2">
                     <form method="GET" action="{{ route('reports.field-engineer.index') }}" id="fieldEngineerFiltersForm">
+                        <input type="hidden" name="from_date" id="field_engineer_from_date" value="{{ $filters['from_date'] }}">
+                        <input type="hidden" name="to_date" id="field_engineer_to_date" value="{{ $filters['to_date'] }}">
+                        <input type="hidden" name="saved_from_date" id="field_engineer_saved_from_date"
+                            value="{{ $filters['saved_from_date'] }}">
+                        <input type="hidden" name="saved_to_date" id="field_engineer_saved_to_date"
+                            value="{{ $filters['saved_to_date'] }}">
+
                         <div class="row g-5">
                             <div class="col-md-4">
                                 <label
@@ -291,18 +304,21 @@
 
                             <div class="col-md-4">
                                 <label class="form-label">
-                                    {{ __('multilingual.field_engineer_report.filters.from_date') }}
+                                    {{ __('multilingual.field_engineer_report.filters.approval_date') }}
                                 </label>
-                                <input type="text" name="from_date" placeholder="yyyy-mm-dd"
-                                    value="{{ $filters['from_date'] }}" class="form-control datepicker form-control-solid">
+                                <input type="text" id="field_engineer_approval_date_range"
+                                    name="approval_date_range" placeholder="yyyy-mm-dd - yyyy-mm-dd"
+                                    value="{{ $approvalDateRangeLabel }}" class="form-control date-range-picker form-control-solid"
+                                    readonly>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">
-                                    {{ __('multilingual.field_engineer_report.filters.to_date') }}
+                                    {{ __('multilingual.field_engineer_report.filters.saved_date') }}
                                 </label>
-                                <input type="text" name="to_date" placeholder="yyyy-mm-dd"
-                                    value="{{ $filters['to_date'] }}" class="form-control datepicker form-control-solid">
+                                <input type="text" id="field_engineer_saved_date_range" name="saved_date_range"
+                                    placeholder="yyyy-mm-dd - yyyy-mm-dd" value="{{ $savedDateRangeLabel }}"
+                                    class="form-control date-range-picker form-control-solid" readonly>
                             </div>
 
                             <div class="col-md-8">
@@ -484,6 +500,10 @@
             const loadingState = document.getElementById('fieldEngineerLoadingState');
             const errorState = document.getElementById('fieldEngineerErrorState');
             const resetFiltersButton = document.getElementById('resetFieldEngineerFilters');
+            const approvalFromDateInput = document.getElementById('field_engineer_from_date');
+            const approvalToDateInput = document.getElementById('field_engineer_to_date');
+            const savedFromDateInput = document.getElementById('field_engineer_saved_from_date');
+            const savedToDateInput = document.getElementById('field_engineer_saved_to_date');
             const tables = {};
 
             $.fn.dataTable.ext.errMode = 'none';
@@ -493,10 +513,53 @@
                 width: '100%',
                 dir: localeIsArabic ? 'rtl' : 'ltr',
             });
-            flatpickr('.datepicker', {
+            function syncDateRange(selectedDates, instance, fromInput, toInput) {
+                if (selectedDates.length === 2) {
+                    fromInput.value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                    toInput.value = instance.formatDate(selectedDates[1], 'Y-m-d');
+                    return;
+                }
+
+                if (selectedDates.length === 1) {
+                    fromInput.value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                    toInput.value = fromInput.value;
+                    return;
+                }
+
+                fromInput.value = '';
+                toInput.value = '';
+            }
+
+            const dateRangeLocale = Object.assign({}, localeIsArabic ? (flatpickr.l10ns.ar || {}) : {}, {
+                rangeSeparator: ' - '
+            });
+
+            const approvalDateRangePicker = flatpickr('#field_engineer_approval_date_range', {
+                mode: 'range',
                 dateFormat: 'Y-m-d',
                 allowInput: true,
-                locale: localeIsArabic ? 'ar' : 'en',
+                locale: dateRangeLocale,
+                defaultDate: [approvalFromDateInput.value, approvalToDateInput.value].filter(Boolean),
+                onChange: function (selectedDates, dateStr, instance) {
+                    syncDateRange(selectedDates, instance, approvalFromDateInput, approvalToDateInput);
+                },
+                onClose: function (selectedDates, dateStr, instance) {
+                    syncDateRange(selectedDates, instance, approvalFromDateInput, approvalToDateInput);
+                }
+            });
+
+            const savedDateRangePicker = flatpickr('#field_engineer_saved_date_range', {
+                mode: 'range',
+                dateFormat: 'Y-m-d',
+                allowInput: true,
+                locale: dateRangeLocale,
+                defaultDate: [savedFromDateInput.value, savedToDateInput.value].filter(Boolean),
+                onChange: function (selectedDates, dateStr, instance) {
+                    syncDateRange(selectedDates, instance, savedFromDateInput, savedToDateInput);
+                },
+                onClose: function (selectedDates, dateStr, instance) {
+                    syncDateRange(selectedDates, instance, savedFromDateInput, savedToDateInput);
+                }
             });
           
             const dataTablesLanguageUrl = localeIsArabic
@@ -768,6 +831,8 @@
 
             $(filtersForm).on('submit', function (event) {
                 event.preventDefault();
+                syncDateRange(approvalDateRangePicker.selectedDates, approvalDateRangePicker, approvalFromDateInput, approvalToDateInput);
+                syncDateRange(savedDateRangePicker.selectedDates, savedDateRangePicker, savedFromDateInput, savedToDateInput);
                 clearErrorState();
                 updatePageUrl();
                 fetchStats();
@@ -782,6 +847,12 @@
             $(resetFiltersButton).on('click', function () {
                 filtersForm.reset();
                 $('.report-select2').val(null).trigger('change');
+                approvalDateRangePicker.clear();
+                savedDateRangePicker.clear();
+                approvalFromDateInput.value = '';
+                approvalToDateInput.value = '';
+                savedFromDateInput.value = '';
+                savedToDateInput.value = '';
                 clearErrorState();
                 updatePageUrl();
                 fetchStats();

@@ -99,6 +99,21 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'building_damage_status' => 'fully_damaged',
         'field_status' => 'NOT_COMPLETED',
         'creationdate' => '2026-04-21 08:00:00',
+        'editdate' => '2026-04-22 10:30:00',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 5003,
+        'globalid' => 'building-field-engineer-3',
+        'assignedto' => 'Engineer One',
+        'building_name' => 'Saved Outside Range Building',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Old Neighborhood',
+        'building_damage_status' => 'partially_damaged',
+        'field_status' => 'COMPLETED',
+        'end' => '2026-04-20 08:45:00',
+        'creationdate' => '2026-04-20 08:00:00',
+        'editdate' => '2026-05-02 09:30:00',
     ]);
 
     $housingUnit = HousingUnit::query()->create([
@@ -283,6 +298,9 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ->assertSee('name="building_objectid"', false)
         ->assertSee('value="5001"', false)
         ->assertSee('name="from_date"', false)
+        ->assertSee('name="saved_from_date"', false)
+        ->assertSee(__('multilingual.field_engineer_report.filters.approval_date'), false)
+        ->assertSee(__('multilingual.field_engineer_report.filters.saved_date'), false)
         ->assertDontSee('name="from_date "', false)
         ->assertSee(__('multilingual.field_engineer_report.tabs.buildings'), false)
         ->assertSee(__('multilingual.field_engineer_report.stats.total_buildings'), false);
@@ -305,6 +323,26 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ])
         ->assertJsonMissing([
             'objectid' => 5002,
+        ]);
+
+    $this->actingAs($user)
+        ->getJson(route('reports.field-engineer.buildings', [
+            'municipalitie' => 'Gaza',
+            'saved_from_date' => '2026-04-22',
+            'saved_to_date' => '2026-04-22',
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]))
+        ->assertOk()
+        ->assertJsonFragment([
+            'objectid' => 5001,
+        ])
+        ->assertJsonMissing([
+            'objectid' => 5002,
+        ])
+        ->assertJsonMissing([
+            'objectid' => 5003,
         ]);
 
     $this->actingAs($user)

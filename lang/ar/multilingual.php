@@ -199,6 +199,8 @@ return [
             'engineer_status' => 'حالة المهندس',
             'legal_status' => 'الحالة القانونية',
             'final_status' => 'الحالة النهائية',
+            'approval_date' => 'تاريخ الإعتماد',
+            'saved_date' => 'تاريخ الحفظ',
             'from_date' => 'من تاريخ',
             'to_date' => 'إلى تاريخ',
             'search' => 'بحث عام',

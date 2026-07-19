@@ -22,8 +22,12 @@ class FieldEngineerReportFilterRequest extends FormRequest
             'engineer_status' => ['nullable', 'string', 'max:255'],
             'legal_status' => ['nullable', 'string', 'max:255'],
             'final_status' => ['nullable', 'string', 'max:255'],
+            'approval_date_range' => ['nullable', 'string', 'max:255'],
             'from_date' => ['nullable', 'date'],
             'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+            'saved_date_range' => ['nullable', 'string', 'max:255'],
+            'saved_from_date' => ['nullable', 'date'],
+            'saved_to_date' => ['nullable', 'date', 'after_or_equal:saved_from_date'],
             'search' => ['nullable', 'string', 'max:255'],
         ];
     }
@@ -34,6 +38,9 @@ class FieldEngineerReportFilterRequest extends FormRequest
             'from_date.date' => __('multilingual.field_engineer_report.validation.date_invalid'),
             'to_date.date' => __('multilingual.field_engineer_report.validation.date_invalid'),
             'to_date.after_or_equal' => __('multilingual.field_engineer_report.validation.to_date_after_or_equal'),
+            'saved_from_date.date' => __('multilingual.field_engineer_report.validation.date_invalid'),
+            'saved_to_date.date' => __('multilingual.field_engineer_report.validation.date_invalid'),
+            'saved_to_date.after_or_equal' => __('multilingual.field_engineer_report.validation.to_date_after_or_equal'),
         ];
     }
 }

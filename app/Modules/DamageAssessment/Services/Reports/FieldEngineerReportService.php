@@ -81,6 +81,8 @@ class FieldEngineerReportService
             'final_status' => $this->normalizeString($validated['final_status'] ?? null),
             'from_date' => $this->normalizeString($validated['from_date'] ?? null),
             'to_date' => $this->normalizeString($validated['to_date'] ?? null),
+            'saved_from_date' => $this->normalizeString($validated['saved_from_date'] ?? null),
+            'saved_to_date' => $this->normalizeString($validated['saved_to_date'] ?? null),
             'search' => $this->normalizeString($validated['search'] ?? null),
         ];
     }
@@ -969,6 +971,8 @@ class FieldEngineerReportService
             $query->whereDate($dateColumn, '<=', $filters['to_date']);
         }
 
+        $this->applySavedDateFilter($query, 'buildings', $filters);
+
         return $query;
     }
 
@@ -1220,6 +1224,8 @@ class FieldEngineerReportService
             $query->whereDate("{$buildingTable}.end", '<=', $filters['to_date']);
         }
 
+        $this->applySavedDateFilter($query, $buildingTable, $filters);
+
         if ($search = $filters['search']) {
             $query->where(function ($searchQuery) use (
                 $search,
@@ -1293,6 +1299,8 @@ class FieldEngineerReportService
             $query->whereDate('housing_units.building_submit_date', '<=', $filters['to_date']);
         }
 
+        $this->applySavedDateFilter($query, 'buildings', $filters);
+
         if ($search = $filters['search']) {
             $query->where(function ($searchQuery) use ($search) {
                 $searchQuery->where('housing_units.objectid', 'like', '%'.$search.'%')
@@ -1307,6 +1315,23 @@ class FieldEngineerReportService
         }
 
         return $query;
+    }
+
+    private function applySavedDateFilter(Builder $query, string $buildingTable, array $filters): void
+    {
+        if (! $filters['saved_from_date'] && ! $filters['saved_to_date']) {
+            return;
+        }
+
+        $query->where("{$buildingTable}.field_status", 'COMPLETED');
+
+        if ($filters['saved_from_date']) {
+            $query->whereDate("{$buildingTable}.editdate", '>=', $filters['saved_from_date']);
+        }
+
+        if ($filters['saved_to_date']) {
+            $query->whereDate("{$buildingTable}.editdate", '<=', $filters['saved_to_date']);
+        }
     }
 
     private function statusOptionsByStage(string $stage): array
