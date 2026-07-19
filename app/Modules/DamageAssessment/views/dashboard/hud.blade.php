@@ -1101,6 +1101,7 @@
         const auditBaseUrl = window.location.pathname.replace(/\/damageAssessment\/hud\/?$/, '/showAssessmentAudit');
         const arcgisOptionsUrl = window.location.pathname.replace(/\/hud\/?$/, '/arcgis/options');
         const hudStatsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/stats');
+        const hudMapObjectIdsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/map-object-ids');
         const hudBuildingUnitsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/building-units');
 
         function hudSelectedValues(element) {
@@ -1563,8 +1564,6 @@
                 return wrapper;
             }
 
-            let hudArcgisDateField = null;
-
             function escapeArcgisValue(value) {
                 return String(value).replace(/'/g, "''");
             }
@@ -1579,37 +1578,6 @@
 
             function hudArcgisFieldName(fieldName) {
                 return getArcgisField(fieldName)?.name || fieldName;
-            }
-
-            function resolveHudArcgisDateField() {
-                if (hudArcgisDateField) {
-                    return hudArcgisDateField;
-                }
-
-                hudArcgisDateField = getArcgisField('submission_date');
-
-                return hudArcgisDateField;
-            }
-
-            function resolveHudArcgisSavedDateField() {
-                return getArcgisField('editdate');
-            }
-
-            function hudArcgisFieldExpression(field) {
-                return String(field.name).toLowerCase() === 'end'
-                    ? '"' + field.name + '"'
-                    : field.name;
-            }
-
-            function hudArcgisDateExpression(field, operator, value, endOfDay = false) {
-                const fieldExpression = hudArcgisFieldExpression(field);
-                const timeValue = endOfDay ? '23:59:59' : '00:00:00';
-
-                if (String(field.type).toLowerCase().includes('date')) {
-                    return fieldExpression + " " + operator + " TIMESTAMP '" + value + " " + timeValue + "'";
-                }
-
-                return fieldExpression + " " + operator + " '" + escapeArcgisValue(value) + "'";
             }
 
             function syncHudDateRange(selectedDates, instance, fromInput, toInput) {
@@ -1695,7 +1663,30 @@
                     : '1=0';
             }
 
-            function buildHudArcgisWhere() {
+            function hudArcgisObjectIdExpression(objectIds) {
+                const objectIdField = hudArcgisFieldName('objectid');
+                const numericObjectIds = objectIds
+                    .map(function (objectId) {
+                        return parseInt(objectId, 10);
+                    })
+                    .filter(function (objectId) {
+                        return Number.isFinite(objectId);
+                    });
+
+                if (!numericObjectIds.length) {
+                    return objectIdField + ' = -1';
+                }
+
+                const chunks = [];
+
+                for (let index = 0; index < numericObjectIds.length; index += 900) {
+                    chunks.push(objectIdField + ' IN (' + numericObjectIds.slice(index, index + 900).join(',') + ')');
+                }
+
+                return chunks.length === 1 ? chunks[0] : '(' + chunks.join(' OR ') + ')';
+            }
+
+            function buildHudArcgisWhere(databaseObjectIds = null) {
                 const clauses = [];
                 const allowedFields = [
                     'assignedto',
@@ -1741,34 +1732,43 @@
                     }
                 }
 
-                const dateField = resolveHudArcgisDateField();
-                const fromDate = document.getElementById('hud_filter_from_date')?.value || '';
-                const toDate = document.getElementById('hud_filter_to_date')?.value || '';
-                const savedDateField = resolveHudArcgisSavedDateField();
                 const savedFromDate = document.getElementById('hud_filter_saved_from_date')?.value || '';
                 const savedToDate = document.getElementById('hud_filter_saved_to_date')?.value || '';
 
-                if (dateField && fromDate) {
-                    clauses.push(hudArcgisDateExpression(dateField, '>=', fromDate));
-                }
-
-                if (dateField && toDate) {
-                    clauses.push(hudArcgisDateExpression(dateField, '<=', toDate, true));
-                }
-
-                if (savedDateField && (savedFromDate || savedToDate)) {
+                if (savedFromDate || savedToDate) {
                     clauses.push(hudArcgisFieldName('field_status') + " = 'COMPLETED'");
                 }
 
-                if (savedDateField && savedFromDate) {
-                    clauses.push(hudArcgisDateExpression(savedDateField, '>=', savedFromDate));
-                }
-
-                if (savedDateField && savedToDate) {
-                    clauses.push(hudArcgisDateExpression(savedDateField, '<=', savedToDate, true));
+                if (Array.isArray(databaseObjectIds)) {
+                    clauses.push(hudArcgisObjectIdExpression(databaseObjectIds));
                 }
 
                 return clauses.length ? clauses.join(' AND ') : '1=1';
+            }
+
+            function fetchHudMapObjectIdsForDateFilters() {
+                const url = new URL(hudMapObjectIdsUrl, window.location.origin);
+
+                currentHudFilterParams().forEach(function (value, key) {
+                    url.searchParams.append(key, value);
+                });
+
+                return fetch(url.toString(), {
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('HUD map object ids request failed with status ' + response.status);
+                        }
+
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        return data.has_date_filter ? (data.object_ids || []) : null;
+                    });
             }
 
             function updateHudFilterCount(whereExpression) {
@@ -1792,31 +1792,36 @@
             }
 
             function applyHudMapFilters() {
-                const whereExpression = buildHudArcgisWhere();
-                const query = buildingsLayer.createQuery();
-                query.where = whereExpression;
-                query.returnGeometry = true;
-                buildingsLayer.definitionExpression = whereExpression;
-                refreshHudDashboardData();
+                fetchHudMapObjectIdsForDateFilters().then(function (databaseObjectIds) {
+                    const whereExpression = buildHudArcgisWhere(databaseObjectIds);
+                    const query = buildingsLayer.createQuery();
+                    query.where = whereExpression;
+                    query.returnGeometry = true;
+                    buildingsLayer.definitionExpression = whereExpression;
+                    refreshHudDashboardData();
 
-                Promise.all([
-                    buildingsLayer.queryFeatureCount(query),
-                    buildingsLayer.queryExtent(query)
-                ]).then(function (results) {
-                    const count = results[0];
-                    const extentResult = results[1];
+                    Promise.all([
+                        buildingsLayer.queryFeatureCount(query),
+                        buildingsLayer.queryExtent(query)
+                    ]).then(function (results) {
+                        const count = results[0];
+                        const extentResult = results[1];
 
-                    document.getElementById('hudMapFilterCount').textContent = count.toLocaleString('en-US');
+                        document.getElementById('hudMapFilterCount').textContent = count.toLocaleString('en-US');
 
-                    if (count > 0 && extentResult.extent) {
-                        view.goTo(extentResult.extent.expand(1.18)).catch(function (error) {
-                            if (error.name !== 'AbortError') {
-                                console.error('HUD filtered goTo failed:', error);
-                            }
-                        });
-                    }
+                        if (count > 0 && extentResult.extent) {
+                            view.goTo(extentResult.extent.expand(1.18)).catch(function (error) {
+                                if (error.name !== 'AbortError') {
+                                    console.error('HUD filtered goTo failed:', error);
+                                }
+                            });
+                        }
+                    }).catch(function (error) {
+                        console.error('HUD ArcGIS filter failed:', error);
+                        document.getElementById('hudMapFilterCount').textContent = '0';
+                    });
                 }).catch(function (error) {
-                    console.error('HUD ArcGIS filter failed:', error);
+                    console.error('HUD database date filter failed:', error);
                     document.getElementById('hudMapFilterCount').textContent = '0';
                 });
             }

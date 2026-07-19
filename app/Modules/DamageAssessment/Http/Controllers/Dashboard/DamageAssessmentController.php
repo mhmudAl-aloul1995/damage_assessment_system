@@ -493,6 +493,47 @@ class DamageAssessmentController extends Controller
         return response()->json($this->buildHudDashboardData($request));
     }
 
+    public function hudMapObjectIds(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = Building::query()->whereNotNull('objectid');
+        $hasDateFilter = false;
+
+        [$startDate, $endDate] = $this->dashboardDateRange($request);
+        $approvalDateColumn = $this->hudBuildingApprovalDateColumn();
+
+        if ($startDate !== null) {
+            $query->whereDate($approvalDateColumn, '>=', $startDate);
+            $hasDateFilter = true;
+        }
+
+        if ($endDate !== null) {
+            $query->whereDate($approvalDateColumn, '<=', $endDate);
+            $hasDateFilter = true;
+        }
+
+        [$savedStartDate, $savedEndDate] = $this->hudSavedDateRange($request);
+
+        if ($savedStartDate !== null || $savedEndDate !== null) {
+            $query->where('field_status', 'COMPLETED');
+            $hasDateFilter = true;
+
+            if ($savedStartDate !== null) {
+                $query->whereDate('editdate', '>=', $savedStartDate);
+            }
+
+            if ($savedEndDate !== null) {
+                $query->whereDate('editdate', '<=', $savedEndDate);
+            }
+        }
+
+        return response()->json([
+            'has_date_filter' => $hasDateFilter,
+            'object_ids' => $hasDateFilter
+                ? $query->orderBy('objectid')->pluck('objectid')->map(fn ($objectId): int => (int) $objectId)->values()
+                : [],
+        ]);
+    }
+
     public function hudBuildingUnits(HudBuildingUnitsRequest $request): \Illuminate\Http\JsonResponse
     {
         $buildingGlobalId = (string) $request->string('building_globalid');

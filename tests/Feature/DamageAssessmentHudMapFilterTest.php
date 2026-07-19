@@ -87,8 +87,12 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('hudArcgisFieldName', false)
         ->assertSee('hudArcgisSecurityPriorityExpression', false)
         ->assertSee('hudArcgisHasDisputeExpression', false)
-        ->assertSee('resolveHudArcgisSavedDateField', false)
-        ->assertSee("getArcgisField('submission_date')", false)
+        ->assertSee('hudMapObjectIdsUrl', false)
+        ->assertSee('/hud/map-object-ids', false)
+        ->assertSee('fetchHudMapObjectIdsForDateFilters', false)
+        ->assertSee('hudArcgisObjectIdExpression', false)
+        ->assertDontSee('resolveHudArcgisSavedDateField', false)
+        ->assertDontSee("getArcgisField('submission_date')", false)
         ->assertSee("hudArcgisFieldName('field_status') + \" = 'COMPLETED'\"", false)
         ->assertSee('buildingsLayer.definitionExpression = whereExpression', false)
         ->assertSee('assessment_obstacle', false)
@@ -172,6 +176,37 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee("has_dispute: document.getElementById('hud_filter_has_dispute')?.checked ? '1' : ''", false)
         ->assertSee("saved_from_date: document.getElementById('hud_filter_saved_from_date')?.value || ''", false)
         ->assertSee('url.searchParams.append(key, value)', false);
+});
+
+it('returns hud map object ids from local buildings table for date filters', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 300,
+        'globalid' => 'date-filter-building',
+        'assignedto' => 'Field Engineer',
+        'field_status' => 'COMPLETED',
+        'submission_date' => '2026-05-22 08:00:00',
+        'editdate' => '2026-05-20 09:00:00',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 301,
+        'globalid' => 'other-date-filter-building',
+        'assignedto' => 'Field Engineer',
+        'field_status' => 'COMPLETED',
+        'submission_date' => '2026-05-23 08:00:00',
+        'editdate' => '2026-05-21 09:00:00',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.map-object-ids', [
+            'from_date' => '2026-05-22',
+            'to_date' => '2026-05-22',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('has_date_filter', true)
+        ->assertJsonPath('object_ids', [300]);
 });
 
 it('returns housing unit owners for the hud building popup unit audit select', function () {
