@@ -1101,7 +1101,6 @@
         const auditBaseUrl = window.location.pathname.replace(/\/damageAssessment\/hud\/?$/, '/showAssessmentAudit');
         const arcgisOptionsUrl = window.location.pathname.replace(/\/hud\/?$/, '/arcgis/options');
         const hudStatsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/stats');
-        const hudMapObjectIdsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/map-object-ids');
         const hudBuildingUnitsUrl = window.location.pathname.replace(/\/hud\/?$/, '/hud/building-units');
 
         function hudSelectedValues(element) {
@@ -1663,30 +1662,40 @@
                     : '1=0';
             }
 
-            function hudArcgisObjectIdExpression(objectIds) {
-                const objectIdField = hudArcgisFieldName('objectid');
-                const numericObjectIds = objectIds
-                    .map(function (objectId) {
-                        return parseInt(objectId, 10);
-                    })
-                    .filter(function (objectId) {
-                        return Number.isFinite(objectId);
-                    });
+            function hudArcgisDateExpression(field, operator, value, endOfDay = false) {
+                const timeValue = endOfDay ? '23:59:59' : '00:00:00';
 
-                if (!numericObjectIds.length) {
-                    return objectIdField + ' = -1';
+                if (String(field.type).toLowerCase().includes('date')) {
+                    return field.name + " " + operator + " TIMESTAMP '" + value + " " + timeValue + "'";
                 }
 
-                const chunks = [];
-
-                for (let index = 0; index < numericObjectIds.length; index += 900) {
-                    chunks.push(objectIdField + ' IN (' + numericObjectIds.slice(index, index + 900).join(',') + ')');
-                }
-
-                return chunks.length === 1 ? chunks[0] : '(' + chunks.join(' OR ') + ')';
+                return field.name + " " + operator + " '" + escapeArcgisValue(value) + "'";
             }
 
-            function buildHudArcgisWhere(databaseObjectIds = null) {
+            function hudArcgisEditDateStatusExpression(status, fromDate, toDate) {
+                const editDateField = getArcgisField('editdate');
+
+                if (!editDateField) {
+                    return '1=0';
+                }
+
+                const statusField = hudArcgisFieldName('field_status');
+                const clauses = [
+                    statusField + " = '" + escapeArcgisValue(status) + "'"
+                ];
+
+                if (fromDate) {
+                    clauses.push(hudArcgisDateExpression(editDateField, '>=', fromDate));
+                }
+
+                if (toDate) {
+                    clauses.push(hudArcgisDateExpression(editDateField, '<=', toDate, true));
+                }
+
+                return '(' + clauses.join(' AND ') + ')';
+            }
+
+            function buildHudArcgisWhere() {
                 const clauses = [];
                 const allowedFields = [
                     'assignedto',
@@ -1732,43 +1741,27 @@
                     }
                 }
 
+                const approvalFromDate = document.getElementById('hud_filter_from_date')?.value || '';
+                const approvalToDate = document.getElementById('hud_filter_to_date')?.value || '';
                 const savedFromDate = document.getElementById('hud_filter_saved_from_date')?.value || '';
                 const savedToDate = document.getElementById('hud_filter_saved_to_date')?.value || '';
+                const dateClauses = [];
 
-                if (savedFromDate || savedToDate) {
-                    clauses.push(hudArcgisFieldName('field_status') + " = 'COMPLETED'");
+                if (approvalFromDate || approvalToDate) {
+                    dateClauses.push(hudArcgisEditDateStatusExpression('COMPLETED', approvalFromDate, approvalToDate));
                 }
 
-                if (Array.isArray(databaseObjectIds)) {
-                    clauses.push(hudArcgisObjectIdExpression(databaseObjectIds));
+                if (savedFromDate || savedToDate) {
+                    dateClauses.push(hudArcgisEditDateStatusExpression('Not_Completed', savedFromDate, savedToDate));
+                }
+
+                if (dateClauses.length === 1) {
+                    clauses.push(dateClauses[0]);
+                } else if (dateClauses.length > 1) {
+                    clauses.push('(' + dateClauses.join(' OR ') + ')');
                 }
 
                 return clauses.length ? clauses.join(' AND ') : '1=1';
-            }
-
-            function fetchHudMapObjectIdsForDateFilters() {
-                const url = new URL(hudMapObjectIdsUrl, window.location.origin);
-
-                currentHudFilterParams().forEach(function (value, key) {
-                    url.searchParams.append(key, value);
-                });
-
-                return fetch(url.toString(), {
-                    headers: {
-                        'Accept': 'application/json'
-                    },
-                    credentials: 'same-origin'
-                })
-                    .then(function (response) {
-                        if (!response.ok) {
-                            throw new Error('HUD map object ids request failed with status ' + response.status);
-                        }
-
-                        return response.json();
-                    })
-                    .then(function (data) {
-                        return data.has_date_filter ? (data.object_ids || []) : null;
-                    });
             }
 
             function updateHudFilterCount(whereExpression) {
@@ -1792,36 +1785,31 @@
             }
 
             function applyHudMapFilters() {
-                fetchHudMapObjectIdsForDateFilters().then(function (databaseObjectIds) {
-                    const whereExpression = buildHudArcgisWhere(databaseObjectIds);
-                    const query = buildingsLayer.createQuery();
-                    query.where = whereExpression;
-                    query.returnGeometry = true;
-                    buildingsLayer.definitionExpression = whereExpression;
-                    refreshHudDashboardData();
+                const whereExpression = buildHudArcgisWhere();
+                const query = buildingsLayer.createQuery();
+                query.where = whereExpression;
+                query.returnGeometry = true;
+                buildingsLayer.definitionExpression = whereExpression;
+                refreshHudDashboardData();
 
-                    Promise.all([
-                        buildingsLayer.queryFeatureCount(query),
-                        buildingsLayer.queryExtent(query)
-                    ]).then(function (results) {
-                        const count = results[0];
-                        const extentResult = results[1];
+                Promise.all([
+                    buildingsLayer.queryFeatureCount(query),
+                    buildingsLayer.queryExtent(query)
+                ]).then(function (results) {
+                    const count = results[0];
+                    const extentResult = results[1];
 
-                        document.getElementById('hudMapFilterCount').textContent = count.toLocaleString('en-US');
+                    document.getElementById('hudMapFilterCount').textContent = count.toLocaleString('en-US');
 
-                        if (count > 0 && extentResult.extent) {
-                            view.goTo(extentResult.extent.expand(1.18)).catch(function (error) {
-                                if (error.name !== 'AbortError') {
-                                    console.error('HUD filtered goTo failed:', error);
-                                }
-                            });
-                        }
-                    }).catch(function (error) {
-                        console.error('HUD ArcGIS filter failed:', error);
-                        document.getElementById('hudMapFilterCount').textContent = '0';
-                    });
+                    if (count > 0 && extentResult.extent) {
+                        view.goTo(extentResult.extent.expand(1.18)).catch(function (error) {
+                            if (error.name !== 'AbortError') {
+                                console.error('HUD filtered goTo failed:', error);
+                            }
+                        });
+                    }
                 }).catch(function (error) {
-                    console.error('HUD database date filter failed:', error);
+                    console.error('HUD ArcGIS filter failed:', error);
                     document.getElementById('hudMapFilterCount').textContent = '0';
                 });
             }

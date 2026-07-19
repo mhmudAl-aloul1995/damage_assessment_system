@@ -87,13 +87,15 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('hudArcgisFieldName', false)
         ->assertSee('hudArcgisSecurityPriorityExpression', false)
         ->assertSee('hudArcgisHasDisputeExpression', false)
-        ->assertSee('hudMapObjectIdsUrl', false)
-        ->assertSee('/hud/map-object-ids', false)
-        ->assertSee('fetchHudMapObjectIdsForDateFilters', false)
-        ->assertSee('hudArcgisObjectIdExpression', false)
+        ->assertSee('hudArcgisEditDateStatusExpression', false)
+        ->assertSee("getArcgisField('editdate')", false)
+        ->assertSee("hudArcgisEditDateStatusExpression('COMPLETED'", false)
+        ->assertSee("hudArcgisEditDateStatusExpression('Not_Completed'", false)
+        ->assertSee("dateClauses.join(' OR ')", false)
+        ->assertDontSee('/hud/map-object-ids', false)
+        ->assertDontSee('hudArcgisObjectIdExpression', false)
         ->assertDontSee('resolveHudArcgisSavedDateField', false)
         ->assertDontSee("getArcgisField('submission_date')", false)
-        ->assertSee("hudArcgisFieldName('field_status') + \" = 'COMPLETED'\"", false)
         ->assertSee('buildingsLayer.definitionExpression = whereExpression', false)
         ->assertSee('assessment_obstacle', false)
         ->assertSee('has_dispute', false)
@@ -176,37 +178,6 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee("has_dispute: document.getElementById('hud_filter_has_dispute')?.checked ? '1' : ''", false)
         ->assertSee("saved_from_date: document.getElementById('hud_filter_saved_from_date')?.value || ''", false)
         ->assertSee('url.searchParams.append(key, value)', false);
-});
-
-it('returns hud map object ids from local buildings table for date filters', function () {
-    $user = User::factory()->create();
-
-    Building::query()->create([
-        'objectid' => 300,
-        'globalid' => 'date-filter-building',
-        'assignedto' => 'Field Engineer',
-        'field_status' => 'COMPLETED',
-        'submission_date' => '2026-05-22 08:00:00',
-        'editdate' => '2026-05-20 09:00:00',
-    ]);
-
-    Building::query()->create([
-        'objectid' => 301,
-        'globalid' => 'other-date-filter-building',
-        'assignedto' => 'Field Engineer',
-        'field_status' => 'COMPLETED',
-        'submission_date' => '2026-05-23 08:00:00',
-        'editdate' => '2026-05-21 09:00:00',
-    ]);
-
-    $this->actingAs($user)
-        ->getJson(route('damageAssessment.hud.map-object-ids', [
-            'from_date' => '2026-05-22',
-            'to_date' => '2026-05-22',
-        ]))
-        ->assertOk()
-        ->assertJsonPath('has_date_filter', true)
-        ->assertJsonPath('object_ids', [300]);
 });
 
 it('returns housing unit owners for the hud building popup unit audit select', function () {
@@ -391,8 +362,8 @@ it('returns hud stats for all data by default and filtered data when filters are
 
     $this->actingAs($user)
         ->getJson(route('damageAssessment.hud.stats', [
-            'from_date' => '2026-05-22',
-            'to_date' => '2026-05-22',
+            'from_date' => '2026-05-20',
+            'to_date' => '2026-05-20',
         ]))
         ->assertOk()
         ->assertJsonPath('summaryStats.total_buildings', 1)
@@ -425,7 +396,20 @@ it('returns hud stats for all data by default and filtered data when filters are
         ]))
         ->assertOk()
         ->assertJsonPath('summaryStats.total_buildings', 1)
+        ->assertJsonPath('summaryStats.assessed_buildings', 0)
+        ->assertJsonPath('buildingDamageChart.data.0', 0)
+        ->assertJsonPath('buildingDamageChart.data.1', 1);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats', [
+            'from_date' => '2026-05-21',
+            'to_date' => '2026-05-21',
+            'saved_from_date' => '2026-05-20',
+            'saved_to_date' => '2026-05-20',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 2)
         ->assertJsonPath('summaryStats.assessed_buildings', 1)
-        ->assertJsonPath('buildingDamageChart.data.0', 1)
-        ->assertJsonPath('buildingDamageChart.data.1', 0);
+        ->assertJsonPath('buildingDamageChart.data.1', 1)
+        ->assertJsonPath('buildingDamageChart.data.2', 1);
 });

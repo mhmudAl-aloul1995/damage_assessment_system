@@ -493,47 +493,6 @@ class DamageAssessmentController extends Controller
         return response()->json($this->buildHudDashboardData($request));
     }
 
-    public function hudMapObjectIds(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $query = Building::query()->whereNotNull('objectid');
-        $hasDateFilter = false;
-
-        [$startDate, $endDate] = $this->dashboardDateRange($request);
-        $approvalDateColumn = $this->hudBuildingApprovalDateColumn();
-
-        if ($startDate !== null) {
-            $query->whereDate($approvalDateColumn, '>=', $startDate);
-            $hasDateFilter = true;
-        }
-
-        if ($endDate !== null) {
-            $query->whereDate($approvalDateColumn, '<=', $endDate);
-            $hasDateFilter = true;
-        }
-
-        [$savedStartDate, $savedEndDate] = $this->hudSavedDateRange($request);
-
-        if ($savedStartDate !== null || $savedEndDate !== null) {
-            $query->where('field_status', 'COMPLETED');
-            $hasDateFilter = true;
-
-            if ($savedStartDate !== null) {
-                $query->whereDate('editdate', '>=', $savedStartDate);
-            }
-
-            if ($savedEndDate !== null) {
-                $query->whereDate('editdate', '<=', $savedEndDate);
-            }
-        }
-
-        return response()->json([
-            'has_date_filter' => $hasDateFilter,
-            'object_ids' => $hasDateFilter
-                ? $query->orderBy('objectid')->pluck('objectid')->map(fn ($objectId): int => (int) $objectId)->values()
-                : [],
-        ]);
-    }
-
     public function hudBuildingUnits(HudBuildingUnitsRequest $request): \Illuminate\Http\JsonResponse
     {
         $buildingGlobalId = (string) $request->string('building_globalid');
@@ -893,29 +852,41 @@ class DamageAssessmentController extends Controller
             });
         }
 
-        [$startDate, $endDate] = $this->dashboardDateRange($request);
-        $approvalDateColumn = $this->hudBuildingApprovalDateColumn();
-
-        if ($startDate !== null) {
-            $query->whereDate($approvalDateColumn, '>=', $startDate);
-        }
-
-        if ($endDate !== null) {
-            $query->whereDate($approvalDateColumn, '<=', $endDate);
-        }
-
+        [$approvalStartDate, $approvalEndDate] = $this->dashboardDateRange($request);
         [$savedStartDate, $savedEndDate] = $this->hudSavedDateRange($request);
+        $hasApprovalDateFilter = $approvalStartDate !== null || $approvalEndDate !== null;
+        $hasSavedDateFilter = $savedStartDate !== null || $savedEndDate !== null;
 
-        if ($savedStartDate !== null || $savedEndDate !== null) {
-            $query->where('field_status', 'COMPLETED');
+        if ($hasApprovalDateFilter || $hasSavedDateFilter) {
+            $query->where(function (Builder $dateQuery) use ($approvalStartDate, $approvalEndDate, $hasApprovalDateFilter, $savedStartDate, $savedEndDate, $hasSavedDateFilter): void {
+                if ($hasApprovalDateFilter) {
+                    $dateQuery->orWhere(function (Builder $approvalQuery) use ($approvalStartDate, $approvalEndDate): void {
+                        $approvalQuery->where('field_status', 'COMPLETED');
 
-            if ($savedStartDate !== null) {
-                $query->whereDate('editdate', '>=', $savedStartDate);
-            }
+                        if ($approvalStartDate !== null) {
+                            $approvalQuery->whereDate('editdate', '>=', $approvalStartDate);
+                        }
 
-            if ($savedEndDate !== null) {
-                $query->whereDate('editdate', '<=', $savedEndDate);
-            }
+                        if ($approvalEndDate !== null) {
+                            $approvalQuery->whereDate('editdate', '<=', $approvalEndDate);
+                        }
+                    });
+                }
+
+                if ($hasSavedDateFilter) {
+                    $dateQuery->orWhere(function (Builder $savedQuery) use ($savedStartDate, $savedEndDate): void {
+                        $savedQuery->where('field_status', 'Not_Completed');
+
+                        if ($savedStartDate !== null) {
+                            $savedQuery->whereDate('editdate', '>=', $savedStartDate);
+                        }
+
+                        if ($savedEndDate !== null) {
+                            $savedQuery->whereDate('editdate', '<=', $savedEndDate);
+                        }
+                    });
+                }
+            });
         }
     }
 
@@ -960,11 +931,6 @@ class DamageAssessmentController extends Controller
             $fromDateInput !== '' ? Carbon::parse($fromDateInput)->toDateString() : null,
             $toDateInput !== '' ? Carbon::parse($toDateInput)->toDateString() : null,
         ];
-    }
-
-    private function hudBuildingApprovalDateColumn(): string
-    {
-        return 'submission_date';
     }
 
     public function search(Request $request)

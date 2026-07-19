@@ -188,8 +188,6 @@ Route::middleware('auth')->group(function () {
         ->name('damageAssessment.hud');
     Route::get('/damageAssessment/hud/stats', [DamageAssessmentController::class, 'hudStats'])
         ->name('damageAssessment.hud.stats');
-    Route::get('/damageAssessment/hud/map-object-ids', [DamageAssessmentController::class, 'hudMapObjectIds'])
-        ->name('damageAssessment.hud.map-object-ids');
     Route::get('/damageAssessment/hud/building-units', [DamageAssessmentController::class, 'hudBuildingUnits'])
         ->name('damageAssessment.hud.building-units');
     Route::resource('damageAssessment', controller: DamageAssessmentController::class);
