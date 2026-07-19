@@ -669,7 +669,11 @@ class SyncArcGISLayers extends Command
             return $row;
         }
 
-        $fallbackValue = $row['end'] ?? $row['creationdate'] ?? null;
+        $fallbackValue = $row['editdate'] ?? null;
+
+        if ($this->isBlankSyncValue($fallbackValue)) {
+            $fallbackValue = $row['creationdate'] ?? null;
+        }
 
         if ($this->isBlankSyncValue($fallbackValue)) {
             return $row;
