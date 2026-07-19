@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('housing_units', function (Blueprint $table) {
-            if (! Schema::hasColumn('housing_units', 'building_submition_date')) {
-                $table->text('building_submition_date')->nullable()->after('building_submit_date');
+            if (! Schema::hasColumn('housing_units', 'submission_date')) {
+                $table->text('submission_date')->nullable()->after('building_submit_date');
             }
         });
     }
@@ -18,8 +18,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('housing_units', function (Blueprint $table) {
-            if (Schema::hasColumn('housing_units', 'building_submition_date')) {
-                $table->dropColumn('building_submition_date');
+            if (Schema::hasColumn('housing_units', 'submission_date')) {
+                $table->dropColumn('submission_date');
             }
         });
     }

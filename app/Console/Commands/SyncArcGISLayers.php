@@ -285,7 +285,9 @@ class SyncArcGISLayers extends Command
                         if ($parentGlobalId) {
                             $buildingColumns = ['governorate', 'municipalitie', 'neighborhood', 'end'];
 
-                            if (Schema::hasColumn('buildings', 'submition_date')) {
+                            if (Schema::hasColumn('buildings', 'submission_date')) {
+                                $buildingColumns[] = 'submission_date';
+                            } elseif (Schema::hasColumn('buildings', 'submition_date')) {
                                 $buildingColumns[] = 'submition_date';
                             }
 
@@ -311,8 +313,12 @@ class SyncArcGISLayers extends Command
                                     $row['building_submit_date'] = $building->end;
                                 }
 
+                                if (in_array('submission_date', $tableColumns, true)) {
+                                    $row['submission_date'] = $building->submission_date ?? $building->submition_date ?? $building->end;
+                                }
+
                                 if (in_array('building_submition_date', $tableColumns, true)) {
-                                    $row['building_submition_date'] = $building->submition_date ?? $building->end;
+                                    $row['building_submition_date'] = $building->submission_date ?? $building->submition_date ?? $building->end;
                                 }
                             }
                         }
@@ -689,7 +695,7 @@ class SyncArcGISLayers extends Command
             return $row;
         }
 
-        foreach (['submition_date', 'submission_date', 'submissiondate'] as $column) {
+        foreach (['submission_date', 'submition_date', 'submissiondate'] as $column) {
             if (
                 in_array($column, $tableColumns, true)
                 && $this->isBlankSyncValue($row[$column] ?? null)

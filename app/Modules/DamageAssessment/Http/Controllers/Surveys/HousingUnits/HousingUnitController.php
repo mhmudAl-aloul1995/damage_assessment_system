@@ -358,7 +358,7 @@ class HousingUnitController extends Controller
 
     private function housingSubmissionDateColumn(): ?string
     {
-        foreach (['submition_date', 'submission_date', 'submissiondate', 'building_submit_date'] as $column) {
+        foreach (['submission_date', 'submition_date', 'submissiondate', 'building_submit_date'] as $column) {
             if (Schema::hasColumn('housing_units', $column)) {
                 return $column;
             }

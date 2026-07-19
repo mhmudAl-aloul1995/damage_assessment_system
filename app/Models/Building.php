@@ -237,7 +237,6 @@ class Building extends Model
         'zone_code',
         'start',
         'end',
-        'submition_date',
         'today',
         'username',
         'simserial',

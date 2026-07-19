@@ -1346,7 +1346,7 @@ class FieldEngineerReportService
 
     private function buildingApprovalDateColumn(string $buildingTable = 'buildings'): string
     {
-        foreach (['submition_date', 'submission_date', 'submissiondate', 'end'] as $column) {
+        foreach (['submission_date', 'submition_date', 'submissiondate', 'end'] as $column) {
             if (Schema::hasColumn('buildings', $column)) {
                 return "{$buildingTable}.{$column}";
             }
@@ -1357,7 +1357,7 @@ class FieldEngineerReportService
 
     private function housingApprovalDateColumn(string $housingTable = 'housing_units'): string
     {
-        foreach (['building_submition_date', 'building_submission_date', 'building_submit_date'] as $column) {
+        foreach (['submission_date', 'building_submission_date', 'building_submition_date', 'building_submit_date'] as $column) {
             if (Schema::hasColumn('housing_units', $column)) {
                 return "{$housingTable}.{$column}";
             }
