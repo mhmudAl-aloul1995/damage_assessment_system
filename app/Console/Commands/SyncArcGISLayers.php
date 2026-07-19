@@ -283,7 +283,7 @@ class SyncArcGISLayers extends Command
                         $parentGlobalId = $row['parentglobalid'] ?? null;
 
                         if ($parentGlobalId) {
-                            $buildingColumns = ['governorate', 'municipalitie', 'neighborhood', 'end'];
+                            $buildingColumns = ['governorate', 'municipalitie', 'neighborhood', 'submission_date'];
 
                             $building = DB::table('buildings')
                                 ->where('globalid', $parentGlobalId)
@@ -304,7 +304,7 @@ class SyncArcGISLayers extends Command
                                 }
 
                                 if (in_array('building_submit_date', $tableColumns, true)) {
-                                    $row['building_submit_date'] = $building->end;
+                                    $row['building_submit_date'] = $building->submission_date;
                                 }
 
                             }
