@@ -25,7 +25,6 @@ beforeEach(function (): void {
         $table->string('municipalitie')->nullable();
         $table->string('neighborhood')->nullable();
         $table->string('end')->nullable();
-        $table->string('submission_date')->nullable();
     });
 
     Schema::connection('mysql')->create('housing_units', function (Blueprint $table): void {
@@ -38,7 +37,6 @@ beforeEach(function (): void {
         $table->string('locality')->nullable();
         $table->string('neighborhood')->nullable();
         $table->text('building_submit_date')->nullable();
-        $table->text('submission_date')->nullable();
     });
 
     Schema::connection('mysql')->create('system_operation_logs', function (Blueprint $table): void {
@@ -70,7 +68,6 @@ it('copies building location fields and submit date when syncing housing units',
         'municipalitie' => 'Gaza Municipality',
         'neighborhood' => 'Old City',
         'end' => '2026-05-10 08:45:00',
-        'submission_date' => '2026-05-11 09:15:00',
     ]);
 
     config()->set('services.arcgis.username', 'tester');
@@ -135,5 +132,4 @@ it('copies building location fields and submit date when syncing housing units',
     expect($housingUnit->unit_neighborhood)->toBe('ArcGIS Unit Neighborhood');
     expect($housingUnit->unit_building_name)->toBe('ArcGIS Unit Building');
     expect($housingUnit->building_submit_date)->toBe('2026-05-10 08:45:00');
-    expect($housingUnit->submission_date)->toBe('2026-05-11 09:15:00');
 });

@@ -313,10 +313,6 @@ class SyncArcGISLayers extends Command
                                     $row['building_submit_date'] = $building->end;
                                 }
 
-                                if (in_array('submission_date', $tableColumns, true)) {
-                                    $row['submission_date'] = $building->submission_date ?? $building->submition_date ?? $building->end;
-                                }
-
                                 if (in_array('building_submition_date', $tableColumns, true)) {
                                     $row['building_submition_date'] = $building->submission_date ?? $building->submition_date ?? $building->end;
                                 }
