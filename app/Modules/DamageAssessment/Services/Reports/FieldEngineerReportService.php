@@ -1346,13 +1346,7 @@ class FieldEngineerReportService
 
     private function buildingApprovalDateColumn(string $buildingTable = 'buildings'): string
     {
-        foreach (['submission_date', 'submition_date', 'submissiondate', 'end'] as $column) {
-            if (Schema::hasColumn('buildings', $column)) {
-                return "{$buildingTable}.{$column}";
-            }
-        }
-
-        return "{$buildingTable}.end";
+        return "{$buildingTable}.submission_date";
     }
 
     private function housingApprovalDateColumn(string $housingTable = 'housing_units'): string

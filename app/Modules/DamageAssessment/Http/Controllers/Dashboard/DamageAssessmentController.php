@@ -923,13 +923,7 @@ class DamageAssessmentController extends Controller
 
     private function hudBuildingApprovalDateColumn(): string
     {
-        foreach (['submission_date', 'submition_date', 'submissiondate', 'end'] as $column) {
-            if (Schema::hasColumn('buildings', $column)) {
-                return $column;
-            }
-        }
-
-        return 'end';
+        return 'submission_date';
     }
 
     public function search(Request $request)
@@ -1219,8 +1213,7 @@ class DamageAssessmentController extends Controller
         $record = $this->applyAssessmentRecordFallbacks($model, $record);
 
         if ($model instanceof Building) {
-            $record['submission_date'] = $model->end;
-            $record['submition_date'] = $model->end;
+            $record['submission_date'] = $model->submission_date;
         }
 
         $fillable = (new $modelClass)->getFillable();
