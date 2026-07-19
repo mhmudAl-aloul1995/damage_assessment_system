@@ -700,6 +700,7 @@ class HousingUnit extends Model
         'globalid',
         'parentglobalid',
         'building_submit_date',
+        'building_submition_date',
         'creationdate',
         'creator',
         'editdate',

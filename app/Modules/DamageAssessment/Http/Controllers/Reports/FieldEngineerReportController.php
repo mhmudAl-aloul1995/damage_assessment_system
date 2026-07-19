@@ -94,7 +94,7 @@ class FieldEngineerReportController extends Controller
             'housing_unit_type' => $row->housing_unit_type,
             'unit_damage_status' => $row->unit_damage_status,
             'occupied' => $row->occupied,
-            'upload_date' => $row->building_submit_date ? date('Y-m-d h:i A', strtotime((string) $row->building_submit_date)) : '-',
+            'upload_date' => $row->approval_date ? date('Y-m-d h:i A', strtotime((string) $row->approval_date)) : '-',
         ]);
 
         $response = response()->json($this->dataTablePayload($parameters['draw'], $result['total'], $data->all()));

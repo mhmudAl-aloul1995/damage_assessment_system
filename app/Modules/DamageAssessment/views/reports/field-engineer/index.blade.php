@@ -422,7 +422,7 @@
                                         <th>{{ __('multilingual.field_engineer_report.columns.unit_use') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.damage_status') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.occupant_status') }}</th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.upload_date') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.approval_date') }}</th>
                                     </tr>
                                 </thead>
                             </table>
@@ -791,7 +791,7 @@
                         { data: 'housing_unit_type', name: 'housing_unit_type' },
                         { data: 'unit_damage_status', name: 'unit_damage_status' },
                         { data: 'occupied', name: 'occupied' },
-                        { data: 'upload_date', name: 'housing_units.building_submit_date' },
+                        { data: 'upload_date', name: 'approval_date' },
                     ]);
                 },
                 edits: function () {

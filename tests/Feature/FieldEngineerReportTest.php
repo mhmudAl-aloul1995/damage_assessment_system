@@ -126,7 +126,8 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'housing_unit_type' => 'residential',
         'unit_damage_status' => 'minor_damage',
         'occupied' => 'occupied',
-        'building_submit_date' => '2026-04-21 12:15:00',
+        'building_submit_date' => '2026-04-20 12:15:00',
+        'building_submition_date' => '2026-04-21 12:15:00',
         'creationdate' => '2026-04-21 11:00:00',
         'editdate' => '2026-04-23 13:00:00',
     ]);
@@ -138,6 +139,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'housing_unit_type' => 'commercial',
         'unit_damage_status' => 'major_damage',
         'occupied' => 'vacant',
+        'building_submition_date' => '2026-05-02 12:15:00',
         'creationdate' => '2026-04-21 11:00:00',
     ]);
 
@@ -149,6 +151,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'unit_damage_status' => 'major_damage',
         'occupied' => 'occupied',
         'building_submit_date' => '2026-04-24 12:15:00',
+        'building_submition_date' => '2026-04-24 12:15:00',
         'creationdate' => '2026-04-24 11:00:00',
     ]);
 
@@ -160,6 +163,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'unit_damage_status' => 'major_damage',
         'occupied' => 'occupied',
         'building_submit_date' => '2026-04-25 12:15:00',
+        'building_submition_date' => '2026-04-25 12:15:00',
         'creationdate' => '2026-04-25 11:00:00',
     ]);
 
@@ -514,6 +518,7 @@ it('counts engineer housing audit statuses from latest history when current stat
         'parentglobalid' => $building->globalid,
         'unit_damage_status' => 'minor_damage',
         'building_submit_date' => '2026-04-21 12:15:00',
+        'building_submition_date' => '2026-04-21 12:15:00',
         'creationdate' => '2026-04-21 11:00:00',
     ]);
 
@@ -523,6 +528,7 @@ it('counts engineer housing audit statuses from latest history when current stat
         'parentglobalid' => $building->globalid,
         'unit_damage_status' => 'major_damage',
         'building_submit_date' => '2026-04-21 12:20:00',
+        'building_submition_date' => '2026-04-21 12:20:00',
         'creationdate' => '2026-04-21 11:10:00',
     ]);
 
@@ -532,6 +538,7 @@ it('counts engineer housing audit statuses from latest history when current stat
         'parentglobalid' => $building->globalid,
         'unit_damage_status' => 'major_damage',
         'building_submit_date' => '2026-04-21 12:25:00',
+        'building_submition_date' => '2026-04-21 12:25:00',
         'creationdate' => '2026-04-21 11:20:00',
     ]);
 

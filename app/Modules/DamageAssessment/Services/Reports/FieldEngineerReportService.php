@@ -292,6 +292,7 @@ class FieldEngineerReportService
                 'housing_units.parentglobalid',
                 'housing_units.creationdate',
                 'housing_units.building_submit_date',
+                DB::raw($this->housingApprovalDateColumn().' as approval_date'),
                 DB::raw('buildings.objectid as building_objectid'),
                 DB::raw('buildings.building_name as building_name'),
                 DB::raw('COALESCE(housing_edit_type.field_value, housing_units.housing_unit_type) as housing_unit_type'),
@@ -570,7 +571,7 @@ class FieldEngineerReportService
         $baseQuery = $this->filteredHousingIdentifiersQuery($filters);
         $total = (clone $baseQuery)->count();
         $pageIds = (clone $baseQuery)
-            ->orderByDesc('housing_units.building_submit_date')
+            ->orderByDesc($this->housingApprovalDateColumn())
             ->orderByDesc('housing_units.id')
             ->offset($start)
             ->limit($length)
@@ -767,7 +768,7 @@ class FieldEngineerReportService
 
     private function exportHousingRows(array $filters): array
     {
-        $rows = $this->filteredHousingUnitsQuery($filters)->orderBy('housing_units.building_submit_date', 'desc')->get();
+        $rows = $this->filteredHousingUnitsQuery($filters)->orderByDesc($this->housingApprovalDateColumn())->get();
 
         return [[
             $this->trans('tabs.housing_units'),
@@ -786,7 +787,7 @@ class FieldEngineerReportService
             $row->housing_unit_type,
             $row->unit_damage_status,
             $row->occupied,
-            $row->building_submit_date,
+            $row->approval_date,
         ])];
     }
 
@@ -1060,8 +1061,10 @@ class FieldEngineerReportService
         return $currentStatuses->unionAll($historyFallbackStatuses);
     }
 
-    private function filteredHousingIdentifiersQuery(array $filters, string $dateColumn = 'housing_units.building_submit_date'): Builder
+    private function filteredHousingIdentifiersQuery(array $filters, ?string $dateColumn = null): Builder
     {
+        $dateColumn ??= $this->housingApprovalDateColumn();
+
         $query = DB::table('housing_units')
             ->join('buildings', fn ($join) => $join->whereRaw($this->collatedEquals('housing_units.parentglobalid', 'buildings.globalid')))
             ->select([
@@ -1296,12 +1299,14 @@ class FieldEngineerReportService
             $query->where('final_statuses.status_name', $filters['final_status']);
         }
 
+        $approvalDateColumn = $this->housingApprovalDateColumn();
+
         if ($filters['from_date']) {
-            $query->whereDate('housing_units.building_submit_date', '>=', $filters['from_date']);
+            $query->whereDate($approvalDateColumn, '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate('housing_units.building_submit_date', '<=', $filters['to_date']);
+            $query->whereDate($approvalDateColumn, '<=', $filters['to_date']);
         }
 
         $this->applySavedDateFilter($query, 'buildings', $filters);
@@ -1348,6 +1353,17 @@ class FieldEngineerReportService
         }
 
         return "{$buildingTable}.end";
+    }
+
+    private function housingApprovalDateColumn(string $housingTable = 'housing_units'): string
+    {
+        foreach (['building_submition_date', 'building_submission_date', 'building_submit_date'] as $column) {
+            if (Schema::hasColumn('housing_units', $column)) {
+                return "{$housingTable}.{$column}";
+            }
+        }
+
+        return "{$housingTable}.building_submit_date";
     }
 
     private function statusOptionsByStage(string $stage): array
