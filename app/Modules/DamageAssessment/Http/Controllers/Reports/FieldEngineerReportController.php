@@ -17,8 +17,8 @@ class FieldEngineerReportController extends Controller
 {
     public function __construct(private readonly FieldEngineerReportService $fieldEngineerReportService)
     {
-       /*  $this->middleware('role:Database Officer|Project Officer|Area Manager|Auditing Supervisor
-        |Team Leader -INF|Team Leader'); */
+        /*  $this->middleware('role:Database Officer|Project Officer|Area Manager|Auditing Supervisor
+         |Team Leader -INF|Team Leader'); */
     }
 
     public function index(FieldEngineerReportFilterRequest $request): Response
@@ -63,7 +63,7 @@ class FieldEngineerReportController extends Controller
             'neighborhood' => $row->neighborhood,
             'building_use' => $row->building_use,
             'building_damage_status' => $row->building_damage_status,
-            'upload_date' => $row->end ? date('Y-m-d h:i A', strtotime((string) $row->end)) : '-',
+            'upload_date' => $row->approval_date ? date('Y-m-d h:i A', strtotime((string) $row->approval_date)) : '-',
             'editdate' => $row->editdate ? date('Y-m-d h:i A', strtotime((string) $row->editdate)) : '-',
             'final_status_label' => $this->statusBadge($row->final_status_name, $row->final_status_label),
         ]);

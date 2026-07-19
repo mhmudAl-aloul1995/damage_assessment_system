@@ -85,6 +85,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'building_damage_status' => 'partially_damaged',
         'field_status' => 'COMPLETED',
         'end' => '2026-04-20 08:45:00',
+        'submition_date' => '2026-04-21 07:30:00',
         'creationdate' => '2026-04-20 08:00:00',
         'editdate' => '2026-04-22 09:30:00',
     ]);
@@ -98,6 +99,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'neighborhood' => 'Other Neighborhood',
         'building_damage_status' => 'fully_damaged',
         'field_status' => 'NOT_COMPLETED',
+        'submition_date' => '2026-05-02 08:45:00',
         'creationdate' => '2026-04-21 08:00:00',
         'editdate' => '2026-04-22 10:30:00',
     ]);
@@ -112,6 +114,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         'building_damage_status' => 'partially_damaged',
         'field_status' => 'COMPLETED',
         'end' => '2026-04-20 08:45:00',
+        'submition_date' => '2026-05-02 08:45:00',
         'creationdate' => '2026-04-20 08:00:00',
         'editdate' => '2026-05-02 09:30:00',
     ]);
@@ -301,6 +304,8 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ->assertSee('name="saved_from_date"', false)
         ->assertSee(__('multilingual.field_engineer_report.filters.approval_date'), false)
         ->assertSee(__('multilingual.field_engineer_report.filters.saved_date'), false)
+        ->assertSee(__('multilingual.field_engineer_report.columns.approval_date'), false)
+        ->assertSee(__('multilingual.field_engineer_report.columns.saved_date'), false)
         ->assertDontSee('name="from_date "', false)
         ->assertSee(__('multilingual.field_engineer_report.tabs.buildings'), false)
         ->assertSee(__('multilingual.field_engineer_report.stats.total_buildings'), false);
@@ -323,6 +328,9 @@ it('renders the field engineer report and serves all tab endpoints', function ()
         ])
         ->assertJsonMissing([
             'objectid' => 5002,
+        ])
+        ->assertJsonMissing([
+            'objectid' => 5003,
         ]);
 
     $this->actingAs($user)
@@ -357,7 +365,7 @@ it('renders the field engineer report and serves all tab endpoints', function ()
             'assignedto' => 'Engineer One',
             'building_name' => 'Original Building',
             'neighborhood' => 'New Neighborhood',
-            'upload_date' => '2026-04-20 08:45 AM',
+            'upload_date' => '2026-04-21 07:30 AM',
         ])
         ->assertSee('Accepted', false)
         ->assertDontSee('Ù…Ù‚Ø¨ÙˆÙ„', false)

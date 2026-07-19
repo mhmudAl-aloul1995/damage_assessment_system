@@ -246,6 +246,7 @@ class FieldEngineerReportService
                 'buildings.end',
                 'buildings.editdate',
                 'buildings.field_status',
+                DB::raw($this->buildingApprovalDateColumn().' as approval_date'),
                 DB::raw('COALESCE(edit_building_name.field_value, buildings.building_name) as building_name'),
                 DB::raw('COALESCE(edit_municipalitie.field_value, buildings.municipalitie) as municipalitie'),
                 DB::raw('COALESCE(edit_neighborhood.field_value, buildings.neighborhood) as neighborhood'),
@@ -542,7 +543,7 @@ class FieldEngineerReportService
         $baseQuery = $this->filteredBuildingIdentifiersQuery($filters);
         $total = (clone $baseQuery)->count();
         $pageIds = (clone $baseQuery)
-            ->orderByDesc('buildings.end')
+            ->orderByDesc($this->buildingApprovalDateColumn())
             ->orderByDesc('buildings.id')
             ->offset($start)
             ->limit($length)
@@ -733,7 +734,7 @@ class FieldEngineerReportService
 
     private function exportBuildingsRows(array $filters): array
     {
-        $rows = $this->filteredBuildingsQuery($filters)->orderBy('end', 'desc')->get();
+        $rows = $this->filteredBuildingsQuery($filters)->orderByDesc($this->buildingApprovalDateColumn())->get();
 
         return [[
             $this->trans('tabs.buildings'),
@@ -744,8 +745,8 @@ class FieldEngineerReportService
             $this->trans('columns.neighborhood'),
             $this->trans('columns.building_use'),
             $this->trans('columns.building_damage_status'),
-            $this->trans('columns.upload_date'),
-            $this->trans('columns.last_update'),
+            $this->trans('columns.approval_date'),
+            $this->trans('columns.saved_date'),
             $this->trans('columns.final_status'),
         ], $rows->map(function ($row) {
             return [
@@ -757,7 +758,7 @@ class FieldEngineerReportService
                 $row->neighborhood,
                 $row->building_use,
                 $row->building_damage_status,
-                $row->end,
+                $row->approval_date,
                 $row->editdate,
                 $row->final_status_label,
             ];
@@ -901,8 +902,10 @@ class FieldEngineerReportService
         return DB::query()->fromSub($buildingHistoryQuery->unionAll($housingHistoryQuery), 'status_history_ids');
     }
 
-    private function filteredBuildingIdentifiersQuery(array $filters, string $dateColumn = 'buildings.end'): Builder
+    private function filteredBuildingIdentifiersQuery(array $filters, ?string $dateColumn = null): Builder
     {
+        $dateColumn ??= $this->buildingApprovalDateColumn();
+
         $query = DB::table('buildings')->select([
             'buildings.id',
             'buildings.objectid',
@@ -1216,12 +1219,14 @@ class FieldEngineerReportService
             $query->where($finalStatusExpression, $filters['final_status']);
         }
 
+        $approvalDateColumn = $this->buildingApprovalDateColumn($buildingTable);
+
         if ($filters['from_date']) {
-            $query->whereDate("{$buildingTable}.end", '>=', $filters['from_date']);
+            $query->whereDate($approvalDateColumn, '>=', $filters['from_date']);
         }
 
         if ($filters['to_date']) {
-            $query->whereDate("{$buildingTable}.end", '<=', $filters['to_date']);
+            $query->whereDate($approvalDateColumn, '<=', $filters['to_date']);
         }
 
         $this->applySavedDateFilter($query, $buildingTable, $filters);
@@ -1332,6 +1337,17 @@ class FieldEngineerReportService
         if ($filters['saved_to_date']) {
             $query->whereDate("{$buildingTable}.editdate", '<=', $filters['saved_to_date']);
         }
+    }
+
+    private function buildingApprovalDateColumn(string $buildingTable = 'buildings'): string
+    {
+        foreach (['submition_date', 'submission_date', 'submissiondate', 'end'] as $column) {
+            if (Schema::hasColumn('buildings', $column)) {
+                return "{$buildingTable}.{$column}";
+            }
+        }
+
+        return "{$buildingTable}.end";
     }
 
     private function statusOptionsByStage(string $stage): array

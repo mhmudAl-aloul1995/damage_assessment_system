@@ -237,6 +237,7 @@ class Building extends Model
         'zone_code',
         'start',
         'end',
+        'submition_date',
         'today',
         'username',
         'simserial',
@@ -434,7 +435,7 @@ class Building extends Model
     public function getAttribute($key)
     {
         if (in_array($key, ['submission_date', 'submition_date'], true)) {
-            return parent::getAttribute('end');
+            return parent::getAttribute($key) ?: parent::getAttribute('end');
         }
 
         $value = parent::getAttribute($key);

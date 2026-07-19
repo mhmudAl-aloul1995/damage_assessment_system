@@ -239,6 +239,8 @@ return [
             'building_use' => 'Building Use',
             'building_damage_status' => 'Building Damage Status',
             'creationdate' => 'Created At',
+            'approval_date' => 'Approval Date',
+            'saved_date' => 'Saved Date',
             'upload_date' => 'Upload Date',
             'last_update' => 'Last Update',
             'final_status' => 'Final Status',

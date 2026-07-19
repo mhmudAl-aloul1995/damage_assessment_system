@@ -239,6 +239,8 @@ return [
             'building_use' => 'استخدام المبنى',
             'building_damage_status' => 'حالة ضرر المبنى',
             'creationdate' => 'تاريخ الإنشاء',
+            'approval_date' => 'تاريخ الإعتماد',
+            'saved_date' => 'تاريخ الحفظ',
             'upload_date' => 'تاريخ الرفع',
             'last_update' => 'آخر تحديث',
             'final_status' => 'الحالة النهائية',

@@ -398,8 +398,8 @@
                                         <th>{{ __('multilingual.field_engineer_report.columns.building_use') }}</th>
                                         <th>{{ __('multilingual.field_engineer_report.columns.building_damage_status') }}
                                         </th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.upload_date') }}</th>
-                                        <th>{{ __('multilingual.field_engineer_report.columns.last_update') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.approval_date') }}</th>
+                                        <th>{{ __('multilingual.field_engineer_report.columns.saved_date') }}</th>
                                         <th class="field-engineer-final-status-column">
                                             {{ __('multilingual.field_engineer_report.columns.final_status') }}
                                         </th>
@@ -764,7 +764,7 @@
                         { data: 'neighborhood', name: 'neighborhood' },
                         { data: 'building_use', name: 'building_use' },
                         { data: 'building_damage_status', name: 'building_damage_status' },
-                        { data: 'upload_date', name: 'buildings.end' },
+                        { data: 'upload_date', name: 'approval_date' },
                         { data: 'editdate', name: 'buildings.editdate' },
                         { data: 'final_status_label', name: 'final_status_label', orderable: false, searchable: false, className: 'field-engineer-final-status-column' },
                     ]);
