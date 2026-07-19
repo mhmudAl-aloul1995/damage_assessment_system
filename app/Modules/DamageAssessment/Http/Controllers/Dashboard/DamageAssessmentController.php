@@ -861,11 +861,25 @@ class DamageAssessmentController extends Controller
         if ($endDate !== null) {
             $query->whereDate('end', '<=', $endDate);
         }
+
+        [$savedStartDate, $savedEndDate] = $this->hudSavedDateRange($request);
+
+        if ($savedStartDate !== null || $savedEndDate !== null) {
+            $query->where('field_status', 'COMPLETED');
+
+            if ($savedStartDate !== null) {
+                $query->whereDate('editdate', '>=', $savedStartDate);
+            }
+
+            if ($savedEndDate !== null) {
+                $query->whereDate('editdate', '<=', $savedEndDate);
+            }
+        }
     }
 
     private function hasHudBuildingFilters(Request $request): bool
     {
-        foreach (['assignedto', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood', 'building_name', 'search', 'security_priority', 'has_dispute', 'from_date', 'to_date'] as $field) {
+        foreach (['assignedto', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood', 'building_name', 'search', 'security_priority', 'has_dispute', 'from_date', 'to_date', 'saved_from_date', 'saved_to_date'] as $field) {
             if ($request->filled($field) || count($this->hudFilterValues($request, $field)) > 0) {
                 return true;
             }
@@ -888,6 +902,22 @@ class DamageAssessmentController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function hudSavedDateRange(Request $request): array
+    {
+        $fromDateInput = trim((string) $request->string('saved_from_date'));
+        $toDateInput = trim((string) $request->string('saved_to_date'));
+
+        if (str_contains($fromDateInput, ' to ') || str_contains($fromDateInput, ' - ')) {
+            [$fromDateInput, $rangeEndDate] = preg_split('/\s+(?:to|-)\s+/', $fromDateInput, 2);
+            $toDateInput = $toDateInput !== '' ? $toDateInput : $rangeEndDate;
+        }
+
+        return [
+            $fromDateInput !== '' ? Carbon::parse($fromDateInput)->toDateString() : null,
+            $toDateInput !== '' ? Carbon::parse($toDateInput)->toDateString() : null,
+        ];
     }
 
     public function search(Request $request)

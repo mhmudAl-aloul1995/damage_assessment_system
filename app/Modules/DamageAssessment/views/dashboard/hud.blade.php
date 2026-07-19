@@ -14,6 +14,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/dark/main.css">
 
     <style>
@@ -809,17 +810,24 @@
                                 placeholder="ObjectID / GlobalID">
                         </div>
 
+                        <input type="hidden" id="hud_filter_from_date">
+                        <input type="hidden" id="hud_filter_to_date">
+                        <input type="hidden" id="hud_filter_saved_from_date">
+                        <input type="hidden" id="hud_filter_saved_to_date">
+
                         <div class="row g-2">
-                            <div class="col-6">
+                            <div class="col-12">
                                 <div class="hud-map-filter-field">
-                                    <label for="hud_filter_from_date">من تاريخ</label>
-                                    <input type="date" id="hud_filter_from_date" class="form-control">
+                                    <label for="hud_filter_approval_date_range">تاريخ الإعتماد</label>
+                                    <input type="text" id="hud_filter_approval_date_range" class="form-control"
+                                        placeholder="yyyy-mm-dd - yyyy-mm-dd" readonly>
                                 </div>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <div class="hud-map-filter-field">
-                                    <label for="hud_filter_to_date">إلى تاريخ</label>
-                                    <input type="date" id="hud_filter_to_date" class="form-control">
+                                    <label for="hud_filter_saved_date_range">تاريخ الحفظ</label>
+                                    <input type="text" id="hud_filter_saved_date_range" class="form-control"
+                                        placeholder="yyyy-mm-dd - yyyy-mm-dd" readonly>
                                 </div>
                             </div>
                         </div>
@@ -1075,6 +1083,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://js.arcgis.com/4.22/"></script>
 
@@ -1583,21 +1593,75 @@
                 return hudArcgisDateField;
             }
 
+            function resolveHudArcgisSavedDateField() {
+                return getArcgisField('editdate');
+            }
+
             function hudArcgisFieldExpression(field) {
                 return String(field.name).toLowerCase() === 'end'
                     ? '"' + field.name + '"'
                     : field.name;
             }
 
-            function hudArcgisDateExpression(field, operator, value) {
+            function hudArcgisDateExpression(field, operator, value, endOfDay = false) {
                 const fieldExpression = hudArcgisFieldExpression(field);
+                const timeValue = endOfDay ? '23:59:59' : '00:00:00';
 
                 if (String(field.type).toLowerCase().includes('date')) {
-                    return fieldExpression + " " + operator + " TIMESTAMP '" + value + " 00:00:00'";
+                    return fieldExpression + " " + operator + " TIMESTAMP '" + value + " " + timeValue + "'";
                 }
 
                 return fieldExpression + " " + operator + " '" + escapeArcgisValue(value) + "'";
             }
+
+            function syncHudDateRange(selectedDates, instance, fromInput, toInput) {
+                if (selectedDates.length === 2) {
+                    fromInput.value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                    toInput.value = instance.formatDate(selectedDates[1], 'Y-m-d');
+                    return;
+                }
+
+                if (selectedDates.length === 1) {
+                    fromInput.value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                    toInput.value = fromInput.value;
+                    return;
+                }
+
+                fromInput.value = '';
+                toInput.value = '';
+            }
+
+            const hudDateRangeLocale = Object.assign({}, flatpickr.l10ns.ar || {}, {
+                rangeSeparator: ' - '
+            });
+            const hudApprovalFromDateInput = document.getElementById('hud_filter_from_date');
+            const hudApprovalToDateInput = document.getElementById('hud_filter_to_date');
+            const hudSavedFromDateInput = document.getElementById('hud_filter_saved_from_date');
+            const hudSavedToDateInput = document.getElementById('hud_filter_saved_to_date');
+            const hudApprovalDateRangePicker = flatpickr('#hud_filter_approval_date_range', {
+                mode: 'range',
+                dateFormat: 'Y-m-d',
+                allowInput: true,
+                locale: hudDateRangeLocale,
+                onChange: function (selectedDates, dateStr, instance) {
+                    syncHudDateRange(selectedDates, instance, hudApprovalFromDateInput, hudApprovalToDateInput);
+                },
+                onClose: function (selectedDates, dateStr, instance) {
+                    syncHudDateRange(selectedDates, instance, hudApprovalFromDateInput, hudApprovalToDateInput);
+                }
+            });
+            const hudSavedDateRangePicker = flatpickr('#hud_filter_saved_date_range', {
+                mode: 'range',
+                dateFormat: 'Y-m-d',
+                allowInput: true,
+                locale: hudDateRangeLocale,
+                onChange: function (selectedDates, dateStr, instance) {
+                    syncHudDateRange(selectedDates, instance, hudSavedFromDateInput, hudSavedToDateInput);
+                },
+                onClose: function (selectedDates, dateStr, instance) {
+                    syncHudDateRange(selectedDates, instance, hudSavedFromDateInput, hudSavedToDateInput);
+                }
+            });
 
             function hudArcgisInExpression(field, values) {
                 const escapedValues = values
@@ -1682,13 +1746,28 @@
                 const dateField = resolveHudArcgisDateField();
                 const fromDate = document.getElementById('hud_filter_from_date')?.value || '';
                 const toDate = document.getElementById('hud_filter_to_date')?.value || '';
+                const savedDateField = resolveHudArcgisSavedDateField();
+                const savedFromDate = document.getElementById('hud_filter_saved_from_date')?.value || '';
+                const savedToDate = document.getElementById('hud_filter_saved_to_date')?.value || '';
 
                 if (dateField && fromDate) {
                     clauses.push(hudArcgisDateExpression(dateField, '>=', fromDate));
                 }
 
                 if (dateField && toDate) {
-                    clauses.push(hudArcgisDateExpression(dateField, '<=', toDate));
+                    clauses.push(hudArcgisDateExpression(dateField, '<=', toDate, true));
+                }
+
+                if (savedDateField && (savedFromDate || savedToDate)) {
+                    clauses.push(hudArcgisFieldName('field_status') + " = 'COMPLETED'");
+                }
+
+                if (savedDateField && savedFromDate) {
+                    clauses.push(hudArcgisDateExpression(savedDateField, '>=', savedFromDate));
+                }
+
+                if (savedDateField && savedToDate) {
+                    clauses.push(hudArcgisDateExpression(savedDateField, '<=', savedToDate, true));
                 }
 
                 return clauses.length ? clauses.join(' AND ') : '1=1';
@@ -1763,6 +1842,10 @@
                 document.getElementById('hud_filter_has_dispute').checked = false;
                 document.getElementById('hud_filter_from_date').value = '';
                 document.getElementById('hud_filter_to_date').value = '';
+                document.getElementById('hud_filter_saved_from_date').value = '';
+                document.getElementById('hud_filter_saved_to_date').value = '';
+                hudApprovalDateRangePicker.clear();
+                hudSavedDateRangePicker.clear();
 
                 buildingsLayer.definitionExpression = '1=1';
                 updateHudFilterCount('1=1');
@@ -2079,7 +2162,9 @@
                 security_priority: document.getElementById('hud_filter_security_priority')?.checked ? '1' : '',
                 has_dispute: document.getElementById('hud_filter_has_dispute')?.checked ? '1' : '',
                 from_date: document.getElementById('hud_filter_from_date')?.value || '',
-                to_date: document.getElementById('hud_filter_to_date')?.value || ''
+                to_date: document.getElementById('hud_filter_to_date')?.value || '',
+                saved_from_date: document.getElementById('hud_filter_saved_from_date')?.value || '',
+                saved_to_date: document.getElementById('hud_filter_saved_to_date')?.value || ''
             };
 
             Object.entries(fields).forEach(function ([field, value]) {

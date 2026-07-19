@@ -26,6 +26,7 @@ it('renders the hud arcgis map filter controls', function () {
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'end' => '2026-05-19 08:00:00',
+        'editdate' => '2026-05-20 09:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -48,6 +49,7 @@ it('renders the hud arcgis map filter controls', function () {
         'municipalitie' => 'North Gaza',
         'neighborhood' => 'Jabalia',
         'end' => '2026-05-18 08:00:00',
+        'editdate' => '2026-05-20 10:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -71,6 +73,12 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('data-field="building_damage_status"', false)
         ->assertSee('id="hud_filter_security_priority"', false)
         ->assertSee('id="hud_filter_has_dispute"', false)
+        ->assertSee('id="hud_filter_approval_date_range"', false)
+        ->assertSee('id="hud_filter_saved_date_range"', false)
+        ->assertSee('id="hud_filter_saved_from_date"', false)
+        ->assertSee('id="hud_filter_saved_to_date"', false)
+        ->assertSee('تاريخ الإعتماد', false)
+        ->assertSee('تاريخ الحفظ', false)
         ->assertSee('data-field="municipalitie"', false)
         ->assertSee('data-field="neighborhood"', false)
         ->assertSee("replace(/\\/hud\\/?$/, '/arcgis/options')", false)
@@ -79,6 +87,8 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('hudArcgisFieldName', false)
         ->assertSee('hudArcgisSecurityPriorityExpression', false)
         ->assertSee('hudArcgisHasDisputeExpression', false)
+        ->assertSee('resolveHudArcgisSavedDateField', false)
+        ->assertSee("hudArcgisFieldName('field_status') + \" = 'COMPLETED'\"", false)
         ->assertSee('buildingsLayer.definitionExpression = whereExpression', false)
         ->assertSee('assessment_obstacle', false)
         ->assertSee('has_dispute', false)
@@ -159,6 +169,7 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('hudArcgisInExpression', false)
         ->assertSee("params.append(element.dataset.field + '[]'", false)
         ->assertSee("has_dispute: document.getElementById('hud_filter_has_dispute')?.checked ? '1' : ''", false)
+        ->assertSee("saved_from_date: document.getElementById('hud_filter_saved_from_date')?.value || ''", false)
         ->assertSee('url.searchParams.append(key, value)', false);
 });
 
@@ -236,6 +247,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         'neighborhood' => 'Rimal',
         'building_debris_qty' => '10',
         'end' => '2026-05-19 08:00:00',
+        'editdate' => '2026-05-20 09:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -261,6 +273,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         'neighborhood' => 'Jabalia',
         'building_debris_qty' => '5',
         'end' => '2026-05-18 08:00:00',
+        'editdate' => '2026-05-20 10:00:00',
     ]);
 
     Building::query()->create([
@@ -276,6 +289,7 @@ it('returns hud stats for all data by default and filtered data when filters are
         'neighborhood' => 'Rimal',
         'building_debris_qty' => '7',
         'end' => '2026-05-17 08:00:00',
+        'editdate' => '2026-05-21 08:00:00',
     ]);
 
     HousingUnit::query()->create([
@@ -353,4 +367,15 @@ it('returns hud stats for all data by default and filtered data when filters are
         ->assertJsonPath('damageChart.data.1', 1)
         ->assertJsonPath('municipalityReports.0.name', 'North Gaza')
         ->assertJsonPath('municipalityReports.0.summary.units', 1);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats', [
+            'saved_from_date' => '2026-05-20',
+            'saved_to_date' => '2026-05-20',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 1)
+        ->assertJsonPath('summaryStats.assessed_buildings', 1)
+        ->assertJsonPath('buildingDamageChart.data.0', 1)
+        ->assertJsonPath('buildingDamageChart.data.1', 0);
 });
