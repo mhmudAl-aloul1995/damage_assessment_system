@@ -2158,11 +2158,11 @@ class DamageAssessmentController extends Controller
         $query->where('building_field_status', 'COMPLETED');
 
         if ($startDate !== null) {
-            $query->whereDate('editdate', '>=', $startDate);
+            $query->whereDate('building_submit_date', '>=', $startDate);
         }
 
         if ($endDate !== null) {
-            $query->whereDate('editdate', '<=', $endDate);
+            $query->whereDate('building_submit_date', '<=', $endDate);
         }
 
         if ($request->filled('governorate')) {

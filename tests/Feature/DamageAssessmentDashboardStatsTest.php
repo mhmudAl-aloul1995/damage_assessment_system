@@ -388,7 +388,7 @@ it('filters the homepage housing unit map table by the building submit date', fu
         ->assertJsonPath('data.0.building_name', 'Old End Building');
 });
 
-it('filters dashboard housing totals by completed building status and edit date', function () {
+it('filters dashboard housing totals by completed building status and building submit date', function () {
     $user = User::factory()->create();
 
     $this->app->instance(ArcgisService::class, new class extends ArcgisService
@@ -419,9 +419,9 @@ it('filters dashboard housing totals by completed building status and edit date'
 
     HousingUnit::query()->create([
         'objectid' => 903,
-        'globalid' => 'unit-edited-in-range-incomplete-building',
+        'globalid' => 'unit-submitted-in-range-incomplete-building',
         'unit_damage_status' => 'fully_damaged2',
-        'building_submit_date' => '2026-05-01 10:00:00',
+        'building_submit_date' => '2026-06-15 10:00:00',
         'editdate' => '2026-06-15 10:00:00',
         'building_field_status' => 'Not_Completed',
     ]);
@@ -434,8 +434,8 @@ it('filters dashboard housing totals by completed building status and edit date'
         ->assertOk()
         ->assertViewHas('unitStats', function (array $unitStats): bool {
             return (int) $unitStats['total_units'] === 1
-                && (int) $unitStats['fully_damaged'] === 0
-                && (int) $unitStats['partially_damaged'] === 1;
+                && (int) $unitStats['fully_damaged'] === 1
+                && (int) $unitStats['partially_damaged'] === 0;
         });
 });
 
