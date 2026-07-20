@@ -62,7 +62,7 @@ class DamageAssessmentController extends Controller
             : '';
 
         $buildingQuery = Building::query();
-        $this->applyDashboardMapFilters($buildingQuery, $request, '', 'end');
+        $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
 
         $housingUnitQuery = HousingUnit::query();
         $this->applyDashboardHousingFilters($housingUnitQuery, $request);
@@ -1028,7 +1028,7 @@ class DamageAssessmentController extends Controller
     public function latestStats(Request $request): \Illuminate\Http\JsonResponse
     {
         $buildingQuery = Building::query();
-        $this->applyDashboardMapFilters($buildingQuery, $request, '', 'end');
+        $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
 
         $housingUnitQuery = HousingUnit::query();
         $this->applyDashboardHousingFilters($housingUnitQuery, $request);
@@ -2155,12 +2155,14 @@ class DamageAssessmentController extends Controller
     {
         [$startDate, $endDate] = $this->dashboardDateRange($request);
 
+        $query->where('building_field_status', 'COMPLETED');
+
         if ($startDate !== null) {
-            $query->whereDate('building_submit_date', '>=', $startDate);
+            $query->whereDate('editdate', '>=', $startDate);
         }
 
         if ($endDate !== null) {
-            $query->whereDate('building_submit_date', '<=', $endDate);
+            $query->whereDate('editdate', '<=', $endDate);
         }
 
         if ($request->filled('governorate')) {

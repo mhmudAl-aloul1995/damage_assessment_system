@@ -174,6 +174,7 @@ it('treats the dashboard yesterday shortcut as the previous day', function () {
         'building_damage_status' => 'fully_damaged',
         'neighborhood' => 'Rimal',
         'end' => '2026-05-15 09:00:00',
+        'submission_date' => '2026-05-15 09:00:00',
     ]);
 
     Building::query()->create([
@@ -184,6 +185,7 @@ it('treats the dashboard yesterday shortcut as the previous day', function () {
         'building_damage_status' => 'partially_damaged',
         'neighborhood' => 'Rimal',
         'end' => '2026-05-16 09:00:00',
+        'submission_date' => '2026-05-16 09:00:00',
     ]);
 
     $this->actingAs($user)
@@ -386,7 +388,7 @@ it('filters the homepage housing unit map table by the building submit date', fu
         ->assertJsonPath('data.0.building_name', 'Old End Building');
 });
 
-it('filters dashboard housing totals by the building submit date', function () {
+it('filters dashboard housing totals by completed building status and edit date', function () {
     $user = User::factory()->create();
 
     $this->app->instance(ArcgisService::class, new class extends ArcgisService
@@ -403,6 +405,7 @@ it('filters dashboard housing totals by the building submit date', function () {
         'unit_damage_status' => 'fully_damaged2',
         'building_submit_date' => '2026-06-15 10:00:00',
         'editdate' => '2026-05-01 10:00:00',
+        'building_field_status' => 'COMPLETED',
     ]);
 
     HousingUnit::query()->create([
@@ -411,6 +414,16 @@ it('filters dashboard housing totals by the building submit date', function () {
         'unit_damage_status' => 'partially_damaged2',
         'building_submit_date' => '2026-05-01 10:00:00',
         'editdate' => '2026-06-15 10:00:00',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 903,
+        'globalid' => 'unit-edited-in-range-incomplete-building',
+        'unit_damage_status' => 'fully_damaged2',
+        'building_submit_date' => '2026-05-01 10:00:00',
+        'editdate' => '2026-06-15 10:00:00',
+        'building_field_status' => 'Not_Completed',
     ]);
 
     $this->actingAs($user)
@@ -421,8 +434,8 @@ it('filters dashboard housing totals by the building submit date', function () {
         ->assertOk()
         ->assertViewHas('unitStats', function (array $unitStats): bool {
             return (int) $unitStats['total_units'] === 1
-                && (int) $unitStats['fully_damaged'] === 1
-                && (int) $unitStats['partially_damaged'] === 0;
+                && (int) $unitStats['fully_damaged'] === 0
+                && (int) $unitStats['partially_damaged'] === 1;
         });
 });
 
@@ -458,6 +471,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'globalid' => 'gaza-unit',
         'unit_damage_status' => 'fully_damaged2',
         'governorate' => 'Gaza',
+        'building_field_status' => 'COMPLETED',
     ]);
 
     HousingUnit::query()->create([
@@ -465,6 +479,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'globalid' => 'north-unit',
         'unit_damage_status' => 'partially_damaged2',
         'governorate' => 'North Gaza',
+        'building_field_status' => 'COMPLETED',
     ]);
 
     PublicBuildingSurvey::query()->create([
@@ -542,6 +557,7 @@ it('returns latest dashboard stats as json', function () {
         'is_the_housing_unit_or_living_habitable' => 'yes',
         'security_situation_unit' => 'Safe',
         'unit_support_needed' => 'no',
+        'building_field_status' => 'COMPLETED',
     ]);
 
     $this->actingAs($user)
