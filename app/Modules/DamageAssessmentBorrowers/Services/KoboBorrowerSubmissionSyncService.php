@@ -14,52 +14,52 @@ use Illuminate\Support\Facades\Schema;
 class KoboBorrowerSubmissionSyncService
 {
     /**
-     * @var array<int, string>
+     * @var array<string, string|null>
      */
-    private const DEFAULT_BOQ_FIELD_ORDER = [
-        '_2_002',
-        '_B250_B300_3',
-        '_B250_2',
-        '_B200_2',
-        '_20_2',
-        '_15_2',
-        '_10_2',
-        '_2_003',
-        '_2_004',
-        '_2_005',
-        '_2_006',
-        '_2_007',
-        '__029',
-        '__030',
-        '_2_008',
-        '__031',
-        '_80_120_',
-        '__032',
-        '__033',
-        '__034',
-        '__035',
-        '_2_',
-        '__036',
-        '_80_100_',
-        '_0_4_',
-        '_80_40_',
-        '_3_',
-        '__037',
-        '__038',
-        '__039',
-        '__040',
-        '__041',
-        '__042',
-        '__043',
-        '__044',
-        '__045',
-        '__046',
-        '_1000_',
-        '_500_',
-        '__047',
-        '_2_009',
-        '_2_010',
-        '__048',
+    private const DEFAULT_BOQ_FIELD_ITEM_CODES = [
+        '_2_002' => '1.1',
+        '_B250_B300_3' => '2.1',
+        '_B250_2' => '2.2',
+        '_B200_2' => '2.3',
+        '_20_2' => '3.1',
+        '_15_2' => '3.2',
+        '_10_2' => '3.3',
+        '_2_003' => '4.1',
+        '_2_004' => '4.2',
+        '_2_005' => null,
+        '_2_006' => '5.1',
+        '_2_007' => '5.2',
+        '__029' => '6.1',
+        '__030' => '6.2',
+        '_2_008' => '7.1',
+        '__031' => '8.1',
+        '_80_120_' => '8.2',
+        '__032' => '8.3',
+        '__033' => '8.4',
+        '__034' => '8.5',
+        '__035' => '8.6',
+        '_2_' => '9.1',
+        '__036' => '9.2',
+        '_80_100_' => '9.3',
+        '_0_4_' => '10.1',
+        '_80_40_' => '10.2',
+        '_3_' => '10.3',
+        '__037' => '10.4',
+        '__038' => '11.1',
+        '__039' => '11.2',
+        '__040' => '11.3',
+        '__041' => '11.4',
+        '__042' => '11.5',
+        '__043' => '11.6',
+        '__044' => '11.7',
+        '__045' => '11.8',
+        '__046' => '11.9',
+        '_1000_' => '11.10',
+        '_500_' => '11.11',
+        '__047' => '11.12',
+        '_2_009' => '12.1',
+        '_2_010' => '12.2',
+        '__048' => '13.1',
     ];
 
     /**
@@ -255,8 +255,9 @@ class KoboBorrowerSubmissionSyncService
             ->map(function (array $quantity) use ($catalogItems): array {
                 $description = $quantity['source_column'];
                 $normalizedDescription = $this->normalizeDescription($description);
-                $catalogItem = $this->isConfiguredBoqGroupField($description)
-                    ? $catalogItems->values()->get(max(0, ((int) $quantity['sort_order']) - 1))
+                $catalogItemCode = $this->text($quantity['catalog_item_code'] ?? null);
+                $catalogItem = $catalogItemCode !== null
+                    ? $catalogItems->first(fn (BorrowerBoqCatalogItem $catalogItem): bool => (string) $catalogItem->item_code === $catalogItemCode)
                     : null;
 
                 $catalogItem ??= $catalogItems->first(function (BorrowerBoqCatalogItem $catalogItem) use ($normalizedDescription): bool {
@@ -422,7 +423,7 @@ class KoboBorrowerSubmissionSyncService
 
     /**
      * @param  array<string, mixed>  $payload
-     * @return array<int, array{source_column: string, quantity: float, sort_order: int}>|null
+     * @return array<int, array{source_column: string, quantity: float, sort_order: int, catalog_item_code?: string}>|null
      */
     private function groupBoqQuantities(array $payload): ?array
     {
@@ -433,8 +434,8 @@ class KoboBorrowerSubmissionSyncService
         }
 
         $quantities = [];
-        $fieldOrder = $this->configuredBoqFieldOrder();
-        $fieldOrderLookup = array_flip($fieldOrder);
+        $fieldItemCodes = $this->configuredBoqFieldItemCodes();
+        $fieldOrderLookup = array_flip(array_keys($fieldItemCodes));
 
         foreach ($this->lookup($payload) as $key => $value) {
             $fieldKey = (string) $key;
@@ -450,31 +451,39 @@ class KoboBorrowerSubmissionSyncService
             }
 
             $fieldName = basename($fieldKey);
+            $catalogItemCode = $fieldItemCodes[$fieldName] ?? null;
 
-            $quantities[] = [
+            if ($catalogItemCode === null) {
+                continue;
+            }
+
+            $quantityRow = [
                 'source_column' => $fieldKey,
                 'quantity' => $quantity,
                 'sort_order' => isset($fieldOrderLookup[$fieldName])
                     ? ((int) $fieldOrderLookup[$fieldName]) + 1
                     : count($quantities) + 1,
             ];
+            $quantityRow['catalog_item_code'] = $catalogItemCode;
+
+            $quantities[] = $quantityRow;
         }
 
         return $quantities === [] ? null : $quantities;
     }
 
     /**
-     * @return array<int, string>
+     * @return array<string, string|null>
      */
-    private function configuredBoqFieldOrder(): array
+    private function configuredBoqFieldItemCodes(): array
     {
-        $fieldOrder = config('services.kobotoolbox.borrower_boq_field_order', []);
+        $fieldItemCodes = config('services.kobotoolbox.borrower_boq_field_item_codes', []);
 
-        if (! is_array($fieldOrder) || $fieldOrder === []) {
-            return self::DEFAULT_BOQ_FIELD_ORDER;
+        if (! is_array($fieldItemCodes) || $fieldItemCodes === []) {
+            return self::DEFAULT_BOQ_FIELD_ITEM_CODES;
         }
 
-        return array_values(array_filter($fieldOrder, 'is_string'));
+        return array_filter($fieldItemCodes, fn (mixed $itemCode): bool => is_string($itemCode) || $itemCode === null);
     }
 
     /**

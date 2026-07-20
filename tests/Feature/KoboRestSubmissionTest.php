@@ -147,7 +147,7 @@ test('kobo rest submission syncs borrower boq quantities from configured kobo gr
         'sort_order' => 2,
     ]);
     BorrowerBoqCatalogItem::query()->create([
-        'item_code' => '1.2',
+        'item_code' => '2.2',
         'description' => 'Second catalog item',
         'normalized_description' => 'second catalog item',
         'unit' => 'M3',
@@ -156,9 +156,9 @@ test('kobo rest submission syncs borrower boq quantities from configured kobo gr
         'sort_order' => 2,
     ]);
     BorrowerBoqCatalogItem::query()->create([
-        'item_code' => '1.3',
-        'description' => 'Third catalog item',
-        'normalized_description' => 'third catalog item',
+        'item_code' => '7.1',
+        'description' => 'Paint catalog item',
+        'normalized_description' => 'paint catalog item',
         'unit' => 'M2',
         'unit_price' => 30,
         'unit_price_ils' => 105,
@@ -171,6 +171,8 @@ test('kobo rest submission syncs borrower boq quantities from configured kobo gr
         'group_fj89d65' => [
             '_2_002' => 2,
             '_B250_2' => 5,
+            '_2_005' => 9,
+            '_2_008' => 100,
         ],
     ];
 
@@ -205,17 +207,21 @@ test('kobo rest submission syncs borrower boq quantities from configured kobo gr
 
     $items = $borrower->boqItems()->orderBy('sort_order')->get();
 
-    expect($items)->toHaveCount(2)
+    expect($items)->toHaveCount(3)
         ->and($items[0]->source_column)->toBe('group_fj89d65/_2_002')
         ->and($items[0]->source_key)->toBe(sha1('First catalog item'))
         ->and($items[0]->description)->toBe('First catalog item')
         ->and((float) $items[0]->quantity)->toBe(2.0)
         ->and($items[1]->source_column)->toBe('group_fj89d65/_B250_2')
-        ->and($items[1]->source_key)->toBe(sha1('Third catalog item'))
-        ->and($items[1]->description)->toBe('Third catalog item')
+        ->and($items[1]->source_key)->toBe(sha1('Second catalog item'))
+        ->and($items[1]->description)->toBe('Second catalog item')
         ->and((float) $items[1]->quantity)->toBe(5.0)
-        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(170.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(595.0);
+        ->and($items[2]->source_column)->toBe('group_fj89d65/_2_008')
+        ->and($items[2]->item_code)->toBe('7.1')
+        ->and($items[2]->description)->toBe('Paint catalog item')
+        ->and((float) $items[2]->quantity)->toBe(100.0)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(3120.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(10920.0);
 });
 
 test('kobo asset submissions can be fetched into stored rest submissions', function () {

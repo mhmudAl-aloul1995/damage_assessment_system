@@ -50,6 +50,7 @@ return [
         'borrower_boq_field_map' => json_decode((string) env('KOBO_BORROWER_BOQ_FIELD_MAP', '[]'), true) ?: [],
         'borrower_boq_group' => env('KOBO_BORROWER_BOQ_GROUP', 'group_fj89d65'),
         'borrower_boq_field_order' => json_decode((string) env('KOBO_BORROWER_BOQ_FIELD_ORDER', '[]'), true) ?: [],
+        'borrower_boq_field_item_codes' => json_decode((string) env('KOBO_BORROWER_BOQ_FIELD_ITEM_CODES', '[]'), true) ?: [],
         'timeout' => env('KOBOTOOLBOX_TIMEOUT', 60),
     ],
     'arcgis' => [
