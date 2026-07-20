@@ -864,11 +864,11 @@ class DamageAssessmentController extends Controller
                         $approvalQuery->where('field_status', 'COMPLETED');
 
                         if ($approvalStartDate !== null) {
-                            $approvalQuery->whereDate('editdate', '>=', $approvalStartDate);
+                            $approvalQuery->whereRaw("DATE(COALESCE(NULLIF(submission_date, ''), `end`)) >= ?", [$approvalStartDate]);
                         }
 
                         if ($approvalEndDate !== null) {
-                            $approvalQuery->whereDate('editdate', '<=', $approvalEndDate);
+                            $approvalQuery->whereRaw("DATE(COALESCE(NULLIF(submission_date, ''), `end`)) <= ?", [$approvalEndDate]);
                         }
                     });
                 }

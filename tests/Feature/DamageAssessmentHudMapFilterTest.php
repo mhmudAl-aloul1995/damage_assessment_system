@@ -87,15 +87,16 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('hudArcgisFieldName', false)
         ->assertSee('hudArcgisSecurityPriorityExpression', false)
         ->assertSee('hudArcgisHasDisputeExpression', false)
+        ->assertSee('hudArcgisApprovalDateStatusExpression', false)
         ->assertSee('hudArcgisEditDateStatusExpression', false)
+        ->assertSee("getArcgisField('submission_date')", false)
+        ->assertSee("getArcgisField('end')", false)
         ->assertSee("getArcgisField('editdate')", false)
-        ->assertSee("hudArcgisEditDateStatusExpression('COMPLETED'", false)
         ->assertSee("hudArcgisEditDateStatusExpression('Not_Completed'", false)
         ->assertSee("dateClauses.join(' OR ')", false)
         ->assertDontSee('/hud/map-object-ids', false)
         ->assertDontSee('hudArcgisObjectIdExpression', false)
         ->assertDontSee('resolveHudArcgisSavedDateField', false)
-        ->assertDontSee("getArcgisField('submission_date')", false)
         ->assertSee('buildingsLayer.definitionExpression = whereExpression', false)
         ->assertSee('assessment_obstacle', false)
         ->assertSee('has_dispute', false)
@@ -297,8 +298,8 @@ it('returns hud stats for all data by default and filtered data when filters are
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'building_debris_qty' => '7',
-        'end' => '2026-05-17 08:00:00',
-        'submission_date' => '2026-05-24 08:00:00',
+        'end' => '2026-05-21 08:00:00',
+        'submission_date' => null,
         'editdate' => '2026-05-21 08:00:00',
     ]);
 
@@ -362,8 +363,8 @@ it('returns hud stats for all data by default and filtered data when filters are
 
     $this->actingAs($user)
         ->getJson(route('damageAssessment.hud.stats', [
-            'from_date' => '2026-05-20',
-            'to_date' => '2026-05-20',
+            'from_date' => '2026-05-22',
+            'to_date' => '2026-05-22',
         ]))
         ->assertOk()
         ->assertJsonPath('summaryStats.total_buildings', 1)

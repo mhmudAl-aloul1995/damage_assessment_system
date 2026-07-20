@@ -1579,6 +1579,12 @@
                 return getArcgisField(fieldName)?.name || fieldName;
             }
 
+            function hudArcgisFieldExpression(field) {
+                return String(field.name).toLowerCase() === 'end'
+                    ? '"' + field.name + '"'
+                    : field.name;
+            }
+
             function syncHudDateRange(selectedDates, instance, fromInput, toInput) {
                 if (selectedDates.length === 2) {
                     fromInput.value = instance.formatDate(selectedDates[0], 'Y-m-d');
@@ -1664,12 +1670,61 @@
 
             function hudArcgisDateExpression(field, operator, value, endOfDay = false) {
                 const timeValue = endOfDay ? '23:59:59' : '00:00:00';
+                const fieldExpression = hudArcgisFieldExpression(field);
 
                 if (String(field.type).toLowerCase().includes('date')) {
-                    return field.name + " " + operator + " TIMESTAMP '" + value + " " + timeValue + "'";
+                    return fieldExpression + " " + operator + " TIMESTAMP '" + value + " " + timeValue + "'";
                 }
 
-                return field.name + " " + operator + " '" + escapeArcgisValue(value) + "'";
+                return fieldExpression + " " + operator + " '" + escapeArcgisValue(value) + "'";
+            }
+
+            function hudArcgisDateRangeExpressions(field, fromDate, toDate) {
+                const clauses = [];
+
+                if (fromDate) {
+                    clauses.push(hudArcgisDateExpression(field, '>=', fromDate));
+                }
+
+                if (toDate) {
+                    clauses.push(hudArcgisDateExpression(field, '<=', toDate, true));
+                }
+
+                return clauses;
+            }
+
+            function hudArcgisApprovalDateStatusExpression(fromDate, toDate) {
+                const statusField = hudArcgisFieldName('field_status');
+                const submissionDateField = getArcgisField('submission_date');
+                const endDateField = getArcgisField('end');
+
+                if (!submissionDateField && !endDateField) {
+                    return '1=0';
+                }
+
+                const statusClause = statusField + " = '" + escapeArcgisValue('COMPLETED') + "'";
+
+                if (!submissionDateField) {
+                    return '(' + [statusClause, ...hudArcgisDateRangeExpressions(endDateField, fromDate, toDate)].join(' AND ') + ')';
+                }
+
+                if (!endDateField) {
+                    return '(' + [statusClause, ...hudArcgisDateRangeExpressions(submissionDateField, fromDate, toDate)].join(' AND ') + ')';
+                }
+
+                const submissionDateExpression = hudArcgisFieldExpression(submissionDateField);
+                const endDateExpression = hudArcgisFieldExpression(endDateField);
+                const submissionDateClauses = [
+                    submissionDateExpression + ' IS NOT NULL',
+                    ...hudArcgisDateRangeExpressions(submissionDateField, fromDate, toDate)
+                ];
+                const endDateClauses = [
+                    submissionDateExpression + ' IS NULL',
+                    endDateExpression + ' IS NOT NULL',
+                    ...hudArcgisDateRangeExpressions(endDateField, fromDate, toDate)
+                ];
+
+                return '(' + statusClause + ' AND ((' + submissionDateClauses.join(' AND ') + ') OR (' + endDateClauses.join(' AND ') + ')))';
             }
 
             function hudArcgisEditDateStatusExpression(status, fromDate, toDate) {
@@ -1684,13 +1739,7 @@
                     statusField + " = '" + escapeArcgisValue(status) + "'"
                 ];
 
-                if (fromDate) {
-                    clauses.push(hudArcgisDateExpression(editDateField, '>=', fromDate));
-                }
-
-                if (toDate) {
-                    clauses.push(hudArcgisDateExpression(editDateField, '<=', toDate, true));
-                }
+                clauses.push(...hudArcgisDateRangeExpressions(editDateField, fromDate, toDate));
 
                 return '(' + clauses.join(' AND ') + ')';
             }
@@ -1748,7 +1797,7 @@
                 const dateClauses = [];
 
                 if (approvalFromDate || approvalToDate) {
-                    dateClauses.push(hudArcgisEditDateStatusExpression('COMPLETED', approvalFromDate, approvalToDate));
+                    dateClauses.push(hudArcgisApprovalDateStatusExpression(approvalFromDate, approvalToDate));
                 }
 
                 if (savedFromDate || savedToDate) {
