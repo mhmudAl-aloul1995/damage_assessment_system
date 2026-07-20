@@ -59,6 +59,28 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('استبيان المقترضين', false);
 });
 
+it('allows borrower managers to manually sync iqrad kobo edits', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    Artisan::shouldReceive('call')
+        ->once()
+        ->with('kobo:sync-iqrad-borrowers', ['--all' => true])
+        ->andReturn(0);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.index'))
+        ->assertOk()
+        ->assertSee('تحديث من Kobo الآن', false)
+        ->assertSee(route('damage-assessment-borrowers.kobo.sync'), false);
+
+    $this->actingAs($user)
+        ->post(route('damage-assessment-borrowers.kobo.sync'))
+        ->assertRedirect(route('damage-assessment-borrowers.index'))
+        ->assertSessionHas('success', 'تم سحب آخر تعديلات Kobo وتحديث بيانات المقترضين وجدول الكميات.');
+});
+
 it('allows field engineers to open the borrower survey form page', function () {
     $role = Role::findOrCreate('Field Engineer', 'web');
     $user = User::factory()->create();

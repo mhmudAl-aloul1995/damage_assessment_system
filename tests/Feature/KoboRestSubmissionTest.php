@@ -253,6 +253,37 @@ test('kobo asset submissions can be fetched into stored rest submissions', funct
         ->and(KoboRestSubmission::query()->where('submission_uuid', 'uuid:iqrad-fetch-001')->value('sync_status'))->toBe('pending');
 });
 
+test('iqrad kobo sync command fetches and applies edited submissions', function () {
+    config([
+        'services.kobotoolbox.token' => 'api-token',
+        'services.kobotoolbox.iqrad_asset_uid' => 'asset123',
+    ]);
+
+    Http::fake([
+        'https://kf.kobotoolbox.org/api/v2/assets/asset123/data/*' => Http::response([
+            'results' => [
+                [
+                    '_uuid' => 'uuid:iqrad-command-sync',
+                    '_id' => 100,
+                    'borrower_name' => 'Edited Kobo Borrower',
+                    'phone_primary' => '0590000000',
+                ],
+            ],
+            'next' => null,
+        ]),
+    ]);
+
+    $this->artisan('kobo:sync-iqrad-borrowers --all')
+        ->assertSuccessful();
+
+    $submission = KoboRestSubmission::query()->where('submission_uuid', 'uuid:iqrad-command-sync')->sole();
+    $borrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid:iqrad-command-sync')->sole();
+
+    expect($submission->sync_status)->toBe('synced')
+        ->and($borrower->borrower_name)->toBe('Edited Kobo Borrower')
+        ->and($borrower->phone_primary)->toBe('0590000000');
+});
+
 test('kobo rest submission syncs HEKS main survey payload', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')

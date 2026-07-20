@@ -24,6 +24,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -198,6 +199,25 @@ class BorrowerSurveyController extends Controller
                 ], 422);
             }
         }
+    }
+
+    public function syncKobo(): RedirectResponse
+    {
+        $this->authorizePricingAccess();
+
+        $exitCode = Artisan::call('kobo:sync-iqrad-borrowers', [
+            '--all' => true,
+        ]);
+
+        if ($exitCode !== 0) {
+            return redirect()
+                ->route('damage-assessment-borrowers.index')
+                ->with('error', 'تعذرت مزامنة تعديلات Kobo. راجع سجل kobo-iqrad-sync.log أو إعدادات الاتصال.');
+        }
+
+        return redirect()
+            ->route('damage-assessment-borrowers.index')
+            ->with('success', 'تم سحب آخر تعديلات Kobo وتحديث بيانات المقترضين وجدول الكميات.');
     }
 
     public function show(DamageAssessmentBorrower $borrower): View

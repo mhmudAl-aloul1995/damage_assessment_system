@@ -33,6 +33,13 @@ Schedule::command('sync:arcgis-layers')
     ->name('sync-arcgis-layers')
     ->emailOutputOnFailure('mhmudaloul@gmail.com')
     ->appendOutputTo(storage_path('logs/sync-arcgis.log'));
+
+Schedule::command('kobo:sync-iqrad-borrowers --all')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(20)
+    ->runInBackground()
+    ->name('kobo-sync-iqrad-borrowers')
+    ->appendOutputTo(storage_path('logs/kobo-iqrad-sync.log'));
 /*
 |-------f-------------------------------------------------------------------
 | Database Backup

@@ -18,6 +18,8 @@ Route::middleware('auth')->group(function () {
         ->name('damage-assessment-borrowers.import');
     Route::post('/import/preview', [BorrowerSurveyController::class, 'previewImport'])
         ->name('damage-assessment-borrowers.import.preview');
+    Route::post('/sync-kobo', [BorrowerSurveyController::class, 'syncKobo'])
+        ->name('damage-assessment-borrowers.kobo.sync');
     Route::put('/exchange-rate', [BorrowerSurveyController::class, 'updateGlobalExchangeRate'])
         ->name('damage-assessment-borrowers.exchange-rate.update');
     Route::get('/{borrower}/pricing', [BorrowerSurveyController::class, 'pricing'])

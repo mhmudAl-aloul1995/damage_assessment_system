@@ -45,6 +45,7 @@ return [
     'kobotoolbox' => [
         'token' => env('KOBOTOOLBOX_TOKEN'),
         'rest_service_token' => env('KOBO_REST_SERVICE_TOKEN'),
+        'iqrad_asset_uid' => env('KOBO_IQRAD_ASSET_UID', 'aK9zqkbNGX4XnD8BgzmQvx'),
         'borrower_name_field' => env('KOBO_BORROWER_NAME_FIELD'),
         'borrower_field_map' => json_decode((string) env('KOBO_BORROWER_FIELD_MAP', '[]'), true) ?: [],
         'borrower_boq_field_map' => json_decode((string) env('KOBO_BORROWER_BOQ_FIELD_MAP', '[]'), true) ?: [],

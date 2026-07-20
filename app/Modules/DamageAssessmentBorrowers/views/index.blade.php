@@ -518,6 +518,14 @@
                 <p class="mb-0 text-white-75">ابحث عن الحالة، حدّد أولويتها، ثم انتقل للتقييم أو التسعير من مكان واحد.</p>
             </div>
             <div class="d-flex flex-wrap gap-3">
+                @if ($canManagePricing)
+                    <form method="POST" action="{{ route('damage-assessment-borrowers.kobo.sync') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-light-info">
+                            تحديث من Kobo الآن
+                        </button>
+                    </form>
+                @endif
                 <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#borrowersImportModal">
                     استيراد من Excel
                 </button>
@@ -674,6 +682,16 @@
                 <span class="path2"></span>
             </i>
             <span>{{ session('success') }}</span>
+        </div>
+    @endif
+    @if (! $isFormPage && session('error'))
+        <div class="alert alert-danger d-flex align-items-center gap-3 mb-6">
+            <i class="ki-duotone ki-information-5 fs-2x text-danger">
+                <span class="path1"></span>
+                <span class="path2"></span>
+                <span class="path3"></span>
+            </i>
+            <span>{{ session('error') }}</span>
         </div>
     @endif
 
