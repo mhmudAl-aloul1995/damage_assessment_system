@@ -157,7 +157,7 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
     expect($pointBuilding->submissiondate)->toBe('2026-05-10 09:30:00');
     expect((float) $polygonBuilding->latitude)->toBe(31.5);
     expect((float) $polygonBuilding->longitude)->toBe(34.5);
-    expect($completedBuildingWithEnd->submissiondate)->toBe('2026-05-13 12:30:00');
+    expect($completedBuildingWithEnd->submissiondate)->toBe('2026-05-12 11:15:00');
 });
 
 it('fills missing owner mobile from alternate arcgis owner mobile fields', function (): void {

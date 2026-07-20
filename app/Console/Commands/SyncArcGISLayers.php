@@ -676,7 +676,7 @@ class SyncArcGISLayers extends Command
             return $row;
         }
 
-        $fallbackValue = $row['editdate'] ?? null;
+        $fallbackValue = $row['end'] ?? null;
 
         if ($this->isBlankSyncValue($fallbackValue)) {
             $fallbackValue = $row['creationdate'] ?? null;
@@ -686,7 +686,7 @@ class SyncArcGISLayers extends Command
             return $row;
         }
 
-        foreach (['submission_date'] as $column) {
+        foreach (['submission_date', 'submissiondate'] as $column) {
             if (
                 in_array($column, $tableColumns, true)
                 && $this->isBlankSyncValue($row[$column] ?? null)
