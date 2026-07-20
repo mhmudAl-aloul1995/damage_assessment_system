@@ -172,6 +172,28 @@ test('kobo rest submission syncs borrower boq quantities from configured kobo gr
         ->assertJsonPath('sync_status', 'synced');
 
     $borrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid:iqrad-group-boq-001')->sole();
+    $borrower->boqItems()->create([
+        'catalog_item_id' => null,
+        'source_column' => 'group_fj89d65/_old_bad_field',
+        'source_key' => sha1('group_fj89d65/_old_bad_field'),
+        'item_code' => '5',
+        'description' => '0000900107',
+        'unit' => '904691094',
+        'unit_price' => 21024,
+        'exchange_rate' => 3.5,
+        'unit_price_ils' => 73584,
+        'quantity' => 15,
+        'total_price' => 315360,
+        'total_price_ils' => 1103760,
+        'sort_order' => 5,
+    ]);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/iqrad', $payload)
+        ->assertOk()
+        ->assertJsonPath('sync_status', 'synced');
+
     $items = $borrower->boqItems()->orderBy('sort_order')->get();
 
     expect($items)->toHaveCount(2)

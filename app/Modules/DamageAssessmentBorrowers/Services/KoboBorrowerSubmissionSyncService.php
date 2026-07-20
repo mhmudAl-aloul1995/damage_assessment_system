@@ -890,6 +890,15 @@ class KoboBorrowerSubmissionSyncService
         }
 
         $borrower->boqItems()
+            ->where(function ($query): void {
+                $query
+                    ->whereNull('catalog_item_id')
+                    ->orWhere('source_column', 'like', trim((string) config('services.kobotoolbox.borrower_boq_group', 'group_fj89d65'), '/').'/%');
+            })
+            ->when($seenKeys !== [], fn ($query) => $query->whereNotIn('source_key', $seenKeys))
+            ->delete();
+
+        $borrower->boqItems()
             ->when($seenKeys !== [], fn ($query) => $query->whereNotIn('source_key', $seenKeys))
             ->when($seenKeys === [], fn ($query) => $query)
             ->delete();
