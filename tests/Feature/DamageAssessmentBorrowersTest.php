@@ -811,6 +811,14 @@ it('opens borrower details page with survey data attachments and boq items', fun
         'employment_status' => 'not_working',
         'source_index' => 1,
     ]);
+    $borrower->koboAnswers()->create([
+        'field_hash' => sha1('group/custom_question'),
+        'field_key' => 'group/custom_question',
+        'field_label' => 'custom question',
+        'value' => 'Custom Kobo answer',
+        'raw_value' => 'Custom Kobo answer',
+        'sort_order' => 1,
+    ]);
 
     $this->actingAs($user)
         ->get(route('damage-assessment-borrowers.show', $borrower))
@@ -830,6 +838,8 @@ it('opens borrower details page with survey data attachments and boq items', fun
         ->assertSee('https://www.google.com/maps?q=31.5012345,34.4667891', false)
         ->assertSee('Repair item')
         ->assertSee('Resident Household')
+        ->assertSee('group/custom_question')
+        ->assertSee('Custom Kobo answer')
         ->assertSee('High risk reason');
 });
 

@@ -574,6 +574,7 @@
                     </div>
                 </div>
             @endif
+            @include('damage-assessment-borrowers::partials.kobo-answers', ['answers' => $borrower->koboAnswers])
         </div>
     </div>
 @endsection

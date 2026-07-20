@@ -3,9 +3,12 @@
 namespace App\Modules\DamageAssessmentBorrowers\Services;
 
 use App\Models\KoboRestSubmission;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class KoboBorrowerSubmissionSyncService
 {
@@ -50,7 +53,7 @@ class KoboBorrowerSubmissionSyncService
             'submitted_by_name' => 'KoboToolbox',
         ]);
 
-        return DB::transaction(function () use ($attributes, $payload): array {
+        return DB::transaction(function () use ($attributes, $payload, $submission): array {
             $sourceUuid = $attributes['source_uuid'] ?? null;
 
             $sourceUuidBorrower = filled($sourceUuid)
@@ -88,6 +91,8 @@ class KoboBorrowerSubmissionSyncService
             }
 
             $this->syncAttachments($borrower, $payload);
+            $this->syncBoqItems($borrower, $this->boqItems($payload));
+            $this->syncKoboAnswers($borrower, $submission, $payload);
             $borrower->forceFill([
                 'attachments_count' => $borrower->attachments()->count(),
             ])->save();
@@ -178,6 +183,176 @@ class KoboBorrowerSubmissionSyncService
             'loan_unit_damage_status' => $this->damageStatus($payload, $fieldMap),
             'notes' => $this->text($this->mappedValue($payload, $fieldMap, 'notes', ['notes', 'note'])),
         ], fn (mixed $value): bool => $value !== null && $value !== []);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function boqItems(array $payload): ?array
+    {
+        $quantities = $this->boqQuantities($payload);
+
+        if ($quantities === null) {
+            return null;
+        }
+
+        $catalogItems = Schema::hasTable('damage_assessment_borrower_boq_catalog_items')
+            ? BorrowerBoqCatalogItem::query()->orderBy('sort_order')->get()
+            : collect();
+
+        return collect($quantities)
+            ->map(function (array $quantity) use ($catalogItems): array {
+                $description = $quantity['source_column'];
+                $normalizedDescription = $this->normalizeDescription($description);
+                $catalogItem = $catalogItems->first(function (BorrowerBoqCatalogItem $catalogItem) use ($normalizedDescription): bool {
+                    $catalogDescription = (string) $catalogItem->normalized_description;
+
+                    return $catalogDescription !== ''
+                        && (str_contains($normalizedDescription, $catalogDescription)
+                            || str_contains($catalogDescription, mb_substr($normalizedDescription, 0, 120)));
+                });
+                $unitPrice = (float) ($catalogItem?->unit_price ?? 0);
+                $exchangeRate = $this->currentExchangeRate();
+                $itemQuantity = (float) $quantity['quantity'];
+
+                return [
+                    'catalog_item_id' => $catalogItem?->id,
+                    'source_column' => $description,
+                    'source_key' => sha1($description),
+                    'item_code' => $catalogItem?->item_code,
+                    'description' => $catalogItem?->description ?? $description,
+                    'unit' => $catalogItem?->unit ?? $this->unitFromDescription($description),
+                    'unit_price' => $unitPrice,
+                    'exchange_rate' => $exchangeRate,
+                    'unit_price_ils' => round($unitPrice * $exchangeRate, 2),
+                    'quantity' => $itemQuantity,
+                    'total_price' => round($itemQuantity * $unitPrice, 2),
+                    'total_price_ils' => round($itemQuantity * $unitPrice * $exchangeRate, 2),
+                    'sort_order' => $quantity['sort_order'],
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array{source_column: string, quantity: float, sort_order: int}>|null
+     */
+    private function boqQuantities(array $payload): ?array
+    {
+        $explicitQuantities = $this->explicitBoqQuantities($payload);
+
+        if ($explicitQuantities !== null) {
+            return $explicitQuantities;
+        }
+
+        $mappedQuantities = $this->mappedBoqQuantities($payload);
+
+        if ($mappedQuantities !== null) {
+            return $mappedQuantities;
+        }
+
+        $scannedQuantities = $this->scannedBoqQuantities($payload);
+
+        return $scannedQuantities === [] ? null : $scannedQuantities;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array{source_column: string, quantity: float, sort_order: int}>|null
+     */
+    private function explicitBoqQuantities(array $payload): ?array
+    {
+        $rawQuantities = $this->value($payload, ['boq_quantities', 'boq_items']);
+
+        if (! is_array($rawQuantities)) {
+            return null;
+        }
+
+        return collect($rawQuantities)
+            ->filter(fn (mixed $quantity): bool => is_array($quantity))
+            ->map(function (array $quantity, int $index): ?array {
+                $sourceColumn = $this->text($quantity['source_column'] ?? $quantity['description'] ?? $quantity['item'] ?? null);
+                $itemQuantity = $this->decimal($quantity['quantity'] ?? $quantity['qty'] ?? null);
+
+                if ($sourceColumn === null || $itemQuantity === null || $itemQuantity <= 0) {
+                    return null;
+                }
+
+                return [
+                    'source_column' => $sourceColumn,
+                    'quantity' => $itemQuantity,
+                    'sort_order' => (int) ($quantity['sort_order'] ?? $index + 1),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array{source_column: string, quantity: float, sort_order: int}>|null
+     */
+    private function mappedBoqQuantities(array $payload): ?array
+    {
+        $fieldMap = config('services.kobotoolbox.borrower_boq_field_map', []);
+
+        if (! is_array($fieldMap) || $fieldMap === []) {
+            return null;
+        }
+
+        return collect($fieldMap)
+            ->map(function (mixed $aliases, string $description) use ($payload): ?array {
+                $aliases = is_array($aliases) ? $aliases : [$aliases];
+                $quantity = $this->decimal($this->value($payload, array_values(array_filter($aliases, 'is_string'))));
+
+                if ($quantity === null || $quantity <= 0) {
+                    return null;
+                }
+
+                return [
+                    'source_column' => $description,
+                    'quantity' => $quantity,
+                    'sort_order' => 0,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array{source_column: string, quantity: float, sort_order: int}>
+     */
+    private function scannedBoqQuantities(array $payload): array
+    {
+        $quantities = [];
+
+        foreach ($this->lookup($payload) as $key => $value) {
+            $header = (string) $key;
+
+            if (! $this->looksLikeBoqHeader($header)) {
+                continue;
+            }
+
+            $quantity = $this->decimal($value);
+
+            if ($quantity === null || $quantity <= 0) {
+                continue;
+            }
+
+            $quantities[] = [
+                'source_column' => $header,
+                'quantity' => $quantity,
+                'sort_order' => count($quantities) + 1,
+            ];
+        }
+
+        return $quantities;
     }
 
     /**
@@ -566,5 +741,223 @@ class KoboBorrowerSubmissionSyncService
                 ->whereNotIn('source_index', $seenIndexes)
                 ->delete();
         }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>|null  $boqItems
+     */
+    private function syncBoqItems(DamageAssessmentBorrower $borrower, ?array $boqItems): void
+    {
+        if ($boqItems === null) {
+            return;
+        }
+
+        $seenKeys = [];
+
+        foreach ($boqItems as $boqItem) {
+            $seenKeys[] = $boqItem['source_key'];
+            $borrower->boqItems()->updateOrCreate(
+                ['source_key' => $boqItem['source_key']],
+                $boqItem
+            );
+        }
+
+        $borrower->boqItems()
+            ->when($seenKeys !== [], fn ($query) => $query->whereNotIn('source_key', $seenKeys))
+            ->when($seenKeys === [], fn ($query) => $query)
+            ->delete();
+
+        $borrower->forceFill([
+            'boq_total_usd' => collect($boqItems)->sum('total_price'),
+            'exchange_rate' => $boqItems[0]['exchange_rate'] ?? $this->currentExchangeRate(),
+            'boq_total_ils' => collect($boqItems)->sum('total_price_ils'),
+        ])->save();
+    }
+
+    private function currentExchangeRate(): float
+    {
+        if (Schema::hasTable('damage_assessment_borrower_pricing_settings')) {
+            $exchangeRate = BorrowerPricingSetting::query()->value('exchange_rate');
+
+            if ($exchangeRate !== null) {
+                return (float) $exchangeRate;
+            }
+        }
+
+        if (! Schema::hasColumn('damage_assessment_borrower_boq_catalog_items', 'unit_price_ils')) {
+            return 3.2;
+        }
+
+        $catalogItem = BorrowerBoqCatalogItem::query()
+            ->where('unit_price', '>', 0)
+            ->where('unit_price_ils', '>', 0)
+            ->first();
+
+        if (! $catalogItem instanceof BorrowerBoqCatalogItem) {
+            return 3.2;
+        }
+
+        return round((float) $catalogItem->unit_price_ils / (float) $catalogItem->unit_price, 4);
+    }
+
+    private function looksLikeBoqHeader(string $header): bool
+    {
+        if (str_starts_with($header, '_') || mb_strlen($header) < 30) {
+            return false;
+        }
+
+        foreach (['م2', 'م3', 'عدد', 'م.ط', 'مقطوعية'] as $unit) {
+            if (str_contains($header, $unit)) {
+                return true;
+            }
+        }
+
+        return str_contains($header, 'شبكة كهرباء');
+    }
+
+    private function normalizeDescription(string $description): string
+    {
+        $description = mb_strtolower($description);
+        $description = preg_replace('/\([^)]*\)/u', ' ', $description) ?? $description;
+        $description = preg_replace('/[^\p{Arabic}\p{L}\p{N}]+/u', ' ', $description) ?? $description;
+
+        return mb_substr(trim(preg_replace('/\s+/u', ' ', $description) ?? $description), 0, 255);
+    }
+
+    private function unitFromDescription(string $description): ?string
+    {
+        foreach (['م2', 'م3', 'عدد', 'م.ط', 'مقطوعية'] as $unit) {
+            if (str_contains($description, $unit)) {
+                return $unit;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function syncKoboAnswers(DamageAssessmentBorrower $borrower, KoboRestSubmission $submission, array $payload): void
+    {
+        if (! Schema::hasTable('damage_assessment_borrower_kobo_answers')) {
+            return;
+        }
+
+        $answers = $this->surveyAnswers($payload);
+        $seenHashes = [];
+
+        foreach ($answers as $answer) {
+            $seenHashes[] = $answer['field_hash'];
+            $borrower->koboAnswers()->updateOrCreate(
+                ['field_hash' => $answer['field_hash']],
+                array_merge($answer, [
+                    'kobo_rest_submission_id' => $submission->id,
+                ])
+            );
+        }
+
+        $borrower->koboAnswers()
+            ->when($seenHashes !== [], fn ($query) => $query->whereNotIn('field_hash', $seenHashes))
+            ->when($seenHashes === [], fn ($query) => $query)
+            ->delete();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array{field_hash: string, field_key: string, field_label: string, value: ?string, raw_value: mixed, sort_order: int}>
+     */
+    private function surveyAnswers(array $payload): array
+    {
+        $answers = [];
+
+        foreach ($this->flattenSurveyPayload($payload) as $fieldKey => $value) {
+            if ($this->isIgnoredSurveyField($fieldKey, $value)) {
+                continue;
+            }
+
+            $answers[] = [
+                'field_hash' => sha1($fieldKey),
+                'field_key' => $fieldKey,
+                'field_label' => $this->surveyFieldLabel($fieldKey),
+                'value' => $this->surveyAnswerText($value),
+                'raw_value' => $value,
+                'sort_order' => count($answers) + 1,
+            ];
+        }
+
+        return $answers;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function flattenSurveyPayload(array $payload, string $prefix = ''): array
+    {
+        $answers = [];
+
+        foreach ($payload as $key => $value) {
+            $fieldKey = $prefix === '' ? (string) $key : $prefix.'/'.$key;
+
+            if (is_array($value) && ! array_is_list($value)) {
+                $answers = array_replace($answers, $this->flattenSurveyPayload($value, $fieldKey));
+
+                continue;
+            }
+
+            $answers[$fieldKey] = $value;
+        }
+
+        return $answers;
+    }
+
+    private function isIgnoredSurveyField(string $fieldKey, mixed $value): bool
+    {
+        if ($value === null || $value === '') {
+            return true;
+        }
+
+        $baseKey = basename($fieldKey);
+
+        return in_array($baseKey, [
+            '_attachments',
+            '_geolocation',
+            '_id',
+            '_notes',
+            '_status',
+            '_submission_time',
+            '_submitted_by',
+            '_tags',
+            '_uuid',
+            '_validation_status',
+            '_version',
+            '_xform_id_string',
+            'instanceID',
+        ], true);
+    }
+
+    private function surveyFieldLabel(string $fieldKey): string
+    {
+        $label = basename($fieldKey);
+        $label = str_replace(['_', '-'], ' ', $label);
+
+        return trim($label) !== '' ? trim($label) : $fieldKey;
+    }
+
+    private function surveyAnswerText(mixed $value): ?string
+    {
+        if (is_array($value)) {
+            if (array_is_list($value) && collect($value)->every(fn (mixed $item): bool => ! is_array($item))) {
+                return collect($value)
+                    ->map(fn (mixed $item): string => (string) $item)
+                    ->filter(fn (string $item): bool => trim($item) !== '')
+                    ->implode(', ');
+            }
+
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: null;
+        }
+
+        return $this->text($value);
     }
 }

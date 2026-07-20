@@ -95,6 +95,11 @@ class DamageAssessmentBorrower extends Model
         return $this->hasMany(BorrowerResidentHousehold::class, 'damage_assessment_borrower_id');
     }
 
+    public function koboAnswers(): HasMany
+    {
+        return $this->hasMany(BorrowerKoboAnswer::class, 'damage_assessment_borrower_id');
+    }
+
     protected function casts(): array
     {
         return [

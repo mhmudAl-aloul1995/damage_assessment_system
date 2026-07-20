@@ -207,6 +207,7 @@ class BorrowerSurveyController extends Controller
         $borrower->load([
             'attachments' => fn ($query) => $query->orderBy('source_index'),
             'boqItems' => fn ($query) => $query->orderBy('sort_order')->orderBy('id'),
+            'koboAnswers' => fn ($query) => $query->orderBy('sort_order')->orderBy('id'),
             'residentHouseholds' => fn ($query) => $query->orderBy('source_index'),
             'submitter:id,name',
         ]);

@@ -47,6 +47,7 @@ return [
         'rest_service_token' => env('KOBO_REST_SERVICE_TOKEN'),
         'borrower_name_field' => env('KOBO_BORROWER_NAME_FIELD'),
         'borrower_field_map' => json_decode((string) env('KOBO_BORROWER_FIELD_MAP', '[]'), true) ?: [],
+        'borrower_boq_field_map' => json_decode((string) env('KOBO_BORROWER_BOQ_FIELD_MAP', '[]'), true) ?: [],
         'timeout' => env('KOBOTOOLBOX_TIMEOUT', 60),
     ],
     'arcgis' => [

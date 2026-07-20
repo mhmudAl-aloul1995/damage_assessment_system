@@ -2,6 +2,7 @@
 
 use App\Models\KoboRestSubmission;
 use App\Models\User;
+use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
@@ -73,7 +74,57 @@ test('kobo rest submission stores json payload', function () {
         ->borrower_id_number->toBe('900000001')
         ->risk_level->toBe('low')
         ->attachments_count->toBe(1)
+        ->and($borrower->koboAnswers()->where('field_key', 'borrower_name')->value('value'))->toBe('Mona Saleh')
+        ->and($borrower->koboAnswers()->where('field_key', 'employment_status')->value('value'))->toBe('not_working')
+        ->and($borrower->koboAnswers()->where('field_key', '_uuid')->exists())->toBeFalse()
         ->and($borrower->attachments()->first()->url)->toBe('https://kf.example.test/media/damage.jpg');
+});
+
+test('kobo rest submission syncs borrower boq quantities from payload', function () {
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '1.1',
+        'description' => 'Repair concrete item',
+        'normalized_description' => 'repair concrete item',
+        'unit' => 'M2',
+        'unit_price' => 10,
+        'unit_price_ils' => 35,
+        'sort_order' => 1,
+    ]);
+
+    $payload = [
+        '_uuid' => 'uuid:iqrad-boq-001',
+        'borrower_name' => 'BOQ Borrower',
+        'borrower_id_number' => '900000099',
+        'boq_quantities' => [
+            ['source_column' => 'Repair concrete item (M2)', 'quantity' => 2, 'sort_order' => 1],
+        ],
+    ];
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/iqrad', $payload)
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $borrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid:iqrad-boq-001')->sole();
+
+    expect($borrower->boqItems()->count())->toBe(1)
+        ->and((float) $borrower->boqItems()->first()->quantity)->toBe(2.0)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(20.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(70.0);
+
+    $payload['boq_quantities'][0]['quantity'] = 3;
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/iqrad', $payload)
+        ->assertOk()
+        ->assertJsonPath('sync_status', 'synced');
+
+    expect($borrower->boqItems()->count())->toBe(1)
+        ->and((float) $borrower->boqItems()->first()->refresh()->quantity)->toBe(3.0)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(30.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(105.0);
 });
 
 test('kobo asset submissions can be fetched into stored rest submissions', function () {
