@@ -146,13 +146,22 @@ test('kobo rest submission syncs borrower boq quantities from configured kobo gr
         'unit_price_ils' => 70,
         'sort_order' => 2,
     ]);
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '1.3',
+        'description' => 'Third catalog item',
+        'normalized_description' => 'third catalog item',
+        'unit' => 'M2',
+        'unit_price' => 30,
+        'unit_price_ils' => 105,
+        'sort_order' => 3,
+    ]);
 
     $payload = [
         '_uuid' => 'uuid:iqrad-group-boq-001',
         'borrower_name' => 'Grouped BOQ Borrower',
         'group_fj89d65' => [
             '_2_002' => 2,
-            '_B250_B300_3' => 3,
+            '_B250_2' => 5,
         ],
     ];
 
@@ -167,13 +176,15 @@ test('kobo rest submission syncs borrower boq quantities from configured kobo gr
 
     expect($items)->toHaveCount(2)
         ->and($items[0]->source_column)->toBe('group_fj89d65/_2_002')
+        ->and($items[0]->source_key)->toBe(sha1('First catalog item'))
         ->and($items[0]->description)->toBe('First catalog item')
         ->and((float) $items[0]->quantity)->toBe(2.0)
-        ->and($items[1]->source_column)->toBe('group_fj89d65/_B250_B300_3')
-        ->and($items[1]->description)->toBe('Second catalog item')
-        ->and((float) $items[1]->quantity)->toBe(3.0)
-        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(80.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(280.0);
+        ->and($items[1]->source_column)->toBe('group_fj89d65/_B250_2')
+        ->and($items[1]->source_key)->toBe(sha1('Third catalog item'))
+        ->and($items[1]->description)->toBe('Third catalog item')
+        ->and((float) $items[1]->quantity)->toBe(5.0)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(170.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(595.0);
 });
 
 test('kobo asset submissions can be fetched into stored rest submissions', function () {

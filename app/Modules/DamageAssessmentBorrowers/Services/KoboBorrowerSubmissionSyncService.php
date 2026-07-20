@@ -13,6 +13,55 @@ use Illuminate\Support\Facades\Schema;
 class KoboBorrowerSubmissionSyncService
 {
     /**
+     * @var array<int, string>
+     */
+    private const DEFAULT_BOQ_FIELD_ORDER = [
+        '_2_002',
+        '_B250_B300_3',
+        '_B250_2',
+        '_B200_2',
+        '_20_2',
+        '_15_2',
+        '_10_2',
+        '_2_003',
+        '_2_004',
+        '_2_005',
+        '_2_006',
+        '_2_007',
+        '__029',
+        '__030',
+        '_2_008',
+        '__031',
+        '_80_120_',
+        '__032',
+        '__033',
+        '__034',
+        '__035',
+        '_2_',
+        '__036',
+        '_80_100_',
+        '_0_4_',
+        '_80_40_',
+        '_3_',
+        '__037',
+        '__038',
+        '__039',
+        '__040',
+        '__041',
+        '__042',
+        '__043',
+        '__044',
+        '__045',
+        '__046',
+        '_1000_',
+        '_500_',
+        '__047',
+        '_2_009',
+        '_2_010',
+        '__048',
+    ];
+
+    /**
      * @var array<string, string>
      */
     private const DAMAGE_STATUSES = [
@@ -219,11 +268,15 @@ class KoboBorrowerSubmissionSyncService
                 $unitPrice = (float) ($catalogItem?->unit_price ?? 0);
                 $exchangeRate = $this->currentExchangeRate();
                 $itemQuantity = (float) $quantity['quantity'];
+                $sourceColumn = $catalogItem?->source_column ?: ($catalogItem?->description ?? $description);
+                $sourceKey = $catalogItem instanceof BorrowerBoqCatalogItem
+                    ? (($catalogItem->source_key ?: sha1((string) $sourceColumn)))
+                    : sha1($description);
 
                 return [
                     'catalog_item_id' => $catalogItem?->id,
                     'source_column' => $description,
-                    'source_key' => sha1($description),
+                    'source_key' => $sourceKey,
                     'item_code' => $catalogItem?->item_code,
                     'description' => $catalogItem?->description ?? $description,
                     'unit' => $catalogItem?->unit ?? $this->unitFromDescription($description),
@@ -354,6 +407,8 @@ class KoboBorrowerSubmissionSyncService
         }
 
         $quantities = [];
+        $fieldOrder = $this->configuredBoqFieldOrder();
+        $fieldOrderLookup = array_flip($fieldOrder);
 
         foreach ($this->lookup($payload) as $key => $value) {
             $fieldKey = (string) $key;
@@ -368,14 +423,32 @@ class KoboBorrowerSubmissionSyncService
                 continue;
             }
 
+            $fieldName = basename($fieldKey);
+
             $quantities[] = [
                 'source_column' => $fieldKey,
                 'quantity' => $quantity,
-                'sort_order' => count($quantities) + 1,
+                'sort_order' => isset($fieldOrderLookup[$fieldName])
+                    ? ((int) $fieldOrderLookup[$fieldName]) + 1
+                    : count($quantities) + 1,
             ];
         }
 
         return $quantities === [] ? null : $quantities;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function configuredBoqFieldOrder(): array
+    {
+        $fieldOrder = config('services.kobotoolbox.borrower_boq_field_order', []);
+
+        if (! is_array($fieldOrder) || $fieldOrder === []) {
+            return self::DEFAULT_BOQ_FIELD_ORDER;
+        }
+
+        return array_values(array_filter($fieldOrder, 'is_string'));
     }
 
     /**
