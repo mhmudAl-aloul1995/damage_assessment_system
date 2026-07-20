@@ -205,7 +205,11 @@ class KoboBorrowerSubmissionSyncService
             ->map(function (array $quantity) use ($catalogItems): array {
                 $description = $quantity['source_column'];
                 $normalizedDescription = $this->normalizeDescription($description);
-                $catalogItem = $catalogItems->first(function (BorrowerBoqCatalogItem $catalogItem) use ($normalizedDescription): bool {
+                $catalogItem = $this->isConfiguredBoqGroupField($description)
+                    ? $catalogItems->values()->get(max(0, ((int) $quantity['sort_order']) - 1))
+                    : null;
+
+                $catalogItem ??= $catalogItems->first(function (BorrowerBoqCatalogItem $catalogItem) use ($normalizedDescription): bool {
                     $catalogDescription = (string) $catalogItem->normalized_description;
 
                     return $catalogDescription !== ''
@@ -236,6 +240,13 @@ class KoboBorrowerSubmissionSyncService
             ->all();
     }
 
+    private function isConfiguredBoqGroupField(string $fieldKey): bool
+    {
+        $group = trim((string) config('services.kobotoolbox.borrower_boq_group', 'group_fj89d65'), '/');
+
+        return $group !== '' && str_starts_with($fieldKey, $group.'/');
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array<int, array{source_column: string, quantity: float, sort_order: int}>|null
@@ -252,6 +263,12 @@ class KoboBorrowerSubmissionSyncService
 
         if ($mappedQuantities !== null) {
             return $mappedQuantities;
+        }
+
+        $groupQuantities = $this->groupBoqQuantities($payload);
+
+        if ($groupQuantities !== null) {
+            return $groupQuantities;
         }
 
         $scannedQuantities = $this->scannedBoqQuantities($payload);
@@ -322,6 +339,43 @@ class KoboBorrowerSubmissionSyncService
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array{source_column: string, quantity: float, sort_order: int}>|null
+     */
+    private function groupBoqQuantities(array $payload): ?array
+    {
+        $group = trim((string) config('services.kobotoolbox.borrower_boq_group', 'group_fj89d65'), '/');
+
+        if ($group === '') {
+            return null;
+        }
+
+        $quantities = [];
+
+        foreach ($this->lookup($payload) as $key => $value) {
+            $fieldKey = (string) $key;
+
+            if (! str_starts_with($fieldKey, $group.'/')) {
+                continue;
+            }
+
+            $quantity = $this->decimal($value);
+
+            if ($quantity === null || $quantity <= 0) {
+                continue;
+            }
+
+            $quantities[] = [
+                'source_column' => $fieldKey,
+                'quantity' => $quantity,
+                'sort_order' => count($quantities) + 1,
+            ];
+        }
+
+        return $quantities === [] ? null : $quantities;
     }
 
     /**

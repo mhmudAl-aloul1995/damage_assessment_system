@@ -127,6 +127,55 @@ test('kobo rest submission syncs borrower boq quantities from payload', function
         ->and((float) $borrower->boq_total_ils)->toBe(105.0);
 });
 
+test('kobo rest submission syncs borrower boq quantities from configured kobo group', function () {
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '1.1',
+        'description' => 'First catalog item',
+        'normalized_description' => 'first catalog item',
+        'unit' => 'M2',
+        'unit_price' => 10,
+        'unit_price_ils' => 35,
+        'sort_order' => 1,
+    ]);
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '1.2',
+        'description' => 'Second catalog item',
+        'normalized_description' => 'second catalog item',
+        'unit' => 'M3',
+        'unit_price' => 20,
+        'unit_price_ils' => 70,
+        'sort_order' => 2,
+    ]);
+
+    $payload = [
+        '_uuid' => 'uuid:iqrad-group-boq-001',
+        'borrower_name' => 'Grouped BOQ Borrower',
+        'group_fj89d65' => [
+            '_2_002' => 2,
+            '_B250_B300_3' => 3,
+        ],
+    ];
+
+    $this
+        ->withHeader('X-Kobo-Token', 'test-kobo-token')
+        ->postJson('/api/kobo/iqrad', $payload)
+        ->assertCreated()
+        ->assertJsonPath('sync_status', 'synced');
+
+    $borrower = DamageAssessmentBorrower::query()->where('source_uuid', 'uuid:iqrad-group-boq-001')->sole();
+    $items = $borrower->boqItems()->orderBy('sort_order')->get();
+
+    expect($items)->toHaveCount(2)
+        ->and($items[0]->source_column)->toBe('group_fj89d65/_2_002')
+        ->and($items[0]->description)->toBe('First catalog item')
+        ->and((float) $items[0]->quantity)->toBe(2.0)
+        ->and($items[1]->source_column)->toBe('group_fj89d65/_B250_B300_3')
+        ->and($items[1]->description)->toBe('Second catalog item')
+        ->and((float) $items[1]->quantity)->toBe(3.0)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(80.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(280.0);
+});
+
 test('kobo asset submissions can be fetched into stored rest submissions', function () {
     config(['services.kobotoolbox.token' => 'api-token']);
 
@@ -1434,6 +1483,39 @@ test('kobo sync command replays synced HEKS submissions into wide record columns
     expect($record)->not->toBeNull()
         ->and($record->identification_application_code)->toBe('REPLAY1')
         ->and($record->custom_group_custom_question)->toBe('replayed answer');
+});
+
+test('kobo sync command can replay only the selected service', function () {
+    KoboRestSubmission::query()->create([
+        'service_name' => 'iqrad',
+        'submission_uuid' => 'uuid:service-iqrad-only',
+        'payload' => [
+            '_uuid' => 'uuid:service-iqrad-only',
+            'borrower_name' => 'Service Filter Borrower',
+        ],
+        'sync_status' => 'synced',
+        'received_at' => now(),
+    ]);
+
+    KoboRestSubmission::query()->create([
+        'service_name' => 'other-service',
+        'submission_uuid' => 'uuid:service-other',
+        'payload' => [
+            '_uuid' => 'uuid:service-other',
+            'borrower_name' => 'Other Service Borrower',
+        ],
+        'sync_status' => 'synced',
+        'received_at' => now(),
+    ]);
+
+    $this->artisan('kobo:sync-rest-submissions --service=iqrad --all')
+        ->expectsOutputToContain('Synced: 1')
+        ->assertSuccessful();
+
+    expect(KoboRestSubmission::query()->where('service_name', 'iqrad')->value('sync_status'))->toBe('synced')
+        ->and(KoboRestSubmission::query()->where('service_name', 'other-service')->value('damage_assessment_borrower_id'))->toBeNull()
+        ->and(DamageAssessmentBorrower::query()->where('borrower_name', 'Service Filter Borrower')->exists())->toBeTrue()
+        ->and(DamageAssessmentBorrower::query()->where('borrower_name', 'Other Service Borrower')->exists())->toBeFalse();
 });
 
 test('kobo sync command can use an explicit borrower name field', function () {

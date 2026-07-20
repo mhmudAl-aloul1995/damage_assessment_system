@@ -18,6 +18,7 @@ class SyncKoboRestSubmissions extends Command
      */
     protected $signature = 'kobo:sync-rest-submissions
         {--all : Re-sync every stored Kobo submission}
+        {--service= : Only sync submissions for the given Kobo service name}
         {--borrower-name-field= : Kobo payload key to use as the borrower name}
         {--field-map= : JSON object mapping borrower fields to Kobo payload keys}';
 
@@ -39,6 +40,10 @@ class SyncKoboRestSubmissions extends Command
 
         $query = KoboRestSubmission::query()
             ->orderBy('id');
+
+        if (filled($this->option('service'))) {
+            $query->where('service_name', (string) $this->option('service'));
+        }
 
         if (! $this->option('all')) {
             $query->whereIn('sync_status', ['pending', 'skipped', 'failed']);
