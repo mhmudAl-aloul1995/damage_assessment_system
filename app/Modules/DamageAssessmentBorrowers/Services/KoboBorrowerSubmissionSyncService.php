@@ -7,6 +7,7 @@ use App\Modules\DamageAssessmentBorrowers\Models\BorrowerBoqCatalogItem;
 use App\Modules\DamageAssessmentBorrowers\Models\BorrowerPricingSetting;
 use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -247,7 +248,7 @@ class KoboBorrowerSubmissionSyncService
         }
 
         $catalogItems = Schema::hasTable('damage_assessment_borrower_boq_catalog_items')
-            ? BorrowerBoqCatalogItem::query()->orderBy('sort_order')->get()
+            ? $this->validBoqCatalogItems()
             : collect();
 
         return collect($quantities)
@@ -291,6 +292,31 @@ class KoboBorrowerSubmissionSyncService
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * @return Collection<int, BorrowerBoqCatalogItem>
+     */
+    private function validBoqCatalogItems(): Collection
+    {
+        return BorrowerBoqCatalogItem::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (BorrowerBoqCatalogItem $catalogItem): bool => $this->isValidBoqCatalogItem($catalogItem))
+            ->values();
+    }
+
+    private function isValidBoqCatalogItem(BorrowerBoqCatalogItem $catalogItem): bool
+    {
+        $itemCode = trim((string) $catalogItem->item_code);
+        $description = trim((string) $catalogItem->description);
+        $unit = trim((string) $catalogItem->unit);
+
+        return preg_match('/^\d+\.\d+$/', $itemCode) === 1
+            && $description !== ''
+            && preg_match('/^\d{6,}$/', $description) !== 1
+            && ($unit === '' || preg_match('/^\d{6,}$/', $unit) !== 1);
     }
 
     private function isConfiguredBoqGroupField(string $fieldKey): bool

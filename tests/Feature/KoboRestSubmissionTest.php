@@ -138,6 +138,15 @@ test('kobo rest submission syncs borrower boq quantities from configured kobo gr
         'sort_order' => 1,
     ]);
     BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '5',
+        'description' => '0000900107',
+        'normalized_description' => '0000900107',
+        'unit' => '904691094',
+        'unit_price' => 21024,
+        'unit_price_ils' => 731635.20,
+        'sort_order' => 2,
+    ]);
+    BorrowerBoqCatalogItem::query()->create([
         'item_code' => '1.2',
         'description' => 'Second catalog item',
         'normalized_description' => 'second catalog item',
