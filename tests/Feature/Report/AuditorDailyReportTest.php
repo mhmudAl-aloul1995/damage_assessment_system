@@ -3,7 +3,9 @@
 use App\Models\AssessmentStatus;
 use App\Models\Building;
 use App\Models\BuildingStatus;
+use App\Models\BuildingStatusHistory;
 use App\Models\HousingStatus;
+use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
@@ -86,6 +88,14 @@ it('shows daily auditor achievement counts grouped by auditing engineer', functi
         'updated_at' => now(),
         'created_at' => now(),
     ]);
+    HousingStatusHistory::query()->create([
+        'housing_id' => 1001,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $firstAuditor->id,
+        'type' => 'Different Type',
+        'notes' => 'accepted today',
+        'created_at' => now(),
+    ]);
 
     HousingStatus::query()->create([
         'housing_id' => 1002,
@@ -94,6 +104,14 @@ it('shows daily auditor achievement counts grouped by auditing engineer', functi
         'type' => 'Different Type',
         'notes' => 'rejected today',
         'updated_at' => now(),
+        'created_at' => now(),
+    ]);
+    HousingStatusHistory::query()->create([
+        'housing_id' => 1002,
+        'status_id' => $rejectedStatus->id,
+        'user_id' => $firstAuditor->id,
+        'type' => 'Different Type',
+        'notes' => 'rejected today',
         'created_at' => now(),
     ]);
 
@@ -106,6 +124,14 @@ it('shows daily auditor achievement counts grouped by auditing engineer', functi
         'updated_at' => now(),
         'created_at' => now(),
     ]);
+    HousingStatusHistory::query()->create([
+        'housing_id' => 1003,
+        'status_id' => $needReviewStatus->id,
+        'user_id' => $firstAuditor->id,
+        'type' => 'Different Type',
+        'notes' => 'review today',
+        'created_at' => now(),
+    ]);
 
     BuildingStatus::query()->create([
         'building_id' => 501,
@@ -114,6 +140,14 @@ it('shows daily auditor achievement counts grouped by auditing engineer', functi
         'type' => 'Different Type',
         'notes' => 'accepted building today',
         'updated_at' => now(),
+        'created_at' => now(),
+    ]);
+    BuildingStatusHistory::query()->create([
+        'building_id' => 501,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $firstAuditor->id,
+        'type' => 'Different Type',
+        'notes' => 'accepted building today',
         'created_at' => now(),
     ]);
 
@@ -126,6 +160,19 @@ it('shows daily auditor achievement counts grouped by auditing engineer', functi
         'updated_at' => now()->subDays(3),
         'created_at' => now()->subDays(3),
     ]);
+    $oldHousingStatusHistory = HousingStatusHistory::query()->create([
+        'housing_id' => 1004,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $secondAuditor->id,
+        'type' => 'Different Type',
+        'notes' => 'old accepted',
+    ]);
+    DB::table('housing_status_histories')
+        ->where('id', $oldHousingStatusHistory->id)
+        ->update([
+            'created_at' => now()->subDays(3),
+            'updated_at' => now()->subDays(3),
+        ]);
 
     $response = $this
         ->actingAs($viewer)
@@ -160,7 +207,7 @@ it('shows daily auditor achievement counts grouped by auditing engineer', functi
     });
 });
 
-it('counts only newly audited existing housing units once for auditing engineers', function () {
+it('counts the first engineering decision for each existing housing unit once', function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
@@ -215,6 +262,14 @@ it('counts only newly audited existing housing units once for auditing engineers
         'updated_at' => now(),
         'created_at' => now(),
     ]);
+    HousingStatusHistory::query()->create([
+        'housing_id' => 7001,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'first decision accepted',
+        'created_at' => now(),
+    ]);
 
     $oldHousingStatus = HousingStatus::query()->create([
         'housing_id' => 7002,
@@ -230,6 +285,27 @@ it('counts only newly audited existing housing units once for auditing engineers
             'created_at' => now()->subDays(5),
             'updated_at' => now(),
         ]);
+    $oldNeedReviewHistory = HousingStatusHistory::query()->create([
+        'housing_id' => 7002,
+        'status_id' => $needReviewStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'first decision need review before range',
+    ]);
+    DB::table('housing_status_histories')
+        ->where('id', $oldNeedReviewHistory->id)
+        ->update([
+            'created_at' => now()->subDays(5),
+            'updated_at' => now()->subDays(5),
+        ]);
+    HousingStatusHistory::query()->create([
+        'housing_id' => 7002,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'later changed today',
+        'created_at' => now(),
+    ]);
 
     HousingStatus::query()->create([
         'housing_id' => 7003,
@@ -240,6 +316,22 @@ it('counts only newly audited existing housing units once for auditing engineers
         'updated_at' => now(),
         'created_at' => now(),
     ]);
+    HousingStatusHistory::query()->create([
+        'housing_id' => 7003,
+        'status_id' => $needReviewStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'first decision need review',
+        'created_at' => now(),
+    ]);
+    HousingStatusHistory::query()->create([
+        'housing_id' => 7003,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'later changed to accepted',
+        'created_at' => now()->addMinute(),
+    ]);
 
     HousingStatus::query()->create([
         'housing_id' => 7999,
@@ -248,6 +340,14 @@ it('counts only newly audited existing housing units once for auditing engineers
         'type' => 'QC/QA Engineer',
         'notes' => 'missing housing unit',
         'updated_at' => now(),
+        'created_at' => now(),
+    ]);
+    HousingStatusHistory::query()->create([
+        'housing_id' => 7999,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'missing housing unit',
         'created_at' => now(),
     ]);
 
