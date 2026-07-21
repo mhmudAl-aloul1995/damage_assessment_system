@@ -128,6 +128,7 @@
                                 $boqStatusLabel = $boqItemsCount > 0 ? 'بنود مستوردة' : ($boqImported ? 'تم استيراد البنود' : ($boqImportFailed ? 'فشل الاستيراد' : ($boqHasFile ? 'ملف محفوظ فقط' : 'لا يوجد BOQ')));
                                 $boqStatusClass = $boqItemsCount > 0 ? 'badge-light-success' : ($boqImported ? 'badge-light-success' : ($boqImportFailed ? 'badge-light-danger' : ($boqHasFile ? 'badge-light-warning' : 'badge-light')));
                                 $boqPreviewId = "follow-up-boq-preview-{$followUp->id}";
+                                $completionPercentage = $followUp->completionPercentageForDisplay();
                             @endphp
                             <tr>
                                 <td class="fw-bold">{{ $followUp->code }}</td>
@@ -148,7 +149,7 @@
                                 </td>
                                 <td>
                                     <div class="fw-bold">{{ $followUp->completed_amount_ils ? number_format((float) $followUp->completed_amount_ils, 2) : '-' }} ILS</div>
-                                    <div class="text-muted small">{{ $followUp->completion_percentage !== null ? number_format((float) $followUp->completion_percentage, 2).'%' : '-' }}</div>
+                                    <div class="text-muted small">{{ $completionPercentage !== null ? number_format($completionPercentage, 2).'%' : '-' }}</div>
                                 </td>
                                 <td>
                                     <span class="badge {{ $boqStatusClass }}">{{ $boqStatusLabel }}</span>

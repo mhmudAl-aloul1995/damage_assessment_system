@@ -61,6 +61,19 @@ class HeksFollowUp extends Model
         return filled($this->boq_url) || filled($this->boq_filename);
     }
 
+    public function completionPercentageForDisplay(): ?float
+    {
+        if ($this->completion_percentage === null) {
+            return null;
+        }
+
+        $percentage = (float) $this->completion_percentage;
+
+        return $percentage >= 0.0 && $percentage <= 100.0
+            ? $percentage
+            : null;
+    }
+
     public static function normalizeVisitNumber(?string $visitNumber): ?string
     {
         $visitNumber = trim((string) $visitNumber);

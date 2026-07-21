@@ -552,6 +552,35 @@ test('kobo rest submission keeps invalid HEKS follow up completion percentages e
         ->and($followUp->completion_percentage)->toBeNull();
 });
 
+test('kobo rest submission resolves HEKS follow up engineer choice labels from field mappings', function () {
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-followups',
+        'table_name' => 'heks_followups_kobo_records',
+        'kobo_field' => 'Engineer_Name/_____4',
+        'column_name' => 'engineer_name_4',
+        'display_label' => 'Engineer Name/م. نعيم شاهين',
+    ]);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-followups',
+        'submission_uuid' => 'uuid:heks-followup-engineer-label',
+        'payload' => [
+            '_uuid' => 'uuid:heks-followup-engineer-label',
+            'group_sr3dl25/Code' => 'DGS22',
+            'group_bv71d05/Visit_Date' => '2026-07-22',
+            'group_bv71d05/visit_' => '1',
+            'group_bv71d05/Engineer_Name' => '_____4',
+        ],
+        'received_at' => now(),
+    ]);
+
+    app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    $followUp = HeksFollowUp::query()->where('code', 'DGS22')->sole();
+
+    expect($followUp->engineer_name)->toBe('م. نعيم شاهين');
+});
+
 test('kobo rest submission links HEKS engineer fields to matching users', function () {
     $engineer = User::factory()->create([
         'name' => 'م مصطفى رضوان',

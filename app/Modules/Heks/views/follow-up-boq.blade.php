@@ -5,6 +5,7 @@
 
 @section('content')
     @include('heks::partials.nav')
+    @php($completionPercentage = $followUp->completionPercentageForDisplay())
 
     <div class="card card-flush mb-6">
         <div class="card-header">

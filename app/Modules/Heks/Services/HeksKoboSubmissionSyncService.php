@@ -228,7 +228,9 @@ class HeksKoboSubmissionSyncService
             'visit_number' => $visitNumber,
         ]);
 
-        $engineerName = $this->cleanEngineerName($this->first($payload, [
+        $engineerName = $this->cleanEngineerName($this->firstChoiceLabel($payload, $service, [
+            'group_bv71d05/Engineer_Name',
+            'Engineer_Name',
             'engineer_name',
             'Engineer Name',
             "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633}",
@@ -1266,6 +1268,18 @@ class HeksKoboSubmissionSyncService
 
                 if (is_string($label) && trim($label) !== '') {
                     return trim($label);
+                }
+
+                $label = HeksKoboFieldMapping::query()
+                    ->where('service_name', $serviceName)
+                    ->whereIn('kobo_field', [
+                        "{$questionKey}/{$value}",
+                        Str::afterLast($questionKey, '/')."/{$value}",
+                    ])
+                    ->value('display_label');
+
+                if (is_string($label) && trim($label) !== '') {
+                    return trim(Str::afterLast($label, '/'));
                 }
             }
         }

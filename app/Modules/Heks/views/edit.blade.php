@@ -497,6 +497,7 @@
                                 </thead>
                                 <tbody>
                                 @forelse ($beneficiary->followUps as $followUp)
+                                    @php($completionPercentage = $followUp->completionPercentageForDisplay())
                                     <tr>
                                         <td><span class="badge badge-light-primary">{{ $followUp->visit_number ?? '-' }}</span></td>
                                         <td>{{ $followUp->visit_date?->format('Y-m-d') ?? '-' }}</td>
@@ -504,7 +505,7 @@
                                         <td>{{ $followUp->workingConditionLabel() }}</td>
                                         <td>
                                             <div>{{ $followUp->completed_amount_ils ? number_format((float) $followUp->completed_amount_ils, 2) : '-' }} ILS</div>
-                                            <div class="text-muted small">{{ $followUp->completion_percentage !== null ? number_format((float) $followUp->completion_percentage, 2).'%' : '-' }}</div>
+                                            <div class="text-muted small">{{ $completionPercentage !== null ? number_format($completionPercentage, 2).'%' : '-' }}</div>
                                         </td>
                                         <td>
                                             @if ($followUp->boqItems->isNotEmpty())
