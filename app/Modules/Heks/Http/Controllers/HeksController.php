@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
@@ -145,6 +146,25 @@ class HeksController extends Controller
         return redirect()
             ->route('heks.imports')
             ->with('success', "تم الاستيراد: {$result['summary']['created_rows']} جديد، {$result['summary']['updated_rows']} تحديث، {$result['summary']['skipped_rows']} متجاوز. تم حفظ روابط BOQ للمتابعات دون تنزيل جماعي لتجنب انقطاع الطلب.");
+    }
+
+    public function syncKobo(): RedirectResponse
+    {
+        $this->authorizeAccess();
+
+        $exitCode = Artisan::call('heks:kobo-sync', [
+            '--all' => true,
+        ]);
+
+        if ($exitCode !== 0) {
+            return redirect()
+                ->route('heks.dashboard')
+                ->withErrors(['kobo_sync' => 'تعذرت مزامنة تعديلات Kobo الخاصة بـ HEKS. راجع سجل heks-kobo-sync.log أو إعدادات الاتصال.']);
+        }
+
+        return redirect()
+            ->route('heks.dashboard')
+            ->with('success', 'تم سحب آخر تعديلات Kobo وتحديث بيانات HEKS.');
     }
 
     public function beneficiaries(Request $request): View

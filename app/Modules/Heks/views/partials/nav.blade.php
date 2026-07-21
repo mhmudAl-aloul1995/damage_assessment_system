@@ -35,6 +35,10 @@
     <a class="btn btn-sm {{ request()->routeIs('heks.labels') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.labels') }}">معايير التقييم</a>
     <a class="btn btn-sm {{ request()->routeIs('heks.follow-ups') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.follow-ups') }}">المتابعات</a>
     <a class="btn btn-sm {{ request()->routeIs('heks.quality') ? 'btn-primary' : 'btn-light' }}" href="{{ route('heks.quality') }}">فحص البيانات</a>
+    <form method="POST" action="{{ route('heks.kobo.sync') }}" class="d-inline">
+        @csrf
+        <button type="submit" class="btn btn-sm btn-light-info">تحديث من Kobo الآن</button>
+    </form>
 </div>
 
 @if (session('success'))

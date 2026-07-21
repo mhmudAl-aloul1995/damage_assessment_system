@@ -151,20 +151,27 @@ class HeksSpreadsheetImportService
         $spreadsheet = IOFactory::load($file->getRealPath());
         $sheet = $spreadsheet->getSheet(0);
         $headerRow = $this->boqHeaderRow($sheet);
+        $columns = $this->boqColumns($sheet, $headerRow);
         $this->assertBoqMatchesBeneficiary($file, $sheet, $beneficiary, $headerRow);
         $summary = ['total_rows' => 0, 'imported_rows' => 0, 'skipped_rows' => 0];
         $section = null;
         $source = $file->getClientOriginalName();
 
-        DB::transaction(function () use ($sheet, $headerRow, $beneficiary, $followUp, $source, &$summary, &$section): void {
+        DB::transaction(function () use ($sheet, $headerRow, $columns, $beneficiary, $followUp, $source, &$summary, &$section): void {
             for ($row = $headerRow + 1; $row <= $sheet->getHighestDataRow(); $row++) {
-                $itemCode = $this->text($sheet->getCell([2, $row]));
-                $description = $this->text($sheet->getCell([3, $row]));
-                $unit = $this->text($sheet->getCell([4, $row]));
-                $unitPrice = $this->decimal($this->text($sheet->getCell([5, $row]))) ?? 0.0;
-                $quantity = $this->decimal($this->text($sheet->getCell([6, $row]))) ?? 0.0;
+                $itemCode = $this->text($sheet->getCell([$columns['item_code'], $row]));
+                $description = $this->text($sheet->getCell([$columns['description'], $row]));
+                $unit = $this->text($sheet->getCell([$columns['unit'], $row]));
+                $unitPrice = $this->decimal($this->text($sheet->getCell([$columns['unit_price'], $row]))) ?? 0.0;
+                $quantity = $this->decimal($this->text($sheet->getCell([$columns['quantity'], $row]))) ?? 0.0;
 
                 if ($itemCode === '' && $description === '') {
+                    continue;
+                }
+
+                if ($itemCode === '' && $description !== '' && $unit === '' && $unitPrice <= 0 && $quantity <= 0) {
+                    $section = $description;
+
                     continue;
                 }
 
@@ -291,6 +298,12 @@ class HeksSpreadsheetImportService
     private function boqHeaderRow(Worksheet $sheet): int
     {
         for ($row = 1; $row <= min(15, $sheet->getHighestDataRow()); $row++) {
+            if ($this->boqColumns($sheet, $row) !== []) {
+                return $row;
+            }
+        }
+
+        for ($row = 1; $row <= min(15, $sheet->getHighestDataRow()); $row++) {
             $descriptionHeader = $this->text($sheet->getCell([3, $row]));
             $quantityHeader = $this->text($sheet->getCell([6, $row]));
 
@@ -300,6 +313,73 @@ class HeksSpreadsheetImportService
         }
 
         throw new RuntimeException('لم يتم العثور على صف عناوين جدول الكميات في الملف.');
+    }
+
+    /**
+     * @return array{item_code: int, description: int, unit: int, unit_price: int, quantity: int}|array{}
+     */
+    private function boqColumns(Worksheet $sheet, int $row): array
+    {
+        $columns = [];
+
+        for ($column = 1; $column <= $this->highestColumnIndex($sheet); $column++) {
+            $header = $this->normalizedIdentifier($this->text($sheet->getCell([$column, $row])));
+
+            if ($header === '') {
+                continue;
+            }
+
+            $type = $this->boqHeaderType($header);
+
+            if ($type !== null && ! isset($columns[$type])) {
+                $columns[$type] = $column;
+            }
+        }
+
+        if (! isset($columns['description'], $columns['quantity'])) {
+            return [];
+        }
+
+        return [
+            'item_code' => $columns['item_code'] ?? max(1, $columns['description'] - 1),
+            'description' => $columns['description'],
+            'unit' => $columns['unit'] ?? $columns['description'] + 1,
+            'unit_price' => $columns['unit_price'] ?? $columns['quantity'] - 1,
+            'quantity' => $columns['quantity'],
+        ];
+    }
+
+    private function boqHeaderType(string $header): ?string
+    {
+        return match (true) {
+            in_array($header, ['no', 'number', 'itemno', 'itemnumber', 'code', 'itemcode'], true),
+            str_contains($header, "\u{0631}\u{0642}\u{0645}\u{0627}\u{0644}\u{0628}\u{0646}\u{062F}"),
+            str_contains($header, "\u{0643}\u{0648}\u{062F}\u{0627}\u{0644}\u{0628}\u{0646}\u{062F}"),
+            str_contains($header, 'ظˆطµظپ') === false && str_contains($header, 'ط§ظ„ط¨ظ†ط¯') && mb_strlen($header) <= 16 => 'item_code',
+
+            str_contains($header, 'description'),
+            str_contains($header, "\u{0648}\u{0635}\u{0641}\u{0627}\u{0644}\u{0628}\u{0646}\u{062F}"),
+            str_contains($header, "\u{0628}\u{064A}\u{0627}\u{0646}\u{0627}\u{0644}\u{0628}\u{0646}\u{062F}"),
+            str_contains($header, 'ظˆطµظپط§ظ„ط¨ظ†ط¯') => 'description',
+
+            in_array($header, ['unit', 'u'], true),
+            str_contains($header, "\u{0627}\u{0644}\u{0648}\u{062D}\u{062F}\u{0629}"),
+            str_contains($header, 'ط§ظ„ظˆط­ط¯ط©') => 'unit',
+
+            str_contains($header, 'unitprice'),
+            str_contains($header, 'unitcost'),
+            str_contains($header, 'price'),
+            str_contains($header, 'rate'),
+            str_contains($header, "\u{062A}\u{0643}\u{0644}\u{0641}\u{0629}\u{0627}\u{0644}\u{0648}\u{062D}\u{062F}\u{0629}"),
+            str_contains($header, "\u{0633}\u{0639}\u{0631}\u{0627}\u{0644}\u{0648}\u{062D}\u{062F}\u{0629}"),
+            str_contains($header, 'طھظƒظ„ظپط©ط§ظ„ظˆط­ط¯ط©') => 'unit_price',
+
+            in_array($header, ['qty', 'quantity'], true),
+            str_contains($header, "\u{0627}\u{0644}\u{0643}\u{0645}\u{064A}\u{0629}"),
+            str_contains($header, 'ط§ظ„ظƒظ…ظٹط©') => 'quantity',
+
+            default => null,
+        };
     }
 
     private function assertBoqMatchesBeneficiary(UploadedFile $file, Worksheet $sheet, HeksBeneficiary $beneficiary, int $headerRow): void

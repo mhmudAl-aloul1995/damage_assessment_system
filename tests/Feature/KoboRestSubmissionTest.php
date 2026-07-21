@@ -284,6 +284,39 @@ test('iqrad kobo sync command fetches and applies edited submissions', function 
         ->and($borrower->phone_primary)->toBe('0590000000');
 });
 
+test('heks kobo sync command fetches configured assets and syncs services', function () {
+    config([
+        'services.kobotoolbox.token' => 'api-token',
+        'heks_kobo.services.heks_main.asset_uid' => 'heks-main-asset',
+        'heks_kobo.services.heks_followup.asset_uid' => null,
+        'heks_kobo.services.heks_boq.asset_uid' => null,
+        'heks_kobo.services.heks_followup_boq.asset_uid' => null,
+    ]);
+
+    Http::fake([
+        'https://kf.kobotoolbox.org/api/v2/assets/heks-main-asset/data/*' => Http::response([
+            'results' => [
+                [
+                    '_uuid' => 'uuid:heks-command-sync',
+                    '_id' => 200,
+                    'identification/application_code' => 'HEKS-CMD',
+                    'family_info/head_name' => 'HEKS Command Beneficiary',
+                ],
+            ],
+            'next' => null,
+        ]),
+    ]);
+
+    $this->artisan('heks:kobo-sync --all')
+        ->assertSuccessful();
+
+    $submission = KoboRestSubmission::query()->where('submission_uuid', 'uuid:heks-command-sync')->sole();
+
+    expect($submission->service_name)->toBe('heks-main')
+        ->and($submission->sync_status)->toBe('synced')
+        ->and(HeksBeneficiary::query()->where('code', 'HEKS-CMD')->where('name', 'HEKS Command Beneficiary')->exists())->toBeTrue();
+});
+
 test('kobo rest submission syncs HEKS main survey payload', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')

@@ -40,6 +40,13 @@ Schedule::command('kobo:sync-iqrad-borrowers --all')
     ->runInBackground()
     ->name('kobo-sync-iqrad-borrowers')
     ->appendOutputTo(storage_path('logs/kobo-iqrad-sync.log'));
+
+Schedule::command('heks:kobo-sync --all')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(20)
+    ->runInBackground()
+    ->name('heks-kobo-sync')
+    ->appendOutputTo(storage_path('logs/heks-kobo-sync.log'));
 /*
 |-------f-------------------------------------------------------------------
 | Database Backup

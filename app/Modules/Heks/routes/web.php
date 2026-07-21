@@ -8,6 +8,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/imports', [HeksController::class, 'imports'])->name('heks.imports');
     Route::post('/imports/preview', [HeksController::class, 'preview'])->name('heks.imports.preview');
     Route::post('/imports', [HeksController::class, 'import'])->name('heks.imports.store');
+    Route::post('/kobo/sync', [HeksController::class, 'syncKobo'])->name('heks.kobo.sync');
     Route::get('/pricing-catalog', [HeksController::class, 'pricingCatalog'])->name('heks.pricing-catalog');
     Route::post('/pricing-catalog', [HeksController::class, 'storePricingCatalogItem'])->name('heks.pricing-catalog.store');
     Route::put('/pricing-catalog/{catalogItem}', [HeksController::class, 'updatePricingCatalogItem'])->name('heks.pricing-catalog.update');

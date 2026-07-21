@@ -16,6 +16,7 @@ use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -23,6 +24,28 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
 use Spatie\Permission\Models\Role;
+
+it('allows database officers to manually sync HEKS Kobo edits', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    Artisan::shouldReceive('call')
+        ->once()
+        ->with('heks:kobo-sync', ['--all' => true])
+        ->andReturn(0);
+
+    $this->actingAs($user)
+        ->get(route('heks.dashboard'))
+        ->assertOk()
+        ->assertSee('تحديث من Kobo الآن', false)
+        ->assertSee(route('heks.kobo.sync'), false);
+
+    $this->actingAs($user)
+        ->post(route('heks.kobo.sync'))
+        ->assertRedirect(route('heks.dashboard'))
+        ->assertSessionHas('success', 'تم سحب آخر تعديلات Kobo وتحديث بيانات HEKS.');
+});
 
 it('imports and manages the HEKS operational workbook', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
