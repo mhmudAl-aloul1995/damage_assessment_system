@@ -4,8 +4,10 @@ use App\Exports\ProductivityExport;
 use App\Models\Building;
 use App\Models\HousingUnit;
 use App\Models\User;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Role;
 
@@ -21,14 +23,36 @@ it('exports productivity report using the same housing-unit date filter as the t
         'name' => 'Database Officer',
         'guard_name' => 'web',
     ]);
+    Role::query()->create([
+        'name' => 'Area Manager',
+        'guard_name' => 'web',
+    ]);
+
+    Schema::table('buildings', function (Blueprint $table): void {
+        $table->string('region')->nullable();
+    });
 
     $user = User::factory()->create();
     $user->assignRole('Database Officer');
+    $southAreaManager = User::factory()->create([
+        'region' => 'south',
+    ]);
+    $southAreaManager->assignRole('Area Manager');
+
+    User::factory()->create([
+        'region' => 'south',
+        'username_arcgis' => 'eng-may',
+    ]);
+    User::factory()->create([
+        'region' => 'north',
+        'username_arcgis' => 'eng-north',
+    ]);
 
     Building::query()->create([
         'objectid' => 9901,
         'globalid' => 'productivity-building-may',
         'assignedto' => 'eng-may',
+        'region' => 'south',
         'building_damage_status' => 'fully_damaged',
         'creationdate' => '2026-05-01 08:00:00',
     ]);
@@ -37,6 +61,25 @@ it('exports productivity report using the same housing-unit date filter as the t
         'objectid' => 9902,
         'globalid' => 'productivity-building-only',
         'assignedto' => 'eng-building-only',
+        'region' => 'south',
+        'building_damage_status' => 'fully_damaged',
+        'creationdate' => '2026-05-10 08:00:00',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 9903,
+        'globalid' => 'productivity-building-north',
+        'assignedto' => 'eng-north',
+        'region' => 'north',
+        'building_damage_status' => 'fully_damaged',
+        'creationdate' => '2026-05-10 08:00:00',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 9904,
+        'globalid' => 'productivity-building-south-unlinked',
+        'assignedto' => 'eng-south-unlinked',
+        'region' => 'south',
         'building_damage_status' => 'fully_damaged',
         'creationdate' => '2026-05-10 08:00:00',
     ]);
@@ -66,6 +109,24 @@ it('exports productivity report using the same housing-unit date filter as the t
         'unit_damage_status' => 'fully_damaged2',
         'building_submit_date' => '2026-06-01 10:00:00',
         'creationdate' => '2026-05-15 12:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9914,
+        'globalid' => 'productivity-housing-north',
+        'parentglobalid' => 'productivity-building-north',
+        'unit_damage_status' => 'fully_damaged2',
+        'building_submit_date' => '2026-05-15 10:00:00',
+        'creationdate' => '2026-05-15 10:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9915,
+        'globalid' => 'productivity-housing-south-unlinked',
+        'parentglobalid' => 'productivity-building-south-unlinked',
+        'unit_damage_status' => 'fully_damaged2',
+        'building_submit_date' => '2026-05-15 10:00:00',
+        'creationdate' => '2026-05-15 10:00:00',
     ]);
 
     $this->actingAs($user)
@@ -101,4 +162,14 @@ it('exports productivity report using the same housing-unit date filter as the t
             && ! isset($stats['eng-may']['daily_breakdown']['2026-06-15'])
             && ! isset($stats['eng-building-only']);
     });
+
+    $this->actingAs($southAreaManager)
+        ->get('damage-assessment/reports/productivity?minDate=2026-05-01&maxDate=2026-05-31')
+        ->assertOk()
+        ->assertViewHas('assignedto', fn ($assignedto): bool => $assignedto->all() === ['eng-may'])
+        ->assertViewHas('stats', function ($stats): bool {
+            return isset($stats['eng-may'])
+                && ! isset($stats['eng-north'])
+                && ! isset($stats['eng-south-unlinked']);
+        });
 });

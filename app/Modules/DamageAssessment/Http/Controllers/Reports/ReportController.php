@@ -7,11 +7,13 @@ use App\Exports\ProductivityExport;
 use App\Http\Controllers\Controller;
 use App\Models\Building;
 use App\Models\HousingUnit;
+use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -98,8 +100,17 @@ class ReportController extends Controller
     {
         $data = $request->all();
         $engineerName = trim((string) $request->input('engineer_name', ''));
+        $areaManagerRegion = $this->areaManagerRegion($request);
+        $regionalEngineerUsernames = $this->regionalEngineerUsernames($areaManagerRegion);
 
-        $allAssignedto = Building::whereNotNull('assignedto')
+        $allAssignedto = Building::query()
+            ->when($areaManagerRegion !== null && Schema::hasColumn('buildings', 'region'), function ($query) use ($areaManagerRegion) {
+                $query->where('region', $areaManagerRegion);
+            })
+            ->when($regionalEngineerUsernames !== null, function ($query) use ($regionalEngineerUsernames) {
+                $query->whereIn('assignedto', $regionalEngineerUsernames);
+            })
+            ->whereNotNull('assignedto')
             ->where('assignedto', '!=', '')
             ->pluck('assignedto')
             ->unique()
@@ -128,6 +139,9 @@ class ReportController extends Controller
 
         $stats = HousingUnit::join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
             ->whereIn('buildings.assignedto', $assignedto)
+            ->when($areaManagerRegion !== null && Schema::hasColumn('buildings', 'region'), function ($query) use ($areaManagerRegion) {
+                $query->where('buildings.region', $areaManagerRegion);
+            })
             ->whereBetween('housing_units.building_submit_date', [$start, $end])
             ->selectRaw("
             buildings.assignedto, 
@@ -156,5 +170,36 @@ class ReportController extends Controller
         ];
 
         return compact('period', 'assignedto', 'allAssignedto', 'stats', 'filters');
+    }
+
+    private function areaManagerRegion(Request $request): ?string
+    {
+        $user = $request->user();
+
+        if (! $user?->hasRole('Area Manager')) {
+            return null;
+        }
+
+        $region = trim((string) $user->region);
+
+        return $region !== '' ? $region : null;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, string>|null
+     */
+    private function regionalEngineerUsernames(?string $region): ?\Illuminate\Support\Collection
+    {
+        if ($region === null) {
+            return null;
+        }
+
+        return User::query()
+            ->where('region', $region)
+            ->whereNotNull('username_arcgis')
+            ->where('username_arcgis', '!=', '')
+            ->pluck('username_arcgis')
+            ->unique()
+            ->values();
     }
 }

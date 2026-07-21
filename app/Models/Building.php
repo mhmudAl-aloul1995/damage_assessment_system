@@ -165,6 +165,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $service_ownership
  * @property string|null $service_ownership_name
  * @property string|null $land_area
+ * @property string|null $region
  * @property string|null $governorate
  * @property string|null $municipalitie
  * @property string|null $neighborhood
@@ -384,6 +385,7 @@ class Building extends Model
         'service_ownership',
         'service_ownership_name',
         'land_area',
+        'region',
         'governorate',
         'municipalitie',
         'neighborhood',
