@@ -86,6 +86,42 @@ class HeksBeneficiary extends Model
         return $this->hasMany(HeksSurveyValueHistory::class);
     }
 
+    public function responsibleEngineerName(): ?string
+    {
+        if (filled($this->fieldEngineerUser?->name)) {
+            return (string) $this->fieldEngineerUser->name;
+        }
+
+        if (filled($this->field_engineer) && ! self::isRawEngineerCode((string) $this->field_engineer)) {
+            return (string) $this->field_engineer;
+        }
+
+        if ($this->relationLoaded('followUps')) {
+            $followUp = $this->followUps->first(
+                fn (HeksFollowUp $followUp): bool => filled($followUp->engineerUser?->name) || filled($followUp->engineer_name)
+            );
+
+            if (filled($followUp?->engineerUser?->name)) {
+                return (string) $followUp->engineerUser->name;
+            }
+
+            if (filled($followUp?->engineer_name) && ! self::isRawEngineerCode((string) $followUp->engineer_name)) {
+                return (string) $followUp->engineer_name;
+            }
+        }
+
+        return null;
+    }
+
+    public static function isRawEngineerCode(string $value): bool
+    {
+        $value = trim($value);
+
+        return $value === ''
+            || preg_match('/^[0-9_\-\s]+$/', $value) === 1
+            || preg_match('/\b[A-Za-z][A-Za-z0-9_.-]{2,30}\s+_{2,}\d*\b/', $value) === 1;
+    }
+
     protected function casts(): array
     {
         return [

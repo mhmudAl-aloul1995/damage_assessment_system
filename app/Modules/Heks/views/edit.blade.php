@@ -125,7 +125,7 @@
                     </div>
                     <h2 class="fw-bold mb-2">{{ $beneficiary->name ?? '-' }}</h2>
                     <div class="text-muted">
-                        {{ $beneficiary->identity_number ?? '-' }} · {{ $beneficiary->phone ?? '-' }} · {{ $beneficiary->fieldEngineerUser?->name ?? $beneficiary->field_engineer ?? '-' }}
+                        {{ $beneficiary->identity_number ?? '-' }} · {{ $beneficiary->phone ?? '-' }} · {{ $beneficiary->responsibleEngineerName() ?? '-' }}
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-start gap-2">

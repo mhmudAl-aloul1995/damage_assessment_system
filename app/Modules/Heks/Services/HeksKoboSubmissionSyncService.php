@@ -252,6 +252,13 @@ class HeksKoboSubmissionSyncService
         ], fn (mixed $value): bool => $value !== null && $value !== ''));
         $followUp->save();
 
+        if ($engineerName !== '' && HeksBeneficiary::isRawEngineerCode((string) $beneficiary->field_engineer)) {
+            $beneficiary->forceFill([
+                'field_engineer' => $engineerName,
+                'field_engineer_user_id' => $this->engineerUserResolver->resolve($engineerName),
+            ])->save();
+        }
+
         return $followUp;
     }
 
@@ -1665,7 +1672,7 @@ class HeksKoboSubmissionSyncService
     private function isInvalidEngineerName(string $value): bool
     {
         return $this->isInvalidValue($value)
-            || preg_match('/^[0-9_\\-]+$/', trim($value)) === 1;
+            || HeksBeneficiary::isRawEngineerCode($value);
     }
 
     private function isLikelyKoboUsername(string $value): bool

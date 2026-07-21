@@ -163,8 +163,8 @@
                 @if ($beneficiary->identity_number)
                     | {{ $beneficiary->identity_number }}
                 @endif
-                @if ($beneficiary->fieldEngineerUser?->name || $beneficiary->field_engineer)
-                    | {{ $beneficiary->fieldEngineerUser?->name ?? $beneficiary->field_engineer }}
+                @if ($beneficiary->responsibleEngineerName())
+                    | {{ $beneficiary->responsibleEngineerName() }}
                 @endif
             </div>
         </header>

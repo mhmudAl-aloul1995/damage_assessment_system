@@ -581,6 +581,40 @@ test('kobo rest submission resolves HEKS follow up engineer choice labels from f
     expect($followUp->engineer_name)->toBe('م. نعيم شاهين');
 });
 
+test('kobo rest submission replaces raw beneficiary engineer code from follow up engineer label', function () {
+    HeksBeneficiary::query()->create([
+        'code' => 'DGS23',
+        'name' => 'Raw Beneficiary Engineer',
+        'field_engineer' => 'adham ____4',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-followups',
+        'table_name' => 'heks_followups_kobo_records',
+        'kobo_field' => 'Engineer_Name/_____4',
+        'column_name' => 'engineer_name_4',
+        'display_label' => 'Engineer Name/Clean Engineer',
+    ]);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-followups',
+        'submission_uuid' => 'uuid:heks-followup-replaces-raw-beneficiary-engineer',
+        'payload' => [
+            '_uuid' => 'uuid:heks-followup-replaces-raw-beneficiary-engineer',
+            'group_sr3dl25/Code' => 'DGS23',
+            'group_bv71d05/Visit_Date' => '2026-07-22',
+            'group_bv71d05/visit_' => '1',
+            'group_bv71d05/Engineer_Name' => '_____4',
+        ],
+        'received_at' => now(),
+    ]);
+
+    app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    expect(HeksBeneficiary::query()->where('code', 'DGS23')->value('field_engineer'))
+        ->toBe('Clean Engineer');
+});
+
 test('kobo rest submission links HEKS engineer fields to matching users', function () {
     $engineer = User::factory()->create([
         'name' => 'م مصطفى رضوان',

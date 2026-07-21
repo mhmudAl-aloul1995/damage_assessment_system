@@ -53,7 +53,7 @@
                         <td class="fw-bold">{{ $beneficiary->code }}</td>
                         <td>{{ $beneficiary->name ?? '-' }}</td>
                         <td>{{ $beneficiary->identity_number ?? '-' }}</td>
-                        <td>{{ $beneficiary->fieldEngineerUser?->name ?? $beneficiary->field_engineer ?? '-' }}</td>
+                        <td>{{ $beneficiary->responsibleEngineerName() ?? '-' }}</td>
                         <td>{{ $beneficiary->grant_amount ? number_format((float) $beneficiary->grant_amount, 2) : '-' }}</td>
                         <td>
                             <span class="badge {{ $beneficiary->is_selected ? 'badge-light-success' : 'badge-light' }}">

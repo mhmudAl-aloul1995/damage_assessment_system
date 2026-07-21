@@ -81,8 +81,8 @@
                     @if ($beneficiary->phone)
                         جوال: {{ $beneficiary->phone }}
                     @endif
-                    @if ($beneficiary->field_engineer)
-                        | المهندس: {{ $beneficiary->field_engineer }}
+                    @if ($beneficiary->responsibleEngineerName())
+                        | المهندس: {{ $beneficiary->responsibleEngineerName() }}
                     @endif
                 </div>
             </div>
