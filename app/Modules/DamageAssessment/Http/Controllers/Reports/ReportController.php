@@ -92,16 +92,25 @@ class ReportController extends Controller
     }
 
     /**
-     * @return array{period: CarbonPeriod, assignedto: \Illuminate\Support\Collection<int, string>, stats: \Illuminate\Support\Collection}
+     * @return array{period: CarbonPeriod, assignedto: \Illuminate\Support\Collection<int, string>, allAssignedto: \Illuminate\Support\Collection<int, string>, stats: \Illuminate\Support\Collection, filters: array{minDate: string|null, maxDate: string|null, engineer_name: string|null}}
      */
     private function buildProductivityReportData(Request $request): array
     {
         $data = $request->all();
+        $engineerName = trim((string) $request->input('engineer_name', ''));
 
-        $assignedto = Building::whereNotNull('assignedto')
+        $allAssignedto = Building::whereNotNull('assignedto')
             ->where('assignedto', '!=', '')
             ->pluck('assignedto')
-            ->unique();
+            ->unique()
+            ->sort()
+            ->values();
+
+        $assignedto = $allAssignedto
+            ->when($engineerName !== '', function ($engineers) use ($engineerName) {
+                return $engineers->filter(fn (string $engineer): bool => str_contains(mb_strtolower($engineer), mb_strtolower($engineerName)));
+            })
+            ->values();
 
         $year = date('Y');
         $month_number = date('m');
@@ -140,6 +149,12 @@ class ReportController extends Controller
                 ];
             });
 
-        return compact('period', 'assignedto', 'stats');
+        $filters = [
+            'minDate' => $request->input('minDate'),
+            'maxDate' => $request->input('maxDate'),
+            'engineer_name' => $engineerName !== '' ? $engineerName : null,
+        ];
+
+        return compact('period', 'assignedto', 'allAssignedto', 'stats', 'filters');
     }
 }

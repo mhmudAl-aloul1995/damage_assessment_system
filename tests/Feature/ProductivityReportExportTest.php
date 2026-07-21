@@ -69,10 +69,14 @@ it('exports productivity report using the same housing-unit date filter as the t
     ]);
 
     $this->actingAs($user)
-        ->get('damage-assessment/reports/productivity?minDate=2026-05-01&maxDate=2026-05-31')
+        ->get('damage-assessment/reports/productivity?minDate=2026-05-01&maxDate=2026-05-31&engineer_name=may')
         ->assertOk()
         ->assertSee('productivity-table', false)
-        ->assertSee('productivity-sticky-yellow', false);
+        ->assertSee('name="engineer_name"', false)
+        ->assertSee('value="may"', false)
+        ->assertSee('eng-may', false)
+        ->assertDontSee('table-striped', false)
+        ->assertViewHas('assignedto', fn ($assignedto): bool => $assignedto->all() === ['eng-may']);
 
     Excel::fake();
 
@@ -80,14 +84,17 @@ it('exports productivity report using the same housing-unit date filter as the t
         ->get(route('export_productivity', [
             'minDate' => '2026-05-01',
             'maxDate' => '2026-05-31',
+            'engineer_name' => 'may',
         ]))
         ->assertOk();
 
     Excel::assertDownloaded('productivity.xlsx', function (ProductivityExport $export): bool {
+        $assignedto = $export->view()->getData()['assignedto'];
         $stats = $export->view()->getData()['stats'];
         $mayData = $stats['eng-may']['daily_breakdown']['2026-05-15'][0];
 
-        return (int) $mayData->tda === 1
+        return $assignedto->all() === ['eng-may']
+            && (int) $mayData->tda === 1
             && (int) $mayData->pda === 1
             && (int) $stats['eng-may']['engineer_total'] === 2
             && ! isset($stats['eng-may']['daily_breakdown']['2026-06-01'])

@@ -36,12 +36,12 @@
                         $tda = $dayData[0]['tda'] ?? 0;
                         $rowDayTotal = $pda + $tda;
 
-                        $columnTotals[$dateStr]['pda'] = ($columnTotals[$dateStr]['pda'] ?? 0) + $pda;
                         $columnTotals[$dateStr]['tda'] = ($columnTotals[$dateStr]['tda'] ?? 0) + $tda;
+                        $columnTotals[$dateStr]['pda'] = ($columnTotals[$dateStr]['pda'] ?? 0) + $pda;
                         $columnTotals[$dateStr]['total'] = ($columnTotals[$dateStr]['total'] ?? 0) + $rowDayTotal;
                     @endphp
-                    <td class=" text-white bg-danger-active">{{ $pda }}</td>
-                    <td class="text-white bg-success-active">{{ $tda }}</td>
+                    <td class="text-white bg-danger-active">{{ $tda }}</td>
+                    <td class=" text-white bg-success-active">{{ $pda }}</td>
                     <td class="text-white bg-primary-active">{{ $rowDayTotal }}</td>
                 @endforeach
                 <td style=" background-color: gray; " class="text-white">
@@ -61,8 +61,8 @@
             <td>الإجمالي (Total)</td>
             @foreach ($period as $date)
                 @php $dateStr = $date->format('Y-m-d'); @endphp
-                <td>{{ $columnTotals[$dateStr]['pda'] ?? 0 }}</td>
                 <td>{{ $columnTotals[$dateStr]['tda'] ?? 0 }}</td>
+                <td>{{ $columnTotals[$dateStr]['pda'] ?? 0 }}</td>
                 <td>{{ $columnTotals[$dateStr]['total'] ?? 0 }}</td>
             @endforeach
             <td class="bg-info text-white">

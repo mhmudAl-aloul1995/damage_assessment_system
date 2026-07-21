@@ -1,126 +1,238 @@
 @extends('layouts.app')
-@section('title', 'الوحدات السكنية')
-@section('pageName', 'الوحدات السكنية')
-
+@section('title', 'Productivity Rates Report')
+@section('pageName', 'Productivity Rates Report')
 
 @section('content')
     <style>
+        .productivity-report-shell {
+            background: #f5f7fb;
+            border-radius: 8px;
+            padding: 18px;
+        }
 
+        .productivity-report-card {
+            border: 1px solid #e4e9f2;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
 
+        .productivity-toolbar {
+            align-items: flex-end;
+            display: grid;
+            gap: 12px;
+            grid-template-columns: minmax(220px, 1.2fr) minmax(220px, 1fr) auto auto;
+            width: 100%;
+        }
 
+        .productivity-filter-label {
+            color: #48556a;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .productivity-table-wrap {
+            border: 1px solid #e4e9f2;
+            border-radius: 8px;
+            max-height: calc(100vh - 320px);
+            min-height: 360px;
+            overflow: auto;
+        }
+
+        .productivity-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 0;
+            min-width: max-content;
+        }
+
+        .productivity-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .productivity-table tfoot {
+            bottom: 0;
+            position: sticky;
+            z-index: 18;
+        }
+
+        .productivity-table th,
+        .productivity-table td {
+            border-color: #ffffff !important;
+            font-size: 12px;
+            height: 40px;
+            min-width: 58px;
+            padding: 8px 10px;
+            white-space: nowrap;
+        }
+
+        .productivity-table thead th,
+        .productivity-table tfoot td,
+        .productivity-engineer-cell {
+            background: #f4b400 !important;
+            color: #111827 !important;
+            font-weight: 800;
+        }
+
+        .productivity-table th:first-child,
+        .productivity-table td:first-child {
+            box-shadow: -2px 0 0 #e4e9f2;
+            min-width: 190px;
+            position: sticky;
+            right: 0;
+            z-index: 12;
+        }
+
+        .productivity-table thead th:first-child {
+            z-index: 30;
+        }
+
+        .productivity-table tfoot td:first-child {
+            z-index: 28;
+        }
+
+        .productivity-cell-pda {
+            background: #16a34a !important;
+            color: #ffffff !important;
+            font-weight: 700;
+        }
+
+        .productivity-cell-tda {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+            font-weight: 700;
+        }
+
+        .productivity-cell-total {
+            background: #0284c7 !important;
+            color: #ffffff !important;
+            font-weight: 800;
+        }
+
+        .productivity-row-total {
+            background: #334155 !important;
+            color: #ffffff !important;
+            font-weight: 800;
+        }
+
+        .productivity-empty-state {
+            align-items: center;
+            color: #64748b;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            justify-content: center;
+            min-height: 260px;
+            text-align: center;
+        }
+
+        @media (max-width: 991.98px) {
+            .productivity-toolbar {
+                grid-template-columns: 1fr;
+            }
+
+            .productivity-toolbar .btn {
+                width: 100%;
+            }
+        }
     </style>
-    <div class="row">
-        <div class="col-md-12 ">
-            <div class="card">
 
-                <!--begin::Card header-->
-                <div class="card-header border-0 pt-6">
-                    <!--begin::Card title-->
-                    <div class="card-title">
-                        <h2 style=" color: green; " class="">Productivity Rates TDA-PDA Report</h3>
+    <div class="productivity-report-shell">
+        <div class="card productivity-report-card">
+            <div class="card-header border-0 pt-6">
+                <div class="card-title flex-column align-items-start">
+                    <h2 class="mb-1 text-gray-900">Productivity Rates TDA-PDA Report</h2>
+                    <span class="text-muted fw-semibold">Daily engineer productivity by submitted housing units.</span>
+                </div>
+            </div>
 
+            <div class="card-body pt-0">
+                <form id="productivity_filters_form" class="productivity-toolbar mb-6" method="GET" action="{{ url('damage-assessment/reports/productivity') }}">
+                    <div>
+                        <label class="productivity-filter-label" for="engineer_name">Engineer name</label>
+                        <input
+                            id="engineer_name"
+                            name="engineer_name"
+                            value="{{ $filters['engineer_name'] ?? '' }}"
+                            class="form-control form-control-solid"
+                            list="productivity_engineers"
+                            placeholder="Search engineer name"
+                            autocomplete="off"
+                        />
+                        <datalist id="productivity_engineers">
+                            @foreach ($allAssignedto as $engineer)
+                                <option value="{{ $engineer }}"></option>
+                            @endforeach
+                        </datalist>
                     </div>
-                    <!--begin::Card title-->
-                    <!--begin::Card toolbar-->
-                    <div class="card-toolbar flex-row-fluid justify-content-end gap-5">
-                        <!--begin::Flatpickr-->
-                        <div class="input-group w-250px">
-                            <input class="form-control form-control-solid rounded rounded-end-0" placeholder="تاريخ من إلى"
-                                id="kt_ecommerce_sales_flatpickr" />
-                            <button class="btn btn-icon btn-light" id="kt_ecommerce_sales_flatpickr_clear">
+
+                    <div>
+                        <label class="productivity-filter-label" for="kt_ecommerce_sales_flatpickr">Date range</label>
+                        <div class="input-group">
+                            <input
+                                class="form-control form-control-solid rounded rounded-end-0"
+                                placeholder="Date from - to"
+                                id="kt_ecommerce_sales_flatpickr"
+                                value="{{ trim(($filters['minDate'] ?? '').' to '.($filters['maxDate'] ?? ''), ' to') }}"
+                            />
+                            <button class="btn btn-icon btn-light" type="button" id="kt_ecommerce_sales_flatpickr_clear" title="Clear date range">
                                 <i class="ki-duotone ki-cross fs-2">
                                     <span class="path1"></span>
                                     <span class="path2"></span>
                                 </i>
                             </button>
                         </div>
-                        <!--end::Flatpickr-->
-
-                        <!--begin::Add product-->
-                        <button id="export_btn" class="btn btn-primary">
-                            تصدير تقرير</button>
-                        <!--end::Add product-->
+                        <input type="hidden" name="minDate" id="minDate" value="{{ $filters['minDate'] ?? '' }}">
+                        <input type="hidden" name="maxDate" id="maxDate" value="{{ $filters['maxDate'] ?? '' }}">
                     </div>
-                    <!--end::Card toolbar-->
-                </div>
-                <!--end::Card header-->
-                <!--begin::Card body-->
-                <style>
-                    .productivity-table {
-                        border-collapse: separate;
-                        border-spacing: 0;
-                    }
 
-                    .productivity-table thead {
-                        position: sticky;
-                        top: 0;
-                        z-index: 20;
-                    }
+                    <button type="submit" class="btn btn-primary">
+                        Search
+                    </button>
 
-                    .productivity-table tfoot {
-                        position: sticky;
-                        bottom: 0;
-                        z-index: 18;
-                    }
+                    <button id="export_btn" type="button" class="btn btn-light-primary">
+                        Export report
+                    </button>
+                </form>
 
-                    .productivity-table thead th,
-                    .productivity-table tfoot td,
-                    .productivity-sticky-yellow {
-                        background-color: #ffc107 !important;
-                    }
-
-                    .productivity-table th:first-child,
-                    .productivity-table td:first-child {
-                        position: sticky;
-                        right: 0;
-                        z-index: 12;
-                        box-shadow: -2px 0 0 #ebedf3;
-                    }
-
-                    .productivity-table thead th:first-child {
-                        z-index: 30;
-                    }
-
-                    .productivity-table tfoot td:first-child {
-                        z-index: 28;
-                    }
-                </style>
-
-                <div class="card-body py-4">
-                    <!-- .table-responsive enables horizontal scrolling -->
-
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped text-center align-middle productivity-table">
+                @if ($assignedto->isEmpty())
+                    <div class="productivity-empty-state">
+                        <h4 class="mb-0">No engineers match the current filters.</h4>
+                        <span>Try another engineer name or date range.</span>
+                    </div>
+                @else
+                    <div class="productivity-table-wrap">
+                        <table class="table table-bordered text-center align-middle productivity-table">
                             <thead>
                                 <tr>
                                     <th>Day</th>
                                     @foreach ($period as $date)
-                                        <th style="width:10px;" colspan="3"> {{ $date->format('Y-m-d D') }} </th>
+                                        <th colspan="3">{{ $date->format('Y-m-d D') }}</th>
                                     @endforeach
-                                    <th> </th>
-
+                                    <th>Total</th>
                                 </tr>
                                 <tr>
-                                    <th> ENG.Name</th>
+                                    <th>ENG. Name</th>
                                     @foreach ($period as $date)
                                         <th scope="col">TDA</th>
                                         <th scope="col">PDA</th>
                                         <th scope="col">Total</th>
                                     @endforeach
-                                    <th> Total </th>
-
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @php
-                                    // Initialize an array to hold totals for each date
                                     $columnTotals = [];
                                     $grandTotal = 0;
                                 @endphp
 
                                 @foreach ($assignedto as $val)
                                     <tr>
-                                        <td class="productivity-sticky-yellow">{{ $val }}</td>
+                                        <td class="productivity-engineer-cell">{{ $val }}</td>
                                         @foreach ($period as $date)
                                             @php
                                                 $dateStr = $date->format('Y-m-d');
@@ -130,161 +242,114 @@
                                                 $tda = $dayData[0]['tda'] ?? 0;
                                                 $rowDayTotal = $pda + $tda;
 
-                                                // Add to vertical column totals
-                                                $columnTotals[$dateStr]['pda'] = ($columnTotals[$dateStr]['pda'] ?? 0) + $pda;
                                                 $columnTotals[$dateStr]['tda'] = ($columnTotals[$dateStr]['tda'] ?? 0) + $tda;
+                                                $columnTotals[$dateStr]['pda'] = ($columnTotals[$dateStr]['pda'] ?? 0) + $pda;
                                                 $columnTotals[$dateStr]['total'] = ($columnTotals[$dateStr]['total'] ?? 0) + $rowDayTotal;
                                             @endphp
-                                            <td class="text-white bg-danger-active">{{ $pda }}</td>
-                                            <td class="text-white bg-success-active">{{ $tda }}</td>
-                                            <td class="text-white bg-primary-active">{{ $rowDayTotal }}</td>
+                                            <td class="productivity-cell-tda">{{ $tda }}</td>
+                                            <td class="productivity-cell-pda">{{ $pda }}</td>
+                                            <td class="productivity-cell-total">{{ $rowDayTotal }}</td>
                                         @endforeach
 
-                                        <td style="background-color: gray;" class="text-white">
-                                            <b>
-                                                @if (isset($stats[$val]))
-                                                    @php $engTotal = $stats[$val]['engineer_total']; @endphp
-                                                    {{ $engTotal }}
-                                                    @php $grandTotal += $engTotal; @endphp
-                                                @endif
-                                            </b>
+                                        <td class="productivity-row-total">
+                                            @if (isset($stats[$val]))
+                                                @php $engTotal = $stats[$val]['engineer_total']; @endphp
+                                                {{ $engTotal }}
+                                                @php $grandTotal += $engTotal; @endphp
+                                            @else
+                                                0
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach
                             </tbody>
-
-                           <tfoot>
-    <tr class="productivity-sticky-yellow" style="font-weight: bold;">
-        <td>الإجمالي (Total)</td>
-        @foreach ($period as $date)
-            @php $dateStr = $date->format('Y-m-d'); @endphp
-            <td>{{ $columnTotals[$dateStr]['pda'] ?? 0 }}</td>
-            <td>{{ $columnTotals[$dateStr]['tda'] ?? 0 }}</td>
-            <td>{{ $columnTotals[$dateStr]['total'] ?? 0 }}</td>
-        @endforeach
-        <td class="bg-info text-white">
-            <b>{{ $grandTotal }}</b>
-        </td>
-    </tr>
-</tfoot>
-
+                            <tfoot>
+                                <tr>
+                                    <td>Total</td>
+                                    @foreach ($period as $date)
+                                        @php $dateStr = $date->format('Y-m-d'); @endphp
+                                        <td>{{ $columnTotals[$dateStr]['tda'] ?? 0 }}</td>
+                                        <td>{{ $columnTotals[$dateStr]['pda'] ?? 0 }}</td>
+                                        <td>{{ $columnTotals[$dateStr]['total'] ?? 0 }}</td>
+                                    @endforeach
+                                    <td class="productivity-cell-total">{{ $grandTotal }}</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
-
-                </div>
-
-
-
+                @endif
             </div>
-
-
         </div>
-
-
+    </div>
 @endsection
 
+@section('script')
+    <script>
+        "use strict";
 
+        var kTExportProductivity = function () {
+            var flatpickr;
+            var minformatted = document.getElementById('minDate').value;
+            var maxformatted = document.getElementById('maxDate').value;
+            const exportButton = document.getElementById('export_btn');
+            const filterForm = document.getElementById('productivity_filters_form');
 
-    @section('script')
+            var initFlatpickr = () => {
+                const element = document.querySelector('#kt_ecommerce_sales_flatpickr');
+                const defaultDates = [minformatted, maxformatted].filter(Boolean);
 
+                flatpickr = $(element).flatpickr({
+                    altInput: true,
+                    altFormat: "Y-m-d",
+                    dateFormat: "Y-m-d",
+                    defaultDate: defaultDates,
+                    mode: "range",
+                    onChange: function (selectedDates, dateStr, instance) {
+                        if (selectedDates.length === 2) {
+                            minformatted = instance.formatDate(selectedDates[0], "Y-m-d");
+                            maxformatted = instance.formatDate(selectedDates[1], "Y-m-d");
+                            document.getElementById('minDate').value = minformatted;
+                            document.getElementById('maxDate').value = maxformatted;
+                            filterForm.submit();
+                        }
+                    },
+                });
+            }
 
+            var handleClearFlatpickr = () => {
+                const clearButton = document.querySelector('#kt_ecommerce_sales_flatpickr_clear');
+                clearButton.addEventListener('click', e => {
+                    flatpickr.clear();
+                    document.getElementById('minDate').value = '';
+                    document.getElementById('maxDate').value = '';
+                    filterForm.submit();
+                });
+            }
 
+            var handleExport = () => {
+                exportButton.addEventListener('click', function () {
+                    exportButton.classList.add('disabled');
 
+                    setTimeout(() => {
+                        exportButton.classList.remove('disabled');
+                    }, 2000);
 
-        <script>
+                    const params = new URLSearchParams(new FormData(filterForm));
+                    window.location.href = "{{ url('damage-assessment/export_productivity') }}?" + params.toString();
+                });
+            }
 
-            "use strict";
-
-            // Class definition
-            var kTExportProductivity = function () {
-                // Shared variables
-                var table;
-                var flatpickr;
-                var minDate, maxDate;
-                var minformatted, maxformatted
-                const export_btn = document.getElementById('export_btn');
-
-                // Handle flatpickr --- more info: https://flatpickr.js.org/events/
-                var handleFlatpickr = (selectedDates, dateStr, instance) => {
-                    minDate = selectedDates[0] ? new Date(selectedDates[0]) : null;
-                    maxDate = selectedDates[1] ? new Date(selectedDates[1]) : null;
-
-                    if (selectedDates.length > 0) {
-                        // Manually format a date using instance.formatDate
-                        minformatted = instance.formatDate(selectedDates[0], "Y-m-d");
-                        maxformatted = instance.formatDate(selectedDates[1], "Y-m-d");
-                    }
+            return {
+                init: function () {
+                    initFlatpickr();
+                    handleClearFlatpickr();
+                    handleExport();
                 }
+            };
+        }();
 
-
-                var initFlatpickr = () => {
-                    const element = document.querySelector('#kt_ecommerce_sales_flatpickr');
-                    flatpickr = $(element).flatpickr({
-                        altInput: true,
-                        altFormat: "Y-m-d",
-                        dateFormat: "Y-m-d",
-                        mode: "range",
-                        onChange: function (selectedDates, dateStr, instance) {
-                            handleFlatpickr(selectedDates, dateStr, instance);
-
-
-                            if (minDate && maxDate) {
-                                var millisecondsInDay = 1000 * 60 * 60 * 24;
-                                // Calculate the difference and round down to a whole number
-                                var days = Math.floor((minDate.getTime() - maxDate.getTime()) / millisecondsInDay);
-
-                                window.location.href = "{{url('damage-assessment/reports/productivity')}}?" + "minDate=" + minformatted + '&maxDate=' + maxformatted
-
-
-                            }
-
-
-                        },
-                    });
-                }
-
-
-
-
-
-
-                // Handle clear flatpickr
-                var handleClearFlatpickr = () => {
-                    const clearButton = document.querySelector('#kt_ecommerce_sales_flatpickr_clear');
-                    clearButton.addEventListener('click', e => {
-                        flatpickr.clear();
-                    });
-                }
-                function getUrlParameter(name) {
-                    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-                    var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-                    var results = regex.exec(location.search);
-                    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-                };
-                export_btn.addEventListener('click', function (e) {
-                    $(this).addClass('disabled');
-    
-setTimeout(() => {
-  $(this).removeClass('disabled');
-}, 2000);
-                    window.location.href = "{{url('damage-assessment/export_productivity')}}?" + "minDate=" + getUrlParameter('minDate') + '&maxDate=' + getUrlParameter('maxDate')
-                })
-
-
-                // Public methods
-                return {
-                    init: function () {
-
-                        initFlatpickr();
-                        handleClearFlatpickr();
-                    }
-                };
-            }();
-
-            // On document ready
-            KTUtil.onDOMContentLoaded(function () {
-                kTExportProductivity.init();
-            });
-
-        </script>
-    @endsection
+        KTUtil.onDOMContentLoaded(function () {
+            kTExportProductivity.init();
+        });
+    </script>
+@endsection
