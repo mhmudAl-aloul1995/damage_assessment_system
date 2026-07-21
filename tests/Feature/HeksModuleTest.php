@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\RunHeksKoboSync;
 use App\Models\User;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
@@ -16,8 +17,8 @@ use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -30,10 +31,7 @@ it('allows database officers to manually sync HEKS Kobo edits', function () {
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    Artisan::shouldReceive('call')
-        ->once()
-        ->with('heks:kobo-sync', ['--all' => true])
-        ->andReturn(0);
+    Queue::fake();
 
     $this->actingAs($user)
         ->get(route('heks.dashboard'))
@@ -44,7 +42,9 @@ it('allows database officers to manually sync HEKS Kobo edits', function () {
     $this->actingAs($user)
         ->post(route('heks.kobo.sync'))
         ->assertRedirect(route('heks.dashboard'))
-        ->assertSessionHas('success', 'تم سحب آخر تعديلات Kobo وتحديث بيانات HEKS.');
+        ->assertSessionHas('success');
+
+    Queue::assertPushedOn('heks', RunHeksKoboSync::class);
 });
 
 it('imports and manages the HEKS operational workbook', function () {

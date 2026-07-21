@@ -3,6 +3,7 @@
 namespace App\Modules\Heks\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\RunHeksKoboSync;
 use App\Models\User;
 use App\Modules\Heks\Http\Requests\ImportHeksBoqItemsRequest;
 use App\Modules\Heks\Http\Requests\ImportHeksSpreadsheetRequest;
@@ -37,7 +38,6 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
@@ -152,19 +152,12 @@ class HeksController extends Controller
     {
         $this->authorizeAccess();
 
-        $exitCode = Artisan::call('heks:kobo-sync', [
-            '--all' => true,
-        ]);
-
-        if ($exitCode !== 0) {
-            return redirect()
-                ->route('heks.dashboard')
-                ->withErrors(['kobo_sync' => 'تعذرت مزامنة تعديلات Kobo الخاصة بـ HEKS. راجع سجل heks-kobo-sync.log أو إعدادات الاتصال.']);
-        }
+        RunHeksKoboSync::dispatch()
+            ->onQueue((string) config('heks_kobo.queue', 'heks'));
 
         return redirect()
             ->route('heks.dashboard')
-            ->with('success', 'تم سحب آخر تعديلات Kobo وتحديث بيانات HEKS.');
+            ->with('success', "\u{062A}\u{0645} \u{0628}\u{062F}\u{0621} \u{0645}\u{0632}\u{0627}\u{0645}\u{0646}\u{0629} Kobo \u{0641}\u{064A} \u{0627}\u{0644}\u{062E}\u{0644}\u{0641}\u{064A}\u{0629}. \u{0633}\u{064A}\u{062A}\u{0645} \u{062A}\u{062D}\u{062F}\u{064A}\u{062B} \u{0628}\u{064A}\u{0627}\u{0646}\u{0627}\u{062A} HEKS \u{0628}\u{0639}\u{062F} \u{0627}\u{0646}\u{062A}\u{0647}\u{0627}\u{0621} \u{0627}\u{0644}\u{0645}\u{0639}\u{0627}\u{0644}\u{062C}\u{0629}.");
     }
 
     public function beneficiaries(Request $request): View

@@ -149,9 +149,7 @@ class HeksSpreadsheetImportService
     public function importBeneficiaryBoq(UploadedFile $file, HeksBeneficiary $beneficiary, ?HeksFollowUp $followUp = null): array
     {
         $spreadsheet = IOFactory::load($file->getRealPath());
-        $sheet = $spreadsheet->getSheet(0);
-        $headerRow = $this->boqHeaderRow($sheet);
-        $columns = $this->boqColumns($sheet, $headerRow);
+        [$sheet, $headerRow, $columns] = $this->boqWorksheet($spreadsheet);
         $this->assertBoqMatchesBeneficiary($file, $sheet, $beneficiary, $headerRow);
         $summary = ['total_rows' => 0, 'imported_rows' => 0, 'skipped_rows' => 0];
         $section = null;
@@ -228,6 +226,24 @@ class HeksSpreadsheetImportService
     }
 
     /**
+     * @return array{0: Worksheet, 1: int, 2: array{item_code: int, description: int, unit: int, unit_price: int, quantity: int}}
+     */
+    private function boqWorksheet(Spreadsheet $spreadsheet): array
+    {
+        foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
+            $headerRow = $this->boqHeaderRowOrNull($sheet);
+
+            if ($headerRow === null) {
+                continue;
+            }
+
+            return [$sheet, $headerRow, $this->boqColumns($sheet, $headerRow)];
+        }
+
+        throw new RuntimeException('لم يتم العثور على صف عناوين جدول الكميات في الملف.');
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function importFollowUpBoq(HeksFollowUp $followUp): ?array
@@ -297,6 +313,17 @@ class HeksSpreadsheetImportService
 
     private function boqHeaderRow(Worksheet $sheet): int
     {
+        $headerRow = $this->boqHeaderRowOrNull($sheet);
+
+        if ($headerRow !== null) {
+            return $headerRow;
+        }
+
+        throw new RuntimeException('لم يتم العثور على صف عناوين جدول الكميات في الملف.');
+    }
+
+    private function boqHeaderRowOrNull(Worksheet $sheet): ?int
+    {
         for ($row = 1; $row <= min(15, $sheet->getHighestDataRow()); $row++) {
             if ($this->boqColumns($sheet, $row) !== []) {
                 return $row;
@@ -312,7 +339,7 @@ class HeksSpreadsheetImportService
             }
         }
 
-        throw new RuntimeException('لم يتم العثور على صف عناوين جدول الكميات في الملف.');
+        return null;
     }
 
     /**
