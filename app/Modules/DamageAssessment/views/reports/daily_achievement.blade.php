@@ -131,7 +131,20 @@
                                     <tr>
                                         <td class="fw-bold">{{ $row['name'] }}</td>
                                         @foreach ($tableColumns as $column)
-                                            <td class="text-center text-{{ $column['class'] }} fw-bold {{ $column['class'] === 'primary' ? 'fw-bolder' : '' }}">{{ $row[$column['key']] }}</td>
+                                            <td class="text-center text-{{ $column['class'] }} fw-bold {{ $column['class'] === 'primary' ? 'fw-bolder' : '' }}">
+                                                @if (($column['status'] ?? null) && $row[$column['key']] > 0)
+                                                    <button type="button"
+                                                        class="btn btn-link text-{{ $column['class'] }} fw-bold p-0 daily-achievement-units-btn"
+                                                        data-user-id="{{ $row['user_id'] }}"
+                                                        data-user-name="{{ $row['name'] }}"
+                                                        data-status="{{ $column['status'] }}"
+                                                        data-status-label="{{ $column['label'] }}">
+                                                        {{ $row[$column['key']] }}
+                                                    </button>
+                                                @else
+                                                    {{ $row[$column['key']] }}
+                                                @endif
+                                            </td>
                                         @endforeach
                                     </tr>
                                 @empty
@@ -154,12 +167,54 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="dailyAchievementUnitsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered mw-1000px mw-lg-1400px">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h3 class="fw-bold mb-1" id="dailyAchievementUnitsModalTitle">Units</h3>
+                        <div class="text-muted fs-7" id="dailyAchievementUnitsModalSubtitle"></div>
+                    </div>
+                    <button type="button" class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="ki-duotone ki-cross fs-1">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-row-bordered table-striped align-middle w-100" id="dailyAchievementUnitsTable">
+                            <thead>
+                                <tr class="fw-bold text-gray-800">
+                                    <th>Object ID</th>
+                                    <th>Unit</th>
+                                    <th>Floor</th>
+                                    <th>Resident</th>
+                                    <th>Building</th>
+                                    <th>Status Date</th>
+                                    <th>Notes</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script')
     <script>
         $(document).ready(function () {
             const exportBaseUrl = "{{ route('reports.daily-achievement.export') }}";
+            const unitsUrl = "{{ route('reports.daily-achievement.units') }}";
+            let unitsTable = null;
 
             function updateExportUrl() {
                 const params = new URLSearchParams({
@@ -237,6 +292,63 @@
                     {{ $chartMetrics['housing_units']['remaining_count'] }}
                 ], ['#50cd89', '#e4e6ef'])
             ).render();
+
+            $('.daily-achievement-units-btn').on('click', function () {
+                const button = $(this);
+                const userId = button.data('user-id');
+                const userName = button.data('user-name');
+                const status = button.data('status');
+                const statusLabel = button.data('status-label');
+
+                $('#dailyAchievementUnitsModalTitle').text(statusLabel);
+                $('#dailyAchievementUnitsModalSubtitle').text(userName + ' | ' + $('#start_date').val() + ' to ' + $('#end_date').val());
+                $('#dailyAchievementUnitsModal').modal('show');
+
+                if (unitsTable) {
+                    unitsTable.destroy();
+                    $('#dailyAchievementUnitsTable tbody').empty();
+                }
+
+                unitsTable = $('#dailyAchievementUnitsTable').DataTable({
+                    serverSide: true,
+                    processing: true,
+                    pageLength: 10,
+                    ajax: {
+                        url: unitsUrl,
+                        data: function (d) {
+                            d.user_id = userId;
+                            d.status = status;
+                            d.start_date = $('#start_date').val();
+                            d.end_date = $('#end_date').val();
+                        }
+                    },
+                    columns: [
+                        { data: 'objectid', name: 'objectid', render: $.fn.dataTable.render.text() },
+                        { data: 'housing_unit_number', name: 'housing_unit_number', render: $.fn.dataTable.render.text() },
+                        { data: 'floor_number', name: 'floor_number', render: $.fn.dataTable.render.text() },
+                        { data: 'resident_name', name: 'resident_name', orderable: false, render: $.fn.dataTable.render.text() },
+                        { data: 'building_name', name: 'building_name', orderable: false, render: $.fn.dataTable.render.text() },
+                        { data: 'status_created_at', name: 'status_created_at', render: $.fn.dataTable.render.text() },
+                        { data: 'notes', name: 'notes', orderable: false, render: $.fn.dataTable.render.text() },
+                        {
+                            data: 'assessment_url',
+                            name: 'assessment_url',
+                            orderable: false,
+                            searchable: false,
+                            render: function (data) {
+                                return '<a class="btn btn-sm btn-light-primary" href="' + data + '" target="_blank">Open</a>';
+                            }
+                        }
+                    ],
+                    order: [[5, 'asc']]
+                });
+            });
+
+            $('#dailyAchievementUnitsModal').on('shown.bs.modal', function () {
+                if (unitsTable) {
+                    unitsTable.columns.adjust();
+                }
+            });
         });
     </script>
 @endsection

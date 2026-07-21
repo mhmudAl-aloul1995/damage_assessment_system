@@ -4,6 +4,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Reports;
 
 use App\Exports\DailyAchievementExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Report\DailyAchievementUnitsRequest;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\HousingStatus;
@@ -12,6 +13,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
@@ -70,6 +72,94 @@ class DailyAchievementReportController extends Controller
         return $this->renderDailyAchievementReport($request, 'lawyers');
     }
 
+    public function dailyAchievementUnits(DailyAchievementUnitsRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+        $statusName = (string) $validated['status'];
+        $userId = (int) $validated['user_id'];
+        $draw = (int) $request->input('draw', 1);
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        $search = trim((string) $request->input('search.value', ''));
+
+        $baseQuery = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->join('housing_units', 'housing_statuses.housing_id', '=', 'housing_units.objectid')
+            ->leftJoin('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
+            ->where('housing_statuses.user_id', $userId)
+            ->where('assessment_statuses.name', $statusName)
+            ->whereBetween('housing_statuses.created_at', [$startDate, $endDate]);
+
+        $recordsTotal = (clone $baseQuery)->count();
+
+        if ($search !== '') {
+            $baseQuery->where(function ($query) use ($search): void {
+                $query
+                    ->where('housing_units.objectid', 'like', "%{$search}%")
+                    ->orWhere('housing_units.globalid', 'like', "%{$search}%")
+                    ->orWhere('housing_units.parentglobalid', 'like', "%{$search}%")
+                    ->orWhere('housing_units.housing_unit_number', 'like', "%{$search}%")
+                    ->orWhere('housing_units.floor_number', 'like', "%{$search}%")
+                    ->orWhere('housing_units.q_9_3_1_first_name', 'like', "%{$search}%")
+                    ->orWhere('housing_units.q_9_3_4_last_name', 'like', "%{$search}%")
+                    ->orWhere('buildings.building_name', 'like', "%{$search}%");
+            });
+        }
+
+        $recordsFiltered = (clone $baseQuery)->count();
+
+        $units = $baseQuery
+            ->select([
+                'housing_units.objectid',
+                'housing_units.globalid',
+                'housing_units.parentglobalid',
+                'housing_units.floor_number',
+                'housing_units.housing_unit_number',
+                'housing_units.q_9_3_1_first_name',
+                'housing_units.q_9_3_2_second_name__father',
+                'housing_units.q_9_3_4_last_name',
+                'buildings.building_name',
+                'buildings.globalid as building_globalid',
+                'housing_statuses.created_at as status_created_at',
+                'housing_statuses.notes',
+            ])
+            ->orderBy('housing_statuses.created_at')
+            ->offset($start)
+            ->limit($length)
+            ->get()
+            ->map(function ($unit): array {
+                $residentName = collect([
+                    $unit->q_9_3_1_first_name,
+                    $unit->q_9_3_2_second_name__father,
+                    $unit->q_9_3_4_last_name,
+                ])->filter()->implode(' ');
+
+                return [
+                    'objectid' => $unit->objectid,
+                    'globalid' => $unit->globalid,
+                    'building_name' => $unit->building_name ?? '-',
+                    'parentglobalid' => $unit->parentglobalid,
+                    'floor_number' => $unit->floor_number ?? '-',
+                    'housing_unit_number' => $unit->housing_unit_number ?? '-',
+                    'resident_name' => $residentName !== '' ? $residentName : '-',
+                    'status_created_at' => $unit->status_created_at
+                        ? Carbon::parse($unit->status_created_at)->format('Y-m-d H:i')
+                        : '-',
+                    'notes' => $unit->notes ?? '-',
+                    'assessment_url' => url('damage-assessment/showAssessmentAudit/'.rawurlencode((string) $unit->building_globalid).'/'.rawurlencode((string) $unit->globalid)),
+                ];
+            });
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $units,
+        ]);
+    }
+
     private function renderDailyAchievementReport(Request $request, string $tab): ViewContract
     {
         $activeTab = $tab === 'lawyers' ? 'lawyers' : 'engineers';
@@ -116,6 +206,7 @@ class DailyAchievementReportController extends Controller
             $needReviewCount = (int) ($counts->need_review_count ?? 0);
 
             return [
+                'user_id' => $auditor->id,
                 'name' => $auditor->name,
                 'accepted_count' => $acceptedCount,
                 'rejected_count' => $rejectedCount,
@@ -153,9 +244,9 @@ class DailyAchievementReportController extends Controller
             ],
             'tableTitle' => 'Auditor Name',
             'tableColumns' => [
-                ['label' => 'Accepted Units', 'key' => 'accepted_count', 'class' => 'success'],
-                ['label' => 'Rejected Units', 'key' => 'rejected_count', 'class' => 'danger'],
-                ['label' => 'Need Review', 'key' => 'need_review_count', 'class' => 'warning'],
+                ['label' => 'Accepted Units', 'key' => 'accepted_count', 'class' => 'success', 'status' => 'accepted_by_engineer'],
+                ['label' => 'Rejected Units', 'key' => 'rejected_count', 'class' => 'danger', 'status' => 'rejected_by_engineer'],
+                ['label' => 'Need Review', 'key' => 'need_review_count', 'class' => 'warning', 'status' => 'need_review'],
                 ['label' => 'Total', 'key' => 'total_count', 'class' => 'primary'],
             ],
             'emptyMessage' => 'No auditors found.',
@@ -194,6 +285,7 @@ class DailyAchievementReportController extends Controller
             $legalNotesCount = (int) ($counts->legal_notes_count ?? 0);
 
             return [
+                'user_id' => $lawyer->id,
                 'name' => $lawyer->name,
                 'assigned_count' => $assignedCount,
                 'accepted_count' => $acceptedCount,
@@ -230,9 +322,9 @@ class DailyAchievementReportController extends Controller
             ],
             'tableTitle' => 'Lawyer Name',
             'tableColumns' => [
-                ['label' => 'Assigned Units', 'key' => 'assigned_count', 'class' => 'info'],
-                ['label' => 'Accepted Units', 'key' => 'accepted_count', 'class' => 'success'],
-                ['label' => 'Legal Notes', 'key' => 'legal_notes_count', 'class' => 'warning'],
+                ['label' => 'Assigned Units', 'key' => 'assigned_count', 'class' => 'info', 'status' => 'assigned_to_lawyer'],
+                ['label' => 'Accepted Units', 'key' => 'accepted_count', 'class' => 'success', 'status' => 'accepted_by_lawyer'],
+                ['label' => 'Legal Notes', 'key' => 'legal_notes_count', 'class' => 'warning', 'status' => 'legal_notes'],
                 ['label' => 'Total', 'key' => 'total_count', 'class' => 'primary'],
             ],
             'emptyMessage' => 'No lawyers found.',

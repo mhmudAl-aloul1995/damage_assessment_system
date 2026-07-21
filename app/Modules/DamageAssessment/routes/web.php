@@ -235,6 +235,7 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/field-engineer/assignments/data', [FieldEngineerReportController::class, 'assignments'])->name('reports.field-engineer.assignments');
     Route::get('reports/field-engineer/export/{tab}/{format}', [FieldEngineerReportController::class, 'export'])->name('reports.field-engineer.export');
     Route::get('reports/daily-achievement', [DailyAchievementReportController::class, 'dailyAchievement'])->name('reports.daily-achievement');
+    Route::get('reports/daily-achievement/units', [DailyAchievementReportController::class, 'dailyAchievementUnits'])->name('reports.daily-achievement.units');
     Route::get('reports/daily-achievement/export', [DailyAchievementReportController::class, 'exportDailyAchievement'])->name('reports.daily-achievement.export');
     Route::get('reports/auditors-daily', [DailyAchievementReportController::class, 'auditorsDailyAchievement'])->name('reports.auditors-daily');
     Route::get('reports/lawyers-daily', [DailyAchievementReportController::class, 'lawyersDailyAchievement'])->name('reports.lawyers-daily');

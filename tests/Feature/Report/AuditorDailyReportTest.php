@@ -132,6 +132,8 @@ it('shows daily auditor achievement counts grouped by auditing engineer', functi
     $response->assertOk();
     $response->assertSee('Saeed Raihan');
     $response->assertDontSee('Ahmad Salem');
+    $response->assertSee('daily-achievement-units-btn');
+    $response->assertSee('dailyAchievementUnitsModal');
     $response->assertViewHas('rows', function ($rows) {
         $firstRow = collect($rows)->firstWhere('name', 'Saeed Raihan');
         $secondRow = collect($rows)->firstWhere('name', 'Ahmad Salem');
@@ -268,4 +270,19 @@ it('counts current engineering statuses created in the period for existing housi
     $response->assertViewHas('chartMetrics', function (array $chartMetrics) {
         return $chartMetrics['housing_units']['audited_count'] === 2;
     });
+
+    $this
+        ->actingAs($viewer)
+        ->getJson(route('reports.daily-achievement.units', [
+            'user_id' => $auditor->id,
+            'status' => 'accepted_by_engineer',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+            'draw' => 1,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('recordsTotal', 1)
+        ->assertJsonPath('recordsFiltered', 1)
+        ->assertJsonPath('data.0.objectid', 7001)
+        ->assertJsonPath('data.0.housing_unit_number', '-');
 });
