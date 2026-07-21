@@ -3,9 +3,7 @@
 use App\Models\AssessmentStatus;
 use App\Models\Building;
 use App\Models\BuildingStatus;
-use App\Models\BuildingStatusHistory;
 use App\Models\HousingStatus;
-use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
@@ -106,14 +104,6 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
         'updated_at' => now(),
         'created_at' => now(),
     ]);
-    HousingStatusHistory::query()->create([
-        'housing_id' => 401,
-        'status_id' => $assignedStatus->id,
-        'user_id' => $firstLawyer->id,
-        'type' => 'Legal Auditor',
-        'notes' => 'assigned today',
-    ]);
-
     HousingStatus::query()->create([
         'housing_id' => 402,
         'status_id' => $acceptedStatus->id,
@@ -123,14 +113,6 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
         'updated_at' => now(),
         'created_at' => now(),
     ]);
-    HousingStatusHistory::query()->create([
-        'housing_id' => 402,
-        'status_id' => $acceptedStatus->id,
-        'user_id' => $firstLawyer->id,
-        'type' => 'Legal Auditor',
-        'notes' => 'accepted today',
-    ]);
-
     HousingStatus::query()->create([
         'housing_id' => 403,
         'status_id' => $legalNotesStatus->id,
@@ -140,14 +122,6 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
         'updated_at' => now(),
         'created_at' => now(),
     ]);
-    HousingStatusHistory::query()->create([
-        'housing_id' => 403,
-        'status_id' => $legalNotesStatus->id,
-        'user_id' => $firstLawyer->id,
-        'type' => 'Legal Auditor',
-        'notes' => 'notes today',
-    ]);
-
     HousingStatus::query()->insert([
         'housing_id' => 404,
         'status_id' => $acceptedStatus->id,
@@ -157,20 +131,6 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
         'updated_at' => now()->subDays(3),
         'created_at' => now()->subDays(3),
     ]);
-    $oldHousingStatusHistory = HousingStatusHistory::query()->create([
-        'housing_id' => 404,
-        'status_id' => $acceptedStatus->id,
-        'user_id' => $secondLawyer->id,
-        'type' => 'Legal Auditor',
-        'notes' => 'old accepted',
-    ]);
-    DB::table('housing_status_histories')
-        ->where('id', $oldHousingStatusHistory->id)
-        ->update([
-            'created_at' => now()->subDays(3),
-            'updated_at' => now()->subDays(3),
-        ]);
-
     BuildingStatus::query()->insert([
         'building_id' => 301,
         'status_id' => $acceptedStatus->id,
@@ -180,14 +140,6 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
         'updated_at' => now(),
         'created_at' => now(),
     ]);
-    BuildingStatusHistory::query()->create([
-        'building_id' => 301,
-        'status_id' => $acceptedStatus->id,
-        'user_id' => $firstLawyer->id,
-        'type' => 'Legal Auditor',
-        'notes' => 'accepted building',
-    ]);
-
     BuildingStatus::query()->insert([
         'building_id' => 302,
         'status_id' => $acceptedStatus->id,
@@ -197,20 +149,6 @@ it('shows daily lawyer achievement counts grouped by legal auditor', function ()
         'updated_at' => now()->subDays(3),
         'created_at' => now()->subDays(3),
     ]);
-    $oldBuildingStatusHistory = BuildingStatusHistory::query()->create([
-        'building_id' => 302,
-        'status_id' => $acceptedStatus->id,
-        'user_id' => $firstLawyer->id,
-        'type' => 'Legal Auditor',
-        'notes' => 'old building',
-    ]);
-    DB::table('building_status_histories')
-        ->where('id', $oldBuildingStatusHistory->id)
-        ->update([
-            'created_at' => now()->subDays(3),
-            'updated_at' => now()->subDays(3),
-        ]);
-
     $response = $this
         ->actingAs($viewer)
         ->get(route('reports.daily-achievement', ['tab' => 'lawyers',
