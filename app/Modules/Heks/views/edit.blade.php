@@ -497,7 +497,9 @@
                                 </thead>
                                 <tbody>
                                 @forelse ($beneficiary->followUps as $followUp)
-                                    @php($completionPercentage = $followUp->completionPercentageForDisplay())
+                                    @php
+                                        $completionPercentage = $followUp->completionPercentageForDisplay();
+                                    @endphp
                                     <tr>
                                         <td><span class="badge badge-light-primary">{{ $followUp->visit_number ?? '-' }}</span></td>
                                         <td>{{ $followUp->visit_date?->format('Y-m-d') ?? '-' }}</td>

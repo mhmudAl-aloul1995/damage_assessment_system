@@ -167,7 +167,9 @@
                 <div class="card card-flush h-100">
                     <div class="card-header"><h3 class="card-title">{{ $title }}</h3></div>
                     <div class="card-body">
-                        @php($max = max(1, (int) $distribution->max()))
+                        @php
+                            $max = max(1, (int) $distribution->max());
+                        @endphp
                         @forelse ($distribution as $label => $count)
                             <div class="mb-4">
                                 <div class="d-flex justify-content-between mb-1">
