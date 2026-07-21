@@ -11,6 +11,7 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View as ViewContract;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
@@ -87,14 +88,11 @@ class DailyAchievementReportController extends Controller
         $startDate = Carbon::parse($request->input('start_date', now()->toDateString()))->startOfDay();
         $endDate = Carbon::parse($request->input('end_date', $startDate->toDateString()))->endOfDay();
 
-        $statusCounts = HousingStatus::query()
-            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
-            ->whereIn('assessment_statuses.name', [
-                'accepted_by_engineer',
-                'rejected_by_engineer',
-                'need_review',
-            ])
+        $statusCounts = $this->latestHousingStatusAchievementQuery(null, [
+            'accepted_by_engineer',
+            'rejected_by_engineer',
+            'need_review',
+        ], $startDate, $endDate)
             ->select(
                 'housing_statuses.user_id',
                 DB::raw("SUM(CASE WHEN assessment_statuses.name = 'accepted_by_engineer' THEN 1 ELSE 0 END) as accepted_count"),
@@ -173,15 +171,11 @@ class DailyAchievementReportController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $statusCounts = HousingStatus::query()
-            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->where('housing_statuses.type', 'Legal Auditor')
-            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
-            ->whereIn('assessment_statuses.name', [
-                'assigned_to_lawyer',
-                'accepted_by_lawyer',
-                'legal_notes',
-            ])
+        $statusCounts = $this->latestHousingStatusAchievementQuery('Legal Auditor', [
+            'assigned_to_lawyer',
+            'accepted_by_lawyer',
+            'legal_notes',
+        ], $startDate, $endDate)
             ->select(
                 'housing_statuses.user_id',
                 DB::raw("SUM(CASE WHEN assessment_statuses.name = 'assigned_to_lawyer' THEN 1 ELSE 0 END) as assigned_count"),
@@ -268,17 +262,13 @@ class DailyAchievementReportController extends Controller
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
 
-        $dailyCounts = HousingStatus::query()
-            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->when($statusType !== null, fn ($query) => $query->where('housing_statuses.type', $statusType))
-            ->whereBetween('housing_statuses.updated_at', [$start, $end])
-            ->whereIn('assessment_statuses.name', $statusNames)
+        $dailyCounts = $this->latestHousingStatusAchievementQuery($statusType, $statusNames, $start, $end)
             ->select(
                 'housing_statuses.user_id',
-                DB::raw('DATE(housing_statuses.updated_at) as achievement_date'),
+                DB::raw('DATE(housing_statuses.created_at) as achievement_date'),
                 DB::raw('COUNT(*) as total_count')
             )
-            ->groupBy('housing_statuses.user_id', DB::raw('DATE(housing_statuses.updated_at)'))
+            ->groupBy('housing_statuses.user_id', DB::raw('DATE(housing_statuses.created_at)'))
             ->get()
             ->groupBy('achievement_date')
             ->map(fn ($rows) => $rows->pluck('total_count', 'user_id')->map(fn ($count): int => (int) $count)->all())
@@ -324,17 +314,14 @@ class DailyAchievementReportController extends Controller
     {
         $auditedBuildingsCount = BuildingStatus::query()
             ->join('assessment_statuses', 'building_statuses.status_id', '=', 'assessment_statuses.id')
+            ->join('buildings', 'building_statuses.building_id', '=', 'buildings.objectid')
             ->when($type !== null, fn ($query) => $query->where('building_statuses.type', $type))
-            ->whereBetween('building_statuses.updated_at', [$startDate, $endDate])
+            ->whereBetween('building_statuses.created_at', [$startDate, $endDate])
             ->whereIn('assessment_statuses.name', $trackedStatusNames)
             ->distinct('building_statuses.building_id')
             ->count('building_statuses.building_id');
 
-        $auditedHousingUnitsCount = HousingStatus::query()
-            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
-            ->when($type !== null, fn ($query) => $query->where('housing_statuses.type', $type))
-            ->whereBetween('housing_statuses.updated_at', [$startDate, $endDate])
-            ->whereIn('assessment_statuses.name', $trackedStatusNames)
+        $auditedHousingUnitsCount = $this->latestHousingStatusAchievementQuery($type, $trackedStatusNames, $startDate, $endDate)
             ->distinct('housing_statuses.housing_id')
             ->count('housing_statuses.housing_id');
 
@@ -357,5 +344,24 @@ class DailyAchievementReportController extends Controller
                 'percentage' => $totalHousingUnitsCount > 0 ? round(($auditedHousingUnitsCount / $totalHousingUnitsCount) * 100, 1) : 0,
             ],
         ];
+    }
+
+    private function latestHousingStatusAchievementQuery(?string $type, array $statusNames, Carbon $startDate, Carbon $endDate): Builder
+    {
+        $latestStatusIds = HousingStatus::query()
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->join('housing_units', 'housing_statuses.housing_id', '=', 'housing_units.objectid')
+            ->when($type !== null, fn ($query) => $query->where('housing_statuses.type', $type))
+            ->whereBetween('housing_statuses.created_at', [$startDate, $endDate])
+            ->whereIn('assessment_statuses.name', $statusNames)
+            ->selectRaw('MAX(housing_statuses.id) as id')
+            ->groupBy('housing_statuses.housing_id');
+
+        return HousingStatus::query()
+            ->joinSub($latestStatusIds, 'latest_housing_statuses', function ($join): void {
+                $join->on('housing_statuses.id', '=', 'latest_housing_statuses.id');
+            })
+            ->join('assessment_statuses', 'housing_statuses.status_id', '=', 'assessment_statuses.id')
+            ->join('housing_units', 'housing_statuses.housing_id', '=', 'housing_units.objectid');
     }
 }

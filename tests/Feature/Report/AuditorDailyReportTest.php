@@ -159,3 +159,122 @@ it('shows daily auditor achievement counts grouped by auditing engineer', functi
             && $chartMetrics['housing_units']['audited_count'] === 3;
     });
 });
+
+it('counts only newly audited existing housing units once for auditing engineers', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+
+    $viewerRole = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole($viewerRole);
+
+    $auditor = User::factory()->create([
+        'name' => 'Wafaa Sarour',
+    ]);
+
+    $acceptedStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'accepted ar',
+        'stage' => 'engineer',
+        'order_step' => 4,
+    ]);
+
+    $needReviewStatus = AssessmentStatus::query()->create([
+        'name' => 'need_review',
+        'label_en' => 'Need Review',
+        'label_ar' => 'need review ar',
+        'stage' => 'engineer',
+        'order_step' => 5,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 701,
+        'globalid' => 'building-701',
+    ]);
+
+    foreach ([7001, 7002, 7003] as $objectId) {
+        HousingUnit::query()->create([
+            'objectid' => $objectId,
+            'globalid' => 'housing-'.$objectId,
+            'parentglobalid' => 'building-701',
+        ]);
+    }
+
+    HousingStatus::query()->create([
+        'housing_id' => 7001,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'new audited unit',
+        'updated_at' => now(),
+        'created_at' => now(),
+    ]);
+
+    $oldHousingStatus = HousingStatus::query()->create([
+        'housing_id' => 7002,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'old unit decision changed today',
+        'updated_at' => now(),
+    ]);
+    DB::table('housing_statuses')
+        ->where('id', $oldHousingStatus->id)
+        ->update([
+            'created_at' => now()->subDays(5),
+            'updated_at' => now(),
+        ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => 7003,
+        'status_id' => $needReviewStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'new audited unit needing review',
+        'updated_at' => now(),
+        'created_at' => now(),
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => 7999,
+        'status_id' => $acceptedStatus->id,
+        'user_id' => $auditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'missing housing unit',
+        'updated_at' => now(),
+        'created_at' => now(),
+    ]);
+
+    $response = $this
+        ->actingAs($viewer)
+        ->get(route('reports.auditors-daily', [
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+        ]));
+
+    $response->assertOk();
+    $response->assertViewHas('rows', function ($rows) {
+        $row = collect($rows)->firstWhere('name', 'Wafaa Sarour');
+
+        return $row !== null
+            && $row['accepted_count'] === 1
+            && $row['rejected_count'] === 0
+            && $row['need_review_count'] === 1
+            && $row['total_count'] === 2;
+    });
+    $response->assertViewHas('totals', function (array $totals) {
+        return $totals['accepted_count'] === 1
+            && $totals['rejected_count'] === 0
+            && $totals['need_review_count'] === 1
+            && $totals['total_count'] === 2;
+    });
+    $response->assertViewHas('chartMetrics', function (array $chartMetrics) {
+        return $chartMetrics['housing_units']['audited_count'] === 2;
+    });
+});
