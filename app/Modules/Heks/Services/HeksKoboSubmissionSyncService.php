@@ -241,8 +241,8 @@ class HeksKoboSubmissionSyncService
             'engineer_user_id' => $this->engineerUserResolver->resolve($engineerName),
             'working_condition' => $this->first($payload, ['working_condition', 'Working condition', "\u{062D}\u{0627}\u{0644}\u{0629} \u{0627}\u{0644}\u{0639}\u{0645}\u{0644}"]),
             'other_condition' => $this->first($payload, ['other_condition', 'Other condition:', "\u{062D}\u{0627}\u{0644}\u{0629} \u{0623}\u{062E}\u{0631}\u{0649}"]),
-            'completed_amount_ils' => $this->decimal($this->first($payload, ['completed_amount_ils', 'completed_amount', "\u{0625}\u{062C}\u{0645}\u{0627}\u{0644}\u{064A} \u{0645}\u{0627} \u{062A}\u{0645} \u{0627}\u{0646}\u{062C}\u{0627}\u{0632}\u{0629} \u{062D}\u{062A}\u{0649} \u{0627}\u{0644}\u{0622}\u{0646} ILS"])),
-            'completion_percentage' => $this->decimal($this->first($payload, ['completion_percentage', 'completion_percent', "\u{0646}\u{0633}\u{0628}\u{0629} \u{0627}\u{0644}\u{0625}\u{0646}\u{062C}\u{0627}\u{0632} \u{0628}\u{0627}\u{0644}\u{0623}\u{0639}\u{0645}\u{0627}\u{0644} %"])),
+            'completed_amount_ils' => $this->decimal($this->first($payload, ['completed_amount_ils', 'completed_amount', 'group_ab98d17/integer_hv9hz51', 'integer_hv9hz51', "\u{0625}\u{062C}\u{0645}\u{0627}\u{0644}\u{064A} \u{0645}\u{0627} \u{062A}\u{0645} \u{0627}\u{0646}\u{062C}\u{0627}\u{0632}\u{0629} \u{062D}\u{062A}\u{0649} \u{0627}\u{0644}\u{0622}\u{0646} ILS"])),
+            'completion_percentage' => $this->percentage($this->first($payload, ['completion_percentage', 'completion_percent', 'group_ab98d17/integer_lp9qe22', 'integer_lp9qe22', "\u{0646}\u{0633}\u{0628}\u{0629} \u{0627}\u{0644}\u{0625}\u{0646}\u{062C}\u{0627}\u{0632} \u{0628}\u{0627}\u{0644}\u{0623}\u{0639}\u{0645}\u{0627}\u{0644} %"])),
             'engineer_recommendations' => $this->first($payload, ['engineer_recommendations', 'recommendations', "\u{062A}\u{0648}\u{0635}\u{064A}\u{0627}\u{062A} \u{0627}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0644}\u{0644}\u{0632}\u{064A}\u{0627}\u{0631}\u{0629}"]),
             'boq_filename' => $boqFilename,
             'boq_url' => $boqUrl,
@@ -1687,6 +1687,15 @@ class HeksKoboSubmissionSyncService
     private function decimal(string $value): ?float
     {
         return $this->normalizer->money($value);
+    }
+
+    private function percentage(string $value): ?float
+    {
+        $percentage = $this->decimal($value);
+
+        return $percentage !== null && $percentage >= 0 && $percentage <= 100
+            ? $percentage
+            : null;
     }
 
     private function date(string $value): ?string

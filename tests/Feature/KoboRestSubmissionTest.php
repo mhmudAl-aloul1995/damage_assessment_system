@@ -528,6 +528,30 @@ test('kobo rest submission syncs HEKS path style field keys from api backfill pa
         ->and($followUp->boq_url)->toBe('https://kf.kobotoolbox.org/api/v2/assets/demo/data/1/attachments/demo/');
 });
 
+test('kobo rest submission keeps invalid HEKS follow up completion percentages empty', function () {
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-followups',
+        'submission_uuid' => 'uuid:heks-invalid-followup-percentage',
+        'payload' => [
+            '_uuid' => 'uuid:heks-invalid-followup-percentage',
+            'group_sr3dl25/Code' => 'DGS21',
+            'group_bv71d05/Visit_Date' => '2026-07-22',
+            'group_bv71d05/visit_' => '2',
+            'group_ab98d17/Working_condition' => 'work_in_progress__but_not_due_for_second',
+            'group_ab98d17/integer_hv9hz51' => '10',
+            'group_ab98d17/integer_lp9qe22' => '999.99',
+        ],
+        'received_at' => now(),
+    ]);
+
+    app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    $followUp = HeksFollowUp::query()->where('code', 'DGS21')->sole();
+
+    expect((float) $followUp->completed_amount_ils)->toBe(10.0)
+        ->and($followUp->completion_percentage)->toBeNull();
+});
+
 test('kobo rest submission links HEKS engineer fields to matching users', function () {
     $engineer = User::factory()->create([
         'name' => 'م مصطفى رضوان',
