@@ -48,17 +48,23 @@ class FetchKoboAssetSubmissions extends Command
         }
 
         $url = "{$baseUrl}/api/v2/assets/{$assetUid}/data/";
+        $query = [
+            'format' => 'json',
+            'limit' => $pageSize,
+        ];
         $fetched = 0;
         $stored = 0;
 
         while ($url !== '') {
-            $response = Http::withToken($token, 'Token')
+            $request = Http::withToken($token, 'Token')
                 ->acceptJson()
-                ->timeout((int) config('services.kobotoolbox.timeout', 60))
-                ->get($url, [
-                    'format' => 'json',
-                    'limit' => $pageSize,
-                ]);
+                ->timeout((int) config('services.kobotoolbox.timeout', 60));
+
+            $response = $query === []
+                ? $request->get($url)
+                : $request->get($url, $query);
+
+            $query = [];
 
             if (! $response->successful()) {
                 $this->components->error("Kobo API request failed ({$response->status()}): {$response->body()}");

@@ -233,7 +233,7 @@ test('kobo asset submissions can be fetched into stored rest submissions', funct
                 'results' => [
                     ['_uuid' => 'uuid:iqrad-fetch-001', '_id' => 1, 'borrower_name' => 'First Borrower'],
                 ],
-                'next' => 'https://kf.example.test/api/v2/assets/asset123/data/?page=2',
+                'next' => 'https://kf.example.test/api/v2/assets/asset123/data/?format=json&limit=1&start=100',
             ])
             ->push([
                 'results' => [
@@ -251,6 +251,9 @@ test('kobo asset submissions can be fetched into stored rest submissions', funct
 
     expect(KoboRestSubmission::query()->where('service_name', 'iqrad')->count())->toBe(2)
         ->and(KoboRestSubmission::query()->where('submission_uuid', 'uuid:iqrad-fetch-001')->value('sync_status'))->toBe('pending');
+
+    Http::assertSentCount(2);
+    Http::assertSent(fn ($request): bool => ($request->data()['start'] ?? null) === '100');
 });
 
 test('iqrad kobo sync command fetches and applies edited submissions', function () {
