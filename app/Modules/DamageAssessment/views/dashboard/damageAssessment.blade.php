@@ -1028,7 +1028,7 @@
 						<!--begin::Balance-->
 						<div class="d-flex text-center flex-column text-white pt-8">
 							<span class="fw-semibold fs-7">{{ __('ui.damage_dashboard.total_housing_units') }}</span>
-							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['total_units']}}</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['damaged_total'] }}</span>
 						</div>
 						<!--end::Balance-->
 					</div>
@@ -1256,7 +1256,7 @@
 						<div class="d-flex text-center flex-column text-white pt-8">
 							<span class="fw-semibold fs-7">{{ __('ui.damage_dashboard.total_housing_units') }}</span>
 							<span
-								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['fully_damaged'] + $unitStats['partially_damaged'] + $unitStats['committee_review'] + $unitStats['security_unsafe'] }}</span>
+								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['damaged_total'] }}</span>
 						</div>
 						<!--end::Balance-->
 					</div>

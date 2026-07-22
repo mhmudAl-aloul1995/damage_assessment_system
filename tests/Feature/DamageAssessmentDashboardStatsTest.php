@@ -439,6 +439,50 @@ it('filters dashboard housing totals by completed building status and building s
         });
 });
 
+it('counts dashboard damaged housing total from fully and partially damaged units only', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    HousingUnit::query()->create([
+        'objectid' => 904,
+        'globalid' => 'damaged-total-fully',
+        'unit_damage_status' => 'fully_damaged2',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 905,
+        'globalid' => 'damaged-total-partially',
+        'unit_damage_status' => 'partially_damaged2',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 906,
+        'globalid' => 'damaged-total-committee',
+        'unit_damage_status' => 'committee_review2',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertViewHas('unitStats', function (array $unitStats): bool {
+            return (int) $unitStats['total_units'] === 3
+                && (int) $unitStats['damaged_total'] === 2
+                && (int) $unitStats['fully_damaged'] === 1
+                && (int) $unitStats['partially_damaged'] === 1
+                && (int) $unitStats['committee_review'] === 1;
+        });
+});
+
 it('filters the main dashboard statistics by governorate', function () {
     $user = User::factory()->create();
 
@@ -566,6 +610,7 @@ it('returns latest dashboard stats as json', function () {
         ->assertJsonPath('buildingStats.completed', 1)
         ->assertJsonPath('buildingStats.fully_damaged', 1)
         ->assertJsonPath('unitStats.total_units', 1)
+        ->assertJsonPath('unitStats.damaged_total', 0)
         ->assertJsonPath('unitStats.committee_review', 1);
 });
 
