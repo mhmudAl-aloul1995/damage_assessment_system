@@ -43,14 +43,14 @@
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="border rounded p-4 h-100">
-                        <div class="text-muted small">المنجز في المتابعة</div>
-                        <div class="fs-2 fw-bold">{{ $followUp->completed_amount_ils ? number_format((float) $followUp->completed_amount_ils, 2) : '-' }} ILS</div>
+                        <div class="text-muted small">نسبة الإنجاز</div>
+                        <div class="fs-2 fw-bold">{{ $completionPercentage !== null ? number_format($completionPercentage, 2).'%' : '-' }}</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="border rounded p-4 h-100">
-                        <div class="text-muted small">نسبة الإنجاز</div>
-                        <div class="fs-2 fw-bold">{{ $followUp->completion_percentage !== null ? number_format((float) $followUp->completion_percentage, 2).'%' : '-' }}</div>
+                        <div class="text-muted small">المنجز في المتابعة</div>
+                        <div class="fs-2 fw-bold">{{ $followUp->completed_amount_ils ? number_format((float) $followUp->completed_amount_ils, 2).' ILS' : '-' }}</div>
                     </div>
                 </div>
             </div>

@@ -46,7 +46,7 @@ class SyncKoboRestSubmissions extends Command
         }
 
         if (! $this->option('all')) {
-            $query->whereIn('sync_status', ['pending', 'skipped', 'failed']);
+            $query->whereIn('sync_status', ['pending', 'queued', 'skipped', 'failed']);
         }
 
         $synced = 0;

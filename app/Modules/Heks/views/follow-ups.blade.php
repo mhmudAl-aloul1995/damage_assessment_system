@@ -148,8 +148,10 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="fw-bold">{{ $followUp->completed_amount_ils ? number_format((float) $followUp->completed_amount_ils, 2) : '-' }} ILS</div>
-                                    <div class="text-muted small">{{ $completionPercentage !== null ? number_format($completionPercentage, 2).'%' : '-' }}</div>
+                                    <div class="fw-bold">{{ $completionPercentage !== null ? number_format($completionPercentage, 2).'%' : '-' }}</div>
+                                    @if ($followUp->completed_amount_ils)
+                                        <div class="text-muted small">{{ number_format((float) $followUp->completed_amount_ils, 2) }} ILS</div>
+                                    @endif
                                 </td>
                                 <td>
                                     <span class="badge {{ $boqStatusClass }}">{{ $boqStatusLabel }}</span>

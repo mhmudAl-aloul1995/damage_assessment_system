@@ -528,7 +528,7 @@ test('kobo rest submission syncs HEKS path style field keys from api backfill pa
         ->and($followUp->boq_url)->toBe('https://kf.kobotoolbox.org/api/v2/assets/demo/data/1/attachments/demo/');
 });
 
-test('kobo rest submission keeps invalid HEKS follow up completion percentages empty', function () {
+test('kobo rest submission stores HEKS follow up progress field as a percentage', function () {
     $submission = KoboRestSubmission::query()->create([
         'service_name' => 'heks-followups',
         'submission_uuid' => 'uuid:heks-invalid-followup-percentage',
@@ -548,8 +548,8 @@ test('kobo rest submission keeps invalid HEKS follow up completion percentages e
 
     $followUp = HeksFollowUp::query()->where('code', 'DGS21')->sole();
 
-    expect((float) $followUp->completed_amount_ils)->toBe(10.0)
-        ->and($followUp->completion_percentage)->toBeNull();
+    expect($followUp->completed_amount_ils)->toBeNull()
+        ->and((float) $followUp->completion_percentage)->toBe(10.0);
 });
 
 test('kobo rest submission resolves HEKS follow up engineer choice labels from field mappings', function () {
@@ -1658,6 +1658,30 @@ test('kobo sync command retries skipped submissions', function () {
 
     expect(KoboRestSubmission::query()->first()->sync_status)->toBe('synced')
         ->and(DamageAssessmentBorrower::query()->where('borrower_name', 'Retried Borrower')->exists())->toBeTrue();
+});
+
+test('kobo sync command processes queued HEKS webhook submissions when queue worker is not running', function () {
+    KoboRestSubmission::query()->create([
+        'service_name' => 'heks-followups',
+        'submission_uuid' => 'uuid:queued-heks-followup',
+        'payload' => [
+            '_uuid' => 'uuid:queued-heks-followup',
+            'group_sr3dl25/Code' => 'QUEUED1',
+            'group_bv71d05/Visit_Date' => '2026-07-21',
+            'group_bv71d05/visit_' => '1',
+            'group_bv71d05/Engineer_Name' => 'Engineer One',
+        ],
+        'sync_status' => 'queued',
+        'received_at' => now(),
+    ]);
+
+    $this->artisan('kobo:sync-rest-submissions --service=heks-followups')
+        ->expectsOutputToContain('Synced: 1')
+        ->assertSuccessful();
+
+    expect(KoboRestSubmission::query()->where('submission_uuid', 'uuid:queued-heks-followup')->value('sync_status'))
+        ->toBe('synced')
+        ->and(HeksFollowUp::query()->where('code', 'QUEUED1')->exists())->toBeTrue();
 });
 
 test('kobo sync command replays synced HEKS submissions into wide record columns', function () {

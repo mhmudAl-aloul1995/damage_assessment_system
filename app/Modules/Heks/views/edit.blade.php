@@ -506,8 +506,10 @@
                                         <td>{{ $followUp->engineerUser?->name ?? $followUp->engineer_name ?? '-' }}</td>
                                         <td>{{ $followUp->workingConditionLabel() }}</td>
                                         <td>
-                                            <div>{{ $followUp->completed_amount_ils ? number_format((float) $followUp->completed_amount_ils, 2) : '-' }} ILS</div>
-                                            <div class="text-muted small">{{ $completionPercentage !== null ? number_format($completionPercentage, 2).'%' : '-' }}</div>
+                                            <div>{{ $completionPercentage !== null ? number_format($completionPercentage, 2).'%' : '-' }}</div>
+                                            @if ($followUp->completed_amount_ils)
+                                                <div class="text-muted small">{{ number_format((float) $followUp->completed_amount_ils, 2) }} ILS</div>
+                                            @endif
                                         </td>
                                         <td>
                                             @if ($followUp->boqItems->isNotEmpty())
