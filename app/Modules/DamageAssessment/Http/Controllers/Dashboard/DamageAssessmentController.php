@@ -1435,6 +1435,7 @@ class DamageAssessmentController extends Controller
                     'Database Officer',
                     'Project Officer',
                     'undp-Project Manager',
+                    'Area Manager',
                     'QC/QA Engineer',
                     'Legal Auditor',
                     'Auditing Supervisor',
@@ -1444,7 +1445,7 @@ class DamageAssessmentController extends Controller
                     return '<span class="text-muted">-</span>';
                 }
 
-                if ($isAssessmentReadOnly && ! $fieldEdits->isEmpty()) {
+                if ($isAssessmentReadOnly && ! $canViewHistory && ! $fieldEdits->isEmpty()) {
                     return e($editedValue ?? '-');
                 }
 

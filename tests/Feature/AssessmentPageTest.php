@@ -184,6 +184,67 @@ it('returns inline edit metadata and field history when saving an audit edit', f
     ]);
 });
 
+it('shows inline edit history cards to area managers without edit controls', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'fake-token',
+        ], 200),
+        '*' => Http::response([
+            'attachmentInfos' => [],
+        ], 200),
+    ]);
+
+    $areaManagerRole = Role::findOrCreate('Area Manager', 'web');
+
+    $manager = User::factory()->create();
+    $manager->assignRole($areaManagerRole);
+
+    $editor = User::factory()->create([
+        'name' => 'Audit Editor',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'owner_name',
+        'label' => 'Owner Name',
+        'hint' => 'Owner full name',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 5601,
+        'globalid' => 'area-manager-inline-history-building',
+        'building_name' => 'History Building',
+        'owner_name' => 'Original Owner',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'owner_name',
+        'field_value' => 'Edited Owner',
+        'user_id' => $editor->id,
+    ]);
+
+    $response = $this
+        ->actingAs($manager)
+        ->getJson('/damage-assessment/showBuildings?'.http_build_query([
+            'globalid' => $building->globalid,
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]))
+        ->assertOk();
+
+    $row = $response->json('data.0');
+
+    expect($row['answer'])
+        ->toContain('audit-existing-edit-card')
+        ->toContain('Original Owner')
+        ->toContain('Edited Owner')
+        ->toContain('Audit Editor')
+        ->and($row['editAnswer'])
+        ->toBeNull();
+});
+
 it('keeps previous housing unit inline edits in edit assessments when saving a new edit', function () {
     $user = User::factory()->create();
 
