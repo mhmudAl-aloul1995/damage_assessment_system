@@ -789,6 +789,7 @@ class HeksKoboSubmissionSyncService
     private function syncBoqItems(HeksBeneficiary $beneficiary, array $payload, array $flatPayload, string $service, ?HeksFollowUp $followUp): int
     {
         $rows = $this->boqRows($payload, $flatPayload, $service);
+        $syncedKeys = [];
         $saved = 0;
 
         foreach ($rows as $index => $row) {
@@ -823,10 +824,37 @@ class HeksKoboSubmissionSyncService
                 ]
             );
 
+            $syncedKeys[$this->boqItemSyncKey($itemCode !== '' ? $itemCode : null, $description)] = true;
             $saved++;
         }
 
+        $this->deleteStaleSyncedBoqItems($beneficiary, $followUp, $service, array_keys($syncedKeys));
+
         return $saved;
+    }
+
+    /**
+     * @param  array<int, string>  $syncedKeys
+     */
+    private function deleteStaleSyncedBoqItems(HeksBeneficiary $beneficiary, ?HeksFollowUp $followUp, string $service, array $syncedKeys): void
+    {
+        HeksBoqItem::query()
+            ->where('heks_beneficiary_id', $beneficiary->id)
+            ->where('heks_follow_up_id', $followUp?->id)
+            ->where('source', $service)
+            ->get()
+            ->each(function (HeksBoqItem $item) use ($syncedKeys): void {
+                $itemKey = $this->boqItemSyncKey($item->item_code, $item->description);
+
+                if (! in_array($itemKey, $syncedKeys, true)) {
+                    $item->delete();
+                }
+            });
+    }
+
+    private function boqItemSyncKey(?string $itemCode, string $description): string
+    {
+        return sha1(trim((string) $itemCode).'|'.trim($description));
     }
 
     /**

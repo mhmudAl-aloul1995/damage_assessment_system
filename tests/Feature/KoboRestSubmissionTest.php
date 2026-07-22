@@ -1499,6 +1499,50 @@ test('kobo rest submission ignores demographic age fields that look like BOQ ite
         ->and(HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->exists())->toBeFalse();
 });
 
+test('kobo rest submission removes stale imported BOQ rows that are no longer present after filtering', function () {
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'STALEBOQ',
+        'name' => 'Stale BOQ Beneficiary',
+    ]);
+
+    HeksBoqItem::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'source' => 'heks-boq',
+        'item_code' => '8.17',
+        'description' => 'ذكر - 17-8 سنة',
+        'quantity' => 1,
+        'unit_price_ils' => 0,
+        'total_price_ils' => 0,
+    ]);
+
+    HeksBoqItem::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'source' => 'manual',
+        'item_code' => 'M1',
+        'description' => 'Manual item',
+        'quantity' => 1,
+        'unit_price_ils' => 10,
+        'total_price_ils' => 10,
+    ]);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-boq',
+        'submission_uuid' => 'uuid:heks-boq-stale-filtered-fields',
+        'payload' => [
+            '_uuid' => 'uuid:heks-boq-stale-filtered-fields',
+            'code' => 'STALEBOQ',
+            'family_members/male_8_17' => '1',
+        ],
+        'received_at' => now(),
+    ]);
+
+    $sync = app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    expect($sync['status'])->toBe('synced')
+        ->and(HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->where('source', 'heks-boq')->exists())->toBeFalse()
+        ->and(HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->where('source', 'manual')->exists())->toBeTrue();
+});
+
 test('heks kobo backfill imports old submissions from Kobo API', function () {
     config(['services.kobotoolbox.token' => 'api-token']);
 
