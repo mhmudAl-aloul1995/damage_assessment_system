@@ -165,7 +165,10 @@ class HeksController extends Controller
         $this->authorizeAccess();
 
         $beneficiaries = HeksBeneficiary::query()
-            ->with('fieldEngineerUser:id,name,name_en,username_arcgis')
+            ->with([
+                'fieldEngineerUser:id,name,name_en,username_arcgis',
+                'mainKoboRecords:id,heks_beneficiary_id,service_name',
+            ])
             ->withCount(['labels', 'followUps', 'scores', 'payments', 'workAssignments', 'attachments'])
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $search = (string) $request->string('q');

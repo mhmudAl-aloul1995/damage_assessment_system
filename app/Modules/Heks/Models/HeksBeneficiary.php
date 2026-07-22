@@ -46,6 +46,11 @@ class HeksBeneficiary extends Model
         return $this->hasMany(HeksLabel::class);
     }
 
+    public function mainKoboRecords(): HasMany
+    {
+        return $this->hasMany(HeksMainKoboRecord::class, 'heks_beneficiary_id');
+    }
+
     public function fieldEngineerUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'field_engineer_user_id');
@@ -111,6 +116,34 @@ class HeksBeneficiary extends Model
         }
 
         return null;
+    }
+
+    public function surveySourceLabel(): string
+    {
+        $services = $this->mainKoboRecords
+            ->pluck('service_name')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($services->contains('heks_25_bnfs')) {
+            return "\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}\u{0629}";
+        }
+
+        if ($services->intersect(['heks_main', 'heks-main'])->isNotEmpty()) {
+            return "\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0649}";
+        }
+
+        return "\u{063A}\u{064A}\u{0631} \u{0645}\u{062D}\u{062F}\u{062F}";
+    }
+
+    public function surveySourceBadgeClass(): string
+    {
+        return match ($this->surveySourceLabel()) {
+            "\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}\u{0629}" => 'badge-light-info',
+            "\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0649}" => 'badge-light-primary',
+            default => 'badge-light',
+        };
     }
 
     public static function isRawEngineerCode(string $value): bool

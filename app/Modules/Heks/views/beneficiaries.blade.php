@@ -41,6 +41,7 @@
                     <th>المستفيد</th>
                     <th>الهوية</th>
                     <th>المهندس</th>
+                    <th>الاستبيان</th>
                     <th>المنحة</th>
                     <th>مرحلة الحالة</th>
                     <th>الملفات المرتبطة</th>
@@ -54,6 +55,11 @@
                         <td>{{ $beneficiary->name ?? '-' }}</td>
                         <td>{{ $beneficiary->identity_number ?? '-' }}</td>
                         <td>{{ $beneficiary->responsibleEngineerName() ?? '-' }}</td>
+                        <td>
+                            <span class="badge {{ $beneficiary->surveySourceBadgeClass() }}">
+                                {{ $beneficiary->surveySourceLabel() }}
+                            </span>
+                        </td>
                         <td>{{ $beneficiary->grant_amount ? number_format((float) $beneficiary->grant_amount, 2) : '-' }}</td>
                         <td>
                             <span class="badge {{ $beneficiary->is_selected ? 'badge-light-success' : 'badge-light' }}">
@@ -81,7 +87,7 @@
                         <td><a href="{{ route('heks.beneficiaries.edit', $beneficiary) }}" class="btn btn-sm btn-light-primary">فتح</a></td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="text-center text-muted">لا توجد حالات بعد.</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted">لا توجد حالات بعد.</td></tr>
                 @endforelse
                 </tbody>
             </table>

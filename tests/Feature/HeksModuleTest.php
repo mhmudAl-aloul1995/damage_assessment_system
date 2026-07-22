@@ -9,6 +9,7 @@ use App\Modules\Heks\Models\HeksFollowUp;
 use App\Modules\Heks\Models\HeksKoboChoice;
 use App\Modules\Heks\Models\HeksKoboFieldMapping;
 use App\Modules\Heks\Models\HeksLabel;
+use App\Modules\Heks\Models\HeksMainKoboRecord;
 use App\Modules\Heks\Models\HeksPayment;
 use App\Modules\Heks\Models\HeksScore;
 use App\Modules\Heks\Models\HeksScoringWeight;
@@ -1622,6 +1623,41 @@ it('shows HEKS survey and score counts separately on the beneficiaries list', fu
         ->assertOk()
         ->assertSee('1 استبيان')
         ->assertSee('0 درجات');
+});
+
+it('shows HEKS survey source phase on the beneficiaries list', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $phaseOneBeneficiary = HeksBeneficiary::query()->create([
+        'code' => 'PHASE-ONE',
+        'name' => 'Phase One Beneficiary',
+    ]);
+
+    $phaseTwoBeneficiary = HeksBeneficiary::query()->create([
+        'code' => 'PHASE-TWO',
+        'name' => 'Phase Two Beneficiary',
+    ]);
+
+    HeksMainKoboRecord::query()->create([
+        'heks_beneficiary_id' => $phaseOneBeneficiary->id,
+        'service_name' => 'heks_main',
+        'submission_uuid' => 'uuid:phase-one-list',
+    ]);
+
+    HeksMainKoboRecord::query()->create([
+        'heks_beneficiary_id' => $phaseTwoBeneficiary->id,
+        'service_name' => 'heks_25_bnfs',
+        'submission_uuid' => 'uuid:phase-two-list',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries'))
+        ->assertOk()
+        ->assertSee("\u{0627}\u{0644}\u{0627}\u{0633}\u{062A}\u{0628}\u{064A}\u{0627}\u{0646}")
+        ->assertSee("\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0649}")
+        ->assertSee("\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}\u{0629}");
 });
 
 it('shows follow-up BOQ items directly on the follow-ups page', function () {
