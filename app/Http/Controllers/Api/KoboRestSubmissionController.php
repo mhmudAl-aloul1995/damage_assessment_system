@@ -33,9 +33,12 @@ class KoboRestSubmissionController extends Controller
 
         $payload = $request->json()->all();
         $submissionUuid = Arr::get($payload, '_uuid') ?? Arr::get($payload, 'meta/instanceID');
+        $heksServiceConfig = $heksServices->service($service) ?? [];
 
         $attributes = [
             'service_name' => $service,
+            'source_project' => $heksServiceConfig['source_project'] ?? null,
+            'survey_phase' => $heksServiceConfig['survey_phase'] ?? null,
             'submission_uuid' => $submissionUuid,
             'payload' => $payload,
             'source_ip' => $request->ip(),

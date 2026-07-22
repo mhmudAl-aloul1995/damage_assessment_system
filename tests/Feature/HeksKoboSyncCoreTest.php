@@ -3,8 +3,11 @@
 use App\Jobs\SyncHeksKoboSubmission;
 use App\Models\KoboRestSubmission;
 use App\Modules\Heks\Services\HeksKoboMappingReportService;
+use App\Modules\Heks\Services\HeksKoboSubmissionSyncService;
 use App\Modules\Heks\Services\HeksValueNormalizer;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -40,6 +43,41 @@ test('heks webhook queues submission on heks queue', function () {
 
     expect($submission->service_name)->toBe('heks_main')
         ->and($submission->sync_status)->toBe('queued');
+
+    Queue::assertPushedOn('heks', SyncHeksKoboSubmission::class);
+});
+
+test('heks phase two webhook stores phase metadata and reuses main wide mappings', function () {
+    Queue::fake();
+    config(['services.kobotoolbox.rest_service_token' => 'secret']);
+
+    $this
+        ->withHeader('X-Kobo-Token', 'secret')
+        ->postJson('/api/heks/kobo-webhook/heks-25-bnfs', [
+            '_uuid' => 'uuid:phase-two-heks-main',
+            'identification/application_code' => 'P2-001',
+            'family_info/head_name' => 'Phase Two Beneficiary',
+        ])
+        ->assertAccepted()
+        ->assertJsonPath('sync_status', 'queued');
+
+    $submission = KoboRestSubmission::query()->where('submission_uuid', 'uuid:phase-two-heks-main')->sole();
+
+    expect($submission->service_name)->toBe('heks_25_bnfs')
+        ->and($submission->source_project)->toBe("HEKS 25 BNF's")
+        ->and($submission->survey_phase)->toBe('phase_2');
+
+    app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    $record = DB::table('heks_main_kobo_records')
+        ->where('submission_uuid', 'uuid:phase-two-heks-main')
+        ->sole();
+
+    expect($record->service_name)->toBe('heks_25_bnfs')
+        ->and($record->identification_application_code)->toBe('P2-001')
+        ->and($record->family_info_head_name)->toBe('Phase Two Beneficiary')
+        ->and(Schema::hasColumn('heks_main_kobo_records', 'identification_application_code'))->toBeTrue()
+        ->and(Schema::hasColumn('heks_main_kobo_records', 'identification_application_code_'.substr(sha1('identification/application_code1'), 0, 8)))->toBeFalse();
 
     Queue::assertPushedOn('heks', SyncHeksKoboSubmission::class);
 });

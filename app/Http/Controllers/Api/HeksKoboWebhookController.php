@@ -32,8 +32,11 @@ class HeksKoboWebhookController extends Controller
         $payload = $request->json()->all();
         $submissionUuid = Arr::get($payload, '_uuid') ?? Arr::get($payload, 'meta/instanceID');
         $serviceName = $services->storageName($service);
+        $serviceConfig = $services->service($service) ?? [];
         $attributes = [
             'service_name' => $serviceName,
+            'source_project' => $serviceConfig['source_project'] ?? null,
+            'survey_phase' => $serviceConfig['survey_phase'] ?? null,
             'submission_uuid' => $submissionUuid,
             'payload' => $payload,
             'source_ip' => $request->ip(),

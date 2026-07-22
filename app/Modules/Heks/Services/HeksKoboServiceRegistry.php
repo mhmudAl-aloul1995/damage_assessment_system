@@ -52,6 +52,21 @@ class HeksKoboServiceRegistry
         return $this->canonical($serviceName) !== null;
     }
 
+    /**
+     * @return array<int, string>
+     */
+    public function lookupNames(string $serviceName): array
+    {
+        $canonical = $this->canonical($serviceName);
+        $service = $canonical !== null ? $this->service($serviceName) : null;
+
+        return array_values(array_unique(array_filter(array_merge(
+            [$serviceName, str_replace('_', '-', $serviceName), str_replace('-', '_', $serviceName), $canonical],
+            is_array($service) ? ($service['aliases'] ?? []) : [],
+            is_array($service) ? ($service['mapping_services'] ?? []) : [],
+        ))));
+    }
+
     public function wideTable(string $serviceName): ?string
     {
         $service = $this->service($serviceName);

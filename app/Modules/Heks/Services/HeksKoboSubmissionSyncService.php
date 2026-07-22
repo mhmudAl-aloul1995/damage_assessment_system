@@ -1191,7 +1191,7 @@ class HeksKoboSubmissionSyncService
     private function ensureKoboRecordColumn(string $service, string $tableName, string $field): ?string
     {
         $existingMapping = HeksKoboFieldMapping::query()
-            ->where('service_name', $service)
+            ->whereIn('service_name', $this->serviceLookupKeys($service))
             ->where('kobo_field', $field)
             ->first();
 
@@ -1206,6 +1206,11 @@ class HeksKoboSubmissionSyncService
         }
 
         $column = $this->uniqueKoboColumnName($service, $tableName, $field);
+        $expectedColumn = $this->koboColumnName($field);
+
+        if (Schema::hasColumn($tableName, $expectedColumn)) {
+            $column = $expectedColumn;
+        }
 
         if ($column === '') {
             return null;
@@ -1408,12 +1413,15 @@ class HeksKoboSubmissionSyncService
     private function serviceLookupKeys(string $service): array
     {
         return array_values(array_unique(array_filter([
+            ...$this->serviceRegistry->lookupNames($service),
             $service,
             str_replace('_', '-', $service),
             str_replace('-', '_', $service),
             match ($service) {
                 'heks_main' => 'heks-main',
                 'heks-main' => 'heks_main',
+                'heks_25_bnfs' => 'heks_main',
+                'heks-25-bnfs', 'heks-25-bnfs-phase-2' => 'heks_25_bnfs',
                 'heks_followup' => 'heks-followups',
                 'heks-followups', 'heks-followup' => 'heks_followup',
                 'heks_boq' => 'heks-boq',

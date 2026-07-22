@@ -11,6 +11,16 @@ return [
             'normalized_handler' => 'main',
             'allow_create_beneficiary' => true,
         ],
+        'heks_25_bnfs' => [
+            'aliases' => ['heks-25-bnfs', 'heks_25_bnfs', 'heks-25-bnfs-phase-2'],
+            'asset_uid' => env('HEKS_25_BNFS_KOBO_ASSET'),
+            'wide_table' => 'heks_main_kobo_records',
+            'normalized_handler' => 'main',
+            'allow_create_beneficiary' => true,
+            'source_project' => "HEKS 25 BNF's",
+            'survey_phase' => 'phase_2',
+            'mapping_services' => ['heks_main', 'heks-main'],
+        ],
         'heks_followup' => [
             'aliases' => ['heks-followups', 'heks-followup'],
             'asset_uid' => env('HEKS_FOLLOWUP_KOBO_ASSET'),
