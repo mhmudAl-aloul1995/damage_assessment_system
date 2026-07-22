@@ -8,6 +8,7 @@ use App\Models\CommitteeMember;
 use App\Models\HousingUnit;
 use App\Models\User;
 use App\Notifications\CommitteeDecisionSignatureRequested;
+use App\services\CommitteeDecisionWorkflowExcelImportService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
@@ -1071,6 +1072,60 @@ it('syncs imported resurvey completed decisions with completed field status on m
     });
 });
 
+it('imports workflow excel housing unit sheets by UNITID and ignores higher committee columns when requested', function () {
+    User::factory()->create();
+
+    $buildingFromSkippedSheet = Building::query()->create([
+        'objectid' => 777,
+        'globalid' => 'skipped-building-sheet-globalid',
+        'building_name' => 'Skipped Building Sheet',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $parentBuilding = Building::query()->create([
+        'objectid' => 598,
+        'globalid' => 'unit-parent-building-globalid',
+        'building_name' => 'Unit Parent From Excel',
+        'building_damage_status' => 'partially_damaged',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $objectIdTrapUnit = HousingUnit::query()->create([
+        'objectid' => 598,
+        'globalid' => 'objectid-trap-unit-globalid',
+        'unit_damage_status' => 'committee_review2',
+    ]);
+
+    $unit = HousingUnit::query()->create([
+        'objectid' => 1082,
+        'globalid' => 'unitid-target-globalid',
+        'parentglobalid' => $parentBuilding->globalid,
+        'housing_unit_number' => 'U-1082',
+        'unit_damage_status' => 'committee_review2',
+    ]);
+
+    $summary = app(CommitteeDecisionWorkflowExcelImportService::class)->import(
+        workflowCommitteeDecisionWorkbookWithUnitIdPath(),
+        [
+            'units_only' => true,
+            'ignore_higher_committee' => true,
+        ],
+    );
+
+    $unitDecision = CommitteeDecision::query()->whereMorphedTo('decisionable', $unit)->firstOrFail();
+
+    expect($summary['rows'])->toBe(1)
+        ->and($summary['decisions_completed'])->toBe(1)
+        ->and($summary['sheets'])->toHaveKey("\u{062E}\u{0627}\u{0646}\u{064A}\u{0648}\u{0646}\u{0633}-\u{0648}\u{062D}\u{062F}\u{0627}\u{062A}", 1)
+        ->and($unitDecision->decision_type)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
+        ->and($unitDecision->decision_text)->toBe("\u{0646}\u{0635} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{064A}\u{0629}")
+        ->and($unitDecision->notes)->toContain('Decision source: initial committee')
+        ->and($unit->refresh()->unit_damage_status)->toBe('partially_damaged2')
+        ->and($parentBuilding->refresh()->field_status)->toBe('Not_Completed')
+        ->and(CommitteeDecision::query()->whereMorphedTo('decisionable', $objectIdTrapUnit)->exists())->toBeFalse()
+        ->and(CommitteeDecision::query()->whereMorphedTo('decisionable', $buildingFromSkippedSheet)->exists())->toBeFalse();
+});
+
 function workflowCommitteeDecisionWorkbookPath(array $records): string
 {
     $spreadsheet = new Spreadsheet;
@@ -1136,6 +1191,95 @@ function workflowCommitteeDecisionWorkbookPath(array $records): string
     }
 
     $path = tempnam(sys_get_temp_dir(), 'workflow-committee-decisions-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    return $path;
+}
+
+function workflowCommitteeDecisionWorkbookWithUnitIdPath(): string
+{
+    $spreadsheet = new Spreadsheet;
+    $buildingSheet = $spreadsheet->getActiveSheet();
+    $buildingSheet->setTitle("\u{062E}\u{0627}\u{0646}\u{064A}\u{0648}\u{0646}\u{0633} -\u{0645}\u{0628}\u{0627}\u{0646}\u{064A}");
+    $buildingSheet->setCellValue('A1', 'ObjectID');
+    $buildingSheet->setCellValue('O1', "\u{0642}\u{0631}\u{0627}\u{0631} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629}");
+    $buildingSheet->setCellValue('A2', 777);
+    $buildingSheet->setCellValue('O2', "\u{0643}\u{0644}\u{064A}");
+
+    $sheet = $spreadsheet->createSheet();
+    $sheet->setTitle("\u{062E}\u{0627}\u{0646}\u{064A}\u{0648}\u{0646}\u{0633}-\u{0648}\u{062D}\u{062F}\u{0627}\u{062A}");
+
+    $headers = [
+        'ObjectID',
+        'UNITID',
+        "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0628}\u{0627}\u{062D}\u{062B}",
+        'What is the current damage status of the building?',
+        'Building Name',
+        '6.1 Comments & Recommendations',
+        "\u{0627}\u{0644}\u{0645}\u{062D}\u{0627}\u{0641}\u{0638}\u{0629}",
+        "\u{0627}\u{0644}\u{062D}\u{064A}",
+        "\u{062A}\u{0627}\u{0631}\u{064A}\u{062E} \u{0627}\u{0646}\u{0639}\u{0642}\u{0627}\u{062F} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629}",
+        "\u{0645}\u{062D}\u{0645}\u{062F} \u{0623}\u{0628}\u{0648} \u{0631}\u{064A}\u{062F}\u{0629}",
+        "\u{0637}\u{0627}\u{0631}\u{0642} \u{0627}\u{0644}\u{0633}\u{0644}\u{0648}\u{062A}",
+        "\u{0639}\u{062F}\u{0646}\u{0627}\u{0646} \u{0627}\u{0644}\u{0639}\u{0643}\u{0644}\u{0648}\u{0643}",
+        "\u{0639}\u{0628}\u{062F} \u{0627}\u{0644}\u{0631}\u{062D}\u{0645}\u{0646} \u{0634}\u{0645}\u{0644}\u{062E}",
+        "\u{0645}\u{062D}\u{0645}\u{062F} \u{0639}\u{0635}\u{0627}\u{0645} \u{0627}\u{062D}\u{0645}\u{062F}",
+        "\u{0639}\u{0628}\u{064A}\u{0631} \u{0627}\u{0644}\u{0643}\u{064A}\u{0627}\u{0644}",
+        "\u{0642}\u{0631}\u{0627}\u{0631} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629}",
+        "\u{0646}\u{0635} \u{0642}\u{0631}\u{0627}\u{0631} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629}",
+        "\u{0627}\u{0644}\u{0625}\u{062C}\u{0631}\u{0627}\u{0621} \u{0627}\u{0644}\u{0645}\u{0637}\u{0644}\u{0648}\u{0628}",
+        "\u{0647}\u{0644} \u{062A}\u{0645} \u{0625}\u{0639}\u{0627}\u{062F}\u{0629} \u{062D}\u{0635}\u{0631}\u{0647}",
+        "\u{062A}\u{0627}\u{0631}\u{064A}\u{062E} \u{0627}\u{0646}\u{0639}\u{0642}\u{0627}\u{062F} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629} \u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}",
+        "\u{0641}\u{0627}\u{062A}\u{0646}\u{0629} \u{0645}\u{0647}\u{062F}\u{064A}",
+        "\u{0645}\u{062D}\u{0645}\u{062F} \u{0623}\u{0628}\u{0648} \u{0631}\u{064A}\u{062F}\u{0629}",
+        "\u{0637}\u{0627}\u{0631}\u{0642} \u{0627}\u{0644}\u{0633}\u{0644}\u{0648}\u{062A}",
+        "\u{0639}\u{062F}\u{0646}\u{0627}\u{0646} \u{0627}\u{0644}\u{0639}\u{0643}\u{0644}\u{0648}\u{0643}",
+        "\u{0639}\u{0628}\u{062F} \u{0627}\u{0644}\u{0631}\u{062D}\u{0645}\u{0646} \u{0634}\u{0645}\u{0644}\u{062E}",
+        "\u{0645}\u{062D}\u{0645}\u{062F} \u{0639}\u{0635}\u{0627}\u{0645} \u{0627}\u{062D}\u{0645}\u{062F}",
+        "\u{0642}\u{0631}\u{0627}\u{0631} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629} \u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}",
+        "\u{0646}\u{0635} \u{0642}\u{0631}\u{0627}\u{0631} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629} \u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}",
+        "\u{0627}\u{0644}\u{0625}\u{062C}\u{0631}\u{0627}\u{0621} \u{0627}\u{0644}\u{0645}\u{0637}\u{0644}\u{0648}\u{0628}",
+        "\u{0647}\u{0644} \u{062A}\u{0645} \u{0625}\u{0639}\u{0627}\u{062F}\u{0629} \u{062D}\u{0635}\u{0631}\u{0647} \u{0628}\u{0639}\u{062F} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629} \u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}",
+    ];
+
+    foreach ($headers as $columnIndex => $header) {
+        $sheet->setCellValue([$columnIndex + 1, 1], $header);
+    }
+
+    $sheet->fromArray([
+        598,
+        1082,
+        'Excel.Researcher',
+        'Committee Review',
+        'Unit Building',
+        'Unit comments',
+        'Khan Younis',
+        'Al-Amal',
+        '2026-04-08',
+        '800846958',
+        '',
+        '',
+        '',
+        '',
+        '',
+        "\u{062C}\u{0632}\u{0626}\u{064A}",
+        "\u{0646}\u{0635} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{064A}\u{0629}",
+        "\u{0627}\u{0639}\u{0627}\u{062F}\u{0629} \u{0627}\u{0644}\u{0645}\u{0628}\u{0646}\u{0649} \u{0644}\u{0644}\u{0645}\u{0647}\u{0646}\u{062F}\u{0633} \u{0644}\u{062D}\u{0635}\u{0631} \u{0627}\u{0644}\u{0648}\u{062D}\u{062F}\u{0629}",
+        "\u{0644}\u{0627}",
+        '2026-04-30',
+        '900000001',
+        '',
+        '',
+        '',
+        '',
+        '',
+        "\u{0643}\u{0644}\u{064A}",
+        "\u{0646}\u{0635} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629} \u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}",
+        "\u{0625}\u{062C}\u{0631}\u{0627}\u{0621} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629} \u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}",
+        "\u{0644}\u{0627}",
+    ], null, 'A2');
+
+    $path = tempnam(sys_get_temp_dir(), 'workflow-committee-unitid-').'.xlsx';
     (new Xlsx($spreadsheet))->save($path);
 
     return $path;

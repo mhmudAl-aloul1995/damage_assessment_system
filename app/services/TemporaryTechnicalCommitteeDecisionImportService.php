@@ -174,7 +174,11 @@ class TemporaryTechnicalCommitteeDecisionImportService
             );
             if ($resurveyCompleted) {
                 $this->markResurveyCompletedFieldStatus($decisionable);
-                $this->syncArcGisResurveyCompletedFieldStatus($decision);
+                if (($record['defer_resurvey_arcgis'] ?? false) === true) {
+                    $this->markArcGisManualPending($decision);
+                } else {
+                    $this->syncArcGisResurveyCompletedFieldStatus($decision);
+                }
             } else {
                 $this->syncArcGisDecisionStatus($decision);
             }

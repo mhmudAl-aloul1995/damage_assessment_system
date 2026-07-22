@@ -4,6 +4,7 @@ namespace App\services;
 
 use App\Models\CommitteeDecision;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -16,7 +17,11 @@ class CommitteeDecisionWorkflowExcelImportService
     /**
      * @return array<string, mixed>
      */
-    public function import(string $path): array
+    /**
+     * @param  array{units_only?: bool, ignore_higher_committee?: bool, dry_run?: bool, recognize_arabic_yes?: bool}  $options
+     * @return array<string, mixed>
+     */
+    public function import(string $path, array $options = []): array
     {
         if (! is_file($path)) {
             throw new RuntimeException("Excel file was not found: {$path}");
@@ -30,12 +35,12 @@ class CommitteeDecisionWorkflowExcelImportService
         ];
 
         foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
-            $sheetRecords = $this->recordsFromSheet($sheet, $summary['parse_issues']);
+            $sheetRecords = $this->recordsFromSheet($sheet, $summary['parse_issues'], $options);
             $summary['sheets'][$sheet->getTitle()] = count($sheetRecords);
             $records = [...$records, ...$sheetRecords];
         }
 
-        $importSummary = $this->workflowImporter->importRecords($records);
+        $importSummary = $this->importWorkflowRecords($records, (bool) ($options['dry_run'] ?? false));
 
         return [
             ...$importSummary,
@@ -45,10 +50,31 @@ class CommitteeDecisionWorkflowExcelImportService
     }
 
     /**
+     * @param  list<array<string, mixed>>  $records
+     * @return array<string, mixed>
+     */
+    private function importWorkflowRecords(array $records, bool $dryRun): array
+    {
+        if (! $dryRun) {
+            return $this->workflowImporter->importRecords($records);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $summary = $this->workflowImporter->importRecords($records);
+        } finally {
+            DB::rollBack();
+        }
+
+        return $summary;
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $issues
      * @return list<array<string, mixed>>
      */
-    private function recordsFromSheet(Worksheet $sheet, array &$issues): array
+    private function recordsFromSheet(Worksheet $sheet, array &$issues, array $options): array
     {
         $rows = $sheet->toArray(null, true, true, false);
         $headerIndex = $this->headerIndex($rows);
@@ -66,6 +92,10 @@ class CommitteeDecisionWorkflowExcelImportService
                 'reason' => 'Sheet name does not identify buildings or housing units.',
             ];
 
+            return [];
+        }
+
+        if (($options['units_only'] ?? false) === true && $recordType !== 'housing-unit') {
             return [];
         }
 
@@ -103,7 +133,7 @@ class CommitteeDecisionWorkflowExcelImportService
                 continue;
             }
 
-            $decisionPayload = $this->decisionPayload($row, $headerRow);
+            $decisionPayload = $this->decisionPayload($row, $headerRow, $recordType, $options);
 
             if ($decisionPayload === null) {
                 $issues[] = [
@@ -118,7 +148,11 @@ class CommitteeDecisionWorkflowExcelImportService
 
             $records[] = [
                 'record_type' => $recordType,
-                'municipality' => trim($this->value($row[5] ?? null).' '.$this->value($row[6] ?? null)),
+                'municipality' => trim($this->cellValue($row, $headerRow, [
+                    "\u{0627}\u{0644}\u{0645}\u{062D}\u{0627}\u{0641}\u{0638}\u{0629}",
+                ], $recordType === 'housing-unit' ? 6 : 5).' '.$this->cellValue($row, $headerRow, [
+                    "\u{0627}\u{0644}\u{062D}\u{064A}",
+                ], $recordType === 'housing-unit' ? 7 : 6)),
                 'sheet' => $sheet->getTitle(),
                 'row' => $rowNumber,
                 'objectid' => $objectId,
@@ -128,14 +162,17 @@ class CommitteeDecisionWorkflowExcelImportService
                 'action_text' => $decisionPayload['action_text'],
                 'decision_date' => $decisionPayload['decision_date'],
                 'resurvey_completed' => $decisionPayload['resurvey_completed'],
+                'defer_resurvey_arcgis' => true,
                 'member_names' => $decisionPayload['member_names'],
                 'use_excel_member_names' => true,
                 'force_committee_review_status' => true,
                 'notes' => trim(implode("\n", array_filter([
                     'Excel sheet: '.$sheet->getTitle().' row: '.$rowNumber,
-                    'Researcher: '.$this->value($row[1] ?? null),
-                    'Building/Unit: '.$this->value($row[3] ?? null),
-                    'Comments: '.$this->value($row[4] ?? null),
+                    'Researcher: '.$this->cellValue($row, $headerRow, [
+                        "\u{0627}\u{0633}\u{0645} \u{0627}\u{0644}\u{0628}\u{0627}\u{062D}\u{062B}",
+                    ], $recordType === 'housing-unit' ? 2 : 1),
+                    'Building/Unit: '.$this->cellValue($row, $headerRow, ['Building Name'], $recordType === 'housing-unit' ? 4 : 3),
+                    'Comments: '.$this->cellValue($row, $headerRow, ['6.1 Comments & Recommendations'], $recordType === 'housing-unit' ? 5 : 4),
                     'Resurvey completed: '.($decisionPayload['resurvey_completed'] ? 'yes' : 'no'),
                     $decisionPayload['source'] === 'higher' ? 'Decision source: higher committee' : 'Decision source: initial committee',
                 ]))),
@@ -165,7 +202,7 @@ class CommitteeDecisionWorkflowExcelImportService
     private function objectIdColumnIndex(array $headerRow, string $recordType): ?int
     {
         if ($recordType === 'housing-unit') {
-            return $this->columnIndex($headerRow, ['Export Row Id', 'ObjectID']);
+            return $this->columnIndex($headerRow, ['UNITID', 'Export Row Id', 'ObjectID']);
         }
 
         return $this->columnIndex($headerRow, ['ObjectID']);
@@ -212,22 +249,27 @@ class CommitteeDecisionWorkflowExcelImportService
      * @param  array<int, mixed>  $row
      * @return array<string, mixed>|null
      */
-    private function decisionPayload(array $row, array $headerRow): ?array
+    private function decisionPayload(array $row, array $headerRow, string $recordType, array $options): ?array
     {
-        $initialDecision = $this->value($row[14] ?? null);
-        $higherDecision = $this->value($row[25] ?? null);
+        $layout = $this->decisionLayout($headerRow, $recordType);
+        $initialDecision = $this->value($row[$layout['initial_decision']] ?? null);
+        $higherDecision = $this->value($row[$layout['higher_decision']] ?? null);
         $initialType = $this->decisionType($initialDecision);
         $higherType = $this->decisionType($higherDecision);
 
-        if ($initialType === CommitteeDecision::TYPE_HIGHER_COMMITTEE && $higherType !== null) {
+        if (
+            ($options['ignore_higher_committee'] ?? false) !== true
+            && $initialType === CommitteeDecision::TYPE_HIGHER_COMMITTEE
+            && $higherType !== null
+        ) {
             return [
                 'source' => 'higher',
                 'decision_type' => $higherType,
-                'decision_text' => $this->value($row[26] ?? null) ?: $higherDecision,
-                'action_text' => $this->value($row[27] ?? null) ?: null,
-                'decision_date' => $this->dateValue($row[18] ?? null),
-                'resurvey_completed' => $this->isYes($row[28] ?? null),
-                'member_names' => $this->memberNamesFromHeaders($row, $headerRow, 19, 24),
+                'decision_text' => $this->value($row[$layout['higher_text']] ?? null) ?: $higherDecision,
+                'action_text' => $this->value($row[$layout['higher_action']] ?? null) ?: null,
+                'decision_date' => $this->dateValue($row[$layout['higher_date']] ?? null),
+                'resurvey_completed' => $this->isYes($row[$layout['higher_resurvey']] ?? null, (bool) ($options['recognize_arabic_yes'] ?? true)),
+                'member_names' => $this->memberNamesFromHeaders($row, $headerRow, $layout['higher_members_start'], $layout['higher_members_end']),
             ];
         }
 
@@ -238,12 +280,74 @@ class CommitteeDecisionWorkflowExcelImportService
         return [
             'source' => 'initial',
             'decision_type' => $initialType,
-            'decision_text' => $this->value($row[15] ?? null) ?: $initialDecision,
-            'action_text' => $this->value($row[16] ?? null) ?: null,
-            'decision_date' => $this->dateValue($row[7] ?? null),
-            'resurvey_completed' => $this->isYes($row[17] ?? null),
-            'member_names' => $this->memberNamesFromHeaders($row, $headerRow, 8, 13),
+            'decision_text' => $this->value($row[$layout['initial_text']] ?? null) ?: $initialDecision,
+            'action_text' => $this->value($row[$layout['initial_action']] ?? null) ?: null,
+            'decision_date' => $this->dateValue($row[$layout['initial_date']] ?? null),
+            'resurvey_completed' => $this->isYes($row[$layout['initial_resurvey']] ?? null, (bool) ($options['recognize_arabic_yes'] ?? true)),
+            'member_names' => $this->memberNamesFromHeaders($row, $headerRow, $layout['initial_members_start'], $layout['initial_members_end']),
         ];
+    }
+
+    /**
+     * @param  array<int, mixed>  $headerRow
+     * @return array<string, int>
+     */
+    private function decisionLayout(array $headerRow, string $recordType): array
+    {
+        $offset = $recordType === 'housing-unit' ? 1 : 0;
+        $initialDate = $this->firstColumnIndex($headerRow, [
+            "\u{062A}\u{0627}\u{0631}\u{064A}\u{062E} \u{0627}\u{0646}\u{0639}\u{0642}\u{0627}\u{062F} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629}",
+        ], fn (string $header): bool => ! str_contains($header, $this->normalizeHeader("\u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}"))) ?? (7 + $offset);
+        $initialDecision = $this->firstColumnIndex($headerRow, [
+            "\u{0642}\u{0631}\u{0627}\u{0631} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629}",
+        ], fn (string $header): bool => ! str_contains($header, $this->normalizeHeader("\u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}"))) ?? (14 + $offset);
+        $initialText = $this->firstColumnIndex($headerRow, [
+            "\u{0646}\u{0635} \u{0642}\u{0631}\u{0627}\u{0631} \u{0627}\u{0644}\u{0644}\u{062C}\u{0646}\u{0629}",
+        ], fn (string $header): bool => ! str_contains($header, $this->normalizeHeader("\u{0627}\u{0644}\u{0639}\u{0644}\u{064A}\u{0627}"))) ?? (15 + $offset);
+        $initialAction = $this->firstColumnIndex($headerRow, [
+            "\u{0627}\u{0644}\u{0625}\u{062C}\u{0631}\u{0627}\u{0621} \u{0627}\u{0644}\u{0645}\u{0637}\u{0644}\u{0648}\u{0628}",
+        ]) ?? (16 + $offset);
+        $initialResurvey = $this->firstColumnIndex($headerRow, [
+            "\u{0647}\u{0644} \u{062A}\u{0645} \u{0625}\u{0639}\u{0627}\u{062F}\u{0629} \u{062D}\u{0635}\u{0631}\u{0647}",
+        ], fn (string $header): bool => ! str_contains($header, $this->normalizeHeader("\u{0628}\u{0639}\u{062F}"))) ?? (17 + $offset);
+
+        return [
+            'initial_date' => $initialDate,
+            'initial_members_start' => $initialDate + 1,
+            'initial_members_end' => max($initialDate + 1, $initialDecision - 1),
+            'initial_decision' => $initialDecision,
+            'initial_text' => $initialText,
+            'initial_action' => $initialAction,
+            'initial_resurvey' => $initialResurvey,
+            'higher_date' => 18 + $offset,
+            'higher_members_start' => 19 + $offset,
+            'higher_members_end' => 24 + $offset,
+            'higher_decision' => 25 + $offset,
+            'higher_text' => 26 + $offset,
+            'higher_action' => 27 + $offset,
+            'higher_resurvey' => 28 + $offset,
+        ];
+    }
+
+    /**
+     * @param  array<int, mixed>  $headerRow
+     * @param  list<string>  $labels
+     */
+    private function firstColumnIndex(array $headerRow, array $labels, ?callable $filter = null): ?int
+    {
+        foreach ($labels as $label) {
+            $normalizedLabel = $this->normalizeHeader($label);
+
+            foreach ($headerRow as $index => $header) {
+                $normalizedHeader = $this->normalizeHeader($this->value($header));
+
+                if ($normalizedHeader === $normalizedLabel && ($filter === null || $filter($normalizedHeader))) {
+                    return $index;
+                }
+            }
+        }
+
+        return null;
     }
 
     private function decisionType(string $decision): ?string
@@ -316,15 +420,31 @@ class CommitteeDecisionWorkflowExcelImportService
         return $value !== '' ? Carbon::parse($value)->toDateString() : null;
     }
 
-    private function isYes(mixed $value): bool
+    private function isYes(mixed $value, bool $recognizeArabicYes): bool
     {
         $normalizedValue = str($this->value($value))->lower()->trim()->toString();
+
+        if ($recognizeArabicYes && $normalizedValue === "\u{0646}\u{0639}\u{0645}") {
+            return true;
+        }
 
         if (in_array($normalizedValue, ["\u{0646}\u{0639}\u{0645}", 'ظ†ط¹ظ…', 'yes', 'y', '1', 'true'], true)) {
             return true;
         }
 
         return $this->value($value) === 'ظ†ط¹ظ…';
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @param  array<int, mixed>  $headerRow
+     * @param  list<string>  $labels
+     */
+    private function cellValue(array $row, array $headerRow, array $labels, int $fallbackIndex): string
+    {
+        $index = $this->columnIndex($headerRow, $labels) ?? $fallbackIndex;
+
+        return $this->value($row[$index] ?? null);
     }
 
     /**
