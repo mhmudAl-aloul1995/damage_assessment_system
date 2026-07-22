@@ -44,6 +44,38 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Engineer One');
 });
 
+it('counts housing page total units from fully and partially damaged units only', function () {
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3003,
+        'globalid' => 'housing-total-fully',
+        'unit_damage_status' => 'fully_damaged2',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3004,
+        'globalid' => 'housing-total-partially',
+        'unit_damage_status' => 'partially_damaged2',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3005,
+        'globalid' => 'housing-total-committee',
+        'unit_damage_status' => 'committee_review2',
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/housing');
+
+    $response->assertOk();
+    $response->assertViewHas('housingSummary', function (array $housingSummary): bool {
+        return $housingSummary['total'] === 2
+            && $housingSummary['fully_damaged'] === 1
+            && $housingSummary['partially_damaged'] === 1
+            && $housingSummary['committee_review'] === 1;
+    });
+});
+
 it('filters housing unit datatable records using grouped filters and ranges', function () {
     $user = User::factory()->create();
 

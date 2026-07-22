@@ -384,9 +384,6 @@ class HousingUnitController extends Controller
         return '<span class="badge badge-light-'.$color.'">'.e($label).'</span>';
     }
 
-    /**
-     * @return array{total: int, fully_damaged: int, partially_damaged: int, committee_review: int}
-     */
     private function housingSummary(?string $parentGlobalId): array
     {
         $query = HousingUnit::query();
@@ -395,10 +392,13 @@ class HousingUnitController extends Controller
             $query->where('parentglobalid', $parentGlobalId);
         }
 
+        $fullyDamaged = (clone $query)->where('unit_damage_status', 'fully_damaged2')->count();
+        $partiallyDamaged = (clone $query)->where('unit_damage_status', 'partially_damaged2')->count();
+
         return [
-            'total' => (clone $query)->count(),
-            'fully_damaged' => (clone $query)->where('unit_damage_status', 'fully_damaged2')->count(),
-            'partially_damaged' => (clone $query)->where('unit_damage_status', 'partially_damaged2')->count(),
+            'total' => $fullyDamaged + $partiallyDamaged,
+            'fully_damaged' => $fullyDamaged,
+            'partially_damaged' => $partiallyDamaged,
             'committee_review' => (clone $query)->where('unit_damage_status', 'committee_review2')->count(),
         ];
     }
