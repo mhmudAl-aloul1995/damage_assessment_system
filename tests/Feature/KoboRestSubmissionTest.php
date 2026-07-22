@@ -1457,6 +1457,48 @@ test('kobo rest submission keeps unmapped HEKS BOQ quantity fields visible', fun
         ->and((float) $item->unit_price_ils)->toBe(0.0);
 });
 
+test('kobo rest submission ignores demographic age fields that look like BOQ item codes', function () {
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-boq',
+        'table_name' => 'heks_boq_kobo_records',
+        'kobo_field' => 'family_members/male_8_17',
+        'column_name' => 'family_members_male_8_17',
+        'display_label' => 'ذكر - 17-8 سنة',
+        'data_type' => 'integer',
+        'field_type' => 'integer',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-boq',
+        'table_name' => 'heks_boq_kobo_records',
+        'kobo_field' => 'family_members/male_18_59',
+        'column_name' => 'family_members_male_18_59',
+        'display_label' => 'ذكر - 59-18 سنة',
+        'data_type' => 'integer',
+        'field_type' => 'integer',
+    ]);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks-boq',
+        'submission_uuid' => 'uuid:heks-boq-demographic-age-fields',
+        'payload' => [
+            '_uuid' => 'uuid:heks-boq-demographic-age-fields',
+            'code' => 'AGEBOQ',
+            'beneficiary_name' => 'Age Fields Beneficiary',
+            'family_members/male_8_17' => '1',
+            'family_members/male_18_59' => '1',
+        ],
+        'received_at' => now(),
+    ]);
+
+    $sync = app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'AGEBOQ')->sole();
+
+    expect($sync['status'])->toBe('synced')
+        ->and(HeksBoqItem::query()->where('heks_beneficiary_id', $beneficiary->id)->exists())->toBeFalse();
+});
+
 test('heks kobo backfill imports old submissions from Kobo API', function () {
     config(['services.kobotoolbox.token' => 'api-token']);
 

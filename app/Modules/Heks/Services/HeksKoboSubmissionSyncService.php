@@ -905,12 +905,17 @@ class HeksKoboSubmissionSyncService
 
             $signature = $itemCode !== null ? 'code:'.$itemCode : 'key:'.$key;
 
+            $catalogItem = $itemCode !== null ? $catalogItems->get($this->normalizeKey($itemCode)) : null;
+
+            if (! $this->shouldImportQuantityField($service, (string) $key, $itemCode, $catalogItem instanceof HeksBoqCatalogItem)) {
+                continue;
+            }
+
             if (isset($seen[$signature])) {
                 continue;
             }
 
             $seen[$signature] = true;
-            $catalogItem = $itemCode !== null ? $catalogItems->get($this->normalizeKey($itemCode)) : null;
             $unitPrice = $catalogItem instanceof HeksBoqCatalogItem ? (float) $catalogItem->unit_price_ils : 0.0;
 
             $rows[] = [
@@ -941,6 +946,22 @@ class HeksKoboSubmissionSyncService
         }
 
         return null;
+    }
+
+    private function shouldImportQuantityField(string $service, string $key, ?string $itemCode, bool $hasCatalogItem): bool
+    {
+        $displayLabel = $this->displayLabelForField($service, $key);
+
+        if ($this->looksLikeQuantityKey($key) || ($displayLabel !== null && $this->looksLikeQuantityKey($displayLabel))) {
+            return true;
+        }
+
+        if ($itemCode === null || ! $hasCatalogItem) {
+            return false;
+        }
+
+        return $this->handler($service) === 'main'
+            && $this->looksLikeTechnicalItemCodeKey($key, $itemCode);
     }
 
     private function boqItemCodeFromText(string $value): ?string
