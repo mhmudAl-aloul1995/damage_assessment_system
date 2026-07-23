@@ -480,7 +480,39 @@ class HeksKoboSubmissionSyncService
 
         $value = $this->first($payload, $this->mappedCandidates($service, [$questionKey]));
 
-        return $value !== '' ? ['key' => $questionKey, 'value' => $value] : null;
+        if ($value !== '') {
+            return ['key' => $questionKey, 'value' => $value];
+        }
+
+        $normalizedQuestion = $this->normalizeScoreToken($questionKey);
+
+        if ($normalizedQuestion === '') {
+            return null;
+        }
+
+        foreach ($payload as $key => $payloadValue) {
+            if (! is_string($key) || ! is_scalar($payloadValue) || ! filled($payloadValue)) {
+                continue;
+            }
+
+            $normalizedKey = $this->normalizeScoreToken($key);
+
+            if ($normalizedKey === '') {
+                continue;
+            }
+
+            if (! str_contains($normalizedKey, $normalizedQuestion) && ! str_contains($normalizedQuestion, $normalizedKey)) {
+                continue;
+            }
+
+            $value = trim((string) $payloadValue);
+
+            if (! $this->isInvalidValue($value)) {
+                return ['key' => $key, 'value' => $value];
+            }
+        }
+
+        return null;
     }
 
     private function answerMatchesScoringOption(string $answer, string $service, string $questionKey, string $optionValue): bool

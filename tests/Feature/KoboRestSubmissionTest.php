@@ -15,6 +15,7 @@ use App\Modules\Heks\Models\HeksLabel;
 use App\Modules\Heks\Models\HeksScore;
 use App\Modules\Heks\Models\HeksScoringWeight;
 use App\Modules\Heks\Services\HeksKoboSubmissionSyncService;
+use Database\Seeders\HeksScoringWeightsSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -504,6 +505,35 @@ test('kobo rest submission calculates phase two HEKS scores from phase two weigh
     $score = HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
 
     expect((float) $score->social_score)->toBe(9.0)
+        ->and($score->technical_score)->toBeNull()
+        ->and($score->total_score)->toBeNull();
+});
+
+test('kobo rest submission calculates phase two social score from seeded Arabic S-V weights', function () {
+    $this->seed(HeksScoringWeightsSeeder::class);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks_25_bnfs',
+        'submission_uuid' => 'uuid:heks-phase-two-seeded-social-score',
+        'payload' => [
+            '_uuid' => 'uuid:heks-phase-two-seeded-social-score',
+            'identification/application_code' => 'P2-SOCIAL',
+            'family_info/head_name' => 'Phase Two Social Beneficiary',
+            'cash_question_تستطيع الأسرة تنظيم أعمال الصيانة بنفسها إذا مُنحت مبلغاً نقدياً؟' => 'نعم',
+            'proof_question_يتوفر إثبات ساري المفعول للملكية/الإيجار/اتفاقية الاستضافة' => 'نعم',
+            'income_question_هل تمتلك الأسرة مصدر دخل ثابت أو منتظم؟' => 'لا',
+        ],
+        'received_at' => now(),
+    ]);
+
+    $sync = app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    expect($sync['status'])->toBe('synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'P2-SOCIAL')->sole();
+    $score = HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect((float) $score->social_score)->toBe(15.0)
         ->and($score->technical_score)->toBeNull()
         ->and($score->total_score)->toBeNull();
 });
