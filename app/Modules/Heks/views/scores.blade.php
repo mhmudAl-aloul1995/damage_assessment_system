@@ -12,16 +12,32 @@
             border: 1px solid #edf1f7;
         }
 
-        .heks-score-table thead th {
-            background: #f9fafc;
-            position: sticky;
-            top: 0;
-            z-index: 1;
+        .heks-score-rule {
+            background: #fff;
+            border: 1px solid #eef2f7;
+            border-radius: .75rem;
+            padding: 1.25rem;
         }
 
-        .heks-score-table textarea {
+        .heks-score-rule + .heks-score-rule {
+            margin-top: 1rem;
+        }
+
+        .heks-score-rule textarea {
             min-height: 58px;
             resize: vertical;
+        }
+
+        .heks-score-rule .form-control,
+        .heks-score-rule .form-select {
+            background-color: #fff;
+            border-color: #e4e6ef;
+        }
+
+        .heks-score-rule .form-control:focus,
+        .heks-score-rule .form-select:focus {
+            border-color: #3e97ff;
+            box-shadow: 0 0 0 .2rem rgba(62, 151, 255, .08);
         }
 
         .heks-score-metric {
@@ -175,71 +191,63 @@
             </div>
         </div>
         <div class="card-body pt-0">
-            <div class="table-responsive" style="max-height: 70vh;">
-                <table class="table table-row-dashed table-hover align-middle gy-4 heks-score-table">
-                    <thead>
-                    <tr class="fw-bold text-muted text-uppercase fs-8">
-                        <th class="min-w-130px">النوع</th>
-                        <th class="min-w-280px">السؤال</th>
-                        <th class="min-w-220px">الخيار / المعيار</th>
-                        <th class="min-w-120px">الوزن</th>
-                        <th class="min-w-140px">نقاط الخيار</th>
-                        <th class="min-w-190px">الفئة</th>
-                        <th class="min-w-95px text-end"></th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @forelse ($weights as $weight)
-                        @php($formId = 'score-weight-'.$weight->id)
-                        @php($isSocial = $weight->source === 'S-V')
-                        <tr>
-                            <td>
-                                <span class="badge badge-light-{{ $isSocial ? 'success' : 'primary' }} mb-2">{{ $isSocial ? 'اجتماعي' : 'فني' }}</span>
-                                <div class="text-muted fs-8">{{ $weight->source }}</div>
-                                <input type="hidden" name="survey_phase" value="{{ $phase }}" form="{{ $formId }}">
-                            </td>
-                            <td>
-                                <input name="question_key" class="form-control form-control-sm form-control-solid mb-2 text-gray-800" value="{{ $weight->question_key }}" form="{{ $formId }}">
-                                <textarea name="indicator" class="form-control form-control-sm" rows="2" form="{{ $formId }}">{{ $weight->indicator }}</textarea>
-                            </td>
-                            <td>
-                                <input name="option_value" class="form-control form-control-sm form-control-solid fw-semibold" value="{{ $weight->option_value }}" form="{{ $formId }}">
-                            </td>
-                            <td>
-                                <input name="weight" class="form-control form-control-sm text-center" value="{{ $weight->weight }}" form="{{ $formId }}">
-                            </td>
-                            <td>
-                                <input name="option_score" class="form-control form-control-sm text-center fw-bold text-gray-900" value="{{ $weight->option_score }}" form="{{ $formId }}">
-                            </td>
-                            <td>
-                                <input name="category" class="form-control form-control-sm form-control-solid" value="{{ $weight->category }}" form="{{ $formId }}">
-                            </td>
-                            <td class="text-end">
-                                <form id="{{ $formId }}" method="POST" action="{{ route('heks.scoring-weights.update', $weight) }}">
-                                    @csrf
-                                    @method('PUT')
-                                    <button class="btn btn-sm btn-light-primary">
-                                        <i class="ki-duotone ki-check fs-3"><span class="path1"></span><span class="path2"></span></i>
-                                        حفظ
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7">
-                                <div class="text-center py-10">
-                                    <i class="ki-duotone ki-information-5 fs-3x text-muted mb-3">
-                                        <span class="path1"></span><span class="path2"></span><span class="path3"></span>
-                                    </i>
-                                    <div class="fw-semibold text-gray-700">لا توجد إعدادات سكور لهذه المرحلة.</div>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                    </tbody>
-                </table>
-            </div>
+            @forelse ($weights as $weight)
+                @php($isSocial = $weight->source === 'S-V')
+                <form method="POST" action="{{ route('heks.scoring-weights.update', $weight) }}" class="heks-score-rule">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="survey_phase" value="{{ $phase }}">
+
+                    <div class="row g-4 align-items-end">
+                        <div class="col-xl-2 col-lg-3 col-md-4">
+                            <div class="d-flex align-items-center gap-3 mb-4">
+                                <span class="badge badge-light-{{ $isSocial ? 'success' : 'primary' }}">{{ $isSocial ? 'اجتماعي' : 'فني' }}</span>
+                                <span class="badge badge-light">{{ $weight->source }}</span>
+                            </div>
+                            <label class="form-label fs-8 text-muted">مفتاح السؤال</label>
+                            <input name="question_key" class="form-control form-control-sm fw-semibold text-gray-800" value="{{ $weight->question_key }}" placeholder="question_key">
+                        </div>
+
+                        <div class="col-xl-4 col-lg-5 col-md-8">
+                            <label class="form-label fs-8 text-muted">السؤال / المؤشر</label>
+                            <textarea name="indicator" class="form-control form-control-sm" rows="2" placeholder="نص السؤال أو المؤشر">{{ $weight->indicator }}</textarea>
+                        </div>
+
+                        <div class="col-xl-2 col-lg-4 col-md-6">
+                            <label class="form-label fs-8 text-muted">الخيار / المعيار</label>
+                            <input name="option_value" class="form-control form-control-sm fw-semibold" value="{{ $weight->option_value }}" placeholder="{{ $isSocial ? 'قيمة الخيار' : 'معيار فني' }}">
+                        </div>
+
+                        <div class="col-xl-1 col-lg-3 col-md-6">
+                            <label class="form-label fs-8 text-muted">الوزن</label>
+                            <input name="weight" class="form-control form-control-sm text-center" value="{{ $weight->weight }}" placeholder="0.00">
+                        </div>
+
+                        <div class="col-xl-1 col-lg-3 col-md-6">
+                            <label class="form-label fs-8 text-muted">النقاط</label>
+                            <input name="option_score" class="form-control form-control-sm text-center fw-bold text-gray-900" value="{{ $weight->option_score }}" placeholder="0.00">
+                        </div>
+
+                        <div class="col-xl-2 col-lg-6 col-md-6">
+                            <label class="form-label fs-8 text-muted">الفئة</label>
+                            <div class="d-flex gap-2">
+                                <input name="category" class="form-control form-control-sm" value="{{ $weight->category }}" placeholder="الفئة">
+                                <button class="btn btn-sm btn-light-primary flex-shrink-0">
+                                    <i class="ki-duotone ki-check fs-3"><span class="path1"></span><span class="path2"></span></i>
+                                    حفظ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            @empty
+                <div class="text-center py-10">
+                    <i class="ki-duotone ki-information-5 fs-3x text-muted mb-3">
+                        <span class="path1"></span><span class="path2"></span><span class="path3"></span>
+                    </i>
+                    <div class="fw-semibold text-gray-700">لا توجد إعدادات سكور لهذه المرحلة.</div>
+                </div>
+            @endforelse
 
             <div class="heks-pagination">
                 {{ $weights->links('pagination::bootstrap-5') }}
