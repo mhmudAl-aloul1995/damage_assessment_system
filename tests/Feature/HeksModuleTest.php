@@ -167,9 +167,9 @@ it('imports and manages the HEKS operational workbook', function () {
         $this->actingAs($user)
             ->get(route('heks.scores'))
             ->assertOk()
-            ->assertSee('التقييم والدرجات')
-            ->assertSee('Intervention (ILS)')
-            ->assertSee('High');
+            ->assertSee('إعدادات السكور')
+            ->assertSee('data-control="select2"', false)
+            ->assertSee('قواعد وأوزان السكور');
 
         $this->actingAs($user)
             ->get(route('heks.follow-ups'))
@@ -1702,6 +1702,59 @@ it('shows HEKS survey source phase on the beneficiaries list', function () {
         ->assertSee("\u{0627}\u{0644}\u{0627}\u{0633}\u{062A}\u{0628}\u{064A}\u{0627}\u{0646}")
         ->assertSee("\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{0623}\u{0648}\u{0644}\u{0649}")
         ->assertSee("\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}\u{0629}");
+});
+
+it('manages HEKS scoring settings by selected survey phase', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    HeksScoringWeight::query()->create([
+        'source' => 'S-V',
+        'survey_phase' => 'phase_1',
+        'category' => 'Phase one category',
+        'indicator' => 'Phase one indicator',
+        'question_key' => 'phase_one_question',
+        'option_value' => 'yes',
+        'option_score' => 4,
+    ]);
+
+    $phaseTwoWeight = HeksScoringWeight::query()->create([
+        'source' => 'S-V',
+        'survey_phase' => 'phase_2',
+        'category' => 'Phase two category',
+        'indicator' => 'Phase two indicator',
+        'question_key' => 'phase_two_question',
+        'option_value' => 'selected',
+        'option_score' => 8,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.scores', ['phase' => 'phase_2']))
+        ->assertOk()
+        ->assertSee('إعدادات السكور')
+        ->assertSee("\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}\u{0629}")
+        ->assertSee('Phase two category')
+        ->assertDontSee('Phase one category')
+        ->assertSee('data-control="select2"', false);
+
+    $this->actingAs($user)
+        ->put(route('heks.scoring-weights.update', $phaseTwoWeight), [
+            'survey_phase' => 'phase_2',
+            'category' => 'Updated phase two category',
+            'indicator' => 'Updated phase two indicator',
+            'question_key' => 'phase_two_question',
+            'option_value' => 'selected',
+            'weight' => 2.5,
+            'option_score' => 9.5,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    expect($phaseTwoWeight->refresh())
+        ->survey_phase->toBe('phase_2')
+        ->category->toBe('Updated phase two category')
+        ->and((float) $phaseTwoWeight->option_score)->toBe(9.5);
 });
 
 it('shows follow-up BOQ items directly on the follow-ups page', function () {

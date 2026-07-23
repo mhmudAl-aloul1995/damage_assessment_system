@@ -957,6 +957,7 @@ class HeksSpreadsheetImportService
             HeksScoringWeight::query()->updateOrCreate(
                 [
                     'source' => $sheet->getTitle(),
+                    'survey_phase' => 'phase_1',
                     'indicator' => $indicator !== '' ? $indicator : null,
                     'question_key' => $questionKey !== '' ? $questionKey : null,
                     'option_value' => $this->first($row, ['option_value']) ?: null,

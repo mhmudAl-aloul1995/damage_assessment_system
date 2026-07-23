@@ -468,6 +468,46 @@ test('kobo rest submission does not total incomplete HEKS score components', fun
         ->and($score->classification)->toBe('');
 });
 
+test('kobo rest submission calculates phase two HEKS scores from phase two weights', function () {
+    HeksScoringWeight::query()->create([
+        'source' => 'S-V',
+        'survey_phase' => 'phase_1',
+        'question_key' => 'social_need',
+        'option_value' => 'vulnerable',
+        'option_score' => 4,
+    ]);
+    HeksScoringWeight::query()->create([
+        'source' => 'S-V',
+        'survey_phase' => 'phase_2',
+        'question_key' => 'social_need',
+        'option_value' => 'vulnerable',
+        'option_score' => 9,
+    ]);
+
+    $submission = KoboRestSubmission::query()->create([
+        'service_name' => 'heks_25_bnfs',
+        'submission_uuid' => 'uuid:heks-phase-two-calculated-score',
+        'payload' => [
+            '_uuid' => 'uuid:heks-phase-two-calculated-score',
+            'identification/application_code' => 'P2-SCORE',
+            'family_info/head_name' => 'Phase Two Score Beneficiary',
+            'social_need' => 'vulnerable',
+        ],
+        'received_at' => now(),
+    ]);
+
+    $sync = app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    expect($sync['status'])->toBe('synced');
+
+    $beneficiary = HeksBeneficiary::query()->where('code', 'P2-SCORE')->sole();
+    $score = HeksScore::query()->where('heks_beneficiary_id', $beneficiary->id)->sole();
+
+    expect((float) $score->social_score)->toBe(9.0)
+        ->and($score->technical_score)->toBeNull()
+        ->and($score->total_score)->toBeNull();
+});
+
 test('kobo rest submission ignores computed HEKS display columns and invalid values', function () {
     $this
         ->withHeader('X-Kobo-Token', 'test-kobo-token')

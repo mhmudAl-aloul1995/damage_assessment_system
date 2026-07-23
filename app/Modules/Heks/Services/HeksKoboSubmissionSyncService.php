@@ -353,8 +353,9 @@ class HeksKoboSubmissionSyncService
      */
     private function calculatedScores(array $payload, string $service): array
     {
-        $socialFromWeights = $this->scoreFromOptionWeights($payload, $service, ['S-V'], 30);
-        $technicalFromWeights = $this->scoreFromOptionWeights($payload, $service, ['T-V', 'Shelter Technical Weights'], 70);
+        $surveyPhase = $this->surveyPhaseForService($service);
+        $socialFromWeights = $this->scoreFromOptionWeights($payload, $service, ['S-V'], 30, $surveyPhase);
+        $technicalFromWeights = $this->scoreFromOptionWeights($payload, $service, ['T-V', 'Shelter Technical Weights'], 70, $surveyPhase);
         $socialFromMatrix = $socialFromWeights['score'] === null
             ? $this->socialMatrixScore($payload)
             : ['score' => null, 'matches' => []];
@@ -375,13 +376,14 @@ class HeksKoboSubmissionSyncService
      * @param  array<int, string>  $sources
      * @return array{score: ?float, matches: array<int, array<string, mixed>>}
      */
-    private function scoreFromOptionWeights(array $payload, string $service, array $sources, float $maxScore): array
+    private function scoreFromOptionWeights(array $payload, string $service, array $sources, float $maxScore, string $surveyPhase): array
     {
         $score = 0.0;
         $matches = [];
 
         $weights = HeksScoringWeight::query()
             ->whereIn('source', $sources)
+            ->where('survey_phase', $surveyPhase)
             ->whereNotNull('question_key')
             ->orderBy('id')
             ->get()
@@ -441,6 +443,11 @@ class HeksKoboSubmissionSyncService
             'score' => round(min($score, $maxScore), 2),
             'matches' => $matches,
         ];
+    }
+
+    private function surveyPhaseForService(string $service): string
+    {
+        return in_array('heks_25_bnfs', $this->serviceLookupKeys($service), true) ? 'phase_2' : 'phase_1';
     }
 
     private function pointsForScoringWeight(HeksScoringWeight $weight): ?float

@@ -16,6 +16,7 @@ use App\Modules\Heks\Http\Requests\UpdateHeksBoqPricingRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksFollowUpRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksLabelRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksScoreRequest;
+use App\Modules\Heks\Http\Requests\UpdateHeksScoringWeightRequest;
 use App\Modules\Heks\Http\Requests\UpdateHeksSurveyValueRequest;
 use App\Modules\Heks\Models\HeksAttachment;
 use App\Modules\Heks\Models\HeksBeneficiary;
@@ -794,22 +795,40 @@ class HeksController extends Controller
     {
         $this->authorizeAccess();
 
+        $phase = in_array(request('phase'), ['phase_1', 'phase_2'], true)
+            ? (string) request('phase')
+            : 'phase_1';
+        $weightsQuery = HeksScoringWeight::query()->where('survey_phase', $phase);
+
         return view('heks::scores', [
-            'scores' => HeksScore::query()->with('beneficiary')->latest()->paginate(25),
-            'scoreSummary' => [
-                'total' => HeksScore::query()->count(),
-                'average_social' => HeksScore::query()->avg('social_score'),
-                'average_technical' => HeksScore::query()->avg('technical_score'),
-                'average_total' => HeksScore::query()->avg('total_score'),
+            'phase' => $phase,
+            'phaseOptions' => $this->heksPhaseOptions(),
+            'weights' => (clone $weightsQuery)
+                ->orderBy('source')
+                ->orderBy('category')
+                ->orderBy('question_key')
+                ->orderBy('option_value')
+                ->paginate(25)
+                ->withQueryString(),
+            'weightSummary' => [
+                'total' => (clone $weightsQuery)->count(),
+                'sources' => (clone $weightsQuery)->distinct('source')->count('source'),
+                'questions' => (clone $weightsQuery)->whereNotNull('question_key')->distinct('question_key')->count('question_key'),
+                'option_scores' => (clone $weightsQuery)->whereNotNull('option_score')->count(),
             ],
-            'classifications' => HeksScore::query()
-                ->selectRaw('classification, count(*) as aggregate')
-                ->whereNotNull('classification')
-                ->where('classification', '<>', '')
-                ->groupBy('classification')
-                ->orderByDesc('aggregate')
-                ->pluck('aggregate', 'classification'),
+            'sources' => (clone $weightsQuery)
+                ->selectRaw('source, count(*) as aggregate')
+                ->groupBy('source')
+                ->orderBy('source')
+                ->pluck('aggregate', 'source'),
         ]);
+    }
+
+    public function updateScoringWeight(UpdateHeksScoringWeightRequest $request, HeksScoringWeight $weight): RedirectResponse
+    {
+        $weight->update($request->validated());
+
+        return back()->with('success', 'تم تحديث إعدادات السكور.');
     }
 
     public function updateScore(UpdateHeksScoreRequest $request, HeksScore $score): RedirectResponse
@@ -2818,6 +2837,17 @@ class HeksController extends Controller
             ['component' => 'Technical vulnerability', 'weight' => '70%', 'max_points' => 70],
             ['component' => 'Social vulnerability', 'weight' => '30%', 'max_points' => 30],
             ['component' => 'Total', 'weight' => '100%', 'max_points' => 100],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function heksPhaseOptions(): array
+    {
+        return [
+            'phase_1' => 'المرحلة الأولى',
+            'phase_2' => 'المرحلة الثانية',
         ];
     }
 

@@ -8,6 +8,7 @@ class HeksScoringWeight extends Model
 {
     protected $fillable = [
         'source',
+        'survey_phase',
         'category',
         'indicator',
         'weight',
