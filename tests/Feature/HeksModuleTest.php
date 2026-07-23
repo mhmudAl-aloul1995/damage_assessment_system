@@ -17,6 +17,7 @@ use App\Modules\Heks\Models\HeksSurveyValueHistory;
 use App\Modules\Heks\Models\HeksWorkAssignment;
 use App\Modules\Heks\Services\HeksSpreadsheetImportService;
 use App\Support\Navigation\Sidebar;
+use Database\Seeders\HeksScoringWeightsSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -1779,6 +1780,52 @@ it('manages HEKS scoring settings by selected survey phase', function () {
         ->survey_phase->toBe('phase_2')
         ->category->toBe('Updated phase two category')
         ->and((float) $phaseTwoWeight->option_score)->toBe(9.5);
+});
+
+it('seeds official HEKS scoring weights for both survey phases', function () {
+    HeksScoringWeight::query()->create([
+        'source' => 'Shelter Technical Weights',
+        'survey_phase' => 'phase_2',
+        'category' => null,
+        'indicator' => 'Old empty row',
+        'question_key' => 'Old question',
+        'option_value' => null,
+        'weight' => null,
+        'option_score' => null,
+    ]);
+
+    $this->seed(HeksScoringWeightsSeeder::class);
+    $this->seed(HeksScoringWeightsSeeder::class);
+
+    expect(HeksScoringWeight::query()
+        ->whereIn('source', ['Shelter Technical Weights', 'S-V'])
+        ->count())->toBe(90)
+        ->and(HeksScoringWeight::query()
+            ->where('source', 'Shelter Technical Weights')
+            ->where('survey_phase', 'phase_1')
+            ->count())->toBe(26)
+        ->and(HeksScoringWeight::query()
+            ->where('source', 'Shelter Technical Weights')
+            ->where('survey_phase', 'phase_2')
+            ->count())->toBe(26)
+        ->and(HeksScoringWeight::query()
+            ->where('source', 'S-V')
+            ->where('survey_phase', 'phase_1')
+            ->count())->toBe(19)
+        ->and(HeksScoringWeight::query()
+            ->where('indicator', 'Old empty row')
+            ->exists())->toBeFalse()
+        ->and((float) HeksScoringWeight::query()
+            ->where('source', 'Shelter Technical Weights')
+            ->where('survey_phase', 'phase_2')
+            ->where('indicator', 'Damage assessment')
+            ->value('option_score'))->toBe(4.0)
+        ->and((float) HeksScoringWeight::query()
+            ->where('source', 'S-V')
+            ->where('survey_phase', 'phase_2')
+            ->where('question_key', 'جنس رب الأسرة')
+            ->where('option_value', 'أنثى')
+            ->value('option_score'))->toBe(5.0);
 });
 
 it('shows follow-up BOQ items directly on the follow-ups page', function () {
