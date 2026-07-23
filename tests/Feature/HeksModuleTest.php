@@ -1842,6 +1842,7 @@ it('shows seeded social scoring rows with matched beneficiary answers', function
             'heks_25_bnfs' => [
                 "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}" => '16',
                 "\u{0647}\u{0644} \u{064A}\u{0639}\u{0627}\u{0646}\u{064A} \u{0645}\u{0646} \u{0645}\u{0639}\u{064A}\u{0644} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629} \u{0645}\u{0646} \u{0645}\u{0631}\u{0636} \u{0645}\u{0632}\u{0645}\u{0646}" => "\u{0646}\u{0639}\u{0645}",
+                'تقييم حالة ضرر المأوى:' => '_____2',
             ],
         ],
     ]);
@@ -1893,6 +1894,8 @@ it('shows seeded social scoring rows with matched beneficiary answers', function
     $technicalRows = $technicalRowsMethod->invoke($controller, $beneficiary, $displayService);
 
     expect($technicalRows)->toHaveCount(26)
+        ->and($technicalRows->firstWhere('question', 'تقييم حالة ضرر المأوى:')['value'])->toBe('2')
+        ->and($technicalRows->firstWhere('question', 'تقييم حالة ضرر المأوى:')['score'])->toBe('2')
         ->and($socialRows->firstWhere('question', "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}")['points'])->toBe(5.0);
 });
 

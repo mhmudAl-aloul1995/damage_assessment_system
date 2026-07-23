@@ -2938,7 +2938,11 @@ class HeksController extends Controller
 
         $text = trim((string) $value);
 
-        if (preg_match('/^([0-9]+(?:\.[0-9]+)?)_+$/', $text, $matches) === 1) {
+        if (preg_match('/^_+$/', $text) === 1) {
+            return '';
+        }
+
+        if (preg_match('/^_*([0-9]+(?:\.[0-9]+)?)_*$/', $text, $matches) === 1) {
             return $matches[1];
         }
 
