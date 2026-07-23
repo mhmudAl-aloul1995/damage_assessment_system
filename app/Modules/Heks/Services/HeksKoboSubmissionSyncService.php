@@ -164,6 +164,10 @@ class HeksKoboSubmissionSyncService
             'raw_data' => array_merge($beneficiary->raw_data ?? [], [$service => $payload]),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
 
+        if (! $this->shouldSyncBeneficiaryFinancialFields($service)) {
+            unset($data['grant_amount'], $data['payment_1'], $data['payment_2'], $data['payment_3']);
+        }
+
         if (! isset($data['name']) && $this->isInvalidBeneficiaryName((string) $beneficiary->name)) {
             $data['name'] = null;
         }
@@ -173,6 +177,11 @@ class HeksKoboSubmissionSyncService
         }
 
         $beneficiary->fill($data)->save();
+    }
+
+    private function shouldSyncBeneficiaryFinancialFields(string $service): bool
+    {
+        return ! in_array('heks_25_bnfs', $this->serviceLookupKeys($service), true);
     }
 
     /**

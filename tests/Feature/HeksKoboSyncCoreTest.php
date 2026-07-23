@@ -57,6 +57,8 @@ test('heks phase two webhook stores phase metadata and reuses main wide mappings
             '_uuid' => 'uuid:phase-two-heks-main',
             'identification/application_code' => 'P2-001',
             'family_info/head_name' => 'Phase Two Beneficiary',
+            'grant_amount' => '1',
+            'payment_3' => '1',
         ])
         ->assertAccepted()
         ->assertJsonPath('sync_status', 'queued');
@@ -78,6 +80,13 @@ test('heks phase two webhook stores phase metadata and reuses main wide mappings
         ->and($record->family_info_head_name)->toBe('Phase Two Beneficiary')
         ->and(Schema::hasColumn('heks_main_kobo_records', 'identification_application_code'))->toBeTrue()
         ->and(Schema::hasColumn('heks_main_kobo_records', 'identification_application_code_'.substr(sha1('identification/application_code1'), 0, 8)))->toBeFalse();
+
+    $beneficiary = \App\Modules\Heks\Models\HeksBeneficiary::query()
+        ->where('code', 'P2-001')
+        ->sole();
+
+    expect($beneficiary->grant_amount)->toBeNull()
+        ->and($beneficiary->payment_3)->toBeNull();
 
     Queue::assertPushedOn('heks', SyncHeksKoboSubmission::class);
 });
