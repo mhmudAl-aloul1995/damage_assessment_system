@@ -1505,6 +1505,28 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
         'list_name' => 'damage_status',
     ]);
 
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-25-bnfs',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_phase_2_status',
+        'column_name' => 'q_phase_2_status',
+        'display_label' => 'Phase 2 status',
+        'data_type' => 'select_one phase_2_status',
+        'field_type' => 'select_one',
+        'list_name' => 'phase_2_status',
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks-25-bnfs',
+        'table_name' => 'heks_main_kobo_records',
+        'kobo_field' => 'q_phase_2_without_choices',
+        'column_name' => 'q_phase_2_without_choices',
+        'display_label' => 'Phase 2 without choices',
+        'data_type' => 'select_one phase_2_without_choices',
+        'field_type' => 'select_one',
+        'list_name' => 'phase_2_without_choices',
+    ]);
+
     foreach ([
         ['family_info/marital_status', 'marital_status', '18', 'متزوج/ة', 1],
         ['family_info/marital_status', 'marital_status', '19', 'أعزب/عزباء', 2],
@@ -1545,6 +1567,17 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
         'is_active' => true,
     ]);
 
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks-25-bnfs',
+        'question_key' => 'q_phase_2_status',
+        'list_name' => 'phase_2_status',
+        'choice_name' => 'selected',
+        'choice_label' => 'Selected in phase two',
+        'language' => 'ar',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
     $displayService = app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class);
 
     $maritalStatus = $displayService->resolve('heks-main', 'family_info/marital_status', '18');
@@ -1556,6 +1589,8 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
     $looseTitleSourceChoice = $displayService->resolve(' Heks_Final_V1 ', 'q_059', '_____1');
     $displayLabelChoice = $displayService->resolve('Heks Final V1', 'Damage status', '_____1');
     $punctuatedDisplayLabelChoice = $displayService->resolve('Heks Final V1', 'Damage status:', '_____1');
+    $phaseTwoChoice = $displayService->resolve('heks_25_bnfs', 'q_phase_2_status', 'selected');
+    $phaseTwoWithoutChoices = $displayService->resolve('heks_25_bnfs', 'q_phase_2_without_choices', 'raw_option');
 
     expect($maritalStatus)
         ->display->toBe('متزوج/ة')
@@ -1598,7 +1633,16 @@ it('resolves Kobo choice labels without guessing ordinary numeric values', funct
         ->resolved->toBeTrue()
         ->and($punctuatedDisplayLabelChoice)
         ->display->toBe('أضرار جزئية طفيفة')
-        ->resolved->toBeTrue();
+        ->resolved->toBeTrue()
+        ->and($phaseTwoChoice)
+        ->display->toBe('Selected in phase two')
+        ->resolved->toBeTrue()
+        ->warning->toBeNull()
+        ->and($phaseTwoWithoutChoices)
+        ->display->toBe('raw_option')
+        ->resolved->toBeFalse()
+        ->warning->toBeNull()
+        ->choices->toBe([]);
 });
 
 it('shows HEKS survey and score counts separately on the beneficiaries list', function () {

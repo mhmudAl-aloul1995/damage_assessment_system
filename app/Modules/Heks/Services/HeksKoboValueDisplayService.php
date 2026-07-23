@@ -73,6 +73,17 @@ class HeksKoboValueDisplayService
 
         $rawDisplay = $this->stringValue($rawValue);
 
+        if ($choices->isEmpty()) {
+            return [
+                'raw' => $rawValue,
+                'display' => $rawDisplay,
+                'type' => $fieldType,
+                'resolved' => false,
+                'choices' => [],
+                'warning' => null,
+            ];
+        }
+
         return [
             'raw' => $rawValue,
             'display' => $rawDisplay,
@@ -273,6 +284,8 @@ class HeksKoboValueDisplayService
                 'Heks Final V1' => 'heks-main',
                 'heks_main' => 'heks-main',
                 'heks-main' => 'heks_main',
+                'heks_25_bnfs' => 'heks-25-bnfs',
+                'heks-25-bnfs', 'heks-25-bnfs-phase-2' => 'heks_25_bnfs',
                 'heks_followup' => 'heks-followups',
                 'heks-followups' => 'heks_followup',
                 'heks_boq' => 'heks-boq',
