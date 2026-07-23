@@ -1846,6 +1846,12 @@ it('shows seeded social scoring rows with matched beneficiary answers', function
         ],
     ]);
 
+    HeksMainKoboRecord::query()->create([
+        'heks_beneficiary_id' => $beneficiary->id,
+        'service_name' => 'heks_25_bnfs',
+        'submission_uuid' => 'uuid:social-phase-two',
+    ]);
+
     HeksKoboFieldMapping::query()->create([
         'service_name' => 'heks_25_bnfs',
         'table_name' => 'kobo_rest_submissions',
@@ -1873,6 +1879,21 @@ it('shows seeded social scoring rows with matched beneficiary answers', function
         ->assertSee("\u{0623}\u{0646}\u{062B}\u{0649}")
         ->assertSee("\u{0647}\u{0644} \u{064A}\u{0639}\u{0627}\u{0646}\u{064A} \u{0645}\u{0646} \u{0645}\u{0639}\u{064A}\u{0644} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629} \u{0645}\u{0646} \u{0645}\u{0631}\u{0636} \u{0645}\u{0632}\u{0645}\u{0646}")
         ->assertDontSee('Female-headed household');
+
+    $beneficiary->load(['labels', 'mainKoboRecords', 'scores']);
+    $controller = app(\App\Modules\Heks\Http\Controllers\HeksController::class);
+    $displayService = app(\App\Modules\Heks\Services\HeksKoboValueDisplayService::class);
+
+    $socialRowsMethod = new ReflectionMethod($controller, 'socialAssessmentRows');
+    $socialRowsMethod->setAccessible(true);
+    $socialRows = $socialRowsMethod->invoke($controller, $beneficiary, $displayService);
+
+    $technicalRowsMethod = new ReflectionMethod($controller, 'technicalAssessmentRows');
+    $technicalRowsMethod->setAccessible(true);
+    $technicalRows = $technicalRowsMethod->invoke($controller, $beneficiary, $displayService);
+
+    expect($technicalRows)->toHaveCount(26)
+        ->and($socialRows->firstWhere('question', "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}")['points'])->toBe(5.0);
 });
 
 it('shows follow-up BOQ items directly on the follow-ups page', function () {

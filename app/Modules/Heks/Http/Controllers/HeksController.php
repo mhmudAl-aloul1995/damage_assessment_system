@@ -212,6 +212,7 @@ class HeksController extends Controller
             'payments' => fn ($query) => $query->latest(),
             'workAssignments' => fn ($query) => $query->with('engineerUser:id,name,name_en,username_arcgis')->latest(),
             'attachments' => fn ($query) => $query->latest(),
+            'mainKoboRecords:id,heks_beneficiary_id,service_name',
             'boqItems' => fn ($query) => $query->whereNull('heks_follow_up_id')->orderBy('section')->orderBy('item_code')->latest(),
             'surveyValueHistories' => fn ($query) => $query->with('user')->latest(),
         ]);
@@ -2766,6 +2767,7 @@ class HeksController extends Controller
 
         return HeksScoringWeight::query()
             ->where('source', 'Shelter Technical Weights')
+            ->where('survey_phase', $this->beneficiarySurveyPhase($beneficiary))
             ->orderBy('id')
             ->get()
             ->map(function (HeksScoringWeight $weight) use ($labels, $rawData, $displayService): array {
@@ -2793,7 +2795,7 @@ class HeksController extends Controller
                     'avg' => $weightRawData['AVG'] ?? $weightRawData['column_5'] ?? null,
                     'min' => $weightRawData['Min'] ?? $weightRawData['column_6'] ?? null,
                     'value' => $displayValue,
-                    'score' => $displayValue,
+                    'score' => $this->cleanAssessmentDisplayValue($displayValue),
                     'source' => $source,
                 ];
             });
@@ -2807,7 +2809,7 @@ class HeksController extends Controller
 
         $resolved = $displayService->resolve($source, $question, trim((string) $value));
 
-        return ($resolved['resolved'] ?? false) ? $resolved['display'] : $value;
+        return $this->cleanAssessmentDisplayValue(($resolved['resolved'] ?? false) ? $resolved['display'] : $value);
     }
 
     private function socialAssessmentRows(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): \Illuminate\Support\Collection
@@ -2819,6 +2821,7 @@ class HeksController extends Controller
 
         $importedRows = HeksScoringWeight::query()
             ->where('source', 'S-V')
+            ->where('survey_phase', $this->beneficiarySurveyPhase($beneficiary))
             ->whereNotNull('question_key')
             ->orderBy('id')
             ->get()
@@ -2828,9 +2831,12 @@ class HeksController extends Controller
                 $rawValue = $rawData->get($question);
                 $value = $label?->label_value ?? $rawValue ?? $this->rawValue($beneficiary, [$question]);
                 $source = $label ? (string) $label->source : ($rawValue !== null || $value !== '' ? 'raw_data' : '');
+                $service = $source !== '' && $source !== 'raw_data'
+                    ? $source
+                    : $this->beneficiaryScoringService($beneficiary);
                 $displayValue = $this->socialAssessmentDisplayValue(
                     $displayService,
-                    $source !== '' && $source !== 'raw_data' ? $source : 'heks_25_bnfs',
+                    $service,
                     $question,
                     $value
                 );
@@ -2876,7 +2882,7 @@ class HeksController extends Controller
 
         $resolved = $displayService->resolve($source, $question, trim((string) $value));
 
-        return ($resolved['resolved'] ?? false) ? $resolved['display'] : $value;
+        return $this->cleanAssessmentDisplayValue(($resolved['resolved'] ?? false) ? $resolved['display'] : $value);
     }
 
     private function socialAssessmentPoints(\Illuminate\Support\Collection $weights, string $rawValue, string $displayValue): ?float
@@ -2922,6 +2928,46 @@ class HeksController extends Controller
     private function normalizedScoreToken(string $value): string
     {
         return mb_strtolower((string) preg_replace('/[^\pL\pN]+/u', '', $value));
+    }
+
+    private function cleanAssessmentDisplayValue(mixed $value): mixed
+    {
+        if (! is_scalar($value)) {
+            return $value;
+        }
+
+        $text = trim((string) $value);
+
+        if (preg_match('/^([0-9]+(?:\.[0-9]+)?)_+$/', $text, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return $value;
+    }
+
+    private function beneficiarySurveyPhase(HeksBeneficiary $beneficiary): string
+    {
+        return $this->beneficiaryScoringService($beneficiary) === 'heks_25_bnfs' ? 'phase_2' : 'phase_1';
+    }
+
+    private function beneficiaryScoringService(HeksBeneficiary $beneficiary): string
+    {
+        if ($beneficiary->relationLoaded('mainKoboRecords')) {
+            $services = $beneficiary->mainKoboRecords
+                ->pluck('service_name')
+                ->filter()
+                ->values();
+
+            if ($services->contains('heks_25_bnfs')) {
+                return 'heks_25_bnfs';
+            }
+        }
+
+        if ($beneficiary->scores->pluck('source')->contains('heks_25_bnfs')) {
+            return 'heks_25_bnfs';
+        }
+
+        return 'heks-main';
     }
 
     private function isPositiveSocialValue(string $value, array $positiveTerms): bool
