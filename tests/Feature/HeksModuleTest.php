@@ -1840,10 +1840,30 @@ it('shows seeded social scoring rows with matched beneficiary answers', function
         'name' => 'Social Case',
         'raw_data' => [
             'heks_25_bnfs' => [
-                "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}" => "\u{0623}\u{0646}\u{062B}\u{0649}",
+                "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}" => '16',
                 "\u{0647}\u{0644} \u{064A}\u{0639}\u{0627}\u{0646}\u{064A} \u{0645}\u{0646} \u{0645}\u{0639}\u{064A}\u{0644} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629} \u{0645}\u{0646} \u{0645}\u{0631}\u{0636} \u{0645}\u{0632}\u{0645}\u{0646}" => "\u{0646}\u{0639}\u{0645}",
             ],
         ],
+    ]);
+
+    HeksKoboFieldMapping::query()->create([
+        'service_name' => 'heks_25_bnfs',
+        'table_name' => 'kobo_rest_submissions',
+        'kobo_field' => "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}",
+        'column_name' => 'head_gender',
+        'display_label' => "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}",
+        'field_type' => 'select_one gender',
+        'list_name' => 'gender',
+    ]);
+
+    HeksKoboChoice::query()->create([
+        'service_name' => 'heks_25_bnfs',
+        'question_key' => "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}",
+        'list_name' => 'gender',
+        'choice_name' => '16',
+        'choice_label' => "\u{0623}\u{0646}\u{062B}\u{0649}",
+        'language' => 'ar',
+        'is_active' => true,
     ]);
 
     $this->actingAs($user)

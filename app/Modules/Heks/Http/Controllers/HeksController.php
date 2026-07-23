@@ -229,7 +229,7 @@ class HeksController extends Controller
             'imageAttachments' => $this->imageAttachments($beneficiary),
             'scoringComponents' => $this->scoringComponents(),
             'priorityMatrix' => $this->priorityMatrix(),
-            'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary),
+            'socialAssessmentRows' => $this->socialAssessmentRows($beneficiary, $displayService),
             'technicalAssessmentRows' => $this->technicalAssessmentRows($beneficiary, $displayService),
         ]);
     }
@@ -2810,7 +2810,7 @@ class HeksController extends Controller
         return ($resolved['resolved'] ?? false) ? $resolved['display'] : $value;
     }
 
-    private function socialAssessmentRows(HeksBeneficiary $beneficiary): \Illuminate\Support\Collection
+    private function socialAssessmentRows(HeksBeneficiary $beneficiary, HeksKoboValueDisplayService $displayService): \Illuminate\Support\Collection
     {
         $labels = $beneficiary->labels->keyBy('label_key');
         $rawData = collect($beneficiary->raw_data ?? [])
@@ -2823,19 +2823,26 @@ class HeksController extends Controller
             ->orderBy('id')
             ->get()
             ->groupBy('question_key')
-            ->map(function (\Illuminate\Support\Collection $weights, string $question) use ($beneficiary, $labels, $rawData): array {
+            ->map(function (\Illuminate\Support\Collection $weights, string $question) use ($beneficiary, $displayService, $labels, $rawData): array {
                 $label = $labels->get($question);
                 $rawValue = $rawData->get($question);
                 $value = $label?->label_value ?? $rawValue ?? $this->rawValue($beneficiary, [$question]);
-                $points = $this->socialAssessmentPoints($weights, (string) $value);
+                $source = $label ? (string) $label->source : ($rawValue !== null || $value !== '' ? 'raw_data' : '');
+                $displayValue = $this->socialAssessmentDisplayValue(
+                    $displayService,
+                    $source !== '' && $source !== 'raw_data' ? $source : 'heks_25_bnfs',
+                    $question,
+                    $value
+                );
+                $points = $this->socialAssessmentPoints($weights, (string) $value, (string) $displayValue);
 
                 return [
                     'factor' => $weights->first()?->indicator ?: $question,
                     'question' => $question,
-                    'value' => $value,
+                    'value' => $displayValue,
                     'options' => $weights->pluck('option_value')->filter()->unique()->values()->implode(' / '),
                     'points' => $value === '' ? null : $points,
-                    'source' => $label ? (string) $label->source : ($rawValue !== null || $value !== '' ? 'raw_data' : ''),
+                    'source' => $source,
                 ];
             })
             ->values();
@@ -2861,13 +2868,25 @@ class HeksController extends Controller
             ->values();
     }
 
-    private function socialAssessmentPoints(\Illuminate\Support\Collection $weights, string $value): ?float
+    private function socialAssessmentDisplayValue(HeksKoboValueDisplayService $displayService, string $source, string $question, mixed $value): mixed
     {
-        if ($value === '') {
+        if (! is_scalar($value) || trim((string) $value) === '' || $question === '') {
+            return $value;
+        }
+
+        $resolved = $displayService->resolve($source, $question, trim((string) $value));
+
+        return ($resolved['resolved'] ?? false) ? $resolved['display'] : $value;
+    }
+
+    private function socialAssessmentPoints(\Illuminate\Support\Collection $weights, string $rawValue, string $displayValue): ?float
+    {
+        if ($rawValue === '' && $displayValue === '') {
             return null;
         }
 
         $points = 0.0;
+        $values = array_values(array_unique(array_filter([$rawValue, $displayValue], fn (string $value): bool => $value !== '')));
 
         foreach ($weights as $weight) {
             if (! $weight instanceof HeksScoringWeight) {
@@ -2876,7 +2895,7 @@ class HeksController extends Controller
 
             $optionValue = trim((string) $weight->option_value);
 
-            if ($optionValue !== '' && ! $this->socialAssessmentOptionMatches($value, $optionValue)) {
+            if ($optionValue !== '' && ! collect($values)->contains(fn (string $value): bool => $this->socialAssessmentOptionMatches($value, $optionValue))) {
                 continue;
             }
 
