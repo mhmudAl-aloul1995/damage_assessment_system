@@ -1770,6 +1770,30 @@ test('kobo sync command processes queued HEKS webhook submissions when queue wor
         ->and(HeksFollowUp::query()->where('code', 'QUEUED1')->exists())->toBeTrue();
 });
 
+test('kobo sync command processes phase two HEKS webhook submissions by canonical service name', function () {
+    KoboRestSubmission::query()->create([
+        'service_name' => 'heks_25_bnfs',
+        'source_project' => "HEKS 25 BNF's",
+        'survey_phase' => 'phase_2',
+        'submission_uuid' => 'uuid:queued-heks-phase-two-main',
+        'payload' => [
+            '_uuid' => 'uuid:queued-heks-phase-two-main',
+            'identification/application_code' => 'QUEUED-P2',
+            'family_info/head_name' => 'Queued Phase Two Beneficiary',
+        ],
+        'sync_status' => 'queued',
+        'received_at' => now(),
+    ]);
+
+    $this->artisan('kobo:sync-rest-submissions --service=heks_25_bnfs')
+        ->expectsOutputToContain('Synced: 1')
+        ->assertSuccessful();
+
+    expect(KoboRestSubmission::query()->where('submission_uuid', 'uuid:queued-heks-phase-two-main')->value('sync_status'))
+        ->toBe('synced')
+        ->and(HeksBeneficiary::query()->where('code', 'QUEUED-P2')->where('name', 'Queued Phase Two Beneficiary')->exists())->toBeTrue();
+});
+
 test('kobo sync command replays synced HEKS submissions into wide record columns', function () {
     KoboRestSubmission::query()->create([
         'service_name' => 'heks-main',
