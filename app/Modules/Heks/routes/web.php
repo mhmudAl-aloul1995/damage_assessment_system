@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/follow-ups/{followUp}/boq/import', [HeksController::class, 'importFollowUpBoq'])->name('heks.follow-ups.boq.import');
     Route::put('/follow-ups/{followUp}', [HeksController::class, 'updateFollowUp'])->name('heks.follow-ups.update');
     Route::get('/scores', [HeksController::class, 'scores'])->name('heks.scores');
+    Route::post('/scores/copy-phase-one-to-two', [HeksController::class, 'copyPhaseOneScoringWeightsToPhaseTwo'])->name('heks.scoring-weights.copy-phase-two');
     Route::put('/scores/weights/{weight}', [HeksController::class, 'updateScoringWeight'])->name('heks.scoring-weights.update');
     Route::put('/scores/{score}', [HeksController::class, 'updateScore'])->name('heks.scores.update');
     Route::get('/quality', [HeksController::class, 'quality'])->name('heks.quality');

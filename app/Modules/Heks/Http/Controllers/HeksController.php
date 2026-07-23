@@ -798,11 +798,30 @@ class HeksController extends Controller
         $phase = in_array(request('phase'), ['phase_1', 'phase_2'], true)
             ? (string) request('phase')
             : 'phase_1';
-        $weightsQuery = HeksScoringWeight::query()->where('survey_phase', $phase);
+        $component = in_array(request('component'), ['social', 'technical'], true)
+            ? (string) request('component')
+            : 'all';
+        $source = trim((string) request('source', ''));
+        $baseWeightsQuery = HeksScoringWeight::query()->where('survey_phase', $phase);
+        $sourceOptions = (clone $baseWeightsQuery)
+            ->select('source')
+            ->distinct()
+            ->orderBy('source')
+            ->pluck('source')
+            ->filter()
+            ->values();
+        $weightsQuery = (clone $baseWeightsQuery)
+            ->when($component === 'social', fn ($query) => $query->where('source', 'S-V'))
+            ->when($component === 'technical', fn ($query) => $query->whereIn('source', ['T-V', 'Shelter Technical Weights']))
+            ->when($source !== '', fn ($query) => $query->where('source', $source));
 
         return view('heks::scores', [
             'phase' => $phase,
+            'component' => $component,
+            'source' => $source,
             'phaseOptions' => $this->heksPhaseOptions(),
+            'componentOptions' => $this->heksScoringComponentOptions(),
+            'sourceOptions' => $sourceOptions,
             'weights' => (clone $weightsQuery)
                 ->orderBy('source')
                 ->orderBy('category')
@@ -822,6 +841,40 @@ class HeksController extends Controller
                 ->orderBy('source')
                 ->pluck('aggregate', 'source'),
         ]);
+    }
+
+    public function copyPhaseOneScoringWeightsToPhaseTwo(): RedirectResponse
+    {
+        $this->authorizeAccess();
+
+        $now = now();
+        $copied = 0;
+
+        HeksScoringWeight::query()
+            ->where('survey_phase', 'phase_1')
+            ->orderBy('id')
+            ->get()
+            ->each(function (HeksScoringWeight $weight) use ($now, &$copied): void {
+                HeksScoringWeight::query()->updateOrCreate([
+                    'survey_phase' => 'phase_2',
+                    'source' => $weight->source,
+                    'question_key' => $weight->question_key,
+                    'option_value' => $weight->option_value,
+                ], [
+                    'category' => $weight->category,
+                    'indicator' => $weight->indicator,
+                    'weight' => $weight->weight,
+                    'option_score' => $weight->option_score,
+                    'raw_data' => $weight->raw_data,
+                    'updated_at' => $now,
+                ]);
+
+                $copied++;
+            });
+
+        return redirect()
+            ->route('heks.scores', ['phase' => 'phase_2'])
+            ->with('success', "تم نسخ {$copied} قاعدة سكور من المرحلة الأولى إلى المرحلة الثانية.");
     }
 
     public function updateScoringWeight(UpdateHeksScoringWeightRequest $request, HeksScoringWeight $weight): RedirectResponse
@@ -2848,6 +2901,18 @@ class HeksController extends Controller
         return [
             'phase_1' => 'المرحلة الأولى',
             'phase_2' => 'المرحلة الثانية',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function heksScoringComponentOptions(): array
+    {
+        return [
+            'all' => 'كل السكور',
+            'social' => 'اجتماعي',
+            'technical' => 'فني',
         ];
     }
 

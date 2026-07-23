@@ -1718,6 +1718,15 @@ it('manages HEKS scoring settings by selected survey phase', function () {
         'option_value' => 'yes',
         'option_score' => 4,
     ]);
+    HeksScoringWeight::query()->create([
+        'source' => 'S-V',
+        'survey_phase' => 'phase_1',
+        'category' => 'Copied phase one category',
+        'indicator' => 'Copied phase one indicator',
+        'question_key' => 'phase_two_question',
+        'option_value' => 'selected',
+        'option_score' => 12,
+    ]);
 
     $phaseTwoWeight = HeksScoringWeight::query()->create([
         'source' => 'S-V',
@@ -1736,7 +1745,22 @@ it('manages HEKS scoring settings by selected survey phase', function () {
         ->assertSee("\u{0627}\u{0644}\u{0645}\u{0631}\u{062D}\u{0644}\u{0629} \u{0627}\u{0644}\u{062B}\u{0627}\u{0646}\u{064A}\u{0629}")
         ->assertSee('Phase two category')
         ->assertDontSee('Phase one category')
+        ->assertSee('نوع السكور')
+        ->assertSee('نسخ أوزان الأولى')
         ->assertSee('data-control="select2"', false);
+
+    $this->actingAs($user)
+        ->get(route('heks.scores', ['phase' => 'phase_2', 'component' => 'technical']))
+        ->assertOk()
+        ->assertDontSee('Phase two category');
+
+    $this->actingAs($user)
+        ->post(route('heks.scoring-weights.copy-phase-two'))
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('heks.scores', ['phase' => 'phase_2']));
+
+    expect((float) $phaseTwoWeight->refresh()->option_score)->toBe(12.0)
+        ->and($phaseTwoWeight->category)->toBe('Copied phase one category');
 
     $this->actingAs($user)
         ->put(route('heks.scoring-weights.update', $phaseTwoWeight), [
