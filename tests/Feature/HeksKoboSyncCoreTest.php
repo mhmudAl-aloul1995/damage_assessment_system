@@ -82,6 +82,47 @@ test('heks phase two webhook stores phase metadata and reuses main wide mappings
     Queue::assertPushedOn('heks', SyncHeksKoboSubmission::class);
 });
 
+test('heks webhook accepts kobo xml payloads', function () {
+    Queue::fake();
+    config(['services.kobotoolbox.rest_service_token' => 'secret']);
+
+    $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<data>
+    <_uuid>uuid:phase-two-xml</_uuid>
+    <identification>
+        <application_code>P2-XML</application_code>
+    </identification>
+    <family_info>
+        <head_name>Phase Two XML Beneficiary</head_name>
+    </family_info>
+</data>
+XML;
+
+    $this
+        ->call('POST', '/api/heks/kobo-webhook/heks-25-bnfs', [], [], [], [
+            'CONTENT_TYPE' => 'application/xml',
+            'HTTP_X_KOBO_TOKEN' => 'secret',
+        ], $xml)
+        ->assertAccepted()
+        ->assertJsonPath('sync_status', 'queued');
+
+    $submission = KoboRestSubmission::query()->where('submission_uuid', 'uuid:phase-two-xml')->sole();
+
+    expect($submission->service_name)->toBe('heks_25_bnfs')
+        ->and($submission->payload['identification']['application_code'])->toBe('P2-XML')
+        ->and($submission->payload['family_info']['head_name'])->toBe('Phase Two XML Beneficiary');
+
+    app(HeksKoboSubmissionSyncService::class)->sync($submission);
+
+    expect(\App\Modules\Heks\Models\HeksBeneficiary::query()
+        ->where('code', 'P2-XML')
+        ->where('name', 'Phase Two XML Beneficiary')
+        ->exists())->toBeTrue();
+
+    Queue::assertPushedOn('heks', SyncHeksKoboSubmission::class);
+});
+
 test('legacy kobo heks style url queues heks submissions', function () {
     Queue::fake();
     config(['services.kobotoolbox.rest_service_token' => 'secret']);
