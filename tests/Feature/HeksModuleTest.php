@@ -1828,6 +1828,33 @@ it('seeds official HEKS scoring weights for both survey phases', function () {
             ->value('option_score'))->toBe(5.0);
 });
 
+it('shows seeded social scoring rows with matched beneficiary answers', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->seed(HeksScoringWeightsSeeder::class);
+
+    $beneficiary = HeksBeneficiary::query()->create([
+        'code' => 'SOC-1',
+        'name' => 'Social Case',
+        'raw_data' => [
+            'heks_25_bnfs' => [
+                "\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}" => "\u{0623}\u{0646}\u{062B}\u{0649}",
+                "\u{0647}\u{0644} \u{064A}\u{0639}\u{0627}\u{0646}\u{064A} \u{0645}\u{0646} \u{0645}\u{0639}\u{064A}\u{0644} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629} \u{0645}\u{0646} \u{0645}\u{0631}\u{0636} \u{0645}\u{0632}\u{0645}\u{0646}" => "\u{0646}\u{0639}\u{0645}",
+            ],
+        ],
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('heks.beneficiaries.edit', $beneficiary))
+        ->assertOk()
+        ->assertSee("\u{062C}\u{0646}\u{0633} \u{0631}\u{0628} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629}")
+        ->assertSee("\u{0623}\u{0646}\u{062B}\u{0649}")
+        ->assertSee("\u{0647}\u{0644} \u{064A}\u{0639}\u{0627}\u{0646}\u{064A} \u{0645}\u{0646} \u{0645}\u{0639}\u{064A}\u{0644} \u{0627}\u{0644}\u{0623}\u{0633}\u{0631}\u{0629} \u{0645}\u{0646} \u{0645}\u{0631}\u{0636} \u{0645}\u{0632}\u{0645}\u{0646}")
+        ->assertDontSee('Female-headed household');
+});
+
 it('shows follow-up BOQ items directly on the follow-ups page', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

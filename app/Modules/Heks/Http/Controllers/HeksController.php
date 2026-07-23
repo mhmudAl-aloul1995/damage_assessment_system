@@ -2816,7 +2816,35 @@ class HeksController extends Controller
         $rawData = collect($beneficiary->raw_data ?? [])
             ->filter(fn (mixed $section): bool => is_array($section))
             ->flatMap(fn (array $section): array => $section);
-        $matrixRows = collect($this->socialVulnerabilityMatrix())
+
+        $importedRows = HeksScoringWeight::query()
+            ->where('source', 'S-V')
+            ->whereNotNull('question_key')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('question_key')
+            ->map(function (\Illuminate\Support\Collection $weights, string $question) use ($beneficiary, $labels, $rawData): array {
+                $label = $labels->get($question);
+                $rawValue = $rawData->get($question);
+                $value = $label?->label_value ?? $rawValue ?? $this->rawValue($beneficiary, [$question]);
+                $points = $this->socialAssessmentPoints($weights, (string) $value);
+
+                return [
+                    'factor' => $weights->first()?->indicator ?: $question,
+                    'question' => $question,
+                    'value' => $value,
+                    'options' => $weights->pluck('option_value')->filter()->unique()->values()->implode(' / '),
+                    'points' => $value === '' ? null : $points,
+                    'source' => $label ? (string) $label->source : ($rawValue !== null || $value !== '' ? 'raw_data' : ''),
+                ];
+            })
+            ->values();
+
+        if ($importedRows->isNotEmpty()) {
+            return $importedRows;
+        }
+
+        return collect($this->socialVulnerabilityMatrix())
             ->map(function (array $criterion) use ($beneficiary): array {
                 $value = $this->rawValue($beneficiary, $criterion['keys']);
                 $isYes = $value !== '' && $this->isPositiveSocialValue($value, $criterion['positive_terms']);
@@ -2829,32 +2857,52 @@ class HeksController extends Controller
                     'points' => $value === '' ? null : ($isYes ? 5 : 0),
                     'source' => $value !== '' ? 'Scoring matrix S -2' : '',
                 ];
-            });
-
-        $importedRows = HeksScoringWeight::query()
-            ->where('source', 'S-V')
-            ->whereNotNull('question_key')
-            ->orderBy('id')
-            ->get()
-            ->groupBy('question_key')
-            ->map(function (\Illuminate\Support\Collection $weights, string $question) use ($labels, $rawData): array {
-                $label = $labels->get($question);
-                $rawValue = $rawData->get($question);
-
-                return [
-                    'factor' => $question,
-                    'question' => $question,
-                    'value' => $label?->label_value ?? $rawValue,
-                    'options' => $weights->pluck('option_value')->filter()->unique()->values()->implode(' / '),
-                    'points' => null,
-                    'source' => $label ? (string) $label->source : ($rawValue !== null ? 'raw_data' : ''),
-                ];
             })
             ->values();
+    }
 
-        return $matrixRows
-            ->concat($importedRows->reject(fn (array $row): bool => $matrixRows->pluck('factor')->contains($row['factor'])))
-            ->values();
+    private function socialAssessmentPoints(\Illuminate\Support\Collection $weights, string $value): ?float
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        $points = 0.0;
+
+        foreach ($weights as $weight) {
+            if (! $weight instanceof HeksScoringWeight) {
+                continue;
+            }
+
+            $optionValue = trim((string) $weight->option_value);
+
+            if ($optionValue !== '' && ! $this->socialAssessmentOptionMatches($value, $optionValue)) {
+                continue;
+            }
+
+            $points += (float) ($weight->option_score ?? $weight->weight ?? 0);
+        }
+
+        return $points;
+    }
+
+    private function socialAssessmentOptionMatches(string $value, string $optionValue): bool
+    {
+        $normalizedValue = $this->normalizedScoreToken($value);
+        $normalizedOption = $this->normalizedScoreToken($optionValue);
+
+        if ($normalizedValue === '' || $normalizedOption === '') {
+            return false;
+        }
+
+        return $normalizedValue === $normalizedOption
+            || str_contains($normalizedValue, $normalizedOption)
+            || str_contains($normalizedOption, $normalizedValue);
+    }
+
+    private function normalizedScoreToken(string $value): string
+    {
+        return mb_strtolower((string) preg_replace('/[^\pL\pN]+/u', '', $value));
     }
 
     private function isPositiveSocialValue(string $value, array $positiveTerms): bool
