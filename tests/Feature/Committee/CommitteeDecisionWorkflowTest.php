@@ -9,6 +9,7 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use App\Notifications\CommitteeDecisionSignatureRequested;
 use App\services\CommitteeDecisionWorkflowExcelImportService;
+use App\services\TemporaryTechnicalCommitteeDecisionImportService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
@@ -1070,6 +1071,53 @@ it('syncs imported resurvey completed decisions with completed field status on m
             && data_get($attributes, 'Field_status') === 'COMPLETED'
             && ! array_key_exists('building_damage_status', $attributes);
     });
+});
+
+it('imports workflow decisions without committee members and marks them for review', function () {
+    User::factory()->create();
+
+    $building = Building::query()->create([
+        'objectid' => 9801,
+        'globalid' => 'workflow-without-members-building',
+        'building_name' => 'Workflow Without Members Building',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Al-Daraj',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $summary = app(TemporaryTechnicalCommitteeDecisionImportService::class)->importRecords([
+        [
+            'record_type' => 'building',
+            'municipality' => 'Gaza Al-Daraj',
+            'sheet' => 'Gaza Buildings',
+            'row' => 10,
+            'objectid' => 9801,
+            'globalid' => null,
+            'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+            'decision_text' => 'Partial damage decision from Excel.',
+            'action_text' => 'Return to engineer for resurvey.',
+            'decision_date' => '2026-07-21',
+            'member_names' => [],
+            'use_excel_member_names' => true,
+            'notes' => 'Excel sheet: Gaza Buildings row: 10',
+        ],
+    ]);
+
+    $decision = CommitteeDecision::query()->whereMorphedTo('decisionable', $building)->firstOrFail();
+
+    expect($summary['rows'])->toBe(1)
+        ->and($summary['decisions_completed'])->toBe(1)
+        ->and($summary['decisions_without_committee_members'])->toBe(1)
+        ->and($summary['skipped_rows'])->toBe(0)
+        ->and($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->notes)->toContain('Imported without committee signatures')
+        ->and(CommitteeDecisionSignature::query()->where('committee_decision_id', $decision->id)->count())->toBe(0)
+        ->and($building->refresh()->building_damage_status)->toBe(CommitteeDecision::TYPE_PARTIALLY_DAMAGED)
+        ->and(BuildingSurveyArchiveObject::query()
+            ->where('source_type', 'committee_decision')
+            ->where('committee_decision_id', $decision->id)
+            ->where('building_objectid', $building->objectid)
+            ->exists())->toBeTrue();
 });
 
 it('imports workflow excel housing unit sheets by UNITID and ignores higher committee columns when requested', function () {

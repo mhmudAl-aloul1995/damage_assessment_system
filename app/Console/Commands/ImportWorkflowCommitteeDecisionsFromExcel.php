@@ -46,6 +46,7 @@ class ImportWorkflowCommitteeDecisionsFromExcel extends Command
             ['Files', count($summary['files'])],
             ['Rows read', $summary['rows']],
             ['Decisions completed', $summary['decisions_completed']],
+            ['Decisions without committee members', $summary['decisions_without_committee_members']],
             ['Statuses forced to committee review', $summary['statuses_forced_to_committee_review']],
             ['Resurvey completed statuses fixed', $summary['resurvey_completed_statuses_fixed']],
             ['Skipped rows', $summary['skipped_rows']],
@@ -120,6 +121,7 @@ class ImportWorkflowCommitteeDecisionsFromExcel extends Command
             'parse_issues' => [],
             'rows' => 0,
             'decisions_completed' => 0,
+            'decisions_without_committee_members' => 0,
             'skipped_rows' => 0,
             'statuses_forced_to_committee_review' => 0,
             'resurvey_completed_statuses_fixed' => 0,
@@ -138,7 +140,7 @@ class ImportWorkflowCommitteeDecisionsFromExcel extends Command
     {
         $summary['files'][] = $filename;
 
-        foreach (['rows', 'decisions_completed', 'skipped_rows', 'statuses_forced_to_committee_review', 'resurvey_completed_statuses_fixed'] as $key) {
+        foreach (['rows', 'decisions_completed', 'decisions_without_committee_members', 'skipped_rows', 'statuses_forced_to_committee_review', 'resurvey_completed_statuses_fixed'] as $key) {
             $summary[$key] = ($summary[$key] ?? 0) + ($fileSummary[$key] ?? 0);
         }
 

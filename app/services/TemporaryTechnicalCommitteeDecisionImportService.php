@@ -121,16 +121,10 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 $members = $this->existingCommitteeMembersForSeedRecord($record);
             }
 
-            if ($members === []) {
-                $this->recordSkip($summary, 'missing_committee_users', [
-                    'sheet' => $record['sheet'],
-                    'row' => $record['row'],
-                    'objectid' => $record['objectid'],
-                    'record_type' => $record['record_type'],
-                    'reason' => 'No configured committee users were found by id_no.',
-                ]);
+            $hasCommitteeMembers = $members !== [];
 
-                continue;
+            if (! $hasCommitteeMembers) {
+                $summary['decisions_without_committee_members']++;
             }
 
             $forcedCommitteeStatus = false;
@@ -169,6 +163,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
                 $record['decision_date'] ?? null,
                 trim(implode("\n", array_filter([
                     $record['notes'] ?? null,
+                    ! $hasCommitteeMembers ? 'Imported without committee signatures: no committee members were selected or matched from the Excel row.' : null,
                     $forcedCommitteeStatus ? 'Status was moved to committee review before importing this decision.' : null,
                 ]))),
             );
@@ -1173,6 +1168,7 @@ class TemporaryTechnicalCommitteeDecisionImportService
         return [
             'rows' => 0,
             'decisions_completed' => 0,
+            'decisions_without_committee_members' => 0,
             'skipped_rows' => 0,
             'statuses_forced_to_committee_review' => 0,
             'resurvey_completed_statuses_fixed' => 0,

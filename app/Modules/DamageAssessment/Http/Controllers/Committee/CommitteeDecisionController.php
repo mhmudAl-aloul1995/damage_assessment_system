@@ -140,6 +140,7 @@ class CommitteeDecisionController extends Controller
             'parse_issues' => [],
             'rows' => 0,
             'decisions_completed' => 0,
+            'decisions_without_committee_members' => 0,
             'skipped_rows' => 0,
             'statuses_forced_to_committee_review' => 0,
             'skip_reasons' => [],
@@ -152,7 +153,7 @@ class CommitteeDecisionController extends Controller
     {
         $summary['files'][] = $filename;
 
-        foreach (['rows', 'decisions_completed', 'skipped_rows', 'statuses_forced_to_committee_review'] as $key) {
+        foreach (['rows', 'decisions_completed', 'decisions_without_committee_members', 'skipped_rows', 'statuses_forced_to_committee_review'] as $key) {
             $summary[$key] = ($summary[$key] ?? 0) + ($fileSummary[$key] ?? 0);
         }
 
