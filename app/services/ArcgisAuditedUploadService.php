@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Building;
 use App\Models\HousingUnit;
 use App\Models\VBuildingAudited;
 use App\Models\VHousingUnitAudited;
@@ -202,25 +203,44 @@ class ArcgisAuditedUploadService
 
     private function applyUnitAttributes(array $attributes, VHousingUnitAudited $unit): array
     {
-        $housingUnit = HousingUnit::query()
-            ->where(function (Builder $query) use ($unit): void {
-                $query->where('objectid', $unit->getAttribute('objectid'));
+        $parentGlobalId = $unit->getAttribute('parentglobalid');
 
-                $globalId = $unit->getAttribute('globalid');
+        if (! is_string($parentGlobalId) || $parentGlobalId === '') {
+            $parentGlobalId = HousingUnit::query()
+                ->where(function (Builder $query) use ($unit): void {
+                    $query->where('objectid', $unit->getAttribute('objectid'));
 
-                if (is_string($globalId) && $globalId !== '') {
-                    $query->orWhere('globalid', $globalId);
-                }
-            })
-            ->first();
+                    $globalId = $unit->getAttribute('globalid');
 
-        if ($housingUnit === null) {
+                    if (is_string($globalId) && $globalId !== '') {
+                        $query->orWhere('globalid', $globalId);
+                    }
+                })
+                ->value('parentglobalid');
+        }
+
+        if (! is_string($parentGlobalId) || $parentGlobalId === '') {
             return $attributes;
         }
 
-        foreach (['unit_governorate', 'unit_municipalitie', 'unit_neighborhood', 'unit_building_name'] as $field) {
-            if (($attributes[$field] ?? null) === null) {
-                $attributes[$field] = $housingUnit->getAttribute($field);
+        $building = Building::query()
+            ->where('globalid', $parentGlobalId)
+            ->first(['governorate', 'municipalitie', 'neighborhood', 'building_name']);
+
+        if ($building === null) {
+            return $attributes;
+        }
+
+        foreach ([
+            'unit_governorate' => 'governorate',
+            'unit_municipalitie' => 'municipalitie',
+            'unit_neighborhood' => 'neighborhood',
+            'unit_building_name' => 'building_name',
+        ] as $unitField => $buildingField) {
+            $value = $building->getAttribute($buildingField);
+
+            if ($value !== null) {
+                $attributes[$unitField] = $value;
             }
         }
 

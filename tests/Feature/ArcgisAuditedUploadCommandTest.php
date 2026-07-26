@@ -197,10 +197,10 @@ it('uploads audited views to arcgis and copies attachments', function () {
                 'old_global_id_U' => 'unit-globalid',
                 'parentglobalid' => 'target-building-globalid',
                 'unit_damage_status' => 'minor',
-                'unit_governorate' => 'ArcGIS Unit Governorate',
-                'unit_municipalitie' => 'ArcGIS Unit Municipality',
-                'unit_neighborhood' => 'ArcGIS Unit Neighborhood',
-                'unit_building_name' => 'ArcGIS Unit Building',
+                'unit_governorate' => 'Gaza Governorate',
+                'unit_municipalitie' => 'Gaza Municipality',
+                'unit_neighborhood' => 'Rimal',
+                'unit_building_name' => 'Uploaded Parent Building',
                 'is_audited' => 1,
             ]);
             expect($features[0]['geometry']['spatialReference']['wkid'])->toBe(4326);
