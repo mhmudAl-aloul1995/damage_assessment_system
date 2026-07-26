@@ -235,15 +235,15 @@ class CommitteeDecisionController extends Controller
 
     public function exceptionalMembersUpdate(ExceptionalCommitteeDecisionMemberUpdateRequest $request, CommitteeDecision $committeeDecision): RedirectResponse
     {
-        $this->workflowService->exceptionallyApproveMembersAndResetArcGis(
+        $this->workflowService->exceptionallyUpdateDecisionAndApproveMembers(
             $committeeDecision,
-            $request->validated('committee_members'),
+            $request->validated(),
             auth()->user(),
         );
 
         return redirect()
             ->back()
-            ->with('success', 'تم تحديث أعضاء اللجنة استثنائيًا واعتمادهم، وتم تفعيل إعادة مزامنة ArcGIS.');
+            ->with('success', 'تم تحديث قرار اللجنة استثنائيًا واعتماد الأعضاء، وتم تفعيل إعادة مزامنة ArcGIS.');
     }
 
     public function retryArcgis(CommitteeDecision $committeeDecision): RedirectResponse
@@ -469,6 +469,7 @@ class CommitteeDecisionController extends Controller
                 ? $this->workflowService->latestSignatureTemplate($decision)
                 : [],
             'canManageContent' => ! $decision->isCompleted() && auth()->user()->can('manage committee decision content'),
+            'canEditDecisionContent' => (! $decision->isCompleted() && auth()->user()->can('manage committee decision content')) || ($this->canUseExceptionalCommitteeEdit() && $decision->isCompleted()),
             'canSign' => auth()->user()->can('sign committee decisions'),
             'canRetryArcgis' => auth()->user()->can('sync committee decision arcgis') || $this->canUseExceptionalCommitteeEdit(),
             'canUseExceptionalCommitteeEdit' => $this->canUseExceptionalCommitteeEdit() && $decision->isCompleted(),

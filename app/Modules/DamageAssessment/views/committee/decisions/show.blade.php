@@ -15,6 +15,10 @@
         : $suggestedCommitteeMembers;
     $selectedCommitteeIds = collect(old('committee_members', array_keys($defaultCommitteeSettings)))
         ->map(fn ($memberId) => (int) $memberId);
+    $usesExceptionalDecisionForm = $canUseExceptionalCommitteeEdit && $decision->isCompleted();
+    $decisionFormAction = $usesExceptionalDecisionForm
+        ? route('committee-decisions.exceptional-members.update', $decision)
+        : route('committee-decisions.update', $decision);
 @endphp
 
 @section('title', __('multilingual.committee_decision_show.title'))
@@ -97,14 +101,16 @@
                     <div class="card-title"><h3 class="fw-bold m-0">{{ __('multilingual.committee_decision_show.form_title') }}</h3></div>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('committee-decisions.update', $decision) }}">
+                    <form method="POST" action="{{ $decisionFormAction }}">
                         @csrf
-                        @method('PUT')
+                        @unless ($usesExceptionalDecisionForm)
+                            @method('PUT')
+                        @endunless
 
                         <div class="row g-5">
                             <div class="col-md-6">
                                 <label class="form-label required">{{ __('multilingual.committee_decision_show.decision_type') }}</label>
-                                <select name="decision_type" class="form-select form-select-solid" {{ $canManageContent ? '' : 'disabled' }}>
+                                <select name="decision_type" class="form-select form-select-solid" {{ $canEditDecisionContent ? '' : 'disabled' }}>
                                     @foreach ($decisionTypes as $value => $label)
                                         <option value="{{ $value }}" @selected(old('decision_type', $decision->decision_type) === $value)>{{ $label }}</option>
                                     @endforeach
@@ -114,21 +120,21 @@
                                 <label class="form-label required">{{ __('multilingual.committee_decision_show.decision_date') }}</label>
                                 <input type="date" name="decision_date" class="form-control form-control-solid"
                                     value="{{ old('decision_date', optional($decision->decision_date)->format('Y-m-d') ?: now()->format('Y-m-d')) }}"
-                                    {{ $canManageContent ? '' : 'disabled' }}>
+                                    {{ $canEditDecisionContent ? '' : 'disabled' }}>
                             </div>
                             <div class="col-12">
                                 <label class="form-label required">{{ __('multilingual.committee_decision_show.decision_text') }}</label>
-                                <textarea name="decision_text" rows="5" class="form-control form-control-solid" {{ $canManageContent ? '' : 'disabled' }}>{{ old('decision_text', $decision->decision_text) }}</textarea>
+                                <textarea name="decision_text" rows="5" class="form-control form-control-solid" {{ $canEditDecisionContent ? '' : 'disabled' }}>{{ old('decision_text', $decision->decision_text) }}</textarea>
                             </div>
                             <div class="col-12">
                                 <label class="form-label">{{ __('multilingual.committee_decision_show.action_text') }}</label>
-                                <textarea name="action_text" rows="3" class="form-control form-control-solid" {{ $canManageContent ? '' : 'disabled' }}>{{ old('action_text', $decision->action_text) }}</textarea>
+                                <textarea name="action_text" rows="3" class="form-control form-control-solid" {{ $canEditDecisionContent ? '' : 'disabled' }}>{{ old('action_text', $decision->action_text) }}</textarea>
                             </div>
                             <div class="col-12">
                                 <label class="form-label">{{ __('multilingual.committee_decision_show.notes') }}</label>
-                                <textarea name="notes" rows="3" class="form-control form-control-solid" {{ $canManageContent ? '' : 'disabled' }}>{{ old('notes', $decision->notes) }}</textarea>
+                                <textarea name="notes" rows="3" class="form-control form-control-solid" {{ $canEditDecisionContent ? '' : 'disabled' }}>{{ old('notes', $decision->notes) }}</textarea>
                             </div>
-                            @if ($canManageContent)
+                            @if ($canEditDecisionContent)
                                 <div class="col-12">
                                     <label class="form-label required">{{ __('multilingual.committee_decision_show.committee_members') }}</label>
                                     <div class="table-responsive border rounded">
@@ -161,62 +167,17 @@
                                     @enderror
                                 </div>
                             @endif
-                            @if ($canManageContent)
+                            @if ($canEditDecisionContent)
                                 <div class="col-12 text-end">
-                                    <button type="submit" class="btn btn-primary">{{ __('multilingual.committee_decision_show.save_decision') }}</button>
+                                    <button type="submit" class="btn {{ $usesExceptionalDecisionForm ? 'btn-warning' : 'btn-primary' }}">
+                                        {{ $usesExceptionalDecisionForm ? 'حفظ التعديل الاستثنائي وتفعيل إعادة المزامنة' : __('multilingual.committee_decision_show.save_decision') }}
+                                    </button>
                                 </div>
                             @endif
                         </div>
                     </form>
                 </div>
             </div>
-
-            @if ($canUseExceptionalCommitteeEdit)
-                <div class="card card-flush border border-warning mb-5">
-                    <div class="card-header">
-                        <div class="card-title"><h3 class="fw-bold m-0">&#1578;&#1593;&#1583;&#1610;&#1604; &#1575;&#1587;&#1578;&#1579;&#1606;&#1575;&#1574;&#1610; &#1604;&#1571;&#1593;&#1590;&#1575;&#1569; &#1575;&#1604;&#1604;&#1580;&#1606;&#1577;</h3></div>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ route('committee-decisions.exceptional-members.update', $decision) }}">
-                            @csrf
-                            <div class="table-responsive border rounded">
-                                <table class="table table-row-bordered align-middle gs-0 gy-3 mb-0">
-                                    <thead>
-                                        <tr class="fw-bold text-muted bg-light">
-                                            <th>{{ __('multilingual.committee_decision_show.columns.choose') }}</th>
-                                            <th>{{ __('multilingual.committee_decision_show.columns.member') }}</th>
-                                            <th>{{ __('multilingual.committee_decision_show.columns.title') }}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($committeeMembers as $member)
-                                            @php
-                                                $isSelected = $selectedCommitteeIds->contains($member->id);
-                                            @endphp
-                                            <tr>
-                                                <td>
-                                                    <input class="form-check-input" type="checkbox" name="committee_members[]" value="{{ $member->id }}" @checked($isSelected)>
-                                                </td>
-                                                <td>{{ $member->name }}</td>
-                                                <td>{{ $member->title ?: '-' }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                            @error('committee_members')
-                                <div class="text-danger mt-2">{{ $message }}</div>
-                            @enderror
-                            <div class="text-muted mt-3">
-                                &#1587;&#1610;&#1578;&#1605; &#1575;&#1593;&#1578;&#1605;&#1575;&#1583; &#1575;&#1604;&#1571;&#1593;&#1590;&#1575;&#1569; &#1575;&#1604;&#1605;&#1582;&#1578;&#1575;&#1585;&#1610;&#1606; &#1578;&#1604;&#1602;&#1575;&#1574;&#1610;&#1611;&#1575; &#1608;&#1578;&#1601;&#1593;&#1610;&#1604; &#1573;&#1593;&#1575;&#1583;&#1577; &#1605;&#1586;&#1575;&#1605;&#1606;&#1577; ArcGIS.
-                            </div>
-                            <div class="text-end mt-4">
-                                <button type="submit" class="btn btn-warning">&#1575;&#1593;&#1578;&#1605;&#1575;&#1583; &#1575;&#1604;&#1571;&#1593;&#1590;&#1575;&#1569; &#1608;&#1578;&#1601;&#1593;&#1610;&#1604; &#1573;&#1593;&#1575;&#1583;&#1577; &#1575;&#1604;&#1605;&#1586;&#1575;&#1605;&#1606;&#1577;</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            @endif
 
             <div class="card card-flush border border-gray-200">
                 <div class="card-header">

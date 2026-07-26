@@ -167,12 +167,12 @@ class CommitteeDecisionWorkflowService
         return $newSignatures;
     }
 
-    public function exceptionallyApproveMembersAndResetArcGis(CommitteeDecision $decision, array $memberIds, User $user): CommitteeDecision
+    public function exceptionallyUpdateDecisionAndApproveMembers(CommitteeDecision $decision, array $data, User $user): CommitteeDecision
     {
-        return DB::transaction(function () use ($decision, $memberIds, $user): CommitteeDecision {
+        return DB::transaction(function () use ($decision, $data, $user): CommitteeDecision {
             abort_unless($decision->isCompleted(), 422, 'يمكن تطبيق التعديل الاستثنائي على القرارات المكتملة فقط.');
 
-            $selectedMemberIds = collect($memberIds)
+            $selectedMemberIds = collect($data['committee_members'] ?? [])
                 ->map(fn (mixed $memberId): int => (int) $memberId)
                 ->filter(fn (int $memberId): bool => $memberId > 0)
                 ->unique()
@@ -206,12 +206,19 @@ class CommitteeDecisionWorkflowService
                 ]);
             }
 
-            $decision->forceFill([
+            $decision->fill([
+                'decision_type' => $data['decision_type'],
+                'decision_text' => $data['decision_text'],
+                'action_text' => $data['action_text'] ?? null,
                 'notes' => trim(implode("\n", array_filter([
-                    $decision->notes,
-                    'Exceptional committee members update by '.$user->name.' (ID: '.$user->id_no.'). ArcGIS sync was reset for manual retry.',
+                    $data['notes'] ?? null,
+                    'Exceptional committee decision update by '.$user->name.' (ID: '.$user->id_no.'). Building/unit snapshot was archived and ArcGIS sync was reset for manual retry.',
                 ]))),
+                'decision_date' => $data['decision_date'],
+                'status' => CommitteeDecision::STATUS_COMPLETED,
+                'committee_manager_id' => $decision->committee_manager_id ?? $user->id,
                 'updated_by' => $user->id,
+                'completed_at' => $decision->completed_at ?? now(),
                 'arcgis_sync_status' => null,
                 'arcgis_synced_at' => null,
                 'arcgis_last_attempt_at' => null,
@@ -220,6 +227,7 @@ class CommitteeDecisionWorkflowService
             ])->save();
 
             $this->archiveDecisionObject($decision, $user);
+            $this->applyLocalDecisionStatus($decision);
 
             return $decision->refresh()->load([
                 'decisionable',

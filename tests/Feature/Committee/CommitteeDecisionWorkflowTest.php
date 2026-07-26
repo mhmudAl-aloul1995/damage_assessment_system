@@ -1160,6 +1160,11 @@ it('allows only exceptional id numbers to approve committee members and reset ar
 
     $this->actingAs($otherUser)
         ->post(route('committee-decisions.exceptional-members.update', $decision), [
+            'decision_type' => CommitteeDecision::TYPE_FULLY_DAMAGED,
+            'decision_text' => 'Exceptional full damage decision.',
+            'action_text' => 'Exceptional action.',
+            'notes' => 'Exceptional note.',
+            'decision_date' => '2026-07-22',
             'committee_members' => [$memberOne->id],
         ])
         ->assertForbidden();
@@ -1171,22 +1176,36 @@ it('allows only exceptional id numbers to approve committee members and reset ar
 
     $this->actingAs($exceptionalUser)
         ->post(route('committee-decisions.exceptional-members.update', $decision), [
+            'decision_type' => CommitteeDecision::TYPE_FULLY_DAMAGED,
+            'decision_text' => 'Exceptional full damage decision.',
+            'action_text' => 'Exceptional action.',
+            'notes' => 'Exceptional note.',
+            'decision_date' => '2026-07-22',
             'committee_members' => [$memberOne->id, $memberTwo->id],
         ])
         ->assertRedirect();
 
     $decision->refresh()->load('signatures');
+    $building->refresh();
     $archiveObject = BuildingSurveyArchiveObject::query()
         ->where('committee_decision_id', $decision->id)
         ->firstOrFail();
 
     expect($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->decision_type)->toBe(CommitteeDecision::TYPE_FULLY_DAMAGED)
+        ->and($decision->decision_text)->toBe('Exceptional full damage decision.')
+        ->and($decision->action_text)->toBe('Exceptional action.')
+        ->and(optional($decision->decision_date)->format('Y-m-d'))->toBe('2026-07-22')
         ->and($decision->arcgis_sync_status)->toBeNull()
         ->and($decision->arcgis_synced_at)->toBeNull()
-        ->and($decision->notes)->toContain('Exceptional committee members update')
+        ->and($decision->notes)->toContain('Exceptional note')
+        ->and($decision->notes)->toContain('Exceptional committee decision update')
         ->and($decision->signatures)->toHaveCount(2)
         ->and($decision->signatures->pluck('status')->all())->toBe(['approved', 'approved'])
         ->and($decision->signatures->pluck('signed_by_user_id')->all())->toBe([$exceptionalUser->id, $exceptionalUser->id])
+        ->and($building->building_damage_status)->toBe(CommitteeDecision::TYPE_FULLY_DAMAGED)
+        ->and($building->field_status)->toBe('Not_Completed')
+        ->and(data_get($archiveObject->fresh()->building_snapshot, 'building_damage_status'))->toBe('partially_damaged')
         ->and(data_get($archiveObject->fresh()->committee_decision_snapshot, 'committee_members.0.status'))->toBe('approved');
 });
 
