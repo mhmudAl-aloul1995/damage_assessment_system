@@ -1120,6 +1120,76 @@ it('imports workflow decisions without committee members and marks them for revi
             ->exists())->toBeTrue();
 });
 
+it('allows only exceptional id numbers to approve committee members and reset arcgis sync', function () {
+    $exceptionalUser = User::factory()->create(['id_no' => '801933490']);
+    $exceptionalUser->givePermissionTo('view committee decisions');
+
+    $otherUser = User::factory()->create(['id_no' => '700000000']);
+    $otherUser->givePermissionTo('view committee decisions');
+
+    $memberOne = CommitteeMember::factory()->create(['sort_order' => 1]);
+    $memberTwo = CommitteeMember::factory()->create(['sort_order' => 2]);
+
+    $building = Building::query()->create([
+        'objectid' => 9901,
+        'globalid' => 'exceptional-members-building',
+        'building_name' => 'Exceptional Members Building',
+        'building_damage_status' => 'partially_damaged',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'decision_text' => 'Completed decision without members.',
+        'decision_date' => '2026-07-21',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'updated_by' => $exceptionalUser->id,
+        'completed_at' => now(),
+        'arcgis_sync_status' => 'synced',
+        'arcgis_synced_at' => now(),
+    ]);
+    BuildingSurveyArchiveObject::query()->create([
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $decision->id,
+        'building_objectid' => $building->objectid,
+        'building_globalid' => $building->globalid,
+        'archived_by' => $exceptionalUser->id,
+        'archived_at' => now(),
+    ]);
+
+    $this->actingAs($otherUser)
+        ->post(route('committee-decisions.exceptional-members.update', $decision), [
+            'committee_members' => [$memberOne->id],
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($exceptionalUser)
+        ->get(route('committee-decisions.buildings.show', $building))
+        ->assertOk()
+        ->assertSee('exceptional-members', false);
+
+    $this->actingAs($exceptionalUser)
+        ->post(route('committee-decisions.exceptional-members.update', $decision), [
+            'committee_members' => [$memberOne->id, $memberTwo->id],
+        ])
+        ->assertRedirect();
+
+    $decision->refresh()->load('signatures');
+    $archiveObject = BuildingSurveyArchiveObject::query()
+        ->where('committee_decision_id', $decision->id)
+        ->firstOrFail();
+
+    expect($decision->status)->toBe(CommitteeDecision::STATUS_COMPLETED)
+        ->and($decision->arcgis_sync_status)->toBeNull()
+        ->and($decision->arcgis_synced_at)->toBeNull()
+        ->and($decision->notes)->toContain('Exceptional committee members update')
+        ->and($decision->signatures)->toHaveCount(2)
+        ->and($decision->signatures->pluck('status')->all())->toBe(['approved', 'approved'])
+        ->and($decision->signatures->pluck('signed_by_user_id')->all())->toBe([$exceptionalUser->id, $exceptionalUser->id])
+        ->and(data_get($archiveObject->fresh()->committee_decision_snapshot, 'committee_members.0.status'))->toBe('approved');
+});
+
 it('imports workflow excel housing unit sheets by UNITID and ignores higher committee columns when requested', function () {
     User::factory()->create();
 

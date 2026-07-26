@@ -171,6 +171,53 @@
                 </div>
             </div>
 
+            @if ($canUseExceptionalCommitteeEdit)
+                <div class="card card-flush border border-warning mb-5">
+                    <div class="card-header">
+                        <div class="card-title"><h3 class="fw-bold m-0">&#1578;&#1593;&#1583;&#1610;&#1604; &#1575;&#1587;&#1578;&#1579;&#1606;&#1575;&#1574;&#1610; &#1604;&#1571;&#1593;&#1590;&#1575;&#1569; &#1575;&#1604;&#1604;&#1580;&#1606;&#1577;</h3></div>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('committee-decisions.exceptional-members.update', $decision) }}">
+                            @csrf
+                            <div class="table-responsive border rounded">
+                                <table class="table table-row-bordered align-middle gs-0 gy-3 mb-0">
+                                    <thead>
+                                        <tr class="fw-bold text-muted bg-light">
+                                            <th>{{ __('multilingual.committee_decision_show.columns.choose') }}</th>
+                                            <th>{{ __('multilingual.committee_decision_show.columns.member') }}</th>
+                                            <th>{{ __('multilingual.committee_decision_show.columns.title') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($committeeMembers as $member)
+                                            @php
+                                                $isSelected = $selectedCommitteeIds->contains($member->id);
+                                            @endphp
+                                            <tr>
+                                                <td>
+                                                    <input class="form-check-input" type="checkbox" name="committee_members[]" value="{{ $member->id }}" @checked($isSelected)>
+                                                </td>
+                                                <td>{{ $member->name }}</td>
+                                                <td>{{ $member->title ?: '-' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            @error('committee_members')
+                                <div class="text-danger mt-2">{{ $message }}</div>
+                            @enderror
+                            <div class="text-muted mt-3">
+                                &#1587;&#1610;&#1578;&#1605; &#1575;&#1593;&#1578;&#1605;&#1575;&#1583; &#1575;&#1604;&#1571;&#1593;&#1590;&#1575;&#1569; &#1575;&#1604;&#1605;&#1582;&#1578;&#1575;&#1585;&#1610;&#1606; &#1578;&#1604;&#1602;&#1575;&#1574;&#1610;&#1611;&#1575; &#1608;&#1578;&#1601;&#1593;&#1610;&#1604; &#1573;&#1593;&#1575;&#1583;&#1577; &#1605;&#1586;&#1575;&#1605;&#1606;&#1577; ArcGIS.
+                            </div>
+                            <div class="text-end mt-4">
+                                <button type="submit" class="btn btn-warning">&#1575;&#1593;&#1578;&#1605;&#1575;&#1583; &#1575;&#1604;&#1571;&#1593;&#1590;&#1575;&#1569; &#1608;&#1578;&#1601;&#1593;&#1610;&#1604; &#1573;&#1593;&#1575;&#1583;&#1577; &#1575;&#1604;&#1605;&#1586;&#1575;&#1605;&#1606;&#1577;</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            @endif
+
             <div class="card card-flush border border-gray-200">
                 <div class="card-header">
                     <div class="card-title"><h3 class="fw-bold m-0">{{ __('multilingual.committee_decision_show.signatures_title') }}</h3></div>

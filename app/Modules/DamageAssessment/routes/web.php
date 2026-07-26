@@ -103,6 +103,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/buildings/{building}', [CommitteeDecisionController::class, 'showBuilding'])->name('buildings.show');
         Route::get('/housing-units/{housingUnit}', [CommitteeDecisionController::class, 'showHousingUnit'])->name('housing-units.show');
         Route::put('/{committeeDecision}', [CommitteeDecisionController::class, 'update'])->name('update');
+        Route::post('/{committeeDecision}/exceptional-members', [CommitteeDecisionController::class, 'exceptionalMembersUpdate'])->name('exceptional-members.update');
         Route::post('/{committeeDecision}/sign', [CommitteeDecisionController::class, 'sign'])->name('sign');
         Route::post('/{committeeDecision}/retry-arcgis', [CommitteeDecisionController::class, 'retryArcgis'])->name('retry-arcgis');
     });

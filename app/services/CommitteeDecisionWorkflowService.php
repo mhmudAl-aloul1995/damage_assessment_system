@@ -167,6 +167,69 @@ class CommitteeDecisionWorkflowService
         return $newSignatures;
     }
 
+    public function exceptionallyApproveMembersAndResetArcGis(CommitteeDecision $decision, array $memberIds, User $user): CommitteeDecision
+    {
+        return DB::transaction(function () use ($decision, $memberIds, $user): CommitteeDecision {
+            abort_unless($decision->isCompleted(), 422, 'يمكن تطبيق التعديل الاستثنائي على القرارات المكتملة فقط.');
+
+            $selectedMemberIds = collect($memberIds)
+                ->map(fn (mixed $memberId): int => (int) $memberId)
+                ->filter(fn (int $memberId): bool => $memberId > 0)
+                ->unique()
+                ->values();
+
+            $members = CommitteeMember::query()
+                ->whereIn('id', $selectedMemberIds)
+                ->where('is_active', true)
+                ->get()
+                ->sortBy(fn (CommitteeMember $member): int => $selectedMemberIds->search($member->id))
+                ->values();
+
+            abort_if($members->isEmpty(), 422, 'يجب اختيار عضو لجنة فعّال واحد على الأقل.');
+
+            CommitteeDecisionSignature::query()
+                ->where('committee_decision_id', $decision->id)
+                ->delete();
+
+            $signedAt = now();
+
+            foreach ($members as $index => $member) {
+                CommitteeDecisionSignature::query()->create([
+                    'committee_decision_id' => $decision->id,
+                    'committee_member_id' => $member->id,
+                    'is_required' => true,
+                    'sort_order' => $index + 1,
+                    'status' => 'approved',
+                    'signed_at' => $signedAt,
+                    'signed_by_user_id' => $user->id,
+                    'notes' => 'Exceptional approval by authorized ID number.',
+                ]);
+            }
+
+            $decision->forceFill([
+                'notes' => trim(implode("\n", array_filter([
+                    $decision->notes,
+                    'Exceptional committee members update by '.$user->name.' (ID: '.$user->id_no.'). ArcGIS sync was reset for manual retry.',
+                ]))),
+                'updated_by' => $user->id,
+                'arcgis_sync_status' => null,
+                'arcgis_synced_at' => null,
+                'arcgis_last_attempt_at' => null,
+                'arcgis_last_error' => null,
+                'arcgis_last_response' => 'ArcGIS sync reset after exceptional committee members update.',
+            ])->save();
+
+            $this->archiveDecisionObject($decision, $user);
+
+            return $decision->refresh()->load([
+                'decisionable',
+                'committeeManager',
+                'signatures.committeeMember.user',
+                'signatures.signedByUser',
+            ]);
+        });
+    }
+
     public function latestSignatureTemplate(?CommitteeDecision $currentDecision = null): array
     {
         $latestDecision = CommitteeDecision::query()

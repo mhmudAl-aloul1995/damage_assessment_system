@@ -6,6 +6,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Committee;
 
 use App\Exports\CommitteeDecisionsExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Committee\ExceptionalCommitteeDecisionMemberUpdateRequest;
 use App\Http\Requests\Committee\ImportCommitteeDecisionWorkflowExcelRequest;
 use App\Http\Requests\Committee\SaveCommitteeDecisionRequest;
 use App\Http\Requests\Committee\SignCommitteeDecisionRequest;
@@ -32,6 +33,8 @@ use Yajra\DataTables\Facades\DataTables;
 
 class CommitteeDecisionController extends Controller
 {
+    private const EXCEPTIONAL_COMMITTEE_EDITOR_ID_NUMBERS = ['801933490', '800846960'];
+
     public function __construct(
         private readonly CommitteeDecisionWorkflowService $workflowService,
         private readonly ArcGisStatusUpdaterService $arcGisStatusUpdaterService,
@@ -230,9 +233,22 @@ class CommitteeDecisionController extends Controller
             ->with('success', 'تم تسجيل التوقيع بنجاح.');
     }
 
+    public function exceptionalMembersUpdate(ExceptionalCommitteeDecisionMemberUpdateRequest $request, CommitteeDecision $committeeDecision): RedirectResponse
+    {
+        $this->workflowService->exceptionallyApproveMembersAndResetArcGis(
+            $committeeDecision,
+            $request->validated('committee_members'),
+            auth()->user(),
+        );
+
+        return redirect()
+            ->back()
+            ->with('success', 'تم تحديث أعضاء اللجنة استثنائيًا واعتمادهم، وتم تفعيل إعادة مزامنة ArcGIS.');
+    }
+
     public function retryArcgis(CommitteeDecision $committeeDecision): RedirectResponse
     {
-        abort_unless(auth()->user()?->can('sync committee decision arcgis'), 403);
+        abort_unless(auth()->user()?->can('sync committee decision arcgis') || $this->canUseExceptionalCommitteeEdit(), 403);
         abort_unless($committeeDecision->isCompleted(), 422, 'لا يمكن مزامنة ArcGIS قبل اكتمال القرار.');
 
         $committeeDecision->load('decisionable');
@@ -454,7 +470,8 @@ class CommitteeDecisionController extends Controller
                 : [],
             'canManageContent' => ! $decision->isCompleted() && auth()->user()->can('manage committee decision content'),
             'canSign' => auth()->user()->can('sign committee decisions'),
-            'canRetryArcgis' => auth()->user()->can('sync committee decision arcgis'),
+            'canRetryArcgis' => auth()->user()->can('sync committee decision arcgis') || $this->canUseExceptionalCommitteeEdit(),
+            'canUseExceptionalCommitteeEdit' => $this->canUseExceptionalCommitteeEdit() && $decision->isCompleted(),
             'decisionTypes' => [
                 CommitteeDecision::TYPE_FULLY_DAMAGED => 'كلي',
                 CommitteeDecision::TYPE_PARTIALLY_DAMAGED => 'جزئي',
@@ -468,6 +485,11 @@ class CommitteeDecisionController extends Controller
                 CommitteeDecision::STATUS_COMPLETED => 'مكتمل',
             ],
         ]);
+    }
+
+    private function canUseExceptionalCommitteeEdit(): bool
+    {
+        return in_array(trim((string) auth()->user()?->id_no), self::EXCEPTIONAL_COMMITTEE_EDITOR_ID_NUMBERS, true);
     }
 
     private function signatureBadge(?CommitteeDecision $decision): string
