@@ -1111,6 +1111,43 @@ it('prevents team leaders from inline editing audit assessment answers', functio
     ]);
 });
 
+it('allows temporarily excepted field engineers by id number to inline edit audit assessment answers', function () {
+    $role = Role::query()->create([
+        'name' => 'Field Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create([
+        'id_no' => '405790619',
+    ]);
+    $user->assignRole($role);
+
+    $building = Building::query()->create([
+        'objectid' => 95463,
+        'globalid' => 'temporary-inline-edit-building',
+        'building_name' => 'Original Building',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.update'), [
+            'type' => 'building_table',
+            'globalid' => $building->globalid,
+            'field' => 'building_name',
+            'value' => 'Changed Building',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('field_value', 'Changed Building');
+
+    $this->assertDatabaseHas('edit_assessments', [
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'building_name',
+        'field_value' => 'Changed Building',
+        'user_id' => $user->id,
+    ]);
+});
+
 it('shows only the latest status markup for read only users without allowing field engineer status changes', function () {
     $role = Role::query()->create([
         'name' => 'Field Engineer',

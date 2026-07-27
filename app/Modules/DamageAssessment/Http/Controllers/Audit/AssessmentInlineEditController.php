@@ -14,6 +14,23 @@ use Illuminate\Http\Request;
 
 class AssessmentInlineEditController extends Controller
 {
+    private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES = [
+        'ظٹط§ط³ظ…ظٹظ† ظ…ط§ظ‡ط± ظ…طµط·ظپظ‰ ط§ط¨ظˆظ…ط¯ظ„ظ„ط©',
+        'ط؛ط§ط¯ط© ظ…ط­ظ…ظˆط¯ ط¹ط¨ط¯ط§ظ„ط­ظٹ ط§ظ„ظ‡ط¨ط§ط´',
+        'ط±ط§ظ†ظٹظ‡ ط³ظ„ظٹظ…ط§ظ† ط±ط§ط´ط¯ ط´ط¹طھ',
+    ];
+
+    private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS = [
+        '800409062',
+        '400940623',
+        '803275288',
+        '800900607',
+        '801773987',
+        '405790619',
+        '403697311',
+        '803307669',
+    ];
+
     public function update(Request $request, AssessmentEditService $assessmentEditService): JsonResponse
     {
         $request->merge([
@@ -145,6 +162,10 @@ class AssessmentInlineEditController extends Controller
             return true;
         }
 
+        if ($this->hasTemporaryStatusAssignmentException($user)) {
+            return true;
+        }
+
         $assignmentTypes = [];
 
         if ($user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])) {
@@ -164,5 +185,11 @@ class AssessmentInlineEditController extends Controller
             ->where('user_id', $user->id)
             ->whereIn('type', $assignmentTypes)
             ->exists();
+    }
+
+    private function hasTemporaryStatusAssignmentException(User $user): bool
+    {
+        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
+            || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);
     }
 }
