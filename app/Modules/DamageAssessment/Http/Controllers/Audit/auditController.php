@@ -49,6 +49,9 @@ class auditController extends Controller
         '803275288',
         '800900607',
         '801773987',
+        '405790619',
+        '403697311',
+        '803307669',
     ];
 
     private const LEGAL_CHALLENGES = [

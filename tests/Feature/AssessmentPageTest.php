@@ -909,6 +909,52 @@ it('allows temporarily excepted auditors to set statuses without assignment', fu
         ->postJson(route('building.assessment.set.status'), [
             'globalid' => $building->globalid,
             'status' => 'accepted',
+            'audit_type' => 'QC/QA Engineer',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.status_name', 'accepted_by_engineer');
+
+    $this->assertDatabaseHas('building_statuses', [
+        'building_id' => $building->objectid,
+        'status_id' => $status->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+});
+
+it('allows temporarily excepted auditors by id number to set statuses without assignment', function () {
+    $role = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $temporaryAllowedUserIdNumbers = (new \ReflectionClass(auditController::class))
+        ->getReflectionConstant('TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS')
+        ->getValue();
+
+    $user = User::factory()->create([
+        'id_no' => $temporaryAllowedUserIdNumbers[0],
+    ]);
+    $user->assignRole($role);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'Accepted By Engineer',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9537,
+        'globalid' => 'temporary-status-exception-id-number-building',
+        'building_name' => 'Temporary Status Exception Id Number Building',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('building.assessment.set.status'), [
+            'globalid' => $building->globalid,
+            'status' => 'accepted',
+            'audit_type' => 'QC/QA Engineer',
         ])
         ->assertOk()
         ->assertJsonPath('data.status_name', 'accepted_by_engineer');
