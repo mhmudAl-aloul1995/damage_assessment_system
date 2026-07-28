@@ -80,6 +80,14 @@
                         </select>
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label">{{ __('ui.buildings_page.survey_status') }}</label>
+                        <select name="filters[field_status][]" class="form-select form-select-solid building-filter-control" data-control="select2" data-placeholder="{{ __('ui.buildings_page.select_filter', ['label' => __('ui.buildings_page.survey_status')]) }}" data-allow-clear="true" data-close-on-select="false" multiple>
+                            @foreach ($buildingFieldStatuses as $status)
+                                <option value="{{ $status['value'] }}">{{ $status['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">{{ __('ui.buildings_page.damage_status') }}</label>
                         <select name="filters[building_damage_status][]" class="form-select form-select-solid building-filter-control" data-control="select2" data-placeholder="{{ __('ui.buildings_page.select_damage_status') }}" data-allow-clear="true" data-close-on-select="false" multiple>
                             @foreach (($groupedFilters['building_damage_status'] ?? collect()) as $option)

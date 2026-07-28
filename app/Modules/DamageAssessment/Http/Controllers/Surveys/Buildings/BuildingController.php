@@ -40,6 +40,7 @@ class BuildingController extends Controller
         return View::make('damage-assessment::surveys.buildings.buildings', [
             'buildingFilterSections' => $this->buildingFilterSections($filters->groupBy('list_name')),
             'buildingSummary' => $this->buildingSummary(),
+            'buildingFieldStatuses' => $this->buildingFieldStatuses($filters->where('list_name', 'field_status')),
             'engineers' => Building::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
             'owners' => Building::query()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
             'municip' => Building::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
@@ -317,6 +318,29 @@ class BuildingController extends Controller
             'partially_damaged' => (clone $baseQuery)->where('building_damage_status', 'partially_damaged')->count(),
             'committee_review' => (clone $baseQuery)->where('building_damage_status', 'committee_review')->count(),
         ];
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function buildingFieldStatuses($filterOptions): array
+    {
+        $filterLabels = $filterOptions
+            ->pluck('label', 'name')
+            ->filter(fn ($label, $name): bool => filled($name) && filled($label));
+
+        return Building::query()
+            ->whereNotNull('field_status')
+            ->where('field_status', '!=', '')
+            ->distinct()
+            ->orderBy('field_status')
+            ->pluck('field_status')
+            ->map(fn (string $status): array => [
+                'value' => $status,
+                'label' => $filterLabels->get($status, str($status)->replace('_', ' ')->title()->toString()),
+            ])
+            ->values()
+            ->all();
     }
 
     public function edit(Request $request, $id)

@@ -19,6 +19,7 @@ it('shows grouped building filters based on survey sections', function () {
         'owner_name' => 'Owner One',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
+        'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
     ]);
 
@@ -36,6 +37,8 @@ it('shows grouped building filters based on survey sections', function () {
     $response->assertSee('Damage, hazards, and debris');
     $response->assertSee('Building specifications');
     $response->assertSee('Risk summary');
+    $response->assertSee('name="filters[field_status][]"', false);
+    $response->assertSee('Completed');
     $response->assertSee('Totally Damaged');
     $response->assertSee('Concrete');
 });
@@ -75,7 +78,7 @@ it('filters building datatable records with grouped filters and ranges', functio
         'owner_id' => '800123456',
         'municipalitie' => 'North Gaza',
         'neighborhood' => 'Camp',
-        'field_status' => 'COMPLETED',
+        'field_status' => 'Not_Completed',
         'building_damage_status' => 'partially_damaged',
         'building_material' => 'wood',
         'units_nos' => 3,
@@ -92,6 +95,7 @@ it('filters building datatable records with grouped filters and ranges', functio
         'start' => 0,
         'length' => 10,
         'filters' => [
+            'field_status' => ['COMPLETED'],
             'building_damage_status' => ['fully_damaged'],
             'building_material' => ['concrete'],
             'municipalitie' => ['Gaza'],
