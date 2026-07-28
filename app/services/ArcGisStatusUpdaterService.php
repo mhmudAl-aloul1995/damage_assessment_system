@@ -133,6 +133,10 @@ class ArcGisStatusUpdaterService
                     return $parentResult;
                 }
 
+                Building::query()
+                    ->where('globalid', $featureRecord->parentglobalid)
+                    ->update(['field_status' => $fieldStatus]);
+
                 return [
                     'success' => true,
                     'status' => 'synced',
@@ -140,10 +144,16 @@ class ArcGisStatusUpdaterService
                 ];
             }
 
-            return $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
+            $buildingResult = $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
                 (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid') => data_get($featureRecord, (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid')),
                 $fieldName => $fieldStatus,
             ], $token, $decision);
+
+            if ($buildingResult['success'] && $featureRecord instanceof Building) {
+                $featureRecord->forceFill(['field_status' => $fieldStatus])->save();
+            }
+
+            return $buildingResult;
         } catch (Throwable $exception) {
             Log::error('Committee ArcGIS field status sync exception.', [
                 'committee_decision_id' => $decision->id,
@@ -289,7 +299,9 @@ class ArcGisStatusUpdaterService
 
         return $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
             $identifierField => data_get($parentBuilding, $identifierField),
-            (string) config('services.committee_decisions.arcgis.status_field', 'field_status') => $fieldStatus ?? (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed'),
+            (string) config('services.committee_decisions.arcgis.status_field', 'field_status') => $fieldStatus
+                ?? $parentBuilding->field_status
+                ?? (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed'),
         ], $token, $decision);
     }
 

@@ -1107,6 +1107,69 @@ it('syncs imported resurvey completed decisions with completed field status on m
     });
 });
 
+it('keeps parent building field status aligned after completed housing unit arcgis retry', function () {
+    config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
+    config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
+    config()->set('services.committee_decisions.arcgis.housing_unit_layer_id', 1);
+    config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
+    config()->set('services.committee_decisions.arcgis.token', 'static-token');
+
+    Http::fake([
+        'https://example.test/arcgis/FeatureServer/*/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+    ]);
+
+    $manager = User::factory()->create();
+    $manager->givePermissionTo('sync committee decision arcgis');
+
+    $building = Building::query()->create([
+        'objectid' => 8227,
+        'globalid' => 'housing-unit-completed-parent',
+        'building_name' => 'Housing Unit Completed Parent',
+        'building_damage_status' => 'committee_review',
+        'field_status' => 'Not_Completed',
+    ]);
+
+    $unit = HousingUnit::query()->create([
+        'objectid' => 8228,
+        'globalid' => 'housing-unit-completed',
+        'parentglobalid' => $building->globalid,
+        'housing_unit_number' => 'U-C',
+        'unit_damage_status' => 'committee_review2',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => HousingUnit::class,
+        'decisionable_id' => $unit->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'decision_text' => 'Completed field status retry decision',
+        'decision_date' => '2026-06-28',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'notes' => "Excel sheet: Khan Younis row: 10\nResurvey completed: yes",
+        'updated_by' => $manager->id,
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($manager)
+        ->postJson(route('committee-decisions.retry-arcgis', $decision))
+        ->assertOk()
+        ->assertJson([
+            'success' => true,
+            'arcgis_sync_status' => 'synced',
+        ]);
+
+    expect($building->refresh()->field_status)->toBe('COMPLETED');
+
+    Http::assertSent(function ($request) use ($building): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/0/updateFeatures')
+            && data_get($features, '0.attributes.objectid') === $building->objectid
+            && data_get($features, '0.attributes.Field_status') === 'COMPLETED';
+    });
+});
+
 it('returns json when retrying committee arcgis sync through ajax', function () {
     config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
     config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
