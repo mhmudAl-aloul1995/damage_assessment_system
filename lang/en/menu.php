@@ -70,6 +70,7 @@ return [
     'committee' => [
         'title' => 'Committee Decisions',
         'decisions' => 'Committee Decisions',
+        'higher_committee_reassessments' => 'Higher Committee Reassessments',
         'members' => 'Committee Members',
         'archive' => 'Committee Archive',
     ],

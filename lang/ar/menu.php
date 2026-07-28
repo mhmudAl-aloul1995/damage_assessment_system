@@ -72,6 +72,7 @@ return [
         'archive' => 'أرشيف اللجنة',
         'title' => 'قرارات اللجنة',
         'decisions' => 'قرارات اللجنة',
+        'higher_committee_reassessments' => 'إعادة تقييم اللجنة العليا',
         'members' => 'أعضاء اللجنة',
     ],
     'user_management' => [

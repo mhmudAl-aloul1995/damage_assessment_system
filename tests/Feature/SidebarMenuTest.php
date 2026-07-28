@@ -119,6 +119,20 @@ it('groups visible sidebar sections by module', function () {
         ->toContain('menu.user_management.title');
 });
 
+it('shows higher committee reassessments in the committee sidebar', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $committeeSection = Sidebar::forUser($user)
+        ->firstWhere('key', 'damage_assessment')['sections']
+        ->firstWhere('title', 'menu.committee.title');
+
+    expect($committeeSection['items'])
+        ->pluck('url')
+        ->toContain('damage-assessment/committee-decisions/higher-committee-reassessments');
+});
+
 it('places hud above damage assessment for non auditor sidebar roles', function () {
     $role = Role::findOrCreate('Area Manager', 'web');
     $user = User::factory()->create();

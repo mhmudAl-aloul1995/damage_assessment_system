@@ -311,6 +311,12 @@ return [
                 'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor', 'Area Manager'],
             ],
             [
+                'title' => 'menu.committee.higher_committee_reassessments',
+                'url' => 'damage-assessment/committee-decisions/higher-committee-reassessments',
+                'pattern' => 'damage-assessment/committee-decisions/higher-committee-reassessments*',
+                'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor', 'Area Manager'],
+            ],
+            [
                 'title' => 'menu.committee.members',
                 'url' => 'damage-assessment/committee-members',
                 'pattern' => 'damage-assessment/committee-members*',
