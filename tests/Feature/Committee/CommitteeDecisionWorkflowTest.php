@@ -167,6 +167,18 @@ it('shows committee decision pages and datatable data for buildings and housing 
             'current_damage_status' => 'committee_review2',
         ]))
         ->assertOk()
+        ->assertSee('A-12')
+        ->assertJsonFragment(['building_objectid' => '9001'])
+        ->assertJsonFragment(['objectid' => 9101]);
+
+    $this->actingAs($user)
+        ->get(route('committee-decisions.housing-units.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'objectid' => 9001,
+        ]))
+        ->assertOk()
         ->assertSee('A-12');
 
     $this->actingAs($user)

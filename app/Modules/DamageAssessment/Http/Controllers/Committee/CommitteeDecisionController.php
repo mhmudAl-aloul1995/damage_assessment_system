@@ -67,6 +67,7 @@ class CommitteeDecisionController extends Controller
     public function housingUnitsData(Request $request): JsonResponse
     {
         return DataTables::eloquent($this->applyHousingUnitFilters($this->housingUnitQuery(), $request))
+            ->addColumn('building_objectid', fn (HousingUnit $unit): string => e($unit->building?->objectid ?? '-'))
             ->addColumn('building_name', fn (HousingUnit $unit): string => e($unit->building?->building_name ?? '-'))
             ->addColumn('assignedto', fn (HousingUnit $unit): string => e($unit->building?->assignedto ?? '-'))
             ->addColumn('has_decision', fn (HousingUnit $unit): string => $unit->committeeDecision !== null
@@ -305,7 +306,7 @@ class CommitteeDecisionController extends Controller
     private function housingUnitQuery(): Builder
     {
         return HousingUnit::query()
-            ->with(['building:id,globalid,building_name,assignedto,neighborhood,field_status', 'committeeDecision.signatures.committeeMember'])
+            ->with(['building:id,objectid,globalid,building_name,assignedto,neighborhood,field_status', 'committeeDecision.signatures.committeeMember'])
             ->select([
                 'id',
                 'objectid',
@@ -347,7 +348,15 @@ class CommitteeDecisionController extends Controller
     private function applyHousingUnitFilters(Builder $query, Request $request): Builder
     {
         return $query
-            ->when($request->filled('objectid'), fn (Builder $query) => $query->where('objectid', $request->string('objectid')->toString()))
+            ->when($request->filled('objectid'), function (Builder $query) use ($request): void {
+                $objectId = $request->string('objectid')->toString();
+
+                $query->where(function (Builder $query) use ($objectId): void {
+                    $query
+                        ->where('objectid', $objectId)
+                        ->orWhereHas('building', fn (Builder $query) => $query->where('objectid', $objectId));
+                });
+            })
             ->when($request->filled('municipality'), function (Builder $query) use ($request): void {
                 $municipality = $request->string('municipality')->toString();
 

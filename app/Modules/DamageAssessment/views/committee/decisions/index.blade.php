@@ -234,7 +234,8 @@
                         <table id="committee_units_table" class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3 w-100">
                             <thead>
                                 <tr class="fw-bold text-muted bg-light">
-                                    <th>ObjectID</th>
+                                    <th>Building ObjectID</th>
+                                    <th>Housing Unit ObjectID</th>
                                     <th>{{ __('multilingual.committee_decisions.columns.owner_name') }}</th>
                                     <th>{{ __('multilingual.committee_decisions.columns.building') }}</th>
                                     <th>البلدية</th>
@@ -305,8 +306,9 @@
                         Object.assign(d, committeeFilters());
                     }
                 },
-                order: [[0, 'desc']],
+                order: [[1, 'desc']],
                 columns: [
+                    { data: 'building_objectid', name: 'building_objectid', orderable: false, searchable: false },
                     { data: 'objectid', name: 'objectid' },
                     { data: 'full_name', name: 'full_name', defaultContent: '-', orderable: false, searchable: false },
                     { data: 'building_name', name: 'building_name', orderable: false, searchable: false },
