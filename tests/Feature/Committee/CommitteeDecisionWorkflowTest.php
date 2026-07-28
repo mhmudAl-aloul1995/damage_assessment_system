@@ -1074,6 +1074,52 @@ it('syncs imported resurvey completed decisions with completed field status on m
     });
 });
 
+it('returns json when retrying committee arcgis sync through ajax', function () {
+    config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
+    config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
+    config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
+    config()->set('services.committee_decisions.arcgis.token', 'static-token');
+
+    Http::fake([
+        'https://example.test/arcgis/FeatureServer/0/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+    ]);
+
+    $manager = User::factory()->create();
+    $manager->givePermissionTo('sync committee decision arcgis');
+
+    $building = Building::query()->create([
+        'objectid' => 8127,
+        'globalid' => 'ajax-arcgis-building',
+        'building_name' => 'Ajax ArcGIS Building',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'decision_text' => 'Ajax retry decision',
+        'decision_date' => '2026-06-28',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'updated_by' => $manager->id,
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($manager)
+        ->postJson(route('committee-decisions.retry-arcgis', $decision))
+        ->assertOk()
+        ->assertJson([
+            'success' => true,
+            'arcgis_sync_status' => 'synced',
+            'arcgis_last_error' => null,
+        ]);
+
+    expect($decision->refresh()->arcgis_sync_status)->toBe('synced')
+        ->and($decision->arcgis_last_response)->toContain('updateResults');
+});
+
 it('imports workflow decisions without committee members and marks them for review', function () {
     User::factory()->create();
 

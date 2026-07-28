@@ -326,6 +326,71 @@
                 unitsTable.ajax.reload();
             }
 
+            function notifyCommitteeSync(type, message) {
+                if (window.toastr && typeof window.toastr[type] === 'function') {
+                    window.toastr[type](message);
+
+                    return;
+                }
+
+                if (window.Swal) {
+                    Swal.fire({
+                        text: message,
+                        icon: type === 'success' ? 'success' : 'error',
+                        confirmButtonText: 'OK',
+                    });
+
+                    return;
+                }
+
+                window.alert(message);
+            }
+
+            function reloadActiveCommitteeTable() {
+                if ($('#committee_units_tab').hasClass('active')) {
+                    unitsTable.ajax.reload(null, false);
+
+                    return;
+                }
+
+                buildingsTable.ajax.reload(null, false);
+            }
+
+            $(document).on('submit', '.committee-arcgis-retry-form', function (event) {
+                event.preventDefault();
+
+                const form = $(this);
+                const button = form.find('button[type="submit"]');
+                const originalText = button.text();
+
+                button.prop('disabled', true).text('جاري المزامنة...');
+
+                $.ajax({
+                    url: form.attr('action'),
+                    method: 'POST',
+                    data: form.serialize(),
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                    success: function (response) {
+                        const isSynced = response.arcgis_sync_status === 'synced';
+                        notifyCommitteeSync(
+                            isSynced ? 'success' : 'error',
+                            isSynced
+                                ? 'تمت مزامنة ArcGIS بنجاح.'
+                                : (response.arcgis_last_error || response.arcgis_last_response || response.message || 'فشلت مزامنة ArcGIS.')
+                        );
+                        reloadActiveCommitteeTable();
+                    },
+                    error: function (xhr) {
+                        notifyCommitteeSync('error', xhr.responseJSON?.message || 'تعذرت محاولة مزامنة ArcGIS.');
+                    },
+                    complete: function () {
+                        button.prop('disabled', false).text(originalText);
+                    }
+                });
+            });
+
             $('#committee_filters_apply').on('click', reloadCommitteeTables);
             $('#filter_objectid').on('keydown', function (event) {
                 if (event.key === 'Enter') {

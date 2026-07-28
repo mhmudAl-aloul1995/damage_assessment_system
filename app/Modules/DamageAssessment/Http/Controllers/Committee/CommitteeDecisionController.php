@@ -246,7 +246,7 @@ class CommitteeDecisionController extends Controller
             ->with('success', 'تم تحديث قرار اللجنة استثنائيًا واعتماد الأعضاء، وتم تفعيل إعادة مزامنة ArcGIS.');
     }
 
-    public function retryArcgis(CommitteeDecision $committeeDecision): RedirectResponse
+    public function retryArcgis(Request $request, CommitteeDecision $committeeDecision): RedirectResponse|JsonResponse
     {
         abort_unless(auth()->user()?->can('sync committee decision arcgis') || $this->canUseExceptionalCommitteeEdit(), 403);
         abort_unless($committeeDecision->isCompleted(), 422, 'لا يمكن مزامنة ArcGIS قبل اكتمال القرار.');
@@ -259,12 +259,24 @@ class CommitteeDecisionController extends Controller
             'arcgis_last_response' => null,
         ])->save();
 
-        $this->workflowService->markArcGisResult(
-            $committeeDecision,
-            $this->shouldSyncCompletedFieldStatus($committeeDecision)
-                ? $this->arcGisStatusUpdaterService->syncDecisionFieldStatus($committeeDecision, 'COMPLETED')
-                : $this->arcGisStatusUpdaterService->syncDecisionStatus($committeeDecision),
-        );
+        $result = $this->shouldSyncCompletedFieldStatus($committeeDecision)
+            ? $this->arcGisStatusUpdaterService->syncDecisionFieldStatus($committeeDecision, 'COMPLETED')
+            : $this->arcGisStatusUpdaterService->syncDecisionStatus($committeeDecision);
+
+        $this->workflowService->markArcGisResult($committeeDecision, $result);
+
+        $committeeDecision->refresh();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => (bool) ($result['success'] ?? false),
+                'message' => 'تمت محاولة مزامنة ArcGIS.',
+                'arcgis_sync_status' => $committeeDecision->arcgis_sync_status,
+                'arcgis_last_attempt_at' => $committeeDecision->arcgis_last_attempt_at?->toDateTimeString(),
+                'arcgis_last_error' => $committeeDecision->arcgis_last_error,
+                'arcgis_last_response' => $committeeDecision->arcgis_last_response,
+            ]);
+        }
 
         return redirect()
             ->back()
@@ -520,7 +532,7 @@ class CommitteeDecisionController extends Controller
         $buttons .= '<a class="btn btn-light-primary btn-sm" href="'.$showRoute.'">فتح القرار</a>';
 
         if ($decision?->isCompleted() && $decision->arcgis_sync_status !== 'synced' && auth()->user()?->can('sync committee decision arcgis')) {
-            $buttons .= '<form method="POST" action="'.route('committee-decisions.retry-arcgis', $decision).'">';
+            $buttons .= '<form method="POST" action="'.route('committee-decisions.retry-arcgis', $decision).'" class="committee-arcgis-retry-form">';
             $buttons .= csrf_field();
             $buttons .= '<button type="submit" class="btn btn-light-warning btn-sm">مزامنة ArcGIS</button>';
             $buttons .= '</form>';
