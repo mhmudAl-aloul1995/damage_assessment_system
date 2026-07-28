@@ -273,6 +273,26 @@
             var datatable;
             const filterForm = document.querySelector('[data-kt-Building-table-filter="form"]');
             const initialQueryParams = new URLSearchParams(window.location.search);
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || "{{ csrf_token() }}";
+
+            const notifyBuildingStatus = function (message, success) {
+                if (window.toastr) {
+                    success ? toastr.success(message) : toastr.error(message);
+                    return;
+                }
+
+                if (window.Swal) {
+                    Swal.fire({
+                        text: message,
+                        icon: success ? 'success' : 'error',
+                        buttonsStyling: false,
+                        confirmButtonText: "{{ __('ui.buttons.ok') }}",
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+                }
+            };
 
             const setFilterValue = function (field, value) {
                 if (!filterForm || !value) {
@@ -481,6 +501,56 @@
                 });
             };
 
+            var handleFieldStatusToggle = () => {
+                if (!table) {
+                    return;
+                }
+
+                table.addEventListener('click', function (event) {
+                    const button = event.target.closest('.building-field-status-toggle');
+
+                    if (!button) {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const url = button.dataset.url;
+
+                    if (!url || button.disabled) {
+                        return;
+                    }
+
+                    button.disabled = true;
+
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                    })
+                        .then(async function (response) {
+                            const payload = await response.json().catch(function () {
+                                return {};
+                            });
+
+                            if (!response.ok || !payload.success) {
+                                throw new Error(payload.message || "{{ __('ui.buildings_page.field_status_update_failed') }}");
+                            }
+
+                            notifyBuildingStatus(payload.message || "{{ __('ui.buildings_page.field_status_updated') }}", true);
+                            datatable.ajax.reload(null, false);
+                        })
+                        .catch(function (error) {
+                            notifyBuildingStatus(error.message || "{{ __('ui.buildings_page.field_status_update_failed') }}", false);
+                        })
+                        .finally(function () {
+                            button.disabled = false;
+                        });
+                });
+            };
+
             return {
                 init: function () {
                     applyInitialFilters();
@@ -489,6 +559,7 @@
                     handleFilterDatatable();
                     handleResetForm();
                     handleRefresh();
+                    handleFieldStatusToggle();
                     activeFilterChips();
                 }
             };

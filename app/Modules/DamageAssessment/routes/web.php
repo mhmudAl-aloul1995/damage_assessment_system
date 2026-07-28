@@ -132,6 +132,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/sync_buildings/{no_day}', [ArcGISController::class, 'sync_buildings']);
 
     // building
+    Route::post('building/{building:globalid}/toggle-field-status', [BuildingController::class, 'toggleFieldStatus'])
+        ->name('building.toggle-field-status');
     Route::resource('building', controller: BuildingController::class);
     Route::get('export_building', action: [BuildingController::class, 'export_building']);
 
