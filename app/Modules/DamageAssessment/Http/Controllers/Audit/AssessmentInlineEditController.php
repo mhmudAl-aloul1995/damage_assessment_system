@@ -29,6 +29,8 @@ class AssessmentInlineEditController extends Controller
         '405790619',
         '403697311',
         '803307669',
+        '404030421',
+        '406966812',
     ];
 
     public function update(Request $request, AssessmentEditService $assessmentEditService): JsonResponse

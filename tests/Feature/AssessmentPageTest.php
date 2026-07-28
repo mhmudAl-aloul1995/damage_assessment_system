@@ -927,12 +927,8 @@ it('allows temporarily excepted auditors by id number to set statuses without as
         'guard_name' => 'web',
     ]);
 
-    $temporaryAllowedUserIdNumbers = (new \ReflectionClass(auditController::class))
-        ->getReflectionConstant('TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS')
-        ->getValue();
-
     $user = User::factory()->create([
-        'id_no' => $temporaryAllowedUserIdNumbers[0],
+        'id_no' => '406966812',
     ]);
     $user->assignRole($role);
 
@@ -1118,7 +1114,7 @@ it('allows temporarily excepted field engineers by id number to inline edit audi
     ]);
 
     $user = User::factory()->create([
-        'id_no' => '405790619',
+        'id_no' => '404030421',
     ]);
     $user->assignRole($role);
 
