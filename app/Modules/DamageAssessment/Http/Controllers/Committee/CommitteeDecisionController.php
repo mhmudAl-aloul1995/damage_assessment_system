@@ -332,6 +332,7 @@ class CommitteeDecisionController extends Controller
     {
         return $query
             ->when($request->filled('objectid'), fn (Builder $query) => $query->where('objectid', $request->string('objectid')->toString()))
+            ->when($request->filled('building_objectid'), fn (Builder $query) => $query->where('objectid', $request->string('building_objectid')->toString()))
             ->when($request->filled('municipality'), fn (Builder $query) => $query->where('municipalitie', $request->string('municipality')->toString()))
             ->when($request->filled('current_damage_status'), fn (Builder $query) => $query->where('building_damage_status', $request->string('current_damage_status')->toString()))
             ->when($request->filled('field_status'), fn (Builder $query) => $query->where('field_status', $request->string('field_status')->toString()))
@@ -357,6 +358,8 @@ class CommitteeDecisionController extends Controller
                         ->orWhereHas('building', fn (Builder $query) => $query->where('objectid', $objectId));
                 });
             })
+            ->when($request->filled('building_objectid'), fn (Builder $query) => $query->whereHas('building', fn (Builder $query) => $query->where('objectid', $request->string('building_objectid')->toString())))
+            ->when($request->filled('housing_unit_objectid'), fn (Builder $query) => $query->where('objectid', $request->string('housing_unit_objectid')->toString()))
             ->when($request->filled('municipality'), function (Builder $query) use ($request): void {
                 $municipality = $request->string('municipality')->toString();
 

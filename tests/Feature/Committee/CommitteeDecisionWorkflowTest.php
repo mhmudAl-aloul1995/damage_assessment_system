@@ -150,6 +150,7 @@ it('shows committee decision pages and datatable data for buildings and housing 
             'draw' => 1,
             'start' => 0,
             'length' => 10,
+            'building_objectid' => 9001,
             'municipality' => 'Gaza',
             'current_damage_status' => 'committee_review',
             'has_decision' => 'no',
@@ -177,6 +178,26 @@ it('shows committee decision pages and datatable data for buildings and housing 
             'start' => 0,
             'length' => 10,
             'objectid' => 9001,
+        ]))
+        ->assertOk()
+        ->assertSee('A-12');
+
+    $this->actingAs($user)
+        ->get(route('committee-decisions.housing-units.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'building_objectid' => 9001,
+        ]))
+        ->assertOk()
+        ->assertSee('A-12');
+
+    $this->actingAs($user)
+        ->get(route('committee-decisions.housing-units.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'housing_unit_objectid' => 9101,
         ]))
         ->assertOk()
         ->assertSee('A-12');

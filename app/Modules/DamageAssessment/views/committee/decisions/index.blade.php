@@ -112,6 +112,14 @@
                     <input type="text" id="filter_objectid" class="form-control form-control-solid">
                 </div>
                 <div class="col-md-2">
+                    <label class="form-label">Building ObjectID</label>
+                    <input type="text" id="filter_building_objectid" class="form-control form-control-solid">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Housing Unit ObjectID</label>
+                    <input type="text" id="filter_housing_unit_objectid" class="form-control form-control-solid">
+                </div>
+                <div class="col-md-2">
                     <label class="form-label">البلدية</label>
                     <select id="filter_municipality" class="form-select form-select-solid">
                         <option value="">الكل</option>
@@ -262,6 +270,8 @@
             function committeeFilters() {
                 return {
                     objectid: $('#filter_objectid').val(),
+                    building_objectid: $('#filter_building_objectid').val(),
+                    housing_unit_objectid: $('#filter_housing_unit_objectid').val(),
                     municipality: $('#filter_municipality').val(),
                     current_damage_status: $('#filter_current_damage_status').val(),
                     field_status: $('#filter_field_status').val(),
@@ -394,7 +404,7 @@
             });
 
             $('#committee_filters_apply').on('click', reloadCommitteeTables);
-            $('#filter_objectid').on('keydown', function (event) {
+            $('#filter_objectid, #filter_building_objectid, #filter_housing_unit_objectid').on('keydown', function (event) {
                 if (event.key === 'Enter') {
                     event.preventDefault();
                     reloadCommitteeTables();
@@ -402,7 +412,7 @@
             });
             $('#filter_municipality, #filter_current_damage_status, #filter_field_status, #filter_has_decision, #filter_decision_type, #filter_decision_status, #filter_arcgis_status').on('change', reloadCommitteeTables);
             $('#committee_filters_reset').on('click', function () {
-                $('#filter_objectid').val('');
+                $('#filter_objectid, #filter_building_objectid, #filter_housing_unit_objectid').val('');
                 $('#filter_municipality, #filter_current_damage_status, #filter_field_status, #filter_has_decision, #filter_decision_type, #filter_decision_status, #filter_arcgis_status').val('');
                 reloadCommitteeTables();
             });
