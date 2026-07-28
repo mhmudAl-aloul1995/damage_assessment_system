@@ -273,8 +273,22 @@ class ArcGisStatusUpdaterService
             ];
         }
 
+        $parentBuilding = Building::query()
+            ->where('globalid', $housingUnit->parentglobalid)
+            ->first();
+
+        if (! $parentBuilding instanceof Building) {
+            return [
+                'success' => false,
+                'status' => 'missing_identifier',
+                'message' => 'The parent building could not be resolved locally.',
+            ];
+        }
+
+        $identifierField = (string) config('services.committee_decisions.arcgis.identifier_field', 'objectid');
+
         return $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
-            'globalid' => $housingUnit->parentglobalid,
+            $identifierField => data_get($parentBuilding, $identifierField),
             (string) config('services.committee_decisions.arcgis.status_field', 'field_status') => $fieldStatus ?? (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed'),
         ], $token, $decision);
     }

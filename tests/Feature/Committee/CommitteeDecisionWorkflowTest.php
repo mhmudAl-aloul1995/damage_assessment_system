@@ -1016,7 +1016,8 @@ it('syncs housing unit committee decisions to the unit damage status and archive
         $features = json_decode((string) data_get($request->data(), 'features'), true);
 
         return str_contains($request->url(), '/0/updateFeatures')
-            && data_get($features, '0.attributes.globalid') === $building->globalid
+            && data_get($features, '0.attributes.objectid') === $building->objectid
+            && ! array_key_exists('globalid', data_get($features, '0.attributes', []))
             && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
     });
 });
