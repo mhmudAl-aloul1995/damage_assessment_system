@@ -59,17 +59,28 @@ class ArcGisStatusUpdaterService
             }
 
             if ($featureRecord instanceof HousingUnit) {
-                $parentResult = $this->sendParentBuildingStatusUpdate($featureRecord, $baseUrl, $token, $decision);
+                $fieldStatus = (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed');
+                $parentResult = $this->sendParentBuildingStatusUpdate($featureRecord, $baseUrl, $token, $decision, $fieldStatus);
 
                 if (! $parentResult['success']) {
                     return $parentResult;
                 }
+
+                Building::query()
+                    ->where('globalid', $featureRecord->parentglobalid)
+                    ->update(['field_status' => $fieldStatus]);
 
                 return [
                     'success' => true,
                     'status' => 'synced',
                     'message' => $result['message']."\n".$parentResult['message'],
                 ];
+            }
+
+            if ($featureRecord instanceof Building) {
+                $featureRecord->forceFill([
+                    'field_status' => (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed'),
+                ])->save();
             }
 
             return [
@@ -300,7 +311,6 @@ class ArcGisStatusUpdaterService
         return $this->sendArcGisUpdate($baseUrl, (int) config('services.committee_decisions.arcgis.building_layer_id', 0), [
             $identifierField => data_get($parentBuilding, $identifierField),
             (string) config('services.committee_decisions.arcgis.status_field', 'field_status') => $fieldStatus
-                ?? $parentBuilding->field_status
                 ?? (string) config('services.committee_decisions.arcgis.status_value', 'Not_Completed'),
         ], $token, $decision);
     }

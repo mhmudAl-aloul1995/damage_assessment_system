@@ -260,9 +260,7 @@ class CommitteeDecisionController extends Controller
             'arcgis_last_response' => null,
         ])->save();
 
-        $result = $this->shouldSyncCompletedFieldStatus($committeeDecision)
-            ? $this->arcGisStatusUpdaterService->syncDecisionFieldStatus($committeeDecision, 'COMPLETED')
-            : $this->arcGisStatusUpdaterService->syncDecisionStatus($committeeDecision);
+        $result = $this->arcGisStatusUpdaterService->syncDecisionStatus($committeeDecision);
 
         $this->workflowService->markArcGisResult($committeeDecision, $result);
 

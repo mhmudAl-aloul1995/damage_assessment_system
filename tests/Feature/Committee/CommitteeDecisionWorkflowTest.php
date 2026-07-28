@@ -1055,7 +1055,7 @@ it('syncs housing unit committee decisions to the unit damage status and archive
     });
 });
 
-it('syncs imported resurvey completed decisions with completed field status on manual arcgis retry', function () {
+it('syncs manual committee arcgis retry with not completed field status', function () {
     config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
     config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
     config()->set('services.committee_decisions.arcgis.identifier_field', 'objectid');
@@ -1094,7 +1094,8 @@ it('syncs imported resurvey completed decisions with completed field status on m
         ->post(route('committee-decisions.retry-arcgis', $decision))
         ->assertRedirect();
 
-    expect($decision->refresh()->arcgis_sync_status)->toBe('synced');
+    expect($decision->refresh()->arcgis_sync_status)->toBe('synced')
+        ->and($building->refresh()->field_status)->toBe('Not_Completed');
 
     Http::assertSent(function ($request): bool {
         $features = json_decode((string) data_get($request->data(), 'features'), true);
@@ -1102,12 +1103,12 @@ it('syncs imported resurvey completed decisions with completed field status on m
 
         return str_contains($request->url(), '/0/updateFeatures')
             && data_get($attributes, 'objectid') === 8027
-            && data_get($attributes, 'Field_status') === 'COMPLETED'
-            && ! array_key_exists('building_damage_status', $attributes);
+            && data_get($attributes, 'Field_status') === 'Not_Completed'
+            && data_get($attributes, 'building_damage_status') === CommitteeDecision::TYPE_PARTIALLY_DAMAGED;
     });
 });
 
-it('keeps parent building field status aligned after completed housing unit arcgis retry', function () {
+it('keeps parent building field status not completed after housing unit arcgis retry', function () {
     config()->set('services.committee_decisions.arcgis.base_url', 'https://example.test/arcgis/FeatureServer');
     config()->set('services.committee_decisions.arcgis.building_layer_id', 0);
     config()->set('services.committee_decisions.arcgis.housing_unit_layer_id', 1);
@@ -1159,14 +1160,14 @@ it('keeps parent building field status aligned after completed housing unit arcg
             'arcgis_sync_status' => 'synced',
         ]);
 
-    expect($building->refresh()->field_status)->toBe('COMPLETED');
+    expect($building->refresh()->field_status)->toBe('Not_Completed');
 
     Http::assertSent(function ($request) use ($building): bool {
         $features = json_decode((string) data_get($request->data(), 'features'), true);
 
         return str_contains($request->url(), '/0/updateFeatures')
             && data_get($features, '0.attributes.objectid') === $building->objectid
-            && data_get($features, '0.attributes.Field_status') === 'COMPLETED';
+            && data_get($features, '0.attributes.Field_status') === 'Not_Completed';
     });
 });
 
