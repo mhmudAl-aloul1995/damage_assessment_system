@@ -132,8 +132,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/sync_buildings/{no_day}', [ArcGISController::class, 'sync_buildings']);
 
     // building
-    Route::post('building/{building:globalid}/toggle-field-status', [BuildingController::class, 'toggleFieldStatus'])
-        ->name('building.toggle-field-status');
     Route::resource('building', controller: BuildingController::class);
     Route::get('export_building', action: [BuildingController::class, 'export_building']);
 
@@ -262,6 +260,8 @@ Route::middleware('auth')->group(function () {
         ->name('audit.building.attachments.index');
     Route::get('/audit/buildings/{building:globalid}/housing-unit-attachments', [auditController::class, 'buildingHousingUnitAttachments'])
         ->name('audit.building.housing-unit-attachments.index');
+    Route::post('/audit/buildings/{building:globalid}/field-status-completed', [auditController::class, 'completeBuildingFieldStatus'])
+        ->name('audit.building.field-status.completed');
     Route::post('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'storeBuildingAttachment'])
         ->name('audit.building.attachments.store');
     Route::post('/audit/buildings/{building:globalid}/attachments/{attachmentId}/replace', [auditController::class, 'replaceBuildingAttachment'])

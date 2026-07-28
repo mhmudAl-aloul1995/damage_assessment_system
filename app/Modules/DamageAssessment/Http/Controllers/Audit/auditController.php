@@ -2843,9 +2843,8 @@ class auditController extends Controller
                 'assignedUsers.user',
                 'engineerStatus.status',
                 'lawyerStatus.status',
-            ])
-              //  ->whereIn('globalid', $globalIds)
-                ->where('field_status', 'COMPLETED');
+            ]);
+            //  ->whereIn('globalid', $globalIds)
 
             $auditTableService->applyFilters($query, $request);
             $auditTableService->applyStatusDateFilters($query, $request);
@@ -2927,8 +2926,18 @@ class auditController extends Controller
                 ->addColumn('actions', function ($row) {
 
                     $assessmentUrl = url("/damage-assessment/showAssessmentAudit/{$row->globalid}");
+                    $completeFieldStatusUrl = route('audit.building.field-status.completed', $row->globalid);
                     $buildingName = e((string) ($row->building_name ?? '-'));
                     $buildingGlobalId = e((string) $row->globalid);
+                    $isFieldStatusCompleted = strtoupper(trim((string) $row->field_status)) === 'COMPLETED';
+                    $completeFieldStatusButton = $isFieldStatusCompleted
+                        ? '<button type="button" class="menu-link px-3 border-0 bg-transparent w-100 text-start text-muted" disabled>الاستبيان مكتمل</button>'
+                        : '<button type="button"
+                    class="menu-link px-3 border-0 bg-transparent w-100 text-start btn-complete-building-field-status"
+                    data-url="'.e($completeFieldStatusUrl).'"
+                    data-building-name="'.$buildingName.'">
+                    تحويل الاستبيان إلى مكتمل
+                </button>';
 
                     return '
     <div class="d-flex justify-content-end audit-actions-wrapper">
@@ -2970,6 +2979,10 @@ class auditController extends Controller
                 </a>
             </div>
 
+            <div class="menu-item px-3">
+                '.$completeFieldStatusButton.'
+            </div>
+
         </div>
     </div>';
                 })
@@ -3004,6 +3017,42 @@ class auditController extends Controller
             'damage-assessment::audit.audit',
             compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges')
         );
+    }
+
+    public function completeBuildingFieldStatus(Building $building, ArcgisService $arcgisService): JsonResponse
+    {
+        if (blank($building->objectid)) {
+            return response()->json([
+                'success' => false,
+                'message' => __('ui.audit.missing_arcgis_objectid'),
+            ], 422);
+        }
+
+        try {
+            $arcgisResult = $arcgisService->updateBuildingFieldStatus($building->objectid, 'COMPLETED');
+
+            if (! ($arcgisResult['success'] ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $arcgisResult['message'] ?? __('ui.audit.field_status_update_failed'),
+                ], 502);
+            }
+
+            $building->forceFill(['field_status' => 'COMPLETED'])->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => __('ui.audit.field_status_completed'),
+                'field_status' => 'COMPLETED',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'success' => false,
+                'message' => __('ui.audit.field_status_update_failed'),
+            ], 500);
+        }
     }
 
     public function buildingAttachments(Building $building, ArcgisService $arcgis): JsonResponse
@@ -3518,7 +3567,6 @@ class auditController extends Controller
                 'engineerStatus.status',
                 'lawyerStatus.status',
             ])
-                ->where('field_status', 'COMPLETED')
                 ->whereRaw('LOWER(TRIM(assignedto)) = ?', [strtolower($fieldEngineerUsername)]);
 
             $auditTableService->applyFilters($query, $request, includeAssignmentFilters: false);

@@ -228,6 +228,16 @@
 								placeholder="ObjectID" />
 						</div>
 
+						<div class="col-md-3">
+							<label class="form-label fw-semibold">{{ __('ui.audit.survey_status') }}</label>
+							<select id="filter_field_status" class="form-select form-select-solid" data-control="select2"
+								data-allow-clear="false" data-placeholder="{{ __('ui.audit.select_status') }}">
+								<option value="COMPLETED" selected>COMPLETED</option>
+								<option value="Not_Completed">Not_Completed</option>
+								<option value="all">{{ __('ui.audit.all_statuses') }}</option>
+							</select>
+						</div>
+
 						@if(! $isFieldEngineerAudit)
 						<div class="col-md-3">
 							<label class="form-label fw-semibold">{{ __('ui.audit.engineer') }}</label>
@@ -1513,6 +1523,7 @@
 				return {
 					building_name: $('#filter_building_name').val(),
 					objectid: $('#filter_objectid').val(),
+					field_status: $('#filter_field_status').val(),
 					engineer_id: $('#filter_engineer').val(),
 					lawyer_id: $('#filter_lawyer').val(),
 					eng_status: $('#filter_eng_status').val(),
@@ -1742,6 +1753,39 @@
 
 			});
 
+			$(document).on('click', '.btn-complete-building-field-status', function (event) {
+				event.preventDefault();
+				event.stopPropagation();
+
+				let button = $(this);
+				let url = button.data('url');
+
+				if (!url || button.prop('disabled')) {
+					return;
+				}
+
+				button.prop('disabled', true);
+
+				$.ajax({
+					url: url,
+					type: 'POST',
+					data: {
+						_token: "{{ csrf_token() }}"
+					},
+					success: function (response) {
+						toastr.success(response.message || "{{ __('ui.audit.field_status_completed') }}");
+						$('#filter_field_status').val('COMPLETED').trigger('change');
+						table.ajax.reload(null, false);
+					},
+					error: function (xhr) {
+						toastr.error(xhr.responseJSON?.message || "{{ __('ui.audit.field_status_update_failed') }}");
+					},
+					complete: function () {
+						button.prop('disabled', false);
+					}
+				});
+			});
+
 			$('#toggle_danger_rows').on('click', function () {
 
 				const button = $(this);
@@ -1837,7 +1881,7 @@
 				}, 350);
 			};
 
-			$('#filter_engineer, #filter_lawyer, #filter_eng_status, #filter_legal_status, #filter_final_status, #filter_field_engineer, #filter_damage_status, #filter_legal_challenge')
+			$('#filter_engineer, #filter_lawyer, #filter_eng_status, #filter_legal_status, #filter_final_status, #filter_field_status, #filter_field_engineer, #filter_damage_status, #filter_legal_challenge')
 				.on('change', scheduleFilterReload);
 
 			$('#filter_building_name, #filter_objectid, #filter_area, #filter_from_date, #filter_to_date, #filter_status_from_date, #filter_status_to_date')
@@ -1853,6 +1897,7 @@
 				isResettingFilters = true;
 				$('select').val(null).trigger('change');
 				$('input').val('');
+				$('#filter_field_status').val('COMPLETED').trigger('change');
 				isResettingFilters = false;
 				table.ajax.reload(null, true);
 

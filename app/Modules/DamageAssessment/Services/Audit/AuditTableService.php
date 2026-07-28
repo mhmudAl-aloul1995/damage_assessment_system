@@ -40,6 +40,15 @@ class AuditTableService
             $query->whereIn('building_damage_status', $damageStatuses);
         }
 
+        $fieldStatuses = $this->filterValues($request, 'field_status');
+        if ($fieldStatuses === []) {
+            $fieldStatuses = ['completed'];
+        }
+
+        if (! in_array('all', $fieldStatuses, true)) {
+            $query->whereIn(DB::raw('LOWER(TRIM(field_status))'), $fieldStatuses);
+        }
+
         $legalChallenges = $this->filterValues($request, 'legal_challenge');
         if ($legalChallenges !== []) {
             $query->whereIn('legal_challenge', $legalChallenges);

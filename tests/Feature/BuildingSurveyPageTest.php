@@ -4,7 +4,6 @@ use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
 use App\Models\User;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
 it('shows grouped building filters based on survey sections', function () {
@@ -114,44 +113,6 @@ it('filters building datatable records with grouped filters and ranges', functio
     $response->assertSee('Debris');
     $response->assertSee('UXO');
     $response->assertDontSee('Al Noor House');
-});
-
-it('toggles a building field status locally and on arcgis', function () {
-    Http::fake([
-        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
-            'token' => 'arcgis-token',
-        ], 200),
-        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/updateFeatures' => Http::response([
-            'updateResults' => [['success' => true]],
-        ], 200),
-    ]);
-
-    $user = User::factory()->create();
-
-    $building = Building::query()->create([
-        'assignedto' => 'Engineer One',
-        'globalid' => 'building-toggle-1',
-        'objectid' => 3001,
-        'building_name' => 'Toggle Tower',
-        'field_status' => 'COMPLETED',
-    ]);
-
-    $response = $this->actingAs($user)
-        ->post('/damage-assessment/building/'.$building->globalid.'/toggle-field-status');
-
-    $response->assertOk()
-        ->assertJsonPath('success', true)
-        ->assertJsonPath('field_status', 'Not_Completed');
-
-    expect($building->refresh()->field_status)->toBe('Not_Completed');
-
-    Http::assertSent(function ($request): bool {
-        $features = json_decode((string) data_get($request->data(), 'features'), true);
-
-        return str_contains($request->url(), '/FeatureServer/0/updateFeatures')
-            && data_get($features, '0.attributes.objectid') === 3001
-            && data_get($features, '0.attributes.field_status') === 'Not_Completed';
-    });
 });
 
 function seedBuildingFilterOptions(): void

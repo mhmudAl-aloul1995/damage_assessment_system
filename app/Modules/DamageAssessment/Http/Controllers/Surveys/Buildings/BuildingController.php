@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
-use App\services\ArcgisService;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +16,6 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\LaravelPdf\Facades\Pdf;
-use Throwable;
 use Yajra\Datatables\Datatables;
 
 class BuildingController extends Controller
@@ -113,72 +111,22 @@ class BuildingController extends Controller
             ->editColumn('action', function ($ctr) {
                 $housingUrl = url("/damage-assessment/showHousing/{$ctr->globalid}");
                 $assessmentUrl = url("/damage-assessment/assessment/{$ctr->globalid}");
-                $toggleUrl = url("/damage-assessment/building/{$ctr->globalid}/toggle-field-status");
-                $toggleLabel = $this->nextFieldStatus($ctr->field_status) === 'COMPLETED'
-                    ? __('ui.buildings_page.mark_completed')
-                    : __('ui.buildings_page.mark_not_completed');
 
                 return '
                 <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">'.e(__('ui.damage_common.actions')).'
                     <i class="ki-duotone ki-down fs-5 ms-1"></i></a>
-                <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-175px py-4" data-kt-menu="true">
+                <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
                     <div class="menu-item px-3">
                         <a target="_blank" href="'.$housingUrl.'" class="menu-link px-3">'.e(__('ui.damage_common.housing_unit')).'</a>
                     </div>
                     <div class="menu-item px-3">
                         <a class="menu-link px-3" target="_blank" href="'.$assessmentUrl.'">'.e(__('ui.damage_common.assessment')).'</a>
                     </div>
-                    <div class="menu-item px-3">
-                        <button type="button" class="menu-link px-3 border-0 bg-transparent w-100 text-start building-field-status-toggle" data-url="'.$toggleUrl.'">'.e($toggleLabel).'</button>
-                    </div>
                 </div>';
             })
             ->setRowId('globalid')
             ->rawColumns(['action', 'id', 'field_status', 'building_damage_status', 'risk_summary'])
             ->make(true);
-    }
-
-    public function toggleFieldStatus(Building $building, ArcgisService $arcgisService): JsonResponse
-    {
-        if (blank($building->objectid)) {
-            return response()->json([
-                'success' => false,
-                'message' => __('ui.buildings_page.missing_arcgis_objectid'),
-            ], 422);
-        }
-
-        $nextStatus = $this->nextFieldStatus($building->field_status);
-
-        try {
-            $arcgisResult = $arcgisService->updateBuildingFieldStatus($building->objectid, $nextStatus);
-
-            if (! ($arcgisResult['success'] ?? false)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $arcgisResult['message'] ?? __('ui.buildings_page.field_status_update_failed'),
-                ], 502);
-            }
-
-            $building->forceFill(['field_status' => $nextStatus])->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => __('ui.buildings_page.field_status_updated'),
-                'field_status' => $nextStatus,
-                'field_status_html' => $this->statusBadge($nextStatus, [
-                    'completed' => 'success',
-                    'not_completed' => 'warning',
-                    'not completed' => 'warning',
-                ]),
-            ]);
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return response()->json([
-                'success' => false,
-                'message' => __('ui.buildings_page.field_status_update_failed'),
-            ], 500);
-        }
     }
 
     /**
@@ -355,13 +303,6 @@ class BuildingController extends Controller
         $label = $labels[$normalized] ?? str($value)->replace('_', ' ')->title();
 
         return '<span class="badge badge-light-'.$color.'">'.e($label).'</span>';
-    }
-
-    private function nextFieldStatus(?string $currentStatus): string
-    {
-        return strtoupper(trim((string) $currentStatus)) === 'COMPLETED'
-            ? 'Not_Completed'
-            : 'COMPLETED';
     }
 
     /**

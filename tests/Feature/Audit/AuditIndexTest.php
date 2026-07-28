@@ -10,6 +10,7 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
 
 it('includes the housing units status progress in the audit table response', function () {
@@ -459,6 +460,83 @@ it('keeps previous building notes visible in the notes history response', functi
         ->assertJsonFragment([
             'notes' => 'Lawyer note also stays visible',
         ]);
+});
+
+it('filters audit buildings by field status and completes field status on arcgis', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ], 200),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true]],
+        ], 200),
+    ]);
+
+    $user = User::factory()->create();
+
+    $completedBuilding = Building::query()->create([
+        'objectid' => 7301,
+        'globalid' => 'audit-completed-field-status-building',
+        'building_name' => 'Already Completed Audit Building',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $notCompletedBuilding = Building::query()->create([
+        'objectid' => 7302,
+        'globalid' => 'audit-not-completed-field-status-building',
+        'building_name' => 'Needs Completed Audit Building',
+        'field_status' => 'Not_Completed',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'globalid' => $completedBuilding->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $notCompletedBuilding->globalid,
+        ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'field_status' => 'Not_Completed',
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'globalid' => $notCompletedBuilding->globalid,
+        ])
+        ->assertSee('btn-complete-building-field-status', false)
+        ->assertJsonMissing([
+            'globalid' => $completedBuilding->globalid,
+        ]);
+
+    $this->actingAs($user)
+        ->postJson(route('audit.building.field-status.completed', $notCompletedBuilding->globalid))
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('field_status', 'COMPLETED');
+
+    expect($notCompletedBuilding->refresh()->field_status)->toBe('COMPLETED');
+
+    Http::assertSent(function ($request): bool {
+        $features = json_decode((string) data_get($request->data(), 'features'), true);
+
+        return str_contains($request->url(), '/FeatureServer/0/updateFeatures')
+            && data_get($features, '0.attributes.objectid') === 7302
+            && data_get($features, '0.attributes.field_status') === 'COMPLETED';
+    });
 });
 
 it('hides audit management action buttons for temporary excepted users only', function () {
