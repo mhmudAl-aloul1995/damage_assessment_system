@@ -97,6 +97,60 @@ class CommitteeDecisionController extends Controller
         );
     }
 
+    public function higherCommitteeReassessments(): View
+    {
+        return view('damage-assessment::committee.decisions.higher-committee-reassessments');
+    }
+
+    public function higherCommitteeReassessmentsData(): JsonResponse
+    {
+        $query = CommitteeDecision::query()
+            ->with([
+                'decisionable',
+                'signatures.committeeMember',
+                'reassessmentDecisions.signatures.committeeMember',
+            ])
+            ->whereNull('parent_decision_id')
+            ->where('decision_type', CommitteeDecision::TYPE_HIGHER_COMMITTEE)
+            ->where('status', CommitteeDecision::STATUS_COMPLETED);
+
+        return DataTables::eloquent($query)
+            ->addColumn('record_type', fn (CommitteeDecision $decision): string => $decision->decisionable instanceof HousingUnit ? 'وحدة سكنية' : 'مبنى')
+            ->addColumn('building_objectid', fn (CommitteeDecision $decision): string => e((string) ($this->decisionBuilding($decision)?->objectid ?? '-')))
+            ->addColumn('housing_unit_objectid', fn (CommitteeDecision $decision): string => e((string) ($decision->decisionable instanceof HousingUnit ? ($decision->decisionable->objectid ?? '-') : '-')))
+            ->addColumn('record_name', fn (CommitteeDecision $decision): string => e($this->decisionRecordName($decision)))
+            ->addColumn('municipality', fn (CommitteeDecision $decision): string => e((string) ($decision->decisionable?->municipalitie ?? $this->decisionBuilding($decision)?->municipalitie ?? '-')))
+            ->addColumn('neighborhood', fn (CommitteeDecision $decision): string => e((string) ($decision->decisionable?->neighborhood ?? $this->decisionBuilding($decision)?->neighborhood ?? '-')))
+            ->addColumn('signatures_count', fn (CommitteeDecision $decision): string => $this->signatureBadge($decision))
+            ->addColumn('reassessment_status', fn (CommitteeDecision $decision): string => $this->reassessmentStatusBadge($decision))
+            ->addColumn('actions', fn (CommitteeDecision $decision): string => $this->higherCommitteeReassessmentButtons($decision))
+            ->rawColumns(['signatures_count', 'reassessment_status', 'actions'])
+            ->toJson();
+    }
+
+    public function startHigherCommitteeReassessment(CommitteeDecision $committeeDecision): RedirectResponse
+    {
+        abort_unless(auth()->user()?->can('manage committee decision content'), 403);
+
+        $reassessment = $this->workflowService->findOrCreateHigherCommitteeReassessment($committeeDecision, auth()->user());
+
+        return redirect()
+            ->route('committee-decisions.reassessments.show', $reassessment)
+            ->with('success', 'تم فتح جولة إعادة تقييم مرتبطة بقرار اللجنة العليا.');
+    }
+
+    public function showReassessment(CommitteeDecision $committeeDecision): View
+    {
+        abort_unless($committeeDecision->parent_decision_id !== null, 404);
+
+        $committeeDecision->loadMissing('decisionable');
+
+        return $this->decisionView(
+            $committeeDecision,
+            $committeeDecision->decisionable instanceof HousingUnit ? 'housing-unit' : 'building',
+        );
+    }
+
     public function importWorkflowExcel(
         ImportCommitteeDecisionWorkflowExcelRequest $request,
         CommitteeDecisionWorkflowExcelImportService $importer,
@@ -468,6 +522,7 @@ class CommitteeDecisionController extends Controller
     private function decisionView(CommitteeDecision $decision, string $recordType): View
     {
         $decision->load([
+            'parentDecision',
             'decisionable',
             'committeeManager',
             'signatures.committeeMember.user',
@@ -487,7 +542,7 @@ class CommitteeDecisionController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(),
-            'suggestedCommitteeMembers' => $decision->signatures->isEmpty()
+            'suggestedCommitteeMembers' => $decision->parent_decision_id === null && $decision->signatures->isEmpty()
                 ? $this->workflowService->latestSignatureTemplate($decision)
                 : [],
             'canManageContent' => ! $decision->isCompleted() && auth()->user()->can('manage committee decision content'),
@@ -549,6 +604,66 @@ class CommitteeDecisionController extends Controller
         }
 
         return $buttons.'</div>';
+    }
+
+    private function higherCommitteeReassessmentButtons(CommitteeDecision $decision): string
+    {
+        $reassessment = $decision->reassessmentDecisions->first();
+
+        if ($reassessment instanceof CommitteeDecision) {
+            return '<a class="btn btn-light-primary btn-sm" href="'.route('committee-decisions.reassessments.show', $reassessment).'">فتح إعادة التقييم</a>';
+        }
+
+        if (! auth()->user()?->can('manage committee decision content')) {
+            return '<span class="text-muted">بانتظار بدء إعادة التقييم</span>';
+        }
+
+        $buttons = '<form method="POST" action="'.route('committee-decisions.higher-committee-reassessments.start', $decision).'">';
+        $buttons .= csrf_field();
+        $buttons .= '<button type="submit" class="btn btn-light-warning btn-sm">بدء إعادة تقييم</button>';
+
+        return $buttons.'</form>';
+    }
+
+    private function reassessmentStatusBadge(CommitteeDecision $decision): string
+    {
+        $reassessment = $decision->reassessmentDecisions->first();
+
+        if (! $reassessment instanceof CommitteeDecision) {
+            return '<span class="badge badge-light-secondary">لم تبدأ</span>';
+        }
+
+        return $this->syncBadge($reassessment->status, 'إعادة التقييم');
+    }
+
+    private function decisionBuilding(CommitteeDecision $decision): ?Building
+    {
+        $decisionable = $decision->decisionable;
+
+        if ($decisionable instanceof Building) {
+            return $decisionable;
+        }
+
+        if ($decisionable instanceof HousingUnit) {
+            return $decisionable->building;
+        }
+
+        return null;
+    }
+
+    private function decisionRecordName(CommitteeDecision $decision): string
+    {
+        $decisionable = $decision->decisionable;
+
+        if ($decisionable instanceof HousingUnit) {
+            return $decisionable->full_name ?: $decisionable->unit_owner ?: $decisionable->housing_unit_number ?: (string) $decisionable->objectid;
+        }
+
+        if ($decisionable instanceof Building) {
+            return $decisionable->building_name ?: (string) $decisionable->objectid;
+        }
+
+        return '-';
     }
 
     private function syncBadge(?string $status, string $label): string

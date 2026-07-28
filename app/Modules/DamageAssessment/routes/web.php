@@ -98,6 +98,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [CommitteeDecisionController::class, 'index'])->name('index');
         Route::get('/export', [CommitteeDecisionController::class, 'export'])->name('export');
         Route::post('/workflow-excel/import', [CommitteeDecisionController::class, 'importWorkflowExcel'])->name('workflow-excel.import');
+        Route::get('/higher-committee-reassessments', [CommitteeDecisionController::class, 'higherCommitteeReassessments'])->name('higher-committee-reassessments.index');
+        Route::get('/higher-committee-reassessments/data', [CommitteeDecisionController::class, 'higherCommitteeReassessmentsData'])->name('higher-committee-reassessments.data');
+        Route::post('/higher-committee-reassessments/{committeeDecision}', [CommitteeDecisionController::class, 'startHigherCommitteeReassessment'])->name('higher-committee-reassessments.start');
+        Route::get('/reassessments/{committeeDecision}', [CommitteeDecisionController::class, 'showReassessment'])->name('reassessments.show');
         Route::get('/buildings/data', [CommitteeDecisionController::class, 'buildingsData'])->name('buildings.data');
         Route::get('/housing-units/data', [CommitteeDecisionController::class, 'housingUnitsData'])->name('housing-units.data');
         Route::get('/buildings/{building}', [CommitteeDecisionController::class, 'showBuilding'])->name('buildings.show');

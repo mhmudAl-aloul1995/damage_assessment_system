@@ -31,6 +31,12 @@
     @if ($errors->any())
         <div class="alert alert-danger mb-5">{{ $errors->first() }}</div>
     @endif
+    @if ($decision->parentDecision)
+        <div class="alert alert-warning mb-5">
+            <div class="fw-bold mb-1">هذه جولة إعادة تقييم مرتبطة بقرار لجنة عليا سابق.</div>
+            <div>رقم القرار السابق: {{ $decision->parentDecision->id }} / تاريخ القرار: {{ optional($decision->parentDecision->decision_date)->format('Y-m-d') ?: '-' }}</div>
+        </div>
+    @endif
 
     <div class="row g-5 mb-5">
         <div class="col-lg-4">

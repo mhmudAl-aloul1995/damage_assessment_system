@@ -1217,6 +1217,79 @@ it('returns json when retrying committee arcgis sync through ajax', function () 
         ->and($decision->arcgis_last_response)->toContain('updateResults');
 });
 
+it('creates a linked reassessment round for completed higher committee decisions', function () {
+    $manager = User::factory()->create();
+    $manager->givePermissionTo([
+        'view committee decisions',
+        'manage committee decision content',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 8301,
+        'globalid' => 'higher-committee-building',
+        'building_name' => 'Higher Committee Reassessment Building',
+        'municipalitie' => 'Khan Younis',
+        'neighborhood' => 'Al-Amal',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $parentDecision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => CommitteeDecision::TYPE_HIGHER_COMMITTEE,
+        'decision_text' => 'Refer to higher committee.',
+        'decision_date' => '2026-07-20',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'updated_by' => $manager->id,
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($manager)
+        ->get(route('committee-decisions.higher-committee-reassessments.index'))
+        ->assertOk()
+        ->assertSee('إعادة تقييم قرارات اللجنة العليا', false);
+
+    $this->actingAs($manager)
+        ->get(route('committee-decisions.higher-committee-reassessments.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.record_name', 'Higher Committee Reassessment Building')
+        ->assertJsonPath('data.0.reassessment_status', '<span class="badge badge-light-secondary">لم تبدأ</span>');
+
+    $this->actingAs($manager)
+        ->post(route('committee-decisions.higher-committee-reassessments.start', $parentDecision))
+        ->assertRedirect();
+
+    $reassessment = CommitteeDecision::query()
+        ->where('parent_decision_id', $parentDecision->id)
+        ->firstOrFail();
+
+    expect($reassessment->decision_source)->toBe(CommitteeDecision::SOURCE_HIGHER_COMMITTEE_REASSESSMENT)
+        ->and($reassessment->decision_round)->toBe(2)
+        ->and($reassessment->decisionable_type)->toBe(Building::class)
+        ->and($reassessment->decisionable_id)->toBe($building->id)
+        ->and($reassessment->status)->toBe(CommitteeDecision::STATUS_DRAFT)
+        ->and($building->refresh()->committeeDecision?->id)->toBe($reassessment->id);
+
+    $this->actingAs($manager)
+        ->get(route('committee-decisions.reassessments.show', $reassessment))
+        ->assertOk()
+        ->assertSee('هذه جولة إعادة تقييم مرتبطة بقرار لجنة عليا سابق', false)
+        ->assertSee('Higher Committee Reassessment Building');
+
+    $this->actingAs($manager)
+        ->get(route('committee-decisions.higher-committee-reassessments.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.reassessment_status', '<span class="badge badge-light-secondary">إعادة التقييم: Draft</span>');
+});
+
 it('imports workflow decisions without committee members and marks them for review', function () {
     User::factory()->create();
 

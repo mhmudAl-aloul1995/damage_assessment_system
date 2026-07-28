@@ -30,7 +30,14 @@ class CommitteeDecision extends Model
 
     public const STATUS_COMPLETED = 'completed';
 
+    public const SOURCE_REGULAR = 'regular';
+
+    public const SOURCE_HIGHER_COMMITTEE_REASSESSMENT = 'higher_committee_reassessment';
+
     protected $fillable = [
+        'parent_decision_id',
+        'decision_round',
+        'decision_source',
         'decisionable_type',
         'decisionable_id',
         'decision_type',
@@ -53,6 +60,8 @@ class CommitteeDecision extends Model
     protected function casts(): array
     {
         return [
+            'parent_decision_id' => 'integer',
+            'decision_round' => 'integer',
             'decisionable_id' => 'integer',
             'created_by' => 'integer',
             'updated_by' => 'integer',
@@ -84,6 +93,16 @@ class CommitteeDecision extends Model
     public function committeeManager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'committee_manager_id');
+    }
+
+    public function parentDecision(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_decision_id');
+    }
+
+    public function reassessmentDecisions(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_decision_id')->latest('id');
     }
 
     public function signatures(): HasMany

@@ -23,20 +23,60 @@ class CommitteeDecisionWorkflowService
 
     public function findOrCreateDecision(Model $decisionable, User $user): CommitteeDecision
     {
-        /** @var CommitteeDecision $decision */
-        $decision = CommitteeDecision::query()->firstOrCreate(
-            [
+        /** @var CommitteeDecision|null $decision */
+        $decision = CommitteeDecision::query()
+            ->where([
                 'decisionable_type' => $decisionable::class,
                 'decisionable_id' => $decisionable->getKey(),
-            ],
-            [
+            ])
+            ->latest('id')
+            ->first();
+
+        if (! $decision instanceof CommitteeDecision) {
+            $decision = CommitteeDecision::query()->create([
+                'decisionable_type' => $decisionable::class,
+                'decisionable_id' => $decisionable->getKey(),
                 'created_by' => $user->id,
                 'updated_by' => $user->id,
                 'status' => CommitteeDecision::STATUS_DRAFT,
+            ]);
+        }
+
+        return $decision->load([
+            'decisionable',
+            'committeeManager',
+            'creator',
+            'updater',
+            'signatures.committeeMember.user',
+            'signatures.signedByUser',
+        ]);
+    }
+
+    public function findOrCreateHigherCommitteeReassessment(CommitteeDecision $parentDecision, User $user): CommitteeDecision
+    {
+        abort_unless($parentDecision->isCompleted() && $parentDecision->refersToHigherCommittee(), 422, 'يمكن بدء إعادة التقييم فقط لقرار لجنة عليا مكتمل.');
+
+        $parentDecision->loadMissing('decisionable');
+
+        /** @var CommitteeDecision $decision */
+        $decision = CommitteeDecision::query()->firstOrCreate(
+            [
+                'parent_decision_id' => $parentDecision->id,
+                'decision_source' => CommitteeDecision::SOURCE_HIGHER_COMMITTEE_REASSESSMENT,
+            ],
+            [
+                'decision_round' => ((int) $parentDecision->decision_round) + 1,
+                'decisionable_type' => $parentDecision->decisionable_type,
+                'decisionable_id' => $parentDecision->decisionable_id,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
+                'status' => CommitteeDecision::STATUS_DRAFT,
+                'notes' => 'Higher committee reassessment for decision #'.$parentDecision->id,
             ],
         );
 
         return $decision->load([
+            'parentDecision.signatures.committeeMember',
             'decisionable',
             'committeeManager',
             'creator',

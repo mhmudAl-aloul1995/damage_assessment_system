@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model; // Import Attribute if using modern Laravel accessors
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 /**
@@ -800,7 +801,12 @@ class HousingUnit extends Model
 
     public function committeeDecision(): MorphOne
     {
-        return $this->morphOne(CommitteeDecision::class, 'decisionable');
+        return $this->morphOne(CommitteeDecision::class, 'decisionable')->latestOfMany();
+    }
+
+    public function committeeDecisions(): MorphMany
+    {
+        return $this->morphMany(CommitteeDecision::class, 'decisionable')->latest('id');
     }
 
     public function buildingStatuses()

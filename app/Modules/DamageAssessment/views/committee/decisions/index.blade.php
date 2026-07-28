@@ -104,6 +104,9 @@
             <div class="card-title">
                 <h3 class="fw-bold m-0">{{ __('multilingual.committee_decisions.management_title') }}</h3>
             </div>
+            <div class="card-toolbar">
+                <a href="{{ route('committee-decisions.higher-committee-reassessments.index') }}" class="btn btn-light-warning btn-sm">إعادة تقييم اللجنة العليا</a>
+            </div>
         </div>
         <div class="card-body">
             <div class="row g-4 align-items-end mb-6">
