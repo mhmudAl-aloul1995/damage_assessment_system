@@ -415,45 +415,45 @@
 
 		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::before,
 		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::after {
-			border: 1px solid rgba(255, 223, 92, 0.9);
+			background: #fff;
 			border-radius: 50%;
 			content: "";
-			height: 92px;
+			height: 7px;
 			opacity: 0;
 			pointer-events: none;
 			position: absolute;
-			width: 92px;
+			width: 7px;
 			z-index: 0;
 		}
 
 		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::before {
-			animation: housing-target-firework 2.25s ease-out infinite;
+			animation: housing-target-firework 2.15s ease-out infinite;
 			box-shadow:
-				0 -34px 0 -30px #fff,
-				24px -24px 0 -30px #ffd95f,
-				34px 0 0 -30px #fff,
-				24px 24px 0 -30px #ff7a59,
-				0 34px 0 -30px #fff,
-				-24px 24px 0 -30px #8fdc9b,
-				-34px 0 0 -30px #ffd95f,
-				-24px -24px 0 -30px #fff;
-			left: 26px;
-			top: 34px;
+				0 -30px 0 #fff,
+				21px -21px 0 #ffd95f,
+				30px 0 0 #fff,
+				21px 21px 0 #ff7a59,
+				0 30px 0 #fff,
+				-21px 21px 0 #8fdc9b,
+				-30px 0 0 #ffd95f,
+				-21px -21px 0 #fff;
+			left: 58px;
+			top: 64px;
 		}
 
 		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::after {
-			animation: housing-target-firework 2.25s 0.8s ease-out infinite;
+			animation: housing-target-firework 2.15s 0.78s ease-out infinite;
 			box-shadow:
-				0 -30px 0 -27px #fff,
-				22px -22px 0 -27px #9fe7ff,
-				30px 0 0 -27px #ffd95f,
-				22px 22px 0 -27px #fff,
-				0 30px 0 -27px #ff7a59,
-				-22px 22px 0 -27px #fff,
-				-30px 0 0 -27px #8fdc9b,
-				-22px -22px 0 -27px #ffd95f;
-			right: 30px;
-			top: 66px;
+				0 -26px 0 #fff,
+				18px -18px 0 #9fe7ff,
+				26px 0 0 #ffd95f,
+				18px 18px 0 #fff,
+				0 26px 0 #ff7a59,
+				-18px 18px 0 #fff,
+				-26px 0 0 #8fdc9b,
+				-18px -18px 0 #ffd95f;
+			right: 54px;
+			top: 102px;
 		}
 
 		.damage-dashboard-stats .housing-target-achieved .target-confetti {
@@ -535,18 +535,19 @@
 		.damage-dashboard-stats .housing-target-achieved .target-achieved-badge {
 			align-items: center;
 			backdrop-filter: blur(8px);
-			background: rgba(255, 255, 255, 0.16);
+			background: rgba(255, 255, 255, 0.2);
 			border: 1px solid rgba(255, 255, 255, 0.28);
 			border-radius: 999px;
 			color: #fff;
 			display: inline-flex;
-			font-size: 0.78rem;
+			font-size: 0.68rem;
 			font-weight: 800;
 			gap: 0.35rem;
 			line-height: 1;
-			margin-top: 0.75rem;
-			padding: 0.48rem 0.78rem;
+			margin-top: 0.35rem;
+			padding: 0.38rem 0.68rem;
 			position: relative;
+			transform: translateY(-2px);
 			width: fit-content;
 			z-index: 2;
 		}
@@ -589,7 +590,7 @@
 
 			100% {
 				opacity: 0;
-				transform: scale(1.15);
+				transform: scale(1.28) rotate(18deg);
 			}
 		}
 
