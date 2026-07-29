@@ -16,6 +16,7 @@ class Sidebar
     private const TEMPORARY_AUDIT_HOME_USER_ID_NUMBERS = [
         '800409062',
         '400940623',
+        '400591194',
         '803275288',
         '800900607',
         '801773987',
@@ -24,7 +25,7 @@ class Sidebar
         '803307669',
         '404030421',
         '406966812',
-        '400591194'
+        '400591194',
     ];
 
     private const TEMPORARY_AUDIT_HOME_URL = 'damage-assessment/audit';
