@@ -47,6 +47,8 @@
 				'uxo' => route('road-facilities.index') . '?' . http_build_query(['uxo_only' => 1]),
 			],
 		];
+		$housingUnitsTarget = 67500;
+		$housingUnitsTargetReached = (int) ($unitStats['damaged_total'] ?? 0) >= $housingUnitsTarget;
 	@endphp
 	<style>
 		#externalLegendDiv {
@@ -394,6 +396,237 @@
 
 		.damage-dashboard-stats .dashboard-summary-body>.d-flex.align-items-center {
 			min-height: var(--summary-item-min-height);
+		}
+
+		.damage-dashboard-stats .housing-target-achieved {
+			isolation: isolate;
+			overflow: visible;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header {
+			background:
+				radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.34) 0 2px, transparent 3px),
+				radial-gradient(circle at 82% 28%, rgba(255, 219, 99, 0.9) 0 2px, transparent 3px),
+				linear-gradient(135deg, #5f9867 0%, #6fa976 52%, #4f8f59 100%) !important;
+			box-shadow: 0 16px 35px rgba(79, 143, 89, 0.26);
+			overflow: hidden;
+			position: relative;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::before,
+		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::after {
+			border: 1px solid rgba(255, 223, 92, 0.9);
+			border-radius: 50%;
+			content: "";
+			height: 92px;
+			opacity: 0;
+			pointer-events: none;
+			position: absolute;
+			width: 92px;
+			z-index: 0;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::before {
+			animation: housing-target-firework 2.25s ease-out infinite;
+			box-shadow:
+				0 -34px 0 -30px #fff,
+				24px -24px 0 -30px #ffd95f,
+				34px 0 0 -30px #fff,
+				24px 24px 0 -30px #ff7a59,
+				0 34px 0 -30px #fff,
+				-24px 24px 0 -30px #8fdc9b,
+				-34px 0 0 -30px #ffd95f,
+				-24px -24px 0 -30px #fff;
+			left: 26px;
+			top: 34px;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::after {
+			animation: housing-target-firework 2.25s 0.8s ease-out infinite;
+			box-shadow:
+				0 -30px 0 -27px #fff,
+				22px -22px 0 -27px #9fe7ff,
+				30px 0 0 -27px #ffd95f,
+				22px 22px 0 -27px #fff,
+				0 30px 0 -27px #ff7a59,
+				-22px 22px 0 -27px #fff,
+				-30px 0 0 -27px #8fdc9b,
+				-22px -22px 0 -27px #ffd95f;
+			right: 30px;
+			top: 66px;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti {
+			inset: 0;
+			overflow: hidden;
+			pointer-events: none;
+			position: absolute;
+			z-index: 1;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span {
+			animation: housing-target-confetti 3.4s linear infinite;
+			background: var(--confetti-color);
+			border-radius: 2px;
+			height: 10px;
+			opacity: 0;
+			position: absolute;
+			top: -18px;
+			transform: rotate(var(--confetti-rotate));
+			width: 5px;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span:nth-child(1) {
+			--confetti-color: #ffffff;
+			--confetti-rotate: 18deg;
+			animation-delay: 0s;
+			left: 12%;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span:nth-child(2) {
+			--confetti-color: #ffd95f;
+			--confetti-rotate: -22deg;
+			animation-delay: 0.35s;
+			left: 24%;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span:nth-child(3) {
+			--confetti-color: #7edfa0;
+			--confetti-rotate: 44deg;
+			animation-delay: 0.72s;
+			left: 38%;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span:nth-child(4) {
+			--confetti-color: #ff8a66;
+			--confetti-rotate: -38deg;
+			animation-delay: 1.1s;
+			left: 52%;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span:nth-child(5) {
+			--confetti-color: #9fe7ff;
+			--confetti-rotate: 28deg;
+			animation-delay: 1.45s;
+			left: 68%;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span:nth-child(6) {
+			--confetti-color: #ffffff;
+			--confetti-rotate: -12deg;
+			animation-delay: 1.82s;
+			left: 84%;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span:nth-child(7) {
+			--confetti-color: #ffd95f;
+			--confetti-rotate: 58deg;
+			animation-delay: 2.14s;
+			left: 44%;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-confetti span:nth-child(8) {
+			--confetti-color: #ff8a66;
+			--confetti-rotate: -54deg;
+			animation-delay: 2.48s;
+			left: 76%;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-achieved-badge {
+			align-items: center;
+			backdrop-filter: blur(8px);
+			background: rgba(255, 255, 255, 0.16);
+			border: 1px solid rgba(255, 255, 255, 0.28);
+			border-radius: 999px;
+			color: #fff;
+			display: inline-flex;
+			font-size: 0.78rem;
+			font-weight: 800;
+			gap: 0.35rem;
+			line-height: 1;
+			margin-top: 0.75rem;
+			padding: 0.48rem 0.78rem;
+			position: relative;
+			width: fit-content;
+			z-index: 2;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-achieved-badge::before {
+			background: #ffd95f;
+			border-radius: 50%;
+			box-shadow: 0 0 0 4px rgba(255, 217, 95, 0.2);
+			content: "";
+			height: 0.45rem;
+			width: 0.45rem;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-total-number {
+			animation: housing-target-number-glow 2.8s ease-in-out infinite;
+			position: relative;
+			text-shadow: 0 0 16px rgba(255, 255, 255, 0.5);
+			z-index: 2;
+		}
+
+		.damage-dashboard-stats .housing-target-achieved .target-title-row,
+		.damage-dashboard-stats .housing-target-achieved .target-total-wrap {
+			position: relative;
+			z-index: 2;
+		}
+
+		@keyframes housing-target-firework {
+			0% {
+				opacity: 0;
+				transform: scale(0.15);
+			}
+
+			18% {
+				opacity: 1;
+			}
+
+			72% {
+				opacity: 0.9;
+			}
+
+			100% {
+				opacity: 0;
+				transform: scale(1.15);
+			}
+		}
+
+		@keyframes housing-target-confetti {
+			0% {
+				opacity: 0;
+				transform: translate3d(0, 0, 0) rotate(var(--confetti-rotate));
+			}
+
+			10% {
+				opacity: 1;
+			}
+
+			100% {
+				opacity: 0;
+				transform: translate3d(16px, 230px, 0) rotate(calc(var(--confetti-rotate) + 210deg));
+			}
+		}
+
+		@keyframes housing-target-number-glow {
+			0%,
+			100% {
+				transform: translateY(0) scale(1);
+			}
+
+			45% {
+				transform: translateY(-2px) scale(1.035);
+			}
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::before,
+			.damage-dashboard-stats .housing-target-achieved .dashboard-summary-header::after,
+			.damage-dashboard-stats .housing-target-achieved .target-confetti span,
+			.damage-dashboard-stats .housing-target-achieved .target-total-number {
+				animation: none;
+			}
 		}
 
 		@media (max-width: 991.98px) {
@@ -999,14 +1232,26 @@
 		<!--begin::Col-->
 		<div class="col-sm-6 col-lg-6 col-xxl-3">
 			<!--begin::Mixed Widget 1-->
-			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card @if ($housingUnitsTargetReached) housing-target-achieved @endif">
 				<!--begin::Body-->
 				<div class="card-body p-0">
 					<!--begin::Header-->
 					<div style=" background-color: #67986c; "
 						class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
+						@if ($housingUnitsTargetReached)
+							<div class="target-confetti" aria-hidden="true">
+								<span></span>
+								<span></span>
+								<span></span>
+								<span></span>
+								<span></span>
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+						@endif
 						<!--begin::Heading-->
-						<div class="d-flex flex-stack">
+						<div class="d-flex flex-stack target-title-row">
 							<h3 class="m-0 text-white fw-bold fs-3">{{ __('ui.damage_dashboard.housing_units') }}</h3>
 							<div class="ms-1">
 								<!--begin::Menu-->
@@ -1026,9 +1271,12 @@
 						</div>
 						<!--end::Heading-->
 						<!--begin::Balance-->
-						<div class="d-flex text-center flex-column text-white pt-8">
+						<div class="d-flex text-center flex-column text-white pt-8 target-total-wrap">
 							<span class="fw-semibold fs-7">{{ __('ui.damage_dashboard.total_housing_units') }}</span>
-							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['damaged_total'] }}</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1 @if ($housingUnitsTargetReached) target-total-number @endif">{{ $unitStats['damaged_total'] }}</span>
+							@if ($housingUnitsTargetReached)
+								<span class="target-achieved-badge">تم تحقيق التارجت {{ number_format($housingUnitsTarget) }}+</span>
+							@endif
 						</div>
 						<!--end::Balance-->
 					</div>

@@ -73,3 +73,15 @@ test('dashboard summary icons match labels and use a consistent size', function 
         ->toContain('ki-bucket')
         ->not->toContain('ki-warning-2');
 });
+
+test('housing units target celebration appears when the dashboard target is reached', function () {
+    $dashboardView = file_get_contents(base_path('app/Modules/DamageAssessment/views/dashboard/damageAssessment.blade.php'));
+
+    expect($dashboardView)
+        ->toContain('$housingUnitsTarget = 67500;')
+        ->toContain('$housingUnitsTargetReached = (int) ($unitStats[\'damaged_total\'] ?? 0) >= $housingUnitsTarget;')
+        ->toContain('housing-target-achieved')
+        ->toContain('target-confetti')
+        ->toContain('target-total-number')
+        ->toContain('تم تحقيق التارجت');
+});
