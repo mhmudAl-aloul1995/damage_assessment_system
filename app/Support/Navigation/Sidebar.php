@@ -24,6 +24,7 @@ class Sidebar
         '803307669',
         '404030421',
         '406966812',
+        '400591194'
     ];
 
     private const TEMPORARY_AUDIT_HOME_URL = 'damage-assessment/audit';
