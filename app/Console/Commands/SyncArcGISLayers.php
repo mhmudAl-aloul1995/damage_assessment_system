@@ -916,7 +916,10 @@ class SyncArcGISLayers extends Command
 
     private function deleteMissingArcgisRows(string $table, string $unique, array $arcgisIds): int
     {
-        $arcgisIds = array_values(array_unique(array_filter($arcgisIds)));
+        $arcgisIds = array_values(array_unique(array_filter(
+            $arcgisIds,
+            static fn ($id): bool => $id !== null && $id !== ''
+        )));
 
         if (empty($arcgisIds)) {
             $this->warn("Skip delete missing rows for {$table}: ArcGIS returned 0 records.");
@@ -924,13 +927,41 @@ class SyncArcGISLayers extends Command
             return 0;
         }
 
-        $query = DB::table($table)
-            ->whereNotNull($unique)
-            ->whereNotIn($unique, $arcgisIds);
+        $arcgisIdLookup = array_fill_keys(array_map('strval', $arcgisIds), true);
+        $deleted = 0;
+        $lastValue = null;
 
-        $deleted = $query->count();
+        do {
+            $query = DB::table($table)
+                ->select($unique)
+                ->whereNotNull($unique)
+                ->orderBy($unique)
+                ->limit(1000);
 
-        $query->delete();
+            if ($lastValue !== null) {
+                $query->where($unique, '>', $lastValue);
+            }
+
+            $localIds = $query
+                ->pluck($unique)
+                ->all();
+
+            if ($localIds === []) {
+                break;
+            }
+
+            $lastValue = end($localIds);
+            $staleIds = array_values(array_filter(
+                $localIds,
+                static fn ($id): bool => ! isset($arcgisIdLookup[(string) $id])
+            ));
+
+            foreach (array_chunk($staleIds, 1000) as $staleIdChunk) {
+                $deleted += DB::table($table)
+                    ->whereIn($unique, $staleIdChunk)
+                    ->delete();
+            }
+        } while (count($localIds) === 1000);
 
         return $deleted;
     }

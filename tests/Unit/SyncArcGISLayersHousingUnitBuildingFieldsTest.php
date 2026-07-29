@@ -139,3 +139,74 @@ it('copies building location fields and submit date when syncing housing units',
     expect($housingUnit->building_submit_date)->toBe('2026-05-11 09:15:00');
     expect($housingUnit->building_field_status)->toBe('COMPLETED');
 });
+
+it('deletes missing housing units without a large not in query', function (): void {
+    $existingHousingUnits = collect(range(1, 1005))
+        ->map(fn (int $objectId): array => [
+            'objectid' => $objectId,
+            'globalid' => 'existing-housing-unit-'.$objectId,
+        ])
+        ->all();
+
+    DB::table('housing_units')->insert($existingHousingUnits);
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://example.com/HousingUnits/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/HousingUnits/FeatureServer/1?*' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'globalid', 'type' => 'esriFieldTypeString', 'length' => 64],
+            ],
+        ]),
+        'https://example.com/HousingUnits/FeatureServer/1/query*' => function ($request) {
+            $offset = (int) $request['resultOffset'];
+
+            if ($offset === 0) {
+                return Http::response([
+                    'features' => collect(range(1, 1000))
+                        ->map(fn (int $objectId): array => [
+                            'attributes' => [
+                                'objectid' => $objectId,
+                                'globalid' => 'synced-housing-unit-'.$objectId,
+                            ],
+                        ])
+                        ->all(),
+                    'exceededTransferLimit' => true,
+                ]);
+            }
+
+            return Http::response([
+                'features' => [
+                    [
+                        'attributes' => [
+                            'objectid' => 1001,
+                            'globalid' => 'synced-housing-unit-1001',
+                        ],
+                    ],
+                ],
+                'exceededTransferLimit' => false,
+            ]);
+        },
+    ]);
+
+    $executedSql = [];
+    DB::listen(function ($query) use (&$executedSql): void {
+        $executedSql[] = strtolower($query->sql);
+    });
+
+    $exitCode = Artisan::call('sync:arcgis-layers', [
+        'table' => 'housing_units',
+        '--chunk' => 1000,
+    ]);
+
+    expect($exitCode)->toBe(0);
+    expect(DB::table('housing_units')->whereBetween('objectid', [1002, 1005])->exists())->toBeFalse();
+    expect(DB::table('housing_units')->whereBetween('objectid', [1, 1001])->count())->toBe(1001);
+    expect(collect($executedSql)->contains(fn (string $sql): bool => str_contains($sql, 'not in')))->toBeFalse();
+});
