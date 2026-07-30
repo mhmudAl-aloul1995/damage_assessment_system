@@ -39,6 +39,7 @@ class SyncIqradKoboBorrowers extends Command
         $fetchExitCode = Artisan::call('kobo:fetch-asset-submissions', [
             'asset_uid' => $assetUid,
             '--service' => 'iqrad',
+            '--prune-missing' => true,
         ]);
         $this->output->write(Artisan::output());
 

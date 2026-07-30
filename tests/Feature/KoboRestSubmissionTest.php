@@ -257,10 +257,58 @@ test('kobo asset submissions can be fetched into stored rest submissions', funct
     Http::assertSent(fn ($request): bool => ($request->data()['start'] ?? null) === '100');
 });
 
+test('kobo asset fetch can prune stored submissions missing from the current asset response', function () {
+    config(['services.kobotoolbox.token' => 'api-token']);
+
+    KoboRestSubmission::query()->create([
+        'service_name' => 'iqrad',
+        'submission_uuid' => 'uuid:stale-iqrad-fetch',
+        'payload' => ['_uuid' => 'uuid:stale-iqrad-fetch', 'borrower_name' => 'Stale Borrower'],
+        'sync_status' => 'synced',
+        'received_at' => now(),
+    ]);
+
+    KoboRestSubmission::query()->create([
+        'service_name' => 'other-service',
+        'submission_uuid' => 'uuid:other-service',
+        'payload' => ['_uuid' => 'uuid:other-service', 'borrower_name' => 'Other Borrower'],
+        'sync_status' => 'synced',
+        'received_at' => now(),
+    ]);
+
+    Http::fake([
+        'https://kf.example.test/api/v2/assets/asset123/data/*' => Http::response([
+            'results' => [
+                ['_uuid' => 'uuid:active-iqrad-fetch', '_id' => 1, 'borrower_name' => 'Active Borrower'],
+            ],
+            'next' => null,
+        ]),
+    ]);
+
+    $this->artisan('kobo:fetch-asset-submissions', [
+        'asset_uid' => 'asset123',
+        '--service' => 'iqrad',
+        '--base-url' => 'https://kf.example.test',
+        '--prune-missing' => true,
+    ])->assertSuccessful();
+
+    expect(KoboRestSubmission::query()->where('service_name', 'iqrad')->pluck('submission_uuid')->all())
+        ->toBe(['uuid:active-iqrad-fetch'])
+        ->and(KoboRestSubmission::query()->where('service_name', 'other-service')->exists())->toBeTrue();
+});
+
 test('iqrad kobo sync command fetches and applies edited submissions', function () {
     config([
         'services.kobotoolbox.token' => 'api-token',
         'services.kobotoolbox.iqrad_asset_uid' => 'asset123',
+    ]);
+
+    KoboRestSubmission::query()->create([
+        'service_name' => 'iqrad',
+        'submission_uuid' => 'uuid:stale-iqrad-command-sync',
+        'payload' => ['_uuid' => 'uuid:stale-iqrad-command-sync', 'borrower_name' => 'Stale Kobo Borrower'],
+        'sync_status' => 'synced',
+        'received_at' => now(),
     ]);
 
     Http::fake([
@@ -285,7 +333,8 @@ test('iqrad kobo sync command fetches and applies edited submissions', function 
 
     expect($submission->sync_status)->toBe('synced')
         ->and($borrower->borrower_name)->toBe('Edited Kobo Borrower')
-        ->and($borrower->phone_primary)->toBe('0590000000');
+        ->and($borrower->phone_primary)->toBe('0590000000')
+        ->and(KoboRestSubmission::query()->where('submission_uuid', 'uuid:stale-iqrad-command-sync')->exists())->toBeFalse();
 });
 
 test('heks kobo sync command fetches configured assets and syncs services', function () {

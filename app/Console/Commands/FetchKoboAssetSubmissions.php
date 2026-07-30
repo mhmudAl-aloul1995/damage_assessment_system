@@ -21,6 +21,7 @@ class FetchKoboAssetSubmissions extends Command
         {--base-url=https://kf.kobotoolbox.org : KoboToolbox KPI server base URL}
         {--token= : KoboToolbox API token. Defaults to KOBOTOOLBOX_TOKEN}
         {--page-size=1000 : Number of submissions to request per page}
+        {--prune-missing : Delete stored submissions for the service when they no longer exist in the fetched asset}
         {--dry-run : Fetch and count without writing records}';
 
     /**
@@ -54,6 +55,7 @@ class FetchKoboAssetSubmissions extends Command
         ];
         $fetched = 0;
         $stored = 0;
+        $fetchedSubmissionUuids = [];
 
         while ($url !== '') {
             $request = Http::withToken($token, 'Token')
@@ -79,6 +81,7 @@ class FetchKoboAssetSubmissions extends Command
             if (! (bool) $this->option('dry-run')) {
                 foreach ($results as $submission) {
                     $submissionUuid = $this->submissionUuid($submission);
+                    $fetchedSubmissionUuids[] = $submissionUuid;
 
                     KoboRestSubmission::query()->updateOrCreate(
                         [
@@ -95,20 +98,49 @@ class FetchKoboAssetSubmissions extends Command
 
                     $stored++;
                 }
+            } else {
+                foreach ($results as $submission) {
+                    $fetchedSubmissionUuids[] = $this->submissionUuid($submission);
+                }
             }
 
             $next = Arr::get($payload, 'next');
             $url = is_string($next) && $next !== '' ? $next : '';
         }
 
+        $pruned = $this->pruneMissingSubmissions($service, $fetchedSubmissionUuids);
+
         $this->table(['Indicator', 'Count'], [
             ['Fetched submissions', $fetched],
             [(bool) $this->option('dry-run') ? 'Would store' : 'Stored submissions', (bool) $this->option('dry-run') ? $fetched : $stored],
+            [(bool) $this->option('dry-run') ? 'Would prune missing' : 'Pruned missing', $pruned],
         ]);
 
         $this->components->info('Kobo asset fetch completed.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  array<int, string>  $fetchedSubmissionUuids
+     */
+    private function pruneMissingSubmissions(string $service, array $fetchedSubmissionUuids): int
+    {
+        if (! (bool) $this->option('prune-missing')) {
+            return 0;
+        }
+
+        $query = KoboRestSubmission::query()
+            ->where('service_name', $service)
+            ->whereNotIn('submission_uuid', array_values(array_unique($fetchedSubmissionUuids)));
+
+        $count = (clone $query)->count();
+
+        if ((bool) $this->option('dry-run')) {
+            return $count;
+        }
+
+        return $query->delete();
     }
 
     /**
