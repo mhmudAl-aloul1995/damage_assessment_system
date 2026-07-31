@@ -17,6 +17,9 @@ class Sidebar
         '800409062',
         '400940623',
         '400591194',
+        '404581993',
+        '456901503',
+        '400662938',
         '803275288',
         '800900607',
         '801773987',
@@ -24,8 +27,12 @@ class Sidebar
         '403697311',
         '803307669',
         '404030421',
+        '403746530',
         '406966812',
-        '400591194',
+        '404581993',
+        '456901503',
+        '400662938',
+        '403746530'
     ];
 
     private const TEMPORARY_AUDIT_HOME_URL = 'damage-assessment/audit';
@@ -36,15 +43,15 @@ class Sidebar
     public static function forUser(User $user): Collection
     {
         $sectionsByModule = collect(config('sidebar'))
-            ->groupBy(fn (array $section): string => $section['module'] ?? 'damage_assessment');
+            ->groupBy(fn(array $section): string => $section['module'] ?? 'damage_assessment');
 
         return collect(config('modules'))
-            ->filter(fn (array $module): bool => $module['enabled'] ?? true)
+            ->filter(fn(array $module): bool => $module['enabled'] ?? true)
             ->sortBy('order')
             ->map(function (array $module, string $moduleKey) use ($sectionsByModule, $user): ?array {
                 $sections = $sectionsByModule
                     ->get($moduleKey, collect())
-                    ->map(fn (array $section): ?array => self::visibleSection($section, $user))
+                    ->map(fn(array $section): ?array => self::visibleSection($section, $user))
                     ->filter()
                     ->values();
 
@@ -66,7 +73,7 @@ class Sidebar
      */
     private static function visibleSection(array $section, User $user): ?array
     {
-        if (! $user->hasAnyRole($section['roles'] ?? []) && ! self::hasTemporaryVisibleItem($section, $user)) {
+        if (!$user->hasAnyRole($section['roles'] ?? []) && !self::hasTemporaryVisibleItem($section, $user)) {
             return null;
         }
 
@@ -80,7 +87,7 @@ class Sidebar
         }
 
         $visibleItems = collect($section['items'] ?? [])
-            ->map(fn (array $item): ?array => self::visibleItem($item, $user))
+            ->map(fn(array $item): ?array => self::visibleItem($item, $user))
             ->filter()
             ->values();
 
@@ -90,7 +97,7 @@ class Sidebar
 
         $section['items'] = $visibleItems;
         $section['visible_item_count'] = $visibleItems->sum(
-            fn (array $item): int => isset($item['children']) ? $item['children']->count() : 1
+            fn(array $item): int => isset($item['children']) ? $item['children']->count() : 1
         );
         $section['is_active'] = request()->is(...($section['active_patterns'] ?? []));
 
@@ -104,7 +111,7 @@ class Sidebar
     {
         if (isset($item['children'])) {
             $children = collect($item['children'])
-                ->filter(fn (array $child): bool => $user->hasAnyRole($child['roles'] ?? []))
+                ->filter(fn(array $child): bool => $user->hasAnyRole($child['roles'] ?? []))
                 ->values();
 
             if ($children->isEmpty()) {
@@ -122,7 +129,7 @@ class Sidebar
     private static function hasTemporaryVisibleItem(array $section, User $user): bool
     {
         return collect($section['items'] ?? [])
-            ->contains(fn (array $item): bool => self::isTemporaryAuditHomeItem($item, $user));
+            ->contains(fn(array $item): bool => self::isTemporaryAuditHomeItem($item, $user));
     }
 
     private static function isTemporaryAuditHomeItem(array $item, User $user): bool

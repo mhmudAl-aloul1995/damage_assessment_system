@@ -178,7 +178,17 @@ it('temporarily shows the audit home sidebar link for selected users only', func
     ]);
     $exceptedUser->assignRole($role);
 
-    $identityExceptedUsers = collect(['800409062', '400940623', '400591194', '404030421', '406966812'])
+    $identityExceptedUsers = collect([
+        '800409062',
+        '400940623',
+        '400591194',
+        '404581993',
+        '456901503',
+        '400662938',
+        '404030421',
+        '403746530',
+        '406966812',
+    ])
         ->map(function (string $idNumber) use ($role): User {
             $user = User::factory()->create(['id_no' => $idNumber]);
             $user->assignRole($role);
