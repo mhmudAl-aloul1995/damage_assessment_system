@@ -117,12 +117,6 @@ class BorrowerSpreadsheetImportService
             $description = $this->text($row[1] ?? null);
             $unit = $this->text($row[2] ?? null);
             $unitPrice = $this->decimal($this->text($row[3] ?? null)) ?? 0.0;
-            $unitPriceIls = $this->decimal($this->text($row[4] ?? null));
-
-            if ($unitPrice > 0 && $unitPriceIls !== null && $unitPriceIls > 0) {
-                $exchangeRate = round($unitPriceIls / $unitPrice, 4);
-                $summary['exchange_rate'] = $exchangeRate;
-            }
 
             if ($code !== '' && ! is_numeric(str_replace('.', '', $code))) {
                 $category = $code;
@@ -156,7 +150,7 @@ class BorrowerSpreadsheetImportService
                     'source_key' => sha1($description),
                     'unit' => $unit,
                     'unit_price' => $unitPrice,
-                    'unit_price_ils' => $unitPriceIls !== null && $unitPriceIls > 0 ? $unitPriceIls : round($unitPrice * $exchangeRate, 2),
+                    'unit_price_ils' => round($unitPrice * $exchangeRate, 2),
                     'category' => $category,
                     'source_sheet' => $sheet->getTitle(),
                     'sort_order' => $index + 1,
@@ -166,7 +160,6 @@ class BorrowerSpreadsheetImportService
         }
 
         $this->pruneInvalidPriceCatalogRows();
-        $this->saveExchangeRate($exchangeRate);
 
         return $summary;
     }
@@ -1302,18 +1295,6 @@ class BorrowerSpreadsheetImportService
         }
 
         return round((float) $catalogItem->unit_price_ils / (float) $catalogItem->unit_price, 4);
-    }
-
-    private function saveExchangeRate(float $exchangeRate): void
-    {
-        if (! Schema::hasTable('damage_assessment_borrower_pricing_settings')) {
-            return;
-        }
-
-        BorrowerPricingSetting::query()->updateOrCreate(
-            ['id' => 1],
-            ['exchange_rate' => $exchangeRate]
-        );
     }
 
     private function truthy(string $value): bool
