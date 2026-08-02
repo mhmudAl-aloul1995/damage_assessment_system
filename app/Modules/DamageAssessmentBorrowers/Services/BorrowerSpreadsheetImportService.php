@@ -222,6 +222,29 @@ class BorrowerSpreadsheetImportService
     }
 
     /**
+     * @return array{
+     *     total: int,
+     *     ready: int,
+     *     created: int,
+     *     updated: int,
+     *     skipped: int,
+     *     issues: array<int, array{row: int, reasons: array<int, string>}>,
+     *     duplicate_form_numbers: int,
+     *     risk_levels: array{critical: int, high: int, medium: int, low: int}
+     * }
+     */
+    public function importDetectedWorkbook(string $path): array
+    {
+        $loanSheetName = $this->firstLoanSheetName($path);
+
+        if ($loanSheetName !== null) {
+            return $this->importLoanWorkbook($path, $loanSheetName);
+        }
+
+        return $this->importWorkbook($path);
+    }
+
+    /**
      * @return array{source: string, sheets: array<int, array{name: string, status: string, total: int, ready: int, skipped: int, sample: array<int, array<string, mixed>>}>}
      */
     public function previewLoanWorkbook(string $path): array
@@ -859,11 +882,35 @@ class BorrowerSpreadsheetImportService
 
     private function loanSheetStatus(string $sheetName): ?string
     {
-        return match ($sheetName) {
-            'نشطه' => 'active',
-            'مغلقه' => 'closed',
+        return match ($this->normalizedLoanSheetName($sheetName)) {
+            'نشطه', 'نشط' => 'active',
+            'مغلقه', 'مغلق' => 'closed',
             default => null,
         };
+    }
+
+    private function firstLoanSheetName(string $path): ?string
+    {
+        $spreadsheet = IOFactory::load($path);
+
+        foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
+            if ($this->loanSheetStatus($sheet->getTitle()) !== null) {
+                return $sheet->getTitle();
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizedLoanSheetName(string $sheetName): string
+    {
+        $normalized = preg_replace('/[\s\p{Mn}\x{0640}]+/u', '', trim($sheetName)) ?? trim($sheetName);
+
+        return str_replace(
+            ['ة', 'أ', 'إ', 'آ'],
+            ['ه', 'ا', 'ا', 'ا'],
+            $normalized
+        );
     }
 
     /**

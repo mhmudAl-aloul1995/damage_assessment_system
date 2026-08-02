@@ -301,7 +301,7 @@ it('imports an uploaded borrower workbook through ajax', function () {
     $user->assignRole($role);
 
     $this->mock(BorrowerSpreadsheetImportService::class, function (MockInterface $mock): void {
-        $mock->shouldReceive('importWorkbook')
+        $mock->shouldReceive('importDetectedWorkbook')
             ->once()
             ->withArgs(fn (string $path): bool => is_file($path))
             ->andReturn([
@@ -371,6 +371,36 @@ it('previews and imports active Kuwait loan records from the selected worksheet'
         ->and((float) $borrower->loan_portfolio_amount)->toBe(15729.37)
         ->and((float) $borrower->loan_net_amount)->toBe(26512.0)
         ->and((float) $borrower->loan_balance)->toBe(15721.19);
+
+    unlink($path);
+});
+
+it('auto-detects Kuwait loan workbooks when no worksheet is selected', function () {
+    $spreadsheet = new Spreadsheet;
+    $activeSheet = $spreadsheet->getActiveSheet();
+    $activeSheet->setTitle(' نشطة ');
+    $activeSheet->fromArray([
+        ['رقم', 'قرض', 'مقترض', '', 'مقترض', '', '', 'تاريخ التفعيل', 'تاريخ اخر قسط', 'مبلغ القرض', 'محفظة القرض', 'صافي مبلغ القرض', 'الرصيد الاجمالي الحالي'],
+        ['', '', '', 'اصل القرض', 'الجوال', 'الاسم', 'العنوان'],
+        [1, '0000900202', '930046991', 41280, '0599496881', 'مقترض تجريبي', 'خانيونس', 43101, 46323, '36,512.00', '25,729.37', 36512, '25,721.19'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'kuwait-loans-auto-');
+    (new Xlsx($spreadsheet))->save($path);
+
+    $importer = app(BorrowerSpreadsheetImportService::class);
+    $preview = $importer->previewLoanWorkbook($path);
+    $summary = $importer->importDetectedWorkbook($path);
+
+    expect($preview['source'])->toBe('kuwait-loans')
+        ->and($preview['sheets'][0]['status'])->toBe('active')
+        ->and($summary['created'])->toBe(1);
+
+    $borrower = DamageAssessmentBorrower::query()->where('borrower_id_number', '930046991')->sole();
+
+    expect($borrower->loan_number)->toBe('0000900202')
+        ->and($borrower->loan_status)->toBe('active')
+        ->and((float) $borrower->loan_balance)->toBe(25721.19);
 
     unlink($path);
 });

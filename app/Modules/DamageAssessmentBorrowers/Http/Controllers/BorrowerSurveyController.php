@@ -144,7 +144,7 @@ class BorrowerSurveyController extends Controller
             $sheetName = $request->string('sheet_name')->toString();
             $summary = $sheetName !== ''
                 ? $importer->importLoanWorkbook($request->file('borrowers_file')->getRealPath(), $sheetName)
-                : $importer->importWorkbook($request->file('borrowers_file')->getRealPath());
+                : $importer->importDetectedWorkbook($request->file('borrowers_file')->getRealPath());
         } catch (RuntimeException $exception) {
             return response()->json([
                 'status' => false,
