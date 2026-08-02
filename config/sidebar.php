@@ -254,7 +254,7 @@ return [
                 'title' => 'Audit Reviewers',
                 'url' => 'damage-assessment/audit/reviewers',
                 'pattern' => 'damage-assessment/audit/reviewers',
-                'roles' => ['Auditing Supervisor'],
+                'roles' => ['Auditing Supervisor', 'Database Officer'],
             ],
             [
                 'title' => 'menu.audit.building_audit',

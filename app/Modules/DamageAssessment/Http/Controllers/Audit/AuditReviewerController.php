@@ -16,7 +16,7 @@ class AuditReviewerController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Auditing Supervisor');
+        $this->middleware('role:Auditing Supervisor|Database Officer');
     }
 
     public function index(): ViewResponse

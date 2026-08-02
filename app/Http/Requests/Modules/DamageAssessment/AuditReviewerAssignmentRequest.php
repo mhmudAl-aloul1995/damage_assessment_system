@@ -9,7 +9,7 @@ class AuditReviewerAssignmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('Auditing Supervisor') ?? false;
+        return $this->user()?->hasAnyRole(['Auditing Supervisor', 'Database Officer']) ?? false;
     }
 
     /**

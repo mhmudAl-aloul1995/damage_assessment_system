@@ -19,23 +19,23 @@ beforeEach(function (): void {
     ]);
 });
 
-it('lets auditing supervisors manage audit reviewers', function () {
-    $supervisorRole = Role::findOrCreate('Auditing Supervisor', 'web');
+it('lets audit managers manage audit reviewers', function (string $managerRoleName) {
+    $managerRole = Role::findOrCreate($managerRoleName, 'web');
     Role::findOrCreate('Audit Reviewer', 'web');
 
-    $supervisor = User::factory()->create();
-    $supervisor->assignRole($supervisorRole);
+    $manager = User::factory()->create();
+    $manager->assignRole($managerRole);
 
     $reviewer = User::factory()->create([
         'name' => 'Audit Reviewer Candidate',
     ]);
 
-    $this->actingAs($supervisor)
+    $this->actingAs($manager)
         ->get(route('audit.reviewers.index'))
         ->assertOk()
         ->assertSee('Audit Reviewer Candidate');
 
-    $this->actingAs($supervisor)
+    $this->actingAs($manager)
         ->post(route('audit.reviewers.store'), [
             'user_id' => $reviewer->id,
         ])
@@ -43,18 +43,21 @@ it('lets auditing supervisors manage audit reviewers', function () {
 
     expect($reviewer->fresh()->hasRole('Audit Reviewer'))->toBeTrue();
 
-    $this->actingAs($supervisor)
+    $this->actingAs($manager)
         ->delete(route('audit.reviewers.destroy', $reviewer))
         ->assertRedirect();
 
     expect($reviewer->fresh()->hasRole('Audit Reviewer'))->toBeFalse();
-});
+})->with([
+    'auditing supervisor' => 'Auditing Supervisor',
+    'database officer' => 'Database Officer',
+]);
 
-it('prevents non supervisors from managing audit reviewers', function () {
-    Role::findOrCreate('Database Officer', 'web');
+it('prevents non audit managers from managing audit reviewers', function () {
+    Role::findOrCreate('Project Officer', 'web');
 
     $user = User::factory()->create();
-    $user->assignRole('Database Officer');
+    $user->assignRole('Project Officer');
 
     $this->actingAs($user)
         ->get(route('audit.reviewers.index'))
