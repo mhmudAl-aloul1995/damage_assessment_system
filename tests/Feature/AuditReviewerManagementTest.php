@@ -40,6 +40,7 @@ it('lets audit managers manage audit reviewers', function (string $managerRoleNa
         ->get(route('audit.index', ['audit_reviewers' => 1]))
         ->assertOk()
         ->assertSee('auditReviewersModal')
+        ->assertSee('data-dropdown-parent="#auditReviewersModal"', false)
         ->assertSee('Audit Reviewer Candidate');
 
     $this->actingAs($manager)

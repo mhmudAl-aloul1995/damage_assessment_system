@@ -481,7 +481,9 @@
 
 						<div class="col-md-8">
 							<label for="audit_reviewer_user_id" class="form-label fw-semibold">المستخدم</label>
-							<select id="audit_reviewer_user_id" name="user_id" class="form-select form-select-solid" required>
+							<select id="audit_reviewer_user_id" name="user_id" class="form-select form-select-solid"
+								data-control="select2" data-dropdown-parent="#auditReviewersModal"
+								data-placeholder="اختر مستخدم" data-allow-clear="true" required>
 								<option value="">اختر مستخدم</option>
 								@foreach ($auditReviewerCandidates as $candidate)
 									<option value="{{ $candidate->id }}">
@@ -2606,6 +2608,27 @@
 
 			$select.val(null).trigger('change');
 		}
+
+		@if($canManageAuditReviewers ?? false)
+			function initAuditReviewerSelect() {
+				const $select = $('#audit_reviewer_user_id');
+
+				if (!$select.length || !$.fn.select2 || $select.hasClass('select2-hidden-accessible')) {
+					return;
+				}
+
+				$select.select2({
+					dropdownParent: $('#auditReviewersModal'),
+					placeholder: $select.data('placeholder') || 'اختر مستخدم',
+					allowClear: true,
+					width: '100%',
+					dir: 'rtl',
+				});
+			}
+
+			$('#auditReviewersModal').on('shown.bs.modal', initAuditReviewerSelect);
+			initAuditReviewerSelect();
+		@endif
 
 		@if(($canManageAuditReviewers ?? false) && request()->boolean('audit_reviewers'))
 			const auditReviewersModal = new bootstrap.Modal(document.getElementById('auditReviewersModal'));
