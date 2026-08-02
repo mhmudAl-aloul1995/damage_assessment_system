@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\BorrowerBoqPricingExport;
 use App\Exports\BorrowerReportExport;
 use App\Models\KoboRestSubmission;
 use App\Models\User;
@@ -18,6 +19,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use Mockery\MockInterface;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
 use Spatie\Permission\Models\Role;
 
 it('allows field engineers to open the borrowers overview page', function () {
@@ -1039,10 +1042,141 @@ it('opens borrower pricing page for database officers', function () {
         ->assertSee('pricing-page-header', false)
         ->assertSee('pricingSearchInput', false)
         ->assertSee('pricingActiveOnlyToggle', false)
+        ->assertSee(route('damage-assessment-borrowers.pricing.pdf', $borrower), false)
+        ->assertSee(route('damage-assessment-borrowers.pricing.excel', $borrower), false)
         ->assertSee('تغيير سعر الصرف هنا يعيد احتساب قيمة الشيكل لكل استبيانات المقترضين')
         ->assertSee('Paint item')
         ->assertDontSee('0000900101')
         ->assertDontSee('930046990');
+});
+
+it('exports borrower BOQ pricing to Excel with active rows only', function () {
+    Excel::fake();
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'BOQ Export Borrower',
+        'borrower_id_number' => '810000012',
+        'form_number' => 'IDB-BOQ',
+        'loan_number' => '0000900999',
+        'is_borrower_alive' => true,
+        'boq_total_usd' => 145,
+        'exchange_rate' => 2.9,
+        'boq_total_ils' => 420.5,
+    ]);
+    $activeCatalogItem = BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '7.1',
+        'source_column' => 'Paint export item',
+        'source_key' => sha1('Paint export item'),
+        'description' => 'Paint export item',
+        'normalized_description' => 'paint export item',
+        'unit' => 'M2',
+        'unit_price' => 5,
+        'unit_price_ils' => 14.5,
+        'sort_order' => 1,
+    ]);
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '8.1',
+        'source_column' => 'Empty export item',
+        'source_key' => sha1('Empty export item'),
+        'description' => 'Empty export item',
+        'normalized_description' => 'empty export item',
+        'unit' => 'No',
+        'unit_price' => 20,
+        'unit_price_ils' => 58,
+        'sort_order' => 2,
+    ]);
+    $borrower->boqItems()->create([
+        'catalog_item_id' => $activeCatalogItem->id,
+        'source_column' => 'Paint export item',
+        'source_key' => sha1('Paint export item'),
+        'item_code' => '7.1',
+        'description' => 'Paint export item',
+        'unit' => 'M2',
+        'unit_price' => 5,
+        'exchange_rate' => 2.9,
+        'unit_price_ils' => 14.5,
+        'quantity' => 10,
+        'total_price' => 145,
+        'total_price_ils' => 420.5,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.pricing.excel', $borrower))
+        ->assertOk();
+
+    Excel::assertDownloaded('borrower-boq-IDB-BOQ.xlsx', function (BorrowerBoqPricingExport $export): bool {
+        return $export->headings() === [
+            'الكود',
+            'البند',
+            'الوحدة',
+            'سعر الوحدة $',
+            'سعر الوحدة ILS',
+            'الكمية',
+            'الإجمالي $',
+            'الإجمالي ILS',
+        ]
+            && $export->collection()->count() === 1
+            && $export->map($export->collection()->first())[0] === '7.1'
+            && $export->map($export->collection()->first())[6] === 145.0;
+    });
+});
+
+it('exports borrower BOQ pricing to PDF', function () {
+    Pdf::fake();
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'PDF BOQ Borrower',
+        'borrower_id_number' => '810000013',
+        'form_number' => 'IDB-PDF',
+        'is_borrower_alive' => true,
+        'boq_total_usd' => 58,
+        'exchange_rate' => 2.9,
+        'boq_total_ils' => 168.2,
+    ]);
+    $catalogItem = BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '11.10',
+        'source_column' => 'Water tank export item',
+        'source_key' => sha1('Water tank export item'),
+        'description' => 'Water tank export item',
+        'normalized_description' => 'water tank export item',
+        'unit' => 'No',
+        'unit_price' => 20,
+        'unit_price_ils' => 58,
+        'sort_order' => 1,
+    ]);
+    $borrower->boqItems()->create([
+        'catalog_item_id' => $catalogItem->id,
+        'source_column' => 'Water tank export item',
+        'source_key' => sha1('Water tank export item'),
+        'item_code' => '11.10',
+        'description' => 'Water tank export item',
+        'unit' => 'No',
+        'unit_price' => 20,
+        'exchange_rate' => 2.9,
+        'unit_price_ils' => 58,
+        'quantity' => 1,
+        'total_price' => 58,
+        'total_price_ils' => 168.2,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.pricing.pdf', $borrower))
+        ->assertOk();
+
+    Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf): bool {
+        return $pdf->viewName === 'damage-assessment-borrowers::pdf.boq-pricing'
+            && $pdf->contains('PDF BOQ Borrower')
+            && $pdf->contains('Water tank export item')
+            && $pdf->contains('58.00');
+    });
 });
 
 it('opens borrower pricing page on active items when quantities are already saved', function () {

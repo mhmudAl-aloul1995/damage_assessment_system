@@ -24,6 +24,10 @@ Route::middleware('auth')->group(function () {
         ->name('damage-assessment-borrowers.exchange-rate.update');
     Route::get('/{borrower}/pricing', [BorrowerSurveyController::class, 'pricing'])
         ->name('damage-assessment-borrowers.pricing');
+    Route::get('/{borrower}/pricing/excel', [BorrowerSurveyController::class, 'exportPricingExcel'])
+        ->name('damage-assessment-borrowers.pricing.excel');
+    Route::get('/{borrower}/pricing/pdf', [BorrowerSurveyController::class, 'exportPricingPdf'])
+        ->name('damage-assessment-borrowers.pricing.pdf');
     Route::put('/{borrower}/pricing', [BorrowerSurveyController::class, 'updatePricing'])
         ->name('damage-assessment-borrowers.pricing.update');
     Route::get('/{borrower}/attachments/{attachment}', [BorrowerSurveyController::class, 'attachment'])

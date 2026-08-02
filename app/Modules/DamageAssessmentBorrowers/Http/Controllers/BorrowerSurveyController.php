@@ -2,6 +2,7 @@
 
 namespace App\Modules\DamageAssessmentBorrowers\Http\Controllers;
 
+use App\Exports\BorrowerBoqPricingExport;
 use App\Exports\BorrowerReportExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\ImportBorrowerSpreadsheetRequest;
@@ -17,6 +18,7 @@ use App\Modules\DamageAssessmentBorrowers\Models\DamageAssessmentBorrower;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerDamageValuationService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerRiskAnalysisService;
 use App\Modules\DamageAssessmentBorrowers\Services\BorrowerSpreadsheetImportService;
+use App\Support\BrowsershotConfiguration;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +33,9 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
+use Spatie\Browsershot\Browsershot;
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
@@ -245,18 +250,43 @@ class BorrowerSurveyController extends Controller
     {
         $this->authorizePricingAccess();
 
-        $borrower->load(['boqItems' => fn ($query) => $query->orderBy('sort_order')]);
-        $catalogItems = BorrowerBoqCatalogItem::query()
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->filter(fn (BorrowerBoqCatalogItem $catalogItem): bool => $this->isValidPricingCatalogItem($catalogItem))
-            ->values();
+        [$borrower, $pricingRows] = $this->borrowerPricingRows($borrower);
 
         return view('damage-assessment-borrowers::pricing', [
             'borrower' => $borrower,
-            'pricingRows' => $this->pricingRows($borrower, $catalogItems),
+            'pricingRows' => $pricingRows,
         ]);
+    }
+
+    public function exportPricingExcel(DamageAssessmentBorrower $borrower): BinaryFileResponse
+    {
+        $this->authorizePricingAccess();
+
+        [$borrower, $pricingRows] = $this->borrowerPricingRows($borrower, true);
+
+        return Excel::download(
+            new BorrowerBoqPricingExport($borrower, $pricingRows),
+            $this->borrowerPricingFilename($borrower, 'xlsx')
+        );
+    }
+
+    public function exportPricingPdf(DamageAssessmentBorrower $borrower): PdfBuilder
+    {
+        $this->authorizePricingAccess();
+
+        [$borrower, $pricingRows] = $this->borrowerPricingRows($borrower, true);
+
+        return Pdf::view('damage-assessment-borrowers::pdf.boq-pricing', [
+            'borrower' => $borrower,
+            'pricingRows' => $pricingRows,
+            'generatedAt' => now()->format('Y-m-d H:i'),
+        ])
+            ->format('a4')
+            ->landscape()
+            ->name($this->borrowerPricingFilename($borrower, 'pdf'))
+            ->withBrowsershot(function (Browsershot $browsershot): void {
+                app(BrowsershotConfiguration::class)->apply($browsershot);
+            });
     }
 
     public function attachment(DamageAssessmentBorrower $borrower, BorrowerAttachment $attachment): Response
@@ -785,6 +815,38 @@ class BorrowerSurveyController extends Controller
             'Team Leader -INF',
             'Auditing Supervisor',
         ]) ?? false;
+    }
+
+    /**
+     * @return array{0: DamageAssessmentBorrower, 1: Collection<int, array<string, mixed>>}
+     */
+    private function borrowerPricingRows(DamageAssessmentBorrower $borrower, bool $activeOnly = false): array
+    {
+        $borrower->load(['boqItems' => fn ($query) => $query->orderBy('sort_order')]);
+        $catalogItems = BorrowerBoqCatalogItem::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (BorrowerBoqCatalogItem $catalogItem): bool => $this->isValidPricingCatalogItem($catalogItem))
+            ->values();
+
+        $pricingRows = $this->pricingRows($borrower, $catalogItems);
+
+        if ($activeOnly) {
+            $pricingRows = $pricingRows
+                ->filter(fn (array $row): bool => (float) ($row['quantity'] ?? 0) > 0)
+                ->values();
+        }
+
+        return [$borrower, $pricingRows];
+    }
+
+    private function borrowerPricingFilename(DamageAssessmentBorrower $borrower, string $extension): string
+    {
+        $code = $borrower->form_number ?: ($borrower->loan_number ?: (string) $borrower->id);
+        $safeCode = preg_replace('/[^A-Za-z0-9_-]+/', '-', $code) ?: 'borrower';
+
+        return "borrower-boq-{$safeCode}.{$extension}";
     }
 
     /**

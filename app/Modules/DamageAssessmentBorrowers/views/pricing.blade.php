@@ -131,6 +131,12 @@
                     <div class="text-muted fs-6">{{ $borrower->borrower_id_number ?: '-' }}</div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('damage-assessment-borrowers.pricing.pdf', $borrower) }}" class="btn btn-light-success" target="_blank" rel="noopener">
+                        تصدير PDF
+                    </a>
+                    <a href="{{ route('damage-assessment-borrowers.pricing.excel', $borrower) }}" class="btn btn-light-info">
+                        تصدير Excel
+                    </a>
                     <a href="{{ route('damage-assessment-borrowers.show', $borrower) }}" class="btn btn-light">
                         بيانات المستفيد
                     </a>
