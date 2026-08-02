@@ -83,6 +83,12 @@ class auditController extends Controller
 
     public function index(Request $request, AuditTableService $auditTableService)
     {
+        $roleNames = $request->user()?->getRoleNames() ?? collect();
+
+        abort_if(
+            $roleNames->count() === 1 && $roleNames->contains(fn (string $role): bool => in_array($role, ['Field Engineer', 'field Engineer'], true)),
+            403
+        );
 
         // dd(Building::where('objectid', 7168)->first());
         if ($request->ajax()) {

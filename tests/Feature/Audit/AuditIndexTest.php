@@ -633,3 +633,43 @@ it('opens the audit index for team leaders without management actions', function
         $response->assertDontSee($buttonId, false);
     }
 });
+
+it('forbids users with only a field engineer role from opening the audit index', function () {
+    $role = Role::query()->create([
+        'name' => 'Field Engineer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertForbidden();
+});
+
+it('does not forbid field engineers with another role from opening the audit index', function () {
+    $fieldEngineerRole = Role::query()->create([
+        'name' => 'Field Engineer',
+        'guard_name' => 'web',
+    ]);
+    $teamLeaderRole = Role::query()->create([
+        'name' => 'Team Leader',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($fieldEngineerRole, $teamLeaderRole);
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk();
+});
