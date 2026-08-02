@@ -858,7 +858,9 @@ class BorrowerSpreadsheetImportService
                 });
                 $unitPrice = (float) ($catalogItem?->unit_price ?? 0);
                 $exchangeRate = $this->currentExchangeRate();
-                $itemTotalUsd = (float) $quantity['quantity'];
+                $unitPriceIls = round($unitPrice * $exchangeRate, 2);
+                $itemQuantity = (float) $quantity['quantity'];
+                $itemTotalUsd = round($itemQuantity * $unitPriceIls, 2);
 
                 return [
                     'catalog_item_id' => $catalogItem?->id,
@@ -869,9 +871,9 @@ class BorrowerSpreadsheetImportService
                     'unit' => $catalogItem?->unit ?? $this->unitFromDescription($description),
                     'unit_price' => $unitPrice,
                     'exchange_rate' => $exchangeRate,
-                    'unit_price_ils' => round($unitPrice * $exchangeRate, 2),
-                    'quantity' => $itemTotalUsd,
-                    'total_price' => round($itemTotalUsd, 2),
+                    'unit_price_ils' => $unitPriceIls,
+                    'quantity' => $itemQuantity,
+                    'total_price' => $itemTotalUsd,
                     'total_price_ils' => round($itemTotalUsd * $exchangeRate, 2),
                     'sort_order' => $quantity['sort_order'],
                 ];

@@ -81,7 +81,7 @@ test('kobo rest submission stores json payload', function () {
         ->and($borrower->attachments()->first()->url)->toBe('https://kf.example.test/media/damage.jpg');
 });
 
-test('kobo rest submission syncs borrower boq dollar amounts from payload', function () {
+test('kobo rest submission syncs borrower boq values using the exchange-adjusted catalog price', function () {
     BorrowerBoqCatalogItem::query()->create([
         'item_code' => '1.1',
         'description' => 'Repair concrete item',
@@ -111,9 +111,9 @@ test('kobo rest submission syncs borrower boq dollar amounts from payload', func
 
     expect($borrower->boqItems()->count())->toBe(1)
         ->and((float) $borrower->boqItems()->first()->quantity)->toBe(2.0)
-        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(2.0)
-        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(2.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(7.0);
+        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(70.0)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(70.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(245.0);
 
     $payload['boq_quantities'][0]['quantity'] = 3;
 
@@ -125,12 +125,12 @@ test('kobo rest submission syncs borrower boq dollar amounts from payload', func
 
     expect($borrower->boqItems()->count())->toBe(1)
         ->and((float) $borrower->boqItems()->first()->refresh()->quantity)->toBe(3.0)
-        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(3.0)
-        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(3.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(10.5);
+        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(105.0)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(105.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(367.5);
 });
 
-test('kobo rest submission syncs borrower boq dollar amounts from configured kobo group', function () {
+test('kobo rest submission syncs borrower boq values from configured kobo group', function () {
     BorrowerBoqCatalogItem::query()->create([
         'item_code' => '1.1',
         'description' => 'First catalog item',
@@ -223,8 +223,8 @@ test('kobo rest submission syncs borrower boq dollar amounts from configured kob
         ->and($items[2]->item_code)->toBe('7.1')
         ->and($items[2]->description)->toBe('Paint catalog item')
         ->and((float) $items[2]->quantity)->toBe(100.0)
-        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(107.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(374.5);
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(10920.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(38220.0);
 });
 
 test('kobo asset submissions can be fetched into stored rest submissions', function () {

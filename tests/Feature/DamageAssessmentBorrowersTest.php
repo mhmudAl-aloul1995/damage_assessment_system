@@ -13,6 +13,7 @@ use App\Support\Navigation\Sidebar;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use Mockery\MockInterface;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -1153,16 +1154,80 @@ it('updates borrower pricing items and recalculates total', function () {
     $borrower->refresh();
     $otherBorrower->refresh();
 
-    expect((float) $borrower->boq_total_usd)->toBe(2.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(7.0)
+    expect((float) $borrower->boq_total_usd)->toBe(385.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(1347.5)
         ->and((float) $borrower->exchange_rate)->toBe(3.5)
         ->and($borrower->boqItems()->count())->toBe(1)
-        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(2.0)
-        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(7.0)
+        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(385.0)
+        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(1347.5)
         ->and((float) $otherBorrower->exchange_rate)->toBe(3.5)
         ->and((float) $otherBorrower->boq_total_ils)->toBe(140.0)
         ->and((float) $otherBorrower->boqItems()->first()->unit_price_ils)->toBe(70.0)
         ->and((float) $otherBorrower->boqItems()->first()->total_price_ils)->toBe(140.0);
+});
+
+it('prices Munir borrower values to 7977.90 dollars from the exchange-adjusted catalog prices', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'منير فارس شحدة زريد',
+        'borrower_id_number' => '923509293',
+        'form_number' => 'IDB53',
+        'is_borrower_alive' => true,
+    ]);
+
+    $items = [
+        ['4.1', 'Crack repair', 'ML', 3, 12],
+        ['7.1', 'Paint work', 'M2', 3, 100],
+        ['8.1', 'Wood door leaf', 'No', 190, 2],
+        ['8.2', 'Door frame', 'No', 60, 2],
+        ['8.4', 'Wood door maintenance', 'No', 75, 4],
+        ['9.1', 'Aluminum window', 'M2', 70, 14],
+        ['9.2', 'Aluminum maintenance', 'M2', 20, 5],
+        ['10.1', 'Galvanized sheets', 'M2', 13, 15],
+        ['10.4', 'Iron doors maintenance', 'M2', 30, 1],
+        ['11.10', 'Water tank 1000 liter', 'No', 155, 2],
+    ];
+
+    $payloadItems = collect($items)
+        ->map(function (array $item, int $index): array {
+            [$itemCode, $description, $unit, $unitPrice, $quantity] = $item;
+            $catalogItem = BorrowerBoqCatalogItem::query()->create([
+                'item_code' => $itemCode,
+                'source_column' => $description,
+                'source_key' => sha1($description),
+                'description' => $description,
+                'normalized_description' => Str::lower($description),
+                'unit' => $unit,
+                'unit_price' => $unitPrice,
+                'sort_order' => $index + 1,
+            ]);
+
+            return [
+                'catalog_item_id' => $catalogItem->id,
+                'source_column' => $description,
+                'source_key' => sha1($description),
+                'item_code' => $itemCode,
+                'description' => $description,
+                'unit' => $unit,
+                'unit_price' => $unitPrice,
+                'quantity' => $quantity,
+                'sort_order' => $index + 1,
+            ];
+        })
+        ->all();
+
+    $this->actingAs($user)
+        ->put(route('damage-assessment-borrowers.pricing.update', $borrower), [
+            'exchange_rate' => 2.9,
+            'items' => $payloadItems,
+        ])
+        ->assertRedirect(route('damage-assessment-borrowers.pricing', $borrower));
+
+    expect((float) $borrower->refresh()->boq_total_usd)->toBe(7977.9)
+        ->and((float) $borrower->boq_total_ils)->toBe(23135.91)
+        ->and((float) $borrower->boqItems()->where('item_code', '7.1')->sole()->total_price)->toBe(870.0);
 });
 
 it('updates the global borrower exchange rate from the main screen', function () {
@@ -1301,8 +1366,8 @@ it('imports borrower boq items attachments and resident households', function ()
             ->and($borrower->attachments()->count())->toBe(1)
             ->and($borrower->residentHouseholds()->count())->toBe(1)
             ->and($borrower->boqItems()->count())->toBe(1)
-            ->and((float) $borrower->refresh()->boq_total_usd)->toBe(2.0)
-            ->and((float) $borrower->boq_total_ils)->toBe(6.4)
+            ->and((float) $borrower->refresh()->boq_total_usd)->toBe(64.0)
+            ->and((float) $borrower->boq_total_ils)->toBe(204.8)
             ->and($borrower->attachments_count)->toBe(1);
     } finally {
         @unlink($path);
