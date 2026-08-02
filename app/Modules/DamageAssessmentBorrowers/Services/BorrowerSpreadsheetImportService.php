@@ -134,6 +134,12 @@ class BorrowerSpreadsheetImportService
                 continue;
             }
 
+            if (! $this->isValidPriceCatalogRow($code, $description, $unit)) {
+                $summary['skipped']++;
+
+                continue;
+            }
+
             $summary['total']++;
 
             if ($unitPrice <= 0) {
@@ -159,6 +165,7 @@ class BorrowerSpreadsheetImportService
             $summary['imported']++;
         }
 
+        $this->pruneInvalidPriceCatalogRows();
         $this->saveExchangeRate($exchangeRate);
 
         return $summary;
@@ -839,7 +846,10 @@ class BorrowerSpreadsheetImportService
         }
 
         $catalogItems = Schema::hasTable('damage_assessment_borrower_boq_catalog_items')
-            ? BorrowerBoqCatalogItem::query()->orderBy('sort_order')->get()
+            ? BorrowerBoqCatalogItem::query()
+                ->orderBy('sort_order')
+                ->get()
+                ->filter(fn (BorrowerBoqCatalogItem $catalogItem): bool => $this->isValidPriceCatalogItem($catalogItem))
             : collect();
 
         return collect($quantities)
@@ -1237,6 +1247,35 @@ class BorrowerSpreadsheetImportService
         }
 
         return null;
+    }
+
+    private function isValidPriceCatalogRow(string $code, string $description, string $unit): bool
+    {
+        return preg_match('/^\d+\.\d+$/', $code) === 1
+            && preg_match('/^\d{6,}$/', $description) !== 1
+            && preg_match('/^\d{6,}$/', $unit) !== 1;
+    }
+
+    private function isValidPriceCatalogItem(BorrowerBoqCatalogItem $catalogItem): bool
+    {
+        return $this->isValidPriceCatalogRow(
+            trim((string) $catalogItem->item_code),
+            trim((string) $catalogItem->description),
+            trim((string) $catalogItem->unit),
+        );
+    }
+
+    private function pruneInvalidPriceCatalogRows(): void
+    {
+        if (! Schema::hasTable('damage_assessment_borrower_boq_catalog_items')) {
+            return;
+        }
+
+        BorrowerBoqCatalogItem::query()
+            ->get()
+            ->reject(fn (BorrowerBoqCatalogItem $catalogItem): bool => $this->isValidPriceCatalogItem($catalogItem))
+            ->each
+            ->delete();
     }
 
     private function currentExchangeRate(): float

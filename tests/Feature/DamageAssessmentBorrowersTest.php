@@ -424,7 +424,20 @@ it('imports borrower boq catalog prices using the ILS price column', function ()
     $sheet->fromArray([
         ['البند', 'الوصف', 'الوحدة', 'سعر الوحدة $', 'سعر الوحدة ILS'],
         ['4.1', 'أعمال معالجة التشققات مع الشبك حسب المواصفات الفنية', 'ML', 3, 8.7],
+        ['1', '0000900101', '930046990', 32280, 93612],
         ['7.1', 'توريد ودهان سوبر كريل لزوم الحوائط الداخلية والأسقف', 'M2', 3, 8.7],
+    ]);
+
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '1',
+        'source_column' => '0000900101',
+        'source_key' => sha1('0000900101'),
+        'description' => '0000900101',
+        'normalized_description' => '0000900101',
+        'unit' => '930046990',
+        'unit_price' => 32280,
+        'unit_price_ils' => 93612,
+        'sort_order' => 99,
     ]);
 
     $path = tempnam(sys_get_temp_dir(), 'borrower-boq-prices-');
@@ -434,6 +447,7 @@ it('imports borrower boq catalog prices using the ILS price column', function ()
 
     expect($summary['imported'])->toBe(2)
         ->and($summary['exchange_rate'])->toBe(2.9)
+        ->and(BorrowerBoqCatalogItem::query()->where('item_code', '1')->exists())->toBeFalse()
         ->and((float) BorrowerBoqCatalogItem::query()->where('item_code', '4.1')->value('unit_price_ils'))->toBe(8.7)
         ->and((float) BorrowerPricingSetting::query()->sole()->exchange_rate)->toBe(2.9);
 
@@ -993,7 +1007,7 @@ it('opens borrower pricing page for database officers', function () {
     ]);
 
     BorrowerBoqCatalogItem::query()->create([
-        'item_code' => 'P1',
+        'item_code' => '7.1',
         'source_column' => 'Paint item',
         'source_key' => sha1('Paint item'),
         'description' => 'Paint item',
@@ -1001,6 +1015,16 @@ it('opens borrower pricing page for database officers', function () {
         'unit' => 'M2',
         'unit_price' => 7,
         'sort_order' => 1,
+    ]);
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '1',
+        'source_column' => '0000900101',
+        'source_key' => sha1('0000900101'),
+        'description' => '0000900101',
+        'normalized_description' => '0000900101',
+        'unit' => '930046990',
+        'unit_price' => 32280,
+        'sort_order' => 2,
     ]);
 
     $this->actingAs($user)
@@ -1013,7 +1037,9 @@ it('opens borrower pricing page for database officers', function () {
         ->assertSee('pricingSearchInput', false)
         ->assertSee('pricingActiveOnlyToggle', false)
         ->assertSee('تغيير سعر الصرف هنا يعيد احتساب قيمة الشيكل لكل استبيانات المقترضين')
-        ->assertSee('Paint item');
+        ->assertSee('Paint item')
+        ->assertDontSee('0000900101')
+        ->assertDontSee('930046990');
 });
 
 it('updates borrower pricing items and recalculates total', function () {

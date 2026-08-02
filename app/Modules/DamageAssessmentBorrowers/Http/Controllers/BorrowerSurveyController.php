@@ -249,7 +249,9 @@ class BorrowerSurveyController extends Controller
         $catalogItems = BorrowerBoqCatalogItem::query()
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->filter(fn (BorrowerBoqCatalogItem $catalogItem): bool => $this->isValidPricingCatalogItem($catalogItem))
+            ->values();
 
         return view('damage-assessment-borrowers::pricing', [
             'borrower' => $borrower,
@@ -815,6 +817,7 @@ class BorrowerSurveyController extends Controller
         $catalogKeys = $rows->pluck('source_key')->all();
         $orphanRows = $borrower->boqItems
             ->reject(fn ($item): bool => in_array($item->source_key, $catalogKeys, true))
+            ->filter(fn ($item): bool => $this->isValidPricingCatalogItemLike($item->item_code, $item->description, $item->unit))
             ->map(fn ($item): array => [
                 'catalog_item_id' => $item->catalog_item_id,
                 'source_column' => $item->source_column,
@@ -831,6 +834,22 @@ class BorrowerSurveyController extends Controller
             ]);
 
         return $rows->merge($orphanRows)->values();
+    }
+
+    private function isValidPricingCatalogItem(BorrowerBoqCatalogItem $catalogItem): bool
+    {
+        return $this->isValidPricingCatalogItemLike($catalogItem->item_code, $catalogItem->description, $catalogItem->unit);
+    }
+
+    private function isValidPricingCatalogItemLike(?string $itemCode, ?string $description, ?string $unit): bool
+    {
+        $itemCode = trim((string) $itemCode);
+        $description = trim((string) $description);
+        $unit = trim((string) $unit);
+
+        return preg_match('/^\d+\.\d+$/', $itemCode) === 1
+            && preg_match('/^\d{6,}$/', $description) !== 1
+            && preg_match('/^\d{6,}$/', $unit) !== 1;
     }
 
     private function riskLabel(?string $riskLevel): string
