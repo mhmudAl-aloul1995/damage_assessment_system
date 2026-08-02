@@ -142,9 +142,12 @@ class BorrowerSurveyController extends Controller
             }
 
             $sheetName = $request->string('sheet_name')->toString();
-            $summary = $sheetName !== ''
-                ? $importer->importLoanWorkbook($request->file('borrowers_file')->getRealPath(), $sheetName)
-                : $importer->importDetectedWorkbook($request->file('borrowers_file')->getRealPath());
+            $filePath = $request->file('borrowers_file')->getRealPath();
+            $summary = match (true) {
+                $sheetName === '__all_loan_sheets' => $importer->importLoanWorkbooks($filePath),
+                $sheetName !== '' => $importer->importLoanWorkbook($filePath, $sheetName),
+                default => $importer->importDetectedWorkbook($filePath),
+            };
         } catch (RuntimeException $exception) {
             return response()->json([
                 'status' => false,

@@ -384,6 +384,13 @@ it('auto-detects Kuwait loan workbooks when no worksheet is selected', function 
         ['', '', '', 'اصل القرض', 'الجوال', 'الاسم', 'العنوان'],
         [1, '0000900202', '930046991', 41280, '0599496881', 'مقترض تجريبي', 'خانيونس', 43101, 46323, '36,512.00', '25,729.37', 36512, '25,721.19'],
     ]);
+    $closedSheet = $spreadsheet->createSheet();
+    $closedSheet->setTitle('مغلقة');
+    $closedSheet->fromArray(array_fill(0, 5, []));
+    $closedSheet->fromArray([
+        ['رقم', 'قرض', 'مقترض', 'الاسم', 'اصل القرض', 'رقم الجوال', 'العنوان', 'المبلغ الكلي', 'عدد دفعات السداد', 'تاريخ بداية السداد', 'المبلغ المطلوب', 'قيمة السداد المدفوعة', 'الرصيد الكلي', 'سلّمت براءة الذّمة'],
+        [1, '0000900203', '930046992', 'مقترض مغلق', 28000, '0599496882', 'غزة', 30000, 30, 43101, 30000, 29990, 10, '1'],
+    ], null, 'A6');
 
     $path = tempnam(sys_get_temp_dir(), 'kuwait-loans-auto-');
     (new Xlsx($spreadsheet))->save($path);
@@ -394,13 +401,18 @@ it('auto-detects Kuwait loan workbooks when no worksheet is selected', function 
 
     expect($preview['source'])->toBe('kuwait-loans')
         ->and($preview['sheets'][0]['status'])->toBe('active')
-        ->and($summary['created'])->toBe(1);
+        ->and($preview['sheets'][1]['status'])->toBe('closed')
+        ->and($summary['created'])->toBe(2);
 
     $borrower = DamageAssessmentBorrower::query()->where('borrower_id_number', '930046991')->sole();
+    $closedBorrower = DamageAssessmentBorrower::query()->where('borrower_id_number', '930046992')->sole();
 
     expect($borrower->loan_number)->toBe('0000900202')
         ->and($borrower->loan_status)->toBe('active')
-        ->and((float) $borrower->loan_balance)->toBe(25721.19);
+        ->and((float) $borrower->loan_balance)->toBe(25721.19)
+        ->and($closedBorrower->loan_number)->toBe('0000900203')
+        ->and($closedBorrower->loan_status)->toBe('closed')
+        ->and((float) $closedBorrower->loan_balance)->toBe(10.0);
 
     unlink($path);
 });

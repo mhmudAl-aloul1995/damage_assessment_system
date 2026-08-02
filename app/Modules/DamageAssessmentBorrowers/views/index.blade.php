@@ -1767,10 +1767,19 @@
                     <span class="badge badge-light-success">معاينة فقط</span>
                 </div>
                 <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-check form-check-custom form-check-solid border rounded p-3 w-100">
+                            <input class="form-check-input" type="radio" name="sheet_name" value="__all_loan_sheets" checked>
+                            <span class="form-check-label ms-3 flex-grow-1">
+                                <span class="fw-bold d-block">كل أوراق القروض</span>
+                                <span class="text-muted fs-7">${sheets.reduce((sum, sheet) => sum + Number(sheet.ready || 0), 0)} سجل جاهز من أصل ${sheets.reduce((sum, sheet) => sum + Number(sheet.total || 0), 0)}</span>
+                            </span>
+                        </label>
+                    </div>
                     ${sheets.map((sheet, index) => `
                         <div class="col-12">
                             <label class="form-check form-check-custom form-check-solid border rounded p-3 w-100">
-                                <input class="form-check-input" type="radio" name="sheet_name" value="${sheet.name}" ${index === 0 ? 'checked' : ''}>
+                                <input class="form-check-input" type="radio" name="sheet_name" value="${sheet.name}">
                                 <span class="form-check-label ms-3 flex-grow-1">
                                     <span class="fw-bold d-block">${sheet.name} — ${sheet.status === 'active' ? 'قروض نشطة' : 'قروض مغلقة'}</span>
                                     <span class="text-muted fs-7">${sheet.ready} سجل جاهز من أصل ${sheet.total}${sheet.skipped ? `، ${sheet.skipped} بحاجة مراجعة` : ''}</span>

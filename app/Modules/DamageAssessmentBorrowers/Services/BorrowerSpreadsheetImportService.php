@@ -235,10 +235,10 @@ class BorrowerSpreadsheetImportService
      */
     public function importDetectedWorkbook(string $path): array
     {
-        $loanSheetName = $this->firstLoanSheetName($path);
+        $loanSheetNames = $this->loanSheetNames($path);
 
-        if ($loanSheetName !== null) {
-            return $this->importLoanWorkbook($path, $loanSheetName);
+        if ($loanSheetNames !== []) {
+            return $this->importLoanWorkbooks($path, $loanSheetNames);
         }
 
         return $this->importWorkbook($path);
@@ -384,6 +384,64 @@ class BorrowerSpreadsheetImportService
             ], fn (mixed $value): bool => $value !== null && $value !== ''));
             $borrower->save();
             $summary[$isNew ? 'created' : 'updated']++;
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param  array<int, string>|null  $sheetNames
+     * @return array{total: int, ready: int, created: int, updated: int, skipped: int, issues: array<int, array{row: int, reasons: array<int, string>}>, duplicate_form_numbers: int, risk_levels: array{critical: int, high: int, medium: int, low: int}}
+     */
+    public function importLoanWorkbooks(string $path, ?array $sheetNames = null): array
+    {
+        $sheetNames ??= $this->loanSheetNames($path);
+
+        if ($sheetNames === []) {
+            throw new RuntimeException('لم يتم العثور على ورقتَي القروض «نشطه» أو «مغلقه» داخل الملف.');
+        }
+
+        $summary = $this->emptyImportSummary();
+
+        foreach ($sheetNames as $sheetName) {
+            $summary = $this->mergeImportSummary($summary, $this->importLoanWorkbook($path, $sheetName));
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @return array{total: int, ready: int, created: int, updated: int, skipped: int, issues: array<int, array{row: int, reasons: array<int, string>}>, duplicate_form_numbers: int, risk_levels: array{critical: int, high: int, medium: int, low: int}}
+     */
+    private function emptyImportSummary(): array
+    {
+        return [
+            'total' => 0,
+            'ready' => 0,
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'issues' => [],
+            'duplicate_form_numbers' => 0,
+            'risk_levels' => ['critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0],
+        ];
+    }
+
+    /**
+     * @param  array{total: int, ready: int, created: int, updated: int, skipped: int, issues: array<int, array{row: int, reasons: array<int, string>}>, duplicate_form_numbers: int, risk_levels: array{critical: int, high: int, medium: int, low: int}}  $summary
+     * @param  array{total: int, ready: int, created: int, updated: int, skipped: int, issues: array<int, array{row: int, reasons: array<int, string>}>, duplicate_form_numbers: int, risk_levels: array{critical: int, high: int, medium: int, low: int}}  $sheetSummary
+     * @return array{total: int, ready: int, created: int, updated: int, skipped: int, issues: array<int, array{row: int, reasons: array<int, string>}>, duplicate_form_numbers: int, risk_levels: array{critical: int, high: int, medium: int, low: int}}
+     */
+    private function mergeImportSummary(array $summary, array $sheetSummary): array
+    {
+        foreach (['total', 'ready', 'created', 'updated', 'skipped', 'duplicate_form_numbers'] as $key) {
+            $summary[$key] += $sheetSummary[$key];
+        }
+
+        $summary['issues'] = array_merge($summary['issues'], $sheetSummary['issues']);
+
+        foreach (['critical', 'high', 'medium', 'low'] as $riskLevel) {
+            $summary['risk_levels'][$riskLevel] += $sheetSummary['risk_levels'][$riskLevel];
         }
 
         return $summary;
@@ -889,17 +947,21 @@ class BorrowerSpreadsheetImportService
         };
     }
 
-    private function firstLoanSheetName(string $path): ?string
+    /**
+     * @return array<int, string>
+     */
+    private function loanSheetNames(string $path): array
     {
         $spreadsheet = IOFactory::load($path);
+        $sheetNames = [];
 
         foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
             if ($this->loanSheetStatus($sheet->getTitle()) !== null) {
-                return $sheet->getTitle();
+                $sheetNames[] = $sheet->getTitle();
             }
         }
 
-        return null;
+        return $sheetNames;
     }
 
     private function normalizedLoanSheetName(string $sheetName): string
