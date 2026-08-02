@@ -299,7 +299,7 @@ class BorrowerSurveyController extends Controller
         $exchangeRate = (float) $validated['exchange_rate'];
         $items = collect($validated['items'] ?? [])
             ->map(function (array $item) use ($exchangeRate): array {
-                $quantity = (float) ($item['quantity'] ?? 0);
+                $itemTotalUsd = (float) ($item['quantity'] ?? 0);
                 $unitPrice = (float) ($item['unit_price'] ?? 0);
                 $sourceColumn = (string) $item['source_column'];
 
@@ -313,9 +313,9 @@ class BorrowerSurveyController extends Controller
                     'unit_price' => $unitPrice,
                     'exchange_rate' => $exchangeRate,
                     'unit_price_ils' => round($unitPrice * $exchangeRate, 2),
-                    'quantity' => $quantity,
-                    'total_price' => round($quantity * $unitPrice, 2),
-                    'total_price_ils' => round($quantity * $unitPrice * $exchangeRate, 2),
+                    'quantity' => $itemTotalUsd,
+                    'total_price' => round($itemTotalUsd, 2),
+                    'total_price_ils' => round($itemTotalUsd * $exchangeRate, 2),
                     'sort_order' => (int) ($item['sort_order'] ?? 0),
                 ];
             })

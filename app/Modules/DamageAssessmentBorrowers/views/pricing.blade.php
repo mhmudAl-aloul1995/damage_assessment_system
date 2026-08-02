@@ -343,16 +343,16 @@
                 const exchangeRate = Number(exchangeRateInput?.value || 0);
                 document.querySelectorAll('[data-pricing-row]').forEach((row) => {
                     const unitPrice = Number(row.querySelector('[data-unit-price]')?.value || 0);
-                    const quantity = Number(row.querySelector('[data-quantity]')?.value || 0);
+                    const itemTotalUsd = Number(row.querySelector('[data-quantity]')?.value || 0);
                     const unitPriceIls = unitPrice * exchangeRate;
-                    const rowTotal = unitPrice * quantity;
-                    const rowTotalIls = unitPriceIls * quantity;
+                    const rowTotal = itemTotalUsd;
+                    const rowTotalIls = itemTotalUsd * exchangeRate;
                     total += rowTotal;
                     totalIls += rowTotalIls;
-                    if (quantity > 0) {
+                    if (itemTotalUsd > 0) {
                         active += 1;
                     }
-                    row.classList.toggle('is-priced-row', quantity > 0);
+                    row.classList.toggle('is-priced-row', itemTotalUsd > 0);
                     row.querySelector('[data-unit-price-ils]').value = formatter.format(unitPriceIls).replace(/,/g, '');
                     row.querySelector('[data-row-total]').textContent = formatter.format(rowTotal);
                     row.querySelector('[data-row-total-ils]').textContent = formatter.format(rowTotalIls);

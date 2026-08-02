@@ -1076,7 +1076,7 @@ it('opens borrower pricing page on active items when quantities are already save
         'unit_price' => 3,
         'exchange_rate' => 2.9,
         'unit_price_ils' => 8.7,
-        'quantity' => 12,
+        'quantity' => 36,
         'total_price' => 36,
         'total_price_ils' => 104.4,
         'sort_order' => 1,
@@ -1125,7 +1125,7 @@ it('updates borrower pricing items and recalculates total', function () {
         'unit_price' => 20,
         'exchange_rate' => 3.2,
         'unit_price_ils' => 64,
-        'quantity' => 2,
+        'quantity' => 40,
         'total_price' => 40,
         'total_price_ils' => 128,
         'sort_order' => 1,
@@ -1153,12 +1153,12 @@ it('updates borrower pricing items and recalculates total', function () {
     $borrower->refresh();
     $otherBorrower->refresh();
 
-    expect((float) $borrower->boq_total_usd)->toBe(110.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(385.0)
+    expect((float) $borrower->boq_total_usd)->toBe(2.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(7.0)
         ->and((float) $borrower->exchange_rate)->toBe(3.5)
         ->and($borrower->boqItems()->count())->toBe(1)
-        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(110.0)
-        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(385.0)
+        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(2.0)
+        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(7.0)
         ->and((float) $otherBorrower->exchange_rate)->toBe(3.5)
         ->and((float) $otherBorrower->boq_total_ils)->toBe(140.0)
         ->and((float) $otherBorrower->boqItems()->first()->unit_price_ils)->toBe(70.0)
@@ -1197,7 +1197,7 @@ it('updates the global borrower exchange rate from the main screen', function ()
         'unit_price' => 20,
         'exchange_rate' => 3.2,
         'unit_price_ils' => 64,
-        'quantity' => 2,
+        'quantity' => 40,
         'total_price' => 40,
         'total_price_ils' => 128,
         'sort_order' => 1,
@@ -1301,8 +1301,8 @@ it('imports borrower boq items attachments and resident households', function ()
             ->and($borrower->attachments()->count())->toBe(1)
             ->and($borrower->residentHouseholds()->count())->toBe(1)
             ->and($borrower->boqItems()->count())->toBe(1)
-            ->and((float) $borrower->refresh()->boq_total_usd)->toBe(20.0)
-            ->and((float) $borrower->boq_total_ils)->toBe(64.0)
+            ->and((float) $borrower->refresh()->boq_total_usd)->toBe(2.0)
+            ->and((float) $borrower->boq_total_ils)->toBe(6.4)
             ->and($borrower->attachments_count)->toBe(1);
     } finally {
         @unlink($path);
