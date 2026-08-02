@@ -22,6 +22,8 @@ beforeEach(function (): void {
 it('lets audit managers manage audit reviewers', function (string $managerRoleName) {
     $managerRole = Role::findOrCreate($managerRoleName, 'web');
     Role::findOrCreate('Audit Reviewer', 'web');
+    Role::findOrCreate('QC/QA Engineer', 'web');
+    Role::findOrCreate('Legal Auditor', 'web');
 
     $manager = User::factory()->create();
     $manager->assignRole($managerRole);
@@ -32,7 +34,12 @@ it('lets audit managers manage audit reviewers', function (string $managerRoleNa
 
     $this->actingAs($manager)
         ->get(route('audit.reviewers.index'))
+        ->assertRedirect(route('audit.index', ['audit_reviewers' => 1]));
+
+    $this->actingAs($manager)
+        ->get(route('audit.index', ['audit_reviewers' => 1]))
         ->assertOk()
+        ->assertSee('auditReviewersModal')
         ->assertSee('Audit Reviewer Candidate');
 
     $this->actingAs($manager)

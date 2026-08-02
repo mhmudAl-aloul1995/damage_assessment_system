@@ -3025,10 +3025,21 @@ class auditController extends Controller
         $hideAuditManagementActions = $this->shouldHideAuditManagementActions(Auth::user())
             || Auth::user()?->hasRole('Team Leader');
         $legalChallenges = self::LEGAL_CHALLENGES;
+        $canManageAuditReviewers = Auth::user()?->hasAnyRole(['Auditing Supervisor', 'Database Officer']) ?? false;
+        $auditReviewers = $canManageAuditReviewers
+            ? User::role('Audit Reviewer')->orderBy('name')->get()
+            : collect();
+        $auditReviewerCandidates = $canManageAuditReviewers
+            ? User::query()
+                ->with('roles')
+                ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Audit Reviewer'))
+                ->orderBy('name')
+                ->get()
+            : collect();
 
         return View::make(
             'damage-assessment::audit.audit',
-            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges')
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges', 'canManageAuditReviewers', 'auditReviewers', 'auditReviewerCandidates')
         );
     }
 

@@ -6,8 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Modules\DamageAssessment\AuditReviewerAssignmentRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\View;
-use Illuminate\View\View as ViewResponse;
 use Spatie\Permission\Models\Role;
 
 class AuditReviewerController extends Controller
@@ -19,19 +17,10 @@ class AuditReviewerController extends Controller
         $this->middleware('role:Auditing Supervisor|Database Officer');
     }
 
-    public function index(): ViewResponse
+    public function index(): RedirectResponse
     {
-        $this->ensureRoleExists();
-
-        return View::make('damage-assessment::audit.auditReviewers', [
-            'reviewers' => User::role(self::ROLE_NAME)
-                ->orderBy('name')
-                ->get(),
-            'users' => User::query()
-                ->with('roles')
-                ->whereDoesntHave('roles', fn ($query) => $query->where('name', self::ROLE_NAME))
-                ->orderBy('name')
-                ->get(),
+        return redirect()->route('audit.index', [
+            'audit_reviewers' => 1,
         ]);
     }
 

@@ -379,6 +379,12 @@
 						</div>
 					</div>
 					<div class="card-toolbar gap-3 flex-wrap justify-content-end">
+						@if($canManageAuditReviewers ?? false)
+						<button type="button" class="btn btn-light-primary btn-sm" data-bs-toggle="modal"
+							data-bs-target="#auditReviewersModal">
+							Audit Reviewers <i class="ki-duotone ki-profile-user"></i>
+						</button>
+						@endif
 						@if(! $isFieldEngineerAudit)
 						<button type="button" class="btn btn-light-success btn-sm" data-bs-toggle="modal"
 							data-bs-target="#auditExportModal">
@@ -458,6 +464,89 @@
 			</div>
 		</div>
 	</div>
+	@if($canManageAuditReviewers ?? false)
+	<div class="modal fade" id="auditReviewersModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered mw-lg-900px">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="fw-bold">إدارة Audit Reviewers</h2>
+					<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+						<i class="ki-duotone ki-cross fs-1"></i>
+					</div>
+				</div>
+
+				<div class="modal-body">
+					<form method="POST" action="{{ route('audit.reviewers.store') }}" class="row g-3 align-items-end mb-8">
+						@csrf
+
+						<div class="col-md-8">
+							<label for="audit_reviewer_user_id" class="form-label fw-semibold">المستخدم</label>
+							<select id="audit_reviewer_user_id" name="user_id" class="form-select form-select-solid" required>
+								<option value="">اختر مستخدم</option>
+								@foreach ($auditReviewerCandidates as $candidate)
+									<option value="{{ $candidate->id }}">
+										{{ $candidate->name ?? '-' }}
+										@if ($candidate->id_no)
+											- {{ $candidate->id_no }}
+										@endif
+									</option>
+								@endforeach
+							</select>
+						</div>
+
+						<div class="col-md-4">
+							<button type="submit" class="btn btn-primary w-100">
+								<i class="ki-duotone ki-plus fs-2"></i>
+								إضافة
+							</button>
+						</div>
+					</form>
+
+					<div class="table-responsive">
+						<table class="table align-middle table-row-dashed fs-6 gy-5 mb-0">
+							<thead>
+								<tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+									<th>الاسم</th>
+									<th>رقم الهوية</th>
+									<th>البريد</th>
+									<th class="text-end">الإجراءات</th>
+								</tr>
+							</thead>
+							<tbody class="text-gray-600 fw-semibold">
+								@forelse ($auditReviewers as $reviewer)
+									<tr>
+										<td>{{ $reviewer->name ?? '-' }}</td>
+										<td>{{ $reviewer->id_no ?? '-' }}</td>
+										<td>{{ $reviewer->email ?? '-' }}</td>
+										<td class="text-end">
+											<form method="POST" action="{{ route('audit.reviewers.destroy', $reviewer) }}">
+												@csrf
+												@method('DELETE')
+												<button type="submit" class="btn btn-sm btn-light-danger">
+													إزالة
+												</button>
+											</form>
+										</td>
+									</tr>
+								@empty
+									<tr>
+										<td colspan="4" class="text-center text-muted py-10">
+											لا يوجد Audit Reviewers حاليا.
+										</td>
+									</tr>
+								@endforelse
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('ui.buttons.cancel') }}</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	@endif
 	<div class="modal fade" id="kt_modal_assign" tabindex="-1" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered mw-650px">
 			<div class="modal-content">
@@ -2517,5 +2606,10 @@
 
 			$select.val(null).trigger('change');
 		}
+
+		@if(($canManageAuditReviewers ?? false) && request()->boolean('audit_reviewers'))
+			const auditReviewersModal = new bootstrap.Modal(document.getElementById('auditReviewersModal'));
+			auditReviewersModal.show();
+		@endif
 	</script>
 @endsection

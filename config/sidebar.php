@@ -251,12 +251,6 @@ return [
                 'roles' => ['Database Officer', 'Auditing Supervisor', 'Audit Reviewer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Team Leader'],
             ],
             [
-                'title' => 'Audit Reviewers',
-                'url' => 'damage-assessment/audit/reviewers',
-                'pattern' => 'damage-assessment/audit/reviewers',
-                'roles' => ['Auditing Supervisor', 'Database Officer'],
-            ],
-            [
                 'title' => 'menu.audit.building_audit',
                 'url' => 'damage-assessment/auditBuilding',
                 'pattern' => 'damage-assessment/auditBuilding',
