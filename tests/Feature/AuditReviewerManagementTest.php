@@ -88,6 +88,17 @@ it('shows audit home to audit reviewers without showing reviewer management', fu
         ->not->toContain('damage-assessment/audit/reviewers');
 });
 
+it('assigns legacy temporary audit reviewers to the audit reviewer role', function () {
+    $user = User::factory()->create([
+        'id_no' => '800409062',
+    ]);
+
+    $migration = include database_path('migrations/2026_08_02_103339_assign_legacy_audit_reviewers_role.php');
+    $migration->up();
+
+    expect($user->fresh()->hasRole('Audit Reviewer'))->toBeTrue();
+});
+
 it('lets audit reviewers edit and set statuses without assessment assignment', function () {
     Role::findOrCreate('Audit Reviewer', 'web');
 
