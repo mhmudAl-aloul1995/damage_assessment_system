@@ -47,7 +47,7 @@ class DamageAssessmentController extends Controller
         '803307669',
         '404030421',
         '406966812',
-        '400591194'
+        '400591194',
     ];
 
     public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse
@@ -1708,7 +1708,7 @@ class DamageAssessmentController extends Controller
             return false;
         }
 
-        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Audit Reviewer'])) {
             return true;
         }
 
@@ -1739,7 +1739,8 @@ class DamageAssessmentController extends Controller
 
     private function hasTemporaryStatusAssignmentException(User $user): bool
     {
-        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
+        return $user->hasRole('Audit Reviewer')
+            || in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
             || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);
     }
 

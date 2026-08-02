@@ -4334,7 +4334,7 @@ COALESCE(
                 $type = 'QC/QA Engineer';
             } elseif ($request->audit_type === 'Legal Auditor' && $user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
-            } elseif ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor']) && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
+            } elseif ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Audit Reviewer']) && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
                 $type = $request->audit_type;
             } elseif (
                 $request->status === 'undp_final_approve'
@@ -4496,7 +4496,7 @@ COALESCE(
                 $type = 'QC/QA Engineer';
             } elseif ($request->audit_type === 'Legal Auditor' && $user->hasRole('Legal Auditor')) {
                 $type = 'Legal Auditor';
-            } elseif ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor']) && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
+            } elseif ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Audit Reviewer']) && in_array($request->audit_type, ['Legal Auditor', 'QC/QA Engineer'], true)) {
                 $type = $request->audit_type;
             } elseif (
                 $request->status === 'undp_final_approve'
@@ -5026,7 +5026,8 @@ COALESCE(
             return false;
         }
 
-        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
+        return $user->hasRole('Audit Reviewer')
+            || in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
             || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);
     }
 
@@ -5075,7 +5076,7 @@ COALESCE(
             return false;
         }
 
-        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Audit Reviewer'])) {
             return true;
         }
 
@@ -5131,7 +5132,8 @@ COALESCE(
 
     private function hasTemporaryStatusAssignmentException(User $user): bool
     {
-        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
+        return $user->hasRole('Audit Reviewer')
+            || in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
             || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);
     }
 

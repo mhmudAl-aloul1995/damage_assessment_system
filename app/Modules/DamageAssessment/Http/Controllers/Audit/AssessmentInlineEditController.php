@@ -35,7 +35,7 @@ class AssessmentInlineEditController extends Controller
         '404581993',
         '456901503',
         '400662938',
-        '403746530'
+        '403746530',
 
     ];
 
@@ -60,7 +60,7 @@ class AssessmentInlineEditController extends Controller
 
         if (
             $request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])
-            && !$this->canEditAssessmentForBuilding($request->user(), $building)
+            && ! $this->canEditAssessmentForBuilding($request->user(), $building)
         ) {
             abort(403, 'هذا الاستبيان متاح للقراءة فقط.');
         }
@@ -73,7 +73,7 @@ class AssessmentInlineEditController extends Controller
             $request
         );
 
-        if (!$result['changed']) {
+        if (! $result['changed']) {
             return response()->json([
                 'status' => false,
                 'success' => false,
@@ -132,7 +132,7 @@ class AssessmentInlineEditController extends Controller
             ->latest('id')
             ->limit(20)
             ->get()
-            ->map(fn(AssessmentEditHistory $history): array => [
+            ->map(fn (AssessmentEditHistory $history): array => [
                 'id' => $history->id,
                 'value' => $history->new_value,
                 'old_value' => $history->old_value,
@@ -153,7 +153,7 @@ class AssessmentInlineEditController extends Controller
 
         $housingUnit = HousingUnit::query()->where('globalid', $globalid)->first();
 
-        if (!$housingUnit instanceof HousingUnit) {
+        if (! $housingUnit instanceof HousingUnit) {
             return null;
         }
 
@@ -162,11 +162,11 @@ class AssessmentInlineEditController extends Controller
 
     private function canEditAssessmentForBuilding(?User $user, ?Building $building): bool
     {
-        if (!$user instanceof User || !$building instanceof Building) {
+        if (! $user instanceof User || ! $building instanceof Building) {
             return false;
         }
 
-        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
+        if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Audit Reviewer'])) {
             return true;
         }
 
@@ -197,7 +197,8 @@ class AssessmentInlineEditController extends Controller
 
     private function hasTemporaryStatusAssignmentException(User $user): bool
     {
-        return in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
+        return $user->hasRole('Audit Reviewer')
+            || in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
             || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);
     }
 }

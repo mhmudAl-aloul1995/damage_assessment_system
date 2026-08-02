@@ -231,7 +231,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.audit.title',
         'icon' => 'ki-medal-star',
-        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Field Engineer', 'Team Leader'],
+        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Audit Reviewer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Field Engineer', 'Team Leader'],
         'active_patterns' => [
             'damage-assessment/audit*',
             'damage-assessment/field-engineer-audit*',
@@ -248,7 +248,13 @@ return [
                 'title' => 'menu.audit.home',
                 'url' => 'damage-assessment/audit',
                 'pattern' => 'damage-assessment/audit',
-                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Team Leader'],
+                'roles' => ['Database Officer', 'Auditing Supervisor', 'Audit Reviewer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Team Leader'],
+            ],
+            [
+                'title' => 'Audit Reviewers',
+                'url' => 'damage-assessment/audit/reviewers',
+                'pattern' => 'damage-assessment/audit/reviewers',
+                'roles' => ['Auditing Supervisor'],
             ],
             [
                 'title' => 'menu.audit.building_audit',

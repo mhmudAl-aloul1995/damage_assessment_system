@@ -7,6 +7,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Audit\AssessmentInlineEditCont
 use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditDashboardController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditExportController;
+use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditReviewerController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditStatusHistoryController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeArchiveController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeDecisionController;
@@ -256,6 +257,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/field-engineer-audit', [auditController::class, 'fieldEngineerAudit'])->name('audit.fieldEngineer');
     Route::get('/audit/export', AuditExportController::class)->name('audit.export');
     Route::get('/audit/dashboard', AuditDashboardController::class)->name('audit.dashboard');
+    Route::get('/audit/reviewers', [AuditReviewerController::class, 'index'])->name('audit.reviewers.index');
+    Route::post('/audit/reviewers', [AuditReviewerController::class, 'store'])->name('audit.reviewers.store');
+    Route::delete('/audit/reviewers/{user}', [AuditReviewerController::class, 'destroy'])->name('audit.reviewers.destroy');
     Route::get('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'buildingAttachments'])
         ->name('audit.building.attachments.index');
     Route::get('/audit/buildings/{building:globalid}/housing-unit-attachments', [auditController::class, 'buildingHousingUnitAttachments'])
