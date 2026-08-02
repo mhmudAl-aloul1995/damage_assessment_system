@@ -417,6 +417,29 @@ it('auto-detects Kuwait loan workbooks when no worksheet is selected', function 
     unlink($path);
 });
 
+it('imports borrower boq catalog prices using the ILS price column', function () {
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('ورقة1');
+    $sheet->fromArray([
+        ['البند', 'الوصف', 'الوحدة', 'سعر الوحدة $', 'سعر الوحدة ILS'],
+        ['4.1', 'أعمال معالجة التشققات مع الشبك حسب المواصفات الفنية', 'ML', 3, 8.7],
+        ['7.1', 'توريد ودهان سوبر كريل لزوم الحوائط الداخلية والأسقف', 'M2', 3, 8.7],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-boq-prices-');
+    (new Xlsx($spreadsheet))->save($path);
+
+    $summary = app(BorrowerSpreadsheetImportService::class)->importPriceCatalog($path);
+
+    expect($summary['imported'])->toBe(2)
+        ->and($summary['exchange_rate'])->toBe(2.9)
+        ->and((float) BorrowerBoqCatalogItem::query()->where('item_code', '4.1')->value('unit_price_ils'))->toBe(8.7)
+        ->and((float) BorrowerPricingSetting::query()->sole()->exchange_rate)->toBe(2.9);
+
+    unlink($path);
+});
+
 it('previews borrower survey workbooks without requiring Kuwait loan sheets', function () {
     $spreadsheet = new Spreadsheet;
     $sheet = $spreadsheet->getActiveSheet();
