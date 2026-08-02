@@ -206,7 +206,7 @@
                     <div class="d-flex flex-column flex-md-row gap-3 flex-grow-1">
                         <input type="search" class="form-control" id="pricingSearchInput" placeholder="بحث بالكود أو اسم البند">
                         <label class="form-check form-switch form-check-custom form-check-solid align-items-center">
-                            <input class="form-check-input" type="checkbox" value="1" id="pricingActiveOnlyToggle">
+                            <input class="form-check-input" type="checkbox" value="1" id="pricingActiveOnlyToggle" @checked($savedItemsCount > 0)>
                             <span class="form-check-label text-muted">عرض البنود المسعّرة فقط</span>
                         </label>
                     </div>

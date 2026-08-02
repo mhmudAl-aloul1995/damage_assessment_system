@@ -1042,6 +1042,52 @@ it('opens borrower pricing page for database officers', function () {
         ->assertDontSee('930046990');
 });
 
+it('opens borrower pricing page on active items when quantities are already saved', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Priced Borrower',
+        'borrower_id_number' => '810000011',
+        'is_borrower_alive' => true,
+        'boq_total_usd' => 36,
+        'boq_total_ils' => 104.4,
+    ]);
+    $catalogItem = BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '4.1',
+        'source_column' => 'Crack repair',
+        'source_key' => sha1('Crack repair'),
+        'description' => 'Crack repair',
+        'normalized_description' => 'crack repair',
+        'unit' => 'ML',
+        'unit_price' => 3,
+        'unit_price_ils' => 8.7,
+        'sort_order' => 1,
+    ]);
+    $borrower->boqItems()->create([
+        'catalog_item_id' => $catalogItem->id,
+        'source_column' => 'Crack repair',
+        'source_key' => sha1('Crack repair'),
+        'item_code' => '4.1',
+        'description' => 'Crack repair',
+        'unit' => 'ML',
+        'unit_price' => 3,
+        'exchange_rate' => 2.9,
+        'unit_price_ils' => 8.7,
+        'quantity' => 12,
+        'total_price' => 36,
+        'total_price_ils' => 104.4,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.pricing', $borrower))
+        ->assertOk()
+        ->assertSee('id="pricingActiveOnlyToggle" checked', false)
+        ->assertSee('36.00 $', false)
+        ->assertSee('104.40 ILS', false);
+});
+
 it('updates borrower pricing items and recalculates total', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
