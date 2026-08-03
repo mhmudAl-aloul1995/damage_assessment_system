@@ -91,6 +91,7 @@ class BorrowerSurveyController extends Controller
             'q' => ['nullable', 'string', 'max:255'],
             'risk_level' => ['nullable', 'in:critical,high,medium,low'],
             'damage_status' => ['nullable', 'in:destroyed,partial,severe_uninhabitable,severe_habitable,minor'],
+            'loan_status' => ['nullable', 'in:active,closed'],
             'report_type' => ['nullable', 'in:compact,detailed,custom'],
             'columns' => ['nullable', 'array'],
             'columns.*' => ['string'],
@@ -472,6 +473,10 @@ class BorrowerSurveyController extends Controller
             $query->where('risk_level', (string) $request->string('risk_level'));
         }
 
+        if ($request->filled('loan_status')) {
+            $query->where('loan_status', (string) $request->string('loan_status'));
+        }
+
         if ($request->string('damage_status')->toString() === 'partial') {
             $query->whereIn('loan_unit_damage_status', ['severe_uninhabitable', 'severe_habitable', 'minor']);
         } elseif ($request->filled('damage_status')) {
@@ -559,6 +564,10 @@ class BorrowerSurveyController extends Controller
     private function matchesExportFilters(DamageAssessmentBorrower $borrower, Request $request): bool
     {
         if ($request->filled('risk_level') && $borrower->risk_level !== $request->string('risk_level')->toString()) {
+            return false;
+        }
+
+        if ($request->filled('loan_status') && $borrower->loan_status !== $request->string('loan_status')->toString()) {
             return false;
         }
 

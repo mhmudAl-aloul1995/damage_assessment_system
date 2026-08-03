@@ -49,6 +49,9 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('data-risk-filter="critical"', false)
         ->assertSee('data-stat="partial_damage"', false)
         ->assertSee('data-damage-filter="partial"', false)
+        ->assertSee('data-loan-status-filter="active"', false)
+        ->assertSee('data-loan-status-filter="closed"', false)
+        ->assertSee('borrowerLoanStatusFilter', false)
         ->assertSee('borrowerDamageFilter', false)
         ->assertSee('borrower-filter-select', false)
         ->assertSee('borrower-worklist-toolbar', false)
@@ -605,6 +608,42 @@ it('filters borrower worklist to full demolition damage only', function () {
         ->and($response->json('data.0.loan_unit_damage_status'))->toBe('destroyed');
 });
 
+it('filters borrower worklist by loan status', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Active Loan Borrower',
+        'borrower_id_number' => '800000014',
+        'loan_status' => 'active',
+        'is_borrower_alive' => true,
+    ]);
+
+    DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Closed Loan Borrower',
+        'borrower_id_number' => '800000015',
+        'loan_status' => 'closed',
+        'is_borrower_alive' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('damage-assessment-borrowers.data', ['loan_status' => 'active']))
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.borrower_name', 'Active Loan Borrower')
+        ->assertJsonPath('data.0.loan_status', 'active');
+
+    $this->actingAs($user)
+        ->getJson(route('damage-assessment-borrowers.data', ['loan_status' => 'closed']))
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.borrower_name', 'Closed Loan Borrower')
+        ->assertJsonPath('data.0.loan_status', 'closed');
+});
+
 it('syncs borrower form numbers from Excel by identity number', function () {
     $borrower = DamageAssessmentBorrower::query()->create([
         'borrower_name' => 'Form Number Borrower',
@@ -629,6 +668,86 @@ it('syncs borrower form numbers from Excel by identity number', function () {
             ->assertSuccessful();
 
         expect($borrower->refresh()->form_number)->toBe('IDB21');
+    } finally {
+        @unlink($path);
+    }
+});
+
+it('syncs borrower form numbers from multiple sheets with beneficiary code aliases', function () {
+    $closedBorrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Closed Alias Borrower',
+        'borrower_id_number' => '800000023',
+        'is_borrower_alive' => true,
+    ]);
+    $partialBorrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Partial Alias Borrower',
+        'borrower_id_number' => '800000024',
+        'is_borrower_alive' => true,
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $closedSheet = $spreadsheet->getActiveSheet();
+    $closedSheet->setTitle('Closed');
+    $closedSheet->fromArray([
+        ['#', 'كود المستفيد', 'اسم المقترض', 'رقم الهوية'],
+        [1, 'IDB23', 'Closed Alias Borrower', '800000023'],
+    ]);
+
+    $partialSheet = $spreadsheet->createSheet();
+    $partialSheet->setTitle('Partially Damage');
+    $partialSheet->fromArray([
+        ['#', 'كود المستفيد', 'اسم المقترض', 'رقم الهوية'],
+        [1, 'IDB24', 'Partial Alias Borrower', '800000024'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-form-number-multi-sheet-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    try {
+        $this->artisan('borrowers:sync-form-numbers', ['file' => $path])
+            ->assertSuccessful();
+
+        expect($closedBorrower->refresh()->form_number)->toBe('IDB23')
+            ->and($partialBorrower->refresh()->form_number)->toBe('IDB24');
+    } finally {
+        @unlink($path);
+    }
+});
+
+it('can sync only missing borrower form numbers', function () {
+    $existingBorrower = DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB-OLD',
+        'borrower_name' => 'Existing Form Borrower',
+        'borrower_id_number' => '800000025',
+        'is_borrower_alive' => true,
+    ]);
+    $missingBorrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Missing Form Borrower',
+        'borrower_id_number' => '800000026',
+        'is_borrower_alive' => true,
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('371 Beneficiaries');
+    $sheet->fromArray([
+        ['#', 'رقم الاستمارة', 'رقم هوية المقترض', 'الاسم'],
+        [1, 'IDB25', '800000025', 'Existing Form Borrower'],
+        [2, 'IDB26', '800000026', 'Missing Form Borrower'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-form-number-only-missing-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    try {
+        $this->artisan('borrowers:sync-form-numbers', [
+            'file' => $path,
+            '--only-missing' => true,
+        ])
+            ->assertSuccessful();
+
+        expect($existingBorrower->refresh()->form_number)->toBe('IDB-OLD')
+            ->and($missingBorrower->refresh()->form_number)->toBe('IDB26');
     } finally {
         @unlink($path);
     }

@@ -23,6 +23,7 @@ class SyncBorrowerFormNumbers extends Command
         {--delete-missing-by=form_number : Compare missing borrowers by form_number or identity_number}
         {--delete-missing-by-identity : Compare missing borrowers by identity number from column C}
         {--dedupe-form-numbers : Keep one borrower per form number after applying the selected sheet}
+        {--only-missing : Only fill borrower records that do not already have a form number}
         {--dry-run : Preview matches without updating the database}';
 
     /**
@@ -115,8 +116,8 @@ class SyncBorrowerFormNumbers extends Command
     {
         $rows = $sheet->toArray(null, true, true, true);
         $headerRow = $rows[1] ?? [];
-        $formColumn = $this->findColumn($headerRow, ['رقم الاستمارة']);
-        $identityColumn = $this->findColumn($headerRow, ['رقم هوية المقترض', 'هوية المقترض']);
+        $formColumn = $this->findColumn($headerRow, ['رقم الاستمارة', 'كود المستفيد', 'كود المقترض']);
+        $identityColumn = $this->findColumn($headerRow, ['رقم هوية المقترض', 'هوية المقترض', 'رقم الهوية']);
 
         $formColumn ??= 'B';
         $identityColumn ??= 'C';
@@ -174,6 +175,12 @@ class SyncBorrowerFormNumbers extends Command
             }
 
             if ((string) $borrower->form_number === $formNumber) {
+                $summary['unchanged']++;
+
+                continue;
+            }
+
+            if ((bool) $this->option('only-missing') && filled($borrower->form_number)) {
                 $summary['unchanged']++;
 
                 continue;

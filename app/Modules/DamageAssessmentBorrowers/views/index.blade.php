@@ -38,6 +38,7 @@
             border: 1px solid var(--bs-gray-200);
             border-radius: 0.75rem;
             color: var(--bs-gray-700);
+            flex: 0 0 15rem;
             font-weight: 600;
             padding: 0.6rem 0.8rem;
             text-align: start;
@@ -58,6 +59,11 @@
             border-radius: 0.9rem;
             box-shadow: 0 0.3rem 1rem rgba(15, 23, 42, 0.04);
             padding: 0.6rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-quick-filter-row {
+            overflow-x: auto;
+            scrollbar-width: thin;
         }
 
         .damage-assessment-borrowers-page .borrower-worklist-toolbar {
@@ -641,33 +647,43 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-6" aria-label="فلاتر الأولوية السريعة">
-        <div class="col-xl col-lg-4 col-sm-6">
+    <div class="borrower-quick-filter-row d-flex flex-nowrap gap-3 mb-6 pb-2" aria-label="فلاتر الأولوية السريعة">
+        <div class="flex-shrink-0">
             <button type="button" class="borrower-quick-filter is-active" data-risk-filter="">
                 كل الحالات <span class="text-muted d-block fs-8 fw-normal">عرض قائمة العمل الكاملة</span>
             </button>
         </div>
-        <div class="col-xl col-lg-4 col-sm-6">
+        <div class="flex-shrink-0">
+            <button type="button" class="borrower-quick-filter" data-loan-status-filter="active">
+                نشط <span class="text-muted d-block fs-8 fw-normal">قروض فعالة ومتابعة</span>
+            </button>
+        </div>
+        <div class="flex-shrink-0">
+            <button type="button" class="borrower-quick-filter" data-loan-status-filter="closed">
+                مغلق <span class="text-muted d-block fs-8 fw-normal">قروض مغلقة أو منتهية</span>
+            </button>
+        </div>
+        <div class="flex-shrink-0">
             <button type="button" class="borrower-quick-filter" data-risk-filter="critical">
                 أولوية حرجة <span class="text-muted d-block fs-8 fw-normal">تحتاج متابعة فورية</span>
             </button>
         </div>
-        <div class="col-xl col-lg-4 col-sm-6">
+        <div class="flex-shrink-0">
             <button type="button" class="borrower-quick-filter" data-risk-filter="high">
                 أولوية مرتفعة <span class="text-muted d-block fs-8 fw-normal">تحتاج مراجعة قريبة</span>
             </button>
         </div>
-        <div class="col-xl col-lg-4 col-sm-6">
+        <div class="flex-shrink-0">
             <button type="button" class="borrower-quick-filter" data-risk-filter="medium">
                 قيد المراجعة <span class="text-muted d-block fs-8 fw-normal">حالات بمتابعة متوسطة</span>
             </button>
         </div>
-        <div class="col-xl col-lg-4 col-sm-6">
+        <div class="flex-shrink-0">
             <button type="button" class="borrower-quick-filter" data-damage-filter="destroyed">
                 ضرر كلي <span class="text-muted d-block fs-8 fw-normal">وحدات مهدمة كليًا</span>
             </button>
         </div>
-        <div class="col-xl col-lg-4 col-sm-6">
+        <div class="flex-shrink-0">
             <button type="button" class="borrower-quick-filter" data-damage-filter="partial">
                 ضرر جزئي <span class="text-muted d-block fs-8 fw-normal">أضرار طفيفة أو بليغة</span>
             </button>
@@ -1010,6 +1026,7 @@
                                 <option value="destroyed">ضرر كلي</option>
                                 <option value="partial">ضرر جزئي</option>
                             </select>
+                            <input type="hidden" id="borrowerLoanStatusFilter" value="">
                             <button type="button" class="btn btn-sm btn-light-success" data-bs-toggle="modal" data-bs-target="#borrowersExportModal">
                                 تصدير
                             </button>
@@ -1520,6 +1537,7 @@
             const q = document.getElementById('borrowerSearch')?.value?.trim()?.toLowerCase();
             const riskLevel = document.getElementById('borrowerRiskFilter')?.value;
             const damageStatus = document.getElementById('borrowerDamageFilter')?.value;
+            const loanStatus = document.getElementById('borrowerLoanStatusFilter')?.value;
 
             if (q) {
                 const haystack = [
@@ -1534,6 +1552,10 @@
             }
 
             if (riskLevel && row.risk_level !== riskLevel) {
+                return false;
+            }
+
+            if (loanStatus && row.loan_status !== loanStatus) {
                 return false;
             }
 
@@ -1552,10 +1574,12 @@
             const q = document.getElementById('borrowerSearch').value;
             const riskLevel = document.getElementById('borrowerRiskFilter')?.value;
             const damageStatus = document.getElementById('borrowerDamageFilter')?.value;
+            const loanStatus = document.getElementById('borrowerLoanStatusFilter')?.value;
             const url = new URL(borrowerRoutes.data, window.location.origin);
             if (q) url.searchParams.set('q', q);
             if (riskLevel) url.searchParams.set('risk_level', riskLevel);
             if (damageStatus) url.searchParams.set('damage_status', damageStatus);
+            if (loanStatus) url.searchParams.set('loan_status', loanStatus);
 
             try {
                 const response = await fetch(url, {
@@ -1581,10 +1605,12 @@
             const q = document.getElementById('borrowerSearch')?.value;
             const riskLevel = document.getElementById('borrowerRiskFilter')?.value;
             const damageStatus = document.getElementById('borrowerDamageFilter')?.value;
+            const loanStatus = document.getElementById('borrowerLoanStatusFilter')?.value;
 
             if (q) params.set('q', q);
             if (riskLevel) params.set('risk_level', riskLevel);
             if (damageStatus) params.set('damage_status', damageStatus);
+            if (loanStatus) params.set('loan_status', loanStatus);
 
             return params;
         }
@@ -1597,10 +1623,13 @@
             const q = document.getElementById('borrowerSearch')?.value;
             const riskText = document.getElementById('borrowerRiskFilter')?.selectedOptions?.[0]?.textContent?.trim();
             const damageText = document.getElementById('borrowerDamageFilter')?.selectedOptions?.[0]?.textContent?.trim();
+            const loanStatus = document.getElementById('borrowerLoanStatusFilter')?.value;
+            const loanStatusText = loanStatus === 'active' ? 'نشط' : (loanStatus === 'closed' ? 'مغلق' : '');
 
             if (q) parts.push(`بحث: ${q}`);
             if (riskText && document.getElementById('borrowerRiskFilter')?.value) parts.push(`الخطورة: ${riskText}`);
             if (damageText && document.getElementById('borrowerDamageFilter')?.value) parts.push(`الضرر: ${damageText}`);
+            if (loanStatusText) parts.push(`حالة القرض: ${loanStatusText}`);
 
             scope.textContent = parts.length ? parts.join('، ') : 'كل السجلات المعروضة في قائمة العمل.';
         }
@@ -1609,6 +1638,7 @@
         const borrowerSearch = document.getElementById('borrowerSearch');
         const borrowerRiskFilter = document.getElementById('borrowerRiskFilter');
         const borrowerDamageFilter = document.getElementById('borrowerDamageFilter');
+        const borrowerLoanStatusFilter = document.getElementById('borrowerLoanStatusFilter');
         const borrowersExportForm = document.getElementById('borrowersExportForm');
         const borrowersImportForm = document.getElementById('borrowersImportForm');
         const borrowersFile = document.getElementById('borrowersFile');
@@ -1757,6 +1787,12 @@
 
         document.querySelectorAll('[data-risk-filter]').forEach((button) => {
             button.addEventListener('click', () => {
+                if (button.dataset.riskFilter === '') {
+                    borrowerDamageFilter.value = '';
+                    borrowerLoanStatusFilter.value = '';
+                    document.querySelectorAll('[data-damage-filter], [data-loan-status-filter]').forEach((filter) => filter.classList.remove('is-active'));
+                }
+
                 borrowerRiskFilter.value = button.dataset.riskFilter;
                 document.querySelectorAll('[data-risk-filter]').forEach((filter) => filter.classList.remove('is-active'));
                 button.classList.add('is-active');
@@ -1768,6 +1804,17 @@
             button.addEventListener('click', () => {
                 borrowerDamageFilter.value = button.dataset.damageFilter;
                 document.querySelectorAll('[data-damage-filter]').forEach((filter) => filter.classList.remove('is-active'));
+                document.querySelector('[data-risk-filter=""]')?.classList.remove('is-active');
+                button.classList.add('is-active');
+                loadBorrowers();
+            });
+        });
+
+        document.querySelectorAll('[data-loan-status-filter]').forEach((button) => {
+            button.addEventListener('click', () => {
+                borrowerLoanStatusFilter.value = button.dataset.loanStatusFilter;
+                document.querySelectorAll('[data-loan-status-filter]').forEach((filter) => filter.classList.remove('is-active'));
+                document.querySelector('[data-risk-filter=""]')?.classList.remove('is-active');
                 button.classList.add('is-active');
                 loadBorrowers();
             });
