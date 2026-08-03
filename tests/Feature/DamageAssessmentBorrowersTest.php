@@ -1673,8 +1673,9 @@ it('updates the global borrower exchange rate from the main screen', function ()
     $this->actingAs($user)
         ->get(route('damage-assessment-borrowers.index'))
         ->assertOk()
-        ->assertSee('globalExchangeRateModal', false)
-        ->assertSee('سعر الصرف الموحد');
+        ->assertSee('borrowerBoqSettingsModal', false)
+        ->assertSee('إعدادات BOQ', false)
+        ->assertSee('سعر صرف الدولار / شيكل', false);
 
     $this->actingAs($user)
         ->put(route('damage-assessment-borrowers.exchange-rate.update'), [
@@ -1688,6 +1689,48 @@ it('updates the global borrower exchange rate from the main screen', function ()
         ->and((float) $borrower->boqItems()->first()->unit_price_ils)->toBe(74.0)
         ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(148.0)
         ->and((float) $catalogItem->refresh()->unit_price_ils)->toBe(74.0);
+});
+
+it('shows borrower boq settings in a modal for pricing managers', function () {
+    BorrowerPricingSetting::query()->create(['exchange_rate' => 2.9]);
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '1.1',
+        'source_column' => 'Settings item',
+        'source_key' => sha1('Settings item'),
+        'description' => 'Settings item',
+        'normalized_description' => 'settings item',
+        'unit' => 'M3',
+        'unit_price' => 50,
+        'unit_price_ils' => 145,
+        'source_sheet' => 'BOQ',
+        'sort_order' => 1,
+    ]);
+
+    BorrowerBoqCatalogItem::query()->create([
+        'item_code' => 'bad',
+        'source_column' => 'Needs review item',
+        'source_key' => sha1('Needs review item'),
+        'description' => 'Needs review item',
+        'normalized_description' => 'needs review item',
+        'unit' => 'M2',
+        'unit_price' => 10,
+        'unit_price_ils' => 29,
+        'sort_order' => 2,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.index'))
+        ->assertOk()
+        ->assertSee('borrowerBoqSettingsModal', false)
+        ->assertSee('إعدادات BOQ', false)
+        ->assertSee('Settings item', false)
+        ->assertSee('جاهز', false)
+        ->assertSee('يحتاج مراجعة', false)
+        ->assertSee('borrowerBoqSettingsSearch', false);
 });
 
 it('adds borrowers to the sidebar for database officers', function () {

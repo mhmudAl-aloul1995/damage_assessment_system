@@ -50,6 +50,7 @@ class BorrowerSurveyController extends Controller
             'stats' => $this->stats(),
             'globalExchangeRate' => $this->globalExchangeRate(),
             'canManagePricing' => $this->canManagePricing(),
+            'boqSettings' => $this->boqSettingsSummary(),
             'exportColumns' => BorrowerReportExport::availableColumns(),
             'exportColumnGroups' => BorrowerReportExport::availableColumnGroups(),
             'compactExportColumns' => array_keys(BorrowerReportExport::compactColumnDefaults()),
@@ -434,6 +435,47 @@ class BorrowerSurveyController extends Controller
         }
 
         return (float) (DamageAssessmentBorrower::query()->latest('updated_at')->value('exchange_rate') ?: 3.2);
+    }
+
+    /**
+     * @return array{total: int, ready: int, needs_review: int, items: \Illuminate\Support\Collection<int, array{item_code: ?string, description: ?string, unit: ?string, unit_price: ?float, unit_price_ils: ?float, category: ?string, source_sheet: ?string, is_ready: bool}>}
+     */
+    private function boqSettingsSummary(): array
+    {
+        if (! Schema::hasTable('damage_assessment_borrower_boq_catalog_items')) {
+            return [
+                'total' => 0,
+                'ready' => 0,
+                'needs_review' => 0,
+                'items' => collect(),
+            ];
+        }
+
+        $catalogItems = BorrowerBoqCatalogItem::query()
+            ->orderBy('sort_order')
+            ->orderBy('item_code')
+            ->get();
+
+        $items = $catalogItems
+            ->map(fn (BorrowerBoqCatalogItem $item): array => [
+                'item_code' => $item->item_code,
+                'description' => $item->description,
+                'unit' => $item->unit,
+                'unit_price' => $item->unit_price === null ? null : (float) $item->unit_price,
+                'unit_price_ils' => $item->unit_price_ils === null ? null : (float) $item->unit_price_ils,
+                'category' => $item->category,
+                'source_sheet' => $item->source_sheet,
+                'is_ready' => $this->isValidPricingCatalogItem($item),
+            ]);
+
+        $ready = $items->where('is_ready', true)->count();
+
+        return [
+            'total' => $items->count(),
+            'ready' => $ready,
+            'needs_review' => $items->count() - $ready,
+            'items' => $items,
+        ];
     }
 
     private function applyExchangeRateToAllBorrowers(float $exchangeRate): void

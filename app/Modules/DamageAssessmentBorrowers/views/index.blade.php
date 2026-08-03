@@ -14,6 +14,7 @@
         ];
         $globalExchangeRate = $globalExchangeRate ?? 3.2;
         $canManagePricing = $canManagePricing ?? false;
+        $boqSettings = $boqSettings ?? ['total' => 0, 'ready' => 0, 'needs_review' => 0, 'items' => collect()];
     @endphp
 
     <style>
@@ -89,6 +90,15 @@
 
         .damage-assessment-borrowers-page .borrower-filter-bar .select2-selection__rendered {
             line-height: 38px;
+        }
+
+        .damage-assessment-borrowers-page .borrower-boq-settings-table {
+            max-height: 52vh;
+            overflow: auto;
+        }
+
+        .damage-assessment-borrowers-page .borrower-boq-settings-table td {
+            vertical-align: middle;
         }
 
         .damage-assessment-borrowers-page .borrower-repeat-row {
@@ -531,6 +541,9 @@
                             تحديث من Kobo الآن
                         </button>
                     </form>
+                    <button type="button" class="btn btn-light-warning" data-bs-toggle="modal" data-bs-target="#borrowerBoqSettingsModal">
+                        إعدادات BOQ
+                    </button>
                 @endif
                 <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#borrowersImportModal">
                     استيراد من Excel
@@ -718,8 +731,8 @@
             </a>
         @else
             @if ($canManagePricing)
-                <button type="button" class="btn btn-light-success" data-bs-toggle="modal" data-bs-target="#globalExchangeRateModal">
-                    سعر الصرف الموحد: {{ number_format((float) $globalExchangeRate, 4) }}
+                <button type="button" class="btn btn-light-success" data-bs-toggle="modal" data-bs-target="#borrowerBoqSettingsModal">
+                    إعدادات BOQ: {{ number_format((float) $globalExchangeRate, 4) }}
                 </button>
             @endif
         @endif
@@ -1210,14 +1223,14 @@
         </div>
 
         @if ($canManagePricing)
-            <div class="modal fade" id="globalExchangeRateModal" tabindex="-1" aria-labelledby="globalExchangeRateModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
+            <div class="modal fade" id="borrowerBoqSettingsModal" tabindex="-1" aria-labelledby="borrowerBoqSettingsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content">
                         <form method="POST" action="{{ route('damage-assessment-borrowers.exchange-rate.update') }}">
                             @csrf
                             @method('PUT')
                             <div class="modal-header">
-                                <h2 class="fw-bold mb-0" id="globalExchangeRateModalLabel">سعر الصرف الموحد</h2>
+                                <h2 class="fw-bold mb-0" id="borrowerBoqSettingsModalLabel">إعدادات جدول الكميات BOQ</h2>
                                 <button type="button" class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="إغلاق">
                                     <i class="ki-duotone ki-cross fs-1">
                                         <span class="path1"></span>
@@ -1226,15 +1239,101 @@
                                 </button>
                             </div>
                             <div class="modal-body">
-                                <label class="form-label fw-semibold" for="globalExchangeRateInput">الدولار / شيكل</label>
-                                <input type="text" inputmode="decimal" name="exchange_rate" id="globalExchangeRateInput" value="{{ old('exchange_rate', $globalExchangeRate) }}" class="form-control form-control-lg" dir="ltr" required>
-                                <div class="form-text mt-3">سيعاد احتساب إجماليات الشيكل وأسعار الوحدة بالشيكل لكل استبيانات المقترضين. قيم الدولار لا تتغير.</div>
+                                <div class="row g-4 mb-6">
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-4 h-100">
+                                            <div class="text-muted fw-semibold mb-1">سعر الصرف العام</div>
+                                            <div class="fs-2 fw-bold">{{ number_format((float) $globalExchangeRate, 4) }}</div>
+                                            <div class="text-muted fs-7">دولار / شيكل</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-4 h-100">
+                                            <div class="text-muted fw-semibold mb-1">بنود جاهزة للتسعير</div>
+                                            <div class="fs-2 fw-bold text-success">{{ number_format((int) ($boqSettings['ready'] ?? 0)) }}</div>
+                                            <div class="text-muted fs-7">من أصل {{ number_format((int) ($boqSettings['total'] ?? 0)) }} بند</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-4 h-100">
+                                            <div class="text-muted fw-semibold mb-1">بنود تحتاج مراجعة</div>
+                                            <div class="fs-2 fw-bold text-warning">{{ number_format((int) ($boqSettings['needs_review'] ?? 0)) }}</div>
+                                            <div class="text-muted fs-7">لن تظهر في تسعير المستفيد إذا بياناتها غير صالحة</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rounded border bg-light p-4 mb-6">
+                                    <label class="form-label fw-semibold" for="globalExchangeRateInput">سعر صرف الدولار / شيكل</label>
+                                    <div class="d-flex flex-column flex-md-row gap-3">
+                                        <input type="text" inputmode="decimal" name="exchange_rate" id="globalExchangeRateInput" value="{{ old('exchange_rate', $globalExchangeRate) }}" class="form-control form-control-lg" dir="ltr" required>
+                                        <button type="submit" class="btn btn-success flex-shrink-0">تطبيق السعر الموحد</button>
+                                    </div>
+                                    <div class="form-text mt-3">سيعاد احتساب إجماليات الشيكل وأسعار الوحدة بالشيكل لكل استبيانات المقترضين. قيم الدولار لا تتغير.</div>
+                                </div>
+
+                                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+                                    <div>
+                                        <h4 class="fw-bold mb-1">كتالوج بنود BOQ</h4>
+                                        <div class="text-muted fs-7">عرض الإعدادات العامة المستخدمة عند فتح تسعير أي مستفيد.</div>
+                                    </div>
+                                    <input type="search" class="form-control form-control-sm w-md-300px" id="borrowerBoqSettingsSearch" placeholder="بحث بالكود أو الوصف أو الوحدة">
+                                </div>
+
+                                <div class="borrower-boq-settings-table border rounded">
+                                    <table class="table table-row-dashed align-middle mb-0">
+                                        <thead class="bg-light">
+                                            <tr class="fw-bold text-muted">
+                                                <th class="min-w-100px">الكود</th>
+                                                <th class="min-w-350px">البند</th>
+                                                <th class="min-w-90px">الوحدة</th>
+                                                <th class="min-w-120px">سعر الوحدة $</th>
+                                                <th class="min-w-140px">سعر الوحدة ILS</th>
+                                                <th class="min-w-120px">الحالة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse (($boqSettings['items'] ?? collect()) as $item)
+                                                <tr data-boq-settings-row data-search="{{ \Illuminate\Support\Str::lower(($item['item_code'] ?? '').' '.($item['description'] ?? '').' '.($item['unit'] ?? '')) }}">
+                                                    <td class="fw-bold text-gray-800">{{ $item['item_code'] ?: '-' }}</td>
+                                                    <td>
+                                                        <div class="fw-semibold text-gray-900">{{ $item['description'] ?: '-' }}</div>
+                                                        @if (! empty($item['source_sheet']) || ! empty($item['category']))
+                                                            <div class="text-muted fs-8">{{ collect([$item['source_sheet'] ?? null, $item['category'] ?? null])->filter()->implode(' / ') }}</div>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{ $item['unit'] ?: '-' }}</td>
+                                                    <td dir="ltr">{{ $item['unit_price'] === null ? '-' : number_format((float) $item['unit_price'], 2) }}</td>
+                                                    <td dir="ltr">{{ $item['unit_price_ils'] === null ? '-' : number_format((float) $item['unit_price_ils'], 2) }}</td>
+                                                    <td>
+                                                        <span class="badge {{ $item['is_ready'] ? 'badge-light-success' : 'badge-light-warning' }}">
+                                                            {{ $item['is_ready'] ? 'جاهز' : 'يحتاج مراجعة' }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-8">لا توجد بنود BOQ حالياً.</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
-                                <button type="submit" class="btn btn-success">تطبيق السعر الموحد</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal fade" id="globalExchangeRateModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-body text-center p-8">
+                            <div class="fw-bold mb-2">تم نقل سعر الصرف إلى إعدادات BOQ</div>
+                            <button type="button" class="btn btn-primary" data-bs-target="#borrowerBoqSettingsModal" data-bs-toggle="modal">فتح إعدادات BOQ</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1649,6 +1748,7 @@
         const borrowersCustomExportColumnsWrap = document.getElementById('borrowersCustomExportColumnsWrap');
         const borrowersCustomExportColumns = document.getElementById('borrowersCustomExportColumns');
         const borrowersExportReportTypes = borrowersExportForm?.querySelectorAll('input[name="report_type"]') || [];
+        const borrowerBoqSettingsSearch = document.getElementById('borrowerBoqSettingsSearch');
 
         if (window.jQuery && $.fn.select2) {
             $('.borrower-filter-select').each(function () {
@@ -1778,6 +1878,20 @@
 
         borrowersExportReportTypes.forEach((input) => {
             input.addEventListener('change', toggleBorrowersCustomExportColumns);
+        });
+
+        borrowerBoqSettingsSearch?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+            }
+        });
+
+        borrowerBoqSettingsSearch?.addEventListener('input', (event) => {
+            const value = event.currentTarget.value.trim().toLowerCase();
+
+            document.querySelectorAll('[data-boq-settings-row]').forEach((row) => {
+                row.classList.toggle('d-none', value !== '' && !row.dataset.search.includes(value));
+            });
         });
 
         document.getElementById('borrowersExportModal')?.addEventListener('show.bs.modal', () => {
