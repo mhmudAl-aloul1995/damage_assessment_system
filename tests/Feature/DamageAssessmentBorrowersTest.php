@@ -1793,7 +1793,9 @@ it('shows borrower boq settings in a modal for pricing managers', function () {
         ->assertSee('data-boq-settings-status="review"', false)
         ->assertSee('data-boq-settings-status="all"', false)
         ->assertSee('data-status="ready"', false)
-        ->assertSee('data-status="review"', false);
+        ->assertSee('data-status="review"', false)
+        ->assertSee('data-boq-editable', false)
+        ->assertSee('data-boq-editable-display', false);
 });
 
 it('adds borrower boq catalog items from the settings modal', function () {

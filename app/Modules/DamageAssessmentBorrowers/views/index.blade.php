@@ -113,6 +113,23 @@
             min-width: 920px;
         }
 
+        .damage-assessment-borrowers-page .borrower-boq-editable {
+            cursor: text;
+            min-height: 2.25rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-boq-editable-display {
+            border: 1px solid transparent;
+            border-radius: 0.35rem;
+            min-height: 2.25rem;
+            padding: 0.45rem 0.55rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-boq-editable:hover .borrower-boq-editable-display {
+            background: var(--bs-gray-100);
+            border-color: var(--bs-gray-200);
+        }
+
         #borrowerBoqSettingsModal .modal-dialog {
             height: calc(100vh - 2rem);
         }
@@ -1352,8 +1369,8 @@
                                     <table class="table table-row-dashed align-middle mb-0">
                                         <thead class="bg-light">
                                             <tr class="fw-bold text-muted">
-                                                <th class="min-w-100px">الكود</th>
-                                                <th class="min-w-350px">البند</th>
+                                                <th class="w-80px min-w-80px">الكود</th>
+                                                <th class="min-w-500px">البند</th>
                                                 <th class="min-w-90px">الوحدة</th>
                                                 <th class="min-w-120px">سعر الوحدة $</th>
                                                 <th class="min-w-140px">سعر الوحدة ILS</th>
@@ -1364,20 +1381,41 @@
                                         <tbody>
                                             @forelse (($boqSettings['items'] ?? collect()) as $item)
                                                 <tr data-boq-settings-row data-status="{{ $item['is_ready'] ? 'ready' : 'review' }}" data-search="{{ \Illuminate\Support\Str::lower(($item['item_code'] ?? '').' '.($item['description'] ?? '').' '.($item['unit'] ?? '')) }}">
-                                                    <td>
+                                                    <td class="w-80px">
                                                         <input type="hidden" name="items[{{ $loop->index }}][id]" value="{{ $item['id'] }}">
-                                                        <input class="form-control form-control-sm" name="items[{{ $loop->index }}][item_code]" value="{{ $item['item_code'] }}" dir="ltr">
+                                                        <div class="borrower-boq-editable" data-boq-editable>
+                                                            <div class="borrower-boq-editable-display fw-bold text-gray-800" data-boq-editable-display dir="ltr">{{ $item['item_code'] ?: '-' }}</div>
+                                                            <input class="form-control form-control-sm d-none" name="items[{{ $loop->index }}][item_code]" value="{{ $item['item_code'] }}" dir="ltr" data-boq-editable-input data-original-value="{{ $item['item_code'] }}">
+                                                        </div>
                                                     </td>
                                                     <td>
-                                                        <textarea class="form-control form-control-sm" name="items[{{ $loop->index }}][description]" rows="2">{{ $item['description'] }}</textarea>
+                                                        <div class="borrower-boq-editable" data-boq-editable>
+                                                            <div class="borrower-boq-editable-display text-gray-900" data-boq-editable-display>{{ $item['description'] ?: '-' }}</div>
+                                                            <textarea class="form-control form-control-sm d-none" name="items[{{ $loop->index }}][description]" rows="3" data-boq-editable-input data-original-value="{{ $item['description'] }}">{{ $item['description'] }}</textarea>
+                                                        </div>
                                                         @if (! empty($item['source_sheet']) || ! empty($item['category']))
                                                             <div class="text-muted fs-8">{{ collect([$item['source_sheet'] ?? null, $item['category'] ?? null])->filter()->implode(' / ') }}</div>
                                                         @endif
                                                     </td>
-                                                    <td><input class="form-control form-control-sm" name="items[{{ $loop->index }}][unit]" value="{{ $item['unit'] }}" dir="ltr"></td>
-                                                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="items[{{ $loop->index }}][unit_price]" value="{{ $item['unit_price'] }}" dir="ltr"></td>
+                                                    <td>
+                                                        <div class="borrower-boq-editable" data-boq-editable>
+                                                            <div class="borrower-boq-editable-display" data-boq-editable-display dir="ltr">{{ $item['unit'] ?: '-' }}</div>
+                                                            <input class="form-control form-control-sm d-none" name="items[{{ $loop->index }}][unit]" value="{{ $item['unit'] }}" dir="ltr" data-boq-editable-input data-original-value="{{ $item['unit'] }}">
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="borrower-boq-editable" data-boq-editable>
+                                                            <div class="borrower-boq-editable-display" data-boq-editable-display dir="ltr">{{ $item['unit_price'] === null ? '-' : number_format((float) $item['unit_price'], 2) }}</div>
+                                                            <input type="number" step="0.01" min="0" class="form-control form-control-sm d-none" name="items[{{ $loop->index }}][unit_price]" value="{{ $item['unit_price'] }}" dir="ltr" data-boq-editable-input data-original-value="{{ $item['unit_price'] }}" data-number-cell="true">
+                                                        </div>
+                                                    </td>
                                                     <td dir="ltr">{{ $item['unit_price_ils'] === null ? '-' : number_format((float) $item['unit_price_ils'], 2) }}</td>
-                                                    <td><input type="number" min="0" class="form-control form-control-sm" name="items[{{ $loop->index }}][sort_order]" value="{{ $item['sort_order'] }}" dir="ltr"></td>
+                                                    <td>
+                                                        <div class="borrower-boq-editable" data-boq-editable>
+                                                            <div class="borrower-boq-editable-display" data-boq-editable-display dir="ltr">{{ $item['sort_order'] }}</div>
+                                                            <input type="number" min="0" class="form-control form-control-sm d-none" name="items[{{ $loop->index }}][sort_order]" value="{{ $item['sort_order'] }}" dir="ltr" data-boq-editable-input data-original-value="{{ $item['sort_order'] }}">
+                                                        </div>
+                                                    </td>
                                                     <td>
                                                         <span class="badge {{ $item['is_ready'] ? 'badge-light-success' : 'badge-light-warning' }}">
                                                             {{ $item['is_ready'] ? 'جاهز' : 'يحتاج مراجعة' }}
@@ -1989,6 +2027,84 @@
         });
 
         document.getElementById('borrowerBoqSettingsModal')?.addEventListener('shown.bs.modal', applyBorrowerBoqSettingsFilters);
+
+        function displayEditableValue(input) {
+            const value = input.value.trim();
+
+            if (input.dataset.numberCell === 'true' && value !== '') {
+                const number = Number(value);
+
+                return Number.isFinite(number) ? number.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                }) : value;
+            }
+
+            return value || '-';
+        }
+
+        function refreshBoqEditableSearch(row) {
+            if (!row) return;
+
+            const values = Array.from(row.querySelectorAll('[data-boq-editable-input]'))
+                .map((input) => input.value || '')
+                .join(' ');
+
+            row.dataset.search = values.toLowerCase();
+        }
+
+        function closeBoqEditableInput(input, confirmed) {
+            const wrapper = input.closest('[data-boq-editable]');
+            const display = wrapper?.querySelector('[data-boq-editable-display]');
+
+            if (!wrapper || !display) return;
+
+            if (!confirmed) {
+                input.value = input.dataset.originalValue || '';
+            } else {
+                input.dataset.originalValue = input.value;
+                display.textContent = displayEditableValue(input);
+                refreshBoqEditableSearch(input.closest('[data-boq-settings-row]'));
+            }
+
+            input.classList.add('d-none');
+            display.classList.remove('d-none');
+        }
+
+        document.querySelectorAll('[data-boq-editable]').forEach((wrapper) => {
+            const display = wrapper.querySelector('[data-boq-editable-display]');
+            const input = wrapper.querySelector('[data-boq-editable-input]');
+
+            display?.addEventListener('dblclick', () => {
+                display.classList.add('d-none');
+                input.classList.remove('d-none');
+                input.focus();
+                input.select?.();
+            });
+
+            input?.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeBoqEditableInput(input, false);
+                }
+
+                if (event.key === 'Enter' && input.tagName !== 'TEXTAREA') {
+                    event.preventDefault();
+                    input.blur();
+                }
+            });
+
+            input?.addEventListener('blur', () => {
+                if (input.value === (input.dataset.originalValue || '')) {
+                    closeBoqEditableInput(input, false);
+
+                    return;
+                }
+
+                const confirmed = window.confirm('هل تريد اعتماد تغيير هذه الخلية؟');
+                closeBoqEditableInput(input, confirmed);
+            });
+        });
 
         document.getElementById('borrowersExportModal')?.addEventListener('show.bs.modal', () => {
             updateBorrowersExportScope();
