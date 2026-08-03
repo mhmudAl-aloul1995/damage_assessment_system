@@ -449,6 +449,33 @@ it('auto-detects Kuwait loan workbooks when no worksheet is selected', function 
     unlink($path);
 });
 
+it('imports visit eligibility values from the IDB workbook', function () {
+    DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB6',
+        'borrower_name' => 'امل سليمان داود المصري',
+        'borrower_id_number' => '931695894',
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('371 Beneficiaries');
+    $sheet->fromArray([
+        ['#', 'رقم الاستمارة', 'رقم هوية المقترض', 'الاسم', 'الجوال', 'نوع القرض', 'العنوان (الفرع)', 'عنوان الوحدة السكنية المستهدفة بالقرض( المحافظة- المدينة- أقرب معلم)', 'الخط الاصفر', 'يمكن زيارته (نعم / لا/ غير معروف)'],
+        [1, 'IDB6', '931695894', 'امل سليمان داود المصري', '0599454930', 'نشط', 'غزة', 'ارض الشنطي', '', 'نعم*'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'idb-visit-eligibility-');
+    (new Xlsx($spreadsheet))->save($path);
+
+    Artisan::call('borrowers:import-visit-eligibility', ['path' => $path]);
+
+    $borrower = DamageAssessmentBorrower::query()->where('form_number', 'IDB6')->sole();
+
+    expect($borrower->visit_eligibility)->toBe('yes_star');
+
+    unlink($path);
+});
+
 it('imports borrower boq catalog prices from dollar prices and the configured exchange rate', function () {
     BorrowerPricingSetting::query()->create(['exchange_rate' => 2.9]);
 

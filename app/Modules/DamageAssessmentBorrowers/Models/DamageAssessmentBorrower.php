@@ -65,6 +65,7 @@ class DamageAssessmentBorrower extends Model
         'loan_unit_occupancy_status',
         'resident_households',
         'loan_unit_damage_status',
+        'visit_eligibility',
         'is_inside_yellow_line',
         'notes',
         'risk_level',
