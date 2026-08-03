@@ -93,7 +93,7 @@
         }
 
         .damage-assessment-borrowers-page .borrower-boq-settings-table {
-            max-height: min(28rem, 46vh);
+            max-height: min(18rem, 34vh);
             overflow-x: auto;
             overflow-y: auto;
         }
@@ -111,6 +111,27 @@
 
         .damage-assessment-borrowers-page .borrower-boq-settings-table table {
             min-width: 920px;
+        }
+
+        #borrowerBoqSettingsModal .modal-dialog {
+            height: calc(100vh - 2rem);
+        }
+
+        #borrowerBoqSettingsModal .modal-content,
+        #borrowerBoqSettingsModal form {
+            max-height: 100%;
+            min-height: 0;
+        }
+
+        #borrowerBoqSettingsModal form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #borrowerBoqSettingsModal .modal-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
         }
 
         .damage-assessment-borrowers-page .borrower-repeat-row {
