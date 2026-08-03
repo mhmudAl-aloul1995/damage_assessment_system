@@ -35,6 +35,9 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('استيراد من Excel', false)
         ->assertSee('borrowersImportModal', false)
         ->assertSee('borrowersExportModal', false)
+        ->assertSee('value="custom"', false)
+        ->assertSee('borrowersCustomExportColumns', false)
+        ->assertSee('boq_items_horizontal', false)
         ->assertSee(str_replace('/', '\/', route('damage-assessment-borrowers.export')), false)
         ->assertSee('borrowers-import-dropzone', false)
         ->assertSee('borrowersPreviewBtn', false)
@@ -860,6 +863,86 @@ it('exports borrower report using the current filters', function () {
             && $export->map($export->collection()->first())[0] === 'IDB-EXPORT'
             && $export->map($export->collection()->first())[1] === 'IDB-EXPORT'
             && $export->map($export->collection()->first())[6] === 84500.0;
+    });
+});
+
+it('exports selected borrower columns with boq items horizontally', function () {
+    Excel::fake();
+    Excel::matchByRegex();
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB-CUSTOM',
+        'borrower_name' => 'Custom Export Borrower',
+        'borrower_id_number' => '830000001',
+        'loan_total_amount' => 12500,
+        'is_borrower_alive' => true,
+        'loan_unit_damage_status' => 'minor',
+        'boq_total_usd' => 350,
+        'boq_total_ils' => 1015,
+    ]);
+
+    $borrower->boqItems()->create([
+        'source_column' => 'Paint',
+        'source_key' => sha1('Paint'),
+        'item_code' => '7.1',
+        'description' => 'Paint internal walls',
+        'unit' => 'M2',
+        'unit_price' => 100,
+        'exchange_rate' => 2.9,
+        'unit_price_ils' => 290,
+        'quantity' => 2,
+        'total_price' => 200,
+        'total_price_ils' => 580,
+        'sort_order' => 1,
+    ]);
+
+    $borrower->boqItems()->create([
+        'source_column' => 'Tank',
+        'source_key' => sha1('Tank'),
+        'item_code' => '11.10',
+        'description' => 'Water tank',
+        'unit' => 'No',
+        'unit_price' => 155,
+        'exchange_rate' => 2.9,
+        'unit_price_ils' => 449.5,
+        'quantity' => 1,
+        'total_price' => 155,
+        'total_price_ils' => 449.5,
+        'sort_order' => 2,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.export', [
+            'report_type' => 'custom',
+            'columns' => [
+                'borrower_name',
+                'borrower_id_number',
+                'loan_total_amount',
+                'boq_items_horizontal',
+            ],
+        ]))
+        ->assertOk();
+
+    Excel::assertDownloaded('/borrowers-report-\d{4}-\d{2}-\d{2}-\d{6}\.xlsx/', function (BorrowerReportExport $export): bool {
+        $headings = $export->headings();
+        $row = $export->map($export->collection()->first());
+
+        return count($headings) === 19
+            && $headings[0] === BorrowerReportExport::availableColumns()['borrower_name']['label']
+            && str_starts_with($headings[3], 'BOQ 01 - ')
+            && str_starts_with($headings[11], 'BOQ 02 - ')
+            && $row[0] === 'Custom Export Borrower'
+            && $row[1] === '830000001'
+            && $row[2] === '12500.00'
+            && $row[3] === '7.1'
+            && $row[8] === 2.0
+            && $row[9] === 200.0
+            && $row[11] === '11.10'
+            && $row[17] === 155.0;
     });
 });
 

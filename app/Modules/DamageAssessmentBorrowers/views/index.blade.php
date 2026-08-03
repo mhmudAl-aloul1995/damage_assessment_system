@@ -1146,7 +1146,24 @@
                                             <span class="text-muted fs-7">يشمل المساحة، الطابق، سعر المتر، قيمة الضرر بالدولار والشيكل، الخطورة وعدد الصور.</span>
                                         </span>
                                     </label>
+                                    <label class="form-check form-check-custom form-check-solid border rounded p-4">
+                                        <input class="form-check-input" type="radio" name="report_type" value="custom">
+                                        <span class="form-check-label ms-3">
+                                            <span class="fw-bold d-block">تقرير مخصص</span>
+                                            <span class="text-muted fs-7">اختر الأعمدة المطلوبة، ويمكن إضافة جدول الكميات BOQ كأعمدة أفقية على نفس صف المقترض.</span>
+                                        </span>
+                                    </label>
                                 </div>
+                            </div>
+
+                            <div class="mb-5 d-none" id="borrowersCustomExportColumnsWrap">
+                                <label class="form-label fw-semibold" for="borrowersCustomExportColumns">أعمدة التقرير المخصص</label>
+                                <select class="form-select" id="borrowersCustomExportColumns" name="columns[]" multiple data-control="select2" data-placeholder="اختر الأعمدة">
+                                    @foreach ($exportColumns ?? [] as $key => $column)
+                                        <option value="{{ $key }}" @selected(in_array($key, $compactExportColumns ?? [], true))>{{ $column['label'] }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">اختيار جدول الكميات BOQ يضيف البنود أفقياً: BOQ 01، BOQ 02، وهكذا.</div>
                             </div>
 
                             <div class="rounded border bg-light p-4">
@@ -1593,6 +1610,9 @@
         const borrowersImportFileName = document.getElementById('borrowersImportFileName');
         const borrowersImportPreview = document.getElementById('borrowersImportPreview');
         const borrowersPreviewBtn = document.getElementById('borrowersPreviewBtn');
+        const borrowersCustomExportColumnsWrap = document.getElementById('borrowersCustomExportColumnsWrap');
+        const borrowersCustomExportColumns = document.getElementById('borrowersCustomExportColumns');
+        const borrowersExportReportTypes = borrowersExportForm?.querySelectorAll('input[name="report_type"]') || [];
 
         if (window.jQuery && $.fn.select2) {
             $('.borrower-filter-select').each(function () {
@@ -1606,6 +1626,13 @@
                     });
                 }
             });
+
+            if (borrowersCustomExportColumns && !$(borrowersCustomExportColumns).hasClass('select2-hidden-accessible')) {
+                $(borrowersCustomExportColumns).select2({
+                    dropdownParent: $('#borrowersExportModal'),
+                    width: '100%',
+                });
+            }
         }
 
         borrowerSurveyForm?.addEventListener('submit', async (event) => {
@@ -1691,15 +1718,36 @@
             event.preventDefault();
 
             const params = currentBorrowerFilterParams();
-            const reportType = new FormData(borrowersExportForm).get('report_type') || 'compact';
+            const formData = new FormData(borrowersExportForm);
+            const reportType = formData.get('report_type') || 'compact';
             params.set('report_type', reportType);
 
+            if (reportType === 'custom') {
+                formData.getAll('columns[]').forEach((column) => {
+                    params.append('columns[]', column);
+                });
+            }
+
             const url = new URL(borrowerRoutes.export, window.location.origin);
-            params.forEach((value, key) => url.searchParams.set(key, value));
+            params.forEach((value, key) => url.searchParams.append(key, value));
             window.location.href = url.toString();
         });
 
-        document.getElementById('borrowersExportModal')?.addEventListener('show.bs.modal', updateBorrowersExportScope);
+        function toggleBorrowersCustomExportColumns() {
+            if (!borrowersExportForm || !borrowersCustomExportColumnsWrap) return;
+
+            const reportType = new FormData(borrowersExportForm).get('report_type') || 'compact';
+            borrowersCustomExportColumnsWrap.classList.toggle('d-none', reportType !== 'custom');
+        }
+
+        borrowersExportReportTypes.forEach((input) => {
+            input.addEventListener('change', toggleBorrowersCustomExportColumns);
+        });
+
+        document.getElementById('borrowersExportModal')?.addEventListener('show.bs.modal', () => {
+            updateBorrowersExportScope();
+            toggleBorrowersCustomExportColumns();
+        });
 
         document.querySelectorAll('[data-risk-filter]').forEach((button) => {
             button.addEventListener('click', () => {

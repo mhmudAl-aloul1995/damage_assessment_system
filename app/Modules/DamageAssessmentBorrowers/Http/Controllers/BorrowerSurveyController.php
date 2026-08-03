@@ -50,6 +50,8 @@ class BorrowerSurveyController extends Controller
             'stats' => $this->stats(),
             'globalExchangeRate' => $this->globalExchangeRate(),
             'canManagePricing' => $this->canManagePricing(),
+            'exportColumns' => BorrowerReportExport::availableColumns(),
+            'compactExportColumns' => array_keys(BorrowerReportExport::compactColumnDefaults()),
             'isFormPage' => false,
         ]);
     }
@@ -88,14 +90,21 @@ class BorrowerSurveyController extends Controller
             'q' => ['nullable', 'string', 'max:255'],
             'risk_level' => ['nullable', 'in:critical,high,medium,low'],
             'damage_status' => ['nullable', 'in:destroyed,partial,severe_uninhabitable,severe_habitable,minor'],
-            'report_type' => ['nullable', 'in:compact,detailed'],
+            'report_type' => ['nullable', 'in:compact,detailed,custom'],
+            'columns' => ['nullable', 'array'],
+            'columns.*' => ['string'],
         ]);
 
         $reportType = $validated['report_type'] ?? 'compact';
         $borrowers = $this->exportBorrowers($request);
+        $columns = $validated['columns'] ?? [];
+
+        if ($reportType === 'custom' && in_array('boq_items_horizontal', $columns, true)) {
+            $borrowers->load(['boqItems' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')]);
+        }
 
         return Excel::download(
-            new BorrowerReportExport($borrowers, $reportType),
+            new BorrowerReportExport($borrowers, $reportType, $columns),
             'borrowers-report-'.now()->format('Y-m-d-His').'.xlsx'
         );
     }
