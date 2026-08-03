@@ -85,6 +85,10 @@ it('keeps custom borrower export column groups aligned with available columns', 
     collect(BorrowerReportExport::availableColumnGroups())
         ->flatten()
         ->each(fn (string $key) => expect($availableColumns)->toContain($key));
+
+    expect(array_keys(BorrowerReportExport::compactColumnDefaults()))
+        ->toContain('is_inside_yellow_line')
+        ->toContain('was_visited');
 });
 
 it('allows borrower managers to manually sync iqrad kobo edits', function () {
@@ -1113,6 +1117,57 @@ it('exports selected borrower columns with boq items horizontally', function () 
             && $row[9] === 200.0
             && $row[11] === '11.10'
             && $row[17] === 155.0;
+    });
+});
+
+it('exports yellow line and visited flags in custom borrower reports', function () {
+    Excel::fake();
+    Excel::matchByRegex();
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Visited Yellow Borrower',
+        'borrower_id_number' => '830000002',
+        'is_inside_yellow_line' => true,
+        'is_borrower_alive' => true,
+    ]);
+
+    KoboRestSubmission::query()->create([
+        'service_name' => 'iqrad',
+        'submission_uuid' => 'uuid-borrower-visited-yellow',
+        'payload' => ['borrower_name' => 'Visited Yellow Borrower'],
+        'damage_assessment_borrower_id' => $borrower->id,
+        'sync_status' => 'synced',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.export', [
+            'report_type' => 'custom',
+            'columns' => [
+                'borrower_name',
+                'is_inside_yellow_line',
+                'was_visited',
+            ],
+        ]))
+        ->assertOk();
+
+    Excel::assertDownloaded('/borrowers-report-\d{4}-\d{2}-\d{2}-\d{6}\.xlsx/', function (BorrowerReportExport $export): bool {
+        $headings = $export->headings();
+        $row = $export->map($export->collection()->first());
+
+        return $headings === [
+            'اسم المقترض',
+            'داخل الخط الأصفر',
+            'هل تم زيارته',
+        ]
+            && $row === [
+                'Visited Yellow Borrower',
+                'نعم',
+                'نعم',
+            ];
     });
 });
 

@@ -101,9 +101,14 @@ class BorrowerSurveyController extends Controller
         $reportType = $validated['report_type'] ?? 'compact';
         $borrowers = $this->exportBorrowers($request);
         $columns = $validated['columns'] ?? [];
+        $customColumns = $reportType === 'custom' ? collect($columns)->filter()->values() : collect();
 
         if ($reportType === 'custom' && in_array('boq_items_horizontal', $columns, true)) {
             $borrowers->load(['boqItems' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')]);
+        }
+
+        if ($reportType === 'custom' && ($customColumns->isEmpty() || $customColumns->contains('was_visited'))) {
+            $borrowers->loadCount(['koboRestSubmissions']);
         }
 
         return Excel::download(

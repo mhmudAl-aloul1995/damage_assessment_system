@@ -195,6 +195,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
             'phone_primary' => ['label' => 'الجوال الأساسي', 'type' => 'text'],
             'phone_secondary' => ['label' => 'الجوال الثانوي', 'type' => 'text'],
             'submitted_by_name' => ['label' => 'اسم مدخل البيانات', 'type' => 'text'],
+            'was_visited' => ['label' => 'هل تم زيارته', 'type' => 'text'],
             'surveyed_at' => ['label' => 'تاريخ المسح', 'type' => 'date'],
             'created_at' => ['label' => 'تاريخ إنشاء السجل', 'type' => 'date'],
             'updated_at' => ['label' => 'تاريخ آخر تحديث', 'type' => 'date'],
@@ -269,6 +270,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
                 'phone_primary',
                 'phone_secondary',
                 'submitted_by_name',
+                'was_visited',
                 'surveyed_at',
                 'created_at',
                 'updated_at',
@@ -440,6 +442,8 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
             'form_number' => 'كود المستفيد',
             'borrower_name' => 'اسم المقترض',
             'borrower_id_number' => 'رقم الهوية',
+            'is_inside_yellow_line' => 'داخل الخط الأصفر',
+            'was_visited' => 'هل تم زيارته',
             'loan_total_amount' => 'قيمة القرض',
             'loan_balance' => 'المبلغ المتبقي',
             'boq_total_usd' => 'قيمة الضرر للهدم الكلي',
@@ -477,6 +481,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
             'loan_unit_damage_status', 'risk_level' => $key === 'risk_level'
                 ? $this->riskLabel($borrower->risk_level)
                 : $this->optionLabel($borrower->{$key}),
+            'was_visited' => $this->booleanLabel((int) ($borrower->kobo_rest_submissions_count ?? 0) > 0),
             'is_borrower_alive', 'loan_clearance_delivered', 'is_inside_yellow_line' => $this->booleanLabel($borrower->{$key}),
             'vulnerability_types', 'deceased_guarantors', 'guarantors_employment_statuses',
             'affected_guarantors', 'resident_households', 'risk_reasons' => $this->stringifyList($borrower->{$key}),

@@ -2,6 +2,7 @@
 
 namespace App\Modules\DamageAssessmentBorrowers\Models;
 
+use App\Models\KoboRestSubmission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -98,6 +99,11 @@ class DamageAssessmentBorrower extends Model
     public function koboAnswers(): HasMany
     {
         return $this->hasMany(BorrowerKoboAnswer::class, 'damage_assessment_borrower_id');
+    }
+
+    public function koboRestSubmissions(): HasMany
+    {
+        return $this->hasMany(KoboRestSubmission::class, 'damage_assessment_borrower_id');
     }
 
     protected function casts(): array
