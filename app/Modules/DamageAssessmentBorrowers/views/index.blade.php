@@ -1345,7 +1345,7 @@
                                             <input class="form-control form-control-sm" id="newBoqUnit" name="unit" placeholder="M2" required>
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label fs-8" for="newBoqUnitPrice">سعر الوحدة $</label>
+                                            <label class="form-label fs-8" for="newBoqUnitPrice">السعر $</label>
                                             <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="newBoqUnitPrice" name="unit_price" dir="ltr" required>
                                         </div>
                                         <div class="col-md-1">
@@ -1383,8 +1383,8 @@
                                                 <th class="borrower-boq-code-column">الكود</th>
                                                 <th class="min-w-500px">البند</th>
                                                 <th class="min-w-90px">الوحدة</th>
-                                                <th class="min-w-120px">سعر الوحدة $</th>
-                                                <th class="min-w-140px">سعر الوحدة ILS</th>
+                                                <th class="min-w-120px">السعر $</th>
+                                                <th class="min-w-140px">السعر ILS</th>
                                                 <th class="min-w-90px">الترتيب</th>
                                             </tr>
                                         </thead>

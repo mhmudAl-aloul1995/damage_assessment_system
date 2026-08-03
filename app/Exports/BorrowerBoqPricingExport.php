@@ -40,7 +40,7 @@ class BorrowerBoqPricingExport implements FromCollection, ShouldAutoSize, WithEv
             'الكود',
             'البند',
             'الوحدة',
-            'سعر الوحدة $',
+            'السعر $',
             'سعر الوحدة ILS',
             'الكمية',
             'الإجمالي $',

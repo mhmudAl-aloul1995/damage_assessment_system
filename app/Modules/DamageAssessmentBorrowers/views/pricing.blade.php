@@ -238,8 +238,8 @@
                                 <th class="min-w-90px">الكود</th>
                                 <th class="min-w-350px">البند</th>
                                 <th class="min-w-90px">الوحدة</th>
-                                <th class="min-w-140px">سعر الوحدة $</th>
-                                <th class="min-w-140px">سعر الوحدة ILS</th>
+                                <th class="min-w-140px">السعر $</th>
+                                <th class="min-w-140px">السعر ILS</th>
                                 <th class="min-w-120px">الكمية</th>
                                 <th class="min-w-140px">الإجمالي $</th>
                                 <th class="min-w-140px">الإجمالي ILS</th>

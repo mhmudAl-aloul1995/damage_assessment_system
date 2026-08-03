@@ -73,7 +73,7 @@
                             <input name="unit" class="form-control" list="heksCatalogUnits" placeholder="M2">
                         </div>
                         <div class="col-xl-2 col-md-4">
-                            <label class="form-label">سعر الوحدة ILS</label>
+                            <label class="form-label">السعر ILS</label>
                             <input name="unit_price_ils" type="number" min="0" step="0.01" class="form-control catalog-number" value="0" required dir="ltr">
                         </div>
                         <div class="col-xl-1 col-md-3">
