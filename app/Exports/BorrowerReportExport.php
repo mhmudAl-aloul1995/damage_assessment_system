@@ -544,6 +544,11 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
     private function optionLabel(?string $value): string
     {
         return match ($value) {
+            '1', 'north' => 'محافظة الشمال',
+            '2', 'gaza' => 'محافظة غزة',
+            '3', 'middle' => 'محافظة الوسطى',
+            '4', 'khan_younis' => 'محافظة خانيونس',
+            '5', 'rafah' => 'محافظة رفح',
             'destroyed' => 'هدم كلي',
             'severe_uninhabitable' => 'متضرر بليغ غير صالح للسكن',
             'severe_habitable' => 'متضرر بليغ صالح للسكن',

@@ -1171,6 +1171,45 @@ it('exports yellow line and visited flags in custom borrower reports', function 
     });
 });
 
+it('exports borrower current governorate names instead of raw codes', function () {
+    Excel::fake();
+    Excel::matchByRegex();
+
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Governorate Export Borrower',
+        'borrower_id_number' => '830000003',
+        'displaced_to_governorate' => '3',
+        'is_borrower_alive' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damage-assessment-borrowers.export', [
+            'report_type' => 'custom',
+            'columns' => [
+                'borrower_name',
+                'displaced_to_governorate',
+            ],
+        ]))
+        ->assertOk();
+
+    Excel::assertDownloaded('/borrowers-report-\d{4}-\d{2}-\d{2}-\d{6}\.xlsx/', function (BorrowerReportExport $export): bool {
+        $row = $export->map($export->collection()->first());
+
+        return $export->headings() === [
+            'اسم المقترض',
+            'المحافظة الحالية',
+        ]
+            && $row === [
+                'Governorate Export Borrower',
+                'محافظة الوسطى',
+            ];
+    });
+});
+
 it('does not export loan number as the borrower beneficiary code', function () {
     $borrower = DamageAssessmentBorrower::query()->create([
         'borrower_name' => 'Loan Number Fallback Borrower',
