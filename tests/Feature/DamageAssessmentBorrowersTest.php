@@ -477,6 +477,24 @@ it('imports visit eligibility values from the IDB workbook', function () {
     unlink($path);
 });
 
+it('includes visit eligibility and branch address in custom borrower exports', function () {
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'form_number' => 'IDB-CUSTOM',
+        'borrower_name' => 'Custom Export Borrower',
+        'borrower_id_number' => '820000777',
+        'visit_eligibility' => 'yes_star',
+        'loan_branch_address' => 'غزة',
+    ]);
+
+    $export = new BorrowerReportExport(collect([$borrower]), 'custom', [
+        'loan_branch_address',
+        'visit_eligibility',
+    ]);
+
+    expect($export->headings())->toBe(['العنوان (الفرع)', 'يمكن زيارته'])
+        ->and($export->map($borrower))->toBe(['غزة', 'نعم*']);
+});
+
 it('imports borrower boq catalog prices from dollar prices and the configured exchange rate', function () {
     BorrowerPricingSetting::query()->create(['exchange_rate' => 2.9]);
 

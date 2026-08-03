@@ -194,8 +194,10 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
             'borrower_id_number' => ['label' => 'رقم الهوية', 'type' => 'text'],
             'phone_primary' => ['label' => 'الجوال الأساسي', 'type' => 'text'],
             'phone_secondary' => ['label' => 'الجوال الثانوي', 'type' => 'text'],
+            'loan_branch_address' => ['label' => 'العنوان (الفرع)', 'type' => 'text'],
             'submitted_by_name' => ['label' => 'اسم مدخل البيانات', 'type' => 'text'],
             'was_visited' => ['label' => 'هل تم زيارته', 'type' => 'text'],
+            'visit_eligibility' => ['label' => 'يمكن زيارته', 'type' => 'text'],
             'surveyed_at' => ['label' => 'تاريخ المسح', 'type' => 'date'],
             'created_at' => ['label' => 'تاريخ إنشاء السجل', 'type' => 'date'],
             'updated_at' => ['label' => 'تاريخ آخر تحديث', 'type' => 'date'],
@@ -269,8 +271,10 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
                 'borrower_id_number',
                 'phone_primary',
                 'phone_secondary',
+                'loan_branch_address',
                 'submitted_by_name',
                 'was_visited',
+                'visit_eligibility',
                 'surveyed_at',
                 'created_at',
                 'updated_at',
@@ -482,6 +486,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
                 ? $this->riskLabel($borrower->risk_level)
                 : $this->optionLabel($borrower->{$key}),
             'was_visited' => $this->booleanLabel((int) ($borrower->kobo_rest_submissions_count ?? 0) > 0),
+            'visit_eligibility' => $this->visitEligibilityLabel($borrower->visit_eligibility),
             'is_borrower_alive', 'loan_clearance_delivered', 'is_inside_yellow_line' => $this->booleanLabel($borrower->{$key}),
             'vulnerability_types', 'deceased_guarantors', 'guarantors_employment_statuses',
             'affected_guarantors', 'resident_households', 'risk_reasons' => $this->stringifyList($borrower->{$key}),
@@ -499,6 +504,17 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
         }
 
         return (bool) $value ? 'نعم' : 'لا';
+    }
+
+    private function visitEligibilityLabel(?string $value): string
+    {
+        return match ($value) {
+            'yes' => 'نعم',
+            'no' => 'لا',
+            'yes_star' => 'نعم*',
+            'unknown' => 'غير معروف',
+            default => '-',
+        };
     }
 
     private function stringifyList(mixed $value): string
