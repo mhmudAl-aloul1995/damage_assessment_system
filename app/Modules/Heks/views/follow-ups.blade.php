@@ -218,7 +218,7 @@
                                                         <th class="boq-preview-description">الوصف</th>
                                                         <th>الوحدة</th>
                                                         <th>الكمية</th>
-                                                        <th>السعر ILS</th>
+                                                        <th>سعر ILS</th>
                                                         <th>الإجمالي ILS</th>
                                                     </tr>
                                                     </thead>

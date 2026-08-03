@@ -456,7 +456,7 @@ it('imports borrower boq catalog prices from dollar prices and the configured ex
     $sheet = $spreadsheet->getActiveSheet();
     $sheet->setTitle('ورقة1');
     $sheet->fromArray([
-        ['البند', 'الوصف', 'الوحدة', 'سعر الوحدة $', 'السعر ILS'],
+        ['البند', 'الوصف', 'الوحدة', 'سعر الوحدة $', 'سعر ILS'],
         ['4.1', 'أعمال معالجة التشققات مع الشبك حسب المواصفات الفنية', 'ML', 3, 999],
         ['1', '0000900101', '930046990', 32280, 93612],
         ['7.1', 'توريد ودهان سوبر كريل لزوم الحوائط الداخلية والأسقف', 'M2', 3, 999],
@@ -1437,7 +1437,7 @@ it('exports borrower BOQ pricing to Excel with active rows only', function () {
             'البند',
             'الوحدة',
             'سعر الوحدة $',
-            'السعر ILS',
+            'سعر ILS',
             'الكمية',
             'الإجمالي $',
             'الإجمالي ILS',
