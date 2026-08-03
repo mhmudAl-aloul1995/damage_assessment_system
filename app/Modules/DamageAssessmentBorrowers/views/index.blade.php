@@ -110,7 +110,13 @@
         }
 
         .damage-assessment-borrowers-page .borrower-boq-settings-table table {
-            min-width: 920px;
+            min-width: 840px;
+        }
+
+        .damage-assessment-borrowers-page .borrower-boq-code-column {
+            max-width: 4.25rem;
+            min-width: 4.25rem;
+            width: 4.25rem;
         }
 
         .damage-assessment-borrowers-page .borrower-boq-editable {
@@ -123,6 +129,11 @@
             border-radius: 0.35rem;
             min-height: 2.25rem;
             padding: 0.45rem 0.55rem;
+        }
+
+        .damage-assessment-borrowers-page .borrower-boq-code-column .borrower-boq-editable-display,
+        .damage-assessment-borrowers-page .borrower-boq-code-column .form-control {
+            padding-inline: 0.35rem;
         }
 
         .damage-assessment-borrowers-page .borrower-boq-editable:hover .borrower-boq-editable-display {
@@ -1369,19 +1380,18 @@
                                     <table class="table table-row-dashed align-middle mb-0">
                                         <thead class="bg-light">
                                             <tr class="fw-bold text-muted">
-                                                <th class="w-80px min-w-80px">الكود</th>
+                                                <th class="borrower-boq-code-column">الكود</th>
                                                 <th class="min-w-500px">البند</th>
                                                 <th class="min-w-90px">الوحدة</th>
                                                 <th class="min-w-120px">سعر الوحدة $</th>
                                                 <th class="min-w-140px">سعر الوحدة ILS</th>
                                                 <th class="min-w-90px">الترتيب</th>
-                                                <th class="min-w-120px">الحالة</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @forelse (($boqSettings['items'] ?? collect()) as $item)
                                                 <tr data-boq-settings-row data-status="{{ $item['is_ready'] ? 'ready' : 'review' }}" data-search="{{ \Illuminate\Support\Str::lower(($item['item_code'] ?? '').' '.($item['description'] ?? '').' '.($item['unit'] ?? '')) }}">
-                                                    <td class="w-80px">
+                                                    <td class="borrower-boq-code-column">
                                                         <input type="hidden" name="items[{{ $loop->index }}][id]" value="{{ $item['id'] }}">
                                                         <div class="borrower-boq-editable" data-boq-editable>
                                                             <div class="borrower-boq-editable-display fw-bold text-gray-800" data-boq-editable-display dir="ltr">{{ $item['item_code'] ?: '-' }}</div>
@@ -1416,15 +1426,10 @@
                                                             <input type="number" min="0" class="form-control form-control-sm d-none" name="items[{{ $loop->index }}][sort_order]" value="{{ $item['sort_order'] }}" dir="ltr" data-boq-editable-input data-original-value="{{ $item['sort_order'] }}">
                                                         </div>
                                                     </td>
-                                                    <td>
-                                                        <span class="badge {{ $item['is_ready'] ? 'badge-light-success' : 'badge-light-warning' }}">
-                                                            {{ $item['is_ready'] ? 'جاهز' : 'يحتاج مراجعة' }}
-                                                        </span>
-                                                    </td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="text-center text-muted py-8">لا توجد بنود BOQ حالياً.</td>
+                                                    <td colspan="6" class="text-center text-muted py-8">لا توجد بنود BOQ حالياً.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
