@@ -117,13 +117,9 @@
             height: calc(100vh - 2rem);
         }
 
-        #borrowerBoqSettingsModal .modal-content,
-        #borrowerBoqSettingsModal form {
+        #borrowerBoqSettingsModal .modal-content {
             max-height: 100%;
             min-height: 0;
-        }
-
-        #borrowerBoqSettingsModal form {
             display: flex;
             flex-direction: column;
         }
@@ -1259,19 +1255,16 @@
             <div class="modal fade" id="borrowerBoqSettingsModal" tabindex="-1" aria-labelledby="borrowerBoqSettingsModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content">
-                        <form method="POST" action="{{ route('damage-assessment-borrowers.exchange-rate.update') }}">
-                            @csrf
-                            @method('PUT')
-                            <div class="modal-header">
-                                <h2 class="fw-bold mb-0" id="borrowerBoqSettingsModalLabel">إعدادات جدول الكميات BOQ</h2>
-                                <button type="button" class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="إغلاق">
-                                    <i class="ki-duotone ki-cross fs-1">
-                                        <span class="path1"></span>
-                                        <span class="path2"></span>
-                                    </i>
-                                </button>
-                            </div>
-                            <div class="modal-body">
+                        <div class="modal-header">
+                            <h2 class="fw-bold mb-0" id="borrowerBoqSettingsModalLabel">إعدادات جدول الكميات BOQ</h2>
+                            <button type="button" class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="إغلاق">
+                                <i class="ki-duotone ki-cross fs-1">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
                                 <div class="row g-4 mb-6">
                                     <div class="col-md-4">
                                         <div class="border rounded p-4 h-100">
@@ -1296,15 +1289,50 @@
                                     </div>
                                 </div>
 
-                                <div class="rounded border bg-light p-4 mb-6">
+                                <form method="POST" action="{{ route('damage-assessment-borrowers.exchange-rate.update') }}" class="rounded border bg-light p-4 mb-6">
+                                    @csrf
+                                    @method('PUT')
                                     <label class="form-label fw-semibold" for="globalExchangeRateInput">سعر صرف الدولار / شيكل</label>
                                     <div class="d-flex flex-column flex-md-row gap-3">
                                         <input type="text" inputmode="decimal" name="exchange_rate" id="globalExchangeRateInput" value="{{ old('exchange_rate', $globalExchangeRate) }}" class="form-control form-control-lg" dir="ltr" required>
                                         <button type="submit" class="btn btn-success flex-shrink-0">تطبيق السعر الموحد</button>
                                     </div>
                                     <div class="form-text mt-3">سيعاد احتساب إجماليات الشيكل وأسعار الوحدة بالشيكل لكل استبيانات المقترضين. قيم الدولار لا تتغير.</div>
-                                </div>
+                                </form>
 
+                                <form method="POST" action="{{ route('damage-assessment-borrowers.boq-catalog.store') }}" class="rounded border p-4 mb-6">
+                                    @csrf
+                                    <div class="fw-bold mb-3">إضافة بند جديد إلى الكتالوج الأساسي</div>
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-md-2">
+                                            <label class="form-label fs-8" for="newBoqItemCode">الكود</label>
+                                            <input class="form-control form-control-sm" id="newBoqItemCode" name="item_code" placeholder="1.1" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fs-8" for="newBoqDescription">البند</label>
+                                            <input class="form-control form-control-sm" id="newBoqDescription" name="description" required>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <label class="form-label fs-8" for="newBoqUnit">الوحدة</label>
+                                            <input class="form-control form-control-sm" id="newBoqUnit" name="unit" placeholder="M2" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fs-8" for="newBoqUnitPrice">سعر الوحدة $</label>
+                                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="newBoqUnitPrice" name="unit_price" dir="ltr" required>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <label class="form-label fs-8" for="newBoqSortOrder">الترتيب</label>
+                                            <input type="number" min="0" class="form-control form-control-sm" id="newBoqSortOrder" name="sort_order" dir="ltr">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-sm btn-primary w-100">إضافة البند</button>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <form method="POST" action="{{ route('damage-assessment-borrowers.boq-catalog.update') }}">
+                                    @csrf
+                                    @method('PUT')
                                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
                                     <div>
                                         <h4 class="fw-bold mb-1">كتالوج بنود BOQ</h4>
@@ -1329,22 +1357,27 @@
                                                 <th class="min-w-90px">الوحدة</th>
                                                 <th class="min-w-120px">سعر الوحدة $</th>
                                                 <th class="min-w-140px">سعر الوحدة ILS</th>
+                                                <th class="min-w-90px">الترتيب</th>
                                                 <th class="min-w-120px">الحالة</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @forelse (($boqSettings['items'] ?? collect()) as $item)
                                                 <tr data-boq-settings-row data-status="{{ $item['is_ready'] ? 'ready' : 'review' }}" data-search="{{ \Illuminate\Support\Str::lower(($item['item_code'] ?? '').' '.($item['description'] ?? '').' '.($item['unit'] ?? '')) }}">
-                                                    <td class="fw-bold text-gray-800">{{ $item['item_code'] ?: '-' }}</td>
                                                     <td>
-                                                        <div class="fw-semibold text-gray-900">{{ $item['description'] ?: '-' }}</div>
+                                                        <input type="hidden" name="items[{{ $loop->index }}][id]" value="{{ $item['id'] }}">
+                                                        <input class="form-control form-control-sm" name="items[{{ $loop->index }}][item_code]" value="{{ $item['item_code'] }}" dir="ltr">
+                                                    </td>
+                                                    <td>
+                                                        <textarea class="form-control form-control-sm" name="items[{{ $loop->index }}][description]" rows="2">{{ $item['description'] }}</textarea>
                                                         @if (! empty($item['source_sheet']) || ! empty($item['category']))
                                                             <div class="text-muted fs-8">{{ collect([$item['source_sheet'] ?? null, $item['category'] ?? null])->filter()->implode(' / ') }}</div>
                                                         @endif
                                                     </td>
-                                                    <td>{{ $item['unit'] ?: '-' }}</td>
-                                                    <td dir="ltr">{{ $item['unit_price'] === null ? '-' : number_format((float) $item['unit_price'], 2) }}</td>
+                                                    <td><input class="form-control form-control-sm" name="items[{{ $loop->index }}][unit]" value="{{ $item['unit'] }}" dir="ltr"></td>
+                                                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="items[{{ $loop->index }}][unit_price]" value="{{ $item['unit_price'] }}" dir="ltr"></td>
                                                     <td dir="ltr">{{ $item['unit_price_ils'] === null ? '-' : number_format((float) $item['unit_price_ils'], 2) }}</td>
+                                                    <td><input type="number" min="0" class="form-control form-control-sm" name="items[{{ $loop->index }}][sort_order]" value="{{ $item['sort_order'] }}" dir="ltr"></td>
                                                     <td>
                                                         <span class="badge {{ $item['is_ready'] ? 'badge-light-success' : 'badge-light-warning' }}">
                                                             {{ $item['is_ready'] ? 'جاهز' : 'يحتاج مراجعة' }}
@@ -1353,17 +1386,21 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="6" class="text-center text-muted py-8">لا توجد بنود BOQ حالياً.</td>
+                                                    <td colspan="7" class="text-center text-muted py-8">لا توجد بنود BOQ حالياً.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
-                            </div>
-                        </form>
+                                    <div class="d-flex justify-content-between align-items-center gap-3 mt-4">
+                                        <div class="text-muted fs-7">تعديل سعر الدولار يعيد حساب سعر الشيكل حسب سعر الصرف العام.</div>
+                                        <button type="submit" class="btn btn-primary">حفظ تعديلات الكتالوج</button>
+                                    </div>
+                                </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+                        </div>
                     </div>
                 </div>
             </div>

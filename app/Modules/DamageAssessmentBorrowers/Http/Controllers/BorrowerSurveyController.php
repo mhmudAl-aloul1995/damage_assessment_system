@@ -6,6 +6,8 @@ use App\Exports\BorrowerBoqPricingExport;
 use App\Exports\BorrowerReportExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\ImportBorrowerSpreadsheetRequest;
+use App\Http\Requests\Modules\DamageAssessmentBorrowers\StoreBorrowerBoqCatalogItemRequest;
+use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateBorrowerBoqCatalogRequest;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateBorrowerPricingRequest;
 use App\Http\Requests\Modules\DamageAssessmentBorrowers\UpdateGlobalBorrowerExchangeRateRequest;
 use App\Models\KoboRestSubmission;
@@ -417,6 +419,72 @@ class BorrowerSurveyController extends Controller
             ->with('success', 'تم توحيد سعر الصرف لكل استبيانات المقترضين بنجاح.');
     }
 
+    public function storeBoqCatalogItem(StoreBorrowerBoqCatalogItemRequest $request): RedirectResponse
+    {
+        $this->authorizePricingAccess();
+        $validated = $request->validated();
+        $exchangeRate = $this->globalExchangeRate();
+        $description = $this->textValue($validated['description'] ?? '');
+
+        BorrowerBoqCatalogItem::query()->create([
+            'item_code' => $this->textValue($validated['item_code'] ?? null),
+            'source_column' => $description,
+            'source_key' => sha1($this->textValue($validated['item_code'] ?? '').'|'.$description),
+            'description' => $description,
+            'normalized_description' => $this->normalizedBoqDescription($description),
+            'unit' => $this->textValue($validated['unit'] ?? null),
+            'unit_price' => (float) $validated['unit_price'],
+            'unit_price_ils' => round((float) $validated['unit_price'] * $exchangeRate, 2),
+            'category' => $this->blankToNull($validated['category'] ?? null),
+            'source_sheet' => $this->blankToNull($validated['source_sheet'] ?? null),
+            'sort_order' => (int) ($validated['sort_order'] ?? 0),
+        ]);
+
+        return redirect()
+            ->route('damage-assessment-borrowers.index')
+            ->with('success', 'تمت إضافة بند BOQ إلى الكتالوج الأساسي.');
+    }
+
+    public function updateBoqCatalog(UpdateBorrowerBoqCatalogRequest $request): RedirectResponse
+    {
+        $this->authorizePricingAccess();
+        $exchangeRate = $this->globalExchangeRate();
+        $validated = $request->validated();
+        $items = collect($validated['items'] ?? []);
+
+        DB::transaction(function () use ($items, $exchangeRate): void {
+            $items->each(function (array $item) use ($exchangeRate): void {
+                $catalogItem = BorrowerBoqCatalogItem::query()->find((int) $item['id']);
+
+                if (! $catalogItem instanceof BorrowerBoqCatalogItem) {
+                    return;
+                }
+
+                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                $description = $this->textValue($item['description'] ?? null);
+
+                $catalogItem->forceFill([
+                    'item_code' => $this->textValue($item['item_code'] ?? null),
+                    'source_column' => $description,
+                    'description' => $description,
+                    'normalized_description' => $this->normalizedBoqDescription($description),
+                    'unit' => $this->textValue($item['unit'] ?? null),
+                    'unit_price' => $unitPrice,
+                    'unit_price_ils' => round($unitPrice * $exchangeRate, 2),
+                    'category' => $this->blankToNull($item['category'] ?? null),
+                    'source_sheet' => $this->blankToNull($item['source_sheet'] ?? null),
+                    'sort_order' => (int) ($item['sort_order'] ?? 0),
+                ])->save();
+
+                $this->applyCatalogItemToBorrowerItems($catalogItem, $exchangeRate);
+            });
+        });
+
+        return redirect()
+            ->route('damage-assessment-borrowers.index')
+            ->with('success', 'تم حفظ تعديلات كتالوج BOQ الأساسي.');
+    }
+
     private function saveGlobalExchangeRate(float $exchangeRate): void
     {
         if (! Schema::hasTable('damage_assessment_borrower_pricing_settings')) {
@@ -442,8 +510,60 @@ class BorrowerSurveyController extends Controller
         return (float) (DamageAssessmentBorrower::query()->latest('updated_at')->value('exchange_rate') ?: 3.2);
     }
 
+    private function applyCatalogItemToBorrowerItems(BorrowerBoqCatalogItem $catalogItem, float $exchangeRate): void
+    {
+        BorrowerBoqItem::query()
+            ->where('catalog_item_id', $catalogItem->id)
+            ->each(function (BorrowerBoqItem $item) use ($catalogItem, $exchangeRate): void {
+                $unitPrice = (float) $catalogItem->unit_price;
+                $unitPriceIls = round($unitPrice * $exchangeRate, 2);
+                $totalPrice = round((float) $item->quantity * $unitPriceIls, 2);
+
+                $item->forceFill([
+                    'item_code' => $catalogItem->item_code,
+                    'description' => $catalogItem->description,
+                    'unit' => $catalogItem->unit,
+                    'unit_price' => $unitPrice,
+                    'exchange_rate' => $exchangeRate,
+                    'unit_price_ils' => $unitPriceIls,
+                    'total_price' => $totalPrice,
+                    'total_price_ils' => round($totalPrice * $exchangeRate, 2),
+                    'sort_order' => $catalogItem->sort_order,
+                ])->save();
+            });
+
+        DamageAssessmentBorrower::query()
+            ->whereHas('boqItems', fn (Builder $query) => $query->where('catalog_item_id', $catalogItem->id))
+            ->with('boqItems')
+            ->each(function (DamageAssessmentBorrower $borrower): void {
+                $borrower->forceFill([
+                    'boq_total_usd' => $borrower->boqItems->sum('total_price'),
+                    'boq_total_ils' => $borrower->boqItems->sum('total_price_ils'),
+                ])->save();
+            });
+    }
+
+    private function textValue(mixed $value): string
+    {
+        return trim((string) ($value ?? ''));
+    }
+
+    private function blankToNull(mixed $value): ?string
+    {
+        $text = $this->textValue($value);
+
+        return $text === '' ? null : $text;
+    }
+
+    private function normalizedBoqDescription(string $description): string
+    {
+        $normalized = preg_replace('/\s+/u', ' ', trim($description)) ?? trim($description);
+
+        return mb_strtolower($normalized);
+    }
+
     /**
-     * @return array{total: int, ready: int, needs_review: int, items: \Illuminate\Support\Collection<int, array{item_code: ?string, description: ?string, unit: ?string, unit_price: ?float, unit_price_ils: ?float, category: ?string, source_sheet: ?string, is_ready: bool}>}
+     * @return array{total: int, ready: int, needs_review: int, items: \Illuminate\Support\Collection<int, array{id: int, item_code: ?string, description: ?string, unit: ?string, unit_price: ?float, unit_price_ils: ?float, category: ?string, source_sheet: ?string, sort_order: int, is_ready: bool}>}
      */
     private function boqSettingsSummary(): array
     {
@@ -463,6 +583,7 @@ class BorrowerSurveyController extends Controller
 
         $items = $catalogItems
             ->map(fn (BorrowerBoqCatalogItem $item): array => [
+                'id' => $item->id,
                 'item_code' => $item->item_code,
                 'description' => $item->description,
                 'unit' => $item->unit,
@@ -470,6 +591,7 @@ class BorrowerSurveyController extends Controller
                 'unit_price_ils' => $item->unit_price_ils === null ? null : (float) $item->unit_price_ils,
                 'category' => $item->category,
                 'source_sheet' => $item->source_sheet,
+                'sort_order' => (int) $item->sort_order,
                 'is_ready' => $this->isValidPricingCatalogItem($item),
             ]);
 

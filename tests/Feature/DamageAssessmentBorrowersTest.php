@@ -1786,11 +1786,108 @@ it('shows borrower boq settings in a modal for pricing managers', function () {
         ->assertSee('جاهز', false)
         ->assertSee('يحتاج مراجعة', false)
         ->assertSee('borrowerBoqSettingsSearch', false)
+        ->assertSee(str_replace('/', '\/', route('damage-assessment-borrowers.boq-catalog.store')), false)
+        ->assertSee(str_replace('/', '\/', route('damage-assessment-borrowers.boq-catalog.update')), false)
+        ->assertSee('newBoqItemCode', false)
         ->assertSee('data-boq-settings-status="ready"', false)
         ->assertSee('data-boq-settings-status="review"', false)
         ->assertSee('data-boq-settings-status="all"', false)
         ->assertSee('data-status="ready"', false)
         ->assertSee('data-status="review"', false);
+});
+
+it('adds borrower boq catalog items from the settings modal', function () {
+    BorrowerPricingSetting::query()->create(['exchange_rate' => 2.9]);
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->post(route('damage-assessment-borrowers.boq-catalog.store'), [
+            'item_code' => '9.9',
+            'description' => 'New catalog item',
+            'unit' => 'M2',
+            'unit_price' => 25,
+            'sort_order' => 99,
+        ])
+        ->assertRedirect(route('damage-assessment-borrowers.index'));
+
+    $item = BorrowerBoqCatalogItem::query()->where('item_code', '9.9')->sole();
+
+    expect($item->description)->toBe('New catalog item')
+        ->and((float) $item->unit_price)->toBe(25.0)
+        ->and((float) $item->unit_price_ils)->toBe(72.5)
+        ->and($item->sort_order)->toBe(99);
+});
+
+it('updates borrower boq catalog items and recalculates linked borrower quantities', function () {
+    BorrowerPricingSetting::query()->create(['exchange_rate' => 2.9]);
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $catalogItem = BorrowerBoqCatalogItem::query()->create([
+        'item_code' => '7.7',
+        'source_column' => 'Old item',
+        'source_key' => sha1('Old item'),
+        'description' => 'Old item',
+        'normalized_description' => 'old item',
+        'unit' => 'M2',
+        'unit_price' => 100,
+        'unit_price_ils' => 290,
+        'sort_order' => 7,
+    ]);
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Catalog Linked Borrower',
+        'borrower_id_number' => '810000005',
+        'is_borrower_alive' => true,
+        'boq_total_usd' => 580,
+        'exchange_rate' => 2.9,
+        'boq_total_ils' => 1682,
+    ]);
+    $borrower->boqItems()->create([
+        'catalog_item_id' => $catalogItem->id,
+        'source_column' => 'Old item',
+        'source_key' => sha1('Old item'),
+        'item_code' => '7.7',
+        'description' => 'Old item',
+        'unit' => 'M2',
+        'unit_price' => 100,
+        'exchange_rate' => 2.9,
+        'unit_price_ils' => 290,
+        'quantity' => 2,
+        'total_price' => 580,
+        'total_price_ils' => 1682,
+        'sort_order' => 7,
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('damage-assessment-borrowers.boq-catalog.update'), [
+            'items' => [
+                [
+                    'id' => $catalogItem->id,
+                    'item_code' => '7.8',
+                    'description' => 'Updated catalog item',
+                    'unit' => 'M3',
+                    'unit_price' => 120,
+                    'sort_order' => 8,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('damage-assessment-borrowers.index'));
+
+    $updatedCatalogItem = $catalogItem->refresh();
+    $updatedBorrowerItem = $borrower->boqItems()->sole();
+
+    expect($updatedCatalogItem->item_code)->toBe('7.8')
+        ->and($updatedCatalogItem->description)->toBe('Updated catalog item')
+        ->and((float) $updatedCatalogItem->unit_price_ils)->toBe(348.0)
+        ->and($updatedBorrowerItem->item_code)->toBe('7.8')
+        ->and($updatedBorrowerItem->unit)->toBe('M3')
+        ->and((float) $updatedBorrowerItem->total_price)->toBe(696.0)
+        ->and((float) $updatedBorrowerItem->total_price_ils)->toBe(2018.4)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(696.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(2018.4);
 });
 
 it('adds borrowers to the sidebar for database officers', function () {

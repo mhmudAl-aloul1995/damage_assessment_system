@@ -22,6 +22,10 @@ Route::middleware('auth')->group(function () {
         ->name('damage-assessment-borrowers.kobo.sync');
     Route::put('/exchange-rate', [BorrowerSurveyController::class, 'updateGlobalExchangeRate'])
         ->name('damage-assessment-borrowers.exchange-rate.update');
+    Route::post('/boq-catalog', [BorrowerSurveyController::class, 'storeBoqCatalogItem'])
+        ->name('damage-assessment-borrowers.boq-catalog.store');
+    Route::put('/boq-catalog', [BorrowerSurveyController::class, 'updateBoqCatalog'])
+        ->name('damage-assessment-borrowers.boq-catalog.update');
     Route::get('/{borrower}/pricing', [BorrowerSurveyController::class, 'pricing'])
         ->name('damage-assessment-borrowers.pricing');
     Route::get('/{borrower}/pricing/excel', [BorrowerSurveyController::class, 'exportPricingExcel'])
