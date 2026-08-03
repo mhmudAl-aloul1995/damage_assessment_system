@@ -24,7 +24,7 @@ class ImportBorrowerVisitEligibility extends Command
      *
      * @var string
      */
-    protected $description = 'Import borrower visit eligibility and branch address values from the IDB Excel workbook.';
+    protected $description = 'Import borrower visit eligibility, branch address, and guarantor values from the IDB Excel workbook.';
 
     /**
      * Execute the console command.
@@ -67,6 +67,7 @@ class ImportBorrowerVisitEligibility extends Command
             $idNumber = $this->text($row[2] ?? null);
             $branchAddress = $this->text($row[6] ?? null);
             $rawEligibility = $this->text($row[9] ?? null);
+            $guarantors = $this->guarantors($row);
 
             if ($formNumber === '' && $idNumber === '' && $rawEligibility === '') {
                 continue;
@@ -107,6 +108,7 @@ class ImportBorrowerVisitEligibility extends Command
                 $borrower->forceFill([
                     'visit_eligibility' => $eligibility,
                     'loan_branch_address' => $branchAddress ?: null,
+                    'loan_guarantors' => $guarantors,
                 ])->save();
                 $summary['updated']++;
             }
@@ -148,5 +150,30 @@ class ImportBorrowerVisitEligibility extends Command
             '', 'غير معروف' => 'unknown',
             default => null,
         };
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @return array<int, array{name: string, phone: ?string}>
+     */
+    private function guarantors(array $row): array
+    {
+        $guarantors = [];
+
+        foreach ([[12, 13], [14, 15], [16, 17]] as [$nameIndex, $phoneIndex]) {
+            $name = $this->text($row[$nameIndex] ?? null);
+            $phone = $this->text($row[$phoneIndex] ?? null);
+
+            if ($name === '' && $phone === '') {
+                continue;
+            }
+
+            $guarantors[] = [
+                'name' => $name,
+                'phone' => $phone !== '' ? $phone : null,
+            ];
+        }
+
+        return $guarantors;
     }
 }

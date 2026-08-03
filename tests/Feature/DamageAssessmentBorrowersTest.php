@@ -460,8 +460,8 @@ it('imports visit eligibility values from the IDB workbook', function () {
     $sheet = $spreadsheet->getActiveSheet();
     $sheet->setTitle('371 Beneficiaries');
     $sheet->fromArray([
-        ['#', 'رقم الاستمارة', 'رقم هوية المقترض', 'الاسم', 'الجوال', 'نوع القرض', 'العنوان (الفرع)', 'عنوان الوحدة السكنية المستهدفة بالقرض( المحافظة- المدينة- أقرب معلم)', 'الخط الاصفر', 'يمكن زيارته (نعم / لا/ غير معروف)'],
-        [1, 'IDB6', '931695894', 'امل سليمان داود المصري', '0599454930', 'نشط', 'غزة', 'ارض الشنطي', '', 'نعم*'],
+        ['#', 'رقم الاستمارة', 'رقم هوية المقترض', 'الاسم', 'الجوال', 'نوع القرض', 'العنوان (الفرع)', 'عنوان الوحدة السكنية المستهدفة بالقرض( المحافظة- المدينة- أقرب معلم)', 'الخط الاصفر', 'يمكن زيارته (نعم / لا/ غير معروف)', 'المحافظة التي بها الوحدة السكنية', 'الملاحظات', 'الكفيل اول', 'رقم الجوال', 'الكفيل الثاني', 'رقم الجوال', 'الكفيل الثالث', 'رقم الجوال'],
+        [1, 'IDB6', '931695894', 'امل سليمان داود المصري', '0599454930', 'نشط', 'غزة', 'ارض الشنطي', '', 'نعم*', 'غزة', '', 'كفيل أول', '0599000001', 'كفيل ثاني', '0599000002', 'كفيل ثالث', '0599000003'],
     ]);
 
     $path = tempnam(sys_get_temp_dir(), 'idb-visit-eligibility-');
@@ -472,7 +472,12 @@ it('imports visit eligibility values from the IDB workbook', function () {
     $borrower = DamageAssessmentBorrower::query()->where('form_number', 'IDB6')->sole();
 
     expect($borrower->visit_eligibility)->toBe('yes_star')
-        ->and($borrower->loan_branch_address)->toBe('غزة');
+        ->and($borrower->loan_branch_address)->toBe('غزة')
+        ->and($borrower->loan_guarantors)->toBe([
+            ['name' => 'كفيل أول', 'phone' => '0599000001'],
+            ['name' => 'كفيل ثاني', 'phone' => '0599000002'],
+            ['name' => 'كفيل ثالث', 'phone' => '0599000003'],
+        ]);
 
     unlink($path);
 });
