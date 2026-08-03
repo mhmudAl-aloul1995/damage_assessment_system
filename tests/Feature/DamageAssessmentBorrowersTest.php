@@ -37,6 +37,7 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('borrowersExportModal', false)
         ->assertSee('value="custom"', false)
         ->assertSee('borrowersCustomExportColumns', false)
+        ->assertSee('<optgroup label=', false)
         ->assertSee('boq_items_horizontal', false)
         ->assertSee(str_replace('/', '\/', route('damage-assessment-borrowers.export')), false)
         ->assertSee('borrowers-import-dropzone', false)
@@ -64,6 +65,23 @@ it('allows field engineers to open the borrowers overview page', function () {
         ->assertSee('تقرير مختصر مطابق للقالب', false)
         ->assertSee('تعبئة استبيان جديد', false)
         ->assertSee('استبيان المقترضين', false);
+});
+
+it('keeps custom borrower export column groups aligned with available columns', function () {
+    $availableColumns = array_keys(BorrowerReportExport::availableColumns());
+
+    expect(BorrowerReportExport::availableColumnGroups())->toHaveKeys([
+        'بيانات المقترض الأساسية',
+        'بيانات القرض',
+        'بيانات الأسرة والهشاشة',
+        'السكن والموقع والضرر',
+        'الخطورة والملاحظات والروابط',
+        'جدول الكميات BOQ',
+    ]);
+
+    collect(BorrowerReportExport::availableColumnGroups())
+        ->flatten()
+        ->each(fn (string $key) => expect($availableColumns)->toContain($key));
 });
 
 it('allows borrower managers to manually sync iqrad kobo edits', function () {

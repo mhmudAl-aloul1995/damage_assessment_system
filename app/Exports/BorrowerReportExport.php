@@ -254,6 +254,91 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
     }
 
     /**
+     * @return array<string, array<int, string>>
+     */
+    public static function availableColumnGroups(): array
+    {
+        return [
+            'بيانات المقترض الأساسية' => [
+                'borrower_code',
+                'form_number',
+                'source_uuid',
+                'source_submission_id',
+                'borrower_name',
+                'borrower_id_number',
+                'phone_primary',
+                'phone_secondary',
+                'submitted_by_name',
+                'surveyed_at',
+                'created_at',
+                'updated_at',
+            ],
+            'بيانات القرض' => [
+                'loan_number',
+                'loan_status',
+                'loan_original_amount',
+                'loan_total_amount',
+                'loan_portfolio_amount',
+                'loan_net_amount',
+                'loan_balance',
+                'loan_paid_amount',
+                'loan_installments_count',
+                'loan_started_at',
+                'loan_last_installment_at',
+                'loan_clearance_delivered',
+            ],
+            'بيانات الأسرة والهشاشة' => [
+                'family_members_count',
+                'marital_status',
+                'spouse_name',
+                'spouse_id_number',
+                'employment_status',
+                'is_borrower_alive',
+                'vulnerability_types',
+                'guarantors_count',
+                'guarantors_alive_status',
+                'deceased_guarantors',
+                'guarantors_employment_statuses',
+                'affected_guarantors',
+            ],
+            'السكن والموقع والضرر' => [
+                'displacement_status',
+                'displaced_to_governorate',
+                'current_residence_address',
+                'loan_unit_address',
+                'loan_unit_area',
+                'loan_unit_floor_type',
+                'parcel_number',
+                'plot_number',
+                'loan_unit_occupancy_status',
+                'resident_households',
+                'loan_unit_damage_status',
+                'is_inside_yellow_line',
+                'location_latitude',
+                'location_longitude',
+                'location_altitude',
+                'location_precision',
+                'boq_total_usd',
+                'exchange_rate',
+                'boq_total_ils',
+                'full_demolition_meter_rate',
+            ],
+            'الخطورة والملاحظات والروابط' => [
+                'risk_level',
+                'risk_score',
+                'risk_reasons',
+                'attachments_count',
+                'notes',
+                'show_url',
+                'pricing_url',
+            ],
+            'جدول الكميات BOQ' => [
+                self::BOQ_HORIZONTAL_COLUMN,
+            ],
+        ];
+    }
+
+    /**
      * @return array<class-string, callable>
      */
     public function registerEvents(): array

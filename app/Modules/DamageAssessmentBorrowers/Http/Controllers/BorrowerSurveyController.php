@@ -51,6 +51,7 @@ class BorrowerSurveyController extends Controller
             'globalExchangeRate' => $this->globalExchangeRate(),
             'canManagePricing' => $this->canManagePricing(),
             'exportColumns' => BorrowerReportExport::availableColumns(),
+            'exportColumnGroups' => BorrowerReportExport::availableColumnGroups(),
             'compactExportColumns' => array_keys(BorrowerReportExport::compactColumnDefaults()),
             'isFormPage' => false,
         ]);

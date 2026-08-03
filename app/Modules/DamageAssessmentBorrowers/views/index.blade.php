@@ -1159,8 +1159,14 @@
                             <div class="mb-5 d-none" id="borrowersCustomExportColumnsWrap">
                                 <label class="form-label fw-semibold" for="borrowersCustomExportColumns">أعمدة التقرير المخصص</label>
                                 <select class="form-select" id="borrowersCustomExportColumns" name="columns[]" multiple data-control="select2" data-placeholder="اختر الأعمدة">
-                                    @foreach ($exportColumns ?? [] as $key => $column)
-                                        <option value="{{ $key }}" @selected(in_array($key, $compactExportColumns ?? [], true))>{{ $column['label'] }}</option>
+                                    @foreach ($exportColumnGroups ?? [] as $groupLabel => $columnKeys)
+                                        <optgroup label="{{ $groupLabel }}">
+                                            @foreach ($columnKeys as $key)
+                                                @if (isset(($exportColumns ?? [])[$key]))
+                                                    <option value="{{ $key }}" @selected(in_array($key, $compactExportColumns ?? [], true))>{{ $exportColumns[$key]['label'] }}</option>
+                                                @endif
+                                            @endforeach
+                                        </optgroup>
                                     @endforeach
                                 </select>
                                 <div class="form-text">اختيار جدول الكميات BOQ يضيف البنود أفقياً: BOQ 01، BOQ 02، وهكذا.</div>
