@@ -1730,7 +1730,12 @@ it('shows borrower boq settings in a modal for pricing managers', function () {
         ->assertSee('Settings item', false)
         ->assertSee('جاهز', false)
         ->assertSee('يحتاج مراجعة', false)
-        ->assertSee('borrowerBoqSettingsSearch', false);
+        ->assertSee('borrowerBoqSettingsSearch', false)
+        ->assertSee('data-boq-settings-status="ready"', false)
+        ->assertSee('data-boq-settings-status="review"', false)
+        ->assertSee('data-boq-settings-status="all"', false)
+        ->assertSee('data-status="ready"', false)
+        ->assertSee('data-status="review"', false);
 });
 
 it('adds borrowers to the sidebar for database officers', function () {

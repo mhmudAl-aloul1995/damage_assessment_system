@@ -93,12 +93,24 @@
         }
 
         .damage-assessment-borrowers-page .borrower-boq-settings-table {
-            max-height: 52vh;
-            overflow: auto;
+            max-height: min(28rem, 46vh);
+            overflow-x: auto;
+            overflow-y: auto;
         }
 
         .damage-assessment-borrowers-page .borrower-boq-settings-table td {
             vertical-align: middle;
+        }
+
+        .damage-assessment-borrowers-page .borrower-boq-settings-table thead th {
+            background: var(--bs-light);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .damage-assessment-borrowers-page .borrower-boq-settings-table table {
+            min-width: 920px;
         }
 
         .damage-assessment-borrowers-page .borrower-repeat-row {
@@ -1277,7 +1289,14 @@
                                         <h4 class="fw-bold mb-1">كتالوج بنود BOQ</h4>
                                         <div class="text-muted fs-7">عرض الإعدادات العامة المستخدمة عند فتح تسعير أي مستفيد.</div>
                                     </div>
-                                    <input type="search" class="form-control form-control-sm w-md-300px" id="borrowerBoqSettingsSearch" placeholder="بحث بالكود أو الوصف أو الوحدة">
+                                    <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2">
+                                        <div class="btn-group flex-shrink-0" role="group" aria-label="تصفية بنود BOQ">
+                                            <button type="button" class="btn btn-sm btn-light-success active" data-boq-settings-status="ready">الجاهزة</button>
+                                            <button type="button" class="btn btn-sm btn-light-warning" data-boq-settings-status="review">تحتاج مراجعة</button>
+                                            <button type="button" class="btn btn-sm btn-light" data-boq-settings-status="all">الكل</button>
+                                        </div>
+                                        <input type="search" class="form-control form-control-sm w-md-300px" id="borrowerBoqSettingsSearch" placeholder="بحث بالكود أو الوصف أو الوحدة">
+                                    </div>
                                 </div>
 
                                 <div class="borrower-boq-settings-table border rounded">
@@ -1294,7 +1313,7 @@
                                         </thead>
                                         <tbody>
                                             @forelse (($boqSettings['items'] ?? collect()) as $item)
-                                                <tr data-boq-settings-row data-search="{{ \Illuminate\Support\Str::lower(($item['item_code'] ?? '').' '.($item['description'] ?? '').' '.($item['unit'] ?? '')) }}">
+                                                <tr data-boq-settings-row data-status="{{ $item['is_ready'] ? 'ready' : 'review' }}" data-search="{{ \Illuminate\Support\Str::lower(($item['item_code'] ?? '').' '.($item['description'] ?? '').' '.($item['unit'] ?? '')) }}">
                                                     <td class="fw-bold text-gray-800">{{ $item['item_code'] ?: '-' }}</td>
                                                     <td>
                                                         <div class="fw-semibold text-gray-900">{{ $item['description'] ?: '-' }}</div>
@@ -1749,6 +1768,7 @@
         const borrowersCustomExportColumns = document.getElementById('borrowersCustomExportColumns');
         const borrowersExportReportTypes = borrowersExportForm?.querySelectorAll('input[name="report_type"]') || [];
         const borrowerBoqSettingsSearch = document.getElementById('borrowerBoqSettingsSearch');
+        let borrowerBoqSettingsStatus = 'ready';
 
         if (window.jQuery && $.fn.select2) {
             $('.borrower-filter-select').each(function () {
@@ -1887,12 +1907,30 @@
         });
 
         borrowerBoqSettingsSearch?.addEventListener('input', (event) => {
-            const value = event.currentTarget.value.trim().toLowerCase();
+            applyBorrowerBoqSettingsFilters();
+        });
+
+        function applyBorrowerBoqSettingsFilters() {
+            const value = borrowerBoqSettingsSearch?.value.trim().toLowerCase() || '';
 
             document.querySelectorAll('[data-boq-settings-row]').forEach((row) => {
-                row.classList.toggle('d-none', value !== '' && !row.dataset.search.includes(value));
+                const matchesSearch = value === '' || row.dataset.search.includes(value);
+                const matchesStatus = borrowerBoqSettingsStatus === 'all' || row.dataset.status === borrowerBoqSettingsStatus;
+
+                row.classList.toggle('d-none', !matchesSearch || !matchesStatus);
+            });
+        }
+
+        document.querySelectorAll('[data-boq-settings-status]').forEach((button) => {
+            button.addEventListener('click', () => {
+                borrowerBoqSettingsStatus = button.dataset.boqSettingsStatus || 'ready';
+                document.querySelectorAll('[data-boq-settings-status]').forEach((filter) => filter.classList.remove('active'));
+                button.classList.add('active');
+                applyBorrowerBoqSettingsFilters();
             });
         });
+
+        document.getElementById('borrowerBoqSettingsModal')?.addEventListener('shown.bs.modal', applyBorrowerBoqSettingsFilters);
 
         document.getElementById('borrowersExportModal')?.addEventListener('show.bs.modal', () => {
             updateBorrowersExportScope();
