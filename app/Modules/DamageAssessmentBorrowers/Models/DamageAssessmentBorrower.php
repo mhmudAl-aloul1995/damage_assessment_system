@@ -57,6 +57,7 @@ class DamageAssessmentBorrower extends Model
         'current_residence_address',
         'phone_primary',
         'phone_secondary',
+        'loan_branch_address',
         'loan_unit_address',
         'loan_unit_area',
         'loan_unit_floor_type',

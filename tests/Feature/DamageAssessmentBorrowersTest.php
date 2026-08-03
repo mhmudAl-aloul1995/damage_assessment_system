@@ -471,7 +471,8 @@ it('imports visit eligibility values from the IDB workbook', function () {
 
     $borrower = DamageAssessmentBorrower::query()->where('form_number', 'IDB6')->sole();
 
-    expect($borrower->visit_eligibility)->toBe('yes_star');
+    expect($borrower->visit_eligibility)->toBe('yes_star')
+        ->and($borrower->loan_branch_address)->toBe('غزة');
 
     unlink($path);
 });

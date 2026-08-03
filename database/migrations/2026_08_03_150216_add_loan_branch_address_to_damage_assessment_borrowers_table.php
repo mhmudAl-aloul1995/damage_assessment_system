@@ -21,4 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('damage_assess
+        Schema::table('damage_assessment_borrowers', function (Blueprint $table) {
+            $table->dropColumn('loan_branch_address');
+        });
+    }
+};

@@ -24,7 +24,7 @@ class ImportBorrowerVisitEligibility extends Command
      *
      * @var string
      */
-    protected $description = 'Import borrower visit eligibility values from the IDB Excel workbook.';
+    protected $description = 'Import borrower visit eligibility and branch address values from the IDB Excel workbook.';
 
     /**
      * Execute the console command.
@@ -65,6 +65,7 @@ class ImportBorrowerVisitEligibility extends Command
 
             $formNumber = $this->text($row[1] ?? null);
             $idNumber = $this->text($row[2] ?? null);
+            $branchAddress = $this->text($row[6] ?? null);
             $rawEligibility = $this->text($row[9] ?? null);
 
             if ($formNumber === '' && $idNumber === '' && $rawEligibility === '') {
@@ -103,7 +104,10 @@ class ImportBorrowerVisitEligibility extends Command
             $summary['matched']++;
 
             if (! $this->option('dry-run')) {
-                $borrower->forceFill(['visit_eligibility' => $eligibility])->save();
+                $borrower->forceFill([
+                    'visit_eligibility' => $eligibility,
+                    'loan_branch_address' => $branchAddress ?: null,
+                ])->save();
                 $summary['updated']++;
             }
         }
