@@ -753,6 +753,39 @@ it('can sync only missing borrower form numbers', function () {
     }
 });
 
+it('treats loan-number form numbers as missing when syncing only missing borrower codes', function () {
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'form_number' => '0000900102',
+        'loan_number' => '0000900102',
+        'borrower_name' => 'Loan Number Code Borrower',
+        'borrower_id_number' => '800000027',
+        'is_borrower_alive' => true,
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('371 Beneficiaries');
+    $sheet->fromArray([
+        ['#', 'رقم الاستمارة', 'رقم هوية المقترض', 'الاسم'],
+        [1, 'IDB27', '800000027', 'Loan Number Code Borrower'],
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'borrower-loan-number-code-').'.xlsx';
+    (new Xlsx($spreadsheet))->save($path);
+
+    try {
+        $this->artisan('borrowers:sync-form-numbers', [
+            'file' => $path,
+            '--only-missing' => true,
+        ])
+            ->assertSuccessful();
+
+        expect($borrower->refresh()->form_number)->toBe('IDB27');
+    } finally {
+        @unlink($path);
+    }
+});
+
 it('can prune borrowers missing from the selected form number sheet', function () {
     $keptBorrower = DamageAssessmentBorrower::query()->create([
         'form_number' => 'IDB 31',
@@ -1081,6 +1114,21 @@ it('exports selected borrower columns with boq items horizontally', function () 
             && $row[11] === '11.10'
             && $row[17] === 155.0;
     });
+});
+
+it('does not export loan number as the borrower beneficiary code', function () {
+    $borrower = DamageAssessmentBorrower::query()->create([
+        'borrower_name' => 'Loan Number Fallback Borrower',
+        'borrower_id_number' => '820000003',
+        'loan_number' => '0000900102',
+        'is_borrower_alive' => true,
+    ]);
+
+    $export = new BorrowerReportExport(collect([$borrower]));
+    $row = $export->map($borrower);
+
+    expect($row[0])->toBeNull()
+        ->and($row[1])->toBeNull();
 });
 
 it('opens borrower details page with survey data attachments and boq items', function () {

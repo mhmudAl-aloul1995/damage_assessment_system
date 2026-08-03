@@ -180,7 +180,7 @@ class SyncBorrowerFormNumbers extends Command
                 continue;
             }
 
-            if ((bool) $this->option('only-missing') && filled($borrower->form_number)) {
+            if ((bool) $this->option('only-missing') && $this->hasBeneficiaryFormNumber($borrower)) {
                 $summary['unchanged']++;
 
                 continue;
@@ -312,6 +312,19 @@ class SyncBorrowerFormNumbers extends Command
             ->values();
     }
 
+    private function hasBeneficiaryFormNumber(DamageAssessmentBorrower $borrower): bool
+    {
+        if (blank($borrower->form_number)) {
+            return false;
+        }
+
+        if (filled($borrower->loan_number) && $this->formNumberKey($borrower->form_number) === $this->formNumberKey($borrower->loan_number)) {
+            return false;
+        }
+
+        return ! $this->isLoanNumberLike($borrower->form_number);
+    }
+
     /**
      * @param  array<string, mixed>  $headerRow
      * @param  array<int, string>  $needles
@@ -349,6 +362,13 @@ class SyncBorrowerFormNumbers extends Command
     private function formNumberKey(mixed $value): string
     {
         return strtoupper(preg_replace('/\s+/u', '', $this->text($value)) ?? '');
+    }
+
+    private function isLoanNumberLike(mixed $value): bool
+    {
+        $text = $this->text($value);
+
+        return preg_match('/^\d{6,}$/', $text) === 1;
     }
 
     private function insideYellowLineValue(mixed $value): ?bool

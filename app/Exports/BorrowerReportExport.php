@@ -402,7 +402,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
 
     private function borrowerCode(DamageAssessmentBorrower $borrower): string|int|null
     {
-        return $borrower->form_number ?: ($borrower->loan_number ?: $borrower->id);
+        return $borrower->form_number ?: null;
     }
 
     private function numberOrNull(mixed $value): ?float
