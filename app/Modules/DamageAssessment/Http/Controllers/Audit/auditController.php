@@ -3443,7 +3443,7 @@ class auditController extends Controller
 
     public function scheduleHousingUnitDeletion(Request $request): JsonResponse
     {
-        abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor']), 403);
+        abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor','Project Officer']), 403);
 
         $validated = $request->validate([
             'globalids' => ['required', 'array', 'min:1'],
@@ -3492,7 +3492,7 @@ class auditController extends Controller
 
     public function undoHousingUnitDeletion(Request $request): JsonResponse
     {
-        abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor']), 403);
+        abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor','Project Officer']), 403);
 
         $validated = $request->validate([
             'token' => ['required', 'string'],
@@ -3507,7 +3507,7 @@ class auditController extends Controller
 
     public function commitHousingUnitDeletion(Request $request, ArcgisService $arcgis): JsonResponse
     {
-        abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor']), 403);
+        abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor','Project Officer']), 403);
 
         $validated = $request->validate([
             'token' => ['required', 'string'],
