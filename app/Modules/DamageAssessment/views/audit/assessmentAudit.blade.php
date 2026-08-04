@@ -794,7 +794,7 @@
                                                 class="dropdown-item"
                                                 onclick="openLegalChallengeModal('housing')">التحديات القانونية</button>
                                             @endhasanyrole
-                                            @hasanyrole('Database Officer|Auditing Supervisor')
+                                            @hasanyrole('Database Officer|Auditing Supervisor|Project Officer')
                                             <button type="button" class="dropdown-item text-danger"
                                                 onclick="scheduleHousingUnitsDeletion('database')">حذف الوحدات المحددة من قاعدة البيانات</button>
                                             <button type="button" class="dropdown-item text-danger"
