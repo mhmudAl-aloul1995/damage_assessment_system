@@ -10,8 +10,9 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
-class PublicBuildingSurveysExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping
+class PublicBuildingSurveysExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithTitle
 {
     public function __construct(protected Collection $surveys) {}
 
@@ -32,6 +33,11 @@ class PublicBuildingSurveysExport implements FromCollection, ShouldAutoSize, Wit
             'Linked Units',
             'Researcher',
         ];
+    }
+
+    public function title(): string
+    {
+        return 'Buildings';
     }
 
     public function map($row): array

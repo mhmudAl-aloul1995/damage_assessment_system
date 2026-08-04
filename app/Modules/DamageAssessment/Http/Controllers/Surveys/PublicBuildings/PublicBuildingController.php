@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\DamageAssessment\Http\Controllers\Surveys\PublicBuildings;
 
 use App\Exports\PublicBuildingSurveysExport;
+use App\Exports\PublicBuildingSurveysWorkbookExport;
 use App\Http\Controllers\Controller;
 use App\Models\PublicBuildingFilter;
 use App\Models\PublicBuildingSurvey;
@@ -109,8 +110,14 @@ class PublicBuildingController extends Controller
             ])->setPaper('a4', 'landscape')->download($fileBaseName.'.pdf');
         }
 
+        if ($format === 'xlsx') {
+            $surveys->load(['units' => fn ($query) => $query->orderBy('objectid')]);
+        }
+
         return Excel::download(
-            new PublicBuildingSurveysExport($surveys),
+            $format === 'xlsx'
+                ? new PublicBuildingSurveysWorkbookExport($surveys)
+                : new PublicBuildingSurveysExport($surveys),
             $fileBaseName.'.'.$format,
             $format === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX,
         );

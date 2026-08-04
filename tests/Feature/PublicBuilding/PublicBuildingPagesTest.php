@@ -7,6 +7,7 @@ use Database\Seeders\PublicBuildingFilterSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use OpenSpout\Reader\XLSX\Reader;
 
 it('shows the public building survey pages and datatable data with dynamic filters and exports', function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
@@ -123,6 +124,59 @@ it('shows the public building survey pages and datatable data with dynamic filte
     $csvResponse->assertOk();
     $csvResponse->assertHeader('content-disposition', 'attachment; filename=public_buildings_20260414_103000.csv');
 
+    $xlsxResponse = $this->actingAs($user)->get(route('public-buildings.export', [
+        'format' => 'xlsx',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'filters' => [
+            'security' => 'Safe',
+            'facility_type' => 'hospital',
+        ],
+    ]));
+    $xlsxResponse->assertOk();
+    $xlsxResponse->assertHeader('content-disposition', 'attachment; filename=public_buildings_20260414_103000.xlsx');
+
+    $reader = new Reader;
+    $reader->open($xlsxResponse->baseResponse->getFile()->getPathname());
+
+    $xlsxRows = [];
+
+    foreach ($reader->getSheetIterator() as $sheet) {
+        $xlsxRows[$sheet->getName()] = [];
+
+        foreach ($sheet->getRowIterator() as $row) {
+            $xlsxRows[$sheet->getName()][] = $row->toArray();
+        }
+    }
+
+    $reader->close();
+
+    expect(array_keys($xlsxRows))->toBe(['Buildings', 'Units']);
+    expect($xlsxRows['Buildings'][1])->toBe([
+        801,
+        'Public School',
+        'Gaza',
+        'Rimal',
+        'partially_damaged',
+        '2026-03-02',
+        1,
+        'Engineer Public',
+    ]);
+    expect($xlsxRows['Units'][1])->toBe([
+        801,
+        'public-building-survey-801',
+        'Public School',
+        '',
+        '',
+        'public-building-survey-801',
+        '',
+        'Ground Floor',
+        '',
+        75.5,
+        'yes',
+        'Repair windows',
+    ]);
+
     $pdfResponse = $this->actingAs($user)->get(route('public-buildings.export', [
         'format' => 'pdf',
         'municipalitie' => 'Gaza',
@@ -156,8 +210,7 @@ it('shows the public building survey pages and datatable data with dynamic filte
     expect(PublicBuildingSurvey::query()->withCount('units')->find($survey->id)->units_count)->toBe(1);
 
     $globalIdResponse = $this->actingAs($user)->get('/public-buildings/'.$survey->globalid);
-    $globalIdResponse->assertOk();
-    $globalIdResponse->assertSee('Public School');
+    $globalIdResponse->assertRedirect('damage-assessment/public-buildings/'.$survey->globalid);
 
     Carbon::setTestNow();
 });
