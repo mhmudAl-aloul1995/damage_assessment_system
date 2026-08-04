@@ -351,7 +351,7 @@ class BorrowerSurveyController extends Controller
                 $quantity = (float) ($item['quantity'] ?? 0);
                 $unitPrice = (float) ($item['unit_price'] ?? 0);
                 $unitPriceIls = round($unitPrice * $exchangeRate, 2);
-                $itemTotalUsd = round($quantity * $unitPriceIls, 2);
+                $itemTotalUsd = round($quantity * $unitPrice, 2);
                 $sourceColumn = (string) $item['source_column'];
 
                 return [
@@ -517,7 +517,7 @@ class BorrowerSurveyController extends Controller
             ->each(function (BorrowerBoqItem $item) use ($catalogItem, $exchangeRate): void {
                 $unitPrice = (float) $catalogItem->unit_price;
                 $unitPriceIls = round($unitPrice * $exchangeRate, 2);
-                $totalPrice = round((float) $item->quantity * $unitPriceIls, 2);
+                $totalPrice = round((float) $item->quantity * $unitPrice, 2);
 
                 $item->forceFill([
                     'item_code' => $catalogItem->item_code,

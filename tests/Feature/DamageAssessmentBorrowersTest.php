@@ -1463,6 +1463,14 @@ it('opens borrower pricing page for database officers', function () {
         ->assertDontSee('930046990');
 });
 
+it('calculates borrower pricing table dollar totals before shekel conversion', function () {
+    $view = file_get_contents(base_path('app/Modules/DamageAssessmentBorrowers/views/pricing.blade.php'));
+
+    expect($view)->toContain('const rowTotal = quantity * unitPrice;')
+        ->and($view)->toContain('const rowTotalIls = rowTotal * exchangeRate;')
+        ->and($view)->not->toContain('const rowTotal = quantity * unitPriceIls;');
+});
+
 it('exports borrower BOQ pricing to Excel with active rows only', function () {
     Excel::fake();
 
@@ -1701,19 +1709,19 @@ it('updates borrower pricing items and recalculates total', function () {
     $borrower->refresh();
     $otherBorrower->refresh();
 
-    expect((float) $borrower->boq_total_usd)->toBe(385.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(1347.5)
+    expect((float) $borrower->boq_total_usd)->toBe(110.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(385.0)
         ->and((float) $borrower->exchange_rate)->toBe(3.5)
         ->and($borrower->boqItems()->count())->toBe(1)
-        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(385.0)
-        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(1347.5)
+        ->and((float) $borrower->boqItems()->first()->total_price)->toBe(110.0)
+        ->and((float) $borrower->boqItems()->first()->total_price_ils)->toBe(385.0)
         ->and((float) $otherBorrower->exchange_rate)->toBe(3.5)
         ->and((float) $otherBorrower->boq_total_ils)->toBe(140.0)
         ->and((float) $otherBorrower->boqItems()->first()->unit_price_ils)->toBe(70.0)
         ->and((float) $otherBorrower->boqItems()->first()->total_price_ils)->toBe(140.0);
 });
 
-it('prices Munir borrower values to 7977.90 dollars from the exchange-adjusted catalog prices', function () {
+it('prices Munir borrower values from dollar catalog prices before exchange conversion', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
@@ -1772,9 +1780,9 @@ it('prices Munir borrower values to 7977.90 dollars from the exchange-adjusted c
         ])
         ->assertRedirect(route('damage-assessment-borrowers.pricing', $borrower));
 
-    expect((float) $borrower->refresh()->boq_total_usd)->toBe(7977.9)
-        ->and((float) $borrower->boq_total_ils)->toBe(23135.91)
-        ->and((float) $borrower->boqItems()->where('item_code', '7.1')->sole()->total_price)->toBe(870.0);
+    expect((float) $borrower->refresh()->boq_total_usd)->toBe(2751.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(7977.9)
+        ->and((float) $borrower->boqItems()->where('item_code', '7.1')->sole()->total_price)->toBe(300.0);
 });
 
 it('updates the global borrower exchange rate from the main screen', function () {
@@ -1976,10 +1984,10 @@ it('updates borrower boq catalog items and recalculates linked borrower quantiti
         ->and((float) $updatedCatalogItem->unit_price_ils)->toBe(348.0)
         ->and($updatedBorrowerItem->item_code)->toBe('7.8')
         ->and($updatedBorrowerItem->unit)->toBe('M3')
-        ->and((float) $updatedBorrowerItem->total_price)->toBe(696.0)
-        ->and((float) $updatedBorrowerItem->total_price_ils)->toBe(2018.4)
-        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(696.0)
-        ->and((float) $borrower->boq_total_ils)->toBe(2018.4);
+        ->and((float) $updatedBorrowerItem->total_price)->toBe(240.0)
+        ->and((float) $updatedBorrowerItem->total_price_ils)->toBe(696.0)
+        ->and((float) $borrower->refresh()->boq_total_usd)->toBe(240.0)
+        ->and((float) $borrower->boq_total_ils)->toBe(696.0);
 });
 
 it('adds borrowers to the sidebar for database officers', function () {
@@ -2060,8 +2068,8 @@ it('imports borrower boq items attachments and resident households', function ()
             ->and($borrower->attachments()->count())->toBe(1)
             ->and($borrower->residentHouseholds()->count())->toBe(1)
             ->and($borrower->boqItems()->count())->toBe(1)
-            ->and((float) $borrower->refresh()->boq_total_usd)->toBe(64.0)
-            ->and((float) $borrower->boq_total_ils)->toBe(204.8)
+            ->and((float) $borrower->refresh()->boq_total_usd)->toBe(20.0)
+            ->and((float) $borrower->boq_total_ils)->toBe(64.0)
             ->and($borrower->attachments_count)->toBe(1);
     } finally {
         @unlink($path);

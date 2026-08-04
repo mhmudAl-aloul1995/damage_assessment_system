@@ -271,7 +271,7 @@ class KoboBorrowerSubmissionSyncService
                 $exchangeRate = $this->currentExchangeRate();
                 $unitPriceIls = round($unitPrice * $exchangeRate, 2);
                 $itemQuantity = (float) $quantity['quantity'];
-                $itemTotalUsd = round($itemQuantity * $unitPriceIls, 2);
+                $itemTotalUsd = round($itemQuantity * $unitPrice, 2);
                 $sourceColumn = $catalogItem?->source_column ?: ($catalogItem?->description ?? $description);
                 $sourceKey = $catalogItem instanceof BorrowerBoqCatalogItem
                     ? (($catalogItem->source_key ?: sha1((string) $sourceColumn)))

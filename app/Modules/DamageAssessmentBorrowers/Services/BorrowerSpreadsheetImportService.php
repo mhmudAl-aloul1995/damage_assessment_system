@@ -860,7 +860,7 @@ class BorrowerSpreadsheetImportService
                 $exchangeRate = $this->currentExchangeRate();
                 $unitPriceIls = round($unitPrice * $exchangeRate, 2);
                 $itemQuantity = (float) $quantity['quantity'];
-                $itemTotalUsd = round($itemQuantity * $unitPriceIls, 2);
+                $itemTotalUsd = round($itemQuantity * $unitPrice, 2);
 
                 return [
                     'catalog_item_id' => $catalogItem?->id,

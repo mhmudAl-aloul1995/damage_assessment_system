@@ -351,7 +351,7 @@
                     const unitPrice = Number(row.querySelector('[data-unit-price]')?.value || 0);
                     const quantity = Number(row.querySelector('[data-quantity]')?.value || 0);
                     const unitPriceIls = unitPrice * exchangeRate;
-                    const rowTotal = quantity * unitPriceIls;
+                    const rowTotal = quantity * unitPrice;
                     const rowTotalIls = rowTotal * exchangeRate;
                     total += rowTotal;
                     totalIls += rowTotalIls;
