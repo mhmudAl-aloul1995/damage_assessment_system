@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Modules\DamageAssessment\Services\Audit\AuditExportService;
 use App\Modules\DamageAssessment\Services\Audit\AuditTableService;
 use App\services\ArcgisAttachmentBackupService;
+use App\services\ArcgisAuditedRestoreService;
 use App\services\ArcgisService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -2940,6 +2941,7 @@ class auditController extends Controller
 
                     $assessmentUrl = url("/damage-assessment/showAssessmentAudit/{$row->globalid}");
                     $completeFieldStatusUrl = route('audit.building.field-status.completed', $row->globalid);
+                    $restoreAuditedToNormalUrl = route('audit.building.restore-audited-to-normal', $row->globalid);
                     $buildingName = e((string) ($row->building_name ?? '-'));
                     $buildingGlobalId = e((string) $row->globalid);
                     $isFieldStatusCompleted = strtoupper(trim((string) $row->field_status)) === 'COMPLETED';
@@ -2994,6 +2996,15 @@ class auditController extends Controller
 
             <div class="menu-item px-3">
                 '.$completeFieldStatusButton.'
+            </div>
+
+            <div class="menu-item px-3">
+                <button type="button"
+                    class="menu-link px-3 border-0 bg-transparent w-100 text-start btn-restore-audited-to-normal"
+                    data-url="'.e($restoreAuditedToNormalUrl).'"
+                    data-building-name="'.$buildingName.'">
+                    تحديث الطبقة العادية من التدقيق
+                </button>
             </div>
 
         </div>
@@ -3077,6 +3088,26 @@ class auditController extends Controller
                 'message' => __('ui.audit.field_status_update_failed'),
             ], 500);
         }
+    }
+
+    public function restoreAuditedToNormal(Building $building, ArcgisAuditedRestoreService $arcgisAuditedRestoreService): JsonResponse
+    {
+        try {
+            $summary = $arcgisAuditedRestoreService->restoreBuilding($building);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث بيانات المبنى والوحدات من بيانات التدقيق إلى الطبقات والجداول العادية.',
+            'summary' => $summary,
+        ]);
     }
 
     public function buildingAttachments(Building $building, ArcgisService $arcgis): JsonResponse

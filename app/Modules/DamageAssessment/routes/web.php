@@ -266,6 +266,8 @@ Route::middleware('auth')->group(function () {
         ->name('audit.building.housing-unit-attachments.index');
     Route::post('/audit/buildings/{building:globalid}/field-status-completed', [auditController::class, 'completeBuildingFieldStatus'])
         ->name('audit.building.field-status.completed');
+    Route::post('/audit/buildings/{building:globalid}/restore-audited-to-normal', [auditController::class, 'restoreAuditedToNormal'])
+        ->name('audit.building.restore-audited-to-normal');
     Route::post('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'storeBuildingAttachment'])
         ->name('audit.building.attachments.store');
     Route::post('/audit/buildings/{building:globalid}/attachments/{attachmentId}/replace', [auditController::class, 'replaceBuildingAttachment'])

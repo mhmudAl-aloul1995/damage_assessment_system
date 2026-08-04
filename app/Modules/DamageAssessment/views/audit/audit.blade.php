@@ -1877,6 +1877,87 @@
 				});
 			});
 
+			$(document).on('click', '.btn-restore-audited-to-normal', function (event) {
+				event.preventDefault();
+				event.stopPropagation();
+
+				let button = $(this);
+				let url = button.data('url');
+				let buildingName = button.data('building-name') || '-';
+
+				if (!url || button.prop('disabled')) {
+					return;
+				}
+
+				Swal.fire({
+					title: 'تحديث الطبقة العادية',
+					text: 'سيتم تحديث بيانات المبنى والوحدات من بيانات التدقيق: ' + buildingName,
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonText: 'تحديث',
+					cancelButtonText: @json(__('ui.buttons.cancel')),
+					buttonsStyling: false,
+					customClass: {
+						confirmButton: 'btn btn-primary',
+						cancelButton: 'btn btn-light'
+					}
+				}).then(function (result) {
+					if (!result.isConfirmed) {
+						return;
+					}
+
+					button.prop('disabled', true);
+
+					$.ajax({
+						url: url,
+						type: 'POST',
+						data: {
+							_token: "{{ csrf_token() }}"
+						},
+						success: function (response) {
+							const summary = response.summary || {};
+							const html = `
+								<div class="text-start" dir="rtl">
+									<div>تحديث المبنى في ArcGIS: ${summary.building_arcgis_updated ? 'نعم' : 'لا'}</div>
+									<div>تحديث المبنى محلياً: ${summary.building_local_updated ? 'نعم' : 'لا'}</div>
+									<div>الوحدات المحدثة في ArcGIS: ${summary.units_arcgis_updated ?? 0}</div>
+									<div>الوحدات المحدثة محلياً: ${summary.units_local_updated ?? 0}</div>
+									<div>الوحدات غير الموجودة في ArcGIS: ${summary.units_skipped_arcgis ?? 0}</div>
+									<div>الوحدات غير الموجودة محلياً: ${summary.units_skipped_local ?? 0}</div>
+								</div>
+							`;
+
+							Swal.fire({
+								title: response.message || 'تمت العملية',
+								html: html,
+								icon: 'success',
+								confirmButtonText: @json(__('ui.buttons.ok')),
+								buttonsStyling: false,
+								customClass: {
+									confirmButton: 'btn btn-primary'
+								}
+							});
+
+							table.ajax.reload(null, false);
+						},
+						error: function (xhr) {
+							Swal.fire({
+								text: xhr.responseJSON?.message || 'تعذر تحديث الطبقة العادية.',
+								icon: 'error',
+								confirmButtonText: @json(__('ui.buttons.ok')),
+								buttonsStyling: false,
+								customClass: {
+									confirmButton: 'btn btn-primary'
+								}
+							});
+						},
+						complete: function () {
+							button.prop('disabled', false);
+						}
+					});
+				});
+			});
+
 			$('#toggle_danger_rows').on('click', function () {
 
 				const button = $(this);
