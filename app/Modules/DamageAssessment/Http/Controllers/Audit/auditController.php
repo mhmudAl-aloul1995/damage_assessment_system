@@ -12,6 +12,7 @@ use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
+use App\Models\BuildingSurveyArchiveObject;
 use App\Models\CommitteeDecision;
 use App\Models\EditAssessment;
 use App\Models\Filter;
@@ -3544,15 +3545,19 @@ class auditController extends Controller
         }
 
         $deletedFromDatabase = 0;
+        $archivedBeforeDatabaseDeletion = 0;
 
         if (in_array($mode, ['database', 'both'], true)) {
-            $deletedFromDatabase = $this->deleteHousingUnitsFromDatabase($globalIds, $objectIds);
+            $databaseDeletionSummary = $this->deleteHousingUnitsFromDatabase($globalIds, $objectIds, (int) $request->user()->id);
+            $deletedFromDatabase = $databaseDeletionSummary['deleted'];
+            $archivedBeforeDatabaseDeletion = $databaseDeletionSummary['archived'];
         }
 
         return response()->json([
             'message' => 'تم تنفيذ حذف الوحدات بنجاح.',
             'deleted_from_database' => $deletedFromDatabase,
             'deleted_from_arcgis' => in_array($mode, ['arcgis', 'both'], true) ? count($objectIds) : 0,
+            'archived_before_database_deletion' => $archivedBeforeDatabaseDeletion,
         ]);
     }
 
@@ -3565,17 +3570,44 @@ class auditController extends Controller
             : $arcgis->deleteFeatures($objectIds, $arcgis->getLayerId(HousingUnit::class), $arcgis->getToken());
     }
 
-    private function deleteHousingUnitsFromDatabase(array $globalIds, array $objectIds): int
+    /**
+     * @return array{deleted: int, archived: int}
+     */
+    private function deleteHousingUnitsFromDatabase(array $globalIds, array $objectIds, int $archivedBy): array
     {
-        return DB::transaction(function () use ($globalIds, $objectIds): int {
+        return DB::transaction(function () use ($globalIds, $objectIds, $archivedBy): array {
             $units = HousingUnit::query()
                 ->whereIn('globalid', $globalIds)
-                ->get(['id', 'globalid', 'objectid']);
+                ->get();
 
             $unitIds = $units->pluck('id')->all();
             $existingGlobalIds = $units->pluck('globalid')->filter()->all();
             $existingObjectIds = $units->pluck('objectid')->filter()->all();
             $allObjectIds = collect($objectIds)->merge($existingObjectIds)->filter()->unique()->values()->all();
+            $buildingsByGlobalId = Building::query()
+                ->whereIn('globalid', $units->pluck('parentglobalid')->filter()->unique()->values()->all())
+                ->get()
+                ->keyBy('globalid');
+            $archived = 0;
+
+            foreach ($units as $unit) {
+                $building = $buildingsByGlobalId->get($unit->parentglobalid);
+
+                BuildingSurveyArchiveObject::query()->create([
+                    'building_objectid' => (int) ($building?->objectid ?? 0),
+                    'building_globalid' => $building?->globalid ?? $unit->parentglobalid,
+                    'housing_unit_objectid' => $unit->objectid,
+                    'housing_unit_globalid' => $unit->globalid,
+                    'source_type' => 'housing_unit_deletion',
+                    'archived_by' => $archivedBy,
+                    'archived_at' => now(),
+                    'notes' => 'Archived before housing unit database deletion.',
+                    'building_snapshot' => $building?->attributesToArray(),
+                    'housing_unit_snapshot' => $unit->attributesToArray(),
+                ]);
+
+                $archived++;
+            }
 
             if ($allObjectIds !== []) {
                 HousingStatus::query()->whereIn('housing_id', $allObjectIds)->delete();
@@ -3597,9 +3629,14 @@ class auditController extends Controller
                     ->each(fn (CommitteeDecision $decision): ?bool => $decision->delete());
             }
 
-            return HousingUnit::query()
+            $deleted = HousingUnit::query()
                 ->whereIn('globalid', $globalIds)
                 ->delete();
+
+            return [
+                'deleted' => $deleted,
+                'archived' => $archived,
+            ];
         });
     }
 

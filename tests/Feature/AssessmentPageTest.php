@@ -6,6 +6,7 @@ use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
+use App\Models\BuildingSurveyArchiveObject;
 use App\Models\EditAssessment;
 use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
@@ -1367,12 +1368,14 @@ it('commits scheduled housing unit database deletion and removes related audit r
     $building = Building::query()->create([
         'objectid' => 9660,
         'globalid' => 'commit-housing-delete-building',
+        'building_name' => 'Building Before Housing Delete',
     ]);
 
     $housing = HousingUnit::query()->create([
         'objectid' => 9661,
         'globalid' => 'commit-housing-delete-unit',
         'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Owner Before Delete',
     ]);
 
     HousingStatus::query()->create([
@@ -1411,7 +1414,8 @@ it('commits scheduled housing unit database deletion and removes related audit r
             'token' => $schedule['token'],
         ])
         ->assertOk()
-        ->assertJsonPath('deleted_from_database', 1);
+        ->assertJsonPath('deleted_from_database', 1)
+        ->assertJsonPath('archived_before_database_deletion', 1);
 
     $this->assertDatabaseMissing('housing_units', [
         'globalid' => $housing->globalid,
@@ -1429,6 +1433,19 @@ it('commits scheduled housing unit database deletion and removes related audit r
         'global_id' => $housing->globalid,
         'type' => 'housing_table',
     ]);
+
+    $archive = BuildingSurveyArchiveObject::query()
+        ->where('source_type', 'housing_unit_deletion')
+        ->where('housing_unit_globalid', $housing->globalid)
+        ->firstOrFail();
+
+    expect($archive->building_objectid)->toBe($building->objectid)
+        ->and($archive->building_globalid)->toBe($building->globalid)
+        ->and($archive->housing_unit_objectid)->toBe($housing->objectid)
+        ->and($archive->housing_unit_globalid)->toBe($housing->globalid)
+        ->and($archive->archived_by)->toBe($user->id)
+        ->and($archive->building_snapshot['building_name'])->toBe('Building Before Housing Delete')
+        ->and($archive->housing_unit_snapshot['unit_owner'])->toBe('Owner Before Delete');
 });
 
 it('returns structured status history payload for rendering badges safely', function () {

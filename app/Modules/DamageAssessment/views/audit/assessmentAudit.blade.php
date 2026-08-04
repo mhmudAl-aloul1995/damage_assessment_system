@@ -2053,7 +2053,13 @@
                     token: token
                 },
                 success: function (response) {
-                    toastr.success(response.message || 'تم حذف الوحدات بنجاح');
+                    let message = response.message || 'تم حذف الوحدات بنجاح';
+
+                    if ((response.archived_before_database_deletion || 0) > 0) {
+                        message += ' - تمت أرشفة ' + response.archived_before_database_deletion + ' وحدة.';
+                    }
+
+                    toastr.success(message);
                     $('#housing_delete_undo_' + token).remove();
                     reloadBuildingUnitsTable();
                 },
