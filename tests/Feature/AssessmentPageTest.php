@@ -246,6 +246,52 @@ it('shows inline edit history cards to area managers without edit controls', fun
         ->toBeNull();
 });
 
+it('uses the database objectid for the building summary even when an audit edit exists', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'fake-token',
+        ], 200),
+        '*' => Http::response([
+            'attachmentInfos' => [],
+        ], 200),
+    ]);
+
+    $user = User::factory()->create();
+
+    Assessment::query()->create([
+        'name' => 'objectid',
+        'label' => 'Object ID',
+        'hint' => 'Building object id',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 990101,
+        'globalid' => 'building-summary-objectid',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'objectid',
+        'field_value' => '123',
+        'user_id' => $user->id,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->getJson('/damage-assessment/showBuildings?'.http_build_query([
+            'globalid' => $building->globalid,
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]))
+        ->assertOk();
+
+    $objectIdRow = collect($response->json('data'))->firstWhere('name', 'objectid');
+
+    expect($objectIdRow['summaryValue'] ?? null)->toBe(990101);
+});
+
 it('keeps previous housing unit inline edits in edit assessments when saving a new edit', function () {
     $user = User::factory()->create();
 

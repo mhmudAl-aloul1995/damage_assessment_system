@@ -1377,7 +1377,10 @@ class DamageAssessmentController extends Controller
                     return null;
                 }
 
-                $lastEdit = $allEdits->get($row->name, collect())->first();
+                $identityFields = ['objectid'];
+                $lastEdit = in_array($row->name, $identityFields, true)
+                    ? null
+                    : $allEdits->get($row->name, collect())->first();
                 $rawValue = $lastEdit?->field_value;
 
                 if ($rawValue === null || $rawValue === '') {
