@@ -86,7 +86,10 @@ it('exports the assessment page as a pdf with attachments', function () {
         },
     ]);
 
+    Role::findOrCreate('Database Officer', 'web');
+
     $user = User::factory()->create();
+    $user->assignRole('Database Officer');
 
     Assessment::query()->create([
         'name' => 'owner_name',
@@ -289,7 +292,12 @@ it('uses the database objectid for the building summary even when an audit edit 
 
     $objectIdRow = collect($response->json('data'))->firstWhere('name', 'objectid');
 
-    expect($objectIdRow['summaryValue'] ?? null)->toBe(990101);
+    expect($objectIdRow['summaryValue'] ?? null)
+        ->toBe(990101)
+        ->and($objectIdRow['answer'] ?? null)
+        ->toBe('990101')
+        ->and($objectIdRow['editAnswer'] ?? null)
+        ->toBeNull();
 });
 
 it('keeps previous housing unit inline edits in edit assessments when saving a new edit', function () {

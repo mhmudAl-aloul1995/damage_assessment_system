@@ -1285,6 +1285,7 @@ class DamageAssessmentController extends Controller
             $allEdits,
             $search
         );
+        $identityFields = ['objectid'];
 
         return DataTables::of($assessmentRows)
             ->addColumn('rowClass', function ($row) use ($record, $allEdits) {
@@ -1372,12 +1373,11 @@ class DamageAssessmentController extends Controller
             ->addColumn('question', function ($row) {
                 return $row->label.'<br>'.$row->hint;
             })
-            ->addColumn('summaryValue', function ($row) use ($record, $allEdits, $filtersByList) {
+            ->addColumn('summaryValue', function ($row) use ($record, $allEdits, $filtersByList, $identityFields) {
                 if ($row->name === 'attachments') {
                     return null;
                 }
 
-                $identityFields = ['objectid'];
                 $lastEdit = in_array($row->name, $identityFields, true)
                     ? null
                     : $allEdits->get($row->name, collect())->first();
@@ -1395,7 +1395,7 @@ class DamageAssessmentController extends Controller
                     $this->filterLabelForAssessmentValue($filtersByList, $row->name, $rawValue)
                 );
             })
-            ->addColumn('answer', function ($row) use ($record, $allEdits, $canEditAssessment, $isAssessmentReadOnly, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList) {
+            ->addColumn('answer', function ($row) use ($record, $allEdits, $canEditAssessment, $isAssessmentReadOnly, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList, $identityFields) {
                 if ($row->name === 'attachments') {
                     if (! $model || ! $model->objectid || ! $token || $attachments->isEmpty()) {
                         return '<span class="text-muted">'.e(__('ui.damage_common.no_attachments')).'</span>';
@@ -1429,7 +1429,9 @@ class DamageAssessmentController extends Controller
                     return $html.'</div>';
                 }
 
-                $fieldEdits = $allEdits->get($row->name, collect());
+                $fieldEdits = in_array($row->name, $identityFields, true)
+                    ? collect()
+                    : $allEdits->get($row->name, collect());
                 $lastEdit = $fieldEdits->first();
 
                 $originalRawValue = $record[$row->name] ?? null;
@@ -1541,12 +1543,12 @@ class DamageAssessmentController extends Controller
             </div>
         ';
             })
-            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type, $isAssessmentReadOnly) {
+            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type, $isAssessmentReadOnly, $identityFields) {
                 if ($isAssessmentReadOnly) {
                     return;
                 }
 
-                if ($row->name === 'attachments') {
+                if ($row->name === 'attachments' || in_array($row->name, $identityFields, true)) {
                     return;
                 }
                 $lastEdit = $edits->get($row->name);
