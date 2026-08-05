@@ -2928,7 +2928,7 @@
                     return normalizeSurveyName(item.name) === field;
                 });
 
-                let value = row ? cleanAuditText(row.summaryValue || $('<div>').html(row.answer || '').text()) : cleanAuditText(BUILDING_SUMMARY_VALUES[field] || '-');
+                let value = buildingSummaryValue(field, row);
                 if (!value) value = '-';
 
                 let color = colors[index % colors.length];
@@ -2950,6 +2950,22 @@
                                             <div class="summary-value text-muted">لا توجد قيم مدخلة</div>
                                         </div>
                                     </div>`);
+        }
+
+        function buildingSummaryValue(field, row) {
+            if (!row) {
+                return cleanAuditText(BUILDING_SUMMARY_VALUES[field] || '-');
+            }
+
+            if (field === 'objectid') {
+                let answerValue = cleanAuditText($('<div>').html(row.answer || '').text());
+
+                if (answerValue && answerValue !== '-') {
+                    return answerValue;
+                }
+            }
+
+            return cleanAuditText(row.summaryValue || $('<div>').html(row.answer || '').text());
         }
 
         function cleanAuditText(text) {
