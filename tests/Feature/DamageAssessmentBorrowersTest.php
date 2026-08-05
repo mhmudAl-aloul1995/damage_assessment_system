@@ -89,6 +89,9 @@ it('keeps custom borrower export column groups aligned with available columns', 
     expect(array_keys(BorrowerReportExport::compactColumnDefaults()))
         ->toContain('is_inside_yellow_line')
         ->toContain('was_visited');
+
+    expect(BorrowerReportExport::availableColumns()['boq_total_usd']['label'])
+        ->toBe('قيمة الضرر بالدولار');
 });
 
 it('allows borrower managers to manually sync iqrad kobo edits', function () {
