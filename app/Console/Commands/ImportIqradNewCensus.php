@@ -108,7 +108,7 @@ class ImportIqradNewCensus extends Command
             $seenFormNumbers[$formNumber] = true;
 
             $borrower = DamageAssessmentBorrower::query()
-                ->where('form_number', $formNumber)
+                ->whereIn('form_number', $this->formNumberCandidates($formNumber))
                 ->first();
 
             if (! $borrower instanceof DamageAssessmentBorrower) {
@@ -213,6 +213,25 @@ class ImportIqradNewCensus extends Command
         $text = $this->text($value);
 
         return $text !== '' && $text !== '-' ? $text : null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function formNumberCandidates(string $formNumber): array
+    {
+        $normalized = preg_replace('/\s+/u', '', $formNumber) ?? $formNumber;
+        $candidates = [$formNumber, $normalized];
+
+        if (preg_match('/^([A-Za-z]+)(\d+)$/', $normalized, $matches) === 1) {
+            $candidates[] = $matches[1].' '.$matches[2];
+        }
+
+        return collect($candidates)
+            ->filter(fn (string $candidate): bool => $candidate !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

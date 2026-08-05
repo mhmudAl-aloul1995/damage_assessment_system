@@ -7,7 +7,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 it('imports branch address target housing unit and governorate from the new census worksheet by form number', function () {
     $borrower = DamageAssessmentBorrower::query()->create([
-        'form_number' => 'IDB4',
+        'form_number' => 'IDB 4',
         'borrower_name' => 'Existing Borrower',
         'borrower_id_number' => '801180407',
         'loan_branch_address' => 'Old Branch',
