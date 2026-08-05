@@ -213,6 +213,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
             'loan_started_at' => ['label' => 'تاريخ بداية السداد', 'type' => 'date'],
             'loan_last_installment_at' => ['label' => 'تاريخ آخر قسط', 'type' => 'date'],
             'loan_clearance_delivered' => ['label' => 'سُلّمت براءة الذمة', 'type' => 'text'],
+            'loan_target_housing_unit' => ['label' => 'الوحدة السكنية المستهدفة في القرض', 'type' => 'text'],
             'family_members_count' => ['label' => 'عدد أفراد الأسرة', 'type' => 'number'],
             'marital_status' => ['label' => 'الحالة الاجتماعية', 'type' => 'text'],
             'spouse_name' => ['label' => 'اسم الزوج/الزوجة', 'type' => 'text'],
@@ -292,6 +293,7 @@ class BorrowerReportExport implements FromCollection, ShouldAutoSize, WithEvents
                 'loan_started_at',
                 'loan_last_installment_at',
                 'loan_clearance_delivered',
+                'loan_target_housing_unit',
             ],
             'بيانات الأسرة والهشاشة' => [
                 'family_members_count',
