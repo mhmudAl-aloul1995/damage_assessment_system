@@ -2980,7 +2980,7 @@
 
             // يمنع WindyWindy أو Totally DamagedTotally Damaged
             let half = text.substring(0, text.length / 2);
-            if (text.length % 2 === 0 && half === text.substring(text.length / 2)) {
+            if (!/^\d+$/.test(text) && text.length % 2 === 0 && half === text.substring(text.length / 2)) {
                 text = half;
             }
 

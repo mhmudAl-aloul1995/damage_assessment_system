@@ -7,6 +7,7 @@ test('building summary prefers the visible objectid answer over stale summary me
         ->toContain('function buildingSummaryValue(field, row)')
         ->toContain("if (field === 'objectid')")
         ->toContain("let answerValue = cleanAuditText($('<div>').html(row.answer || '').text())")
+        ->toContain('!/^\d+$/.test(text)')
         ->toContain("return cleanAuditText(row.summaryValue || $('<div>').html(row.answer || '').text())")
         ->not->toContain("let value = row ? cleanAuditText(row.summaryValue || $('<div>').html(row.answer || '').text()) : cleanAuditText(BUILDING_SUMMARY_VALUES[field] || '-')");
 });
