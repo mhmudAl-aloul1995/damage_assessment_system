@@ -1148,9 +1148,9 @@
                             </button>
                         </div>
                         <div class="modal-body">
-                            <label class="required fw-semibold fs-6 mb-2 d-block" for="borrowersFile">ملف Excel</label>
+                            <label class="fw-semibold fs-6 mb-2 d-block" for="borrowersFile">ملف Excel للمستفيدين</label>
                             <label class="dropzone borrowers-import-dropzone d-flex align-items-center p-8 mb-5" for="borrowersFile" id="borrowersImportDropzone">
-                                <input type="file" name="borrowers_file" id="borrowersFile" class="d-none" accept=".xlsx" required>
+                                <input type="file" name="borrowers_file" id="borrowersFile" class="d-none" accept=".xlsx">
                                 <span class="symbol symbol-50px me-5">
                                     <span class="symbol-label bg-light-success">
                                         <i class="ki-duotone ki-file-up fs-2x text-success">
@@ -1164,9 +1164,9 @@
                                     <span class="fs-7 text-gray-600 mt-1 borrowers-import-file-name" id="borrowersImportFileName">صيغة XLSX فقط، حتى 20 ميغابايت.</span>
                                 </span>
                             </label>
-                            <label class="fw-semibold fs-6 mb-2 d-block" for="boqFile">ملف أسعار BOQ (اختياري)</label>
+                            <label class="fw-semibold fs-6 mb-2 d-block" for="boqFile">ملف أسعار BOQ</label>
                             <input type="file" name="boq_file" id="boqFile" class="form-control form-control-solid mb-3" accept=".xlsx">
-                            <div class="form-text mb-5">ارفع ملف BOQ-Analysis Price عند الحاجة لحساب إجمالي البنود تلقائيًا.</div>
+                            <div class="form-text mb-5">يمكن استيراد ملف BOQ-Analysis Price وحده لتحديث كتالوج الأسعار، أو رفعه مع ملف المستفيدين لحساب إجمالي البنود تلقائيًا.</div>
                             <div class="form-text">سيتم تجاوز الصفوف المكررة أو غير المكتملة تلقائيًا، ثم تحديث الإحصائيات بعد الاستيراد.</div>
                             <div class="borrowers-import-preview mt-5" id="borrowersImportPreview" aria-live="polite"></div>
                             <div class="invalid-feedback d-block mt-3" id="borrowersImportError" style="display: none;"></div>

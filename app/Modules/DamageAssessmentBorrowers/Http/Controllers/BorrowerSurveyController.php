@@ -161,8 +161,19 @@ class BorrowerSurveyController extends Controller
     public function import(ImportBorrowerSpreadsheetRequest $request, BorrowerSpreadsheetImportService $importer): JsonResponse
     {
         try {
+            $priceSummary = null;
+
             if ($request->hasFile('boq_file')) {
-                $importer->importPriceCatalog($request->file('boq_file')->getRealPath());
+                $priceSummary = $importer->importPriceCatalog($request->file('boq_file')->getRealPath());
+            }
+
+            if (! $request->hasFile('borrowers_file')) {
+                return response()->json([
+                    'status' => true,
+                    'message' => "تم استيراد {$priceSummary['imported']} بند BOQ وتجاوز {$priceSummary['skipped']} بند غير صالح.",
+                    'price_summary' => $priceSummary,
+                    'stats' => $this->stats(),
+                ]);
             }
 
             $sheetName = $request->string('sheet_name')->toString();
@@ -180,7 +191,7 @@ class BorrowerSurveyController extends Controller
         } catch (Throwable) {
             return response()->json([
                 'status' => false,
-                'message' => 'تعذر قراءة ملف Excel. تأكد من أنه ملف الاستبيان الصحيح.',
+                'message' => 'تعذر قراءة ملف Excel. تأكد من سلامة الملف وصيغته.',
             ], 422);
         }
 

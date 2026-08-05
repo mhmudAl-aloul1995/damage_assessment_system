@@ -370,6 +370,41 @@ it('imports an uploaded borrower workbook through ajax', function () {
         ->assertJsonPath('summary.skipped', 1);
 });
 
+it('imports borrower boq prices without requiring a borrower workbook', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->mock(BorrowerSpreadsheetImportService::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('importPriceCatalog')
+            ->once()
+            ->withArgs(fn (string $path): bool => is_file($path))
+            ->andReturn([
+                'total' => 3,
+                'imported' => 2,
+                'skipped' => 1,
+                'exchange_rate' => 2.9,
+            ]);
+
+        $mock->shouldNotReceive('importDetectedWorkbook');
+        $mock->shouldNotReceive('importLoanWorkbook');
+        $mock->shouldNotReceive('importLoanWorkbooks');
+    });
+
+    $this->actingAs($user)
+        ->post(route('damage-assessment-borrowers.import'), [
+            'boq_file' => UploadedFile::fake()->create(
+                'BOQ-Analysis Price.xlsx',
+                20,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ),
+        ], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('price_summary.imported', 2)
+        ->assertJsonPath('price_summary.skipped', 1);
+});
+
 it('previews and imports active Kuwait loan records from the selected worksheet', function () {
     $spreadsheet = new Spreadsheet;
     $activeSheet = $spreadsheet->getActiveSheet();
