@@ -26,7 +26,7 @@ class ImportIqradNewCensus extends Command
      *
      * @var string
      */
-    protected $description = 'Import branch address and target housing unit values from the IQRAD new census worksheet.';
+    protected $description = 'Import branch address, target housing unit, and unit governorate values from the IQRAD new census worksheet.';
 
     /**
      * Execute the console command.
@@ -56,9 +56,10 @@ class ImportIqradNewCensus extends Command
         $formNumberIndex = $this->columnIndex($headers, ['رقم الاستمارة', 'الاستمارة']);
         $branchAddressIndex = $this->columnIndex($headers, ['العنوان (الفرع)']);
         $targetHousingUnitIndex = $this->columnIndex($headers, ['عنوان الوحدة السكنية المستهدفة بالقرض( المحافظة- المدينة- أقرب معلم)', 'عنوان الوحدة السكنية المستهدفة بالقرض', 'الوحدة السكنية المستهدفة في القرض']);
+        $unitGovernorateIndex = $this->columnIndex($headers, ['المحافظة التي بها الوحدة السكنية']);
 
-        if ($formNumberIndex === null || $branchAddressIndex === null || $targetHousingUnitIndex === null) {
-            $this->error('Required columns were not found: رقم الاستمارة, العنوان (الفرع), عنوان الوحدة السكنية المستهدفة بالقرض.');
+        if ($formNumberIndex === null || $branchAddressIndex === null || $targetHousingUnitIndex === null || $unitGovernorateIndex === null) {
+            $this->error('Required columns were not found: رقم الاستمارة, العنوان (الفرع), عنوان الوحدة السكنية المستهدفة بالقرض, المحافظة التي بها الوحدة السكنية.');
 
             return CommandAlias::FAILURE;
         }
@@ -81,8 +82,9 @@ class ImportIqradNewCensus extends Command
             $formNumber = $this->text($row[$formNumberIndex] ?? null);
             $branchAddress = $this->nullableText($row[$branchAddressIndex] ?? null);
             $targetHousingUnit = $this->nullableText($row[$targetHousingUnitIndex] ?? null);
+            $unitGovernorate = $this->nullableText($row[$unitGovernorateIndex] ?? null);
 
-            if ($formNumber === '' && $branchAddress === null && $targetHousingUnit === null) {
+            if ($formNumber === '' && $branchAddress === null && $targetHousingUnit === null && $unitGovernorate === null) {
                 continue;
             }
 
@@ -120,6 +122,7 @@ class ImportIqradNewCensus extends Command
             $changes = [
                 'loan_branch_address' => $branchAddress,
                 'loan_target_housing_unit' => $targetHousingUnit,
+                'loan_unit_governorate' => $unitGovernorate,
             ];
 
             if (! $this->hasChanges($borrower, $changes)) {
