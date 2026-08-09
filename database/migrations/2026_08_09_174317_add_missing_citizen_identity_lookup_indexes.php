@@ -15,7 +15,7 @@ return new class extends Migration
         }
 
         if (! $this->indexExists((string) config('database.connections.mysql.database'), 'housing_units', 'housing_units_id_number1_index')) {
-            DB::statement('ALTER TABLE housing_units ADD INDEX housing_units_id_number1_index (id_number1)');
+            DB::statement('ALTER TABLE housing_units ADD INDEX housing_units_id_number1_index (id_number1(11))');
         }
 
         if (! $this->indexExists('phc_dashboard', 'citizens', 'citizens_id_card_no_status_index')) {

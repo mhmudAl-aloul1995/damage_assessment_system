@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\HousingUnit;
+use App\Models\MissingCitizenIdentityReport;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -58,6 +59,11 @@ it('returns housing unit identities that are not active citizens', function (): 
         ['id_card_no' => '900000003', 'status' => 'I'],
     ]);
 
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()->count())->toBe(2);
+
     $response = $this
         ->actingAs(User::factory()->create())
         ->getJson(route('reports.missing-citizen-identities.data', [
@@ -70,5 +76,5 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonFragment(['id_number1' => '900000003'])
         ->assertJsonMissing(['id_number1' => '900000002'])
         ->assertJsonMissing(['id_number1' => ''])
-        ->assertJsonPath('next_cursor', 3);
+        ->assertJsonPath('next_cursor', 2);
 });
