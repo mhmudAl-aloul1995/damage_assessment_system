@@ -29,7 +29,7 @@ class MissingCitizenIdentityController extends Controller
 
     public function data(Request $request): JsonResponse
     {
-        $perPage = 25;
+        $perPage = min(max($request->integer('per_page', 25), 1), 100);
         $afterId = max(0, $request->integer('after_id', 0));
         $search = trim($request->string('search')->toString());
 
@@ -80,6 +80,7 @@ class MissingCitizenIdentityController extends Controller
                 ->values(),
             'has_more' => $rows->count() > $perPage,
             'next_cursor' => $rows->take($perPage)->last()?->id,
+            'per_page' => $perPage,
             'total' => $total,
         ]);
     }

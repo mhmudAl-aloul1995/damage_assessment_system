@@ -39,6 +39,14 @@
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
                     <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-solid w-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
                 </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted fs-7">{{ __('ui.missing_citizen_identities.rows_per_page') }}</span>
+                    <select class="form-select form-select-solid w-100px" data-kt-missing-citizens-filter="per-page">
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
                 <button type="button" class="btn btn-light-primary" data-kt-missing-citizens-action="refresh">
                     <i class="ki-duotone ki-arrows-circle fs-2"></i>
                     {{ __('ui.missing_citizen_identities.refresh') }}
@@ -84,6 +92,7 @@
             var currentSearch = '';
             var hasMore = false;
             var loading = false;
+            var currentPerPage = 25;
             var cursorStack = [0];
             var cursorIndex = 0;
             var nextCursor = null;
@@ -179,7 +188,8 @@
 
                 var params = new URLSearchParams({
                     after_id: cursor,
-                    search: currentSearch
+                    search: currentSearch,
+                    per_page: currentPerPage
                 });
 
                 fetch("{{ route('reports.missing-citizen-identities.data') }}?" + params.toString(), {
@@ -200,7 +210,12 @@
                         }
 
                         if (pageInfo) {
-                            pageInfo.textContent = '{{ __('ui.missing_citizen_identities.page') }} ' + (cursorIndex + 1);
+                            var rowCount = (payload.data || []).length;
+                            pageInfo.textContent = '{{ __('ui.missing_citizen_identities.page') }} ' + (cursorIndex + 1)
+                                + ' - {{ __('ui.missing_citizen_identities.showing_rows') }} '
+                                + rowCount.toLocaleString()
+                                + ' {{ __('ui.missing_citizen_identities.from_total') }} '
+                                + Number(payload.total || 0).toLocaleString();
                         }
                     })
                     .catch(function () {
@@ -232,10 +247,21 @@
                 }
 
                 var refresh = document.querySelector('[data-kt-missing-citizens-action="refresh"]');
+                var perPage = document.querySelector('[data-kt-missing-citizens-filter="per-page"]');
 
                 if (refresh) {
                     refresh.addEventListener('click', function () {
                         loadCursor(cursorStack[cursorIndex]);
+                    });
+                }
+
+                if (perPage) {
+                    perPage.addEventListener('change', function (event) {
+                        currentPerPage = Number(event.target.value || 25);
+                        cursorStack = [0];
+                        cursorIndex = 0;
+                        nextCursor = null;
+                        loadCursor(0);
                     });
                 }
 
