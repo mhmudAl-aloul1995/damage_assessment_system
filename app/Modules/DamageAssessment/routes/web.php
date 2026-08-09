@@ -29,6 +29,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Reports\EngineerAuditReportCon
 use App\Modules\DamageAssessment\Http\Controllers\Reports\FieldEngineerReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\HlpAuditReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\IndasPdfReportController;
+use App\Modules\DamageAssessment\Http\Controllers\Reports\MissingCitizenIdentityController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\phcPdfReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\ReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\SurveyReportController;
@@ -171,6 +172,11 @@ Route::middleware('auth')->group(function () {
     Route::prefix('reports')
         ->name('reports.')
         ->group(function () {
+            Route::get('/missing-citizen-identities', [MissingCitizenIdentityController::class, 'index'])
+                ->name('missing-citizen-identities.index');
+
+            Route::get('/missing-citizen-identities/data', [MissingCitizenIdentityController::class, 'data'])
+                ->name('missing-citizen-identities.data');
             Route::get('/damage-statistics', [DamageStatisticsReportController::class, 'index'])
                 ->name('damage-statistics.index');
 

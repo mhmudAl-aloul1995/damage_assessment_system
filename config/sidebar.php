@@ -59,6 +59,12 @@ return [
                 'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
             ],
             [
+                'title' => 'menu.damage_assessment.missing_citizen_identities',
+                'url' => 'damage-assessment/reports/missing-citizen-identities',
+                'pattern' => 'damage-assessment/reports/missing-citizen-identities*',
+                'roles' => ['Database Officer'],
+            ],
+            [
                 'title' => 'menu.damage_assessment.public_buildings',
                 'url' => 'damage-assessment/public-buildings',
                 'pattern' => 'damage-assessment/public-buildings*',
