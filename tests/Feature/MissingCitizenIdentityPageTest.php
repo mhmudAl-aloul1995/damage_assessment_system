@@ -88,6 +88,17 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonPath('total', 2)
         ->assertJsonPath('next_cursor', 1)
         ->assertJsonCount(1, 'data');
+
+    $this
+        ->actingAs(User::factory()->create())
+        ->getJson(route('reports.missing-citizen-identities.data', [
+            'after_id' => 0,
+            'name_match_status' => 'matched',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonFragment(['id_number1' => '900000001'])
+        ->assertJsonMissing(['id_number1' => '900000003']);
 });
 
 it('approves a single name match and syncs the new identity to arcgis', function (): void {

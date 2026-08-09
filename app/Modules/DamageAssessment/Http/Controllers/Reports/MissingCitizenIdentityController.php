@@ -32,6 +32,7 @@ class MissingCitizenIdentityController extends Controller
         $perPage = min(max($request->integer('per_page', 25), 1), 100);
         $afterId = max(0, $request->integer('after_id', 0));
         $search = trim($request->string('search')->toString());
+        $nameMatchStatus = trim($request->string('name_match_status')->toString());
 
         $query = MissingCitizenIdentityReport::query()
             ->select([
@@ -51,6 +52,10 @@ class MissingCitizenIdentityController extends Controller
             } else {
                 $query->where('owner_name', 'like', '%'.$search.'%');
             }
+        }
+
+        if (in_array($nameMatchStatus, ['matched', 'ambiguous', 'not_found', 'no_owner_name', 'not_checked'], true)) {
+            $query->where('name_match_status', $nameMatchStatus);
         }
 
         $total = (clone $query)->count();

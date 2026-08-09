@@ -576,6 +576,7 @@ return [
         'name_match_status' => 'مطابقة الاسم',
         'matched_citizen' => 'المواطن المقترح',
         'actions' => 'الإجراءات',
+        'all_name_matches' => 'كل حالات مطابقة الاسم',
         'name_match_matched' => 'تطابق واحد',
         'name_match_ambiguous' => 'أكثر من تطابق',
         'name_match_not_found' => 'لا يوجد تطابق',

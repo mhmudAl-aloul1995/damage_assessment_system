@@ -596,6 +596,7 @@ return [
         'name_match_status' => 'Name match',
         'matched_citizen' => 'Suggested citizen',
         'actions' => 'Actions',
+        'all_name_matches' => 'All name match statuses',
         'name_match_matched' => 'Single match',
         'name_match_ambiguous' => 'Multiple matches',
         'name_match_not_found' => 'No match',

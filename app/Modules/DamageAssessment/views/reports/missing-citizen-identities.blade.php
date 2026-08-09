@@ -39,6 +39,14 @@
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
                     <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-solid w-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
                 </div>
+                <select class="form-select form-select-solid w-175px" data-kt-missing-citizens-filter="name-match-status">
+                    <option value="">{{ __('ui.missing_citizen_identities.all_name_matches') }}</option>
+                    <option value="matched">{{ __('ui.missing_citizen_identities.name_match_matched') }}</option>
+                    <option value="ambiguous">{{ __('ui.missing_citizen_identities.name_match_ambiguous') }}</option>
+                    <option value="not_found">{{ __('ui.missing_citizen_identities.name_match_not_found') }}</option>
+                    <option value="no_owner_name">{{ __('ui.missing_citizen_identities.name_match_no_owner') }}</option>
+                    <option value="not_checked">{{ __('ui.missing_citizen_identities.name_match_not_checked') }}</option>
+                </select>
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted fs-7">{{ __('ui.missing_citizen_identities.rows_per_page') }}</span>
                     <select class="form-select form-select-solid w-100px" data-kt-missing-citizens-filter="per-page">
@@ -121,6 +129,7 @@
             var tbody = table ? table.querySelector('tbody') : null;
             var pageInfo = document.getElementById('missing_citizens_page_info');
             var currentSearch = '';
+            var currentNameMatchStatus = '';
             var hasMore = false;
             var loading = false;
             var currentPerPage = 25;
@@ -235,6 +244,7 @@
                 var params = new URLSearchParams({
                     after_id: cursor,
                     search: currentSearch,
+                    name_match_status: currentNameMatchStatus,
                     per_page: currentPerPage
                 });
 
@@ -393,6 +403,7 @@
 
                 var refresh = document.querySelector('[data-kt-missing-citizens-action="refresh"]');
                 var perPage = document.querySelector('[data-kt-missing-citizens-filter="per-page"]');
+                var nameMatchStatus = document.querySelector('[data-kt-missing-citizens-filter="name-match-status"]');
 
                 if (refresh) {
                     refresh.addEventListener('click', function () {
@@ -403,6 +414,16 @@
                 if (perPage) {
                     perPage.addEventListener('change', function (event) {
                         currentPerPage = Number(event.target.value || 25);
+                        cursorStack = [0];
+                        cursorIndex = 0;
+                        nextCursor = null;
+                        loadCursor(0);
+                    });
+                }
+
+                if (nameMatchStatus) {
+                    nameMatchStatus.addEventListener('change', function (event) {
+                        currentNameMatchStatus = event.target.value || '';
                         cursorStack = [0];
                         cursorIndex = 0;
                         nextCursor = null;
