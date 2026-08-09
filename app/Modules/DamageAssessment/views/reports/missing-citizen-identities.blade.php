@@ -9,7 +9,7 @@
                 <div class="card-body d-flex align-items-center justify-content-between gap-4">
                     <div>
                         <div class="text-muted fs-7 mb-2">{{ __('ui.missing_citizen_identities.total_missing') }}</div>
-                        <div class="fs-2x fw-bold text-danger">{{ __('ui.missing_citizen_identities.fast_mode') }}</div>
+                        <div class="fs-2x fw-bold text-danger" id="missing_citizens_total">{{ number_format($totalMissingCitizenIdentities) }}</div>
                     </div>
                     <div class="symbol symbol-50px">
                         <div class="symbol-label bg-light-danger">
@@ -84,6 +84,7 @@
             var cursorStack = [0];
             var cursorIndex = 0;
             var nextCursor = null;
+            var total = document.getElementById('missing_citizens_total');
 
             var setButtonsState = function () {
                 var previous = document.querySelector('[data-kt-missing-citizens-action="previous"]');
@@ -151,6 +152,10 @@
                         hasMore = Boolean(payload.has_more);
                         nextCursor = payload.next_cursor;
                         renderRows(payload.data || []);
+
+                        if (total) {
+                            total.textContent = Number(payload.total || 0).toLocaleString();
+                        }
 
                         if (pageInfo) {
                             pageInfo.textContent = '{{ __('ui.missing_citizen_identities.page') }} ' + (cursorIndex + 1);

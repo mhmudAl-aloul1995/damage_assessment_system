@@ -567,8 +567,7 @@ return [
     ],
     'missing_citizen_identities' => [
         'title' => 'أرقام هويات غير موجودة',
-        'total_missing' => 'وضع التحميل',
-        'fast_mode' => 'سريع',
+        'total_missing' => 'العدد الكلي',
         'rule_title' => 'قاعدة المقارنة',
         'rule_description' => 'تعرض أرقام الهويات المدخلة في housing_units.id_number1 وغير الموجودة كمواطنين فعالين في citizens.id_card_no.',
         'table_title' => 'هويات الوحدات السكنية غير الموجودة في المواطنين',

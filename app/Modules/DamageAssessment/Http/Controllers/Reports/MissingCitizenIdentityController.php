@@ -15,7 +15,9 @@ class MissingCitizenIdentityController extends Controller
 {
     public function index(): ViewContract
     {
-        return View::make('damage-assessment::reports.missing-citizen-identities');
+        return View::make('damage-assessment::reports.missing-citizen-identities', [
+            'totalMissingCitizenIdentities' => MissingCitizenIdentityReport::query()->count(),
+        ]);
     }
 
     public function data(Request $request): JsonResponse
@@ -25,8 +27,7 @@ class MissingCitizenIdentityController extends Controller
         $search = trim($request->string('search')->toString());
 
         $query = MissingCitizenIdentityReport::query()
-            ->select(['id', 'owner_name', 'id_number'])
-            ->when($afterId > 0, fn (Builder $query): Builder => $query->where('id', '>', $afterId));
+            ->select(['id', 'owner_name', 'id_number']);
 
         if ($search !== '') {
             if (ctype_digit($search)) {
@@ -35,6 +36,10 @@ class MissingCitizenIdentityController extends Controller
                 $query->where('owner_name', 'like', '%'.$search.'%');
             }
         }
+
+        $total = (clone $query)->count();
+
+        $query->when($afterId > 0, fn (Builder $query): Builder => $query->where('id', '>', $afterId));
 
         /** @var Collection<int, MissingCitizenIdentityReport> $rows */
         $rows = $query
@@ -53,6 +58,7 @@ class MissingCitizenIdentityController extends Controller
                 ->values(),
             'has_more' => $rows->count() > $perPage,
             'next_cursor' => $rows->take($perPage)->last()?->id,
+            'total' => $total,
         ]);
     }
 }

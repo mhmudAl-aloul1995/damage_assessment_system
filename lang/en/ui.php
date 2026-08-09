@@ -587,8 +587,7 @@ return [
     ],
     'missing_citizen_identities' => [
         'title' => 'Missing Citizen IDs',
-        'total_missing' => 'Loading mode',
-        'fast_mode' => 'Fast',
+        'total_missing' => 'Total records',
         'rule_title' => 'Comparison rule',
         'rule_description' => 'Shows housing unit owner ID numbers that are filled in housing_units.id_number1 but do not exist as active citizens in citizens.id_card_no.',
         'table_title' => 'Housing unit IDs not found in citizens',

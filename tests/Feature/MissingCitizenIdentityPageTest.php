@@ -76,5 +76,6 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonFragment(['id_number1' => '900000003'])
         ->assertJsonMissing(['id_number1' => '900000002'])
         ->assertJsonMissing(['id_number1' => ''])
+        ->assertJsonPath('total', 2)
         ->assertJsonPath('next_cursor', 2);
 });
