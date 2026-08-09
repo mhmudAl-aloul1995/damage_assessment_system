@@ -277,6 +277,47 @@ class ArcgisService
         ];
     }
 
+    public function updateHousingUnitIdentity(int|string|null $objectId, string $idNumber): array
+    {
+        if (! filled($objectId)) {
+            return [
+                'success' => true,
+                'status' => 'skipped',
+                'message' => 'Housing unit has no ArcGIS objectid.',
+                'response' => null,
+            ];
+        }
+
+        $token = $this->getToken();
+        $layerUrl = rtrim((string) config('services.arcgis.housing_units_url'), '/');
+
+        $response = Http::asForm()
+            ->withoutVerifying()
+            ->acceptJson()
+            ->post($layerUrl.'/updateFeatures', [
+                'f' => 'json',
+                'token' => $token,
+                'features' => json_encode([
+                    [
+                        'attributes' => [
+                            'objectid' => $objectId,
+                            'id_number1' => $idNumber,
+                        ],
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            ]);
+
+        $body = $response->json();
+        $success = $response->successful() && (bool) data_get($body, 'updateResults.0.success', false);
+
+        return [
+            'success' => $success,
+            'status' => $success ? 'synced' : 'failed',
+            'message' => $success ? 'ArcGIS identity updated.' : $response->body(),
+            'response' => $body,
+        ];
+    }
+
     public function buildUrlFromLayerUrl(string $layerUrl, int|string $objectId, int|string $attachmentId, string $token): string
     {
         return $this->normalizeLayerUrl($layerUrl).'/'.$objectId.'/attachments/'.$attachmentId.'?token='.urlencode($token);

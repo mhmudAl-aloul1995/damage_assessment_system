@@ -177,6 +177,9 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/missing-citizen-identities/data', [MissingCitizenIdentityController::class, 'data'])
                 ->name('missing-citizen-identities.data');
+
+            Route::post('/missing-citizen-identities/{report}/approve-name-match', [MissingCitizenIdentityController::class, 'approveNameMatch'])
+                ->name('missing-citizen-identities.approve-name-match');
             Route::get('/damage-statistics', [DamageStatisticsReportController::class, 'index'])
                 ->name('damage-statistics.index');
 

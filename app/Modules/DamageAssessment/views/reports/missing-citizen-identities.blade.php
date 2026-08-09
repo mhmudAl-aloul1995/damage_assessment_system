@@ -52,6 +52,9 @@
                         <tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
                             <th>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.id_number') }}</th>
+                            <th>{{ __('ui.missing_citizen_identities.name_match_status') }}</th>
+                            <th>{{ __('ui.missing_citizen_identities.matched_citizen') }}</th>
+                            <th class="text-end">{{ __('ui.missing_citizen_identities.actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="text-gray-700 fw-semibold"></tbody>
@@ -85,6 +88,8 @@
             var cursorIndex = 0;
             var nextCursor = null;
             var total = document.getElementById('missing_citizens_total');
+            var approveUrlTemplate = @json(route('reports.missing-citizen-identities.approve-name-match', ['report' => '__REPORT__']));
+            var csrfToken = @json(csrf_token());
 
             var setButtonsState = function () {
                 var previous = document.querySelector('[data-kt-missing-citizens-action="previous"]');
@@ -114,13 +119,50 @@
                 }
 
                 if (rows.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = rows.map(function (row) {
-                    return '<tr><td>' + escapeHtml(row.owner_name) + '</td><td><span class="badge badge-light-danger">' + escapeHtml(row.id_number1) + '</span></td></tr>';
+                    var status = matchStatusBadge(row);
+                    var matchedCitizen = row.matched_citizen_full_name
+                        ? '<div class="fw-semibold">' + escapeHtml(row.matched_citizen_full_name) + '</div><span class="badge badge-light-success">' + escapeHtml(row.matched_citizen_id_card_no) + '</span>'
+                        : '<span class="text-muted">-</span>';
+                    var action = row.can_approve_name_match
+                        ? '<button type="button" class="btn btn-sm btn-light-success" data-kt-missing-citizens-action="approve-name" data-report-id="' + escapeHtml(row.id) + '">{{ __('ui.missing_citizen_identities.approve_match') }}</button>'
+                        : '<span class="text-muted">-</span>';
+
+                    return '<tr>'
+                        + '<td>' + escapeHtml(row.owner_name) + '</td>'
+                        + '<td><span class="badge badge-light-danger">' + escapeHtml(row.id_number1) + '</span></td>'
+                        + '<td>' + status + '</td>'
+                        + '<td>' + matchedCitizen + '</td>'
+                        + '<td class="text-end">' + action + '</td>'
+                        + '</tr>';
                 }).join('');
+            };
+
+            var matchStatusBadge = function (row) {
+                var status = row.name_match_status || 'not_checked';
+                var labels = {
+                    matched: '{{ __('ui.missing_citizen_identities.name_match_matched') }}',
+                    ambiguous: '{{ __('ui.missing_citizen_identities.name_match_ambiguous') }}',
+                    not_found: '{{ __('ui.missing_citizen_identities.name_match_not_found') }}',
+                    no_owner_name: '{{ __('ui.missing_citizen_identities.name_match_no_owner') }}',
+                    not_checked: '{{ __('ui.missing_citizen_identities.name_match_not_checked') }}'
+                };
+                var classes = {
+                    matched: 'badge-light-success',
+                    ambiguous: 'badge-light-warning',
+                    not_found: 'badge-light-danger',
+                    no_owner_name: 'badge-light-secondary',
+                    not_checked: 'badge-light'
+                };
+                var suffix = status === 'ambiguous' && row.matched_citizens_count
+                    ? ' (' + row.matched_citizens_count + ')'
+                    : '';
+
+                return '<span class="badge ' + (classes[status] || 'badge-light') + '">' + escapeHtml(labels[status] || status) + suffix + '</span>';
             };
 
             var loadCursor = function (cursor) {
@@ -132,7 +174,7 @@
                 setButtonsState();
 
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
                 }
 
                 var params = new URLSearchParams({
@@ -163,7 +205,7 @@
                     })
                     .catch(function () {
                         if (tbody) {
-                            tbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
                         }
                     })
                     .finally(function () {
@@ -218,6 +260,50 @@
                         cursorStack.push(nextCursor);
                         cursorIndex += 1;
                         loadCursor(nextCursor);
+                    });
+                }
+
+                if (tbody) {
+                    tbody.addEventListener('click', function (event) {
+                        var button = event.target.closest('[data-kt-missing-citizens-action="approve-name"]');
+
+                        if (!button || loading) {
+                            return;
+                        }
+
+                        if (!confirm('{{ __('ui.missing_citizen_identities.approve_confirm') }}')) {
+                            return;
+                        }
+
+                        button.disabled = true;
+                        button.textContent = '{{ __('ui.missing_citizen_identities.approving') }}';
+
+                        fetch(approveUrlTemplate.replace('__REPORT__', button.getAttribute('data-report-id')), {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
+                            },
+                            body: JSON.stringify({ confirm: true })
+                        })
+                            .then(function (response) {
+                                return response.json().then(function (payload) {
+                                    if (!response.ok) {
+                                        throw payload;
+                                    }
+
+                                    return payload;
+                                });
+                            })
+                            .then(function () {
+                                loadCursor(cursorStack[cursorIndex]);
+                            })
+                            .catch(function (payload) {
+                                alert(payload.message || '{{ __('ui.messages.unexpected_error') }}');
+                                button.disabled = false;
+                                button.textContent = '{{ __('ui.missing_citizen_identities.approve_match') }}';
+                            });
                     });
                 }
             };
