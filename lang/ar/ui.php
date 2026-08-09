@@ -570,7 +570,7 @@ return [
         'total_missing' => 'العدد الكلي',
         'rule_title' => 'قاعدة المقارنة',
         'rule_description' => 'تعرض أرقام الهويات المدخلة في housing_units.id_number1 وغير الموجودة كمواطنين فعالين في citizens.id_card_no.',
-        'table_title' => 'هويات الوحدات السكنية غير الموجودة في المواطنين',
+        'table_title' => 'هويات الوحدات السكنية غير الموجودة في السجل المدني',
         'owner_name' => 'اسم المالك',
         'id_number' => 'رقم الهوية',
         'name_match_status' => 'مطابقة الاسم',
