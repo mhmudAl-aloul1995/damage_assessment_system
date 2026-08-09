@@ -586,6 +586,7 @@ return [
         'approve_confirm' => 'هل تريد اعتماد هذا المواطن وتحديث رقم الهوية في قاعدة البيانات و ArcGIS؟',
         'show_candidates' => 'عرض المرشحين',
         'candidates_title' => 'المرشحون المطابقون للاسم',
+        'current_missing_id_number' => 'رقم الهوية الحالي في الوحدة',
         'approve_this_candidate' => 'اعتماد هذا المواطن',
         'no_candidates' => 'لا توجد مرشحين لهذا الاسم.',
         'approved_success' => 'تم تحديث رقم الهوية في قاعدة البيانات و ArcGIS بنجاح.',

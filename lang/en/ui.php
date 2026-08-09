@@ -606,6 +606,7 @@ return [
         'approve_confirm' => 'Approve this citizen and update the ID number in the database and ArcGIS?',
         'show_candidates' => 'Show candidates',
         'candidates_title' => 'Name match candidates',
+        'current_missing_id_number' => 'Current unit ID number',
         'approve_this_candidate' => 'Approve this citizen',
         'no_candidates' => 'No candidates were found for this name.',
         'approved_success' => 'The ID number was updated in the database and ArcGIS.',
