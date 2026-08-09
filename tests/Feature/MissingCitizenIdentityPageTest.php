@@ -61,7 +61,7 @@ it('returns housing unit identities that are not active citizens', function (): 
     $response = $this
         ->actingAs(User::factory()->create())
         ->getJson(route('reports.missing-citizen-identities.data', [
-            'page' => 1,
+            'after_id' => 0,
         ]));
 
     $response
@@ -70,5 +70,5 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonFragment(['id_number1' => '900000003'])
         ->assertJsonMissing(['id_number1' => '900000002'])
         ->assertJsonMissing(['id_number1' => ''])
-        ->assertJsonPath('page', 1);
+        ->assertJsonPath('next_cursor', 3);
 });

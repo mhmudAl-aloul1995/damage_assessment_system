@@ -78,17 +78,19 @@
             var table = document.getElementById('kt_table_missing_citizen_identities');
             var tbody = table ? table.querySelector('tbody') : null;
             var pageInfo = document.getElementById('missing_citizens_page_info');
-            var currentPage = 1;
             var currentSearch = '';
             var hasMore = false;
             var loading = false;
+            var cursorStack = [0];
+            var cursorIndex = 0;
+            var nextCursor = null;
 
             var setButtonsState = function () {
                 var previous = document.querySelector('[data-kt-missing-citizens-action="previous"]');
                 var next = document.querySelector('[data-kt-missing-citizens-action="next"]');
 
                 if (previous) {
-                    previous.disabled = loading || currentPage <= 1;
+                    previous.disabled = loading || cursorIndex <= 0;
                 }
 
                 if (next) {
@@ -120,13 +122,12 @@
                 }).join('');
             };
 
-            var loadPage = function (page) {
+            var loadCursor = function (cursor) {
                 if (loading) {
                     return;
                 }
 
                 loading = true;
-                currentPage = page;
                 setButtonsState();
 
                 if (tbody) {
@@ -134,7 +135,7 @@
                 }
 
                 var params = new URLSearchParams({
-                    page: currentPage,
+                    after_id: cursor,
                     search: currentSearch
                 });
 
@@ -148,10 +149,11 @@
                     })
                     .then(function (payload) {
                         hasMore = Boolean(payload.has_more);
+                        nextCursor = payload.next_cursor;
                         renderRows(payload.data || []);
 
                         if (pageInfo) {
-                            pageInfo.textContent = '{{ __('ui.missing_citizen_identities.page') }} ' + currentPage;
+                            pageInfo.textContent = '{{ __('ui.missing_citizen_identities.page') }} ' + (cursorIndex + 1);
                         }
                     })
                     .catch(function () {
@@ -174,7 +176,10 @@
                         clearTimeout(searchTimer);
                         searchTimer = setTimeout(function () {
                             currentSearch = event.target.value;
-                            loadPage(1);
+                            cursorStack = [0];
+                            cursorIndex = 0;
+                            nextCursor = null;
+                            loadCursor(0);
                         }, 350);
                     });
                 }
@@ -183,7 +188,7 @@
 
                 if (refresh) {
                     refresh.addEventListener('click', function () {
-                        loadPage(currentPage);
+                        loadCursor(cursorStack[cursorIndex]);
                     });
                 }
 
@@ -191,7 +196,8 @@
 
                 if (previous) {
                     previous.addEventListener('click', function () {
-                        loadPage(Math.max(1, currentPage - 1));
+                        cursorIndex = Math.max(0, cursorIndex - 1);
+                        loadCursor(cursorStack[cursorIndex]);
                     });
                 }
 
@@ -199,7 +205,14 @@
 
                 if (next) {
                     next.addEventListener('click', function () {
-                        loadPage(currentPage + 1);
+                        if (!hasMore || nextCursor === null) {
+                            return;
+                        }
+
+                        cursorStack = cursorStack.slice(0, cursorIndex + 1);
+                        cursorStack.push(nextCursor);
+                        cursorIndex += 1;
+                        loadCursor(nextCursor);
                     });
                 }
             };
@@ -207,7 +220,7 @@
             return {
                 init: function () {
                     bindEvents();
-                    loadPage(1);
+                    loadCursor(0);
                 }
             };
         }();

@@ -22,22 +22,22 @@ class MissingCitizenIdentityController extends Controller
     public function data(Request $request): JsonResponse
     {
         $perPage = 25;
-        $page = max(1, $request->integer('page', 1));
+        $afterId = max(0, $request->integer('after_id', 0));
         $search = trim($request->string('search')->toString());
 
-        $query = $this->missingCitizenIdentityQuery();
+        $query = $this->missingCitizenIdentityQuery()
+            ->when($afterId > 0, fn (Builder $query): Builder => $query->where('housing_units.id', '>', $afterId));
 
         if ($search !== '') {
-            $query->where(function (Builder $searchQuery) use ($search): void {
-                $searchQuery
-                    ->where('housing_units.unit_owner', 'like', '%'.$search.'%')
-                    ->orWhere('housing_units.id_number1', 'like', '%'.$search.'%');
-            });
+            if (ctype_digit($search)) {
+                $query->where('housing_units.id_number1', 'like', $search.'%');
+            } else {
+                $query->where('housing_units.unit_owner', 'like', '%'.$search.'%');
+            }
         }
 
         /** @var Collection<int, HousingUnit> $rows */
         $rows = $query
-            ->offset(($page - 1) * $perPage)
             ->limit($perPage + 1)
             ->get();
 
@@ -45,12 +45,13 @@ class MissingCitizenIdentityController extends Controller
             'data' => $rows
                 ->take($perPage)
                 ->map(fn (HousingUnit $housingUnit): array => [
+                    'id' => $housingUnit->id,
                     'owner_name' => $housingUnit->unit_owner ?: '-',
                     'id_number1' => (string) $housingUnit->id_number1,
                 ])
                 ->values(),
             'has_more' => $rows->count() > $perPage,
-            'page' => $page,
+            'next_cursor' => $rows->take($perPage)->last()?->id,
         ]);
     }
 
@@ -71,7 +72,7 @@ class MissingCitizenIdentityController extends Controller
                     ->whereColumn('citizens.id_card_no', 'housing_units.id_number1')
                     ->where('citizens.status', 'A');
             })
-            ->orderBy('housing_units.id_number1');
+            ->orderBy('housing_units.id');
     }
 
     private function citizensTable(): string
