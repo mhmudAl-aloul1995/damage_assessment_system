@@ -8,6 +8,7 @@ use App\Models\HousingUnit;
 use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
 use App\services\ArcgisService;
+use App\Support\ArabicNameNormalizer;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -83,12 +84,63 @@ class MissingCitizenIdentityController extends Controller
                         && filled($report->matched_citizen_id_card_no),
                     'can_show_name_candidates' => $report->name_match_status === 'ambiguous'
                         && $report->matched_citizens_count > 1,
+                    'can_search_citizens' => in_array($report->name_match_status, ['not_found', 'no_owner_name'], true),
                 ])
                 ->values(),
             'has_more' => $rows->count() > $perPage,
             'next_cursor' => $rows->take($perPage)->last()?->id,
             'per_page' => $perPage,
             'total' => $total,
+        ]);
+    }
+
+    public function citizenSearch(Request $request, MissingCitizenIdentityReport $report): JsonResponse
+    {
+        if ($report->approved_at !== null) {
+            return response()->json([
+                'message' => __('ui.missing_citizen_identities.already_approved'),
+            ], 422);
+        }
+
+        $search = trim($request->string('q')->toString());
+
+        if (mb_strlen($search) < 2) {
+            return response()->json([
+                'data' => [],
+            ]);
+        }
+
+        $query = DB::table($this->citizensTable())
+            ->select(['id', 'id_card_no', 'full_name'])
+            ->where('status', 'A');
+
+        if (ctype_digit($search)) {
+            $query->where('id_card_no', 'like', $search.'%');
+        } else {
+            $normalizedSearch = ArabicNameNormalizer::normalize($search);
+
+            if ($normalizedSearch === '') {
+                return response()->json([
+                    'data' => [],
+                ]);
+            }
+
+            $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
+        }
+
+        $citizens = $query
+            ->orderBy('id')
+            ->limit(20)
+            ->get()
+            ->map(fn ($citizen): array => [
+                'id' => $citizen->id,
+                'id_card_no' => (string) $citizen->id_card_no,
+                'full_name' => $citizen->full_name ?: '-',
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => $citizens,
         ]);
     }
 
@@ -215,7 +267,6 @@ class MissingCitizenIdentityController extends Controller
                 ->select(['id', 'id_card_no', 'full_name'])
                 ->where('id', $request->integer('citizen_id'))
                 ->where('status', 'A')
-                ->where('full_name_normalized', $report->normalized_owner_name)
                 ->first();
         }
 

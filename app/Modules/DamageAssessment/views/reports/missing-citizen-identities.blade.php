@@ -104,6 +104,10 @@
                         <span class="text-muted fw-semibold">{{ __('ui.missing_citizen_identities.current_missing_id_number') }}</span>
                         <span class="badge badge-light-danger fs-6" id="missing_citizen_candidates_id_number">-</span>
                     </div>
+                    <div class="position-relative mb-5">
+                        <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
+                        <input type="text" class="form-control form-control-solid ps-12" id="missing_citizen_manual_search" placeholder="{{ __('ui.missing_citizen_identities.citizen_search_placeholder') }}">
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-row-dashed align-middle">
                             <thead>
@@ -139,11 +143,14 @@
             var total = document.getElementById('missing_citizens_total');
             var approveUrlTemplate = @json(route('reports.missing-citizen-identities.approve-name-match', ['report' => '__REPORT__']));
             var candidatesUrlTemplate = @json(route('reports.missing-citizen-identities.name-candidates', ['report' => '__REPORT__']));
+            var citizenSearchUrlTemplate = @json(route('reports.missing-citizen-identities.citizen-search', ['report' => '__REPORT__']));
             var csrfToken = @json(csrf_token());
             var candidatesModalElement = document.getElementById('missing_citizen_candidates_modal');
             var candidatesBody = document.getElementById('missing_citizen_candidates_body');
             var candidatesIdNumber = document.getElementById('missing_citizen_candidates_id_number');
+            var manualSearch = document.getElementById('missing_citizen_manual_search');
             var activeCandidateReportId = null;
+            var manualSearchTimer = null;
 
             var setButtonsState = function () {
                 var previous = document.querySelector('[data-kt-missing-citizens-action="previous"]');
@@ -201,6 +208,10 @@
 
                 if (row.can_show_name_candidates) {
                     return '<button type="button" class="btn btn-sm btn-light-warning" data-kt-missing-citizens-action="show-candidates" data-report-id="' + escapeHtml(row.id) + '" data-id-number="' + escapeHtml(row.id_number1) + '">{{ __('ui.missing_citizen_identities.show_candidates') }}</button>';
+                }
+
+                if (row.can_search_citizens) {
+                    return '<button type="button" class="btn btn-sm btn-light-primary" data-kt-missing-citizens-action="search-citizens" data-report-id="' + escapeHtml(row.id) + '" data-id-number="' + escapeHtml(row.id_number1) + '" data-owner-name="' + escapeHtml(row.owner_name) + '">{{ __('ui.missing_citizen_identities.search_civil_registry') }}</button>';
                 }
 
                 return '<span class="text-muted">-</span>';
@@ -292,6 +303,10 @@
                     candidatesIdNumber.textContent = idNumber || '-';
                 }
 
+                if (manualSearch) {
+                    manualSearch.value = '';
+                }
+
                 if (candidatesBody) {
                     candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
                 }
@@ -321,23 +336,89 @@
                             return;
                         }
 
-                        if (candidates.length === 0) {
-                            candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.no_candidates') }}</td></tr>';
-                            return;
-                        }
-
-                        candidatesBody.innerHTML = candidates.map(function (candidate) {
-                            return '<tr>'
-                                + '<td>' + escapeHtml(candidate.full_name) + '</td>'
-                                + '<td><span class="badge badge-light-primary">' + escapeHtml(candidate.id_card_no) + '</span></td>'
-                                + '<td class="text-end"><button type="button" class="btn btn-sm btn-light-success" data-kt-missing-citizens-action="approve-candidate" data-citizen-id="' + escapeHtml(candidate.id) + '">{{ __('ui.missing_citizen_identities.approve_this_candidate') }}</button></td>'
-                                + '</tr>';
-                        }).join('');
+                        renderCandidateRows(candidates);
                     })
                     .catch(function (payload) {
                         if (candidatesBody) {
                             candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-8">' + escapeHtml(payload.message || '{{ __('ui.messages.unexpected_error') }}') + '</td></tr>';
                         }
+                    });
+            };
+
+            var renderCandidateRows = function (candidates) {
+                if (!candidatesBody) {
+                    return;
+                }
+
+                if (candidates.length === 0) {
+                    candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.no_candidates') }}</td></tr>';
+                    return;
+                }
+
+                candidatesBody.innerHTML = candidates.map(function (candidate) {
+                    return '<tr>'
+                        + '<td>' + escapeHtml(candidate.full_name) + '</td>'
+                        + '<td><span class="badge badge-light-primary">' + escapeHtml(candidate.id_card_no) + '</span></td>'
+                        + '<td class="text-end"><button type="button" class="btn btn-sm btn-light-success" data-kt-missing-citizens-action="approve-candidate" data-citizen-id="' + escapeHtml(candidate.id) + '">{{ __('ui.missing_citizen_identities.approve_this_candidate') }}</button></td>'
+                        + '</tr>';
+                }).join('');
+            };
+
+            var showCitizenSearch = function (reportId, idNumber, ownerName) {
+                activeCandidateReportId = reportId;
+
+                if (candidatesIdNumber) {
+                    candidatesIdNumber.textContent = idNumber || '-';
+                }
+
+                if (manualSearch) {
+                    manualSearch.value = ownerName && ownerName !== '-' ? ownerName : '';
+                }
+
+                if (candidatesBody) {
+                    candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.type_to_search_citizens') }}</td></tr>';
+                }
+
+                if (candidatesModalElement && window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(candidatesModalElement).show();
+                }
+
+                if (manualSearch && manualSearch.value.trim().length >= 2) {
+                    searchCitizens(reportId, manualSearch.value.trim());
+                }
+            };
+
+            var searchCitizens = function (reportId, searchValue) {
+                if (!candidatesBody) {
+                    return;
+                }
+
+                if (searchValue.length < 2) {
+                    candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.type_to_search_citizens') }}</td></tr>';
+                    return;
+                }
+
+                candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
+
+                fetch(citizenSearchUrlTemplate.replace('__REPORT__', reportId) + '?' + new URLSearchParams({ q: searchValue }).toString(), {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(function (response) {
+                        return response.json().then(function (payload) {
+                            if (!response.ok) {
+                                throw payload;
+                            }
+
+                            return payload;
+                        });
+                    })
+                    .then(function (payload) {
+                        renderCandidateRows(payload.data || []);
+                    })
+                    .catch(function (payload) {
+                        candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-8">' + escapeHtml(payload.message || '{{ __('ui.messages.unexpected_error') }}') + '</td></tr>';
                     });
             };
 
@@ -472,7 +553,30 @@
                                 candidatesButton.getAttribute('data-report-id'),
                                 candidatesButton.getAttribute('data-id-number')
                             );
+
+                            return;
                         }
+
+                        var searchCitizensButton = event.target.closest('[data-kt-missing-citizens-action="search-citizens"]');
+
+                        if (searchCitizensButton && !loading) {
+                            showCitizenSearch(
+                                searchCitizensButton.getAttribute('data-report-id'),
+                                searchCitizensButton.getAttribute('data-id-number'),
+                                searchCitizensButton.getAttribute('data-owner-name')
+                            );
+                        }
+                    });
+                }
+
+                if (manualSearch) {
+                    manualSearch.addEventListener('keyup', function (event) {
+                        clearTimeout(manualSearchTimer);
+                        manualSearchTimer = setTimeout(function () {
+                            if (activeCandidateReportId) {
+                                searchCitizens(activeCandidateReportId, event.target.value.trim());
+                            }
+                        }, 350);
                     });
                 }
 

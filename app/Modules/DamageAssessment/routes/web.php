@@ -183,6 +183,9 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/missing-citizen-identities/{report}/name-candidates', [MissingCitizenIdentityController::class, 'nameCandidates'])
                 ->name('missing-citizen-identities.name-candidates');
+
+            Route::get('/missing-citizen-identities/{report}/citizen-search', [MissingCitizenIdentityController::class, 'citizenSearch'])
+                ->name('missing-citizen-identities.citizen-search');
             Route::get('/damage-statistics', [DamageStatisticsReportController::class, 'index'])
                 ->name('damage-statistics.index');
 
