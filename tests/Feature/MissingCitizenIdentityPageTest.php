@@ -27,6 +27,7 @@ it('shows the missing citizen identities page', function (): void {
     $response
         ->assertOk()
         ->assertSee(__('ui.missing_citizen_identities.title'))
+        ->assertSee(__('ui.missing_citizen_identities.approve_selected'))
         ->assertSee('kt_table_missing_citizen_identities');
 });
 
@@ -290,4 +291,70 @@ it('searches the civil registry for unmatched names and approves a manually sele
     expect($housingUnit->fresh()->id_number1)->toBe('666666666')
         ->and($report->fresh()->matched_citizen_id_card_no)->toBe('666666666')
         ->and($report->fresh()->approved_at)->not->toBeNull();
+});
+
+it('bulk approves selected single name matches', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true],
+            ],
+        ]),
+    ]);
+
+    $firstHousingUnit = HousingUnit::query()->create([
+        'objectid' => 901,
+        'globalid' => 'bulk-one',
+        'unit_owner' => 'Bulk One',
+        'id_number1' => '701701701',
+    ]);
+
+    $secondHousingUnit = HousingUnit::query()->create([
+        'objectid' => 902,
+        'globalid' => 'bulk-two',
+        'unit_owner' => 'Bulk Two',
+        'id_number1' => '702702702',
+    ]);
+
+    DB::table('citizens')->insert([
+        [
+            'id_card_no' => '801801801',
+            'status' => 'A',
+            'full_name' => 'Bulk One',
+            'full_name_normalized' => 'BulkOne',
+        ],
+        [
+            'id_card_no' => '802802802',
+            'status' => 'A',
+            'full_name' => 'Bulk Two',
+            'full_name_normalized' => 'BulkTwo',
+        ],
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $reports = MissingCitizenIdentityReport::query()
+        ->whereIn('housing_unit_id', [$firstHousingUnit->id, $secondHousingUnit->id])
+        ->orderBy('id')
+        ->get();
+
+    $this
+        ->actingAs(User::factory()->create())
+        ->postJson(route('reports.missing-citizen-identities.bulk-approve-name-matches'), [
+            'report_ids' => $reports->pluck('id')->all(),
+        ])
+        ->assertOk()
+        ->assertJsonPath('approved', 2)
+        ->assertJsonPath('failed', 0)
+        ->assertJsonPath('skipped', 0);
+
+    expect($firstHousingUnit->fresh()->id_number1)->toBe('801801801')
+        ->and($secondHousingUnit->fresh()->id_number1)->toBe('802802802')
+        ->and(MissingCitizenIdentityApproval::query()->whereIn('housing_unit_id', [$firstHousingUnit->id, $secondHousingUnit->id])->count())->toBe(2);
 });

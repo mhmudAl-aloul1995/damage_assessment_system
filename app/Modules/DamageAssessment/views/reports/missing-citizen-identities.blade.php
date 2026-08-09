@@ -59,6 +59,10 @@
                     <i class="ki-duotone ki-arrows-circle fs-2"></i>
                     {{ __('ui.missing_citizen_identities.refresh') }}
                 </button>
+                <button type="button" class="btn btn-light-success" data-kt-missing-citizens-action="bulk-approve" disabled>
+                    <i class="ki-duotone ki-check-square fs-2"></i>
+                    {{ __('ui.missing_citizen_identities.approve_selected') }}
+                </button>
             </div>
         </div>
         <div class="card-body">
@@ -66,6 +70,9 @@
                 <table class="table table-rounded table-striped align-middle table-row-dashed fs-6 gy-5 w-100" id="kt_table_missing_citizen_identities">
                     <thead>
                         <tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
+                            <th class="w-30px">
+                                <input class="form-check-input" type="checkbox" data-kt-missing-citizens-action="select-all">
+                            </th>
                             <th>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.id_number') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.name_match_status') }}</th>
@@ -142,6 +149,7 @@
             var nextCursor = null;
             var total = document.getElementById('missing_citizens_total');
             var approveUrlTemplate = @json(route('reports.missing-citizen-identities.approve-name-match', ['report' => '__REPORT__']));
+            var bulkApproveUrl = @json(route('reports.missing-citizen-identities.bulk-approve-name-matches'));
             var candidatesUrlTemplate = @json(route('reports.missing-citizen-identities.name-candidates', ['report' => '__REPORT__']));
             var citizenSearchUrlTemplate = @json(route('reports.missing-citizen-identities.citizen-search', ['report' => '__REPORT__']));
             var csrfToken = @json(csrf_token());
@@ -151,6 +159,29 @@
             var manualSearch = document.getElementById('missing_citizen_manual_search');
             var activeCandidateReportId = null;
             var manualSearchTimer = null;
+
+            var selectedReportIds = function () {
+                return Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]:checked'))
+                    .map(function (checkbox) {
+                        return checkbox.value;
+                    });
+            };
+
+            var updateBulkState = function () {
+                var bulkApprove = document.querySelector('[data-kt-missing-citizens-action="bulk-approve"]');
+                var selectAll = document.querySelector('[data-kt-missing-citizens-action="select-all"]');
+                var checkboxes = Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]'));
+                var checkedCount = selectedReportIds().length;
+
+                if (bulkApprove) {
+                    bulkApprove.disabled = loading || checkedCount === 0;
+                }
+
+                if (selectAll) {
+                    selectAll.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+                    selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+                }
+            };
 
             var setButtonsState = function () {
                 var previous = document.querySelector('[data-kt-missing-citizens-action="previous"]');
@@ -163,6 +194,8 @@
                 if (next) {
                     next.disabled = loading || !hasMore;
                 }
+
+                updateBulkState();
             };
 
             var escapeHtml = function (value) {
@@ -180,7 +213,7 @@
                 }
 
                 if (rows.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
                     return;
                 }
 
@@ -190,8 +223,12 @@
                         ? '<div class="fw-semibold">' + escapeHtml(row.matched_citizen_full_name) + '</div><span class="badge badge-light-success">' + escapeHtml(row.matched_citizen_id_card_no) + '</span>'
                         : '<span class="text-muted">-</span>';
                     var action = actionButton(row);
+                    var checkbox = row.can_approve_name_match
+                        ? '<input class="form-check-input" type="checkbox" data-kt-missing-citizens-row-check value="' + escapeHtml(row.id) + '">'
+                        : '';
 
                     return '<tr>'
+                        + '<td>' + checkbox + '</td>'
                         + '<td>' + escapeHtml(row.owner_name) + '</td>'
                         + '<td><span class="badge badge-light-danger">' + escapeHtml(row.id_number1) + '</span></td>'
                         + '<td>' + status + '</td>'
@@ -199,6 +236,8 @@
                         + '<td class="text-end">' + action + '</td>'
                         + '</tr>';
                 }).join('');
+
+                updateBulkState();
             };
 
             var actionButton = function (row) {
@@ -249,7 +288,7 @@
                 setButtonsState();
 
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
                 }
 
                 var params = new URLSearchParams({
@@ -287,7 +326,7 @@
                     })
                     .catch(function () {
                         if (tbody) {
-                            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
                         }
                     })
                     .finally(function () {
@@ -465,6 +504,53 @@
                     });
             };
 
+            var bulkApprove = function (button) {
+                var reportIds = selectedReportIds();
+
+                if (reportIds.length === 0) {
+                    return;
+                }
+
+                if (!confirm('{{ __('ui.missing_citizen_identities.bulk_approve_confirm') }}')) {
+                    return;
+                }
+
+                button.disabled = true;
+                button.textContent = '{{ __('ui.missing_citizen_identities.approving') }}';
+
+                fetch(bulkApproveUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        report_ids: reportIds
+                    })
+                })
+                    .then(function (response) {
+                        return response.json().then(function (payload) {
+                            if (!response.ok) {
+                                throw payload;
+                            }
+
+                            return payload;
+                        });
+                    })
+                    .then(function (payload) {
+                        alert(payload.message || '{{ __('ui.missing_citizen_identities.bulk_approved_done') }}');
+                        loadCursor(cursorStack[cursorIndex]);
+                    })
+                    .catch(function (payload) {
+                        alert(payload.message || '{{ __('ui.messages.unexpected_error') }}');
+                    })
+                    .finally(function () {
+                        button.textContent = '{{ __('ui.missing_citizen_identities.approve_selected') }}';
+                        updateBulkState();
+                    });
+            };
+
             var bindEvents = function () {
                 var search = document.querySelector('[data-kt-missing-citizens-filter="search"]');
                 var searchTimer;
@@ -485,6 +571,8 @@
                 var refresh = document.querySelector('[data-kt-missing-citizens-action="refresh"]');
                 var perPage = document.querySelector('[data-kt-missing-citizens-filter="per-page"]');
                 var nameMatchStatus = document.querySelector('[data-kt-missing-citizens-filter="name-match-status"]');
+                var bulkApproveButton = document.querySelector('[data-kt-missing-citizens-action="bulk-approve"]');
+                var selectAll = document.querySelector('[data-kt-missing-citizens-action="select-all"]');
 
                 if (refresh) {
                     refresh.addEventListener('click', function () {
@@ -509,6 +597,23 @@
                         cursorIndex = 0;
                         nextCursor = null;
                         loadCursor(0);
+                    });
+                }
+
+                if (bulkApproveButton) {
+                    bulkApproveButton.addEventListener('click', function () {
+                        bulkApprove(bulkApproveButton);
+                    });
+                }
+
+                if (selectAll) {
+                    selectAll.addEventListener('change', function (event) {
+                        Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]'))
+                            .forEach(function (checkbox) {
+                                checkbox.checked = event.target.checked;
+                            });
+
+                        updateBulkState();
                     });
                 }
 
@@ -537,6 +642,12 @@
                 }
 
                 if (tbody) {
+                    tbody.addEventListener('change', function (event) {
+                        if (event.target.matches('[data-kt-missing-citizens-row-check]')) {
+                            updateBulkState();
+                        }
+                    });
+
                     tbody.addEventListener('click', function (event) {
                         var button = event.target.closest('[data-kt-missing-citizens-action="approve-name"]');
 

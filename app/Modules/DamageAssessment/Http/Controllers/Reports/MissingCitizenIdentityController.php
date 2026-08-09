@@ -4,6 +4,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reports\ApproveMissingCitizenIdentityNameMatchRequest;
+use App\Http\Requests\Reports\BulkApproveMissingCitizenIdentityNameMatchesRequest;
 use App\Models\HousingUnit;
 use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
@@ -196,18 +197,121 @@ class MissingCitizenIdentityController extends Controller
             ], 422);
         }
 
-        $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
+        $result = $this->approveReportWithCitizen($report, $citizen, $request->user()?->id, $arcgisService);
 
-        if (! $housingUnit instanceof HousingUnit) {
+        if (! $result['success'] && ($result['reason'] ?? null) === 'missing_housing_unit') {
             return response()->json([
                 'message' => __('ui.missing_citizen_identities.housing_unit_missing'),
             ], 404);
         }
 
+        return response()->json([
+            'message' => ($result['arcgis_success'] ?? false)
+                ? __('ui.missing_citizen_identities.approved_success')
+                : __('ui.missing_citizen_identities.approved_with_arcgis_error'),
+            'arcgis_status' => $result['arcgis_status'] ?? 'failed',
+        ]);
+    }
+
+    public function bulkApproveNameMatches(
+        BulkApproveMissingCitizenIdentityNameMatchesRequest $request,
+        ArcgisService $arcgisService
+    ): JsonResponse {
+        $reports = MissingCitizenIdentityReport::query()
+            ->whereIn('id', $request->input('report_ids', []))
+            ->whereNull('approved_at')
+            ->get();
+
+        $approved = 0;
+        $failed = 0;
+        $skipped = 0;
+
+        foreach ($reports as $report) {
+            $citizen = $this->automaticApprovalCitizen($report);
+
+            if ($citizen === null) {
+                $skipped++;
+
+                continue;
+            }
+
+            $result = $this->approveReportWithCitizen($report, $citizen, $request->user()?->id, $arcgisService);
+
+            if ($result['success']) {
+                $approved++;
+            } else {
+                $failed++;
+            }
+        }
+
+        return response()->json([
+            'message' => __('ui.missing_citizen_identities.bulk_approved_success', [
+                'approved' => $approved,
+                'failed' => $failed,
+                'skipped' => $skipped,
+            ]),
+            'approved' => $approved,
+            'failed' => $failed,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    private function approvalCitizen(ApproveMissingCitizenIdentityNameMatchRequest $request, MissingCitizenIdentityReport $report): ?object
+    {
+        if ($request->filled('citizen_id')) {
+            return DB::table($this->citizensTable())
+                ->select(['id', 'id_card_no', 'full_name'])
+                ->where('id', $request->integer('citizen_id'))
+                ->where('status', 'A')
+                ->first();
+        }
+
+        if ($report->name_match_status !== 'matched' || ! filled($report->matched_citizen_id_card_no)) {
+            return null;
+        }
+
+        return (object) [
+            'id' => $report->matched_citizen_id,
+            'id_card_no' => $report->matched_citizen_id_card_no,
+            'full_name' => $report->matched_citizen_full_name,
+        ];
+    }
+
+    private function automaticApprovalCitizen(MissingCitizenIdentityReport $report): ?object
+    {
+        if ($report->name_match_status !== 'matched' || ! filled($report->matched_citizen_id_card_no)) {
+            return null;
+        }
+
+        return (object) [
+            'id' => $report->matched_citizen_id,
+            'id_card_no' => $report->matched_citizen_id_card_no,
+            'full_name' => $report->matched_citizen_full_name,
+        ];
+    }
+
+    /**
+     * @return array{success: bool, arcgis_success?: bool, arcgis_status?: string, reason?: string}
+     */
+    private function approveReportWithCitizen(
+        MissingCitizenIdentityReport $report,
+        object $citizen,
+        ?int $userId,
+        ArcgisService $arcgisService
+    ): array {
+        $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
+
+        if (! $housingUnit instanceof HousingUnit) {
+            return [
+                'success' => false,
+                'reason' => 'missing_housing_unit',
+            ];
+        }
+
         $oldIdNumber = (string) $housingUnit->id_number1;
         $newIdNumber = (string) $citizen->id_card_no;
 
-        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $request, $citizen): void {
+        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $userId, $citizen): void {
             $housingUnit->forceFill([
                 'id_number1' => $newIdNumber,
             ])->save();
@@ -217,7 +321,7 @@ class MissingCitizenIdentityController extends Controller
                 'matched_citizen_id_card_no' => $citizen->id_card_no,
                 'matched_citizen_full_name' => $citizen->full_name,
                 'approved_at' => now(),
-                'approved_by' => $request->user()?->id,
+                'approved_by' => $userId,
             ])->save();
 
             MissingCitizenIdentityApproval::query()->create([
@@ -229,7 +333,7 @@ class MissingCitizenIdentityController extends Controller
                 'owner_name' => $report->owner_name,
                 'citizen_id' => $citizen->id,
                 'citizen_full_name' => $citizen->full_name,
-                'approved_by' => $request->user()?->id,
+                'approved_by' => $userId,
                 'arcgis_sync_status' => 'pending',
             ]);
         });
@@ -252,32 +356,10 @@ class MissingCitizenIdentityController extends Controller
             'arcgis_sync_message' => $arcgisResult['message'] ?? null,
         ])->save();
 
-        return response()->json([
-            'message' => ($arcgisResult['success'] ?? false)
-                ? __('ui.missing_citizen_identities.approved_success')
-                : __('ui.missing_citizen_identities.approved_with_arcgis_error'),
+        return [
+            'success' => true,
+            'arcgis_success' => (bool) ($arcgisResult['success'] ?? false),
             'arcgis_status' => $arcgisResult['status'] ?? 'failed',
-        ]);
-    }
-
-    private function approvalCitizen(ApproveMissingCitizenIdentityNameMatchRequest $request, MissingCitizenIdentityReport $report): ?object
-    {
-        if ($request->filled('citizen_id')) {
-            return DB::table($this->citizensTable())
-                ->select(['id', 'id_card_no', 'full_name'])
-                ->where('id', $request->integer('citizen_id'))
-                ->where('status', 'A')
-                ->first();
-        }
-
-        if ($report->name_match_status !== 'matched' || ! filled($report->matched_citizen_id_card_no)) {
-            return null;
-        }
-
-        return (object) [
-            'id' => $report->matched_citizen_id,
-            'id_card_no' => $report->matched_citizen_id_card_no,
-            'full_name' => $report->matched_citizen_full_name,
         ];
     }
 
