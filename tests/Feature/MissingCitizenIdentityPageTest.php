@@ -146,3 +146,73 @@ it('approves a single name match and syncs the new identity to arcgis', function
             && str_contains((string) $request['features'], '"id_number1":"222222222"');
     });
 });
+
+it('lists ambiguous name candidates and approves the selected citizen', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 777],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 777,
+        'globalid' => 'ambiguous-citizen-id',
+        'unit_owner' => 'Ambiguous Owner',
+        'id_number1' => '333333333',
+    ]);
+
+    DB::table('citizens')->insert([
+        [
+            'id_card_no' => '444444444',
+            'status' => 'A',
+            'full_name' => 'Ambiguous Owner',
+            'full_name_normalized' => 'AmbiguousOwner',
+        ],
+        [
+            'id_card_no' => '555555555',
+            'status' => 'A',
+            'full_name' => 'Ambiguous Owner',
+            'full_name_normalized' => 'AmbiguousOwner',
+        ],
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
+
+    expect($report->name_match_status)->toBe('ambiguous')
+        ->and($report->matched_citizens_count)->toBe(2);
+
+    $user = User::factory()->create();
+
+    $this
+        ->actingAs($user)
+        ->getJson(route('reports.missing-citizen-identities.name-candidates', $report))
+        ->assertOk()
+        ->assertJsonFragment(['id_card_no' => '444444444'])
+        ->assertJsonFragment(['id_card_no' => '555555555'])
+        ->assertJsonCount(2, 'data');
+
+    $chosenCitizenId = DB::table('citizens')->where('id_card_no', '555555555')->value('id');
+
+    $this
+        ->actingAs($user)
+        ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
+            'confirm' => true,
+            'citizen_id' => $chosenCitizenId,
+        ])
+        ->assertOk()
+        ->assertJsonPath('arcgis_status', 'synced');
+
+    expect($housingUnit->fresh()->id_number1)->toBe('555555555')
+        ->and($report->fresh()->matched_citizen_id_card_no)->toBe('555555555')
+        ->and($report->fresh()->approved_at)->not->toBeNull();
+});

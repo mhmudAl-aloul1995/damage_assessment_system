@@ -76,12 +76,47 @@ class MissingCitizenIdentityController extends Controller
                     'matched_citizens_count' => $report->matched_citizens_count,
                     'can_approve_name_match' => $report->name_match_status === 'matched'
                         && filled($report->matched_citizen_id_card_no),
+                    'can_show_name_candidates' => $report->name_match_status === 'ambiguous'
+                        && $report->matched_citizens_count > 1,
                 ])
                 ->values(),
             'has_more' => $rows->count() > $perPage,
             'next_cursor' => $rows->take($perPage)->last()?->id,
             'per_page' => $perPage,
             'total' => $total,
+        ]);
+    }
+
+    public function nameCandidates(MissingCitizenIdentityReport $report): JsonResponse
+    {
+        if ($report->approved_at !== null) {
+            return response()->json([
+                'message' => __('ui.missing_citizen_identities.already_approved'),
+            ], 422);
+        }
+
+        if (! filled($report->normalized_owner_name)) {
+            return response()->json([
+                'data' => [],
+            ]);
+        }
+
+        $candidates = DB::table($this->citizensTable())
+            ->select(['id', 'id_card_no', 'full_name'])
+            ->where('status', 'A')
+            ->where('full_name_normalized', $report->normalized_owner_name)
+            ->orderBy('id')
+            ->limit(20)
+            ->get()
+            ->map(fn ($citizen): array => [
+                'id' => $citizen->id,
+                'id_card_no' => (string) $citizen->id_card_no,
+                'full_name' => $citizen->full_name ?: '-',
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => $candidates,
         ]);
     }
 
@@ -96,7 +131,9 @@ class MissingCitizenIdentityController extends Controller
             ], 422);
         }
 
-        if ($report->name_match_status !== 'matched' || ! filled($report->matched_citizen_id_card_no)) {
+        $citizen = $this->approvalCitizen($request, $report);
+
+        if ($citizen === null) {
             return response()->json([
                 'message' => __('ui.missing_citizen_identities.approve_unavailable'),
             ], 422);
@@ -111,14 +148,17 @@ class MissingCitizenIdentityController extends Controller
         }
 
         $oldIdNumber = (string) $housingUnit->id_number1;
-        $newIdNumber = (string) $report->matched_citizen_id_card_no;
+        $newIdNumber = (string) $citizen->id_card_no;
 
-        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $request): void {
+        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $request, $citizen): void {
             $housingUnit->forceFill([
                 'id_number1' => $newIdNumber,
             ])->save();
 
             $report->forceFill([
+                'matched_citizen_id' => $citizen->id,
+                'matched_citizen_id_card_no' => $citizen->id_card_no,
+                'matched_citizen_full_name' => $citizen->full_name,
                 'approved_at' => now(),
                 'approved_by' => $request->user()?->id,
             ])->save();
@@ -130,8 +170,8 @@ class MissingCitizenIdentityController extends Controller
                 'old_id_number' => $oldIdNumber,
                 'new_id_number' => $newIdNumber,
                 'owner_name' => $report->owner_name,
-                'citizen_id' => $report->matched_citizen_id,
-                'citizen_full_name' => $report->matched_citizen_full_name,
+                'citizen_id' => $citizen->id,
+                'citizen_full_name' => $citizen->full_name,
                 'approved_by' => $request->user()?->id,
                 'arcgis_sync_status' => 'pending',
             ]);
@@ -161,5 +201,36 @@ class MissingCitizenIdentityController extends Controller
                 : __('ui.missing_citizen_identities.approved_with_arcgis_error'),
             'arcgis_status' => $arcgisResult['status'] ?? 'failed',
         ]);
+    }
+
+    private function approvalCitizen(ApproveMissingCitizenIdentityNameMatchRequest $request, MissingCitizenIdentityReport $report): ?object
+    {
+        if ($request->filled('citizen_id')) {
+            return DB::table($this->citizensTable())
+                ->select(['id', 'id_card_no', 'full_name'])
+                ->where('id', $request->integer('citizen_id'))
+                ->where('status', 'A')
+                ->where('full_name_normalized', $report->normalized_owner_name)
+                ->first();
+        }
+
+        if ($report->name_match_status !== 'matched' || ! filled($report->matched_citizen_id_card_no)) {
+            return null;
+        }
+
+        return (object) [
+            'id' => $report->matched_citizen_id,
+            'id_card_no' => $report->matched_citizen_id_card_no,
+            'full_name' => $report->matched_citizen_full_name,
+        ];
+    }
+
+    private function citizensTable(): string
+    {
+        if (app()->environment('testing')) {
+            return 'citizens';
+        }
+
+        return 'phc_dashboard.citizens';
     }
 }

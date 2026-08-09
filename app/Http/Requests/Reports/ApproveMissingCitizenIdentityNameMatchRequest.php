@@ -23,6 +23,7 @@ class ApproveMissingCitizenIdentityNameMatchRequest extends FormRequest
     {
         return [
             'confirm' => ['nullable', 'boolean'],
+            'citizen_id' => ['nullable', 'integer'],
         ];
     }
 }

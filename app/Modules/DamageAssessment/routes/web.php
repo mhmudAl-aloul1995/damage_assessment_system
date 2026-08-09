@@ -180,6 +180,9 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/missing-citizen-identities/{report}/approve-name-match', [MissingCitizenIdentityController::class, 'approveNameMatch'])
                 ->name('missing-citizen-identities.approve-name-match');
+
+            Route::get('/missing-citizen-identities/{report}/name-candidates', [MissingCitizenIdentityController::class, 'nameCandidates'])
+                ->name('missing-citizen-identities.name-candidates');
             Route::get('/damage-statistics', [DamageStatisticsReportController::class, 'index'])
                 ->name('damage-statistics.index');
 
