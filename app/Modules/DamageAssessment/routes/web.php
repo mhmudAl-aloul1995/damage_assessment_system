@@ -286,6 +286,12 @@ Route::middleware('auth')->group(function () {
         ->name('audit.building.field-status.completed');
     Route::post('/audit/buildings/{building:globalid}/restore-audited-to-normal', [auditController::class, 'restoreAuditedToNormal'])
         ->name('audit.building.restore-audited-to-normal');
+    Route::post('/audit/buildings/{building:globalid}/delete/schedule', [auditController::class, 'scheduleBuildingDeletion'])
+        ->name('audit.building.delete.schedule');
+    Route::post('/audit/buildings/delete/undo', [auditController::class, 'undoBuildingDeletion'])
+        ->name('audit.building.delete.undo');
+    Route::post('/audit/buildings/delete/commit', [auditController::class, 'commitBuildingDeletion'])
+        ->name('audit.building.delete.commit');
     Route::post('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'storeBuildingAttachment'])
         ->name('audit.building.attachments.store');
     Route::post('/audit/buildings/{building:globalid}/attachments/{attachmentId}/replace', [auditController::class, 'replaceBuildingAttachment'])
