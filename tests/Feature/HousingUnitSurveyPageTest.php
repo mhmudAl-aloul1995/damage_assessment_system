@@ -403,11 +403,13 @@ it('exports filtered housing units to excel from the housing units table', funct
 
     Excel::matchByRegex();
     Excel::assertDownloaded('/housing-units-\d{8}-\d{6}\.xlsx/', function (HousingUnitBoqExport $export): bool {
-        return $export->collection()->count() === 1
-            && $export->collection()->first()['globalid'] === 'housing-unit-export-included'
-            && $export->collection()->first()['item_code'] === 'DM1'
-            && $export->collection()->first()['quantity'] === '12.5'
-            && $export->headings() === ['Object ID', 'رقم الوحدة', 'مالك الوحدة', 'القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'];
+        $rows = collect($export->array());
+
+        return $rows->contains(['Object ID', 3501, 'رقم الوحدة', '-', 'اسم مالك الوحدة'])
+            && $rows->contains([null, null, null, null, 'Included Owner'])
+            && $rows->contains(['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'])
+            && $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '12.5')
+            && ! $rows->contains(['Object ID', 'رقم الوحدة', 'مالك الوحدة', 'القسم', 'الكود', 'البند', 'الوحدة', 'الكمية']);
     });
 });
 
@@ -441,6 +443,8 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
     Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf): bool {
         return $pdf->viewName === 'damage-assessment::surveys.housing-units.export_pdf'
             && $pdf->contains('3601')
+            && $pdf->contains('PDF Owner')
+            && $pdf->contains('اسم مالك الوحدة')
             && $pdf->contains('جدول الكميات BOQ')
             && $pdf->contains('إزالة حوائط');
     });

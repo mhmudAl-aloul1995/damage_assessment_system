@@ -19,6 +19,11 @@
         .card-value { font-size: 16px; font-weight: 900; color: #111827; direction: ltr; text-align: right; }
         .primary { color: #1b84ff; }
         .success { color: #16a34a; }
+        .unit-block { margin-top: 14px; page-break-inside: avoid; }
+        .unit-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+        .unit-meta-item { border: 1px solid #d8e7fb; border-radius: 9px; padding: 8px 10px; background: #eaf4ff; }
+        .unit-meta-label { color: #64748b; font-size: 10px; margin-bottom: 3px; }
+        .unit-meta-value { font-size: 13px; font-weight: 900; color: #0f172a; direction: ltr; text-align: right; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th { background: #10233f; color: #fff; font-size: 10px; padding: 7px 6px; border: 1px solid #10233f; }
         td { padding: 7px 6px; border: 1px solid #e3e9f2; vertical-align: top; background: #fff; }
@@ -28,8 +33,6 @@
         .qty { width: 70px; }
         .code { width: 62px; }
         .section { width: 120px; }
-        .unit-no { width: 70px; }
-        .objectid { width: 70px; }
         .desc { width: auto; }
         .empty { padding: 24px; text-align: center; color: #64748b; border: 1px dashed #ccd6e3; border-radius: 10px; background: #fbfdff; }
         .footer { margin-top: 12px; display: flex; justify-content: space-between; color: #8a97aa; font-size: 9px; }
@@ -78,41 +81,55 @@
         @if ($boqRows->isEmpty())
             <div class="empty">لا توجد بنود جدول كميات لهذه البيانات.</div>
         @else
-            <table>
-                <colgroup>
-                    <col class="objectid">
-                    <col class="unit-no">
-                    <col class="section">
-                    <col class="code">
-                    <col class="desc">
-                    <col class="unit">
-                    <col class="qty">
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th>Object ID</th>
-                        <th>رقم الوحدة</th>
-                        <th>القسم</th>
-                        <th>الكود</th>
-                        <th>البند</th>
-                        <th>الوحدة</th>
-                        <th>الكمية</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($boqRows as $row)
-                        <tr>
-                            <td class="num">{{ $row['objectid'] ?: '-' }}</td>
-                            <td class="num">{{ $row['housing_unit_number'] ?: '-' }}</td>
-                            <td>{{ $row['section'] }}</td>
-                            <td class="num">{{ $row['item_code'] ?: '-' }}</td>
-                            <td>{{ $row['description'] }}</td>
-                            <td class="num">{{ $row['unit'] ?: '-' }}</td>
-                            <td class="num">{{ $row['quantity'] ?: '-' }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+            @foreach ($boqRows->groupBy('globalid') as $unitRows)
+                @php($firstRow = $unitRows->first())
+                <section class="unit-block">
+                    <div class="unit-meta">
+                        <div class="unit-meta-item">
+                            <div class="unit-meta-label">Object ID</div>
+                            <div class="unit-meta-value">{{ $firstRow['objectid'] ?: '-' }}</div>
+                        </div>
+                        <div class="unit-meta-item">
+                            <div class="unit-meta-label">رقم الوحدة</div>
+                            <div class="unit-meta-value">{{ $firstRow['housing_unit_number'] ?: '-' }}</div>
+                        </div>
+                        <div class="unit-meta-item">
+                            <div class="unit-meta-label">اسم مالك الوحدة</div>
+                            <div class="unit-meta-value">{{ $firstRow['unit_owner'] ?: '-' }}</div>
+                        </div>
+                    </div>
+
+                    <table>
+                        <colgroup>
+                            <col class="section">
+                            <col class="code">
+                            <col class="desc">
+                            <col class="unit">
+                            <col class="qty">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>القسم</th>
+                                <th>الكود</th>
+                                <th>البند</th>
+                                <th>الوحدة</th>
+                                <th>الكمية</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($unitRows as $row)
+                                <tr>
+                                    <td>{{ $row['section'] }}</td>
+                                    <td class="num">{{ $row['item_code'] ?: '-' }}</td>
+                                    <td>{{ $row['description'] }}</td>
+                                    <td class="num">{{ $row['unit'] ?: '-' }}</td>
+                                    <td class="num">{{ $row['quantity'] ?: '-' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </section>
+            @endforeach
         @endif
 
         <footer class="footer">

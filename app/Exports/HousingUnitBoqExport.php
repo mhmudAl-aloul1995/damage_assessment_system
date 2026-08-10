@@ -5,19 +5,16 @@ declare(strict_types=1);
 namespace App\Exports;
 
 use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class HousingUnitBoqExport implements FromCollection, ShouldAutoSize, WithEvents, WithHeadings, WithMapping, WithStrictNullComparison, WithTitle
+class HousingUnitBoqExport implements FromArray, ShouldAutoSize, WithEvents, WithTitle
 {
     /**
      * @param  Collection<int, array<string, mixed>>  $rows
@@ -28,44 +25,39 @@ class HousingUnitBoqExport implements FromCollection, ShouldAutoSize, WithEvents
         private readonly array $summary,
     ) {}
 
-    public function collection(): Collection
-    {
-        return $this->rows;
-    }
-
     /**
-     * @return array<int, string>
+     * @return array<int, array<int, mixed>>
      */
-    public function headings(): array
+    public function array(): array
     {
-        return [
-            'Object ID',
-            'رقم الوحدة',
-            'مالك الوحدة',
-            'القسم',
-            'الكود',
-            'البند',
-            'الوحدة',
-            'الكمية',
+        $sheetRows = [
+            ['جدول الكميات BOQ', null, null, null, null],
+            ['Damage Assessment Project', null, null, null, null],
+            ['عدد الوحدات: '.($this->summary['units_count'] ?? 0), 'عدد البنود: '.($this->summary['rows_count'] ?? 0), 'عدد الأقسام: '.($this->summary['sections_count'] ?? 0), null, null],
+            [null, null, null, null, null],
         ];
-    }
 
-    /**
-     * @param  array<string, mixed>  $row
-     * @return array<int, mixed>
-     */
-    public function map($row): array
-    {
-        return [
-            $row['objectid'],
-            $row['housing_unit_number'],
-            $row['unit_owner'],
-            $row['section'],
-            $row['item_code'],
-            $row['description'],
-            $row['unit'],
-            $row['quantity'],
-        ];
+        foreach ($this->rows->groupBy('globalid') as $unitRows) {
+            $firstRow = $unitRows->first();
+
+            $sheetRows[] = ['Object ID', $firstRow['objectid'] ?? '-', 'رقم الوحدة', $firstRow['housing_unit_number'] ?? '-', 'اسم مالك الوحدة'];
+            $sheetRows[] = [null, null, null, null, $firstRow['unit_owner'] ?? '-'];
+            $sheetRows[] = ['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'];
+
+            foreach ($unitRows as $row) {
+                $sheetRows[] = [
+                    $row['section'],
+                    $row['item_code'],
+                    $row['description'],
+                    $row['unit'],
+                    $row['quantity'],
+                ];
+            }
+
+            $sheetRows[] = [null, null, null, null, null];
+        }
+
+        return $sheetRows;
     }
 
     public function title(): string
@@ -84,16 +76,9 @@ class HousingUnitBoqExport implements FromCollection, ShouldAutoSize, WithEvents
                 $highestRow = $sheet->getHighestRow();
 
                 $sheet->setRightToLeft(true);
-                $sheet->insertNewRowBefore(1, 4);
-                $sheet->mergeCells('A1:H1');
-                $sheet->mergeCells('A2:H2');
-                $sheet->mergeCells('A3:H3');
-                $sheet->setCellValue('A1', 'جدول الكميات BOQ');
-                $sheet->setCellValue('A2', 'Damage Assessment Project');
-                $sheet->setCellValue('A3', 'عدد الوحدات: '.($this->summary['units_count'] ?? 0).' | عدد البنود: '.($this->summary['rows_count'] ?? 0));
-
-                $sheet->freezePane('A6');
-                $sheet->getStyle('A1:H3')->applyFromArray([
+                $sheet->mergeCells('A1:E1');
+                $sheet->mergeCells('A2:E2');
+                $sheet->getStyle('A1:E3')->applyFromArray([
                     'font' => ['bold' => true],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -102,22 +87,38 @@ class HousingUnitBoqExport implements FromCollection, ShouldAutoSize, WithEvents
                 ]);
                 $sheet->getStyle('A1')->getFont()->setSize(16);
 
-                $sheet->getStyle('A5:H5')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'color' => ['rgb' => 'FFFFFF'],
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => '10233F'],
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                ]);
+                for ($row = 5; $row <= $highestRow; $row++) {
+                    $firstCell = (string) $sheet->getCell("A{$row}")->getValue();
 
-                $sheet->getStyle("A1:H{$highestRow}")->applyFromArray([
+                    if ($firstCell === 'Object ID') {
+                        $sheet->getStyle("A{$row}:E".($row + 1))->applyFromArray([
+                            'font' => ['bold' => true],
+                            'fill' => [
+                                'fillType' => Fill::FILL_SOLID,
+                                'startColor' => ['rgb' => 'EAF4FF'],
+                            ],
+                        ]);
+                    }
+
+                    if ($firstCell === 'القسم') {
+                        $sheet->getStyle("A{$row}:E{$row}")->applyFromArray([
+                            'font' => [
+                                'bold' => true,
+                                'color' => ['rgb' => 'FFFFFF'],
+                            ],
+                            'fill' => [
+                                'fillType' => Fill::FILL_SOLID,
+                                'startColor' => ['rgb' => '10233F'],
+                            ],
+                            'alignment' => [
+                                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                                'vertical' => Alignment::VERTICAL_CENTER,
+                            ],
+                        ]);
+                    }
+                }
+
+                $sheet->getStyle("A1:E{$highestRow}")->applyFromArray([
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
@@ -130,10 +131,10 @@ class HousingUnitBoqExport implements FromCollection, ShouldAutoSize, WithEvents
                     ],
                 ]);
 
-                $sheet->getStyle("A6:H{$highestRow}")->getAlignment()->setWrapText(true);
-                $sheet->getStyle("H6:H{$highestRow}")->getNumberFormat()->setFormatCode('#,##0.00');
-                $sheet->getColumnDimension('D')->setWidth(26);
-                $sheet->getColumnDimension('F')->setWidth(70);
+                $sheet->getStyle("E1:E{$highestRow}")->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getColumnDimension('A')->setWidth(26);
+                $sheet->getColumnDimension('C')->setWidth(70);
+                $sheet->getColumnDimension('E')->setWidth(16);
             },
         ];
     }
