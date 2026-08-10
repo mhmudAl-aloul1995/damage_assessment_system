@@ -483,7 +483,7 @@ class HousingUnitController extends Controller
         $boqRows = $this->housingBoqRows($housing, $assessmentHints);
         $summary = $this->housingBoqSummary($housing, $boqRows);
 
-        $fileBaseName = 'housing-units-'.now()->format('Ymd-His');
+        $fileBaseName = $this->housingExportFileBaseName($housing);
 
         if ($format === 'pdf') {
             return Pdf::view('damage-assessment::surveys.housing-units.export_pdf', [
@@ -645,6 +645,39 @@ class HousingUnitController extends Controller
                 $housingUnit->setAttribute($field, $value);
             });
         });
+    }
+
+    /**
+     * @param  Collection<int, HousingUnit>  $housing
+     */
+    private function housingExportFileBaseName(Collection $housing): string
+    {
+        $timestamp = now()->format('Ymd-His');
+
+        if ($housing->count() === 1) {
+            $ownerName = $this->safeExportFileSegment($this->housingUnitOwnerName($housing->first()));
+
+            if ($ownerName !== null) {
+                return 'جدول-الكميات-'.$ownerName.'-'.$timestamp;
+            }
+        }
+
+        return 'housing-units-'.$timestamp;
+    }
+
+    private function safeExportFileSegment(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '' || $value === '-') {
+            return null;
+        }
+
+        $value = (string) preg_replace('/[\\\\\/:*?"<>|]+/u', ' ', $value);
+        $value = (string) preg_replace('/\s+/u', '-', trim($value));
+        $value = trim($value, '-_. ');
+
+        return $value !== '' ? (string) str($value)->limit(80, '') : null;
     }
 
     private function isHousingBoqColumn(string $column): bool

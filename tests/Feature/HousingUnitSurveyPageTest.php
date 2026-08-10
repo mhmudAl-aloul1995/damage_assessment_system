@@ -423,7 +423,7 @@ it('exports filtered housing units to excel from the audited housing units view'
     ]))->assertOk();
 
     Excel::matchByRegex();
-    Excel::assertDownloaded('/housing-units-\d{8}-\d{6}\.xlsx/', function (HousingUnitBoqExport $export): bool {
+    Excel::assertDownloaded('/جدول-الكميات-Included-Owner-\d{8}-\d{6}\.xlsx/u', function (HousingUnitBoqExport $export): bool {
         $rows = collect($export->array());
 
         return ! $export instanceof ShouldAutoSize
@@ -469,6 +469,8 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
         return $pdf->viewName === 'damage-assessment::surveys.housing-units.export_pdf'
             && $pdf->contains('3601')
             && $pdf->contains('PDF Owner')
+            && $pdf->downloadName !== ''
+            && str_contains($pdf->downloadName, 'PDF-Owner')
             && $pdf->contains('v_housing_units_audited')
             && ! $pdf->contains('card-value')
             && ! $pdf->contains('summary')
