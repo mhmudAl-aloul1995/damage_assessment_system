@@ -7,6 +7,7 @@ use App\Models\Filter;
 use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
@@ -425,7 +426,8 @@ it('exports filtered housing units to excel from the audited housing units view'
     Excel::assertDownloaded('/housing-units-\d{8}-\d{6}\.xlsx/', function (HousingUnitBoqExport $export): bool {
         $rows = collect($export->array());
 
-        return $rows->contains(['Object ID', 3501, 'رقم الوحدة', '-', 'اسم مالك الوحدة'])
+        return ! $export instanceof ShouldAutoSize
+            && $rows->contains(['Object ID', 3501, 'رقم الوحدة', '-', 'اسم مالك الوحدة'])
             && $rows->contains([null, null, null, null, 'Included Owner'])
             && ! $rows->contains([null, null, null, null, 'Original Owner'])
             && $rows->contains(['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'])

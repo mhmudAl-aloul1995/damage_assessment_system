@@ -6,7 +6,6 @@ namespace App\Exports;
 
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
@@ -14,7 +13,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class HousingUnitBoqExport implements FromArray, ShouldAutoSize, WithEvents, WithTitle
+class HousingUnitBoqExport implements FromArray, WithEvents, WithTitle
 {
     /**
      * @param  Collection<int, array<string, mixed>>  $rows
@@ -131,9 +130,11 @@ class HousingUnitBoqExport implements FromArray, ShouldAutoSize, WithEvents, Wit
                 ]);
 
                 $sheet->getStyle("E1:E{$highestRow}")->getNumberFormat()->setFormatCode('#,##0.00');
-                $sheet->getColumnDimension('A')->setWidth(26);
-                $sheet->getColumnDimension('C')->setWidth(70);
-                $sheet->getColumnDimension('E')->setWidth(16);
+                $sheet->getColumnDimension('A')->setWidth(24);
+                $sheet->getColumnDimension('B')->setWidth(12);
+                $sheet->getColumnDimension('C')->setWidth(58);
+                $sheet->getColumnDimension('D')->setWidth(12);
+                $sheet->getColumnDimension('E')->setWidth(12);
             },
         ];
     }
