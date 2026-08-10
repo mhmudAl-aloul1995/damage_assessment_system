@@ -10,11 +10,9 @@ use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
 use App\Models\HousingUnit;
-use App\Models\VHousingUnitAudited;
 use App\Support\BrowsershotConfiguration;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -481,6 +479,7 @@ class HousingUnitController extends Controller
         $housing = $this->exportQuery($request, $housingColumns)
             ->orderBy('objectid')
             ->get();
+        $housing = $this->applyAuditedHousingValues($housing, $housingColumns);
         $boqRows = $this->housingBoqRows($housing, $assessmentHints);
         $summary = $this->housingBoqSummary($housing, $boqRows);
 
@@ -551,7 +550,7 @@ class HousingUnitController extends Controller
      */
     private function exportQuery(HousingUnitExportRequest $request, array $housingColumns): Builder
     {
-        $query = VHousingUnitAudited::query()->select($housingColumns);
+        $query = HousingUnit::query()->select($housingColumns);
         $filters = $request->input('filters', []);
 
         if (! is_array($filters)) {
@@ -566,7 +565,7 @@ class HousingUnitController extends Controller
             $query->where('parentglobalid', $request->string('parentglobalid')->toString());
         }
 
-        $this->applyHousingFilters($query, $filters, self::HOUSING_EXPORT_SOURCE_TABLE);
+        $this->applyHousingFilters($query, $filters);
 
         return $query;
     }
@@ -576,7 +575,7 @@ class HousingUnitController extends Controller
      */
     private function housingBoqSelectColumns(): array
     {
-        $availableColumns = Schema::getColumnListing(self::HOUSING_EXPORT_SOURCE_TABLE);
+        $availableColumns = Schema::getColumnListing('housing_units');
 
         return array_values(array_intersect(array_unique(array_merge([
             'objectid',
@@ -599,10 +598,53 @@ class HousingUnitController extends Controller
      */
     private function housingBoqColumns(): array
     {
-        return collect(Schema::getColumnListing(self::HOUSING_EXPORT_SOURCE_TABLE))
+        return collect(Schema::getColumnListing('housing_units'))
             ->filter(fn (string $column): bool => $this->isHousingBoqColumn($column))
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  Collection<int, HousingUnit>  $housing
+     * @param  array<int, string>  $columns
+     * @return Collection<int, HousingUnit>
+     */
+    private function applyAuditedHousingValues(Collection $housing, array $columns): Collection
+    {
+        if ($housing->isEmpty()) {
+            return $housing;
+        }
+
+        $globalIds = $housing
+            ->pluck('globalid')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($globalIds === []) {
+            return $housing;
+        }
+
+        $auditedValues = DB::table('edit_assessments')
+            ->where('type', 'housing_table')
+            ->whereIn('global_id', $globalIds)
+            ->whereIn('field_name', $columns)
+            ->orderByDesc('id')
+            ->get(['global_id', 'field_name', 'field_value'])
+            ->groupBy('global_id')
+            ->map(fn (Collection $edits): Collection => $edits->unique('field_name')->pluck('field_value', 'field_name'));
+
+        return $housing->each(function (HousingUnit $housingUnit) use ($auditedValues): void {
+            $unitAuditedValues = $auditedValues->get($housingUnit->globalid);
+
+            if (! $unitAuditedValues instanceof Collection) {
+                return;
+            }
+
+            $unitAuditedValues->each(function (mixed $value, string $field) use ($housingUnit): void {
+                $housingUnit->setAttribute($field, $value);
+            });
+        });
     }
 
     private function isHousingBoqColumn(string $column): bool
@@ -613,7 +655,7 @@ class HousingUnitController extends Controller
     }
 
     /**
-     * @param  Collection<int, Model>  $housing
+     * @param  Collection<int, HousingUnit>  $housing
      * @param  Collection<string, Assessment>  $assessmentHints
      * @return Collection<int, array<string, mixed>>
      */
@@ -659,7 +701,7 @@ class HousingUnitController extends Controller
         return $rows->values();
     }
 
-    private function housingBoqRow(Model $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
+    private function housingBoqRow(HousingUnit $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
     {
         return [
             'objectid' => $housingUnit->objectid,
@@ -771,7 +813,7 @@ class HousingUnitController extends Controller
         return 'Miscellaneous Works';
     }
 
-    private function housingUnitOwnerName(Model $housingUnit): string
+    private function housingUnitOwnerName(HousingUnit $housingUnit): string
     {
         $name = collect([
             $housingUnit->q_9_3_1_first_name,
@@ -784,7 +826,7 @@ class HousingUnitController extends Controller
     }
 
     /**
-     * @param  Collection<int, Model>  $housing
+     * @param  Collection<int, HousingUnit>  $housing
      * @param  Collection<int, array<string, mixed>>  $boqRows
      * @return array<string, mixed>
      */
