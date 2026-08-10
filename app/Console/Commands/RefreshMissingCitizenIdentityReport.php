@@ -267,8 +267,18 @@ class RefreshMissingCitizenIdentityReport extends Command
             return collect();
         }
 
+        $identityNumbers = $identityNumbers
+            ->map(fn ($identityNumber): string => trim((string) $identityNumber))
+            ->filter()
+            ->values();
+
+        if ($identityNumbers->isEmpty()) {
+            return collect();
+        }
+
         return DB::table('sgaza')
-            ->whereIn('id_number', $identityNumbers)
+            ->selectRaw('TRIM(id_number) as id_number')
+            ->whereIn(DB::raw('TRIM(id_number)'), $identityNumbers)
             ->pluck('id_number');
     }
 

@@ -125,18 +125,18 @@ it('does not report identities that exist in sgaza civil registry', function ():
     HousingUnit::query()->create([
         'objectid' => 1101,
         'globalid' => 'sgaza-existing-id',
-        'unit_owner' => 'SGaza Existing',
-        'id_number1' => '777777777',
+        'unit_owner' => 'علي احمد يونس حمودة',
+        'id_number1' => '938900636',
     ]);
 
     DB::table('sgaza')->insert([
-        'id_number' => '777777777',
-        'first_name' => 'SGaza',
-        'father_name' => 'Existing',
-        'grandfather_name' => 'Civil',
-        'family_name' => 'Registry',
-        'full_name' => 'SGaza Existing Civil Registry',
-        'full_name_normalized' => 'SGazaExistingCivilRegistry',
+        'id_number' => ' 938900636 ',
+        'first_name' => 'علي',
+        'father_name' => 'احمد',
+        'grandfather_name' => 'يونس',
+        'family_name' => 'حمودة',
+        'full_name' => 'علي احمد يونس حمودة',
+        'full_name_normalized' => 'علياحمديونسحموده',
     ]);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])

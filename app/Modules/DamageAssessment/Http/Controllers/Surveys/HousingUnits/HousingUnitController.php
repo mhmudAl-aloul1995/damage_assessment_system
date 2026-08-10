@@ -2,6 +2,7 @@
 
 namespace App\Modules\DamageAssessment\Http\Controllers\Surveys\HousingUnits;
 
+use App\Exports\HousingUnitBoqExport;
 use App\Exports\TableExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\HousingUnitExportRequest;
@@ -9,14 +10,17 @@ use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
 use App\Models\HousingUnit;
+use App\Support\BrowsershotConfiguration;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
+use Spatie\Browsershot\Browsershot;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -464,31 +468,37 @@ class HousingUnitController extends Controller
 
         abort_unless(in_array($format, ['xlsx', 'pdf', 'csv'], true), 422, 'صيغة التصدير غير صحيحة.');
 
-        $housingColumns = $this->exportColumns($request->input('housing_columns', []));
+        $housingColumns = $this->housingBoqSelectColumns();
         $assessmentHints = Assessment::query()
-            ->whereIn('name', $housingColumns)
+            ->whereIn('name', $this->housingBoqColumns())
             ->get(['name', 'hint', 'label'])
             ->keyBy('name');
 
         $housing = $this->exportQuery($request, $housingColumns)
             ->orderBy('objectid')
             ->get();
+        $boqRows = $this->housingBoqRows($housing, $assessmentHints);
+        $summary = $this->housingBoqSummary($housing, $boqRows);
 
         $fileBaseName = 'housing-units-'.now()->format('Ymd-His');
 
         if ($format === 'pdf') {
             return Pdf::view('damage-assessment::surveys.housing-units.export_pdf', [
                 'housing' => $housing,
-                'housingColumns' => $housingColumns,
-                'assessmentHints' => $assessmentHints,
+                'boqRows' => $boqRows,
+                'summary' => $summary,
+                'generatedAt' => now()->format('Y-m-d H:i'),
             ])
                 ->format('a4')
                 ->landscape()
-                ->name($fileBaseName.'.pdf');
+                ->name($fileBaseName.'.pdf')
+                ->withBrowsershot(function (Browsershot $browsershot): void {
+                    app(BrowsershotConfiguration::class)->apply($browsershot);
+                });
         }
 
         return Excel::download(
-            new TableExport($housing, $housingColumns, $assessmentHints),
+            new HousingUnitBoqExport($boqRows, $summary),
             $fileBaseName.'.'.$format
         );
     }
@@ -554,6 +564,231 @@ class HousingUnitController extends Controller
         $this->applyHousingFilters($query, $filters);
 
         return $query;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function housingBoqSelectColumns(): array
+    {
+        return array_values(array_unique(array_merge([
+            'objectid',
+            'globalid',
+            'parentglobalid',
+            'housing_unit_number',
+            'unit_owner',
+            'q_9_3_1_first_name',
+            'q_9_3_2_second_name__father',
+            'q_9_3_3_third_name__grandfather',
+            'q_9_3_4_last_name',
+            'municipalitie',
+            'neighborhood',
+            'unit_damage_status',
+        ], $this->housingBoqColumns())));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function housingBoqColumns(): array
+    {
+        return collect(Schema::getColumnListing('housing_units'))
+            ->filter(fn (string $column): bool => $this->isHousingBoqColumn($column))
+            ->values()
+            ->all();
+    }
+
+    private function isHousingBoqColumn(string $column): bool
+    {
+        return (bool) preg_match('/^(dm|bl|co|fn|al|wd|mt|cm|pm|el|pv)\d+$/', $column)
+            || (bool) preg_match('/^(item|quant)\d+$/', $column)
+            || $column === 'pv_note';
+    }
+
+    /**
+     * @param  Collection<int, HousingUnit>  $housing
+     * @param  Collection<string, Assessment>  $assessmentHints
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function housingBoqRows(Collection $housing, Collection $assessmentHints): Collection
+    {
+        $rows = collect();
+        $boqColumns = $this->housingBoqColumns();
+
+        foreach ($housing as $housingUnit) {
+            $miscDescriptions = [];
+
+            foreach ($boqColumns as $column) {
+                $value = $this->cleanBoqValue($housingUnit->{$column} ?? null);
+
+                if ($value === null) {
+                    continue;
+                }
+
+                if (preg_match('/^item(\d+)$/', $column, $matches)) {
+                    $miscDescriptions[$matches[1]] = $value;
+
+                    continue;
+                }
+
+                if (preg_match('/^quant(\d+)$/', $column, $matches)) {
+                    $description = $miscDescriptions[$matches[1]] ?? $this->boqDescription($column, $assessmentHints);
+                    $rows->push($this->housingBoqRow($housingUnit, $column, $description, $value, 'ITEM'.$matches[1], 'Miscellaneous Works'));
+
+                    continue;
+                }
+
+                $rows->push($this->housingBoqRow(
+                    $housingUnit,
+                    $column,
+                    $this->boqDescription($column, $assessmentHints),
+                    $value,
+                    $this->boqItemCode($column, $assessmentHints),
+                    $this->boqSection($column)
+                ));
+            }
+        }
+
+        return $rows->values();
+    }
+
+    private function housingBoqRow(HousingUnit $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
+    {
+        return [
+            'objectid' => $housingUnit->objectid,
+            'globalid' => $housingUnit->globalid,
+            'housing_unit_number' => $housingUnit->housing_unit_number ?: '-',
+            'unit_owner' => $this->housingUnitOwnerName($housingUnit),
+            'municipalitie' => $housingUnit->municipalitie ?: '-',
+            'neighborhood' => $housingUnit->neighborhood ?: '-',
+            'unit_damage_status' => $housingUnit->unit_damage_status ?: '-',
+            'field' => $column,
+            'section' => $section,
+            'item_code' => $itemCode,
+            'description' => $description,
+            'unit' => $this->boqUnit($description),
+            'quantity' => $quantity,
+        ];
+    }
+
+    private function cleanBoqValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '' || $value === '0' || strtolower($value) === 'null') {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  Collection<string, Assessment>  $assessmentHints
+     */
+    private function boqDescription(string $column, Collection $assessmentHints): string
+    {
+        $assessment = $assessmentHints->get($column);
+        $description = trim((string) ($assessment?->hint ?: $assessment?->label ?: $column));
+
+        return $description !== '' ? $description : $column;
+    }
+
+    /**
+     * @param  Collection<string, Assessment>  $assessmentHints
+     */
+    private function boqItemCode(string $column, Collection $assessmentHints): string
+    {
+        $label = trim((string) ($assessmentHints->get($column)?->label ?? ''));
+
+        if (preg_match('/^([A-Za-z]{1,4}\d+[A-Za-z]?)\s*[-–]/', $label, $matches)) {
+            return strtoupper($matches[1]);
+        }
+
+        return strtoupper($column);
+    }
+
+    private function boqUnit(string $description): string
+    {
+        if (preg_match('/\(([^()]+)\)\s*$/u', $description, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return '-';
+    }
+
+    private function boqSection(string $column): string
+    {
+        if (preg_match('/^fn(\d+)$/', $column, $matches)) {
+            $number = (int) $matches[1];
+
+            if ($number >= 1 && $number <= 3) {
+                return 'Painting Works';
+            }
+
+            if (in_array($number, [5, 6, 7, 8, 10], true)) {
+                return 'Tiling Works';
+            }
+
+            if ($number === 4 || ($number >= 11 && $number <= 15)) {
+                return 'Marble Works';
+            }
+
+            if ($number >= 16 && $number <= 26) {
+                return 'Plastering Works (Gypsum / Plaster)';
+            }
+
+            return 'External Finishings Works';
+        }
+
+        foreach ([
+            'dm' => 'Demolishing Works',
+            'bl' => 'Blocks Works',
+            'co' => 'Concrete Works',
+            'al' => 'Aluminum Works',
+            'wd' => 'Wood Works',
+            'mt' => 'Metal Works',
+            'cm' => 'Combined',
+            'pm' => 'Plumping Works',
+            'el' => 'Electrical Works',
+            'pv' => 'PV System Works',
+        ] as $prefix => $section) {
+            if (str_starts_with($column, $prefix)) {
+                return $section;
+            }
+        }
+
+        return 'Miscellaneous Works';
+    }
+
+    private function housingUnitOwnerName(HousingUnit $housingUnit): string
+    {
+        $name = collect([
+            $housingUnit->q_9_3_1_first_name,
+            $housingUnit->q_9_3_2_second_name__father,
+            $housingUnit->q_9_3_3_third_name__grandfather,
+            $housingUnit->q_9_3_4_last_name,
+        ])->filter()->implode(' ');
+
+        return $name !== '' ? $name : ($housingUnit->unit_owner ?: '-');
+    }
+
+    /**
+     * @param  Collection<int, HousingUnit>  $housing
+     * @param  Collection<int, array<string, mixed>>  $boqRows
+     * @return array<string, mixed>
+     */
+    private function housingBoqSummary(Collection $housing, Collection $boqRows): array
+    {
+        return [
+            'units_count' => $housing->count(),
+            'rows_count' => $boqRows->count(),
+            'sections_count' => $boqRows->pluck('section')->unique()->count(),
+            'generated_at' => now()->format('Y-m-d H:i'),
+        ];
     }
 
     public function update(Request $request)
