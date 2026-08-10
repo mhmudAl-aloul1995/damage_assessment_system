@@ -13,12 +13,6 @@
         h1 { margin: 0 0 6px; color: #0f172a; font-size: 23px; font-weight: 900; }
         h2 { margin: 0 0 6px; color: #0f172a; font-size: 20px; font-weight: 900; }
         .meta { color: #64748b; font-size: 11px; }
-        .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-        .card { border: 1px solid #e5eaf2; border-radius: 9px; padding: 10px 12px; background: #fbfdff; }
-        .card-label { color: #64748b; font-size: 10px; margin-bottom: 4px; }
-        .card-value { font-size: 16px; font-weight: 900; color: #111827; direction: ltr; text-align: right; }
-        .primary { color: #1b84ff; }
-        .success { color: #16a34a; }
         .unit-block { margin-top: 14px; page-break-inside: avoid; }
         .unit-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
         .unit-meta-item { border: 1px solid #d8e7fb; border-radius: 9px; padding: 8px 10px; background: #eaf4ff; }
@@ -52,31 +46,8 @@
             <div>
                 <div class="eyebrow">بيانات التصدير</div>
                 <h2>وحدات الإسكان</h2>
-                <div class="meta">
-                    عدد الوحدات: {{ number_format((int) $summary['units_count']) }}
-                    | عدد الأقسام: {{ number_format((int) $summary['sections_count']) }}
-                </div>
             </div>
         </header>
-
-        <section class="summary">
-            <div class="card">
-                <div class="card-label">عدد الوحدات</div>
-                <div class="card-value primary">{{ number_format((int) $summary['units_count']) }}</div>
-            </div>
-            <div class="card">
-                <div class="card-label">عدد البنود</div>
-                <div class="card-value success">{{ number_format((int) $summary['rows_count']) }}</div>
-            </div>
-            <div class="card">
-                <div class="card-label">عدد الأقسام</div>
-                <div class="card-value">{{ number_format((int) $summary['sections_count']) }}</div>
-            </div>
-            <div class="card">
-                <div class="card-label">نوع التقرير</div>
-                <div class="card-value">BOQ</div>
-            </div>
-        </section>
 
         @if ($boqRows->isEmpty())
             <div class="empty">لا توجد بنود جدول كميات لهذه البيانات.</div>

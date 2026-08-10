@@ -409,6 +409,7 @@ it('exports filtered housing units to excel from the housing units table', funct
             && $rows->contains([null, null, null, null, 'Included Owner'])
             && $rows->contains(['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'])
             && $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '12.5')
+            && ! $rows->contains(fn (array $row): bool => is_string($row[1] ?? null) && str_contains($row[1], ':'))
             && ! $rows->contains(['Object ID', 'رقم الوحدة', 'مالك الوحدة', 'القسم', 'الكود', 'البند', 'الوحدة', 'الكمية']);
     });
 });
@@ -444,6 +445,8 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
         return $pdf->viewName === 'damage-assessment::surveys.housing-units.export_pdf'
             && $pdf->contains('3601')
             && $pdf->contains('PDF Owner')
+            && ! $pdf->contains('card-value')
+            && ! $pdf->contains('summary')
             && $pdf->contains('اسم مالك الوحدة')
             && $pdf->contains('جدول الكميات BOQ')
             && $pdf->contains('إزالة حوائط');

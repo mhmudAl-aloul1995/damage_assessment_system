@@ -33,7 +33,6 @@ class HousingUnitBoqExport implements FromArray, ShouldAutoSize, WithEvents, Wit
         $sheetRows = [
             ['جدول الكميات BOQ', null, null, null, null],
             ['Damage Assessment Project', null, null, null, null],
-            ['عدد الوحدات: '.($this->summary['units_count'] ?? 0), 'عدد البنود: '.($this->summary['rows_count'] ?? 0), 'عدد الأقسام: '.($this->summary['sections_count'] ?? 0), null, null],
             [null, null, null, null, null],
         ];
 
@@ -78,7 +77,7 @@ class HousingUnitBoqExport implements FromArray, ShouldAutoSize, WithEvents, Wit
                 $sheet->setRightToLeft(true);
                 $sheet->mergeCells('A1:E1');
                 $sheet->mergeCells('A2:E2');
-                $sheet->getStyle('A1:E3')->applyFromArray([
+                $sheet->getStyle('A1:E2')->applyFromArray([
                     'font' => ['bold' => true],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -87,7 +86,7 @@ class HousingUnitBoqExport implements FromArray, ShouldAutoSize, WithEvents, Wit
                 ]);
                 $sheet->getStyle('A1')->getFont()->setSize(16);
 
-                for ($row = 5; $row <= $highestRow; $row++) {
+                for ($row = 4; $row <= $highestRow; $row++) {
                     $firstCell = (string) $sheet->getCell("A{$row}")->getValue();
 
                     if ($firstCell === 'Object ID') {
