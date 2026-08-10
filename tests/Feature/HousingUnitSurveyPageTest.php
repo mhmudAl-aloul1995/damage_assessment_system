@@ -1,6 +1,6 @@
 <?php
 
-use App\Exports\TableExport;
+use App\Exports\HousingUnitBoqExport;
 use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
@@ -376,6 +376,7 @@ it('exports filtered housing units to excel from the housing units table', funct
         'globalid' => 'housing-unit-export-included',
         'unit_owner' => 'Included Owner',
         'municipalitie' => 'Gaza',
+        'dm1' => '12.5',
     ]);
 
     HousingUnit::query()->create([
@@ -383,6 +384,13 @@ it('exports filtered housing units to excel from the housing units table', funct
         'globalid' => 'housing-unit-export-excluded',
         'unit_owner' => 'Excluded Owner',
         'municipalitie' => 'Rafah',
+        'dm1' => '7',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'dm1',
+        'label' => 'DM1-Demolish walls',
+        'hint' => 'إزالة حوائط شاملا المعدات والمصنعية والترحيل لأقرب مكب (M2)',
     ]);
 
     $this->actingAs($user)->get(route('housing.export', [
@@ -394,10 +402,12 @@ it('exports filtered housing units to excel from the housing units table', funct
     ]))->assertOk();
 
     Excel::matchByRegex();
-    Excel::assertDownloaded('/housing-units-\d{8}-\d{6}\.xlsx/', function (TableExport $export): bool {
+    Excel::assertDownloaded('/housing-units-\d{8}-\d{6}\.xlsx/', function (HousingUnitBoqExport $export): bool {
         return $export->collection()->count() === 1
-            && $export->collection()->first()->globalid === 'housing-unit-export-included'
-            && $export->headings() === ['Objectid', 'Globalid', 'Unit owner', 'Municipalitie'];
+            && $export->collection()->first()['globalid'] === 'housing-unit-export-included'
+            && $export->collection()->first()['item_code'] === 'DM1'
+            && $export->collection()->first()['quantity'] === '12.5'
+            && $export->headings() === ['Object ID', 'رقم الوحدة', 'مالك الوحدة', 'القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'];
     });
 });
 
@@ -411,6 +421,13 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
         'globalid' => 'housing-unit-pdf-export',
         'unit_owner' => 'PDF Owner',
         'municipalitie' => 'Gaza',
+        'dm1' => '9',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'dm1',
+        'label' => 'DM1-Demolish walls',
+        'hint' => 'إزالة حوائط شاملا المعدات والمصنعية والترحيل لأقرب مكب (M2)',
     ]);
 
     $response = $this->actingAs($user)->get(route('housing.export', [
@@ -423,8 +440,9 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
 
     Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf): bool {
         return $pdf->viewName === 'damage-assessment::surveys.housing-units.export_pdf'
-            && $pdf->contains('housing-unit-pdf-export')
-            && $pdf->contains('PDF Owner');
+            && $pdf->contains('3601')
+            && $pdf->contains('جدول الكميات BOQ')
+            && $pdf->contains('إزالة حوائط');
     });
 });
 

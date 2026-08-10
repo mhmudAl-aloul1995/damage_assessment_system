@@ -1,76 +1,124 @@
-<!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
+<!doctype html>
+<html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <title>{{ __('ui.housing_page.title') }}</title>
+    <meta charset="utf-8">
+    <title>BOQ - Housing Units</title>
     <style>
-        body {
-            font-family: DejaVu Sans, sans-serif;
-            color: #1f2937;
-            font-size: 11px;
-        }
-
-        .heading {
-            margin-bottom: 16px;
-        }
-
-        .heading h1 {
-            margin: 0 0 6px;
-            font-size: 20px;
-        }
-
-        .meta {
-            color: #6b7280;
-            font-size: 11px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            border: 1px solid #d1d5db;
-            padding: 6px;
-            text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }};
-            vertical-align: top;
-            word-break: break-word;
-        }
-
-        th {
-            background: #f3f4f6;
-            font-weight: 700;
-        }
+        @page { size: A4 landscape; margin: 10mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "DejaVu Sans", "Tahoma", "Arial", sans-serif; direction: rtl; color: #172033; background: #f5f7fb; font-size: 11px; line-height: 1.55; }
+        .paper { background: #fff; border: 1px solid #dfe6f0; border-radius: 12px; padding: 18px 20px; }
+        .header { display: flex; justify-content: space-between; gap: 18px; border-bottom: 2px solid #e8eef6; padding-bottom: 14px; margin-bottom: 14px; }
+        .eyebrow { color: #1b84ff; font-weight: 800; font-size: 11px; margin-bottom: 4px; }
+        h1 { margin: 0 0 6px; color: #0f172a; font-size: 23px; font-weight: 900; }
+        h2 { margin: 0 0 6px; color: #0f172a; font-size: 20px; font-weight: 900; }
+        .meta { color: #64748b; font-size: 11px; }
+        .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+        .card { border: 1px solid #e5eaf2; border-radius: 9px; padding: 10px 12px; background: #fbfdff; }
+        .card-label { color: #64748b; font-size: 10px; margin-bottom: 4px; }
+        .card-value { font-size: 16px; font-weight: 900; color: #111827; direction: ltr; text-align: right; }
+        .primary { color: #1b84ff; }
+        .success { color: #16a34a; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { background: #10233f; color: #fff; font-size: 10px; padding: 7px 6px; border: 1px solid #10233f; }
+        td { padding: 7px 6px; border: 1px solid #e3e9f2; vertical-align: top; background: #fff; }
+        tbody tr:nth-child(even) td { background: #fafcff; }
+        .num { direction: ltr; text-align: right; unicode-bidi: plaintext; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .unit { width: 55px; }
+        .qty { width: 70px; }
+        .code { width: 62px; }
+        .section { width: 120px; }
+        .unit-no { width: 70px; }
+        .objectid { width: 70px; }
+        .desc { width: auto; }
+        .empty { padding: 24px; text-align: center; color: #64748b; border: 1px dashed #ccd6e3; border-radius: 10px; background: #fbfdff; }
+        .footer { margin-top: 12px; display: flex; justify-content: space-between; color: #8a97aa; font-size: 9px; }
     </style>
 </head>
 <body>
-    <div class="heading">
-        <h1>{{ __('ui.housing_page.title') }}</h1>
-        <div class="meta">{{ now()->format('Y-m-d H:i') }}</div>
-    </div>
+    <main class="paper">
+        <header class="header">
+            <div>
+                <div class="eyebrow">Damage Assessment Project</div>
+                <h1>جدول الكميات BOQ</h1>
+                <div class="meta">
+                    مصدر البيانات: housing_units
+                    | تاريخ التوليد: {{ $generatedAt }}
+                </div>
+            </div>
+            <div>
+                <div class="eyebrow">بيانات التصدير</div>
+                <h2>وحدات الإسكان</h2>
+                <div class="meta">
+                    عدد الوحدات: {{ number_format((int) $summary['units_count']) }}
+                    | عدد الأقسام: {{ number_format((int) $summary['sections_count']) }}
+                </div>
+            </div>
+        </header>
 
-    <table>
-        <thead>
-            <tr>
-                @foreach ($housingColumns as $column)
-                    <th>{{ $assessmentHints[$column]->hint ?? $assessmentHints[$column]->label ?? str($column)->replace('_', ' ')->title() }}</th>
-                @endforeach
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($housing as $housingUnit)
-                <tr>
-                    @foreach ($housingColumns as $column)
-                        <td>{{ $housingUnit->{$column} }}</td>
+        <section class="summary">
+            <div class="card">
+                <div class="card-label">عدد الوحدات</div>
+                <div class="card-value primary">{{ number_format((int) $summary['units_count']) }}</div>
+            </div>
+            <div class="card">
+                <div class="card-label">عدد البنود</div>
+                <div class="card-value success">{{ number_format((int) $summary['rows_count']) }}</div>
+            </div>
+            <div class="card">
+                <div class="card-label">عدد الأقسام</div>
+                <div class="card-value">{{ number_format((int) $summary['sections_count']) }}</div>
+            </div>
+            <div class="card">
+                <div class="card-label">نوع التقرير</div>
+                <div class="card-value">BOQ</div>
+            </div>
+        </section>
+
+        @if ($boqRows->isEmpty())
+            <div class="empty">لا توجد بنود جدول كميات لهذه البيانات.</div>
+        @else
+            <table>
+                <colgroup>
+                    <col class="objectid">
+                    <col class="unit-no">
+                    <col class="section">
+                    <col class="code">
+                    <col class="desc">
+                    <col class="unit">
+                    <col class="qty">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Object ID</th>
+                        <th>رقم الوحدة</th>
+                        <th>القسم</th>
+                        <th>الكود</th>
+                        <th>البند</th>
+                        <th>الوحدة</th>
+                        <th>الكمية</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($boqRows as $row)
+                        <tr>
+                            <td class="num">{{ $row['objectid'] ?: '-' }}</td>
+                            <td class="num">{{ $row['housing_unit_number'] ?: '-' }}</td>
+                            <td>{{ $row['section'] }}</td>
+                            <td class="num">{{ $row['item_code'] ?: '-' }}</td>
+                            <td>{{ $row['description'] }}</td>
+                            <td class="num">{{ $row['unit'] ?: '-' }}</td>
+                            <td class="num">{{ $row['quantity'] ?: '-' }}</td>
+                        </tr>
                     @endforeach
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="{{ max(count($housingColumns), 1) }}">لا توجد بيانات</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+                </tbody>
+            </table>
+        @endif
+
+        <footer class="footer">
+            <span>Palestinian Housing Council (PHC)</span>
+            <span>{{ $generatedAt }}</span>
+        </footer>
+    </main>
 </body>
 </html>
