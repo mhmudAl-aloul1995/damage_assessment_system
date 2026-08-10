@@ -175,10 +175,10 @@ class HousingUnitController extends Controller
 																	<a class="menu-link px-3" target="_blank" href="'.url('damage-assessment/assessment/'.$ctr->parentglobalid).'" data-kt-users-table-filter="delete_row">'.e(__('ui.damage_common.assessment')).'</a>
 																</div>
 																<div class="menu-item px-3">
-																	<a class="menu-link px-3" href="'.e($excelUrl).'">تصدير Excel</a>
+																	<a class="menu-link px-3" href="'.e($excelUrl).'">تصدير BOQ Excel</a>
 																</div>
 																<div class="menu-item px-3">
-																	<a class="menu-link px-3" href="'.e($pdfUrl).'">تصدير PDF</a>
+																	<a class="menu-link px-3" href="'.e($pdfUrl).'">تصدير BOQ PDF</a>
 																</div>
 															</div>';
             })

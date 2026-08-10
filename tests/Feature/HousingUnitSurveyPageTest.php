@@ -362,8 +362,8 @@ it('shows housing unit excel and pdf export links in the row actions menu', func
     $actionHtml = $response->json('data.0.action');
 
     expect($actionHtml)
-        ->toContain('تصدير Excel')
-        ->toContain('تصدير PDF')
+        ->toContain('تصدير BOQ Excel')
+        ->toContain('تصدير BOQ PDF')
         ->toContain(route('housing.export', ['format' => 'xlsx', 'globalid' => 'housing-unit-actions-export']))
         ->toContain(route('housing.export', ['format' => 'pdf', 'globalid' => 'housing-unit-actions-export']));
 });
