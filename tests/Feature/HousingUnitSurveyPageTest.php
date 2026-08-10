@@ -447,6 +447,8 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
             && $pdf->contains('PDF Owner')
             && ! $pdf->contains('card-value')
             && ! $pdf->contains('summary')
+            && ! $pdf->contains('.unit-block { margin-top: 14px; page-break-inside: avoid; }')
+            && $pdf->contains('.unit-block { margin-top: 14px; page-break-inside: auto; }')
             && $pdf->contains('اسم مالك الوحدة')
             && $pdf->contains('جدول الكميات BOQ')
             && $pdf->contains('إزالة حوائط');

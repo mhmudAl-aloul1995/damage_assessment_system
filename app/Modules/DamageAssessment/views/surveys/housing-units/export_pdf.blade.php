@@ -13,12 +13,14 @@
         h1 { margin: 0 0 6px; color: #0f172a; font-size: 23px; font-weight: 900; }
         h2 { margin: 0 0 6px; color: #0f172a; font-size: 20px; font-weight: 900; }
         .meta { color: #64748b; font-size: 11px; }
-        .unit-block { margin-top: 14px; page-break-inside: avoid; }
+        .unit-block { margin-top: 14px; page-break-inside: auto; }
         .unit-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
         .unit-meta-item { border: 1px solid #d8e7fb; border-radius: 9px; padding: 8px 10px; background: #eaf4ff; }
         .unit-meta-label { color: #64748b; font-size: 10px; margin-bottom: 3px; }
         .unit-meta-value { font-size: 13px; font-weight: 900; color: #0f172a; direction: ltr; text-align: right; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
         th { background: #10233f; color: #fff; font-size: 10px; padding: 7px 6px; border: 1px solid #10233f; }
         td { padding: 7px 6px; border: 1px solid #e3e9f2; vertical-align: top; background: #fff; }
         tbody tr:nth-child(even) td { background: #fafcff; }
