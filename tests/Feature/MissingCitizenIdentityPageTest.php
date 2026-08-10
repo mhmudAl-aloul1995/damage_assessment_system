@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AccessCivilRegistryRecord;
 use App\Models\HousingUnit;
 use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
@@ -219,7 +220,7 @@ it('lists ambiguous name candidates and approves the selected citizen', function
         ->actingAs($user)
         ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
             'confirm' => true,
-            'citizen_id' => $chosenCitizenId,
+            'citizen_id' => (string) $chosenCitizenId,
         ])
         ->assertOk()
         ->assertJsonPath('arcgis_status', 'synced');
@@ -253,10 +254,23 @@ it('searches the civil registry for unmatched names and approves a manually sele
     DB::table('citizens')->insert([
         [
             'id_card_no' => '666666666',
-            'status' => 'A',
+            'status' => 'I',
             'full_name' => 'Correct Citizen',
             'full_name_normalized' => 'CorrectCitizen',
         ],
+    ]);
+
+    $accessRecord = AccessCivilRegistryRecord::query()->create([
+        'id_card_no' => '666666666',
+        'first_name' => 'Correct',
+        'father_name' => 'Access',
+        'grand_name' => 'Civil',
+        'family_name' => 'Registry',
+        'full_name' => 'Correct Access Civil Registry',
+        'full_name_normalized' => 'CorrectAccessCivilRegistry',
+        'mother_name' => 'Mother',
+        'neighborhood' => 'Neighborhood',
+        'birth_date' => '1980-01-01',
     ]);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
@@ -275,15 +289,14 @@ it('searches the civil registry for unmatched names and approves a manually sele
             'q' => '666666',
         ]))
         ->assertOk()
-        ->assertJsonFragment(['id_card_no' => '666666666']);
-
-    $chosenCitizenId = DB::table('citizens')->where('id_card_no', '666666666')->value('id');
+        ->assertJsonFragment(['id_card_no' => '666666666'])
+        ->assertJsonFragment(['source' => __('ui.missing_citizen_identities.source_access')]);
 
     $this
         ->actingAs($user)
         ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
             'confirm' => true,
-            'citizen_id' => $chosenCitizenId,
+            'citizen_id' => 'access:'.$accessRecord->id,
         ])
         ->assertOk()
         ->assertJsonPath('arcgis_status', 'synced');

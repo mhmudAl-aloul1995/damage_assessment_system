@@ -33,6 +33,7 @@ Thumbs.db
 *.rar
 *.zip
 *.7z
+*.mdb
 /public/*
 !/public/login.php
 !/public/index.php

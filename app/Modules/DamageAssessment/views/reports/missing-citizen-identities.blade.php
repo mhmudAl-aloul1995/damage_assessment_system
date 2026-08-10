@@ -395,8 +395,15 @@
                 }
 
                 candidatesBody.innerHTML = candidates.map(function (candidate) {
+                    var source = candidate.source
+                        ? '<span class="badge badge-light-info ms-2">' + escapeHtml(candidate.source) + '</span>'
+                        : '';
+                    var details = candidate.details
+                        ? '<div class="text-muted fs-8 mt-1">' + escapeHtml(candidate.details) + '</div>'
+                        : '';
+
                     return '<tr>'
-                        + '<td>' + escapeHtml(candidate.full_name) + '</td>'
+                        + '<td><div class="fw-semibold">' + escapeHtml(candidate.full_name) + source + '</div>' + details + '</td>'
                         + '<td><span class="badge badge-light-primary">' + escapeHtml(candidate.id_card_no) + '</span></td>'
                         + '<td class="text-end"><button type="button" class="btn btn-sm btn-light-success" data-kt-missing-citizens-action="approve-candidate" data-citizen-id="' + escapeHtml(candidate.id) + '">{{ __('ui.missing_citizen_identities.approve_this_candidate') }}</button></td>'
                         + '</tr>';
