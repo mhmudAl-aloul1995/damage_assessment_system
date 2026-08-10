@@ -6,6 +6,7 @@ use App\Models\Building;
 use App\Models\Filter;
 use App\Models\HousingUnit;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
@@ -366,7 +367,7 @@ it('shows housing unit excel and pdf export links in the row actions menu', func
         ->toContain(route('housing.export', ['format' => 'pdf', 'globalid' => 'housing-unit-actions-export']));
 });
 
-it('exports filtered housing units to excel from the housing units table', function () {
+it('exports filtered housing units to excel from the audited housing units view', function () {
     Excel::fake();
 
     $user = User::factory()->create();
@@ -374,9 +375,9 @@ it('exports filtered housing units to excel from the housing units table', funct
     HousingUnit::query()->create([
         'objectid' => 3501,
         'globalid' => 'housing-unit-export-included',
-        'unit_owner' => 'Included Owner',
+        'unit_owner' => 'Original Owner',
         'municipalitie' => 'Gaza',
-        'dm1' => '12.5',
+        'dm1' => '1',
     ]);
 
     HousingUnit::query()->create([
@@ -393,6 +394,25 @@ it('exports filtered housing units to excel from the housing units table', funct
         'hint' => 'إزالة حوائط شاملا المعدات والمصنعية والترحيل لأقرب مكب (M2)',
     ]);
 
+    DB::table('edit_assessments')->insert([
+        [
+            'global_id' => 'housing-unit-export-included',
+            'type' => 'housing_table',
+            'field_name' => 'unit_owner',
+            'field_value' => 'Included Owner',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [
+            'global_id' => 'housing-unit-export-included',
+            'type' => 'housing_table',
+            'field_name' => 'dm1',
+            'field_value' => '12.5',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
     $this->actingAs($user)->get(route('housing.export', [
         'format' => 'xlsx',
         'filters' => [
@@ -407,8 +427,10 @@ it('exports filtered housing units to excel from the housing units table', funct
 
         return $rows->contains(['Object ID', 3501, 'رقم الوحدة', '-', 'اسم مالك الوحدة'])
             && $rows->contains([null, null, null, null, 'Included Owner'])
+            && ! $rows->contains([null, null, null, null, 'Original Owner'])
             && $rows->contains(['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'])
             && $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '12.5')
+            && ! $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '1')
             && ! $rows->contains(fn (array $row): bool => is_string($row[1] ?? null) && str_contains($row[1], ':'))
             && ! $rows->contains(['Object ID', 'رقم الوحدة', 'مالك الوحدة', 'القسم', 'الكود', 'البند', 'الوحدة', 'الكمية']);
     });
@@ -445,6 +467,7 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
         return $pdf->viewName === 'damage-assessment::surveys.housing-units.export_pdf'
             && $pdf->contains('3601')
             && $pdf->contains('PDF Owner')
+            && $pdf->contains('v_housing_units_audited')
             && ! $pdf->contains('card-value')
             && ! $pdf->contains('summary')
             && ! $pdf->contains('.unit-block { margin-top: 14px; page-break-inside: avoid; }')

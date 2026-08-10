@@ -10,9 +10,11 @@ use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
 use App\Models\HousingUnit;
+use App\Models\VHousingUnitAudited;
 use App\Support\BrowsershotConfiguration;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -28,6 +30,8 @@ use Yajra\Datatables\Datatables;
 
 class HousingUnitController extends Controller
 {
+    private const HOUSING_EXPORT_SOURCE_TABLE = 'v_housing_units_audited';
+
     public function index(?string $globalid = null): ViewContract
     {
         $filterColumns = ['id', 'list_name', 'name', 'label'];
@@ -245,7 +249,7 @@ class HousingUnitController extends Controller
             ->all();
     }
 
-    private function applyHousingFilters(Builder $query, array $filters): void
+    private function applyHousingFilters(Builder $query, array $filters, string $table = 'housing_units'): void
     {
         $assignedTo = $filters['assignedto'] ?? null;
 
@@ -299,7 +303,7 @@ class HousingUnitController extends Controller
         ];
 
         foreach ($selectFilters as $field) {
-            if (! Schema::hasColumn('housing_units', $field)) {
+            if (! Schema::hasColumn($table, $field)) {
                 continue;
             }
 
@@ -328,7 +332,7 @@ class HousingUnitController extends Controller
             'housing_unit_number',
             'objectid',
         ] as $field) {
-            if (! Schema::hasColumn('housing_units', $field)) {
+            if (! Schema::hasColumn($table, $field)) {
                 continue;
             }
 
@@ -340,7 +344,7 @@ class HousingUnitController extends Controller
         }
 
         foreach (['floor_number', 'damaged_area_m2', 'number_of_rooms', 'age'] as $field) {
-            if (! Schema::hasColumn('housing_units', $field)) {
+            if (! Schema::hasColumn($table, $field)) {
                 continue;
             }
 
@@ -356,7 +360,7 @@ class HousingUnitController extends Controller
             }
         }
 
-        $submissionDateColumn = $this->housingSubmissionDateColumn();
+        $submissionDateColumn = $this->housingSubmissionDateColumn($table);
 
         if ($submissionDateColumn !== null) {
             $from = $filters['submission_date_from'] ?? null;
@@ -372,10 +376,10 @@ class HousingUnitController extends Controller
         }
     }
 
-    private function housingSubmissionDateColumn(): ?string
+    private function housingSubmissionDateColumn(string $table = 'housing_units'): ?string
     {
         foreach (['building_submit_date'] as $column) {
-            if (Schema::hasColumn('housing_units', $column)) {
+            if (Schema::hasColumn($table, $column)) {
                 return $column;
             }
         }
@@ -487,6 +491,7 @@ class HousingUnitController extends Controller
                 'housing' => $housing,
                 'boqRows' => $boqRows,
                 'summary' => $summary,
+                'sourceTable' => self::HOUSING_EXPORT_SOURCE_TABLE,
                 'generatedAt' => now()->format('Y-m-d H:i'),
             ])
                 ->format('a4')
@@ -546,7 +551,7 @@ class HousingUnitController extends Controller
      */
     private function exportQuery(HousingUnitExportRequest $request, array $housingColumns): Builder
     {
-        $query = HousingUnit::query()->select($housingColumns);
+        $query = VHousingUnitAudited::query()->select($housingColumns);
         $filters = $request->input('filters', []);
 
         if (! is_array($filters)) {
@@ -561,7 +566,7 @@ class HousingUnitController extends Controller
             $query->where('parentglobalid', $request->string('parentglobalid')->toString());
         }
 
-        $this->applyHousingFilters($query, $filters);
+        $this->applyHousingFilters($query, $filters, self::HOUSING_EXPORT_SOURCE_TABLE);
 
         return $query;
     }
@@ -571,7 +576,9 @@ class HousingUnitController extends Controller
      */
     private function housingBoqSelectColumns(): array
     {
-        return array_values(array_unique(array_merge([
+        $availableColumns = Schema::getColumnListing(self::HOUSING_EXPORT_SOURCE_TABLE);
+
+        return array_values(array_intersect(array_unique(array_merge([
             'objectid',
             'globalid',
             'parentglobalid',
@@ -584,7 +591,7 @@ class HousingUnitController extends Controller
             'municipalitie',
             'neighborhood',
             'unit_damage_status',
-        ], $this->housingBoqColumns())));
+        ], $this->housingBoqColumns())), $availableColumns));
     }
 
     /**
@@ -592,7 +599,7 @@ class HousingUnitController extends Controller
      */
     private function housingBoqColumns(): array
     {
-        return collect(Schema::getColumnListing('housing_units'))
+        return collect(Schema::getColumnListing(self::HOUSING_EXPORT_SOURCE_TABLE))
             ->filter(fn (string $column): bool => $this->isHousingBoqColumn($column))
             ->values()
             ->all();
@@ -606,7 +613,7 @@ class HousingUnitController extends Controller
     }
 
     /**
-     * @param  Collection<int, HousingUnit>  $housing
+     * @param  Collection<int, Model>  $housing
      * @param  Collection<string, Assessment>  $assessmentHints
      * @return Collection<int, array<string, mixed>>
      */
@@ -652,7 +659,7 @@ class HousingUnitController extends Controller
         return $rows->values();
     }
 
-    private function housingBoqRow(HousingUnit $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
+    private function housingBoqRow(Model $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
     {
         return [
             'objectid' => $housingUnit->objectid,
@@ -764,7 +771,7 @@ class HousingUnitController extends Controller
         return 'Miscellaneous Works';
     }
 
-    private function housingUnitOwnerName(HousingUnit $housingUnit): string
+    private function housingUnitOwnerName(Model $housingUnit): string
     {
         $name = collect([
             $housingUnit->q_9_3_1_first_name,
@@ -777,7 +784,7 @@ class HousingUnitController extends Controller
     }
 
     /**
-     * @param  Collection<int, HousingUnit>  $housing
+     * @param  Collection<int, Model>  $housing
      * @param  Collection<int, array<string, mixed>>  $boqRows
      * @return array<string, mixed>
      */
