@@ -597,6 +597,7 @@ return [
         'type_to_search_citizens' => 'اكتب رقم الهوية أو بداية الاسم للبحث.',
         'source_citizens' => 'السجل المدني',
         'source_access' => 'Access',
+        'source_sgaza' => 'SGaza',
         'mother_name' => 'اسم الأم',
         'neighborhood' => 'الحي',
         'birth_date' => 'تاريخ الميلاد',

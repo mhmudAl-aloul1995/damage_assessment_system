@@ -4,6 +4,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Surveys\HousingUnits;
 
 use App\Exports\TableExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\HousingUnitExportRequest;
 use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Yajra\Datatables\Datatables;
 
 class HousingUnitController extends Controller
@@ -156,11 +159,20 @@ class HousingUnitController extends Controller
 															</div>';
             })
             ->editColumn('action', function ($ctr) {
+                $excelUrl = route('housing.export', ['format' => 'xlsx', 'globalid' => $ctr->globalid]);
+                $pdfUrl = route('housing.export', ['format' => 'pdf', 'globalid' => $ctr->globalid]);
+
                 return '<a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">'.e(__('ui.damage_common.actions')).'
 															<i class="ki-duotone ki-down fs-5 ms-1"></i></a>
-															<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
+															<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4" data-kt-menu="true">
 																<div class="menu-item px-3">
 																	<a class="menu-link px-3" target="_blank" href="'.url('damage-assessment/assessment/'.$ctr->parentglobalid).'" data-kt-users-table-filter="delete_row">'.e(__('ui.damage_common.assessment')).'</a>
+																</div>
+																<div class="menu-item px-3">
+																	<a class="menu-link px-3" href="'.e($excelUrl).'">تصدير Excel</a>
+																</div>
+																<div class="menu-item px-3">
+																	<a class="menu-link px-3" href="'.e($pdfUrl).'">تصدير PDF</a>
 																</div>
 															</div>';
             })
@@ -438,7 +450,110 @@ class HousingUnitController extends Controller
                 ->name('building-'.time().'.pdf');
         }
 
-        return Excel::download(new TableExport($housing, $housingColumns), time().'housing.'.$format);
+        $assessmentHints = Assessment::query()
+            ->whereIn('name', $housingColumns)
+            ->get(['name', 'hint', 'label'])
+            ->keyBy('name');
+
+        return Excel::download(new TableExport($housing, $housingColumns, $assessmentHints), time().'housing.'.$format);
+    }
+
+    public function export(HousingUnitExportRequest $request, ?string $format = null): BinaryFileResponse|PdfBuilder
+    {
+        $format = strtolower($format ?? (string) $request->input('format', 'xlsx'));
+
+        abort_unless(in_array($format, ['xlsx', 'pdf', 'csv'], true), 422, 'صيغة التصدير غير صحيحة.');
+
+        $housingColumns = $this->exportColumns($request->input('housing_columns', []));
+        $assessmentHints = Assessment::query()
+            ->whereIn('name', $housingColumns)
+            ->get(['name', 'hint', 'label'])
+            ->keyBy('name');
+
+        $housing = $this->exportQuery($request, $housingColumns)
+            ->orderBy('objectid')
+            ->get();
+
+        $fileBaseName = 'housing-units-'.now()->format('Ymd-His');
+
+        if ($format === 'pdf') {
+            return Pdf::view('damage-assessment::surveys.housing-units.export_pdf', [
+                'housing' => $housing,
+                'housingColumns' => $housingColumns,
+                'assessmentHints' => $assessmentHints,
+            ])
+                ->format('a4')
+                ->landscape()
+                ->name($fileBaseName.'.pdf');
+        }
+
+        return Excel::download(
+            new TableExport($housing, $housingColumns, $assessmentHints),
+            $fileBaseName.'.'.$format
+        );
+    }
+
+    /**
+     * @param  array<int, string|null>|mixed  $requestedColumns
+     * @return array<int, string>
+     */
+    private function exportColumns(mixed $requestedColumns): array
+    {
+        $availableColumns = Schema::getColumnListing('housing_units');
+        $requestedColumns = is_array($requestedColumns) ? $requestedColumns : [];
+        $columns = array_values(array_intersect(
+            array_values(array_filter($requestedColumns, fn ($column): bool => is_string($column) && $column !== '')),
+            $availableColumns
+        ));
+
+        if ($columns !== []) {
+            return $columns;
+        }
+
+        return array_values(array_intersect([
+            'objectid',
+            'globalid',
+            'parentglobalid',
+            'housing_unit_type',
+            'unit_damage_status',
+            'floor_number',
+            'housing_unit_number',
+            'unit_owner',
+            'id_number1',
+            'mobile_number',
+            'damaged_area_m2',
+            'municipalitie',
+            'neighborhood',
+            'unit_support_needed',
+            'is_the_housing_unit_or_living_habitable',
+            'building_submit_date',
+            'editdate',
+        ], $availableColumns));
+    }
+
+    /**
+     * @param  array<int, string>  $housingColumns
+     */
+    private function exportQuery(HousingUnitExportRequest $request, array $housingColumns): Builder
+    {
+        $query = HousingUnit::query()->select($housingColumns);
+        $filters = $request->input('filters', []);
+
+        if (! is_array($filters)) {
+            $filters = [];
+        }
+
+        if ($request->filled('globalid')) {
+            $query->where('globalid', $request->string('globalid')->toString());
+        }
+
+        if ($request->filled('parentglobalid')) {
+            $query->where('parentglobalid', $request->string('parentglobalid')->toString());
+        }
+
+        $this->applyHousingFilters($query, $filters);
+
+        return $query;
     }
 
     public function update(Request $request)

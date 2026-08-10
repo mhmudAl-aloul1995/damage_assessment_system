@@ -145,9 +145,11 @@ class MissingCitizenIdentityController extends Controller
             ->values();
 
         $accessRecords = $this->searchAccessCivilRegistry($search);
+        $sgazaRecords = $this->searchSgazaCivilRegistry($search);
 
         return response()->json([
             'data' => $citizens
+                ->merge($sgazaRecords)
                 ->merge($accessRecords)
                 ->unique('id_card_no')
                 ->take(20)
@@ -184,8 +186,14 @@ class MissingCitizenIdentityController extends Controller
             ])
             ->values();
 
+        $sgazaCandidates = $this->sgazaNameCandidates($report->normalized_owner_name);
+
         return response()->json([
-            'data' => $candidates,
+            'data' => $candidates
+                ->merge($sgazaCandidates)
+                ->unique('id_card_no')
+                ->take(20)
+                ->values(),
         ]);
     }
 
@@ -276,6 +284,20 @@ class MissingCitizenIdentityController extends Controller
                 $record = AccessCivilRegistryRecord::query()->find((int) Str::after($selectedCitizen, 'access:'));
 
                 if (! $record instanceof AccessCivilRegistryRecord || ! filled($record->id_card_no)) {
+                    return null;
+                }
+
+                return (object) [
+                    'id' => 0,
+                    'id_card_no' => $record->id_card_no,
+                    'full_name' => $record->full_name,
+                ];
+            }
+
+            if (str_starts_with($selectedCitizen, 'sgaza:')) {
+                $record = $this->sgazaRecordByIdNumber((string) Str::after($selectedCitizen, 'sgaza:'));
+
+                if ($record === null) {
                     return null;
                 }
 
@@ -439,5 +461,136 @@ class MissingCitizenIdentityController extends Controller
                     $record->birth_date ? __('ui.missing_citizen_identities.birth_date').': '.$record->birth_date->format('Y-m-d') : null,
                 ])->filter()->implode(' | '),
             ]);
+    }
+
+    private function searchSgazaCivilRegistry(string $search): Collection
+    {
+        if (! Schema::hasTable('sgaza') || ! Schema::hasColumn('sgaza', 'id_number')) {
+            return collect();
+        }
+
+        $query = DB::table('sgaza');
+
+        if (ctype_digit($search)) {
+            $query->where('id_number', 'like', $search.'%');
+        } else {
+            $normalizedSearch = ArabicNameNormalizer::normalize($search);
+
+            if ($normalizedSearch === '') {
+                return collect();
+            }
+
+            if (Schema::hasColumn('sgaza', 'full_name_normalized')) {
+                $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
+            } else {
+                $firstToken = Str::before($search, ' ');
+                $query->where('first_name', 'like', $firstToken.'%');
+            }
+        }
+
+        return $query
+            ->select([
+                'id_number',
+                'first_name',
+                'father_name',
+                'grandfather_name',
+                'family_name',
+                'mother_name',
+                'الحي as neighborhood',
+                'تاريخ الميلاد as birth_date',
+                ...(Schema::hasColumn('sgaza', 'full_name') ? ['full_name'] : []),
+            ])
+            ->orderBy('id_number')
+            ->limit(20)
+            ->get()
+            ->map(fn ($record): array => $this->sgazaRecordToCandidate($record));
+    }
+
+    private function sgazaNameCandidates(?string $normalizedOwnerName): Collection
+    {
+        if (
+            ! filled($normalizedOwnerName)
+            || ! Schema::hasTable('sgaza')
+            || ! Schema::hasColumn('sgaza', 'full_name_normalized')
+        ) {
+            return collect();
+        }
+
+        return DB::table('sgaza')
+            ->select([
+                'id_number',
+                'first_name',
+                'father_name',
+                'grandfather_name',
+                'family_name',
+                'mother_name',
+                'الحي as neighborhood',
+                'تاريخ الميلاد as birth_date',
+                ...(Schema::hasColumn('sgaza', 'full_name') ? ['full_name'] : []),
+            ])
+            ->where('full_name_normalized', $normalizedOwnerName)
+            ->orderBy('id_number')
+            ->limit(20)
+            ->get()
+            ->map(fn ($record): array => $this->sgazaRecordToCandidate($record));
+    }
+
+    private function sgazaRecordByIdNumber(string $idNumber): ?object
+    {
+        if (! Schema::hasTable('sgaza') || ! Schema::hasColumn('sgaza', 'id_number')) {
+            return null;
+        }
+
+        $record = DB::table('sgaza')
+            ->where('id_number', $idNumber)
+            ->select([
+                'id_number',
+                'first_name',
+                'father_name',
+                'grandfather_name',
+                'family_name',
+                ...(Schema::hasColumn('sgaza', 'full_name') ? ['full_name'] : []),
+            ])
+            ->first();
+
+        if ($record === null) {
+            return null;
+        }
+
+        return (object) [
+            'id_card_no' => $record->id_number,
+            'full_name' => $this->sgazaFullName($record),
+        ];
+    }
+
+    private function sgazaRecordToCandidate(object $record): array
+    {
+        return [
+            'id' => 'sgaza:'.$record->id_number,
+            'id_card_no' => (string) $record->id_number,
+            'full_name' => $this->sgazaFullName($record),
+            'source' => __('ui.missing_citizen_identities.source_sgaza'),
+            'details' => collect([
+                filled($record->mother_name ?? null) ? __('ui.missing_citizen_identities.mother_name').': '.$record->mother_name : null,
+                filled($record->neighborhood ?? null) ? __('ui.missing_citizen_identities.neighborhood').': '.$record->neighborhood : null,
+                filled($record->birth_date ?? null) ? __('ui.missing_citizen_identities.birth_date').': '.date('Y-m-d', strtotime((string) $record->birth_date)) : null,
+            ])->filter()->implode(' | '),
+        ];
+    }
+
+    private function sgazaFullName(object $record): string
+    {
+        if (filled($record->full_name ?? null)) {
+            return (string) $record->full_name;
+        }
+
+        $fullName = trim(implode(' ', array_filter([
+            trim((string) ($record->first_name ?? '')),
+            trim((string) ($record->father_name ?? '')),
+            trim((string) ($record->grandfather_name ?? '')),
+            trim((string) ($record->family_name ?? '')),
+        ])));
+
+        return $fullName !== '' ? $fullName : '-';
     }
 }

@@ -1,10 +1,14 @@
 <?php
 
+use App\Exports\TableExport;
 use App\Models\Assessment;
 use App\Models\Building;
 use App\Models\Filter;
 use App\Models\HousingUnit;
 use App\Models\User;
+use Maatwebsite\Excel\Facades\Excel;
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
 
 it('shows grouped housing unit filters from the assessment survey', function () {
     $user = User::factory()->create();
@@ -334,6 +338,94 @@ it('filters housing unit datatable records by the building save date', function 
     $response->assertJsonPath('recordsFiltered', 1);
     $response->assertSee('Saved Inside');
     $response->assertDontSee('Saved Outside');
+});
+
+it('shows housing unit excel and pdf export links in the row actions menu', function () {
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3401,
+        'globalid' => 'housing-unit-actions-export',
+        'housing_unit_number' => '51',
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/housing/show?'.http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+    ]));
+
+    $response->assertOk();
+
+    $actionHtml = $response->json('data.0.action');
+
+    expect($actionHtml)
+        ->toContain('تصدير Excel')
+        ->toContain('تصدير PDF')
+        ->toContain(route('housing.export', ['format' => 'xlsx', 'globalid' => 'housing-unit-actions-export']))
+        ->toContain(route('housing.export', ['format' => 'pdf', 'globalid' => 'housing-unit-actions-export']));
+});
+
+it('exports filtered housing units to excel from the housing units table', function () {
+    Excel::fake();
+
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3501,
+        'globalid' => 'housing-unit-export-included',
+        'unit_owner' => 'Included Owner',
+        'municipalitie' => 'Gaza',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3502,
+        'globalid' => 'housing-unit-export-excluded',
+        'unit_owner' => 'Excluded Owner',
+        'municipalitie' => 'Rafah',
+    ]);
+
+    $this->actingAs($user)->get(route('housing.export', [
+        'format' => 'xlsx',
+        'filters' => [
+            'municipalitie' => ['Gaza'],
+        ],
+        'housing_columns' => ['objectid', 'globalid', 'unit_owner', 'municipalitie'],
+    ]))->assertOk();
+
+    Excel::matchByRegex();
+    Excel::assertDownloaded('/housing-units-\d{8}-\d{6}\.xlsx/', function (TableExport $export): bool {
+        return $export->collection()->count() === 1
+            && $export->collection()->first()->globalid === 'housing-unit-export-included'
+            && $export->headings() === ['Objectid', 'Globalid', 'Unit owner', 'Municipalitie'];
+    });
+});
+
+it('exports a selected housing unit to pdf from the actions menu', function () {
+    Pdf::fake();
+
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3601,
+        'globalid' => 'housing-unit-pdf-export',
+        'unit_owner' => 'PDF Owner',
+        'municipalitie' => 'Gaza',
+    ]);
+
+    $response = $this->actingAs($user)->get(route('housing.export', [
+        'format' => 'pdf',
+        'globalid' => 'housing-unit-pdf-export',
+        'housing_columns' => ['objectid', 'globalid', 'unit_owner', 'municipalitie'],
+    ]));
+
+    $response->assertOk();
+
+    Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf): bool {
+        return $pdf->viewName === 'damage-assessment::surveys.housing-units.export_pdf'
+            && $pdf->contains('housing-unit-pdf-export')
+            && $pdf->contains('PDF Owner');
+    });
 });
 
 function seedHousingFilterOptions(): void

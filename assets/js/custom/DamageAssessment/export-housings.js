@@ -53,7 +53,10 @@ var KTModalExportUsers = function () {
                         setTimeout(function () {
                             submitButton.removeAttribute('data-kt-indicator');
 
-                            window.location.href = url_phc + "/export_housing?" + $("#kt_modal_export_housing_form").serialize() + '&' + $("#filter_housing_form").serialize()
+                            const format = ($(form).find('[name="format"]').val() || 'xlsx').toString().toLowerCase();
+                            const exportUrl = housing_export_url.replace('__FORMAT__', encodeURIComponent(format));
+
+                            window.location.href = exportUrl + "?" + $("#kt_modal_export_housing_form").serialize() + '&' + $("#filter_housing_form").serialize()
 
                             Swal.fire({
                                 text: "تم تصدير البيانات المطلوبة بنجاخ !",

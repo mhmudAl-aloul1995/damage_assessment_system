@@ -617,6 +617,7 @@ return [
         'type_to_search_citizens' => 'Type an ID number or name prefix to search.',
         'source_citizens' => 'Civil registry',
         'source_access' => 'Access',
+        'source_sgaza' => 'SGaza',
         'mother_name' => 'Mother name',
         'neighborhood' => 'Neighborhood',
         'birth_date' => 'Birth date',

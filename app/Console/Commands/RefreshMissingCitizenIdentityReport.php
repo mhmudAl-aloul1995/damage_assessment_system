@@ -65,8 +65,13 @@ class RefreshMissingCitizenIdentityReport extends Command
                     ->pluck('id_card_no')
                     ->mapWithKeys(fn ($id): array => [(string) $id => true]);
 
+                $sgazaIds = $this->sgazaIdsByNumbers($identityNumbers)
+                    ->mapWithKeys(fn ($id): array => [(string) $id => true]);
+
+                $existingCivilRegistryIds = $activeCitizenIds->union($sgazaIds);
+
                 $missingHousingUnits = $housingUnits
-                    ->filter(fn (HousingUnit $housingUnit): bool => ! isset($activeCitizenIds[trim((string) $housingUnit->id_number1)]))
+                    ->filter(fn (HousingUnit $housingUnit): bool => ! isset($existingCivilRegistryIds[trim((string) $housingUnit->id_number1)]))
                     ->values();
 
                 if ($missingHousingUnits->isEmpty()) {
@@ -227,29 +232,66 @@ class RefreshMissingCitizenIdentityReport extends Command
             ->get()
             ->groupBy(fn ($citizen): string => (string) $citizen->full_name_normalized);
 
+        $sgazaByNormalizedName = $this->sgazaMatchesByNormalizedNames($normalizedNamesByUnitId->unique()->values());
+
         return $housingUnits
-            ->mapWithKeys(function (HousingUnit $housingUnit) use ($normalizedNamesByUnitId, $citizensByNormalizedName): array {
+            ->mapWithKeys(function (HousingUnit $housingUnit) use ($normalizedNamesByUnitId, $citizensByNormalizedName, $sgazaByNormalizedName): array {
                 $normalizedOwnerName = (string) ($normalizedNamesByUnitId[$housingUnit->id] ?? '');
                 $citizens = $citizensByNormalizedName->get($normalizedOwnerName, collect());
-                $matchedCitizen = $citizens->count() === 1 ? $citizens->first() : null;
+                $sgazaRecords = $sgazaByNormalizedName->get($normalizedOwnerName, collect());
+                $matches = $citizens->merge($sgazaRecords);
+                $matchedCitizen = $matches->count() === 1 ? $matches->first() : null;
 
                 return [
                     $housingUnit->id => [
                         'normalized_owner_name' => $normalizedOwnerName,
                         'name_match_status' => match (true) {
                             $normalizedOwnerName === '' => 'no_owner_name',
-                            $citizens->count() === 1 => 'matched',
-                            $citizens->count() > 1 => 'ambiguous',
+                            $matches->count() === 1 => 'matched',
+                            $matches->count() > 1 => 'ambiguous',
                             default => 'not_found',
                         },
                         'matched_citizen_id' => $matchedCitizen?->id,
                         'matched_citizen_id_card_no' => $matchedCitizen?->id_card_no,
                         'matched_citizen_full_name' => $matchedCitizen?->full_name,
-                        'matched_citizens_count' => $citizens->count(),
+                        'matched_citizens_count' => $matches->count(),
                     ],
                 ];
             })
             ->all();
+    }
+
+    private function sgazaIdsByNumbers(Collection $identityNumbers): Collection
+    {
+        if (! Schema::hasTable('sgaza') || ! Schema::hasColumn('sgaza', 'id_number')) {
+            return collect();
+        }
+
+        return DB::table('sgaza')
+            ->whereIn('id_number', $identityNumbers)
+            ->pluck('id_number');
+    }
+
+    private function sgazaMatchesByNormalizedNames(Collection $normalizedNames): Collection
+    {
+        if (
+            ! Schema::hasTable('sgaza')
+            || ! Schema::hasColumn('sgaza', 'full_name_normalized')
+            || ! Schema::hasColumn('sgaza', 'full_name')
+        ) {
+            return collect();
+        }
+
+        return DB::table('sgaza')
+            ->select([
+                DB::raw('0 as id'),
+                'id_number as id_card_no',
+                'full_name',
+                'full_name_normalized',
+            ])
+            ->whereIn('full_name_normalized', $normalizedNames)
+            ->get()
+            ->groupBy(fn ($record): string => (string) $record->full_name_normalized);
     }
 
     private function citizensTable(): string

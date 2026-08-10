@@ -138,6 +138,8 @@ Route::middleware('auth')->group(function () {
     Route::get('export_building', action: [BuildingController::class, 'export_building']);
 
     // housing
+    Route::get('/housing/export/{format}', [HousingUnitController::class, 'export'])->name('housing.export');
+    Route::get('/export_housings', [HousingUnitController::class, 'export'])->name('housing.export.legacy');
     Route::resource('housing', controller: HousingUnitController::class);
     Route::get('/showHousing/{globalid}', action: [HousingUnitController::class, 'index']);
 

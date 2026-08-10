@@ -20,6 +20,22 @@ beforeEach(function (): void {
     });
 });
 
+function createSgazaTable(): void
+{
+    Schema::create('sgaza', function (Blueprint $table): void {
+        $table->string('id_number')->nullable();
+        $table->string('first_name')->nullable();
+        $table->string('father_name')->nullable();
+        $table->string('grandfather_name')->nullable();
+        $table->string('family_name')->nullable();
+        $table->string('full_name')->nullable();
+        $table->string('full_name_normalized')->nullable();
+        $table->string('mother_name')->nullable();
+        $table->string('الحي')->nullable();
+        $table->dateTime('تاريخ الميلاد')->nullable();
+    });
+}
+
 it('shows the missing citizen identities page', function (): void {
     $response = $this
         ->actingAs(User::factory()->create())
@@ -101,6 +117,32 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonPath('total', 1)
         ->assertJsonFragment(['id_number1' => '900000001'])
         ->assertJsonMissing(['id_number1' => '900000003']);
+});
+
+it('does not report identities that exist in sgaza civil registry', function (): void {
+    createSgazaTable();
+
+    HousingUnit::query()->create([
+        'objectid' => 1101,
+        'globalid' => 'sgaza-existing-id',
+        'unit_owner' => 'SGaza Existing',
+        'id_number1' => '777777777',
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '777777777',
+        'first_name' => 'SGaza',
+        'father_name' => 'Existing',
+        'grandfather_name' => 'Civil',
+        'family_name' => 'Registry',
+        'full_name' => 'SGaza Existing Civil Registry',
+        'full_name_normalized' => 'SGazaExistingCivilRegistry',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()->count())->toBe(0);
 });
 
 it('approves a single name match and syncs the new identity to arcgis', function (): void {
@@ -303,6 +345,75 @@ it('searches the civil registry for unmatched names and approves a manually sele
 
     expect($housingUnit->fresh()->id_number1)->toBe('666666666')
         ->and($report->fresh()->matched_citizen_id_card_no)->toBe('666666666')
+        ->and($report->fresh()->approved_at)->not->toBeNull();
+});
+
+it('searches sgaza civil registry and approves a manually selected sgaza identity', function (): void {
+    createSgazaTable();
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 889],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 889,
+        'globalid' => 'sgaza-manual-id',
+        'unit_owner' => 'Unknown SGaza Owner',
+        'id_number1' => '777777770',
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '777777777',
+        'first_name' => 'SGaza',
+        'father_name' => 'Manual',
+        'grandfather_name' => 'Civil',
+        'family_name' => 'Registry',
+        'full_name' => 'SGaza Manual Civil Registry',
+        'full_name_normalized' => 'SGazaManualCivilRegistry',
+        'mother_name' => 'Mother',
+        'الحي' => 'Neighborhood',
+        'تاريخ الميلاد' => '1980-01-01 00:00:00',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
+
+    expect($report->name_match_status)->toBe('not_found');
+
+    $user = User::factory()->create();
+
+    $this
+        ->actingAs($user)
+        ->getJson(route('reports.missing-citizen-identities.citizen-search', [
+            'report' => $report,
+            'q' => '777777',
+        ]))
+        ->assertOk()
+        ->assertJsonFragment(['id_card_no' => '777777777'])
+        ->assertJsonFragment(['source' => __('ui.missing_citizen_identities.source_sgaza')]);
+
+    $this
+        ->actingAs($user)
+        ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
+            'confirm' => true,
+            'citizen_id' => 'sgaza:777777777',
+        ])
+        ->assertOk()
+        ->assertJsonPath('arcgis_status', 'synced');
+
+    expect($housingUnit->fresh()->id_number1)->toBe('777777777')
+        ->and($report->fresh()->matched_citizen_id_card_no)->toBe('777777777')
         ->and($report->fresh()->approved_at)->not->toBeNull();
 });
 
