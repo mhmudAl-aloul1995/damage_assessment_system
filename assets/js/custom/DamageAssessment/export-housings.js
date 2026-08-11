@@ -81,7 +81,7 @@ var KTModalExportUsers = function () {
 
 
 
-                        }, 5000);
+                        }, 30000);
                     } else {
                         Swal.fire({
                             text: "عذراً، يبدو أنه تم اكتشاف بعض الأخطاء، يرجى المحاولة مرة أخرى.",

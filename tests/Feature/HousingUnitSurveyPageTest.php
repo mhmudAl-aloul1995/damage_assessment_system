@@ -46,7 +46,7 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Resident and household');
     $response->assertSee('Support and safety');
     $response->assertSee('Object ID للوحدات السكنية');
-    $response->assertSee('الحد الأقصى 10 وحدات');
+    $response->assertSee('الحد الأقصى 100 وحدة');
     $response->assertSee('var url_phc', false);
     $response->assertSee('export-housings.js?v=', false);
     $response->assertSee('Apartment');
@@ -480,25 +480,35 @@ it('exports housing unit BOQ by pasted housing object ids with a maximum of ten 
         'hint' => 'إزالة حوائط شاملا المعدات والمصنعية والترحيل لأقرب مكب (M2)',
     ]);
 
-    $this->actingAs($user)->get(route('housing.export', [
+    $response = $this->actingAs($user)->get(route('housing.export', [
         'format' => 'xlsx',
         'objectids' => "3701\r\n3702",
-    ]))->assertOk();
+    ]));
 
-    Excel::matchByRegex();
-    Excel::assertDownloaded('/housing-units-\d{8}-\d{6}\.xlsx/', function (HousingUnitBoqExport $export): bool {
-        $rows = collect($export->array());
+    $response->assertOk();
 
-        return $rows->contains(['-', null, 'Object One', 3701, null])
-            && $rows->contains(['-', null, 'Object Two', 3702, null])
-            && ! $rows->contains(['-', null, 'Object Three', 3703, null]);
-    });
+    expect($response->baseResponse->headers->get('content-disposition'))->toContain('.zip');
+
+    $zipPath = $response->baseResponse->getFile()->getPathname();
+    $zip = new ZipArchive;
+
+    expect($zip->open($zipPath))->toBeTrue();
+
+    $zipEntries = collect(range(0, $zip->numFiles - 1))
+        ->map(fn (int $index): string => (string) $zip->getNameIndex($index));
+
+    expect($zipEntries->contains(fn (string $name): bool => str_contains($name, 'Object-One-3701.xlsx')))->toBeTrue();
+    expect($zipEntries->contains(fn (string $name): bool => str_contains($name, 'Object-Two-3702.xlsx')))->toBeTrue();
+    expect($zipEntries->contains(fn (string $name): bool => str_contains($name, 'Object-Three-3703.xlsx')))->toBeFalse();
+
+    $zip->close();
+    @unlink($zipPath);
 });
 
 it('rejects pasted housing object ids above the export limit', function () {
     $user = User::factory()->create();
 
-    $objectIds = collect(range(1, 11))->map(fn (int $id): string => (string) (3800 + $id))->implode("\n");
+    $objectIds = collect(range(1, 101))->map(fn (int $id): string => (string) (3800 + $id))->implode("\n");
 
     $this->actingAs($user)->get(route('housing.export', [
         'format' => 'xlsx',

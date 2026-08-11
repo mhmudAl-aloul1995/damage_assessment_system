@@ -186,8 +186,8 @@
             <input type="hidden" name="_method" value="get"><input type="hidden" name="_token" value="{{ csrf_token() }}">
             <div class="fv-row mb-10">
                 <label class="fs-6 fw-semibold form-label mb-2">Object ID للوحدات السكنية</label>
-                <textarea name="objectids" class="form-control form-control-solid" rows="5" placeholder="الصق حتى 10 أرقام من Excel، كل Object ID في سطر"></textarea>
-                <div class="form-text">الحد الأقصى 10 وحدات في كل تصدير BOQ.</div>
+                <textarea name="objectids" class="form-control form-control-solid" rows="5" placeholder="الصق حتى 100 رقم من Excel، كل Object ID في سطر"></textarea>
+                <div class="form-text">الحد الأقصى 100 وحدة في كل تصدير BOQ.</div>
             </div>
             <div class="fv-row mb-10"><label class="fs-6 fw-semibold form-label mb-2">{{ __('ui.housing_page.select_columns') }}</label><select multiple data-allow-clear="true" data-close-on-select="false" name="housing_columns[]" data-control="select2" data-placeholder="{{ __('ui.housing_page.select_columns') }}" class="form-select form-select-solid fw-bold"><option value=""></option>@foreach ($assessments as $value) @if (Schema::hasColumn('housing_units', $value->name)) <option value="{{ $value->name }}">{{ $value->hint ?: $value->label }}</option> @endif @endforeach</select></div>
             <div class="fv-row mb-10"><label class="required fs-6 fw-semibold form-label mb-2">{{ __('ui.housing_page.export_format') }}</label><select name="format" data-control="select2" data-placeholder="{{ __('ui.housing_page.export_format') }}" class="form-select form-select-solid fw-bold"><option></option><option value="XLSX">Excel</option><option value="pdf">PDF</option><option value="csv">CSV</option></select></div>

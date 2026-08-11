@@ -25,12 +25,13 @@ use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Yajra\Datatables\Datatables;
+use ZipArchive;
 
 class HousingUnitController extends Controller
 {
     private const HOUSING_EXPORT_SOURCE_TABLE = 'v_housing_units_audited';
 
-    private const HOUSING_EXPORT_OBJECT_IDS_LIMIT = 10;
+    private const HOUSING_EXPORT_OBJECT_IDS_LIMIT = 100;
 
     public function index(?string $globalid = null): ViewContract
     {
@@ -468,6 +469,8 @@ class HousingUnitController extends Controller
 
     public function export(HousingUnitExportRequest $request, ?string $format = null): BinaryFileResponse|PdfBuilder
     {
+        set_time_limit(300);
+
         $format = strtolower($format ?? (string) $request->input('format', 'xlsx'));
 
         abort_unless(in_array($format, ['xlsx', 'pdf', 'csv'], true), 422, 'صيغة التصدير غير صحيحة.');
@@ -503,10 +506,57 @@ class HousingUnitController extends Controller
                 });
         }
 
-        return Excel::download(
-            new HousingUnitBoqExport($boqRows, $summary),
-            $fileBaseName.'.'.$format
-        );
+        if ($format === 'xlsx' && $request->filled('objectids') && $housing->count() > 1) {
+            return $this->downloadHousingBoqZip($housing, $boqRows);
+        }
+
+        return Excel::download(new HousingUnitBoqExport($boqRows, $summary), $fileBaseName.'.'.$format);
+    }
+
+    /**
+     * @param  Collection<int, HousingUnit>  $housing
+     * @param  Collection<int, array<string, mixed>>  $boqRows
+     */
+    private function downloadHousingBoqZip(Collection $housing, Collection $boqRows): BinaryFileResponse
+    {
+        abort_unless(class_exists(ZipArchive::class), 500, 'خدمة ضغط ملفات Excel غير متاحة على الخادم.');
+
+        $zipDirectory = storage_path('app/tmp/housing-boq-exports');
+
+        if (! is_dir($zipDirectory)) {
+            mkdir($zipDirectory, 0755, true);
+        }
+
+        $zipFileName = 'boq-exports-'.now()->format('Ymd-His').'.zip';
+        $zipPath = $zipDirectory.DIRECTORY_SEPARATOR.$zipFileName;
+        $zip = new ZipArchive;
+
+        abort_if($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true, 500, 'تعذر إنشاء ملف ZIP للتصدير.');
+
+        $rowsByGlobalId = $boqRows->groupBy('globalid');
+
+        foreach ($housing as $housingUnit) {
+            $unitRows = $rowsByGlobalId->get($housingUnit->globalid, collect());
+            $unitSummary = $this->housingBoqSummary(collect([$housingUnit]), $unitRows);
+            $unitFileName = $this->housingUnitBoqExcelFileName($housingUnit);
+
+            $zip->addFromString(
+                $unitFileName,
+                Excel::raw(new HousingUnitBoqExport($unitRows, $unitSummary), \Maatwebsite\Excel\Excel::XLSX)
+            );
+        }
+
+        $zip->close();
+
+        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+    }
+
+    private function housingUnitBoqExcelFileName(HousingUnit $housingUnit): string
+    {
+        $ownerName = $this->safeExportFileSegment($this->housingUnitOwnerName($housingUnit)) ?? 'unit';
+        $objectId = $this->safeExportFileSegment((string) ($housingUnit->objectid ?? '')) ?? (string) $housingUnit->getKey();
+
+        return 'جدول-الكميات-'.$ownerName.'-'.$objectId.'.xlsx';
     }
 
     /**
