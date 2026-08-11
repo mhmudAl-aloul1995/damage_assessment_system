@@ -108,8 +108,9 @@ class MissingCitizenIdentityController extends Controller
         }
 
         $search = trim($request->string('q')->toString());
+        $nameParts = $this->searchNameParts($request);
 
-        if (mb_strlen($search) < 2) {
+        if (mb_strlen($search) < 2 && $nameParts->isEmpty()) {
             return response()->json([
                 'data' => [],
             ]);
@@ -121,16 +122,18 @@ class MissingCitizenIdentityController extends Controller
 
         if (ctype_digit($search)) {
             $query->where('id_card_no', 'like', $search.'%');
-        } else {
+        } elseif ($search !== '') {
             $normalizedSearch = ArabicNameNormalizer::normalize($search);
 
-            if ($normalizedSearch === '') {
+            if ($normalizedSearch === '' && $nameParts->isEmpty()) {
                 return response()->json([
                     'data' => [],
                 ]);
             }
 
             $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
+        } else {
+            $query->whereRaw('1 = 0');
         }
 
         $citizens = $query
@@ -145,7 +148,7 @@ class MissingCitizenIdentityController extends Controller
             ])
             ->values();
 
-        $sgazaRecords = $this->searchSgazaCivilRegistry($search);
+        $sgazaRecords = $this->searchSgazaCivilRegistry($search, $nameParts);
         $accessRecords = $this->searchAccessCivilRegistry($search);
 
         return response()->json([
@@ -464,15 +467,30 @@ class MissingCitizenIdentityController extends Controller
             ]);
     }
 
-    private function searchSgazaCivilRegistry(string $search): Collection
+    private function searchNameParts(Request $request): Collection
+    {
+        return collect([
+            'first_name' => trim($request->string('first_name')->toString()),
+            'father_name' => trim($request->string('father_name')->toString()),
+            'grandfather_name' => trim($request->string('grandfather_name')->toString()),
+            'family_name' => trim($request->string('family_name')->toString()),
+        ])->filter();
+    }
+
+    private function searchSgazaCivilRegistry(string $search, ?Collection $nameParts = null): Collection
     {
         if (! Schema::hasTable('sgaza') || ! Schema::hasColumn('sgaza', 'id_number')) {
             return collect();
         }
 
+        $nameParts ??= collect();
         $query = DB::table('sgaza');
 
-        if (ctype_digit($search)) {
+        if ($nameParts->isNotEmpty()) {
+            foreach ($nameParts as $column => $value) {
+                $query->where($column, 'like', $value.'%');
+            }
+        } elseif (ctype_digit($search)) {
             $query->where('id_number', 'like', $search.'%');
         } else {
             $normalizedSearch = ArabicNameNormalizer::normalize($search);

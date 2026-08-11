@@ -115,6 +115,20 @@
                         <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
                         <input type="text" class="form-control form-control-solid ps-12" id="missing_citizen_manual_search" placeholder="{{ __('ui.missing_citizen_identities.citizen_search_placeholder') }}">
                     </div>
+                    <div class="row g-3 mb-5">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-name-part="first_name" placeholder="{{ __('ui.missing_citizen_identities.first_name') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-name-part="father_name" placeholder="{{ __('ui.missing_citizen_identities.father_name') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-name-part="grandfather_name" placeholder="{{ __('ui.missing_citizen_identities.grandfather_name') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-name-part="family_name" placeholder="{{ __('ui.missing_citizen_identities.family_name') }}">
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-row-dashed align-middle">
                             <thead>
@@ -157,6 +171,7 @@
             var candidatesBody = document.getElementById('missing_citizen_candidates_body');
             var candidatesIdNumber = document.getElementById('missing_citizen_candidates_id_number');
             var manualSearch = document.getElementById('missing_citizen_manual_search');
+            var namePartInputs = Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizen-name-part]'));
             var activeCandidateReportId = null;
             var manualSearchTimer = null;
 
@@ -345,6 +360,7 @@
                 if (manualSearch) {
                     manualSearch.value = '';
                 }
+                clearNamePartInputs();
 
                 if (candidatesBody) {
                     candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
@@ -410,6 +426,48 @@
                 }).join('');
             };
 
+            var clearNamePartInputs = function () {
+                namePartInputs.forEach(function (input) {
+                    input.value = '';
+                });
+            };
+
+            var fillNamePartInputs = function (ownerName) {
+                clearNamePartInputs();
+
+                if (!ownerName || ownerName === '-') {
+                    return;
+                }
+
+                String(ownerName).trim().split(/\s+/).slice(0, 4).forEach(function (part, index) {
+                    if (namePartInputs[index]) {
+                        namePartInputs[index].value = part;
+                    }
+                });
+            };
+
+            var citizenSearchParams = function () {
+                var params = new URLSearchParams();
+
+                if (manualSearch && manualSearch.value.trim() !== '') {
+                    params.set('q', manualSearch.value.trim());
+                }
+
+                namePartInputs.forEach(function (input) {
+                    if (input.value.trim() !== '') {
+                        params.set(input.getAttribute('data-kt-missing-citizen-name-part'), input.value.trim());
+                    }
+                });
+
+                return params;
+            };
+
+            var hasCitizenSearchValues = function () {
+                return Array.from(citizenSearchParams().values()).some(function (value) {
+                    return value.length >= 2;
+                });
+            };
+
             var showCitizenSearch = function (reportId, idNumber, ownerName) {
                 activeCandidateReportId = reportId;
 
@@ -420,6 +478,7 @@
                 if (manualSearch) {
                     manualSearch.value = ownerName && ownerName !== '-' ? ownerName : '';
                 }
+                fillNamePartInputs(ownerName);
 
                 if (candidatesBody) {
                     candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.type_to_search_citizens') }}</td></tr>';
@@ -429,24 +488,24 @@
                     bootstrap.Modal.getOrCreateInstance(candidatesModalElement).show();
                 }
 
-                if (manualSearch && manualSearch.value.trim().length >= 2) {
-                    searchCitizens(reportId, manualSearch.value.trim());
+                if (hasCitizenSearchValues()) {
+                    searchCitizens(reportId);
                 }
             };
 
-            var searchCitizens = function (reportId, searchValue) {
+            var searchCitizens = function (reportId) {
                 if (!candidatesBody) {
                     return;
                 }
 
-                if (searchValue.length < 2) {
+                if (!hasCitizenSearchValues()) {
                     candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.type_to_search_citizens') }}</td></tr>';
                     return;
                 }
 
                 candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
 
-                fetch(citizenSearchUrlTemplate.replace('__REPORT__', reportId) + '?' + new URLSearchParams({ q: searchValue }).toString(), {
+                fetch(citizenSearchUrlTemplate.replace('__REPORT__', reportId) + '?' + citizenSearchParams().toString(), {
                     headers: {
                         'Accept': 'application/json'
                     }
@@ -692,11 +751,22 @@
                         clearTimeout(manualSearchTimer);
                         manualSearchTimer = setTimeout(function () {
                             if (activeCandidateReportId) {
-                                searchCitizens(activeCandidateReportId, event.target.value.trim());
+                                searchCitizens(activeCandidateReportId);
                             }
                         }, 350);
                     });
                 }
+
+                namePartInputs.forEach(function (input) {
+                    input.addEventListener('keyup', function () {
+                        clearTimeout(manualSearchTimer);
+                        manualSearchTimer = setTimeout(function () {
+                            if (activeCandidateReportId) {
+                                searchCitizens(activeCandidateReportId);
+                            }
+                        }, 350);
+                    });
+                });
 
                 if (candidatesBody) {
                     candidatesBody.addEventListener('click', function (event) {

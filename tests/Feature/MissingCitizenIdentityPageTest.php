@@ -536,6 +536,46 @@ it('searches sgaza by first father grandfather and family name fields', function
         ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'));
 });
 
+it('searches sgaza by separate name part inputs without a general query', function (): void {
+    createSgazaTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 891,
+        'globalid' => 'sgaza-name-part-search',
+        'unit_owner' => 'Unknown Owner',
+        'id_number1' => '966605551',
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '966605552',
+        'first_name' => 'واصل',
+        'father_name' => 'محمود',
+        'grandfather_name' => 'سعيد',
+        'family_name' => 'لحسان',
+        'full_name' => null,
+        'full_name_normalized' => null,
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
+
+    $this
+        ->actingAs(User::factory()->create())
+        ->getJson(route('reports.missing-citizen-identities.citizen-search', [
+            'report' => $report,
+            'first_name' => 'وا',
+            'father_name' => 'مح',
+            'grandfather_name' => 'سع',
+            'family_name' => 'لح',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.id_card_no', '966605552')
+        ->assertJsonPath('data.0.full_name', 'واصل محمود سعيد لحسان')
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'));
+});
+
 it('bulk approves selected single name matches', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
