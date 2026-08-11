@@ -3,6 +3,7 @@
 namespace App\Support\Navigation;
 
 use App\Models\User;
+use App\Support\Audit\RestrictedLawyerAuditAccess;
 use Illuminate\Support\Collection;
 
 class Sidebar
@@ -32,7 +33,7 @@ class Sidebar
         '404581993',
         '456901503',
         '400662938',
-        '403746530'
+        '403746530',
     ];
 
     private const TEMPORARY_AUDIT_HOME_URL = 'damage-assessment/audit';
@@ -43,15 +44,15 @@ class Sidebar
     public static function forUser(User $user): Collection
     {
         $sectionsByModule = collect(config('sidebar'))
-            ->groupBy(fn(array $section): string => $section['module'] ?? 'damage_assessment');
+            ->groupBy(fn (array $section): string => $section['module'] ?? 'damage_assessment');
 
         return collect(config('modules'))
-            ->filter(fn(array $module): bool => $module['enabled'] ?? true)
+            ->filter(fn (array $module): bool => $module['enabled'] ?? true)
             ->sortBy('order')
             ->map(function (array $module, string $moduleKey) use ($sectionsByModule, $user): ?array {
                 $sections = $sectionsByModule
                     ->get($moduleKey, collect())
-                    ->map(fn(array $section): ?array => self::visibleSection($section, $user))
+                    ->map(fn (array $section): ?array => self::visibleSection($section, $user))
                     ->filter()
                     ->values();
 
@@ -73,7 +74,7 @@ class Sidebar
      */
     private static function visibleSection(array $section, User $user): ?array
     {
-        if (!$user->hasAnyRole($section['roles'] ?? []) && !self::hasTemporaryVisibleItem($section, $user)) {
+        if (! $user->hasAnyRole($section['roles'] ?? []) && ! self::hasVisibleItem($section, $user)) {
             return null;
         }
 
@@ -87,7 +88,7 @@ class Sidebar
         }
 
         $visibleItems = collect($section['items'] ?? [])
-            ->map(fn(array $item): ?array => self::visibleItem($item, $user))
+            ->map(fn (array $item): ?array => self::visibleItem($item, $user))
             ->filter()
             ->values();
 
@@ -97,7 +98,7 @@ class Sidebar
 
         $section['items'] = $visibleItems;
         $section['visible_item_count'] = $visibleItems->sum(
-            fn(array $item): int => isset($item['children']) ? $item['children']->count() : 1
+            fn (array $item): int => isset($item['children']) ? $item['children']->count() : 1
         );
         $section['is_active'] = request()->is(...($section['active_patterns'] ?? []));
 
@@ -111,7 +112,7 @@ class Sidebar
     {
         if (isset($item['children'])) {
             $children = collect($item['children'])
-                ->filter(fn(array $child): bool => $user->hasAnyRole($child['roles'] ?? []))
+                ->filter(fn (array $child): bool => self::isItemVisible($child, $user))
                 ->values();
 
             if ($children->isEmpty()) {
@@ -123,13 +124,28 @@ class Sidebar
             return $item;
         }
 
-        return $user->hasAnyRole($item['roles'] ?? []) || self::isTemporaryAuditHomeItem($item, $user) ? $item : null;
+        return self::isItemVisible($item, $user) ? $item : null;
     }
 
-    private static function hasTemporaryVisibleItem(array $section, User $user): bool
+    private static function hasVisibleItem(array $section, User $user): bool
     {
         return collect($section['items'] ?? [])
-            ->contains(fn(array $item): bool => self::isTemporaryAuditHomeItem($item, $user));
+            ->contains(fn (array $item): bool => self::isItemVisible($item, $user));
+    }
+
+    private static function isItemVisible(array $item, User $user): bool
+    {
+        return $user->hasAnyRole($item['roles'] ?? [])
+            || self::isCustomVisibleItem($item, $user)
+            || self::isTemporaryAuditHomeItem($item, $user);
+    }
+
+    private static function isCustomVisibleItem(array $item, User $user): bool
+    {
+        return match ($item['visible_when'] ?? null) {
+            'restricted_lawyer_audit_assignments' => RestrictedLawyerAuditAccess::canViewAssignments($user),
+            default => false,
+        };
     }
 
     private static function isTemporaryAuditHomeItem(array $item, User $user): bool

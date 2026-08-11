@@ -263,6 +263,13 @@ return [
                 'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager'],
             ],
             [
+                'title' => 'تأهيل وحدات - تدقيق قانوني',
+                'url' => 'damage-assessment/audit/lawyer-assignments',
+                'pattern' => 'damage-assessment/audit/lawyer-assignments*',
+                'roles' => ['Database Officer'],
+                'visible_when' => 'restricted_lawyer_audit_assignments',
+            ],
+            [
                 'title' => 'مباني المهندس الميداني',
                 'url' => 'damage-assessment/field-engineer-audit',
                 'pattern' => 'damage-assessment/field-engineer-audit',

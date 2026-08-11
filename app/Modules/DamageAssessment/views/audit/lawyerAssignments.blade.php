@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'قائمة المحامين')
-@section('pageName', 'قائمة المحامين')
+@section('title', 'تأهيل وحدات - تدقيق قانوني')
+@section('pageName', 'تأهيل وحدات - تدقيق قانوني')
 
 @section('content')
     <div class="row mb-5">

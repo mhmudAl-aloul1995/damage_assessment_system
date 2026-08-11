@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\Audit\RestrictedLawyerAuditAccess;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -131,6 +132,42 @@ it('shows higher committee reassessments in the committee sidebar', function () 
     expect($committeeSection['items'])
         ->pluck('url')
         ->toContain('damage-assessment/committee-decisions/higher-committee-reassessments');
+});
+
+it('shows lawyer legal audit assignments only to authorized sidebar users', function () {
+    $databaseOfficerRole = Role::findOrCreate('Database Officer', 'web');
+    $legalAuditorRole = Role::findOrCreate('Legal Auditor', 'web');
+    $auditingSupervisorRole = Role::findOrCreate('Auditing Supervisor', 'web');
+    $auditReviewerRole = Role::findOrCreate('Audit Reviewer', 'web');
+
+    $databaseOfficer = User::factory()->create();
+    $databaseOfficer->assignRole($databaseOfficerRole);
+
+    $lawyer = User::factory()->create([
+        'name' => RestrictedLawyerAuditAccess::ALAA_KATOU,
+    ]);
+    $lawyer->assignRole($legalAuditorRole);
+
+    $auditingSupervisor = User::factory()->create();
+    $auditingSupervisor->assignRole($auditingSupervisorRole);
+
+    $auditReviewer = User::factory()->create();
+    $auditReviewer->assignRole($auditReviewerRole);
+
+    $sidebarUrlsFor = fn (User $user): array => Sidebar::forUser($user)
+        ->flatMap(fn (array $module) => $module['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->pluck('url')
+        ->all();
+
+    expect($sidebarUrlsFor($databaseOfficer))
+        ->toContain('damage-assessment/audit/lawyer-assignments')
+        ->and($sidebarUrlsFor($lawyer))
+        ->toContain('damage-assessment/audit/lawyer-assignments')
+        ->and($sidebarUrlsFor($auditingSupervisor))
+        ->not->toContain('damage-assessment/audit/lawyer-assignments')
+        ->and($sidebarUrlsFor($auditReviewer))
+        ->not->toContain('damage-assessment/audit/lawyer-assignments');
 });
 
 it('places hud above damage assessment for non auditor sidebar roles', function () {
