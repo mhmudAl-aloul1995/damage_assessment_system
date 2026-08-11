@@ -483,7 +483,7 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         });
 });
 
-it('counts assessed buildings from fully damaged partially damaged and committee review statuses only', function () {
+it('counts assessed buildings from damaged committee review and blocked assessment totals', function () {
     $user = User::factory()->create();
 
     $this->app->instance(ArcgisService::class, new class extends ArcgisService
@@ -522,6 +522,13 @@ it('counts assessed buildings from fully damaged partially damaged and committee
         'building_damage_status' => 'no_damage',
     ]);
 
+    Building::query()->create([
+        'objectid' => 914,
+        'globalid' => 'assessed-building-blocked',
+        'field_status' => 'Not_Completed',
+        'security_situation' => 'Unsafe',
+    ]);
+
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
@@ -530,7 +537,8 @@ it('counts assessed buildings from fully damaged partially damaged and committee
                 && (int) $buildingStats['fully_damaged'] === 1
                 && (int) $buildingStats['partially_damaged'] === 1
                 && (int) $buildingStats['committee_review'] === 1
-                && (int) $buildingStats['assessed_total'] === 3;
+                && (int) $buildingStats['security_unsafe'] === 1
+                && (int) $buildingStats['assessed_total'] === 4;
         });
 });
 
