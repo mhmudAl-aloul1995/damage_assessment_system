@@ -37,15 +37,8 @@ class HousingUnitBoqExport implements FromArray, WithEvents, WithTitle
         foreach ($this->rows->groupBy('globalid') as $unitRows) {
             $firstRow = $unitRows->first();
 
-            $sheetRows[] = [
-                'Object ID: '.($firstRow['objectid'] ?? '-')
-                .' | رقم الوحدة: '.($firstRow['housing_unit_number'] ?? '-')
-                .' | اسم مالك الوحدة: '.($firstRow['unit_owner'] ?? '-'),
-                null,
-                null,
-                null,
-                null,
-            ];
+            $sheetRows[] = ['Object ID للمبنى', 'اسم مالك الوحدة', 'Object ID للوحدة', null, null];
+            $sheetRows[] = [$firstRow['building_objectid'] ?? '-', $firstRow['unit_owner'] ?? '-', $firstRow['objectid'] ?? '-', null, null];
             $sheetRows[] = ['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'];
 
             foreach ($unitRows as $row) {
@@ -93,9 +86,8 @@ class HousingUnitBoqExport implements FromArray, WithEvents, WithTitle
                 for ($row = 3; $row <= $highestRow; $row++) {
                     $firstCell = (string) $sheet->getCell("A{$row}")->getValue();
 
-                    if (str_starts_with($firstCell, 'Object ID:')) {
-                        $sheet->mergeCells("A{$row}:E{$row}");
-                        $sheet->getStyle("A{$row}:E{$row}")->applyFromArray([
+                    if ($firstCell === 'Object ID للمبنى') {
+                        $sheet->getStyle("A{$row}:C".($row + 1))->applyFromArray([
                             'font' => ['bold' => true],
                             'fill' => [
                                 'fillType' => Fill::FILL_SOLID,

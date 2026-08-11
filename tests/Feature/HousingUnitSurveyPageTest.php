@@ -373,9 +373,15 @@ it('exports filtered housing units to excel from the audited housing units view'
 
     $user = User::factory()->create();
 
+    Building::query()->create([
+        'objectid' => 2501,
+        'globalid' => 'building-export-included',
+    ]);
+
     HousingUnit::query()->create([
         'objectid' => 3501,
         'globalid' => 'housing-unit-export-included',
+        'parentglobalid' => 'building-export-included',
         'unit_owner' => 'Original Owner',
         'municipalitie' => 'Gaza',
         'dm1' => '1',
@@ -427,8 +433,9 @@ it('exports filtered housing units to excel from the audited housing units view'
         $rows = collect($export->array());
 
         return ! $export instanceof ShouldAutoSize
-            && $rows->contains(['Object ID: 3501 | رقم الوحدة: - | اسم مالك الوحدة: Included Owner', null, null, null, null])
-            && ! $rows->contains(['Object ID: 3501 | رقم الوحدة: - | اسم مالك الوحدة: Original Owner', null, null, null, null])
+            && $rows->contains(['Object ID للمبنى', 'اسم مالك الوحدة', 'Object ID للوحدة', null, null])
+            && $rows->contains([2501, 'Included Owner', 3501, null, null])
+            && ! $rows->contains(['-', 'Original Owner', 3501, null, null])
             && $rows->contains(['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'])
             && $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '12.5')
             && ! $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '1')
@@ -442,9 +449,15 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
 
     $user = User::factory()->create();
 
+    Building::query()->create([
+        'objectid' => 2601,
+        'globalid' => 'building-pdf-export',
+    ]);
+
     HousingUnit::query()->create([
         'objectid' => 3601,
         'globalid' => 'housing-unit-pdf-export',
+        'parentglobalid' => 'building-pdf-export',
         'unit_owner' => 'PDF Owner',
         'municipalitie' => 'Gaza',
         'dm1' => '9',
@@ -466,6 +479,7 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
 
     Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf): bool {
         return $pdf->viewName === 'damage-assessment::surveys.housing-units.export_pdf'
+            && $pdf->contains('2601')
             && $pdf->contains('3601')
             && $pdf->contains('PDF Owner')
             && $pdf->downloadName !== ''
@@ -475,6 +489,8 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
             && ! $pdf->contains('summary')
             && ! $pdf->contains('.unit-block { margin-top: 14px; page-break-inside: avoid; }')
             && $pdf->contains('.unit-block { margin-top: 14px; page-break-inside: auto; }')
+            && $pdf->contains('Object ID للمبنى')
+            && $pdf->contains('Object ID للوحدة')
             && $pdf->contains('اسم مالك الوحدة')
             && $pdf->contains('جدول الكميات BOQ')
             && $pdf->contains('إزالة حوائط');

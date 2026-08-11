@@ -59,16 +59,16 @@
                 <section class="unit-block">
                     <div class="unit-meta">
                         <div class="unit-meta-item">
-                            <div class="unit-meta-label">Object ID</div>
-                            <div class="unit-meta-value">{{ $firstRow['objectid'] ?: '-' }}</div>
-                        </div>
-                        <div class="unit-meta-item">
-                            <div class="unit-meta-label">رقم الوحدة</div>
-                            <div class="unit-meta-value">{{ $firstRow['housing_unit_number'] ?: '-' }}</div>
+                            <div class="unit-meta-label">Object ID للمبنى</div>
+                            <div class="unit-meta-value">{{ $firstRow['building_objectid'] ?: '-' }}</div>
                         </div>
                         <div class="unit-meta-item">
                             <div class="unit-meta-label">اسم مالك الوحدة</div>
                             <div class="unit-meta-value">{{ $firstRow['unit_owner'] ?: '-' }}</div>
+                        </div>
+                        <div class="unit-meta-item">
+                            <div class="unit-meta-label">Object ID للوحدة</div>
+                            <div class="unit-meta-value">{{ $firstRow['objectid'] ?: '-' }}</div>
                         </div>
                     </div>
 

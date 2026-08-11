@@ -550,7 +550,9 @@ class HousingUnitController extends Controller
      */
     private function exportQuery(HousingUnitExportRequest $request, array $housingColumns): Builder
     {
-        $query = HousingUnit::query()->select($housingColumns);
+        $query = HousingUnit::query()
+            ->with('building:globalid,objectid')
+            ->select($housingColumns);
         $filters = $request->input('filters', []);
 
         if (! is_array($filters)) {
@@ -737,6 +739,7 @@ class HousingUnitController extends Controller
     private function housingBoqRow(HousingUnit $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
     {
         return [
+            'building_objectid' => $housingUnit->building?->objectid ?? '-',
             'objectid' => $housingUnit->objectid,
             'globalid' => $housingUnit->globalid,
             'housing_unit_number' => $housingUnit->housing_unit_number ?: '-',
