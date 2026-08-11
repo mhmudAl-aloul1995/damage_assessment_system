@@ -197,8 +197,12 @@
 @endsection
 
 @section('script')
-    <script>var housing_export_url = "{{ route('housing.export', ['format' => '__FORMAT__']) }}";</script>
-    <script src="{{ url('') }}/assets/js/custom/DamageAssessment/export-housings.js"></script>
+    @php($housingExportScriptVersion = filemtime(base_path('assets/js/custom/DamageAssessment/export-housings.js')))
+    <script>
+        var url_phc = "{{ url('') }}";
+        var housing_export_url = "{{ route('housing.export', ['format' => '__FORMAT__']) }}";
+    </script>
+    <script src="{{ url('') }}/assets/js/custom/DamageAssessment/export-housings.js?v={{ $housingExportScriptVersion }}"></script>
     <script>
         var KTHousingList = function () {
             var table = document.getElementById('kt_table_Housing');

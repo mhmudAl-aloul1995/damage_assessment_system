@@ -47,6 +47,8 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Support and safety');
     $response->assertSee('Object ID للوحدات السكنية');
     $response->assertSee('الحد الأقصى 10 وحدات');
+    $response->assertSee('var url_phc', false);
+    $response->assertSee('export-housings.js?v=', false);
     $response->assertSee('Apartment');
     $response->assertSee('Totally Damaged');
     $response->assertSee('Engineer One');
