@@ -897,7 +897,7 @@
 							<!-- Added text-wrap here -->
 							<span
 								class="fw-semibold fs-7 text-wrap">{{ __('ui.damage_dashboard.assessed_buildings') }}</span>
-							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $buildingStats['completed'] }}</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $buildingStats['assessed_total'] }}</span>
 						</div>
 					</div>
 

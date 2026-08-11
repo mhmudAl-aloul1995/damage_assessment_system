@@ -483,6 +483,57 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         });
 });
 
+it('counts assessed buildings from fully damaged partially damaged and committee review statuses only', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    Building::query()->create([
+        'objectid' => 910,
+        'globalid' => 'assessed-building-fully',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 911,
+        'globalid' => 'assessed-building-partially',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'partially_damaged',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 912,
+        'globalid' => 'assessed-building-committee',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 913,
+        'globalid' => 'assessed-building-no-damage',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'no_damage',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertViewHas('buildingStats', function (array $buildingStats): bool {
+            return (int) $buildingStats['completed'] === 4
+                && (int) $buildingStats['fully_damaged'] === 1
+                && (int) $buildingStats['partially_damaged'] === 1
+                && (int) $buildingStats['committee_review'] === 1
+                && (int) $buildingStats['assessed_total'] === 3;
+        });
+});
+
 it('filters the main dashboard statistics by governorate', function () {
     $user = User::factory()->create();
 
