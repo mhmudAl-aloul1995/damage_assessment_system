@@ -31,7 +31,7 @@ class HousingUnitController extends Controller
 {
     private const HOUSING_EXPORT_SOURCE_TABLE = 'v_housing_units_audited';
 
-    private const HOUSING_EXPORT_OBJECT_IDS_LIMIT = 100;
+    private const HOUSING_EXPORT_OBJECT_IDS_LIMIT = 200;
 
     public function index(?string $globalid = null): ViewContract
     {
@@ -469,7 +469,7 @@ class HousingUnitController extends Controller
 
     public function export(HousingUnitExportRequest $request, ?string $format = null): BinaryFileResponse|PdfBuilder
     {
-        set_time_limit(300);
+        set_time_limit(900);
 
         $format = strtolower($format ?? (string) $request->input('format', 'xlsx'));
 

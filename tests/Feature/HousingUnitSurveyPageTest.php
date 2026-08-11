@@ -46,7 +46,7 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Resident and household');
     $response->assertSee('Support and safety');
     $response->assertSee('Object ID للوحدات السكنية');
-    $response->assertSee('الحد الأقصى 100 وحدة');
+    $response->assertSee('الحد الأقصى 200 وحدة');
     $response->assertSee('var url_phc', false);
     $response->assertSee('export-housings.js?v=', false);
     $response->assertSee('Apartment');
@@ -508,7 +508,7 @@ it('exports housing unit BOQ by pasted housing object ids with a maximum of ten 
 it('rejects pasted housing object ids above the export limit', function () {
     $user = User::factory()->create();
 
-    $objectIds = collect(range(1, 101))->map(fn (int $id): string => (string) (3800 + $id))->implode("\n");
+    $objectIds = collect(range(1, 201))->map(fn (int $id): string => (string) (3800 + $id))->implode("\n");
 
     $this->actingAs($user)->get(route('housing.export', [
         'format' => 'xlsx',
