@@ -605,6 +605,7 @@ return [
         'approve_match' => 'Approve',
         'approve_selected' => 'Approve selected',
         'approving' => 'Approving...',
+        'yes_approve' => 'Yes, approve',
         'approve_confirm' => 'Approve this citizen and update the ID number in the database and ArcGIS?',
         'bulk_approve_confirm' => 'Approve all selected records? Only single name matches will update the database and ArcGIS.',
         'bulk_approved_success' => 'Approved :approved records, failed :failed, skipped :skipped.',

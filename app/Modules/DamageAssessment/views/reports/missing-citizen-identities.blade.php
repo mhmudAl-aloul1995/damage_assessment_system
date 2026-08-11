@@ -426,6 +426,45 @@
                 }).join('');
             };
 
+            var showToast = function (message, icon) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        text: message,
+                        icon: icon || 'info',
+                        buttonsStyling: false,
+                        confirmButtonText: '{{ __('ui.buttons.ok') }}',
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+
+                    return;
+                }
+
+                alert(message);
+            };
+
+            var confirmAction = function (message) {
+                if (typeof Swal === 'undefined') {
+                    return Promise.resolve(confirm(message));
+                }
+
+                return Swal.fire({
+                    text: message,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    buttonsStyling: false,
+                    confirmButtonText: '{{ __('ui.missing_citizen_identities.yes_approve') }}',
+                    cancelButtonText: '{{ __('ui.buttons.cancel') }}',
+                    customClass: {
+                        confirmButton: 'btn btn-primary',
+                        cancelButton: 'btn btn-light'
+                    }
+                }).then(function (result) {
+                    return Boolean(result.isConfirmed);
+                });
+            };
+
             var removeApprovedRows = function (reportIds) {
                 reportIds.forEach(function (reportId) {
                     Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row]'))
@@ -542,47 +581,50 @@
             };
 
             var approveReport = function (reportId, button, citizenId) {
-                if (!confirm('{{ __('ui.missing_citizen_identities.approve_confirm') }}')) {
-                    return;
-                }
+                confirmAction('{{ __('ui.missing_citizen_identities.approve_confirm') }}').then(function (confirmed) {
+                    if (!confirmed) {
+                        return;
+                    }
 
-                button.disabled = true;
-                button.textContent = '{{ __('ui.missing_citizen_identities.approving') }}';
+                    button.disabled = true;
+                    button.textContent = '{{ __('ui.missing_citizen_identities.approving') }}';
 
-                fetch(approveUrlTemplate.replace('__REPORT__', reportId), {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({
-                        confirm: true,
-                        citizen_id: citizenId || null
+                    fetch(approveUrlTemplate.replace('__REPORT__', reportId), {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: JSON.stringify({
+                            confirm: true,
+                            citizen_id: citizenId || null
+                        })
                     })
-                })
-                    .then(function (response) {
-                        return response.json().then(function (payload) {
-                            if (!response.ok) {
-                                throw payload;
+                        .then(function (response) {
+                            return response.json().then(function (payload) {
+                                if (!response.ok) {
+                                    throw payload;
+                                }
+
+                                return payload;
+                            });
+                        })
+                        .then(function (payload) {
+                            if (candidatesModalElement && window.bootstrap) {
+                                bootstrap.Modal.getOrCreateInstance(candidatesModalElement).hide();
                             }
 
-                            return payload;
+                            removeApprovedRows([reportId]);
+                            loadCursor(cursorStack[cursorIndex]);
+                            showToast(payload.message || '{{ __('ui.missing_citizen_identities.approved_success') }}', 'success');
+                        })
+                        .catch(function (payload) {
+                            showToast(payload.message || '{{ __('ui.messages.unexpected_error') }}', 'error');
+                            button.disabled = false;
+                            button.textContent = citizenId ? '{{ __('ui.missing_citizen_identities.approve_this_candidate') }}' : '{{ __('ui.missing_citizen_identities.approve_match') }}';
                         });
-                    })
-                    .then(function () {
-                        if (candidatesModalElement && window.bootstrap) {
-                            bootstrap.Modal.getOrCreateInstance(candidatesModalElement).hide();
-                        }
-
-                        removeApprovedRows([reportId]);
-                        loadCursor(cursorStack[cursorIndex]);
-                    })
-                    .catch(function (payload) {
-                        alert(payload.message || '{{ __('ui.messages.unexpected_error') }}');
-                        button.disabled = false;
-                        button.textContent = citizenId ? '{{ __('ui.missing_citizen_identities.approve_this_candidate') }}' : '{{ __('ui.missing_citizen_identities.approve_match') }}';
-                    });
+                });
             };
 
             var bulkApprove = function (button) {
@@ -592,45 +634,47 @@
                     return;
                 }
 
-                if (!confirm('{{ __('ui.missing_citizen_identities.bulk_approve_confirm') }}')) {
-                    return;
-                }
+                confirmAction('{{ __('ui.missing_citizen_identities.bulk_approve_confirm') }}').then(function (confirmed) {
+                    if (!confirmed) {
+                        return;
+                    }
 
-                button.disabled = true;
-                button.textContent = '{{ __('ui.missing_citizen_identities.approving') }}';
+                    button.disabled = true;
+                    button.textContent = '{{ __('ui.missing_citizen_identities.approving') }}';
 
-                fetch(bulkApproveUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({
-                        report_ids: reportIds
+                    fetch(bulkApproveUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: JSON.stringify({
+                            report_ids: reportIds
+                        })
                     })
-                })
-                    .then(function (response) {
-                        return response.json().then(function (payload) {
-                            if (!response.ok) {
-                                throw payload;
-                            }
+                        .then(function (response) {
+                            return response.json().then(function (payload) {
+                                if (!response.ok) {
+                                    throw payload;
+                                }
 
-                            return payload;
+                                return payload;
+                            });
+                        })
+                        .then(function (payload) {
+                            showToast(payload.message || '{{ __('ui.missing_citizen_identities.bulk_approved_done') }}', 'success');
+                            removeApprovedRows(reportIds);
+                            loadCursor(cursorStack[cursorIndex]);
+                        })
+                        .catch(function (payload) {
+                            showToast(payload.message || '{{ __('ui.messages.unexpected_error') }}', 'error');
+                        })
+                        .finally(function () {
+                            button.textContent = '{{ __('ui.missing_citizen_identities.approve_selected') }}';
+                            updateBulkState();
                         });
-                    })
-                    .then(function (payload) {
-                        alert(payload.message || '{{ __('ui.missing_citizen_identities.bulk_approved_done') }}');
-                        removeApprovedRows(reportIds);
-                        loadCursor(cursorStack[cursorIndex]);
-                    })
-                    .catch(function (payload) {
-                        alert(payload.message || '{{ __('ui.messages.unexpected_error') }}');
-                    })
-                    .finally(function () {
-                        button.textContent = '{{ __('ui.missing_citizen_identities.approve_selected') }}';
-                        updateBulkState();
-                    });
+                });
             };
 
             var bindEvents = function () {

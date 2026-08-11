@@ -585,6 +585,7 @@ return [
         'approve_match' => 'اعتماد',
         'approve_selected' => 'اعتماد المحدد',
         'approving' => 'جاري الاعتماد...',
+        'yes_approve' => 'نعم، اعتماد',
         'approve_confirm' => 'هل تريد اعتماد هذا المواطن وتحديث رقم الهوية في قاعدة البيانات و ArcGIS؟',
         'bulk_approve_confirm' => 'هل تريد اعتماد كل السجلات المحددة؟ سيتم تحديث قاعدة البيانات و ArcGIS للسجلات ذات التطابق الواحد فقط.',
         'bulk_approved_success' => 'تم اعتماد :approved سجل، فشل :failed، وتم تجاهل :skipped.',
