@@ -13,6 +13,7 @@ use App\services\ArcgisService;
 use App\Support\ArabicNameNormalizer;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -144,12 +145,12 @@ class MissingCitizenIdentityController extends Controller
             ])
             ->values();
 
-        $accessRecords = $this->searchAccessCivilRegistry($search);
         $sgazaRecords = $this->searchSgazaCivilRegistry($search);
+        $accessRecords = $this->searchAccessCivilRegistry($search);
 
         return response()->json([
-            'data' => $citizens
-                ->merge($sgazaRecords)
+            'data' => $sgazaRecords
+                ->merge($citizens)
                 ->merge($accessRecords)
                 ->unique('id_card_no')
                 ->take(20)
@@ -189,8 +190,8 @@ class MissingCitizenIdentityController extends Controller
         $sgazaCandidates = $this->sgazaNameCandidates($report->normalized_owner_name);
 
         return response()->json([
-            'data' => $candidates
-                ->merge($sgazaCandidates)
+            'data' => $sgazaCandidates
+                ->merge($candidates)
                 ->unique('id_card_no')
                 ->take(20)
                 ->values(),
@@ -480,12 +481,7 @@ class MissingCitizenIdentityController extends Controller
                 return collect();
             }
 
-            if (Schema::hasColumn('sgaza', 'full_name_normalized')) {
-                $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
-            } else {
-                $firstToken = Str::before($search, ' ');
-                $query->where('first_name', 'like', $firstToken.'%');
-            }
+            $this->applySgazaNameSearch($query, $search, $normalizedSearch);
         }
 
         return $query
@@ -504,6 +500,37 @@ class MissingCitizenIdentityController extends Controller
             ->limit(20)
             ->get()
             ->map(fn ($record): array => $this->sgazaRecordToCandidate($record));
+    }
+
+    private function applySgazaNameSearch(QueryBuilder $query, string $search, string $normalizedSearch): void
+    {
+        $tokens = collect(preg_split('/\s+/u', trim($search)) ?: [])
+            ->map(fn (string $token): string => trim($token))
+            ->filter()
+            ->values();
+
+        $query->where(function (QueryBuilder $query) use ($normalizedSearch, $tokens): void {
+            if (Schema::hasColumn('sgaza', 'full_name_normalized')) {
+                $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
+            }
+
+            if ($tokens->isEmpty()) {
+                return;
+            }
+
+            $query->orWhere(function (QueryBuilder $query) use ($tokens): void {
+                $nameColumns = [
+                    'first_name',
+                    'father_name',
+                    'grandfather_name',
+                    'family_name',
+                ];
+
+                foreach ($tokens->take(4)->values() as $index => $token) {
+                    $query->where($nameColumns[$index], 'like', $token.'%');
+                }
+            });
+        });
     }
 
     private function sgazaNameCandidates(?string $normalizedOwnerName): Collection
