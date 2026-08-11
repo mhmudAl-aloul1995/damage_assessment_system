@@ -11,20 +11,20 @@ class RestrictedLawyerAuditAccess
     public const EYAD_BAKRI = 'المحامي/ اياد هاني وحيد بكري';
 
     /**
-     * @return array<int, array{from: int, to: int, lawyer: string}>
+     * @return array<int, array{from: int, to: int|null, lawyer: string}>
      */
     public static function ranges(): array
     {
         return [
             ['from' => 1, 'to' => 1000, 'lawyer' => self::ALAA_KATOU],
-            ['from' => 1001, 'to' => 2455, 'lawyer' => self::EYAD_BAKRI],
+            ['from' => 1001, 'to' => null, 'lawyer' => self::EYAD_BAKRI],
         ];
     }
 
     public static function lawyerForExcelIndex(int $excelIndex): string
     {
         foreach (self::ranges() as $range) {
-            if ($excelIndex >= $range['from'] && $excelIndex <= $range['to']) {
+            if ($excelIndex >= $range['from'] && ($range['to'] === null || $excelIndex <= $range['to'])) {
                 return $range['lawyer'];
             }
         }

@@ -24,7 +24,7 @@
                             <div class="col-md-6">
                                 <div class="border rounded p-4 h-100">
                                     <div class="fw-bold text-gray-900">{{ $range['lawyer'] }}</div>
-                                    <div class="text-muted">عداد الإكسل: {{ $range['from'] }} - {{ $range['to'] }}</div>
+                                    <div class="text-muted">عداد الإكسل: {{ $range['from'] }} - {{ $range['to'] ?? 'آخر سطر' }}</div>
                                 </div>
                             </div>
                         @endforeach

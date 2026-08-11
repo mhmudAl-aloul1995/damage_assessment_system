@@ -78,6 +78,15 @@ it('builds direct assessment audit links from building and housing global ids', 
         ->toContain('/damage-assessment/showAssessmentAudit/building-globalid/housing-globalid');
 });
 
+it('assigns lawyer audit rows from one thousand one through the last excel row to eyad', function () {
+    expect(RestrictedLawyerAuditAccess::lawyerForExcelIndex(1000))
+        ->toBe(RestrictedLawyerAuditAccess::ALAA_KATOU)
+        ->and(RestrictedLawyerAuditAccess::lawyerForExcelIndex(1001))
+        ->toBe(RestrictedLawyerAuditAccess::EYAD_BAKRI)
+        ->and(RestrictedLawyerAuditAccess::lawyerForExcelIndex(3000))
+        ->toBe(RestrictedLawyerAuditAccess::EYAD_BAKRI);
+});
+
 it('allows only restricted lawyers and database officers to open the lawyer assignments page', function () {
     Role::findOrCreate('Database Officer', 'web');
     Role::findOrCreate('Auditing Supervisor', 'web');

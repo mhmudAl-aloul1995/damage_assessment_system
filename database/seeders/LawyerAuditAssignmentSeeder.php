@@ -11,10 +11,6 @@ use ZipArchive;
 
 class LawyerAuditAssignmentSeeder extends Seeder
 {
-    public const MAX_ASSIGNMENTS = 2455;
-
-    public const SCAN_ROW_LIMIT = 2600;
-
     public function run(): void
     {
         $path = (string) config('lawyer_audit_assignments.source_path');
@@ -27,15 +23,13 @@ class LawyerAuditAssignmentSeeder extends Seeder
         $headerMap = [];
         $excelIndex = 0;
 
+        LawyerAuditAssignment::query()->delete();
+
         foreach ($this->worksheetRows($path, $sharedStrings) as $rowNumber => $row) {
             if ($rowNumber === 1) {
                 $headerMap = $this->headerMap($row);
 
                 continue;
-            }
-
-            if ($rowNumber > self::SCAN_ROW_LIMIT || $excelIndex >= self::MAX_ASSIGNMENTS) {
-                break;
             }
 
             $housingGlobalid = RestrictedLawyerAuditAccess::normalizeGlobalid($this->value($row, $headerMap, 'GlobalID'));
