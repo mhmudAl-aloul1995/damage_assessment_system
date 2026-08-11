@@ -426,6 +426,20 @@
                 }).join('');
             };
 
+            var removeApprovedRows = function (reportIds) {
+                reportIds.forEach(function (reportId) {
+                    Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row]'))
+                        .filter(function (row) {
+                            return row.getAttribute('data-kt-missing-citizens-row') === String(reportId);
+                        })
+                        .forEach(function (row) {
+                            row.remove();
+                        });
+                });
+
+                updateBulkState();
+            };
+
             var clearNamePartInputs = function () {
                 namePartInputs.forEach(function (input) {
                     input.value = '';
@@ -561,6 +575,7 @@
                             bootstrap.Modal.getOrCreateInstance(candidatesModalElement).hide();
                         }
 
+                        removeApprovedRows([reportId]);
                         loadCursor(cursorStack[cursorIndex]);
                     })
                     .catch(function (payload) {
@@ -606,6 +621,7 @@
                     })
                     .then(function (payload) {
                         alert(payload.message || '{{ __('ui.missing_citizen_identities.bulk_approved_done') }}');
+                        removeApprovedRows(reportIds);
                         loadCursor(cursorStack[cursorIndex]);
                     })
                     .catch(function (payload) {

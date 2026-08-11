@@ -231,6 +231,12 @@ it('approves a single name match and syncs the new identity to arcgis', function
         ->and(MissingCitizenIdentityApproval::query()->where('housing_unit_id', $housingUnit->id)->exists())->toBeTrue()
         ->and($report->fresh()->approved_at)->not->toBeNull();
 
+    $this
+        ->actingAs(User::factory()->create())
+        ->getJson(route('reports.missing-citizen-identities.data'))
+        ->assertOk()
+        ->assertJsonMissing(['id_number1' => '111111111']);
+
     Http::assertSent(function ($request): bool {
         return $request->url() === 'https://services.example.test/FeatureServer/1/updateFeatures'
             && str_contains((string) $request['features'], '"id_number1":"222222222"');
