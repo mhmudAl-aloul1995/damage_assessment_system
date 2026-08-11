@@ -145,6 +145,41 @@ it('does not report identities that exist in sgaza civil registry', function ():
     expect(MissingCitizenIdentityReport::query()->count())->toBe(0);
 });
 
+it('matches sgaza records using structured housing unit owner name fields', function (): void {
+    createSgazaTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 1102,
+        'globalid' => 'sgaza-structured-name-match',
+        'unit_owner' => null,
+        'q_9_3_1_first_name' => 'واصل',
+        'q_9_3_2_second_name__father' => 'محمود',
+        'q_9_3_3_third_name__grandfather' => 'سعيد',
+        'q_9_3_4_last_name' => 'لحسان',
+        'id_number1' => '966605550',
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '966605552',
+        'first_name' => 'واصل',
+        'father_name' => 'محمود',
+        'grandfather_name' => 'سعيد',
+        'family_name' => 'لحسان',
+        'full_name' => 'واصل محمود سعيد لحسان',
+        'full_name_normalized' => 'واصلمحمودسعيدلحسان',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
+
+    expect($report->owner_name)->toBe('واصل محمود سعيد لحسان')
+        ->and($report->name_match_status)->toBe('matched')
+        ->and($report->matched_citizen_id_card_no)->toBe('966605552')
+        ->and($report->matched_citizen_full_name)->toBe('واصل محمود سعيد لحسان');
+});
+
 it('approves a single name match and syncs the new identity to arcgis', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');

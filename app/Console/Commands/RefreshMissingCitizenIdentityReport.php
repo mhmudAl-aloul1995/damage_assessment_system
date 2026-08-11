@@ -40,7 +40,15 @@ class RefreshMissingCitizenIdentityReport extends Command
         $missing = 0;
 
         HousingUnit::query()
-            ->select(['id', 'unit_owner', 'id_number1'])
+            ->select([
+                'id',
+                'unit_owner',
+                'id_number1',
+                'q_9_3_1_first_name',
+                'q_9_3_2_second_name__father',
+                'q_9_3_3_third_name__grandfather',
+                'q_9_3_4_last_name',
+            ])
             ->whereNotNull('id_number1')
             ->where('id_number1', '<>', '')
             ->orderBy('id')
@@ -82,9 +90,10 @@ class RefreshMissingCitizenIdentityReport extends Command
 
                 $rows = $missingHousingUnits
                     ->map(function (HousingUnit $housingUnit) use ($nameMatchesByUnitId): array {
+                        $ownerName = $this->ownerName($housingUnit);
                         $nameMatch = $nameMatchesByUnitId[$housingUnit->id] ?? [
-                            'normalized_owner_name' => ArabicNameNormalizer::normalize((string) $housingUnit->unit_owner),
-                            'name_match_status' => filled($housingUnit->unit_owner) ? 'not_found' : 'no_owner_name',
+                            'normalized_owner_name' => ArabicNameNormalizer::normalize($ownerName),
+                            'name_match_status' => filled($ownerName) ? 'not_found' : 'no_owner_name',
                             'matched_citizen_id' => null,
                             'matched_citizen_id_card_no' => null,
                             'matched_citizen_full_name' => null,
@@ -93,7 +102,7 @@ class RefreshMissingCitizenIdentityReport extends Command
 
                         return [
                             'housing_unit_id' => $housingUnit->id,
-                            'owner_name' => $housingUnit->unit_owner,
+                            'owner_name' => $ownerName,
                             'normalized_owner_name' => $nameMatch['normalized_owner_name'],
                             'id_number' => trim((string) $housingUnit->id_number1),
                             'name_match_status' => $nameMatch['name_match_status'],
@@ -217,7 +226,7 @@ class RefreshMissingCitizenIdentityReport extends Command
     {
         $normalizedNamesByUnitId = $housingUnits
             ->mapWithKeys(fn (HousingUnit $housingUnit): array => [
-                $housingUnit->id => ArabicNameNormalizer::normalize((string) $housingUnit->unit_owner),
+                $housingUnit->id => ArabicNameNormalizer::normalize($this->ownerName($housingUnit)),
             ])
             ->filter();
 
@@ -259,6 +268,20 @@ class RefreshMissingCitizenIdentityReport extends Command
                 ];
             })
             ->all();
+    }
+
+    private function ownerName(HousingUnit $housingUnit): string
+    {
+        $structuredName = trim(implode(' ', array_filter([
+            trim((string) $housingUnit->q_9_3_1_first_name),
+            trim((string) $housingUnit->q_9_3_2_second_name__father),
+            trim((string) $housingUnit->q_9_3_3_third_name__grandfather),
+            trim((string) $housingUnit->q_9_3_4_last_name),
+        ])));
+
+        return $structuredName !== ''
+            ? $structuredName
+            : trim((string) $housingUnit->unit_owner);
     }
 
     private function sgazaIdsByNumbers(Collection $identityNumbers): Collection
