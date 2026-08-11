@@ -30,6 +30,8 @@ class HousingUnitController extends Controller
 {
     private const HOUSING_EXPORT_SOURCE_TABLE = 'v_housing_units_audited';
 
+    private const HOUSING_EXPORT_OBJECT_IDS_LIMIT = 10;
+
     public function index(?string $globalid = null): ViewContract
     {
         $filterColumns = ['id', 'list_name', 'name', 'label'];
@@ -567,9 +569,43 @@ class HousingUnitController extends Controller
             $query->where('parentglobalid', $request->string('parentglobalid')->toString());
         }
 
+        $objectIds = $this->exportHousingObjectIds($request);
+
+        if ($objectIds !== []) {
+            $query->whereIn('objectid', $objectIds);
+        }
+
         $this->applyHousingFilters($query, $filters);
 
         return $query;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function exportHousingObjectIds(HousingUnitExportRequest $request): array
+    {
+        $rawObjectIds = trim((string) $request->input('objectids', ''));
+
+        if ($rawObjectIds === '') {
+            return [];
+        }
+
+        preg_match_all('/\d+/', $rawObjectIds, $matches);
+
+        $objectIds = collect($matches[0] ?? [])
+            ->map(fn (string $objectId): int => (int) $objectId)
+            ->filter(fn (int $objectId): bool => $objectId > 0)
+            ->unique()
+            ->values();
+
+        abort_if(
+            $objectIds->count() > self::HOUSING_EXPORT_OBJECT_IDS_LIMIT,
+            422,
+            'يمكن تصدير جدول الكميات لعشرة وحدات سكنية كحد أقصى في كل مرة.'
+        );
+
+        return $objectIds->all();
     }
 
     /**

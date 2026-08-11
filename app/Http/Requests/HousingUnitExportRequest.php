@@ -26,6 +26,7 @@ class HousingUnitExportRequest extends FormRequest
             'filters' => ['nullable', 'array'],
             'globalid' => ['nullable', 'string'],
             'parentglobalid' => ['nullable', 'string'],
+            'objectids' => ['nullable', 'string'],
         ];
     }
 

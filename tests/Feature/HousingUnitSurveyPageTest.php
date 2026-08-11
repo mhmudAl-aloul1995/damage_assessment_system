@@ -45,6 +45,8 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Unit information and damage');
     $response->assertSee('Resident and household');
     $response->assertSee('Support and safety');
+    $response->assertSee('Object ID للوحدات السكنية');
+    $response->assertSee('الحد الأقصى 10 وحدات');
     $response->assertSee('Apartment');
     $response->assertSee('Totally Damaged');
     $response->assertSee('Engineer One');
@@ -442,6 +444,64 @@ it('exports filtered housing units to excel from the audited housing units view'
             && ! $rows->contains(fn (array $row): bool => is_string($row[1] ?? null) && str_contains($row[1], ':'))
             && ! $rows->contains(['Object ID', 'رقم الوحدة', 'مالك الوحدة', 'القسم', 'الكود', 'البند', 'الوحدة', 'الكمية']);
     });
+});
+
+it('exports housing unit BOQ by pasted housing object ids with a maximum of ten ids', function () {
+    Excel::fake();
+
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3701,
+        'globalid' => 'housing-unit-objectids-included-one',
+        'unit_owner' => 'Object One',
+        'dm1' => '4',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3702,
+        'globalid' => 'housing-unit-objectids-included-two',
+        'unit_owner' => 'Object Two',
+        'dm1' => '5',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3703,
+        'globalid' => 'housing-unit-objectids-excluded',
+        'unit_owner' => 'Object Three',
+        'dm1' => '6',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'dm1',
+        'label' => 'DM1-Demolish walls',
+        'hint' => 'إزالة حوائط شاملا المعدات والمصنعية والترحيل لأقرب مكب (M2)',
+    ]);
+
+    $this->actingAs($user)->get(route('housing.export', [
+        'format' => 'xlsx',
+        'objectids' => "3701\r\n3702",
+    ]))->assertOk();
+
+    Excel::matchByRegex();
+    Excel::assertDownloaded('/housing-units-\d{8}-\d{6}\.xlsx/', function (HousingUnitBoqExport $export): bool {
+        $rows = collect($export->array());
+
+        return $rows->contains(['-', null, 'Object One', 3701, null])
+            && $rows->contains(['-', null, 'Object Two', 3702, null])
+            && ! $rows->contains(['-', null, 'Object Three', 3703, null]);
+    });
+});
+
+it('rejects pasted housing object ids above the export limit', function () {
+    $user = User::factory()->create();
+
+    $objectIds = collect(range(1, 11))->map(fn (int $id): string => (string) (3800 + $id))->implode("\n");
+
+    $this->actingAs($user)->get(route('housing.export', [
+        'format' => 'xlsx',
+        'objectids' => $objectIds,
+    ]))->assertStatus(422);
 });
 
 it('exports a selected housing unit to pdf from the actions menu', function () {
