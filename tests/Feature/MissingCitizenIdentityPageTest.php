@@ -145,6 +145,56 @@ it('does not report identities that exist in sgaza civil registry', function ():
     expect(MissingCitizenIdentityReport::query()->count())->toBe(0);
 });
 
+it('returns housing unit documents for a missing identity report', function (): void {
+    Schema::table('housing_units', function (Blueprint $table): void {
+        if (! Schema::hasColumn('housing_units', 'attachments')) {
+            $table->text('attachments')->nullable();
+        }
+
+        if (! Schema::hasColumn('housing_units', 'damge_photo_2')) {
+            $table->text('damge_photo_2')->nullable();
+        }
+    });
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services2.arcgis.com/*/FeatureServer/1/910/attachments' => Http::response(['attachmentInfos' => []]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 910,
+        'globalid' => 'missing-identity-documents',
+        'unit_owner' => 'Document Owner',
+        'id_number1' => '900000010',
+        'attachments' => json_encode([
+            [
+                'name' => 'Ownership document',
+                'url' => 'https://example.test/documents/ownership.pdf',
+                'contentType' => 'application/pdf',
+            ],
+        ], JSON_THROW_ON_ERROR),
+        'damge_photo_2' => 'https://example.test/photos/damage.jpg',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->firstOrFail();
+
+    $this
+        ->actingAs(User::factory()->create())
+        ->getJson(route('reports.missing-citizen-identities.documents', $report))
+        ->assertOk()
+        ->assertJsonPath('data.0.title', 'Ownership document')
+        ->assertJsonPath('data.0.type', 'pdf')
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.local_attachments'))
+        ->assertJsonPath('data.1.url', 'https://example.test/photos/damage.jpg')
+        ->assertJsonPath('data.1.type', 'image')
+        ->assertJsonPath('data.1.source', __('ui.missing_citizen_identities.damage_photo_2'));
+});
+
 it('matches sgaza records using structured housing unit owner name fields', function (): void {
     createSgazaTable();
 

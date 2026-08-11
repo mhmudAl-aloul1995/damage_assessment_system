@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
+use Throwable;
 
 class MissingCitizenIdentityController extends Controller
 {
@@ -198,6 +199,22 @@ class MissingCitizenIdentityController extends Controller
                 ->unique('id_card_no')
                 ->take(20)
                 ->values(),
+        ]);
+    }
+
+    public function documents(MissingCitizenIdentityReport $report, ArcgisService $arcgisService): JsonResponse
+    {
+        $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
+
+        if (! $housingUnit instanceof HousingUnit) {
+            return response()->json([
+                'message' => __('ui.missing_citizen_identities.housing_unit_missing'),
+                'data' => [],
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => $this->housingUnitDocuments($housingUnit, $arcgisService),
         ]);
     }
 
@@ -427,6 +444,177 @@ class MissingCitizenIdentityController extends Controller
         }
 
         return 'phc_dashboard.citizens';
+    }
+
+    /**
+     * @return array<int, array{title: string, url: string, type: string, source: string, content_type?: string, size?: int|null}>
+     */
+    private function housingUnitDocuments(HousingUnit $housingUnit, ArcgisService $arcgisService): array
+    {
+        $documents = collect();
+
+        if (filled($housingUnit->objectid)) {
+            try {
+                $token = $arcgisService->getToken();
+                $layerId = $arcgisService->getLayerId(HousingUnit::class);
+
+                collect($arcgisService->getAttachments($housingUnit->objectid, $layerId, $token))
+                    ->each(function (array $attachment) use ($arcgisService, $documents, $housingUnit, $layerId, $token): void {
+                        $attachmentId = $attachment['id'] ?? null;
+
+                        if (! filled($attachmentId)) {
+                            return;
+                        }
+
+                        $url = $arcgisService->buildUrl($housingUnit->objectid, $attachmentId, $layerId, $token);
+
+                        $documents->push([
+                            'title' => (string) ($attachment['name'] ?? __('ui.missing_citizen_identities.arcgis_attachment')),
+                            'url' => $url,
+                            'type' => $this->documentType($url, (string) ($attachment['contentType'] ?? '')),
+                            'source' => __('ui.missing_citizen_identities.source_arcgis'),
+                            'content_type' => (string) ($attachment['contentType'] ?? ''),
+                            'size' => $attachment['size'] ?? null,
+                        ]);
+                    });
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        $this->collectDocumentsFromValue($documents, $housingUnit->attachments, __('ui.missing_citizen_identities.local_attachments'));
+
+        collect([
+            'damge_photo_2' => __('ui.missing_citizen_identities.damage_photo_2'),
+            'damge_photo_3' => __('ui.missing_citizen_identities.damage_photo_3'),
+            'damge_photo_4' => __('ui.missing_citizen_identities.damage_photo_4'),
+        ])->each(function (string $label, string $field) use ($documents, $housingUnit): void {
+            $this->collectDocumentsFromValue($documents, $housingUnit->{$field}, $label);
+        });
+
+        return $documents
+            ->filter(fn (array $document): bool => filled($document['url'] ?? null))
+            ->unique('url')
+            ->values()
+            ->all();
+    }
+
+    private function collectDocumentsFromValue(Collection $documents, mixed $value, string $source): void
+    {
+        if ($value === null || $value === '') {
+            return;
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $this->collectDocumentsFromValue($documents, $decoded, $source);
+
+                return;
+            }
+
+            collect(preg_split('/[\s,]+/', $value) ?: [])
+                ->map(fn (string $url): string => trim($url))
+                ->filter()
+                ->each(function (string $url) use ($documents, $source): void {
+                    $this->pushDocument($documents, $url, null, $source);
+                });
+
+            return;
+        }
+
+        if (is_object($value)) {
+            $this->collectDocumentsFromValue($documents, (array) $value, $source);
+
+            return;
+        }
+
+        if (! is_array($value)) {
+            return;
+        }
+
+        $url = $value['url'] ?? $value['href'] ?? $value['src'] ?? null;
+
+        if (is_string($url)) {
+            $title = $value['name'] ?? $value['title'] ?? null;
+            $contentType = $value['contentType'] ?? $value['content_type'] ?? null;
+
+            $this->pushDocument(
+                $documents,
+                $url,
+                is_string($title) ? $title : null,
+                $source,
+                is_string($contentType) ? $contentType : null
+            );
+        }
+
+        foreach ($value as $item) {
+            if (is_array($item) || is_object($item)) {
+                $this->collectDocumentsFromValue($documents, $item, $source);
+            } elseif (is_string($item)) {
+                $this->pushDocument($documents, $item, null, $source);
+            }
+        }
+    }
+
+    private function pushDocument(Collection $documents, string $url, ?string $title, string $source, ?string $contentType = null): void
+    {
+        $normalizedUrl = $this->normalizeDocumentUrl($url);
+
+        if ($normalizedUrl === null) {
+            return;
+        }
+
+        $documents->push([
+            'title' => filled($title) ? (string) $title : basename(parse_url($normalizedUrl, PHP_URL_PATH) ?: $source),
+            'url' => $normalizedUrl,
+            'type' => $this->documentType($normalizedUrl, (string) $contentType),
+            'source' => $source,
+            'content_type' => (string) $contentType,
+        ]);
+    }
+
+    private function normalizeDocumentUrl(string $url): ?string
+    {
+        $url = trim($url);
+
+        if ($url === '') {
+            return null;
+        }
+
+        if (filter_var($url, FILTER_VALIDATE_URL)) {
+            return $url;
+        }
+
+        if (str_starts_with($url, '/')) {
+            return url($url);
+        }
+
+        if (str_starts_with($url, 'storage/') || str_starts_with($url, 'uploads/')) {
+            return url($url);
+        }
+
+        return null;
+    }
+
+    private function documentType(string $url, string $contentType = ''): string
+    {
+        if (str_contains($contentType, 'image/')) {
+            return 'image';
+        }
+
+        if (str_contains($contentType, 'pdf')) {
+            return 'pdf';
+        }
+
+        $extension = strtolower(pathinfo(parse_url($url, PHP_URL_PATH) ?: '', PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp' => 'image',
+            'pdf' => 'pdf',
+            default => 'file',
+        };
     }
 
     private function searchAccessCivilRegistry(string $search): Collection
