@@ -248,7 +248,10 @@ class RefreshMissingCitizenIdentityReport extends Command
                 $normalizedOwnerName = (string) ($normalizedNamesByUnitId[$housingUnit->id] ?? '');
                 $citizens = $citizensByNormalizedName->get($normalizedOwnerName, collect());
                 $sgazaRecords = $sgazaByNormalizedName->get($normalizedOwnerName, collect());
-                $matches = $citizens->merge($sgazaRecords);
+                $matches = $sgazaRecords
+                    ->merge($citizens)
+                    ->unique(fn ($match): string => (string) $match->id_card_no)
+                    ->values();
                 $matchedCitizen = $matches->count() === 1 ? $matches->first() : null;
 
                 return [

@@ -360,6 +360,52 @@ it('prioritizes sgaza candidates before citizens for matching names', function (
         ->assertJsonPath('data.1.source', __('ui.missing_citizen_identities.source_citizens'));
 });
 
+it('counts duplicate sgaza and citizen candidates with the same identity as one match', function (): void {
+    createSgazaTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 779,
+        'globalid' => 'duplicate-source-name',
+        'unit_owner' => 'Duplicate Source',
+        'id_number1' => '333333335',
+    ]);
+
+    DB::table('citizens')->insert([
+        [
+            'id_card_no' => '555555557',
+            'status' => 'A',
+            'full_name' => 'Duplicate Source',
+            'full_name_normalized' => 'DuplicateSource',
+        ],
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '555555557',
+        'first_name' => 'Duplicate',
+        'father_name' => 'Source',
+        'grandfather_name' => null,
+        'family_name' => null,
+        'full_name' => 'Duplicate Source',
+        'full_name_normalized' => 'DuplicateSource',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
+
+    expect($report->name_match_status)->toBe('matched')
+        ->and($report->matched_citizens_count)->toBe(1)
+        ->and($report->matched_citizen_id_card_no)->toBe('555555557');
+
+    $this
+        ->actingAs(User::factory()->create())
+        ->getJson(route('reports.missing-citizen-identities.name-candidates', $report))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id_card_no', '555555557');
+});
+
 it('searches the civil registry for unmatched names and approves a manually selected citizen', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
