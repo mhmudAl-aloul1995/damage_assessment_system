@@ -10,6 +10,7 @@ use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
 use App\Models\User;
+use App\Support\Audit\RestrictedLawyerAuditAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -220,6 +221,12 @@ class AuditStatusHistoryController extends Controller
 
     public function updateNote(Request $request): JsonResponse
     {
+        abort_if(
+            RestrictedLawyerAuditAccess::isRestrictedLawyer($request->user()),
+            403,
+            'هذا الحساب مخصص للعرض فقط ولا يمكنه تعديل التدقيق أو إضافة ملاحظات.'
+        );
+
         abort_unless($this->canEditStatusNotes($request->user()), 403);
 
         $request->validate([
@@ -308,6 +315,10 @@ class AuditStatusHistoryController extends Controller
 
     private function canEditStatusNotes(?User $user): bool
     {
+        if (RestrictedLawyerAuditAccess::isRestrictedLawyer($user)) {
+            return false;
+        }
+
         return $user?->hasAnyRole([
             'Database Officer',
             'Auditing Supervisor',
@@ -332,6 +343,10 @@ class AuditStatusHistoryController extends Controller
 
     private function canEditSpecificNote(?User $user, BuildingStatusHistory|HousingStatusHistory $note): bool
     {
+        if (RestrictedLawyerAuditAccess::isRestrictedLawyer($user)) {
+            return false;
+        }
+
         if ($user?->hasAnyRole(['Database Officer', 'Auditing Supervisor'])) {
             return true;
         }

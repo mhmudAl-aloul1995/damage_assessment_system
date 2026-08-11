@@ -22,7 +22,8 @@
     $showHousingTab = filled($housingGlobalid);
     $isAssessmentReadOnly = $isAssessmentReadOnly ?? false;
     $canEditAssessment = $canEditAssessment ?? false;
-    $isStatusPreviewOnly = false;
+    $canViewStatusButtons = $canViewStatusButtons ?? false;
+    $isStatusPreviewOnly = ! $canViewStatusButtons;
     $statusLabel = fn (?string $status): string => match ($status) {
         'accepted_by_engineer' => 'مقبول هندسياً',
         'rejected_by_engineer' => 'مرفوض هندسياً',
@@ -678,35 +679,44 @@
                                                 <span class="{{ $statusBadgeClass($buildingLegalStatus) }}">
                                                     آخر حالة قانونية: {{ $statusLabel($buildingLegalStatus) }}
                                                 </span>
-                                            @else
+                                            @elseif($canViewStatusButtons)
+                                            @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                         data-status="accepted" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canEditAssessment)
                                                         onclick="setBuildingStatus('accepted', 'Legal Auditor')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
                                                         data-status="legal_notes" data-audit-type="Legal Auditor"
+                                                        @disabled(! $canEditAssessment)
                                                         onclick="setBuildingStatus('legal_notes', 'Legal Auditor')">ملاحظات
                                                         قانونية</button>
                                                 </div>
                                             </div>
+                                            @endhasanyrole
 
+                                            @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
                                                         data-status="rejected" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
                                                         onclick="setBuildingStatus('rejected', 'QC/QA Engineer')">مرفوض</button>
                                                     <button type="button" class="btn btn-sm btn-light-success building-status-btn"
                                                         data-status="accepted" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
                                                         onclick="setBuildingStatus('accepted', 'QC/QA Engineer')">مقبول</button>
                                                     <button type="button" class="btn btn-sm btn-light-warning building-status-btn"
                                                         data-status="need_review" data-audit-type="QC/QA Engineer"
+                                                        @disabled(! $canEditAssessment)
                                                         onclick="setBuildingStatus('need_review', 'QC/QA Engineer')">بحاجة
                                                         لمراجعة</button>
                                                 </div>
                                             </div>
+                                            @endhasanyrole
 
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">الاعتماد النهائي</div>
@@ -985,7 +995,7 @@
                                                 <span class="d-none badge badge-light fw-bold px-4 py-3">
                                                     آخر حالة: <span id="housing_current_status_preview">-</span>
                                                 </span>
-                                            @else
+                                            @elseif($canViewStatusButtons)
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">

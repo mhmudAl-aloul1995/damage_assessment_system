@@ -9,6 +9,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditDashboardController
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditExportController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditReviewerController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditStatusHistoryController;
+use App\Modules\DamageAssessment\Http\Controllers\Audit\LawyerAuditAssignmentController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeArchiveController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeDecisionController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeMemberController;
@@ -277,6 +278,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/field-engineer-audit', [auditController::class, 'fieldEngineerAudit'])->name('audit.fieldEngineer');
     Route::get('/audit/export', AuditExportController::class)->name('audit.export');
     Route::get('/audit/dashboard', AuditDashboardController::class)->name('audit.dashboard');
+    Route::get('/audit/lawyer-assignments', LawyerAuditAssignmentController::class)
+        ->name('audit.lawyer-assignments');
     Route::get('/audit/reviewers', [AuditReviewerController::class, 'index'])->name('audit.reviewers.index');
     Route::post('/audit/reviewers', [AuditReviewerController::class, 'store'])->name('audit.reviewers.store');
     Route::delete('/audit/reviewers/{user}', [AuditReviewerController::class, 'destroy'])->name('audit.reviewers.destroy');

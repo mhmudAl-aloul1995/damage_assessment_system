@@ -25,6 +25,7 @@ use App\Modules\DamageAssessment\Services\Audit\AuditTableService;
 use App\services\ArcgisAttachmentBackupService;
 use App\services\ArcgisAuditedRestoreService;
 use App\services\ArcgisService;
+use App\Support\Audit\RestrictedLawyerAuditAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -3070,6 +3071,8 @@ class auditController extends Controller
 
     public function completeBuildingFieldStatus(Building $building, ArcgisService $arcgisService): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite(request());
+
         if (blank($building->objectid)) {
             return response()->json([
                 'success' => false,
@@ -3106,6 +3109,8 @@ class auditController extends Controller
 
     public function restoreAuditedToNormal(Building $building, ArcgisAuditedRestoreService $arcgisAuditedRestoreService): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite(request());
+
         try {
             $summary = $arcgisAuditedRestoreService->restoreBuilding($building);
         } catch (Throwable $exception) {
@@ -3220,6 +3225,8 @@ class auditController extends Controller
 
     public function storeBuildingAttachment(StoreBuildingAttachmentRequest $request, Building $building, ArcgisService $arcgis): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         if (! filled($building->objectid)) {
             return response()->json([
                 'message' => 'This building does not have an ArcGIS object id.',
@@ -3255,6 +3262,8 @@ class auditController extends Controller
 
     public function replaceBuildingAttachment(StoreBuildingAttachmentRequest $request, Building $building, int $attachmentId, ArcgisService $arcgis, ArcgisAttachmentBackupService $backupService): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         if (! filled($building->objectid)) {
             return response()->json([
                 'message' => 'This building does not have an ArcGIS object id.',
@@ -3299,6 +3308,8 @@ class auditController extends Controller
 
     public function destroyBuildingAttachment(Building $building, int $attachmentId, ArcgisService $arcgis, ArcgisAttachmentBackupService $backupService): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite(request());
+
         if (! filled($building->objectid)) {
             return response()->json([
                 'message' => 'This building does not have an ArcGIS object id.',
@@ -3338,6 +3349,8 @@ class auditController extends Controller
 
     public function storeHousingUnitAttachment(StoreBuildingAttachmentRequest $request, HousingUnit $housingUnit, ArcgisService $arcgis): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         if (! filled($housingUnit->objectid)) {
             return response()->json([
                 'message' => 'This housing unit does not have an ArcGIS object id.',
@@ -3373,6 +3386,8 @@ class auditController extends Controller
 
     public function replaceHousingUnitAttachment(StoreBuildingAttachmentRequest $request, HousingUnit $housingUnit, int $attachmentId, ArcgisService $arcgis, ArcgisAttachmentBackupService $backupService): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         if (! filled($housingUnit->objectid)) {
             return response()->json([
                 'message' => 'This housing unit does not have an ArcGIS object id.',
@@ -3417,6 +3432,8 @@ class auditController extends Controller
 
     public function destroyHousingUnitAttachment(HousingUnit $housingUnit, int $attachmentId, ArcgisService $arcgis, ArcgisAttachmentBackupService $backupService): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite(request());
+
         if (! filled($housingUnit->objectid)) {
             return response()->json([
                 'message' => 'This housing unit does not have an ArcGIS object id.',
@@ -3456,6 +3473,8 @@ class auditController extends Controller
 
     public function scheduleBuildingDeletion(Request $request, Building $building): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Project Officer']), 403);
 
         if (blank($building->objectid)) {
@@ -3498,6 +3517,8 @@ class auditController extends Controller
 
     public function undoBuildingDeletion(Request $request): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Project Officer']), 403);
 
         $validated = $request->validate([
@@ -3513,6 +3534,8 @@ class auditController extends Controller
 
     public function commitBuildingDeletion(Request $request, ArcgisService $arcgis): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Project Officer']), 403);
 
         $validated = $request->validate([
@@ -3580,6 +3603,8 @@ class auditController extends Controller
 
     public function scheduleHousingUnitDeletion(Request $request): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Project Officer']), 403);
 
         $validated = $request->validate([
@@ -3629,6 +3654,8 @@ class auditController extends Controller
 
     public function undoHousingUnitDeletion(Request $request): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Project Officer']), 403);
 
         $validated = $request->validate([
@@ -3644,6 +3671,8 @@ class auditController extends Controller
 
     public function commitHousingUnitDeletion(Request $request, ArcgisService $arcgis): JsonResponse
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         abort_unless($request->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Project Officer']), 403);
 
         $validated = $request->validate([
@@ -4290,6 +4319,7 @@ COALESCE(
     public function updateBuildingLegalChallenge(UpdateBuildingLegalChallengeRequest $request)
     {
         $this->abortFieldEngineerWrite();
+        $this->abortRestrictedLawyerAuditWrite($request);
 
         $updated = Building::query()
             ->whereIn('objectid', $request->validated('building_ids'))
@@ -4309,6 +4339,7 @@ COALESCE(
     public function updateHousingLegalChallenge(UpdateHousingLegalChallengeRequest $request)
     {
         $this->abortFieldEngineerWrite();
+        $this->abortRestrictedLawyerAuditWrite($request);
 
         $globalids = $request->validated('globalids')
             ?? [$request->validated('globalid')];
@@ -4331,6 +4362,7 @@ COALESCE(
     public function finalApproveSelected(Request $request)
     {
         $this->abortFieldEngineerWrite();
+        $this->abortRestrictedLawyerAuditWrite($request);
 
         abort_unless(auth()->user()?->hasAnyRole(['Auditing Supervisor', 'Database Officer']), 403);
 
@@ -4532,6 +4564,8 @@ COALESCE(
 
     public function undpFinalApproveSelected(Request $request)
     {
+        $this->abortRestrictedLawyerAuditWrite($request);
+
         abort_unless(auth()->user()?->hasAnyRole(['Database Officer', 'Auditing Supervisor']), 403);
 
         $request->validate([
@@ -4643,6 +4677,7 @@ COALESCE(
     public function setStatus(Request $request)
     {
         $this->abortFieldEngineerWrite();
+        $this->abortRestrictedLawyerAuditWrite($request);
 
         $request->validate([
             'globalid' => ['required', 'string'],
@@ -4803,6 +4838,7 @@ COALESCE(
     public function setHousingStatus(Request $request)
     {
         $this->abortFieldEngineerWrite();
+        $this->abortRestrictedLawyerAuditWrite($request);
 
         $request->validate([
             'globalid' => ['required', 'string'],
@@ -5239,11 +5275,12 @@ COALESCE(
         $building = Building::where('globalid', $request->buildingGlobalid)->first();
         $user = Auth::user();
         $canEditAssessment = $this->canEditAssessmentForBuilding($user, $building);
+        $isRestrictedLawyerAuditUser = RestrictedLawyerAuditAccess::isRestrictedLawyer($user);
         $canViewFieldAssessment = $this->canViewFieldAssessmentForBuilding($user, $building);
         $isTeamLeaderReadOnly = $user?->hasRole('Team Leader') && ! $canEditAssessment;
-        $canViewStatusButtons = $canEditAssessment
+        $canViewStatusButtons = ! $isRestrictedLawyerAuditUser && ($canEditAssessment
             || $isTeamLeaderReadOnly
-            || ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) && $canViewFieldAssessment);
+            || ($user?->hasAnyRole(['Field Engineer', 'field Engineer']) && $canViewFieldAssessment));
         $isFieldEngineerStatusPreview = $user?->hasAnyRole(['Field Engineer', 'field Engineer'])
             && $canViewFieldAssessment
             && ! $canEditAssessment;
@@ -5285,7 +5322,8 @@ COALESCE(
             ->first()?->status?->name;
 
         $legalChallenges = self::LEGAL_CHALLENGES;
-        $isAssessmentReadOnly = $isTeamLeaderReadOnly
+        $isAssessmentReadOnly = $isRestrictedLawyerAuditUser
+            || $isTeamLeaderReadOnly
             || ($user?->hasAnyRole(['Field Engineer', 'field Engineer'])
                 && ! $canEditAssessment
                 && $canViewFieldAssessment);
@@ -5424,6 +5462,10 @@ COALESCE(
             return false;
         }
 
+        if (RestrictedLawyerAuditAccess::isRestrictedLawyer($user)) {
+            return false;
+        }
+
         if ($user->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Audit Reviewer'])) {
             return true;
         }
@@ -5451,6 +5493,15 @@ COALESCE(
             ->where('user_id', $user->id)
             ->whereIn('type', $assignmentTypes)
             ->exists();
+    }
+
+    private function abortRestrictedLawyerAuditWrite(Request $request): void
+    {
+        abort_if(
+            RestrictedLawyerAuditAccess::isRestrictedLawyer($request->user()),
+            403,
+            'هذا الحساب مخصص للعرض فقط ولا يمكنه تعديل التدقيق أو إضافة ملاحظات.'
+        );
     }
 
     private function canSetAssessmentStatusForBuilding(?User $user, ?Building $building, string $type): bool

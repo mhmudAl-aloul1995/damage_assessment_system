@@ -9,6 +9,7 @@ use App\Models\Building;
 use App\Models\HousingUnit;
 use App\Models\User;
 use App\Services\AssessmentEditService;
+use App\Support\Audit\RestrictedLawyerAuditAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -53,6 +54,10 @@ class AssessmentInlineEditController extends Controller
         ]);
 
         $building = $this->buildingForAssessmentEdit((string) $request->type, (string) $request->globalid);
+
+        if (RestrictedLawyerAuditAccess::isRestrictedLawyer($request->user())) {
+            abort(403, 'هذا الحساب مخصص للعرض فقط ولا يمكنه تعديل التدقيق أو إضافة ملاحظات.');
+        }
 
         if ($request->user()?->hasRole('Team Leader')) {
             abort(403, 'This assessment is read only.');
@@ -163,6 +168,10 @@ class AssessmentInlineEditController extends Controller
     private function canEditAssessmentForBuilding(?User $user, ?Building $building): bool
     {
         if (! $user instanceof User || ! $building instanceof Building) {
+            return false;
+        }
+
+        if (RestrictedLawyerAuditAccess::isRestrictedLawyer($user)) {
             return false;
         }
 
