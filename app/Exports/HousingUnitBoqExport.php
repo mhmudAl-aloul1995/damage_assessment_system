@@ -30,16 +30,22 @@ class HousingUnitBoqExport implements FromArray, WithEvents, WithTitle
     public function array(): array
     {
         $sheetRows = [
-            ['جدول الكميات BOQ', null, null, null, null],
-            ['Damage Assessment Project', null, null, null, null],
+            ['جدول الكميات BOQ - Damage Assessment Project', null, null, null, null],
             [null, null, null, null, null],
         ];
 
         foreach ($this->rows->groupBy('globalid') as $unitRows) {
             $firstRow = $unitRows->first();
 
-            $sheetRows[] = ['Object ID', $firstRow['objectid'] ?? '-', 'رقم الوحدة', $firstRow['housing_unit_number'] ?? '-', 'اسم مالك الوحدة'];
-            $sheetRows[] = [null, null, null, null, $firstRow['unit_owner'] ?? '-'];
+            $sheetRows[] = [
+                'Object ID: '.($firstRow['objectid'] ?? '-')
+                .' | رقم الوحدة: '.($firstRow['housing_unit_number'] ?? '-')
+                .' | اسم مالك الوحدة: '.($firstRow['unit_owner'] ?? '-'),
+                null,
+                null,
+                null,
+                null,
+            ];
             $sheetRows[] = ['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'];
 
             foreach ($unitRows as $row) {
@@ -75,8 +81,7 @@ class HousingUnitBoqExport implements FromArray, WithEvents, WithTitle
 
                 $sheet->setRightToLeft(true);
                 $sheet->mergeCells('A1:E1');
-                $sheet->mergeCells('A2:E2');
-                $sheet->getStyle('A1:E2')->applyFromArray([
+                $sheet->getStyle('A1:E1')->applyFromArray([
                     'font' => ['bold' => true],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -85,15 +90,20 @@ class HousingUnitBoqExport implements FromArray, WithEvents, WithTitle
                 ]);
                 $sheet->getStyle('A1')->getFont()->setSize(16);
 
-                for ($row = 4; $row <= $highestRow; $row++) {
+                for ($row = 3; $row <= $highestRow; $row++) {
                     $firstCell = (string) $sheet->getCell("A{$row}")->getValue();
 
-                    if ($firstCell === 'Object ID') {
-                        $sheet->getStyle("A{$row}:E".($row + 1))->applyFromArray([
+                    if (str_starts_with($firstCell, 'Object ID:')) {
+                        $sheet->mergeCells("A{$row}:E{$row}");
+                        $sheet->getStyle("A{$row}:E{$row}")->applyFromArray([
                             'font' => ['bold' => true],
                             'fill' => [
                                 'fillType' => Fill::FILL_SOLID,
                                 'startColor' => ['rgb' => 'EAF4FF'],
+                            ],
+                            'alignment' => [
+                                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                                'vertical' => Alignment::VERTICAL_CENTER,
                             ],
                         ]);
                     }

@@ -427,9 +427,8 @@ it('exports filtered housing units to excel from the audited housing units view'
         $rows = collect($export->array());
 
         return ! $export instanceof ShouldAutoSize
-            && $rows->contains(['Object ID', 3501, 'رقم الوحدة', '-', 'اسم مالك الوحدة'])
-            && $rows->contains([null, null, null, null, 'Included Owner'])
-            && ! $rows->contains([null, null, null, null, 'Original Owner'])
+            && $rows->contains(['Object ID: 3501 | رقم الوحدة: - | اسم مالك الوحدة: Included Owner', null, null, null, null])
+            && ! $rows->contains(['Object ID: 3501 | رقم الوحدة: - | اسم مالك الوحدة: Original Owner', null, null, null, null])
             && $rows->contains(['القسم', 'الكود', 'البند', 'الوحدة', 'الكمية'])
             && $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '12.5')
             && ! $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '1')
