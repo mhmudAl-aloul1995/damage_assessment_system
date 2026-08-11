@@ -78,6 +78,33 @@ it('builds direct assessment audit links from building and housing global ids', 
         ->toContain('/damage-assessment/showAssessmentAudit/building-globalid/housing-globalid');
 });
 
+it('allows only restricted lawyers and database officers to open the lawyer assignments page', function () {
+    Role::findOrCreate('Database Officer', 'web');
+    Role::findOrCreate('Auditing Supervisor', 'web');
+    Role::findOrCreate('Audit Reviewer', 'web');
+
+    $databaseOfficer = User::factory()->create();
+    $databaseOfficer->assignRole('Database Officer');
+
+    $auditingSupervisor = User::factory()->create();
+    $auditingSupervisor->assignRole('Auditing Supervisor');
+
+    $auditReviewer = User::factory()->create();
+    $auditReviewer->assignRole('Audit Reviewer');
+
+    $this->actingAs($databaseOfficer)
+        ->get(route('audit.lawyer-assignments'))
+        ->assertOk();
+
+    $this->actingAs($auditingSupervisor)
+        ->get(route('audit.lawyer-assignments'))
+        ->assertForbidden();
+
+    $this->actingAs($auditReviewer)
+        ->get(route('audit.lawyer-assignments'))
+        ->assertForbidden();
+});
+
 it('keeps restricted lawyers read only on the assessment page and write endpoints', function () {
     Role::query()->create([
         'name' => 'Legal Auditor',

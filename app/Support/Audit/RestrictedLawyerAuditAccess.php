@@ -57,7 +57,7 @@ class RestrictedLawyerAuditAccess
     public static function canViewAssignments(?User $user): bool
     {
         return self::isRestrictedLawyer($user)
-            || ($user?->hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Audit Reviewer']) ?? false);
+            || ($user?->hasRole('Database Officer') ?? false);
     }
 
     public static function normalizeGlobalid(mixed $value): string
