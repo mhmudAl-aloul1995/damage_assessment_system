@@ -20,30 +20,36 @@ class LawyerAuditAssignmentSeeder extends Seeder
         }
 
         $sharedStrings = $this->sharedStrings($path);
-        $headerMap = [];
+        $records = [];
         $excelIndex = 0;
 
-        LawyerAuditAssignment::query()->delete();
+        foreach ($this->worksheetPaths($path) as $worksheetPath) {
+            $headerMap = [];
 
-        foreach ($this->worksheetRows($path, $sharedStrings) as $rowNumber => $row) {
-            if ($rowNumber === 1) {
-                $headerMap = $this->headerMap($row);
+            foreach ($this->worksheetRows($path, $worksheetPath, $sharedStrings) as $rowNumber => $row) {
+                if ($headerMap === []) {
+                    $headerMap = $this->headerMap($row);
 
-                continue;
-            }
+                    if ($this->hasRequiredHeaders($headerMap)) {
+                        continue;
+                    }
 
-            $housingGlobalid = RestrictedLawyerAuditAccess::normalizeGlobalid($this->value($row, $headerMap, 'GlobalID'));
-            $buildingGlobalid = RestrictedLawyerAuditAccess::normalizeGlobalid($this->value($row, $headerMap, 'ParentGlobalID'));
+                    $headerMap = [];
 
-            if ($housingGlobalid === '' || $buildingGlobalid === '') {
-                continue;
-            }
+                    continue;
+                }
 
-            $excelIndex++;
+                $housingGlobalid = RestrictedLawyerAuditAccess::normalizeGlobalid($this->value($row, $headerMap, 'GlobalID'));
+                $buildingGlobalid = RestrictedLawyerAuditAccess::normalizeGlobalid($this->value($row, $headerMap, 'ParentGlobalID'));
 
-            LawyerAuditAssignment::query()->updateOrCreate(
-                ['excel_index' => $excelIndex],
-                [
+                if ($housingGlobalid === '' || $buildingGlobalid === '') {
+                    continue;
+                }
+
+                $excelIndex++;
+
+                $records[] = [
+                    'excel_index' => $excelIndex,
                     'source_row_number' => $rowNumber,
                     'lawyer_name' => RestrictedLawyerAuditAccess::lawyerForExcelIndex($excelIndex),
                     'building_objectid' => $this->integerValue($row, $headerMap, 'ObjectID للمبنى'),
@@ -62,9 +68,24 @@ class LawyerAuditAssignmentSeeder extends Seeder
                     'neighborhood' => $this->stringValue($row, $headerMap, '12.9 Neighborhood'),
                     'street' => $this->stringValue($row, $headerMap, '12.10 Street'),
                     'closest_facility' => $this->stringValue($row, $headerMap, '12.11 Closest Facility'),
-                ]
-            );
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            if ($records !== []) {
+                break;
+            }
         }
+
+        if ($records === []) {
+            throw new RuntimeException('No lawyer audit assignments were imported. Make sure the Excel file has GlobalID and ParentGlobalID columns.');
+        }
+
+        LawyerAuditAssignment::query()->delete();
+        LawyerAuditAssignment::query()->insert($records);
+
+        $this->command?->info('Imported '.count($records).' lawyer audit assignments.');
     }
 
     /**
@@ -117,13 +138,103 @@ class LawyerAuditAssignmentSeeder extends Seeder
     }
 
     /**
+     * @return list<string>
+     */
+    private function worksheetPaths(string $path): array
+    {
+        $zip = new ZipArchive;
+
+        if ($zip->open($path) !== true) {
+            throw new RuntimeException("Unable to open Excel file [{$path}].");
+        }
+
+        $paths = [];
+        $preferredPath = $this->worksheetPathByName(
+            $zip,
+            (string) config('lawyer_audit_assignments.worksheet_name')
+        );
+
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $name = $zip->getNameIndex($index);
+
+            if (is_string($name) && preg_match('#^xl/worksheets/sheet\d+\.xml$#', $name) === 1) {
+                $paths[] = $name;
+            }
+        }
+
+        $zip->close();
+        sort($paths, SORT_NATURAL);
+
+        if ($preferredPath !== null) {
+            $paths = array_values(array_unique([$preferredPath, ...$paths]));
+        }
+
+        if ($paths === []) {
+            throw new RuntimeException("No worksheets were found in Excel file [{$path}].");
+        }
+
+        return $paths;
+    }
+
+    private function worksheetPathByName(ZipArchive $zip, string $worksheetName): ?string
+    {
+        $worksheetName = trim($worksheetName);
+
+        if ($worksheetName === '') {
+            return null;
+        }
+
+        $workbookXml = $zip->getFromName('xl/workbook.xml');
+        $relationshipsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
+
+        if (! is_string($workbookXml) || ! is_string($relationshipsXml)) {
+            return null;
+        }
+
+        $workbook = new \SimpleXMLElement($workbookXml);
+        $workbook->registerXPathNamespace('main', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+
+        $relationshipId = null;
+
+        foreach ($workbook->xpath('//main:sheets/main:sheet') ?: [] as $sheet) {
+            if (trim((string) $sheet['name']) !== $worksheetName) {
+                continue;
+            }
+
+            $relationshipId = (string) $sheet->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
+
+            break;
+        }
+
+        if ($relationshipId === null || $relationshipId === '') {
+            return null;
+        }
+
+        $relationships = new \SimpleXMLElement($relationshipsXml);
+
+        foreach ($relationships->children('http://schemas.openxmlformats.org/package/2006/relationships')->Relationship as $relationship) {
+            if ((string) $relationship['Id'] !== $relationshipId) {
+                continue;
+            }
+
+            $target = ltrim((string) $relationship['Target'], '/');
+
+            return str_starts_with($target, 'xl/')
+                ? $target
+                : 'xl/'.$target;
+        }
+
+        return null;
+    }
+
+    /**
      * @param  array<int, string>  $sharedStrings
      * @return \Generator<int, array<int, mixed>>
      */
-    private function worksheetRows(string $path, array $sharedStrings): \Generator
+    private function worksheetRows(string $path, string $worksheetPath, array $sharedStrings): \Generator
     {
         $reader = new XMLReader;
-        $reader->open('zip://'.str_replace('\\', '/', $path).'#xl/worksheets/sheet1.xml');
+        $reader->open('zip://'.str_replace('\\', '/', $path).'#'.$worksheetPath);
 
         while ($reader->read()) {
             if ($reader->nodeType !== XMLReader::ELEMENT || $reader->name !== 'row') {
@@ -198,10 +309,40 @@ class LawyerAuditAssignmentSeeder extends Seeder
         $map = [];
 
         foreach ($headers as $index => $header) {
-            $map[trim((string) $header)] = $index;
+            $header = trim((string) $header);
+
+            if ($header === '') {
+                continue;
+            }
+
+            $map[$header] = $index;
+            $map[$this->normalizedHeader($header)] = $index;
         }
 
         return $map;
+    }
+
+    /**
+     * @param  array<string, int>  $headerMap
+     */
+    private function hasRequiredHeaders(array $headerMap): bool
+    {
+        return $this->hasHeader($headerMap, 'GlobalID')
+            && $this->hasHeader($headerMap, 'ParentGlobalID');
+    }
+
+    /**
+     * @param  array<string, int>  $headerMap
+     */
+    private function hasHeader(array $headerMap, string $header): bool
+    {
+        return array_key_exists($header, $headerMap)
+            || array_key_exists($this->normalizedHeader($header), $headerMap);
+    }
+
+    private function normalizedHeader(string $header): string
+    {
+        return strtolower((string) preg_replace('/\s+/u', '', trim($header)));
     }
 
     /**
@@ -210,7 +351,9 @@ class LawyerAuditAssignmentSeeder extends Seeder
      */
     private function value(array $row, array $headerMap, string $header): mixed
     {
-        return array_key_exists($header, $headerMap) ? ($row[$headerMap[$header]] ?? null) : null;
+        $index = $headerMap[$header] ?? $headerMap[$this->normalizedHeader($header)] ?? null;
+
+        return $index === null ? null : ($row[$index] ?? null);
     }
 
     /**
