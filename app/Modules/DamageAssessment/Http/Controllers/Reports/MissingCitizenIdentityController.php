@@ -35,7 +35,7 @@ class MissingCitizenIdentityController extends Controller
 
     public function data(Request $request): JsonResponse
     {
-        $perPage = min(max($request->integer('per_page', 25), 1), 100);
+        $perPage = min(max($request->integer('per_page', 100), 100), 500);
         $afterId = max(0, $request->integer('after_id', 0));
         $search = trim($request->string('search')->toString());
         $nameMatchStatus = trim($request->string('name_match_status')->toString());

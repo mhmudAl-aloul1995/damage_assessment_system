@@ -50,9 +50,9 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted fs-7">{{ __('ui.missing_citizen_identities.rows_per_page') }}</span>
                     <select class="form-select form-select-solid w-100px" data-kt-missing-citizens-filter="per-page">
-                        <option value="25" selected>25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
+                        <option value="100" selected>100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
                     </select>
                 </div>
                 <button type="button" class="btn btn-light-primary" data-kt-missing-citizens-action="refresh">
@@ -157,7 +157,7 @@
             var currentNameMatchStatus = '';
             var hasMore = false;
             var loading = false;
-            var currentPerPage = 25;
+            var currentPerPage = 100;
             var cursorStack = [0];
             var cursorIndex = 0;
             var nextCursor = null;
@@ -664,7 +664,7 @@
 
                 if (perPage) {
                     perPage.addEventListener('change', function (event) {
-                        currentPerPage = Number(event.target.value || 25);
+                        currentPerPage = Number(event.target.value || 100);
                         cursorStack = [0];
                         cursorIndex = 0;
                         nextCursor = null;

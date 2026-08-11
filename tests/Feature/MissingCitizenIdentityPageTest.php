@@ -98,14 +98,14 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertOk()
         ->assertJsonFragment(['id_number1' => '900000001'])
         ->assertJsonFragment(['matched_citizen_id_card_no' => '900000009'])
-        ->assertJsonMissing(['id_number1' => '900000003'])
+        ->assertJsonFragment(['id_number1' => '900000003'])
         ->assertJsonMissing(['id_number1' => '900000002'])
         ->assertJsonMissing(['id_number1' => ''])
-        ->assertJsonPath('has_more', true)
-        ->assertJsonPath('per_page', 1)
+        ->assertJsonPath('has_more', false)
+        ->assertJsonPath('per_page', 100)
         ->assertJsonPath('total', 2)
-        ->assertJsonPath('next_cursor', 1)
-        ->assertJsonCount(1, 'data');
+        ->assertJsonPath('next_cursor', 2)
+        ->assertJsonCount(2, 'data');
 
     $this
         ->actingAs(User::factory()->create())
