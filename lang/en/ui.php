@@ -639,6 +639,8 @@ return [
         'source_citizens' => 'Civil registry',
         'source_access' => 'Access',
         'source_sgaza' => 'SGaza',
+        'source_husband_registry' => 'Husband registry',
+        'husband_id_card_no' => 'Husband ID',
         'mother_name' => 'Mother name',
         'neighborhood' => 'Neighborhood',
         'birth_date' => 'Birth date',

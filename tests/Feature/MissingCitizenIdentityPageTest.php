@@ -37,6 +37,18 @@ function createSgazaTable(): void
     });
 }
 
+function createHusbandRegistryTable(): void
+{
+    Schema::create('citizens_to_set_husband_id', function (Blueprint $table): void {
+        $table->id();
+        $table->string('status')->default('A');
+        $table->string('id_card_no')->nullable();
+        $table->string('full_name')->nullable();
+        $table->string('full_name_normalized')->nullable();
+        $table->string('husband_id_card_no')->nullable();
+    });
+}
+
 function missingCitizenIdentityUser(string $roleName = 'Database Officer'): User
 {
     $role = Role::findOrCreate($roleName, 'web');
@@ -890,6 +902,96 @@ it('approves a spouse identity match into the spouse identity field', function (
             && str_contains((string) $request['features'], '"spouse2_id":"900000033"')
             && ! str_contains((string) $request['features'], '"id_number1":"900000033"');
     });
+});
+
+it('does not report spouse identities found in the husband registry table', function (): void {
+    createHusbandRegistryTable();
+
+    HousingUnit::query()->create([
+        'objectid' => 894,
+        'globalid' => 'spouse-id-found-in-husband-registry',
+        'unit_owner' => 'Registry Husband',
+        'id_number1' => '910000001',
+        'spouse1' => 'Registry Spouse',
+        'spouse1_id' => '910000002',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '910000002',
+        'full_name' => 'Registry Spouse',
+        'full_name_normalized' => 'RegistrySpouse',
+        'husband_id_card_no' => '910000001',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()
+        ->where('identity_number_field', 'spouse1_id')
+        ->exists())->toBeFalse();
+});
+
+it('matches and approves missing spouse identities from the husband registry table', function (): void {
+    createHusbandRegistryTable();
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 895],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 895,
+        'globalid' => 'spouse-match-from-husband-registry',
+        'unit_owner' => 'Registry Husband',
+        'id_number1' => '920000001',
+        'spouse3' => 'Registry Third Spouse',
+        'spouse3_id' => '',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '920000003',
+        'full_name' => 'Registry Third Spouse',
+        'full_name_normalized' => 'RegistryThirdSpouse',
+        'husband_id_card_no' => '920000001',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_number_field', 'spouse3_id')
+        ->firstOrFail();
+
+    expect($report->name_match_status)->toBe('matched')
+        ->and($report->matched_citizen_id_card_no)->toBe('920000003');
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.name-candidates', $report))
+        ->assertOk()
+        ->assertJsonPath('data.0.id_card_no', '920000003')
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_husband_registry'));
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
+            'confirm' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('arcgis_status', 'synced');
+
+    expect($housingUnit->fresh()->spouse3_id)->toBe('920000003');
 });
 
 it('bulk approves selected single name matches', function (): void {

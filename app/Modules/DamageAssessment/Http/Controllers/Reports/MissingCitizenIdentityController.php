@@ -184,11 +184,13 @@ class MissingCitizenIdentityController extends Controller
             ])
             ->values();
 
+        $husbandRegistryRecords = $this->searchHusbandRegistry($report, $search);
         $sgazaRecords = $this->searchSgazaCivilRegistry($search, $nameParts);
         $accessRecords = $this->searchAccessCivilRegistry($search);
 
         return response()->json([
-            'data' => $sgazaRecords
+            'data' => $husbandRegistryRecords
+                ->merge($sgazaRecords)
                 ->merge($citizens)
                 ->merge($accessRecords)
                 ->unique('id_card_no')
@@ -226,10 +228,12 @@ class MissingCitizenIdentityController extends Controller
             ])
             ->values();
 
+        $husbandRegistryCandidates = $this->husbandRegistryNameCandidates($report);
         $sgazaCandidates = $this->sgazaNameCandidates($report->normalized_owner_name);
 
         return response()->json([
-            'data' => $sgazaCandidates
+            'data' => $husbandRegistryCandidates
+                ->merge($sgazaCandidates)
                 ->merge($candidates)
                 ->unique('id_card_no')
                 ->take(20)
@@ -352,6 +356,20 @@ class MissingCitizenIdentityController extends Controller
 
             if (str_starts_with($selectedCitizen, 'sgaza:')) {
                 $record = $this->sgazaRecordByIdNumber((string) Str::after($selectedCitizen, 'sgaza:'));
+
+                if ($record === null) {
+                    return null;
+                }
+
+                return (object) [
+                    'id' => 0,
+                    'id_card_no' => $record->id_card_no,
+                    'full_name' => $record->full_name,
+                ];
+            }
+
+            if (str_starts_with($selectedCitizen, 'husband:')) {
+                $record = $this->husbandRegistryRecordByIdNumber((string) Str::after($selectedCitizen, 'husband:'));
 
                 if ($record === null) {
                     return null;
@@ -506,6 +524,15 @@ class MissingCitizenIdentityController extends Controller
         }
 
         return 'phc_dashboard.citizens';
+    }
+
+    private function husbandRegistryTable(): string
+    {
+        if (app()->environment('testing')) {
+            return 'citizens_to_set_husband_id';
+        }
+
+        return 'phc_dashboard.citizens_to_set_husband_id';
     }
 
     /**
@@ -727,6 +754,75 @@ class MissingCitizenIdentityController extends Controller
         ])->filter();
     }
 
+    private function searchHusbandRegistry(MissingCitizenIdentityReport $report, string $search): Collection
+    {
+        if ($report->identity_subject !== 'spouse') {
+            return collect();
+        }
+
+        $husbandIdCardNo = $this->reportHusbandIdCardNo($report);
+
+        if ($husbandIdCardNo === '') {
+            return collect();
+        }
+
+        try {
+            $query = DB::table($this->husbandRegistryTable())
+                ->select(['id_card_no', 'full_name', 'husband_id_card_no'])
+                ->where('status', 'A')
+                ->whereRaw('TRIM(husband_id_card_no) = ?', [$husbandIdCardNo]);
+
+            if (ctype_digit($search)) {
+                $query->where('id_card_no', 'like', $search.'%');
+            } elseif ($search !== '') {
+                $normalizedSearch = ArabicNameNormalizer::normalize($search);
+
+                if ($normalizedSearch === '') {
+                    return collect();
+                }
+
+                $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
+            } else {
+                return collect();
+            }
+
+            return $query
+                ->orderBy('id_card_no')
+                ->limit(20)
+                ->get()
+                ->map(fn ($record): array => $this->husbandRegistryRecordToCandidate($record));
+        } catch (Throwable) {
+            return collect();
+        }
+    }
+
+    private function husbandRegistryNameCandidates(MissingCitizenIdentityReport $report): Collection
+    {
+        if ($report->identity_subject !== 'spouse' || ! filled($report->normalized_owner_name)) {
+            return collect();
+        }
+
+        $husbandIdCardNo = $this->reportHusbandIdCardNo($report);
+
+        if ($husbandIdCardNo === '') {
+            return collect();
+        }
+
+        try {
+            return DB::table($this->husbandRegistryTable())
+                ->select(['id_card_no', 'full_name', 'husband_id_card_no'])
+                ->where('status', 'A')
+                ->whereRaw('TRIM(husband_id_card_no) = ?', [$husbandIdCardNo])
+                ->where('full_name_normalized', $report->normalized_owner_name)
+                ->orderBy('id_card_no')
+                ->limit(20)
+                ->get()
+                ->map(fn ($record): array => $this->husbandRegistryRecordToCandidate($record));
+        } catch (Throwable) {
+            return collect();
+        }
+    }
+
     private function searchSgazaCivilRegistry(string $search, ?Collection $nameParts = null): Collection
     {
         if (! Schema::hasTable('sgaza') || ! Schema::hasColumn('sgaza', 'id_number')) {
@@ -855,6 +951,52 @@ class MissingCitizenIdentityController extends Controller
         return (object) [
             'id_card_no' => $record->id_number,
             'full_name' => $this->sgazaFullName($record),
+        ];
+    }
+
+    private function husbandRegistryRecordByIdNumber(string $idNumber): ?object
+    {
+        try {
+            $record = DB::table($this->husbandRegistryTable())
+                ->select(['id_card_no', 'full_name'])
+                ->where('status', 'A')
+                ->where('id_card_no', $idNumber)
+                ->first();
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($record === null) {
+            return null;
+        }
+
+        return (object) [
+            'id_card_no' => $record->id_card_no,
+            'full_name' => $record->full_name,
+        ];
+    }
+
+    private function reportHusbandIdCardNo(MissingCitizenIdentityReport $report): string
+    {
+        $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
+
+        if (! $housingUnit instanceof HousingUnit) {
+            return '';
+        }
+
+        return trim((string) $housingUnit->id_number1);
+    }
+
+    private function husbandRegistryRecordToCandidate(object $record): array
+    {
+        return [
+            'id' => 'husband:'.$record->id_card_no,
+            'id_card_no' => (string) $record->id_card_no,
+            'full_name' => $record->full_name ?: '-',
+            'source' => __('ui.missing_citizen_identities.source_husband_registry'),
+            'details' => filled($record->husband_id_card_no ?? null)
+                ? __('ui.missing_citizen_identities.husband_id_card_no').': '.$record->husband_id_card_no
+                : '',
         ];
     }
 

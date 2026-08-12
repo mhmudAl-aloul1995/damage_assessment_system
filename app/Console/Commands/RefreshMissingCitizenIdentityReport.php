@@ -9,6 +9,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class RefreshMissingCitizenIdentityReport extends Command
 {
@@ -92,17 +93,29 @@ class RefreshMissingCitizenIdentityReport extends Command
                     : $this->sgazaIdsByNumbers($identityNumbers)
                         ->mapWithKeys(fn ($id): array => [(string) $id => true]);
 
+                $husbandRegistryIds = $identityNumbers->isEmpty()
+                    ? collect()
+                    : $this->husbandRegistryIdsByNumbers($identityNumbers)
+                        ->mapWithKeys(fn ($id): array => [(string) $id => true]);
+
                 $existingCivilRegistryIds = $activeCitizenIds->union($sgazaIds);
 
                 $missingIdentityRows = $identityRows
-                    ->filter(function (array $identityRow) use ($existingCivilRegistryIds): bool {
+                    ->filter(function (array $identityRow) use ($existingCivilRegistryIds, $husbandRegistryIds): bool {
                         $idNumber = $identityRow['id_number'];
 
                         if ($idNumber === '') {
                             return filled($identityRow['owner_name']);
                         }
 
-                        return ! isset($existingCivilRegistryIds[$idNumber]);
+                        if (isset($existingCivilRegistryIds[$idNumber])) {
+                            return false;
+                        }
+
+                        return ! (
+                            $identityRow['identity_subject'] === self::SUBJECT_SPOUSE
+                            && isset($husbandRegistryIds[$idNumber])
+                        );
                     })
                     ->values();
 
@@ -298,7 +311,9 @@ class RefreshMissingCitizenIdentityReport extends Command
                 $normalizedOwnerName = (string) ($normalizedNamesByIdentityKey[$identityKey] ?? '');
                 $citizens = $citizensByNormalizedName->get($normalizedOwnerName, collect());
                 $sgazaRecords = $sgazaByNormalizedName->get($normalizedOwnerName, collect());
-                $matches = $sgazaRecords
+                $husbandRegistryRecords = $this->husbandRegistryMatches($identityRow, $normalizedOwnerName);
+                $matches = $husbandRegistryRecords
+                    ->merge($sgazaRecords)
                     ->merge($citizens)
                     ->unique(fn ($match): string => (string) $match->id_card_no)
                     ->values();
@@ -336,6 +351,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'identity_number_field' => 'id_number1',
                 'owner_name' => $this->ownerName($housingUnit),
                 'id_number' => trim((string) $housingUnit->id_number1),
+                'husband_id_card_no' => null,
             ],
             ...collect(range(1, 4))->map(fn (int $index): array => [
                 'identity_subject' => self::SUBJECT_SPOUSE,
@@ -344,6 +360,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'identity_number_field' => 'spouse'.$index.'_id',
                 'owner_name' => trim((string) $housingUnit->{'spouse'.$index}),
                 'id_number' => trim((string) $housingUnit->{'spouse'.$index.'_id'}),
+                'husband_id_card_no' => trim((string) $housingUnit->id_number1),
             ])->all(),
         ])
             ->filter(fn (array $identityRow): bool => filled($identityRow['owner_name']) || filled($identityRow['id_number']))
@@ -402,6 +419,60 @@ class RefreshMissingCitizenIdentityReport extends Command
             ->pluck('id_number');
     }
 
+    private function husbandRegistryIdsByNumbers(Collection $identityNumbers): Collection
+    {
+        $identityNumbers = $identityNumbers
+            ->map(fn ($identityNumber): string => trim((string) $identityNumber))
+            ->filter()
+            ->values();
+
+        if ($identityNumbers->isEmpty()) {
+            return collect();
+        }
+
+        try {
+            return DB::table($this->husbandRegistryTable())
+                ->selectRaw('TRIM(id_card_no) as id_card_no')
+                ->where('status', 'A')
+                ->whereIn(DB::raw('TRIM(id_card_no)'), $identityNumbers)
+                ->pluck('id_card_no');
+        } catch (Throwable) {
+            return collect();
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $identityRow
+     */
+    private function husbandRegistryMatches(array $identityRow, string $normalizedOwnerName): Collection
+    {
+        if ($identityRow['identity_subject'] !== self::SUBJECT_SPOUSE || $normalizedOwnerName === '') {
+            return collect();
+        }
+
+        $husbandIdCardNo = trim((string) ($identityRow['husband_id_card_no'] ?? ''));
+
+        if ($husbandIdCardNo === '') {
+            return collect();
+        }
+
+        try {
+            return DB::table($this->husbandRegistryTable())
+                ->select([
+                    DB::raw('0 as id'),
+                    'id_card_no',
+                    'full_name',
+                    'full_name_normalized',
+                ])
+                ->where('status', 'A')
+                ->whereRaw('TRIM(husband_id_card_no) = ?', [$husbandIdCardNo])
+                ->where('full_name_normalized', $normalizedOwnerName)
+                ->get();
+        } catch (Throwable) {
+            return collect();
+        }
+    }
+
     private function sgazaMatchesByNormalizedNames(Collection $normalizedNames): Collection
     {
         if (
@@ -431,5 +502,14 @@ class RefreshMissingCitizenIdentityReport extends Command
         }
 
         return 'phc_dashboard.citizens';
+    }
+
+    private function husbandRegistryTable(): string
+    {
+        if (app()->environment('testing')) {
+            return 'citizens_to_set_husband_id';
+        }
+
+        return 'phc_dashboard.citizens_to_set_husband_id';
     }
 }

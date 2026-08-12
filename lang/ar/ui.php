@@ -619,6 +619,8 @@ return [
         'source_citizens' => 'السجل المدني',
         'source_access' => 'Access',
         'source_sgaza' => 'SGaza',
+        'source_husband_registry' => 'سجل ربط الزوج',
+        'husband_id_card_no' => 'هوية الزوج',
         'mother_name' => 'اسم الأم',
         'neighborhood' => 'الحي',
         'birth_date' => 'تاريخ الميلاد',
