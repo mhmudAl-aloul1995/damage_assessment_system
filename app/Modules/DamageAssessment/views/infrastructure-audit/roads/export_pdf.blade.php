@@ -15,7 +15,7 @@
         @page { margin: 10mm; }
 
         @font-face {
-            font-family: 'Droid Arabic Kufi';
+            font-family: 'droidarabickufi';
             font-style: normal;
             font-weight: 400;
             src: url('{{ public_path('DroidArabicKufi.ttf') }}') format('truetype');
@@ -27,7 +27,7 @@
             background: #f5f7fb;
             color: #172033;
             direction: rtl;
-            font-family: 'Droid Arabic Kufi', 'DejaVu Sans', 'Tahoma', 'Arial', sans-serif;
+            font-family: 'droidarabickufi', 'Droid Arabic Kufi', 'DejaVu Sans', 'Tahoma', 'Arial', sans-serif;
             font-size: 10px;
             line-height: 1.55;
             margin: 0;

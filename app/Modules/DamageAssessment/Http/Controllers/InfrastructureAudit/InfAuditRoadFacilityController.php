@@ -33,6 +33,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -741,6 +743,8 @@ class InfAuditRoadFacilityController extends Controller
 
         $fileName = $fileBaseName.'.pdf';
         $filePath = $directory.DIRECTORY_SEPARATOR.$fileName;
+        $defaultConfig = (new ConfigVariables)->getDefaults();
+        $defaultFontConfig = (new FontVariables)->getDefaults();
         $html = view('damage-assessment::infrastructure-audit.roads.export_pdf', [
             'rows' => $rows,
             'filters' => $filters,
@@ -755,7 +759,15 @@ class InfAuditRoadFacilityController extends Controller
             'margin_bottom' => 0,
             'autoScriptToLang' => true,
             'autoLangToFont' => true,
-            'default_font' => 'Droid Arabic Kufi',
+            'fontDir' => array_merge($defaultConfig['fontDir'], [
+                public_path(),
+            ]),
+            'fontdata' => $defaultFontConfig['fontdata'] + [
+                'droidarabickufi' => [
+                    'R' => 'DroidArabicKufi.ttf',
+                ],
+            ],
+            'default_font' => 'droidarabickufi',
             'tempDir' => $temporaryDirectory,
         ]);
 
