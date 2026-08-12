@@ -72,6 +72,7 @@ test('it streams export rows to an xlsx file without internal columns', function
         $spreadsheet = IOFactory::load($path);
         $sheet = $spreadsheet->getActiveSheet();
 
+        expect($sheet->getColumnDimension('A')->getWidth())->toBe(14.0);
         expect($sheet->getStyle('A2')->getAlignment()->getWrapText())->toBeFalse();
         $spreadsheet->disconnectWorksheets();
     } finally {

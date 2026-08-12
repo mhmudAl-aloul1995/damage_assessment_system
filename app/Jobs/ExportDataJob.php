@@ -27,6 +27,12 @@ class ExportDataJob implements ShouldQueue
         'export_housing_globalid',
     ];
 
+    private const HEADER_COLUMN_MIN_WIDTH = 10;
+
+    private const HEADER_COLUMN_MAX_WIDTH = 45;
+
+    private const HEADER_COLUMN_PADDING = 4;
+
     public int $tries = 3;
 
     public int $timeout = 0;
@@ -378,6 +384,7 @@ class ExportDataJob implements ShouldQueue
 
                 if ($headers === []) {
                     $headers = $this->exportHeaders($row, $assessmentLabels);
+                    $this->applyHeaderColumnWidths($writer, array_values($headers));
                     $writer->addRow(Row::fromValues(array_values($headers), $headerStyle));
                 }
 
@@ -396,6 +403,29 @@ class ExportDataJob implements ShouldQueue
         }
 
         return $processed;
+    }
+
+    /**
+     * @param  array<int, string>  $headers
+     */
+    private function applyHeaderColumnWidths(Writer $writer, array $headers): void
+    {
+        foreach ($headers as $index => $header) {
+            $writer->getCurrentSheet()->setColumnWidth(
+                $this->headerColumnWidth($header),
+                $index + 1,
+            );
+        }
+    }
+
+    private function headerColumnWidth(string $header): float
+    {
+        $length = mb_strlen($header);
+
+        return (float) min(
+            self::HEADER_COLUMN_MAX_WIDTH,
+            max(self::HEADER_COLUMN_MIN_WIDTH, $length + self::HEADER_COLUMN_PADDING),
+        );
     }
 
     private function editedColumnExpression(string $type, string $tableAlias, string $globalIdColumn, string $field): string
