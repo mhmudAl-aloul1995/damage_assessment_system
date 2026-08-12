@@ -839,6 +839,14 @@
 			return $('input[name="export_mode"]:checked').val() || 'data';
 		}
 
+		function hasSelectedDataColumns() {
+			return $('input[name="building_columns[]"]:checked, input[name="housing_columns[]"]:checked').length > 0;
+		}
+
+		function requiresDataColumnsForExport() {
+			return selectedExportMode() !== 'attachments';
+		}
+
 		function syncAttachmentExportOptions() {
 			$('#attachmentExportOptions').removeClass('d-none');
 		}
@@ -1220,6 +1228,11 @@
 				if (exportType === 'zip' && selectedExportMode() === 'data') {
 					$('#exportModeAttachments').prop('checked', true);
 					syncAttachmentExportOptions();
+				}
+
+				if (requiresDataColumnsForExport() && !hasSelectedDataColumns()) {
+					toastr.error('يرجى اختيار عمود واحد على الأقل من أعمدة البيانات قبل التصدير.');
+					return;
 				}
 
 				const formData = $('#exportForm').serializeArray();

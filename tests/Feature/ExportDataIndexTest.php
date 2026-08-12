@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\Building;
+use App\Models\Export;
 use App\Models\Filter;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 
 it('shows export page actions including objectid import', function () {
@@ -89,6 +91,54 @@ it('shows attachment export controls on the export page', function () {
     $response->assertSee('value="housing_unit_arcgis"', false);
     $response->assertSee('value="damage_photos"', false);
     $response->assertSee('data-type="zip"', false);
+});
+
+it('rejects data exports when no data columns are selected', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('export.start'), [
+            'export_mode' => 'data',
+            'export_type' => 'excel',
+            'building_columns' => [],
+            'housing_columns' => [],
+        ]);
+
+    $response
+        ->assertStatus(422)
+        ->assertJson([
+            'status' => false,
+            'message' => 'يرجى اختيار عمود واحد على الأقل من أعمدة البيانات قبل التصدير.',
+        ]);
+
+    expect(Export::query()->count())->toBe(0);
+});
+
+it('allows attachment only exports without selecting data columns', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('export.start'), [
+            'export_mode' => 'attachments',
+            'export_type' => 'zip',
+            'building_columns' => [],
+            'housing_columns' => [],
+            'attachment_sources' => ['building_arcgis'],
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJson([
+            'status' => true,
+        ]);
+
+    expect(Export::query()->count())->toBe(1);
 });
 
 it('fills the neighborhood filter from unique building neighborhoods', function () {
