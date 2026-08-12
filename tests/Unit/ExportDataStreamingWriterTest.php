@@ -6,6 +6,7 @@ use App\Models\EditAssessment;
 use App\Models\Export;
 use App\Models\User;
 use OpenSpout\Reader\XLSX\Reader;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -68,6 +69,11 @@ test('it streams export rows to an xlsx file without internal columns', function
             ['Ahmad', 3, 7],
             ['Mona', 1, 4],
         ]);
+        $spreadsheet = IOFactory::load($path);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->getStyle('A2')->getAlignment()->getWrapText())->toBeFalse();
+        $spreadsheet->disconnectWorksheets();
     } finally {
         if (is_file($path)) {
             unlink($path);

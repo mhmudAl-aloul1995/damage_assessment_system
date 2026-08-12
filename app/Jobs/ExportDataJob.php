@@ -366,6 +366,8 @@ class ExportDataJob implements ShouldQueue
             ->setFontColor('FFFFFF')
             ->setBackgroundColor('1F4E78')
             ->setCellAlignment(CellAlignment::CENTER);
+        $dataStyle = (new Style)
+            ->setShouldWrapText(false);
 
         $headers = [];
         $processed = 0;
@@ -379,7 +381,7 @@ class ExportDataJob implements ShouldQueue
                     $writer->addRow(Row::fromValues(array_values($headers), $headerStyle));
                 }
 
-                $writer->addRow(Row::fromValues($this->exportValues($row, array_keys($headers))));
+                $writer->addRow(Row::fromValues($this->exportValues($row, array_keys($headers)), $dataStyle));
                 $processed++;
 
                 if ($processed % 200 === 0) {
