@@ -833,6 +833,39 @@
 
 						<div class="separator separator-dashed my-6"></div>
 
+						<div class="mb-8">
+							<h4 class="fw-bold mb-4">ملاحظات التدقيق</h4>
+							<div class="row g-5">
+								<div class="col-md-6">
+									<label class="form-check form-check-custom form-check-solid mb-3">
+										<input class="form-check-input" type="checkbox" id="audit_include_legal_notes"
+											name="include_legal_notes" value="1">
+										<span class="form-check-label fw-semibold">تضمين الملاحظات القانونية + اسم المدقق القانوني</span>
+									</label>
+									<select id="audit_legal_notes_filter" class="form-select form-select-solid">
+										<option value="">كل السجلات القانونية</option>
+										<option value="with_notes">يوجد ملاحظة قانونية</option>
+										<option value="without_notes">لا يوجد ملاحظة قانونية</option>
+									</select>
+								</div>
+
+								<div class="col-md-6">
+									<label class="form-check form-check-custom form-check-solid mb-3">
+										<input class="form-check-input" type="checkbox" id="audit_include_engineering_notes"
+											name="include_engineering_notes" value="1">
+										<span class="form-check-label fw-semibold">تضمين الملاحظات الهندسية + اسم المدقق الهندسي</span>
+									</label>
+									<select id="audit_engineering_notes_filter" class="form-select form-select-solid">
+										<option value="">كل السجلات الهندسية</option>
+										<option value="with_notes">يوجد ملاحظة هندسية</option>
+										<option value="without_notes">لا يوجد ملاحظة هندسية</option>
+									</select>
+								</div>
+							</div>
+						</div>
+
+						<div class="separator separator-dashed my-6"></div>
+
 						<div class="d-flex flex-stack flex-wrap gap-3 mb-4">
 							<div>
 								<h4 class="fw-bold mb-1">أعمدة المباني</h4>
@@ -1652,6 +1685,13 @@
 				minimumResultsForSearch: Infinity
 			});
 
+			$('#audit_legal_notes_filter, #audit_engineering_notes_filter').select2({
+				dir: 'rtl',
+				width: '100%',
+				dropdownParent: $('#auditExportModal'),
+				minimumResultsForSearch: Infinity
+			});
+
 			$('#audit_export_type').on('change', function () {
 				$('#audit_housing_columns_wrapper').toggleClass('d-none', $(this).val() !== 'buildings_with_units');
 			});
@@ -1697,6 +1737,16 @@
 
 				const params = new URLSearchParams();
 				appendAuditExportParams(params, 'export_type', exportType);
+				appendAuditExportParams(params, 'legal_notes_filter', $('#audit_legal_notes_filter').val());
+				appendAuditExportParams(params, 'engineering_notes_filter', $('#audit_engineering_notes_filter').val());
+
+				if ($('#audit_include_legal_notes').is(':checked') || $('#audit_legal_notes_filter').val()) {
+					appendAuditExportParams(params, 'include_legal_notes', '1');
+				}
+
+				if ($('#audit_include_engineering_notes').is(':checked') || $('#audit_engineering_notes_filter').val()) {
+					appendAuditExportParams(params, 'include_engineering_notes', '1');
+				}
 
 				selectedBuildingColumns.each(function () {
 					params.append('building_columns[]', $(this).val());

@@ -46,6 +46,10 @@ class AuditExportRequest extends FormRequest
             'damage_status.*' => ['nullable', 'string', 'max:255'],
             'legal_challenge' => ['nullable', 'array'],
             'legal_challenge.*' => ['nullable', 'string', 'max:255'],
+            'include_legal_notes' => ['nullable', 'boolean'],
+            'include_engineering_notes' => ['nullable', 'boolean'],
+            'legal_notes_filter' => ['nullable', Rule::in(['with_notes', 'without_notes'])],
+            'engineering_notes_filter' => ['nullable', Rule::in(['with_notes', 'without_notes'])],
         ];
     }
 

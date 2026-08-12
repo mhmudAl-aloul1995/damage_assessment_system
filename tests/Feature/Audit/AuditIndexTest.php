@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Spatie\Permission\Models\Role;
 
 it('includes the housing units status progress in the audit table response', function () {
@@ -18,9 +19,20 @@ it('includes the housing units status progress in the audit table response', fun
     config()->set('database.default', 'mysql');
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+    Http::fake([
+        '*' => Http::response(['token' => 'fake-token']),
+    ]);
 
     $role = Role::query()->create([
         'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
         'guard_name' => 'web',
     ]);
 
@@ -282,6 +294,121 @@ it('includes the housing units status progress in the audit table response', fun
         ]))
         ->assertOk()
         ->assertHeader('content-disposition');
+
+    config()->set('database.default', 'sqlite');
+    DB::purge('mysql');
+});
+
+it('exports requested legal and engineering audit notes with auditor names', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    config()->set('database.default', 'mysql');
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk()
+        ->assertSee('id="audit_include_legal_notes"', false)
+        ->assertSee('id="audit_include_engineering_notes"', false)
+        ->assertSee('id="audit_legal_notes_filter"', false)
+        ->assertSee('id="audit_engineering_notes_filter"', false);
+
+    $engineer = User::factory()->create(['name' => 'Engineering Auditor Name']);
+    $lawyer = User::factory()->create(['name' => 'Legal Auditor Name']);
+
+    $engineeringStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'مقبول هندسيا',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    $legalStatus = AssessmentStatus::query()->create([
+        'name' => 'legal_notes',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'ملاحظات قانونية',
+        'stage' => 'lawyer',
+        'order_step' => 2,
+    ]);
+
+    $includedBuilding = Building::query()->create([
+        'objectid' => 7201,
+        'globalid' => 'audit-notes-building-included',
+        'building_name' => 'Building With Notes',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $excludedBuilding = Building::query()->create([
+        'objectid' => 7202,
+        'globalid' => 'audit-notes-building-excluded',
+        'building_name' => 'Building Without Legal Notes',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $includedBuilding->objectid,
+        'status_id' => $engineeringStatus->id,
+        'user_id' => $engineer->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'Engineering note text',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $includedBuilding->objectid,
+        'status_id' => $legalStatus->id,
+        'user_id' => $lawyer->id,
+        'type' => 'Legal Auditor',
+        'notes' => 'Legal note text',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $excludedBuilding->objectid,
+        'status_id' => $engineeringStatus->id,
+        'user_id' => $engineer->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'Engineering only note',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('audit.export', [
+            'export_type' => 'buildings',
+            'building_columns' => ['objectid'],
+            'include_legal_notes' => '1',
+            'include_engineering_notes' => '1',
+            'legal_notes_filter' => 'with_notes',
+        ]));
+
+    $response->assertOk();
+
+    $filePath = $response->baseResponse->getFile()->getPathname();
+    $spreadsheet = IOFactory::load($filePath);
+    $sheet = $spreadsheet->getSheetByName('Buildings');
+
+    expect($sheet)->not->toBeNull();
+    expect($sheet->rangeToArray('A1:E2'))->toBe([
+        ['ObjectID', 'اسم المدقق القانوني', 'الملاحظات القانونية', 'اسم المدقق الهندسي', 'الملاحظات الهندسية'],
+        ['7201', 'Legal Auditor Name', 'Legal note text', 'Engineering Auditor Name', 'Engineering note text'],
+    ]);
+
+    $spreadsheet->disconnectWorksheets();
 
     config()->set('database.default', 'sqlite');
     DB::purge('mysql');

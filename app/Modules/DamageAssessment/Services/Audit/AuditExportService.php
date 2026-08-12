@@ -24,6 +24,7 @@ class AuditExportService
             $request->input('housing_columns', []),
             $this->housingColumns()
         );
+        $this->appendRequestedNotesColumns($buildingColumns, $housingColumns, $request);
 
         $includeHousingUnits = $request->input('export_type') === 'buildings_with_units';
         $baseBuildingQuery = $this->query($request);
@@ -50,13 +51,18 @@ class AuditExportService
                 ->with([
                     'building',
                     'engineerStatus.assessment_status',
+                    'engineerStatus.user',
                     'lawyerStatus.assessment_status',
+                    'lawyerStatus.user',
                     'finalApproval.assessment_status',
                     'housingStatuses',
                 ])
                 ->whereIn('parentglobalid', $buildingGlobalIdsQuery)
                 ->orderBy('parentglobalid')
                 ->orderBy('objectid');
+
+            $this->applyNotesPresenceFilter($housingQuery, 'lawyerStatus', (string) $request->input('legal_notes_filter'));
+            $this->applyNotesPresenceFilter($housingQuery, 'engineerStatus', (string) $request->input('engineering_notes_filter'));
         }
 
         $fileName = 'audit-export-'.now()->format('Y-m-d-His').'.xlsx';
@@ -149,7 +155,9 @@ class AuditExportService
             ->with([
                 'assignedUsers.user',
                 'engineerStatus.status',
+                'engineerStatus.user',
                 'lawyerStatus.status',
+                'lawyerStatus.user',
                 'finalApproval.status',
                 'buildingStatuses',
             ])
@@ -235,6 +243,9 @@ class AuditExportService
             });
         }
 
+        $this->applyNotesPresenceFilter($query, 'lawyerStatus', (string) $request->input('legal_notes_filter'));
+        $this->applyNotesPresenceFilter($query, 'engineerStatus', (string) $request->input('engineering_notes_filter'));
+
         $query->whereNotExists(function ($statusQuery): void {
             $statusQuery->selectRaw('1')
                 ->from('building_statuses as bs')
@@ -252,6 +263,50 @@ class AuditExportService
         });
 
         return $query->orderByDesc('objectid');
+    }
+
+    /**
+     * @param  array<string, string>  $buildingColumns
+     * @param  array<string, string>  $housingColumns
+     */
+    private function appendRequestedNotesColumns(array &$buildingColumns, array &$housingColumns, AuditExportRequest $request): void
+    {
+        if ($request->boolean('include_legal_notes')) {
+            $buildingColumns = array_replace($buildingColumns, [
+                'legal_auditor' => 'اسم المدقق القانوني',
+                'legal_notes' => 'الملاحظات القانونية',
+            ]);
+            $housingColumns = array_replace($housingColumns, [
+                'legal_auditor' => 'اسم المدقق القانوني',
+                'legal_notes' => 'الملاحظات القانونية',
+            ]);
+        }
+
+        if ($request->boolean('include_engineering_notes')) {
+            $buildingColumns = array_replace($buildingColumns, [
+                'engineering_auditor' => 'اسم المدقق الهندسي',
+                'engineering_notes' => 'الملاحظات الهندسية',
+            ]);
+            $housingColumns = array_replace($housingColumns, [
+                'engineering_auditor' => 'اسم المدقق الهندسي',
+                'engineering_notes' => 'الملاحظات الهندسية',
+            ]);
+        }
+    }
+
+    private function applyNotesPresenceFilter(Builder $query, string $relation, string $filter): void
+    {
+        if ($filter === 'with_notes') {
+            $query->whereHas($relation, function (Builder $statusQuery): void {
+                $statusQuery->whereNotNull('notes')->where('notes', '<>', '');
+            });
+        }
+
+        if ($filter === 'without_notes') {
+            $query->whereDoesntHave($relation, function (Builder $statusQuery): void {
+                $statusQuery->whereNotNull('notes')->where('notes', '<>', '');
+            });
+        }
     }
 
     /**
