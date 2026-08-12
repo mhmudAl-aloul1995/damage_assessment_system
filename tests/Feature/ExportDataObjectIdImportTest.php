@@ -6,8 +6,10 @@ use App\Models\Export;
 use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use OpenSpout\Reader\XLSX\Reader;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 it('imports objectids from uploaded file and stores unique cleaned values in session', function () {
     $user = User::factory()->create();
@@ -293,6 +295,69 @@ it('runs an orphaned pending export inline when checking status', function () {
     $export->refresh();
 
     expect($export->file_name)->not->toBeNull();
+
+    if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+        unlink(storage_path('app/public/'.$export->file_name));
+    }
+});
+
+it('runs an orphaned pending attachment column export with the attachment job when checking status', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/9002/attachments' => Http::response([
+            'attachmentInfos' => [],
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 9002,
+        'globalid' => 'pending-attachment-export-building',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_type' => 'excel',
+            'export_mode' => 'data',
+            'building_columns' => ['objectid'],
+            'attachment_sources' => ['building_arcgis'],
+            'attachment_type_filters' => ['identity'],
+            'include_attachment_excel_columns' => '1',
+            'attachment_excel_display' => 'images',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    $export->forceFill([
+        'created_at' => now()->subMinutes(5),
+        'updated_at' => now()->subMinutes(5),
+    ])->save();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.status', $export));
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', 'done')
+        ->assertJsonPath('processed', 1);
+
+    $export->refresh();
+
+    $spreadsheet = IOFactory::load(storage_path('app/public/'.$export->file_name));
+    $sheet = $spreadsheet->getActiveSheet();
+
+    expect($sheet->getCell('A1')->getValue())->toBe('Objectid');
+    expect($sheet->getCell('B2')->getValue())->toBe('لا توجد مرفقات مطابقة');
+
+    $spreadsheet->disconnectWorksheets();
 
     if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
         unlink(storage_path('app/public/'.$export->file_name));

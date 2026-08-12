@@ -10,6 +10,7 @@ use App\Jobs\ExportDataJob;
 use App\Models\Assessment;
 use App\Models\Export;
 use App\Modules\DamageAssessment\Http\Requests\ObjectIdImportRequest;
+use App\services\ArcgisService;
 use App\Support\Exports\ExportDataColumns;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -147,7 +148,11 @@ class ExportDataController extends Controller
             ->findOrFail($id);
 
         if ($this->shouldRunPendingExportInline($export)) {
-            (new ExportDataJob($export->id))->handle();
+            if ($this->shouldUseAttachmentsJob(json_decode((string) $export->filters, true) ?: [])) {
+                (new ExportAttachmentsJob($export->id))->handle(app(ArcgisService::class));
+            } else {
+                (new ExportDataJob($export->id))->handle();
+            }
 
             $export->refresh();
         }
@@ -238,11 +243,7 @@ class ExportDataController extends Controller
 
             $this->clearImportedObjectIdFilter($request);
 
-            $exportType = (string) ($payload['export_type'] ?? 'excel');
-            $exportMode = (string) ($payload['export_mode'] ?? 'data');
-            $includeAttachmentExcelColumns = (string) ($payload['include_attachment_excel_columns'] ?? '0') === '1';
-
-            if ($exportType === 'zip' || $includeAttachmentExcelColumns || in_array($exportMode, ['attachments', 'data_with_attachments'], true)) {
+            if ($this->shouldUseAttachmentsJob($payload)) {
                 ExportAttachmentsJob::dispatch($export->id)->onQueue('exports');
             } else {
                 ExportDataJob::dispatch($export->id)->onQueue('exports');
@@ -439,6 +440,20 @@ class ExportDataController extends Controller
         $housingColumns = array_filter((array) ($payload['housing_columns'] ?? []), fn ($column): bool => filled($column));
 
         return $buildingColumns !== [] || $housingColumns !== [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function shouldUseAttachmentsJob(array $payload): bool
+    {
+        $exportType = (string) ($payload['export_type'] ?? 'excel');
+        $exportMode = (string) ($payload['export_mode'] ?? 'data');
+        $includeAttachmentExcelColumns = (string) ($payload['include_attachment_excel_columns'] ?? '0') === '1';
+
+        return $exportType === 'zip'
+            || $includeAttachmentExcelColumns
+            || in_array($exportMode, ['attachments', 'data_with_attachments'], true);
     }
 
     /**
