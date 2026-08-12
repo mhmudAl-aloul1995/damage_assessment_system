@@ -21,6 +21,8 @@ beforeEach(function (): void {
         $table->unsignedBigInteger('objectid')->nullable();
         $table->string('globalid')->nullable();
         $table->string('field_status')->nullable();
+        $table->string('security_situation')->nullable();
+        $table->string('assessment_obstacle')->nullable();
         $table->string('building_name')->nullable();
         $table->string('owner_mobile')->nullable();
         $table->string('owner_mobile_1')->nullable();
@@ -54,6 +56,58 @@ beforeEach(function (): void {
         $table->text('message')->nullable();
         $table->timestamps();
     });
+});
+
+it('fills missing assessment obstacle when building security situation is unsafe', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.buildings_url', 'https://example.com/FeatureServer/0');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/FeatureServer/0?*' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'Security_Situation', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'assessment_obstacle', 'type' => 'esriFieldTypeString', 'length' => 255],
+            ],
+        ]),
+        'https://example.com/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                [
+                    'attributes' => [
+                        'objectid' => 801,
+                        'Security_Situation' => 'Unsafe',
+                        'assessment_obstacle' => null,
+                    ],
+                ],
+                [
+                    'attributes' => [
+                        'objectid' => 802,
+                        'Security_Situation' => 'Unsafe',
+                        'assessment_obstacle' => 'no',
+                    ],
+                ],
+                [
+                    'attributes' => [
+                        'objectid' => 803,
+                        'Security_Situation' => 'Safe',
+                        'assessment_obstacle' => null,
+                    ],
+                ],
+            ],
+            'exceededTransferLimit' => false,
+        ]),
+    ]);
+
+    $exitCode = Artisan::call('sync:arcgis-layers', ['table' => 'buildings']);
+
+    expect($exitCode)->toBe(0);
+    expect(DB::table('buildings')->where('objectid', 801)->value('assessment_obstacle'))->toBe('yes');
+    expect(DB::table('buildings')->where('objectid', 802)->value('assessment_obstacle'))->toBe('no');
+    expect(DB::table('buildings')->where('objectid', 803)->value('assessment_obstacle'))->toBeNull();
 });
 
 it('syncs building latitude and longitude from arcgis geometry', function (): void {

@@ -340,6 +340,7 @@ class SyncArcGISLayers extends Command
                         }
                     }
                     $row = $this->applyFallbackColumns($row, $arcgisMap, $syncColumns, $table);
+                    $row = $this->applyBuildingAssessmentObstacleFallback($row, $syncColumns, $table);
 
                     $row[$unique] = $objectId;
 
@@ -666,6 +667,22 @@ class SyncArcGISLayers extends Command
                 $column.'_v1',
             ]);
         }
+
+        return $row;
+    }
+
+    private function applyBuildingAssessmentObstacleFallback(array $row, array $syncColumns, string $table): array
+    {
+        if (
+            $table !== 'buildings'
+            || ! in_array('assessment_obstacle', $syncColumns, true)
+            || ! $this->isBlankSyncValue($row['assessment_obstacle'] ?? null)
+            || strtolower(trim((string) ($row['security_situation'] ?? ''))) !== 'unsafe'
+        ) {
+            return $row;
+        }
+
+        $row['assessment_obstacle'] = 'yes';
 
         return $row;
     }
