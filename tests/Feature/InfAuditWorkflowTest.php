@@ -462,6 +462,7 @@ test('database officer can export filtered road audit summary', function (): voi
         ->assertOk();
 
     Excel::assertDownloaded('/inf_audit_roads_report_\d{8}_\d{6}\.xlsx/', function (InfAuditRoadsSummaryExport $export): bool {
+        expect($export->startCell())->toBe('A8');
         expect($export->array())->toBe([
             [
                 'Gaza',
