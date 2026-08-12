@@ -745,6 +745,7 @@ class InfAuditRoadFacilityController extends Controller
             'margin_bottom' => 0,
             'autoScriptToLang' => true,
             'autoLangToFont' => true,
+            'default_font' => 'Droid Arabic Kufi',
             'tempDir' => $temporaryDirectory,
         ]);
 

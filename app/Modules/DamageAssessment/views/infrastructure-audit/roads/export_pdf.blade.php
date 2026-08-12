@@ -13,12 +13,19 @@
     <style>
         @page { margin: 22px 24px 28px; }
 
+        @font-face {
+            font-family: 'Droid Arabic Kufi';
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ public_path('DroidArabicKufi.ttf') }}') format('truetype');
+        }
+
         body {
             background: #f5f8fa;
             color: #181c32;
             direction: rtl;
-            font-family: DejaVu Sans, sans-serif;
-            font-size: 11px;
+            font-family: 'Droid Arabic Kufi', DejaVu Sans, sans-serif;
+            font-size: 10px;
             line-height: 1.6;
             margin: 0;
         }
@@ -31,7 +38,7 @@
         }
 
         .hero {
-            background: #1b84ff;
+            background: #009ef7;
             border-radius: 10px;
             color: #ffffff;
             margin-bottom: 14px;
@@ -52,21 +59,21 @@
         }
 
         .eyebrow {
-            color: #d7e9ff;
+            color: #f1faff;
             font-size: 10px;
             font-weight: 700;
             margin-bottom: 3px;
         }
 
         h1 {
-            font-size: 21px;
+            font-size: 19px;
             line-height: 1.25;
             margin: 0;
         }
 
         .hero-meta {
-            color: #eaf4ff;
-            font-size: 10px;
+            color: #f1faff;
+            font-size: 9px;
             text-align: left;
         }
 
@@ -83,17 +90,17 @@
 
         .filter-chip {
             background: #f1faff;
-            border: 1px solid #b8dfff;
+            border: 1px solid #b5e4ff;
             border-radius: 16px;
             color: #3f4254;
             display: inline-block;
-            font-size: 10px;
+            font-size: 9px;
             margin: 0 0 7px 6px;
             padding: 5px 10px;
         }
 
         .filter-chip strong {
-            color: #1b84ff;
+            color: #009ef7;
         }
 
         .empty-filters {
@@ -124,24 +131,24 @@
 
         .stat-label {
             color: #7e8299;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             margin-bottom: 5px;
         }
 
         .stat-value {
             color: #181c32;
-            font-size: 19px;
+            font-size: 17px;
             font-weight: 700;
             line-height: 1.25;
         }
 
-        .stat-value.primary { color: #1b84ff; }
-        .stat-value.success { color: #17c653; }
-        .stat-value.warning { color: #f6c000; }
+        .stat-value.primary { color: #009ef7; }
+        .stat-value.success { color: #50cd89; }
+        .stat-value.warning { color: #ffc700; }
 
         .report-table {
-            font-size: 10.5px;
+            font-size: 9.5px;
         }
 
         .report-table th {
@@ -179,7 +186,7 @@
         .badge {
             border-radius: 12px;
             display: inline-block;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             min-width: 34px;
             padding: 3px 8px;
@@ -187,12 +194,12 @@
 
         .badge-primary {
             background: #e9f3ff;
-            color: #1b84ff;
+            color: #009ef7;
         }
 
         .badge-success {
             background: #e8fff3;
-            color: #17c653;
+            color: #50cd89;
         }
 
         .badge-light {
