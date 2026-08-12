@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 @php
     $totalSurveyed = collect($rows)->sum('surveyed_count');
@@ -6,12 +6,13 @@
     $totalLength = collect($rows)->sum('road_length_meters');
     $auditRate = $totalSurveyed > 0 ? round(($totalAudited / $totalSurveyed) * 100, 1) : 0;
     $activeFilters = collect($filters)->filter(fn ($value) => filled($value));
+    $generatedAt = now()->format('H:i Y-m-d');
 @endphp
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <title>تقرير تدقيق الطرق</title>
     <style>
-        @page { margin: 22px 24px 28px; }
+        @page { margin: 10mm; }
 
         @font-face {
             font-family: 'Droid Arabic Kufi';
@@ -20,69 +21,107 @@
             src: url('{{ public_path('DroidArabicKufi.ttf') }}') format('truetype');
         }
 
+        * { box-sizing: border-box; }
+
         body {
-            background: #f5f8fa;
-            color: #181c32;
+            background: #f5f7fb;
+            color: #172033;
             direction: rtl;
-            font-family: 'Droid Arabic Kufi', DejaVu Sans, sans-serif;
+            font-family: 'Droid Arabic Kufi', 'DejaVu Sans', 'Tahoma', 'Arial', sans-serif;
             font-size: 10px;
-            line-height: 1.6;
+            line-height: 1.55;
             margin: 0;
         }
 
-        .report-shell {
+        .paper {
             background: #ffffff;
-            border: 1px solid #eff2f5;
-            border-radius: 10px;
-            padding: 18px;
-        }
-
-        .hero {
-            background: #009ef7;
-            border-radius: 10px;
-            color: #ffffff;
-            margin-bottom: 14px;
+            border: 1px solid #dfe6f0;
+            border-radius: 12px;
             padding: 18px 20px;
         }
 
-        .hero-table,
-        .stats-table,
-        .report-table {
+        .header-table,
+        .summary-table,
+        .report-table,
+        .footer-table {
             border-collapse: collapse;
             width: 100%;
         }
 
-        .hero-table td {
+        .header {
+            border-bottom: 2px solid #e8eef6;
+            margin-bottom: 14px;
+            padding-bottom: 14px;
+        }
+
+        .header-table td {
             border: 0;
             padding: 0;
-            vertical-align: middle;
+            vertical-align: top;
+            width: 50%;
         }
 
         .eyebrow {
-            color: #f1faff;
+            color: #1b84ff;
             font-size: 10px;
-            font-weight: 700;
-            margin-bottom: 3px;
+            font-weight: 800;
+            margin-bottom: 4px;
         }
 
         h1 {
-            font-size: 19px;
-            line-height: 1.25;
-            margin: 0;
+            color: #0f172a;
+            font-size: 22px;
+            font-weight: 900;
+            line-height: 1.35;
+            margin: 0 0 6px;
         }
 
-        .hero-meta {
-            color: #f1faff;
+        h2 {
+            color: #0f172a;
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1.35;
+            margin: 0 0 6px;
+        }
+
+        .meta {
+            color: #64748b;
+            font-size: 10px;
+        }
+
+        .summary-table {
+            border-spacing: 10px;
+            border-collapse: separate;
+            margin: 0 -10px 14px;
+            table-layout: fixed;
+        }
+
+        .summary-table td {
+            background: #fbfdff;
+            border: 1px solid #e5eaf2;
+            border-radius: 9px;
+            padding: 10px 12px;
+            vertical-align: middle;
+            width: 25%;
+        }
+
+        .card-label {
+            color: #64748b;
             font-size: 9px;
-            text-align: left;
+            margin-bottom: 4px;
         }
 
-        .section-title {
-            color: #3f4254;
-            font-size: 13px;
-            font-weight: 700;
-            margin: 16px 0 8px;
+        .card-value {
+            color: #111827;
+            direction: ltr;
+            font-size: 16px;
+            font-weight: 900;
+            text-align: right;
         }
+
+        .primary { color: #1b84ff; }
+        .success { color: #16a34a; }
+        .warning { color: #ffc700; }
 
         .filters {
             margin-bottom: 12px;
@@ -90,230 +129,218 @@
 
         .filter-chip {
             background: #f1faff;
-            border: 1px solid #b5e4ff;
-            border-radius: 16px;
-            color: #3f4254;
+            border: 1px solid #d7e8fb;
+            border-radius: 8px;
+            color: #172033;
             display: inline-block;
             font-size: 9px;
-            margin: 0 0 7px 6px;
-            padding: 5px 10px;
+            margin: 0 0 6px 6px;
+            padding: 4px 8px;
         }
 
         .filter-chip strong {
-            color: #009ef7;
+            color: #1b84ff;
         }
 
-        .empty-filters {
-            background: #f9f9f9;
-            border: 1px dashed #e1e3ea;
-            border-radius: 8px;
-            color: #7e8299;
-            padding: 10px 12px;
+        .section-title {
+            color: #172033;
+            font-size: 12px;
+            font-weight: 900;
+            margin: 0 0 8px;
         }
 
-        .stats-table {
-            border-spacing: 0;
-            margin-bottom: 14px;
+        .empty {
+            background: #fbfdff;
+            border: 1px dashed #ccd6e3;
+            border-radius: 10px;
+            color: #64748b;
+            padding: 18px;
+            text-align: center;
+        }
+
+        .report-table {
             table-layout: fixed;
         }
 
-        .stats-table td {
-            border: 1px solid #eff2f5;
-            padding: 12px;
-            vertical-align: top;
-            width: 25%;
-        }
-
-        .stat-card {
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-
-        .stat-label {
-            color: #7e8299;
-            font-size: 9px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            color: #181c32;
-            font-size: 17px;
-            font-weight: 700;
-            line-height: 1.25;
-        }
-
-        .stat-value.primary { color: #009ef7; }
-        .stat-value.success { color: #50cd89; }
-        .stat-value.warning { color: #ffc700; }
-
-        .report-table {
-            font-size: 9.5px;
-        }
-
         .report-table th {
-            background: #f1f4f7;
-            border: 1px solid #e1e3ea;
-            color: #3f4254;
-            font-weight: 700;
-            padding: 9px 8px;
+            background: #10233f;
+            border: 1px solid #10233f;
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: 900;
+            padding: 7px 6px;
             text-align: center;
             vertical-align: middle;
         }
 
         .report-table td {
-            border: 1px solid #eff2f5;
-            color: #3f4254;
-            padding: 9px 8px;
+            background: #ffffff;
+            border: 1px solid #e3e9f2;
+            color: #172033;
+            padding: 7px 6px;
             text-align: center;
             vertical-align: middle;
         }
 
         .report-table tbody tr:nth-child(even) td {
-            background: #fcfcfc;
+            background: #fafcff;
         }
 
         .report-table tfoot td {
-            background: #eef6ff;
-            color: #181c32;
-            font-weight: 700;
+            background: #eaf4ff;
+            font-weight: 900;
         }
 
         .text-start {
             text-align: right;
         }
 
-        .badge {
-            border-radius: 12px;
-            display: inline-block;
-            font-size: 9px;
-            font-weight: 700;
-            min-width: 34px;
-            padding: 3px 8px;
+        .num {
+            direction: ltr;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+            unicode-bidi: plaintext;
+            white-space: nowrap;
         }
 
-        .badge-primary {
-            background: #e9f3ff;
-            color: #009ef7;
-        }
+        .governorate { width: 21%; }
+        .neighborhood { width: 21%; }
+        .count { width: 14%; }
+        .rate { width: 16%; }
+        .length { width: 20%; }
 
-        .badge-success {
-            background: #e8fff3;
-            color: #50cd89;
-        }
-
-        .badge-light {
-            background: #f9f9f9;
-            color: #7e8299;
-        }
-
-        .no-data {
-            color: #7e8299;
-            padding: 18px;
-        }
-
-        .footer-note {
-            color: #a1a5b7;
+        .footer {
+            color: #8a97aa;
             font-size: 9px;
             margin-top: 12px;
+        }
+
+        .footer-table td {
+            border: 0;
+            padding: 0;
+        }
+
+        .footer-left {
             text-align: left;
         }
     </style>
 </head>
 <body>
-    <div class="report-shell">
-        <div class="hero">
-            <table class="hero-table">
+    <div class="paper">
+        <div class="header">
+            <table class="header-table">
                 <tr>
                     <td>
-                        <div class="eyebrow">Damage Assessment System</div>
+                        <div class="eyebrow">Damage Assessment Project</div>
                         <h1>تقرير تدقيق الطرق</h1>
+                        <div class="meta">
+                            النتائج حسب الفلاتر الحالية | تاريخ التصدير: {{ $generatedAt }}
+                        </div>
                     </td>
-                    <td class="hero-meta">
-                        تاريخ التصدير<br>
-                        {{ now()->format('Y-m-d H:i') }}
+                    <td>
+                        <div class="eyebrow">ملخص التقرير</div>
+                        <h2>تدقيق البنية التحتية - الطرق</h2>
+                        <div class="meta">
+                            ما تم حصره: {{ number_format((int) $totalSurveyed) }}
+                            | ما تم تدقيقه: {{ number_format((int) $totalAudited) }}
+                            | نسبة التدقيق: {{ $auditRate }}%
+                        </div>
                     </td>
                 </tr>
             </table>
         </div>
 
-        <table class="stats-table">
-            <tr>
-                <td class="stat-card">
-                    <div class="stat-label">ما تم حصره</div>
-                    <div class="stat-value primary">{{ number_format((int) $totalSurveyed) }}</div>
-                </td>
-                <td class="stat-card">
-                    <div class="stat-label">ما تم تدقيقه</div>
-                    <div class="stat-value success">{{ number_format((int) $totalAudited) }}</div>
-                </td>
-                <td class="stat-card">
-                    <div class="stat-label">نسبة التدقيق</div>
-                    <div class="stat-value warning">{{ $auditRate }}%</div>
-                </td>
-                <td class="stat-card">
-                    <div class="stat-label">أطوال الطرق (متر)</div>
-                    <div class="stat-value">{{ number_format((float) $totalLength, 2) }}</div>
-                </td>
-            </tr>
-        </table>
-
-        <div class="section-title">الفلاتر الحالية</div>
-        <div class="filters">
-            @forelse ($activeFilters as $label => $value)
-                <span class="filter-chip"><strong>{{ $label }}:</strong> {{ $value }}</span>
-            @empty
-                <div class="empty-filters">لا توجد فلاتر مفعلة. التقرير يعرض كامل النتائج المتاحة حسب الصلاحيات.</div>
-            @endforelse
+        <div>
+            <table class="summary-table">
+                <tr>
+                    <td>
+                        <div class="card-label">أطوال الطرق (متر)</div>
+                        <div class="card-value">{{ number_format((float) $totalLength, 2) }}</div>
+                    </td>
+                    <td>
+                        <div class="card-label">نسبة التدقيق</div>
+                        <div class="card-value warning">{{ $auditRate }}%</div>
+                    </td>
+                    <td>
+                        <div class="card-label">ما تم تدقيقه</div>
+                        <div class="card-value success">{{ number_format((int) $totalAudited) }}</div>
+                    </td>
+                    <td>
+                        <div class="card-label">ما تم حصره</div>
+                        <div class="card-value primary">{{ number_format((int) $totalSurveyed) }}</div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
-        <div class="section-title">تفاصيل التقرير</div>
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th class="text-start">المحافظة</th>
-                    <th class="text-start">الحي</th>
-                    <th>ما تم حصره</th>
-                    <th>ما تم تدقيقه</th>
-                    <th>نسبة التدقيق</th>
-                    <th>أطوال الطرق (متر)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($rows as $row)
-                    @php
-                        $rowAuditRate = (int) $row['surveyed_count'] > 0
-                            ? round(((int) $row['audited_count'] / (int) $row['surveyed_count']) * 100, 1)
-                            : 0;
-                    @endphp
+        @if ($activeFilters->isNotEmpty())
+            <div class="filters">
+                @foreach ($activeFilters as $label => $value)
+                    <span class="filter-chip"><strong>{{ $label }}:</strong> {{ $value }}</span>
+                @endforeach
+            </div>
+        @endif
+
+        @if ($rows === [])
+            <div class="empty">لا توجد بيانات ضمن الفلاتر الحالية.</div>
+        @else
+            <div class="section-title">تفاصيل التقرير</div>
+            <table class="report-table">
+                <colgroup>
+                    <col class="length">
+                    <col class="rate">
+                    <col class="count">
+                    <col class="count">
+                    <col class="neighborhood">
+                    <col class="governorate">
+                </colgroup>
+                <thead>
                     <tr>
-                        <td class="text-start">{{ $row['governorate'] }}</td>
-                        <td class="text-start">{{ $row['neighborhood'] }}</td>
-                        <td><span class="badge badge-primary">{{ number_format((int) $row['surveyed_count']) }}</span></td>
-                        <td><span class="badge badge-success">{{ number_format((int) $row['audited_count']) }}</span></td>
-                        <td><span class="badge badge-light">{{ $rowAuditRate }}%</span></td>
-                        <td>{{ number_format((float) $row['road_length_meters'], 2) }}</td>
+                        <th>أطوال الطرق (متر)</th>
+                        <th>نسبة التدقيق</th>
+                        <th>ما تم تدقيقه</th>
+                        <th>ما تم حصره</th>
+                        <th>الحي</th>
+                        <th>المحافظة</th>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="no-data">لا توجد بيانات ضمن الفلاتر الحالية.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-            @if ($rows !== [])
+                </thead>
+                <tbody>
+                    @foreach ($rows as $row)
+                        @php
+                            $rowAuditRate = (int) $row['surveyed_count'] > 0
+                                ? round(((int) $row['audited_count'] / (int) $row['surveyed_count']) * 100, 1)
+                                : 0;
+                        @endphp
+                        <tr>
+                            <td class="num">{{ number_format((float) $row['road_length_meters'], 2) }}</td>
+                            <td class="num">{{ $rowAuditRate }}%</td>
+                            <td class="num">{{ number_format((int) $row['audited_count']) }}</td>
+                            <td class="num">{{ number_format((int) $row['surveyed_count']) }}</td>
+                            <td class="text-start">{{ $row['neighborhood'] }}</td>
+                            <td class="text-start">{{ $row['governorate'] }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
                 <tfoot>
                     <tr>
+                        <td class="num">{{ number_format((float) $totalLength, 2) }}</td>
+                        <td class="num">{{ $auditRate }}%</td>
+                        <td class="num">{{ number_format((int) $totalAudited) }}</td>
+                        <td class="num">{{ number_format((int) $totalSurveyed) }}</td>
                         <td colspan="2">الإجمالي</td>
-                        <td>{{ number_format((int) $totalSurveyed) }}</td>
-                        <td>{{ number_format((int) $totalAudited) }}</td>
-                        <td>{{ $auditRate }}%</td>
-                        <td>{{ number_format((float) $totalLength, 2) }}</td>
                     </tr>
                 </tfoot>
-            @endif
-        </table>
+            </table>
+        @endif
 
-        <div class="footer-note">تم إنشاء التقرير آليًا حسب نتائج صفحة تدقيق الطرق والفلاتر المحددة.</div>
+        <div class="footer">
+            <table class="footer-table">
+                <tr>
+                    <td>Palestinian Housing Council (PHC)</td>
+                    <td class="footer-left">{{ $generatedAt }}</td>
+                </tr>
+            </table>
+        </div>
     </div>
 </body>
 </html>
