@@ -384,7 +384,7 @@ test('database officer can assign and inf engineer can audit road facilities and
     expect(RoadFacilityAuditStatus::query()->where('globalid', $road->globalid)->count())->toBeGreaterThan(1);
 });
 
-test('database officer can export filtered road audit summary to excel', function (): void {
+test('database officer can export filtered road audit summary', function (): void {
     $officer = infAuditUser('Database Officer');
     $engineer = infAuditUser('Inf - QC/QA Engineer');
     $assignedStatus = InfAuditStatus::query()->where('name', 'assigned')->firstOrFail();
@@ -440,6 +440,16 @@ test('database officer can export filtered road audit summary to excel', functio
         'assigned_to' => $engineer->id,
         'updated_by' => $officer->id,
     ]);
+
+    $pdfResponse = $this->actingAs($officer)
+        ->get(route('inf-audit.roads.export', [
+            'format' => 'pdf',
+            'municipalitie' => 'Gaza Municipality',
+        ]));
+
+    $pdfResponse->assertOk();
+    expect($pdfResponse->headers->get('content-disposition'))
+        ->toMatch('/attachment; filename=inf_audit_roads_report_\d{8}_\d{6}\.pdf/');
 
     Excel::fake();
     Excel::matchByRegex();

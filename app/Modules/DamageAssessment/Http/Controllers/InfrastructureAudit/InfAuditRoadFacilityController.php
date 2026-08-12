@@ -21,7 +21,6 @@ use App\Models\RoadFacilitySurveyItem;
 use App\Models\User;
 use App\services\ArcgisService;
 use App\Support\Forms\RoadFacilitySurveyLayout;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -29,10 +28,13 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
+use Mpdf\Mpdf;
+use Mpdf\Output\Destination;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -91,10 +93,7 @@ class InfAuditRoadFacilityController extends Controller
         $fileBaseName = 'inf_audit_roads_report_'.now()->format('Ymd_His');
 
         if ($format === 'pdf') {
-            return Pdf::loadView('damage-assessment::infrastructure-audit.roads.export_pdf', [
-                'rows' => $rows,
-                'filters' => $this->activeFilterLabels($request),
-            ])->setPaper('a4', 'landscape')->download($fileBaseName.'.pdf');
+            return $this->downloadPdfReport($rows, $this->activeFilterLabels($request), $fileBaseName);
         }
 
         return Excel::download(
@@ -717,6 +716,44 @@ class InfAuditRoadFacilityController extends Controller
             'إلى تاريخ' => $request->input('to_date'),
             'بحث' => $request->input('search'),
         ];
+    }
+
+    private function downloadPdfReport(array $rows, array $filters, string $fileBaseName): BinaryFileResponse
+    {
+        $directory = storage_path('app/public/reports');
+        $temporaryDirectory = storage_path('app/mpdf');
+
+        foreach ([$directory, $temporaryDirectory] as $path) {
+            if (! File::exists($path)) {
+                File::makeDirectory($path, 0755, true);
+            }
+        }
+
+        $fileName = $fileBaseName.'.pdf';
+        $filePath = $directory.DIRECTORY_SEPARATOR.$fileName;
+        $html = view('damage-assessment::infrastructure-audit.roads.export_pdf', [
+            'rows' => $rows,
+            'filters' => $filters,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4-L',
+            'margin_left' => 0,
+            'margin_right' => 0,
+            'margin_top' => 0,
+            'margin_bottom' => 0,
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+            'tempDir' => $temporaryDirectory,
+        ]);
+
+        $mpdf->SetDirectionality('rtl');
+        $mpdf->SetDisplayMode('fullpage');
+        $mpdf->WriteHTML($html);
+        $mpdf->Output($filePath, Destination::FILE);
+
+        return response()->download($filePath, $fileName)->deleteFileAfterSend(true);
     }
 
     private function joinFieldEngineer(Builder $query): void
