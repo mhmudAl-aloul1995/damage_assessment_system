@@ -839,16 +839,25 @@
 			return $('input[name="export_mode"]:checked').val() || 'data';
 		}
 
-		function hasSelectedDataColumns() {
-			return $('input[name="building_columns[]"]:checked, input[name="housing_columns[]"]:checked').length > 0;
+		function hasSelectedDataColumns(formData) {
+			return formData.some(function (field) {
+				return (field.name === 'building_columns[]' || field.name === 'housing_columns[]') && field.value;
+			});
 		}
 
 		function requiresDataColumnsForExport() {
 			return selectedExportMode() !== 'attachments';
 		}
 
+		function syncAttachmentExcelDisplay() {
+			if ($('#attachmentExcelDisplay').val() === 'images') {
+				$('input[name="include_attachment_excel_columns"][value="1"]').prop('checked', true);
+			}
+		}
+
 		function syncAttachmentExportOptions() {
 			$('#attachmentExportOptions').removeClass('d-none');
+			syncAttachmentExcelDisplay();
 		}
 
 		function toggleVisibleGroup(listId, inputName, checked) {
@@ -1201,6 +1210,7 @@
 
 			$('input[name="objectid_input_method"]').on('change', syncObjectIdInputMethod);
 			$('input[name="export_mode"]').on('change', syncAttachmentExportOptions);
+			$('#attachmentExcelDisplay').on('change', syncAttachmentExcelDisplay);
 
 			$('#resetObjectIdsFilterBtn').on('click', function () {
 				$.ajax({
@@ -1230,12 +1240,15 @@
 					syncAttachmentExportOptions();
 				}
 
-				if (requiresDataColumnsForExport() && !hasSelectedDataColumns()) {
+				syncAttachmentExcelDisplay();
+
+				const formData = $('#exportForm').serializeArray();
+
+				if (requiresDataColumnsForExport() && !hasSelectedDataColumns(formData)) {
 					toastr.error('يرجى اختيار عمود واحد على الأقل من أعمدة البيانات قبل التصدير.');
 					return;
 				}
 
-				const formData = $('#exportForm').serializeArray();
 				formData.push({ name: 'export_type', value: exportType });
 
 				disableExportButtons();

@@ -1,5 +1,7 @@
 <?php
 
+use App\Jobs\ExportAttachmentsJob;
+use App\Jobs\ExportDataJob;
 use App\Models\Building;
 use App\Models\Export;
 use App\Models\Filter;
@@ -139,6 +141,68 @@ it('allows attachment only exports without selecting data columns', function () 
         ]);
 
     expect(Export::query()->count())->toBe(1);
+});
+
+it('treats image attachment display as a request for excel attachment columns', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('export.start'), [
+            'export_mode' => 'data',
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+            'attachment_sources' => ['building_arcgis'],
+            'attachment_type_filters' => ['images'],
+            'attachment_excel_display' => 'images',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJson([
+            'status' => true,
+        ]);
+
+    $export = Export::query()->firstOrFail();
+    $filters = json_decode((string) $export->filters, true);
+
+    expect($filters['include_attachment_excel_columns'])->toBe('1');
+
+    Queue::assertPushed(ExportAttachmentsJob::class);
+    Queue::assertNotPushed(ExportDataJob::class);
+});
+
+it('treats data with attachments mode as a request for excel attachment columns', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('export.start'), [
+            'export_mode' => 'data_with_attachments',
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+            'attachment_sources' => ['housing_unit_arcgis'],
+            'attachment_type_filters' => ['identity'],
+            'attachment_excel_display' => 'links',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJson([
+            'status' => true,
+        ]);
+
+    $export = Export::query()->firstOrFail();
+    $filters = json_decode((string) $export->filters, true);
+
+    expect($filters['include_attachment_excel_columns'])->toBe('1');
+
+    Queue::assertPushed(ExportAttachmentsJob::class);
+    Queue::assertNotPushed(ExportDataJob::class);
 });
 
 it('fills the neighborhood filter from unique building neighborhoods', function () {

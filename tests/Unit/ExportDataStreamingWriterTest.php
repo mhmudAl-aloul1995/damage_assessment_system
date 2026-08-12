@@ -491,6 +491,64 @@ test('it can export all image attachments inside xlsx attachment columns', funct
     }
 });
 
+test('it shows a clear note when image attachment columns have no matching attachments', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/6002/attachments' => Http::response([
+            'attachmentInfos' => [],
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 6002,
+        'globalid' => 'building-without-matching-attachments',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_mode' => 'data',
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+            'attachment_sources' => ['building_arcgis'],
+            'attachment_type_filters' => ['identity'],
+            'include_attachment_excel_columns' => '1',
+            'attachment_excel_display' => 'images',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportAttachmentsJob($export->id))->handle(app(ArcgisService::class));
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->file_name)->toEndWith('.xlsx');
+
+        $spreadsheet = IOFactory::load(storage_path('app/public/'.$export->file_name));
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->getCell('B2')->getValue())->toBe('لا توجد مرفقات مطابقة');
+        expect($sheet->getDrawingCollection()->count())->toBe(0);
+
+        $spreadsheet->disconnectWorksheets();
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
 test('it skips exports that are already claimed by another worker', function () {
     $user = User::factory()->create();
 

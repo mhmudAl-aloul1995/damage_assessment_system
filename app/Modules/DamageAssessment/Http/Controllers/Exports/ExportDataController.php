@@ -199,6 +199,13 @@ class ExportDataController extends Controller
 
             $payload = $request->all();
 
+            if (
+                ($payload['attachment_excel_display'] ?? null) === 'images'
+                || ($payload['export_mode'] ?? null) === 'data_with_attachments'
+            ) {
+                $payload['include_attachment_excel_columns'] = '1';
+            }
+
             if ($this->requiresDataColumns($payload) && ! $this->hasSelectedDataColumns($payload)) {
                 return response()->json([
                     'status' => false,

@@ -506,7 +506,13 @@ class ExportAttachmentsJob implements ShouldQueue
                         ->map(fn (array $entry): string => (string) ($entry['attachment']['name'] ?? $entry['attachment']['id'] ?? 'attachment'))
                         ->values();
 
-                    if ($nonImageNames->isNotEmpty()) {
+                    if ($entries === []) {
+                        $sheet->setCellValue($cellCoordinate, 'لا توجد مرفقات مطابقة');
+                        $sheet->getStyle($cellCoordinate)->getAlignment()->setWrapText(true);
+                    } elseif ($images->isEmpty() && $nonImageNames->isEmpty()) {
+                        $sheet->setCellValue($cellCoordinate, 'لا توجد صور قابلة للعرض');
+                        $sheet->getStyle($cellCoordinate)->getAlignment()->setWrapText(true);
+                    } elseif ($nonImageNames->isNotEmpty()) {
                         $sheet->setCellValue($cellCoordinate, $nonImageNames->implode("\n"));
                         $sheet->getStyle($cellCoordinate)->getAlignment()->setWrapText(true);
                     }
