@@ -323,6 +323,14 @@ class HousingUnitController extends Controller
                 : $query->where($field, $value);
         }
 
+        if (Schema::hasColumn($table, 'objectid')) {
+            $objectId = $filters['objectid'] ?? null;
+
+            if ($objectId !== null && $objectId !== '') {
+                $query->where('objectid', $objectId);
+            }
+        }
+
         foreach ([
             'unit_owner',
             'id_number1',
@@ -331,7 +339,6 @@ class HousingUnitController extends Controller
             'q_9_3_3_third_name__grandfather',
             'q_9_3_4_last_name',
             'housing_unit_number',
-            'objectid',
         ] as $field) {
             if (! Schema::hasColumn($table, $field)) {
                 continue;

@@ -184,6 +184,12 @@ it('filters housing unit datatable records by housing unit objectid', function (
         'housing_unit_number' => '13',
     ]);
 
+    HousingUnit::query()->create([
+        'objectid' => 13001,
+        'globalid' => 'housing-unit-objectid-partial',
+        'housing_unit_number' => '14',
+    ]);
+
     $query = http_build_query([
         'draw' => 1,
         'start' => 0,
