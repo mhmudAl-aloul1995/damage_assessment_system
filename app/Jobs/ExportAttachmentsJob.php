@@ -397,7 +397,11 @@ class ExportAttachmentsJob implements ShouldQueue
      */
     private function writeDataWorkbook(string $dataPath, array $params, array $sources, ArcgisService $arcgis, string $token): void
     {
-        if (($params['attachment_excel_display'] ?? 'links') === 'images') {
+        if (
+            $this->shouldIncludeAttachmentExcelColumns($params)
+            && ($params['attachment_excel_display'] ?? 'links') === 'images'
+            && $this->attachmentExcelColumns($params) !== []
+        ) {
             $this->writeDataWorkbookWithImages($dataPath, $params, $sources, $arcgis, $token);
 
             return;
@@ -422,7 +426,7 @@ class ExportAttachmentsJob implements ShouldQueue
         $labels = $this->assessmentLabels();
         $writer->addRow(Row::fromValues(
             collect($columns)
-                ->map(fn (array $column): string => $labels[$column['field']] ?? ucwords(str_replace('_', ' ', $column['field'])))
+                ->map(fn (array $column): string => $this->columnLabel($column['field'], $labels))
                 ->merge(collect($attachmentColumns)->pluck('label'))
                 ->all(),
             $headerStyle,
@@ -459,10 +463,19 @@ class ExportAttachmentsJob implements ShouldQueue
         $temporaryImages = [];
 
         $headers = collect($columns)
-            ->map(fn (array $column): string => $labels[$column['field']] ?? ucwords(str_replace('_', ' ', $column['field'])))
+            ->map(fn (array $column): string => $this->columnLabel($column['field'], $labels))
             ->merge(collect($attachmentColumns)->pluck('label'))
             ->values()
             ->all();
+
+        if ($headers === []) {
+            $headers = ['ObjectID'];
+            $columns = [[
+                'table' => 'building',
+                'field' => 'objectid',
+                'alias' => 'building_objectid',
+            ]];
+        }
 
         foreach ($headers as $index => $header) {
             $columnLetter = Coordinate::stringFromColumnIndex($index + 1);
@@ -771,6 +784,16 @@ class ExportAttachmentsJob implements ShouldQueue
     private function shouldIncludeAttachmentExcelColumns(array $params): bool
     {
         return (string) ($params['include_attachment_excel_columns'] ?? '0') === '1';
+    }
+
+    /**
+     * @param  array<string, string>  $labels
+     */
+    private function columnLabel(string $field, array $labels): string
+    {
+        $label = trim((string) ($labels[$field] ?? ''));
+
+        return $label !== '' ? $label : ucwords(str_replace('_', ' ', $field));
     }
 
     /**
