@@ -7,6 +7,7 @@ use App\Models\EditAssessment;
 use App\Models\Export;
 use App\Models\User;
 use App\services\ArcgisService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use OpenSpout\Reader\XLSX\Reader;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -291,6 +292,91 @@ test('it exports data with selected arcgis building attachments to a zip with an
         expect($zip->getFromName('buildings/4001/4001_building_901_damage photo.jpg'))->toBe('image-bytes');
         expect($zip->getFromName('buildings/4001/4001_building_902_identity.pdf'))->toBeFalse();
         expect($zip->getFromName('attachments-index.csv'))->toContain('building-with-attachment');
+
+        $zip->close();
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
+test('it matches semantic attachment type filters using arabic names and arcgis keywords', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/5001/attachments' => Http::response([
+            'attachmentInfos' => [
+                [
+                    'id' => 1001,
+                    'name' => 'صورة الهوية.jpg',
+                    'contentType' => 'image/jpeg',
+                ],
+                [
+                    'id' => 1002,
+                    'name' => 'document.pdf',
+                    'contentType' => 'application/pdf',
+                    'keywords' => 'land ownership deed',
+                ],
+                [
+                    'id' => 1003,
+                    'name' => 'general-photo.jpg',
+                    'contentType' => 'image/jpeg',
+                ],
+            ],
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/5001/attachments/1001*' => Http::response('identity-image'),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/5001/attachments/1002*' => Http::response('ownership-pdf'),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/5001/attachments/1003*' => Http::response('general-image'),
+    ]);
+
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 5000,
+        'globalid' => 'building-for-housing-attachment',
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 5001,
+        'globalid' => 'housing-with-semantic-attachments',
+        'parentglobalid' => 'building-for-housing-attachment',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_mode' => 'attachments',
+            'export_type' => 'zip',
+            'attachment_sources' => ['housing_unit_arcgis'],
+            'attachment_type_filters' => ['identity', 'ownership'],
+            'attachment_grouping' => 'by_housing_unit',
+            'attachment_filename_strategy' => 'objectid_type',
+            'include_attachment_index' => '1',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportAttachmentsJob($export->id))->handle(app(ArcgisService::class));
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(2);
+
+        $zip = new \ZipArchive;
+        $zip->open(storage_path('app/public/'.$export->file_name));
+
+        expect($zip->getFromName('housing_units/5001/5001_housing_unit_1001_صورة الهوية.jpg'))->toBe('identity-image');
+        expect($zip->getFromName('housing_units/5001/5001_housing_unit_1002_document.pdf'))->toBe('ownership-pdf');
+        expect($zip->getFromName('housing_units/5001/5001_housing_unit_1003_general-photo.jpg'))->toBeFalse();
 
         $zip->close();
     } finally {

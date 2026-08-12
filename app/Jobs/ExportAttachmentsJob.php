@@ -513,9 +513,9 @@ class ExportAttachmentsJob implements ShouldQueue
             return true;
         }
 
-        $name = mb_strtolower((string) ($attachment['name'] ?? ''));
+        $searchableText = $this->attachmentSearchableText($attachment);
         $contentType = mb_strtolower((string) ($attachment['contentType'] ?? ''));
-        $extension = mb_strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $extension = mb_strtolower(pathinfo((string) ($attachment['name'] ?? ''), PATHINFO_EXTENSION));
 
         foreach ($typeFilters as $type) {
             if ($type === 'images' && (str_starts_with($contentType, 'image/') || in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'], true))) {
@@ -526,23 +526,56 @@ class ExportAttachmentsJob implements ShouldQueue
                 return true;
             }
 
-            if ($type === 'damage_photos' && str_contains($name, 'damage')) {
+            if ($type === 'damage_photos' && $this->containsAny($searchableText, ['damage', 'damaged', 'damge', 'photo', 'image', 'ضرر', 'اضرار', 'أضرار', 'صورة', 'صور'])) {
                 return true;
             }
 
-            if ($type === 'identity' && (str_contains($name, 'identity') || str_contains($name, 'id'))) {
+            if ($type === 'identity' && $this->containsAny($searchableText, ['identity', ' id ', 'id_', '_id', 'passport', 'هوية', 'الهويه', 'الهوية', 'جواز'])) {
                 return true;
             }
 
-            if ($type === 'ownership' && (str_contains($name, 'ownership') || str_contains($name, 'owner'))) {
+            if ($type === 'ownership' && $this->containsAny($searchableText, ['ownership', 'owner', 'deed', 'title', 'land', 'ملكية', 'الملكية', 'طابو', 'سند', 'ارض', 'أرض'])) {
                 return true;
             }
 
-            if ($type === 'permit' && str_contains($name, 'permit')) {
+            if ($type === 'permit' && $this->containsAny($searchableText, ['permit', 'municipal', 'municipality', 'license', 'licence', 'رخصة', 'رخصه', 'بلدية', 'البلدية'])) {
                 return true;
             }
 
             if ($type === 'other_documents' && ! str_starts_with($contentType, 'image/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attachment
+     */
+    private function attachmentSearchableText(array $attachment): string
+    {
+        $parts = [
+            $attachment['name'] ?? '',
+            $attachment['contentType'] ?? '',
+            $attachment['keywords'] ?? '',
+            $attachment['globalId'] ?? '',
+            $attachment['parentGlobalId'] ?? '',
+        ];
+
+        return ' '.mb_strtolower(collect($parts)
+            ->flatten()
+            ->map(fn ($value): string => (string) $value)
+            ->implode(' ')).' ';
+    }
+
+    /**
+     * @param  array<int, string>  $needles
+     */
+    private function containsAny(string $haystack, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if (str_contains($haystack, mb_strtolower($needle))) {
                 return true;
             }
         }
