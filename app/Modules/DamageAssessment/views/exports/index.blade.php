@@ -76,6 +76,12 @@
 
 				<form id="exportForm" method="POST">
 					@csrf
+					@if(!empty($importedObjectIds))
+						@foreach($importedObjectIds as $objectId)
+							<input type="hidden" name="imported_object_ids[]" value="{{ $objectId }}">
+						@endforeach
+						<input type="hidden" name="imported_object_id_target" value="{{ $importedObjectIdTarget }}">
+					@endif
 
 					{{-- FILTERS --}}
 					<div class="card card-bordered mb-5">

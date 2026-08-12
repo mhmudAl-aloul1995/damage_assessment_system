@@ -59,7 +59,7 @@ class ExportDataController extends Controller
 
     private const ORPHANED_PROCESSING_MINUTES = 2;
 
-    public function index()
+    public function index(Request $request)
     {
         $buildingColumns = ExportDataColumns::visibleBuildingColumns();
         $housingColumns = ExportDataColumns::visibleHousingColumns();
@@ -119,14 +119,21 @@ class ExportDataController extends Controller
         $assessmentLabels[self::ASSESSMENT_OBSTACLE_FILTER] = 'Assessment Obstacle';
         $assessmentLabels['building_states_auditig'] = 'حالات المبنى - التدقيق';
 
+        $importedObjectIds = $this->importedObjectIds();
+        $importedObjectIdTarget = $this->importedObjectIdTarget();
+
+        if (! empty($importedObjectIds)) {
+            $this->clearImportedObjectIdFilter($request);
+        }
+
         return view('damage-assessment::exports.index', [
             'assessmentLabels' => $assessmentLabels,
             'buildingColumns' => $buildingColumns,
             'housingColumns' => $housingColumns,
             'assessmentMeta' => $assessmentMeta,
             'filters' => $filters,
-            'importedObjectIds' => $this->importedObjectIds(),
-            'importedObjectIdTarget' => $this->importedObjectIdTarget(),
+            'importedObjectIds' => $importedObjectIds,
+            'importedObjectIdTarget' => $importedObjectIdTarget,
         ]);
     }
 
@@ -190,11 +197,18 @@ class ExportDataController extends Controller
             }
 
             $payload = $request->all();
-            $importedObjectIds = $this->importedObjectIds();
+            $requestedImportedObjectIds = $this->normalizeObjectIdValues($request->input('imported_object_ids', []));
+            $sessionImportedObjectIds = $this->importedObjectIds();
+            $importedObjectIds = ! empty($requestedImportedObjectIds)
+                ? $requestedImportedObjectIds
+                : $sessionImportedObjectIds;
+            $importedObjectIdTarget = $this->objectIdFilterTarget(
+                $request->input('imported_object_id_target', session(self::OBJECT_ID_FILTER_TARGET_SESSION_KEY)),
+            );
 
             if (! empty($importedObjectIds)) {
                 $payload['imported_object_ids'] = $importedObjectIds;
-                $payload['imported_object_id_target'] = $this->importedObjectIdTarget();
+                $payload['imported_object_id_target'] = $importedObjectIdTarget;
             }
 
             $export = Export::query()->create([
@@ -348,7 +362,15 @@ class ExportDataController extends Controller
      */
     private function importedObjectIds(): array
     {
-        return collect(session(self::OBJECT_ID_FILTER_SESSION_KEY, []))
+        return $this->normalizeObjectIdValues(session(self::OBJECT_ID_FILTER_SESSION_KEY, []));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeObjectIdValues(mixed $values): array
+    {
+        return collect((array) $values)
             ->map(fn ($value) => trim((string) $value))
             ->filter()
             ->unique()

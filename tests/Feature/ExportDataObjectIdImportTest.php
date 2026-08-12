@@ -109,6 +109,57 @@ it('passes imported objectids into the export payload', function () {
     Queue::assertPushed(ExportDataJob::class);
 });
 
+it('shows imported objectids once on the export page and then clears the session filter', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->withSession([
+            'exports.imported_object_ids' => ['273', '360'],
+            'exports.imported_object_id_target' => 'housing_unit',
+        ])
+        ->get(route('export.data.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee('name="imported_object_ids[]" value="273"', false)
+        ->assertSee('name="imported_object_ids[]" value="360"', false)
+        ->assertSee('name="imported_object_id_target" value="housing_unit"', false);
+
+    expect(session()->has('exports.imported_object_ids'))->toBeFalse();
+    expect(session()->has('exports.imported_object_id_target'))->toBeFalse();
+});
+
+it('passes page embedded imported objectids into the export payload after the session is cleared', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('export.start'), [
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+            'imported_object_ids' => ['273', '360', '273'],
+            'imported_object_id_target' => 'housing_unit',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    $export = Export::query()->latest('id')->first();
+
+    expect($export)->not->toBeNull();
+
+    $payload = json_decode($export->filters, true);
+
+    expect($payload['imported_object_ids'])->toBe(['273', '360']);
+    expect($payload['imported_object_id_target'])->toBe('housing_unit');
+
+    Queue::assertPushed(ExportDataJob::class);
+});
+
 it('filters exports by housing unit objectid without matching building objectids', function () {
     $user = User::factory()->create();
 
