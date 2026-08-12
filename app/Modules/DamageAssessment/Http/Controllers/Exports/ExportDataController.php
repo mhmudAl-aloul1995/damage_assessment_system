@@ -21,6 +21,37 @@ class ExportDataController extends Controller
 {
     private const OBJECT_ID_FILTER_SESSION_KEY = 'exports.imported_object_ids';
 
+    private const OBJECT_ID_FILTER_TARGET_SESSION_KEY = 'exports.imported_object_id_target';
+
+    private const OBJECT_ID_FILTER_TARGET_BUILDING = 'building';
+
+    private const OBJECT_ID_FILTER_TARGET_HOUSING_UNIT = 'housing_unit';
+
+    private const OBJECT_ID_COLUMN_ALIASES = [
+        self::OBJECT_ID_FILTER_TARGET_BUILDING => [
+            'buildingobjectid',
+            'building_objectid',
+            'objectidbuilding',
+            'objectidمبنى',
+            'objectidالمبنى',
+            'objectidللمبنى',
+            'objectidللمبني',
+            'objectidللمبنا',
+        ],
+        self::OBJECT_ID_FILTER_TARGET_HOUSING_UNIT => [
+            'housingunitobjectid',
+            'housing_unit_objectid',
+            'housingobjectid',
+            'unitobjectid',
+            'unit_objectid',
+            'objectidhousingunit',
+            'objectidunit',
+            'objectidالوحدة',
+            'objectidللوحدة',
+            'objectidرقمالوحدة',
+        ],
+    ];
+
     private const ORPHANED_PENDING_MINUTES = 1;
 
     private const ORPHANED_PROCESSING_MINUTES = 2;
@@ -89,6 +120,7 @@ class ExportDataController extends Controller
             'assessmentMeta' => $assessmentMeta,
             'filters' => $filters,
             'importedObjectIds' => $this->importedObjectIds(),
+            'importedObjectIdTarget' => $this->importedObjectIdTarget(),
         ]);
     }
 
@@ -156,6 +188,7 @@ class ExportDataController extends Controller
 
             if (! empty($importedObjectIds)) {
                 $payload['imported_object_ids'] = $importedObjectIds;
+                $payload['imported_object_id_target'] = $this->importedObjectIdTarget();
             }
 
             $export = Export::query()->create([
@@ -213,24 +246,51 @@ class ExportDataController extends Controller
 
     public function importObjectIds(ObjectIdImportRequest $request): JsonResponse
     {
+        $target = $this->objectIdFilterTarget($request->input('objectid_filter_target'));
+        $objectIds = $request->filled('objectids_text')
+            ? $this->objectIdsFromText((string) $request->input('objectids_text'))
+            : $this->objectIdsFromFile($request, $target);
+
+        if (empty($objectIds)) {
+            return response()->json([
+                'status' => false,
+                'message' => __('ui.exports.objectid_import_no_valid_rows'),
+            ], 422);
+        }
+
+        session([
+            self::OBJECT_ID_FILTER_SESSION_KEY => $objectIds,
+            self::OBJECT_ID_FILTER_TARGET_SESSION_KEY => $target,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => __('ui.exports.objectid_import_success', ['count' => count($objectIds)]),
+            'count' => count($objectIds),
+            'target' => $target,
+        ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function objectIdsFromFile(ObjectIdImportRequest $request, string $target): array
+    {
         $rows = Excel::toArray([], $request->file('objectids_file'));
         $sheetRows = collect($rows[0] ?? []);
 
         if ($sheetRows->isEmpty()) {
-            return response()->json([
-                'status' => false,
-                'message' => __('ui.exports.objectid_import_empty'),
-            ], 422);
+            return [];
         }
 
         $headerRow = collect((array) $sheetRows->first())
-            ->map(fn ($value) => Str::lower(trim((string) $value)))
+            ->map(fn ($value) => $this->normalizeObjectIdColumnName((string) $value))
             ->values();
 
-        $objectIdColumnIndex = $headerRow->search('objectid');
+        $objectIdColumnIndex = $this->objectIdColumnIndex($headerRow->all(), $target);
         $dataRows = $sheetRows;
 
-        if ($objectIdColumnIndex !== false) {
+        if ($objectIdColumnIndex !== null) {
             $dataRows = $sheetRows->slice(1)->values();
         } else {
             $objectIdColumnIndex = 0;
@@ -240,32 +300,37 @@ class ExportDataController extends Controller
             ->map(function ($row) use ($objectIdColumnIndex) {
                 $values = is_array($row) ? array_values($row) : [(string) $row];
 
-                return trim((string) ($values[$objectIdColumnIndex] ?? ''));
+                return $this->normalizeObjectIdValue($values[$objectIdColumnIndex] ?? '');
             })
-            ->filter(fn ($value) => $value !== '')
+            ->filter()
             ->unique()
             ->values()
             ->all();
 
-        if (empty($objectIds)) {
-            return response()->json([
-                'status' => false,
-                'message' => __('ui.exports.objectid_import_no_valid_rows'),
-            ], 422);
-        }
+        return $objectIds;
+    }
 
-        session([self::OBJECT_ID_FILTER_SESSION_KEY => $objectIds]);
+    /**
+     * @return array<int, string>
+     */
+    private function objectIdsFromText(string $text): array
+    {
+        preg_match_all('/\d+(?:\.0+)?/', $text, $matches);
 
-        return response()->json([
-            'status' => true,
-            'message' => __('ui.exports.objectid_import_success', ['count' => count($objectIds)]),
-            'count' => count($objectIds),
-        ]);
+        return collect($matches[0] ?? [])
+            ->map(fn ($value) => $this->normalizeObjectIdValue($value))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function resetImportedObjectIds(Request $request): JsonResponse
     {
-        $request->session()->forget(self::OBJECT_ID_FILTER_SESSION_KEY);
+        $request->session()->forget([
+            self::OBJECT_ID_FILTER_SESSION_KEY,
+            self::OBJECT_ID_FILTER_TARGET_SESSION_KEY,
+        ]);
 
         return response()->json([
             'status' => true,
@@ -284,6 +349,52 @@ class ExportDataController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function importedObjectIdTarget(): string
+    {
+        return $this->objectIdFilterTarget(session(self::OBJECT_ID_FILTER_TARGET_SESSION_KEY));
+    }
+
+    private function objectIdFilterTarget(mixed $target): string
+    {
+        return $target === self::OBJECT_ID_FILTER_TARGET_HOUSING_UNIT
+            ? self::OBJECT_ID_FILTER_TARGET_HOUSING_UNIT
+            : self::OBJECT_ID_FILTER_TARGET_BUILDING;
+    }
+
+    /**
+     * @param  array<int, string>  $headers
+     */
+    private function objectIdColumnIndex(array $headers, string $target): ?int
+    {
+        $targetAliases = array_flip(self::OBJECT_ID_COLUMN_ALIASES[$target] ?? []);
+
+        foreach ($headers as $index => $header) {
+            if (isset($targetAliases[$header])) {
+                return $index;
+            }
+        }
+
+        $genericIndex = array_search('objectid', $headers, true);
+
+        return $genericIndex === false ? null : (int) $genericIndex;
+    }
+
+    private function normalizeObjectIdColumnName(string $value): string
+    {
+        return Str::lower(preg_replace('/[\s\-_]+/u', '', trim($value)) ?? '');
+    }
+
+    private function normalizeObjectIdValue(mixed $value): string
+    {
+        $value = trim((string) $value);
+
+        if (preg_match('/^\d+(?:\.0+)?$/', $value) !== 1) {
+            return '';
+        }
+
+        return (string) (int) $value;
     }
 
     private function failStaleExports(): void

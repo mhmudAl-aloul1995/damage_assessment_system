@@ -17,7 +17,7 @@ it('shows export page actions including objectid import', function () {
     $response->assertSee('value="housing_units_count"', false);
     $response->assertSee('value="latitude"', false);
     $response->assertSee('value="longitude"', false);
-    $response->assertSee(__('ui.exports.import_objectids_excel'));
+    $response->assertSee(__('ui.exports.import_objectids'));
     $response->assertSee('name="building_end_from"', false);
     $response->assertSee('name="building_end_to"', false);
 });

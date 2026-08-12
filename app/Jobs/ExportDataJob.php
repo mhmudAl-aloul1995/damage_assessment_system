@@ -80,6 +80,9 @@ class ExportDataJob implements ShouldQueue
                 ->unique()
                 ->values()
                 ->all();
+            $importedObjectIdTarget = ($params['imported_object_id_target'] ?? 'building') === 'housing_unit'
+                ? 'housing_unit'
+                : 'building';
 
             $familyMembersFrom = $params['family_members_from'] ?? null;
             $familyMembersTo = $params['family_members_to'] ?? null;
@@ -88,7 +91,7 @@ class ExportDataJob implements ShouldQueue
 
             $buildingUnitsCountColumn = ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN;
             $needsHousingUnitsCount = in_array($buildingUnitsCountColumn, $buildingColumns, true);
-            $needsHousingJoin = ! empty($housingColumns);
+            $needsHousingJoin = ! empty($housingColumns) || (! empty($importedObjectIds) && $importedObjectIdTarget === 'housing_unit');
             $needsFamily = ! is_null($familyMembersFrom) || ! is_null($familyMembersTo);
             $paginateByHousing = $needsHousingJoin;
             $buildingsSource = ExportDataColumns::BUILDINGS_TABLE;
@@ -195,13 +198,10 @@ class ExportDataJob implements ShouldQueue
             }
 
             if (! empty($importedObjectIds)) {
-                $query->where(function ($nested) use ($importedObjectIds, $needsHousingJoin) {
-                    $nested->whereIn('b.objectid', $importedObjectIds);
-
-                    if ($needsHousingJoin) {
-                        $nested->orWhereIn('h.objectid', $importedObjectIds);
-                    }
-                });
+                $query->whereIn(
+                    $importedObjectIdTarget === 'housing_unit' ? 'h.objectid' : 'b.objectid',
+                    $importedObjectIds,
+                );
             }
 
             Log::info('Export query prepared', [
@@ -210,6 +210,7 @@ class ExportDataJob implements ShouldQueue
                 'paginate_by_housing' => $paginateByHousing,
                 'building_columns' => count($buildingColumns),
                 'housing_columns' => count($housingColumns),
+                'imported_object_id_target' => $importedObjectIdTarget,
                 'source' => 'base_tables',
             ]);
 

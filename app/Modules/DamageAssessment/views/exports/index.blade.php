@@ -30,7 +30,7 @@
 							<span class="path1"></span>
 							<span class="path2"></span>
 						</i>
-						{{ __('ui.exports.import_objectids_excel') }}
+						{{ __('ui.exports.import_objectids') }}
 					</button>
 
 					@if(!empty($importedObjectIds))
@@ -60,6 +60,7 @@
 							<strong>{{ __('ui.exports.objectid_import_active') }}</strong>
 							<div class="text-muted fs-7 mt-1">
 								{{ __('ui.exports.objectid_import_active_count', ['count' => count($importedObjectIds)]) }}
+								{{ __('ui.exports.objectid_import_active_target', ['target' => __('ui.exports.objectid_target_' . $importedObjectIdTarget)]) }}
 							</div>
 						</div>
 						<div class="d-flex flex-wrap gap-2">
@@ -619,7 +620,7 @@
 				<form id="importObjectIdsForm" enctype="multipart/form-data">
 					@csrf
 					<div class="modal-header">
-						<h2 class="fw-bold">{{ __('ui.exports.import_objectids_excel') }}</h2>
+						<h2 class="fw-bold">{{ __('ui.exports.import_objectids') }}</h2>
 						<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
 							<i class="ki-duotone ki-cross fs-1">
 								<span class="path1"></span>
@@ -630,12 +631,53 @@
 
 					<div class="modal-body py-10 px-lg-17">
 						<div class="mb-7">
-							<label
-								class="required fw-semibold fs-6 mb-2 d-block">{{ __('ui.exports.objectid_import_file_label') }}</label>
+							<label class="required fw-semibold fs-6 mb-2 d-block">{{ __('ui.exports.objectid_import_target_label') }}</label>
+							<div class="btn-group w-100" role="group" aria-label="{{ __('ui.exports.objectid_import_target_label') }}">
+								<input type="radio" class="btn-check" name="objectid_filter_target" id="objectidTargetBuilding"
+									value="building" autocomplete="off" {{ ($importedObjectIdTarget ?? 'building') === 'building' ? 'checked' : '' }}>
+								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="objectidTargetBuilding">
+									{{ __('ui.exports.objectid_target_building') }}
+								</label>
+
+								<input type="radio" class="btn-check" name="objectid_filter_target" id="objectidTargetHousingUnit"
+									value="housing_unit" autocomplete="off" {{ ($importedObjectIdTarget ?? 'building') === 'housing_unit' ? 'checked' : '' }}>
+								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="objectidTargetHousingUnit">
+									{{ __('ui.exports.objectid_target_housing_unit') }}
+								</label>
+							</div>
+						</div>
+
+						<div class="mb-7">
+							<label class="required fw-semibold fs-6 mb-2 d-block">{{ __('ui.exports.objectid_import_method_label') }}</label>
+							<div class="btn-group w-100" role="group" aria-label="{{ __('ui.exports.objectid_import_method_label') }}">
+								<input type="radio" class="btn-check" name="objectid_input_method" id="objectidInputFile"
+									value="file" autocomplete="off" checked>
+								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="objectidInputFile">
+									{{ __('ui.exports.objectid_input_file') }}
+								</label>
+
+								<input type="radio" class="btn-check" name="objectid_input_method" id="objectidInputText"
+									value="text" autocomplete="off">
+								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="objectidInputText">
+									{{ __('ui.exports.objectid_input_text') }}
+								</label>
+							</div>
+						</div>
+
+						<div class="mb-7" id="objectidsFileInputWrap">
+							<label class="fw-semibold fs-6 mb-2 d-block">{{ __('ui.exports.objectid_import_file_label') }}</label>
 							<input type="file" name="objectids_file" id="objectids_file"
 								class="form-control form-control-solid" accept=".xlsx,.xls,.csv" />
 							<div class="form-text">{{ __('ui.exports.objectid_import_file_help') }}</div>
 							<div class="invalid-feedback d-block" id="objectids-file-error" style="display: none;"></div>
+						</div>
+
+						<div class="mb-7 d-none" id="objectidsTextInputWrap">
+							<label class="fw-semibold fs-6 mb-2 d-block">{{ __('ui.exports.objectid_import_text_label') }}</label>
+							<textarea name="objectids_text" id="objectids_text" class="form-control form-control-solid"
+								rows="8" placeholder="{{ __('ui.exports.objectid_import_text_placeholder') }}"></textarea>
+							<div class="form-text">{{ __('ui.exports.objectid_import_text_help') }}</div>
+							<div class="invalid-feedback d-block" id="objectids-text-error" style="display: none;"></div>
 						</div>
 					</div>
 
@@ -644,7 +686,7 @@
 							{{ __('ui.buttons.cancel') }}
 						</button>
 						<button type="submit" class="btn btn-primary" id="importObjectIdsSubmitBtn">
-							<span class="indicator-label">{{ __('ui.exports.import_objectids_excel') }}</span>
+							<span class="indicator-label">{{ __('ui.exports.import_objectids') }}</span>
 							<span class="indicator-progress">{{ __('ui.auth.please_wait') }}
 								<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
 							</span>
@@ -797,6 +839,26 @@
 			}
 		}
 
+		function syncObjectIdInputMethod() {
+			const method = $('input[name="objectid_input_method"]:checked').val() || 'file';
+			const fileWrap = $('#objectidsFileInputWrap');
+			const textWrap = $('#objectidsTextInputWrap');
+			const fileInput = $('#objectids_file');
+			const textInput = $('#objectids_text');
+
+			if (method === 'text') {
+				fileWrap.addClass('d-none');
+				textWrap.removeClass('d-none');
+				fileInput.prop('disabled', true);
+				textInput.prop('disabled', false);
+			} else {
+				fileWrap.removeClass('d-none');
+				textWrap.addClass('d-none');
+				fileInput.prop('disabled', false);
+				textInput.prop('disabled', true);
+			}
+		}
+
 		function showPreparingCard() {
 			$('#exportResult').html(`
 																<div class="card p-4 text-center">
@@ -911,6 +973,7 @@
 			filterColumns('buildingSearch', 'buildingColumnsList', 'buildingCounter');
 			filterColumns('housingSearch', 'housingColumnsList', 'housingCounter');
 			filterFilterCards();
+			syncObjectIdInputMethod();
 
 			$('.filter-select2').select2({
 				width: '100%',
@@ -936,9 +999,11 @@
 				e.preventDefault();
 
 				const form = this;
+				syncObjectIdInputMethod();
 				const formData = new FormData(form);
 
 				$('#objectids-file-error').hide().text('');
+				$('#objectids-text-error').hide().text('');
 				setImportObjectIdsLoading(true);
 
 				$.ajax({
@@ -960,9 +1025,14 @@
 					error: function (xhr) {
 						const message = xhr.responseJSON?.message || @json(__('ui.exports.objectid_import_failed'));
 						const fieldMessage = xhr.responseJSON?.errors?.objectids_file?.[0];
+						const textMessage = xhr.responseJSON?.errors?.objectids_text?.[0];
 
 						if (fieldMessage) {
 							$('#objectids-file-error').text(fieldMessage).show();
+						}
+
+						if (textMessage) {
+							$('#objectids-text-error').text(textMessage).show();
 						}
 
 						toastr.error(message);
@@ -972,6 +1042,8 @@
 					}
 				});
 			});
+
+			$('input[name="objectid_input_method"]').on('change', syncObjectIdInputMethod);
 
 			$('#resetObjectIdsFilterBtn').on('click', function () {
 				$.ajax({
