@@ -244,6 +244,11 @@
 									مرفقات فقط
 								</label>
 
+								<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeDataAttachments"
+									value="data_with_attachments" autocomplete="off">
+								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeDataAttachments">
+									بيانات + مرفقات
+								</label>
 							</div>
 
 							<div id="attachmentExportOptions" class="border rounded p-4 d-none">
@@ -263,6 +268,22 @@
 												<span class="form-check-label ms-3">مرفقات الوحد السكنية</span>
 											</label>
 										</div>
+									</div>
+
+									<div class="col-lg-4 mb-4">
+										<label class="form-label fw-bold" for="attachmentTypeFilters">تصنيف المرفق</label>
+										<select id="attachmentTypeFilters" name="attachment_type_filters[]"
+											class="form-select form-select-solid attachment-type-select2" multiple
+											data-placeholder="كل المرفقات">
+											<option value="all" selected>كل المرفقات</option>
+											<option value="images">صور فقط</option>
+											<option value="pdf">PDF فقط</option>
+											<option value="damage_photos">صور الضرر</option>
+											<option value="identity">الهوية</option>
+											<option value="ownership">وثائق الملكية</option>
+											<option value="permit">رخصة البلدية</option>
+											<option value="other_documents">مستندات أخرى</option>
+										</select>
 									</div>
 
 									<div class="col-lg-4 mb-4">
@@ -1075,6 +1096,21 @@
 				dir: 'rtl',
 				closeOnSelect: false,
 				placeholder: @json(__('ui.exports.select_values'))
+			});
+
+			$('.attachment-type-select2').select2({
+				width: '100%',
+				dir: 'rtl',
+				closeOnSelect: false,
+				placeholder: 'كل المرفقات'
+			});
+
+			$('.attachment-type-select2').on('change', function () {
+				const selected = $(this).val() || [];
+
+				if (selected.length > 1 && selected.includes('all')) {
+					$(this).val(selected.filter((value) => value !== 'all')).trigger('change.select2');
+				}
 			});
 
 			const collapse = document.getElementById('filtersCollapse');

@@ -9,6 +9,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Writer\XLSX\Writer;
 
 class ExportAttachmentsJob implements ShouldQueue
 {
@@ -81,6 +85,10 @@ class ExportAttachmentsJob implements ShouldQueue
             $processedArcgisRecords = [];
             $seenPaths = [];
             $totalRows = max(1, $rows->count());
+
+            if (($params['export_mode'] ?? null) === 'data_with_attachments') {
+                $this->addDataWorkbookToZip($zip, $params, $sources);
+            }
 
             foreach ($rows as $position => $row) {
                 $export->refresh();
@@ -300,11 +308,16 @@ class ExportAttachmentsJob implements ShouldQueue
     ): int {
         $attachments = $arcgis->getAttachments($objectId, $layerId, $token);
         $processed = 0;
+        $typeFilters = $this->selectedAttachmentTypeFilters($params);
 
         foreach ($attachments as $attachment) {
             $attachmentId = $attachment['id'] ?? null;
 
             if (! filled($attachmentId)) {
+                continue;
+            }
+
+            if (! $this->matchesAttachmentTypeFilters($attachment, $typeFilters)) {
                 continue;
             }
 
@@ -333,6 +346,208 @@ class ExportAttachmentsJob implements ShouldQueue
         }
 
         return $processed;
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @param  array<int, string>  $sources
+     */
+    private function addDataWorkbookToZip(\ZipArchive $zip, array $params, array $sources): void
+    {
+        $dataPath = storage_path('app/public/exports/data_'.$this->exportId.'_'.now()->timestamp.'.xlsx');
+
+        if (! is_dir(dirname($dataPath))) {
+            mkdir(dirname($dataPath), 0777, true);
+        }
+
+        $writer = new Writer;
+        $writer->openToFile($dataPath);
+
+        $headerStyle = (new Style)
+            ->setFontBold()
+            ->setFontSize(12)
+            ->setFontColor('FFFFFF')
+            ->setBackgroundColor('1F4E78')
+            ->setCellAlignment(CellAlignment::CENTER);
+
+        $columns = $this->dataColumns($params);
+        $labels = $this->assessmentLabels();
+        $writer->addRow(Row::fromValues(
+            collect($columns)->map(fn (array $column): string => $labels[$column['field']] ?? ucwords(str_replace('_', ' ', $column['field'])))->all(),
+            $headerStyle,
+        ));
+
+        $this->dataRows($params, $sources, $columns)
+            ->each(function (object $row) use ($writer, $columns): void {
+                $writer->addRow(Row::fromValues(
+                    collect($columns)->map(fn (array $column): mixed => $row->{$column['alias']} ?? null)->all(),
+                ));
+            });
+
+        $writer->close();
+        $zip->addFile($dataPath, 'data.xlsx');
+        register_shutdown_function(static function () use ($dataPath): void {
+            if (is_file($dataPath)) {
+                unlink($dataPath);
+            }
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array<int, array{table: string, field: string, alias: string}>
+     */
+    private function dataColumns(array $params): array
+    {
+        $buildingColumns = ExportDataColumns::sanitizeRequestedColumns(
+            ExportDataColumns::BUILDINGS_TABLE,
+            array_values($params['building_columns'] ?? []),
+            [ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN],
+        );
+
+        $housingColumns = ExportDataColumns::sanitizeRequestedColumns(
+            ExportDataColumns::HOUSING_UNITS_TABLE,
+            array_values($params['housing_columns'] ?? []),
+        );
+
+        if ($buildingColumns === [] && $housingColumns === []) {
+            $buildingColumns = ['objectid', 'globalid', 'owner_name'];
+        }
+
+        return collect($buildingColumns)
+            ->map(fn (string $field): array => [
+                'table' => 'building',
+                'field' => $field,
+                'alias' => 'building_'.$field,
+            ])
+            ->merge(collect($housingColumns)->map(fn (string $field): array => [
+                'table' => 'housing',
+                'field' => $field,
+                'alias' => 'housing_'.$field,
+            ]))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @param  array<int, string>  $sources
+     * @param  array<int, array{table: string, field: string, alias: string}>  $columns
+     */
+    private function dataRows(array $params, array $sources, array $columns): \Illuminate\Support\Collection
+    {
+        $buildingsSource = ExportDataColumns::BUILDINGS_TABLE;
+        $housingUnitsSource = ExportDataColumns::HOUSING_UNITS_TABLE;
+        $filters = $params['filters'] ?? [];
+        $needsHousingJoin = in_array(self::SOURCE_HOUSING_UNIT_ARCGIS, $sources, true)
+            || collect($columns)->contains(fn (array $column): bool => $column['table'] === 'housing')
+            || (($params['imported_object_id_target'] ?? 'building') === 'housing_unit')
+            || collect(array_keys((array) $filters))
+                ->contains(fn (string $field): bool => ExportDataColumns::hasColumn($housingUnitsSource, $field));
+
+        $query = $needsHousingJoin
+            ? DB::table("{$housingUnitsSource} as h")->join("{$buildingsSource} as b", 'b.globalid', '=', 'h.parentglobalid')
+            : DB::table("{$buildingsSource} as b");
+
+        $selects = collect($columns)
+            ->map(function (array $column): string {
+                if ($column['field'] === ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN) {
+                    return '(SELECT COUNT(*) FROM '.ExportDataColumns::HOUSING_UNITS_TABLE.' hu_count WHERE hu_count.parentglobalid = b.globalid) as `'.$column['alias'].'`';
+                }
+
+                $tableAlias = $column['table'] === 'housing' ? 'h' : 'b';
+
+                return "{$tableAlias}.`{$column['field']}` as `{$column['alias']}`";
+            })
+            ->all();
+
+        $query->selectRaw(implode(', ', $selects));
+        $this->applyFilters($query, $params);
+
+        return $query
+            ->orderBy('b.objectid')
+            ->when($needsHousingJoin, fn ($query) => $query->orderBy('h.objectid'))
+            ->get();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function assessmentLabels(): array
+    {
+        $labels = DB::table('assessments')
+            ->whereNotNull('name')
+            ->select('name', 'label')
+            ->get()
+            ->mapWithKeys(fn (object $item): array => [trim((string) $item->name) => trim((string) ($item->label ?? ''))])
+            ->toArray();
+
+        $labels[ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN] = 'عدد الوحدات للمبنى';
+
+        return $labels;
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array<int, string>
+     */
+    private function selectedAttachmentTypeFilters(array $params): array
+    {
+        $types = collect($params['attachment_type_filters'] ?? ['all'])
+            ->map(fn ($type): string => trim((string) $type))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return $types === [] ? ['all'] : $types;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attachment
+     * @param  array<int, string>  $typeFilters
+     */
+    private function matchesAttachmentTypeFilters(array $attachment, array $typeFilters): bool
+    {
+        if (in_array('all', $typeFilters, true)) {
+            return true;
+        }
+
+        $name = mb_strtolower((string) ($attachment['name'] ?? ''));
+        $contentType = mb_strtolower((string) ($attachment['contentType'] ?? ''));
+        $extension = mb_strtolower(pathinfo($name, PATHINFO_EXTENSION));
+
+        foreach ($typeFilters as $type) {
+            if ($type === 'images' && (str_starts_with($contentType, 'image/') || in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'], true))) {
+                return true;
+            }
+
+            if ($type === 'pdf' && ($contentType === 'application/pdf' || $extension === 'pdf')) {
+                return true;
+            }
+
+            if ($type === 'damage_photos' && str_contains($name, 'damage')) {
+                return true;
+            }
+
+            if ($type === 'identity' && (str_contains($name, 'identity') || str_contains($name, 'id'))) {
+                return true;
+            }
+
+            if ($type === 'ownership' && (str_contains($name, 'ownership') || str_contains($name, 'owner'))) {
+                return true;
+            }
+
+            if ($type === 'permit' && str_contains($name, 'permit')) {
+                return true;
+            }
+
+            if ($type === 'other_documents' && ! str_starts_with($contentType, 'image/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -78,9 +78,12 @@ it('shows attachment export controls on the export page', function () {
 
     $response->assertOk();
     $response->assertSee('value="attachments"', false);
+    $response->assertSee('value="data_with_attachments"', false);
     $response->assertSee('name="attachment_sources[]"', false);
+    $response->assertSee('name="attachment_type_filters[]"', false);
     $response->assertSee('value="building_arcgis"', false);
     $response->assertSee('value="housing_unit_arcgis"', false);
+    $response->assertSee('value="damage_photos"', false);
     $response->assertSee('data-type="zip"', false);
 });
 

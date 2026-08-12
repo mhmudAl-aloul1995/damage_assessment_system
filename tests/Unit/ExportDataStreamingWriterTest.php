@@ -224,7 +224,7 @@ test('it filters building exports by assessment obstacle', function () {
     }
 });
 
-test('it exports selected arcgis building attachments to a zip with an index', function () {
+test('it exports data with selected arcgis building attachments to a zip with an index', function () {
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
             'token' => 'arcgis-token',
@@ -237,9 +237,16 @@ test('it exports selected arcgis building attachments to a zip with an index', f
                     'contentType' => 'image/jpeg',
                     'size' => 12,
                 ],
+                [
+                    'id' => 902,
+                    'name' => 'identity.pdf',
+                    'contentType' => 'application/pdf',
+                    'size' => 20,
+                ],
             ],
         ]),
         'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/4001/attachments/901*' => Http::response('image-bytes'),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/4001/attachments/902*' => Http::response('pdf-bytes'),
     ]);
 
     $user = User::factory()->create();
@@ -253,9 +260,11 @@ test('it exports selected arcgis building attachments to a zip with an index', f
     $export = Export::query()->create([
         'status' => 'pending',
         'filters' => json_encode([
-            'export_mode' => 'attachments',
+            'export_mode' => 'data_with_attachments',
             'export_type' => 'zip',
+            'building_columns' => ['objectid', 'owner_name'],
             'attachment_sources' => ['building_arcgis'],
+            'attachment_type_filters' => ['damage_photos'],
             'attachment_grouping' => 'by_building',
             'attachment_filename_strategy' => 'objectid_type',
             'include_attachment_index' => '1',
@@ -278,7 +287,9 @@ test('it exports selected arcgis building attachments to a zip with an index', f
         $zip = new \ZipArchive;
         $zip->open(storage_path('app/public/'.$export->file_name));
 
+        expect($zip->locateName('data.xlsx'))->not->toBeFalse();
         expect($zip->getFromName('buildings/4001/4001_building_901_damage photo.jpg'))->toBe('image-bytes');
+        expect($zip->getFromName('buildings/4001/4001_building_902_identity.pdf'))->toBeFalse();
         expect($zip->getFromName('attachments-index.csv'))->toContain('building-with-attachment');
 
         $zip->close();

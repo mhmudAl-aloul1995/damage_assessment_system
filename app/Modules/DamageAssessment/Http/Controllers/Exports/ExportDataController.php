@@ -226,7 +226,7 @@ class ExportDataController extends Controller
             $exportType = (string) ($payload['export_type'] ?? 'excel');
             $exportMode = (string) ($payload['export_mode'] ?? 'data');
 
-            if ($exportType === 'zip' || $exportMode === 'attachments') {
+            if ($exportType === 'zip' || in_array($exportMode, ['attachments', 'data_with_attachments'], true)) {
                 ExportAttachmentsJob::dispatch($export->id)->onQueue('exports');
             } else {
                 ExportDataJob::dispatch($export->id)->onQueue('exports');
