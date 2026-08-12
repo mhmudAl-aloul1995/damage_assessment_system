@@ -53,6 +53,22 @@ it('shows select controls for each export field group', function () {
     $response->assertSee("toggleColumnGroup(this,'housing_columns[]',false)", false);
 });
 
+it('shows the assessment obstacle export filter with a readable label', function () {
+    Filter::query()->where('list_name', 'assessment_obstacle')->delete();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response->assertOk();
+    $response->assertSee('Assessment Obstacle', false);
+    $response->assertSee('name="filters[assessment_obstacle][]"', false);
+    $response->assertSee('value="yes"', false);
+    $response->assertSee('value="no"', false);
+});
+
 it('fills the neighborhood filter from unique building neighborhoods', function () {
     Filter::query()->create([
         'list_name' => 'neighborhood',

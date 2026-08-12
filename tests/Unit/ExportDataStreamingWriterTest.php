@@ -151,6 +151,69 @@ test('it filters building exports by audited building end date range', function 
     }
 });
 
+test('it filters building exports by assessment obstacle', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 3001,
+        'globalid' => 'building-with-obstacle',
+        'assessment_obstacle' => 'yes',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 3002,
+        'globalid' => 'building-without-obstacle',
+        'assessment_obstacle' => 'no',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'building_columns' => ['objectid', 'assessment_obstacle'],
+            'filters' => [
+                'assessment_obstacle' => ['yes'],
+            ],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportDataJob($export->id))->handle();
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+        expect($export->file_name)->not->toBeNull();
+
+        $reader = new Reader;
+        $reader->open(storage_path('app/public/'.$export->file_name));
+
+        $rows = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+
+            break;
+        }
+
+        $reader->close();
+
+        expect($rows[1])->toBe([3001, 'yes']);
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
 test('it skips exports that are already claimed by another worker', function () {
     $user = User::factory()->create();
 

@@ -12,6 +12,7 @@ use App\Modules\DamageAssessment\Http\Requests\ObjectIdImportRequest;
 use App\Support\Exports\ExportDataColumns;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -19,6 +20,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ExportDataController extends Controller
 {
+    private const ASSESSMENT_OBSTACLE_FILTER = 'assessment_obstacle';
+
     private const OBJECT_ID_FILTER_SESSION_KEY = 'exports.imported_object_ids';
 
     private const OBJECT_ID_FILTER_TARGET_SESSION_KEY = 'exports.imported_object_id_target';
@@ -84,6 +87,8 @@ class ExportDataController extends Controller
             ->get()
             ->groupBy('list_name');
 
+        $this->ensureAssessmentObstacleFilter($filters);
+
         $filters['neighborhood'] = DB::table(ExportDataColumns::BUILDINGS_TABLE)
             ->select('neighborhood')
             ->whereNotNull('neighborhood')
@@ -111,6 +116,7 @@ class ExportDataController extends Controller
         ];
 
         $assessmentLabels = Assessment::pluck('label', 'name');
+        $assessmentLabels[self::ASSESSMENT_OBSTACLE_FILTER] = 'Assessment Obstacle';
         $assessmentLabels['building_states_auditig'] = 'حالات المبنى - التدقيق';
 
         return view('damage-assessment::exports.index', [
@@ -395,6 +401,24 @@ class ExportDataController extends Controller
         }
 
         return (string) (int) $value;
+    }
+
+    private function ensureAssessmentObstacleFilter(Collection $filters): void
+    {
+        if ($filters->has(self::ASSESSMENT_OBSTACLE_FILTER) && $filters[self::ASSESSMENT_OBSTACLE_FILTER]->isNotEmpty()) {
+            return;
+        }
+
+        $filters[self::ASSESSMENT_OBSTACLE_FILTER] = collect([
+            (object) [
+                'name' => 'no',
+                'label' => 'No',
+            ],
+            (object) [
+                'name' => 'yes',
+                'label' => 'Yes',
+            ],
+        ]);
     }
 
     private function failStaleExports(): void
