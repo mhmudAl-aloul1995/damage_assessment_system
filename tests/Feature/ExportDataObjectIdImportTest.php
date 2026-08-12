@@ -103,6 +103,8 @@ it('passes imported objectids into the export payload', function () {
 
     expect($payload['imported_object_ids'])->toBe(['1001', '1002', '1003']);
     expect($payload['imported_object_id_target'])->toBe('housing_unit');
+    expect(session()->has('exports.imported_object_ids'))->toBeFalse();
+    expect(session()->has('exports.imported_object_id_target'))->toBeFalse();
 
     Queue::assertPushed(ExportDataJob::class);
 });

@@ -206,6 +206,8 @@ class ExportDataController extends Controller
                 'file_name' => null,
             ]);
 
+            $this->clearImportedObjectIdFilter($request);
+
             ExportDataJob::dispatch($export->id)->onQueue('exports');
 
             return response()->json([
@@ -333,10 +335,7 @@ class ExportDataController extends Controller
 
     public function resetImportedObjectIds(Request $request): JsonResponse
     {
-        $request->session()->forget([
-            self::OBJECT_ID_FILTER_SESSION_KEY,
-            self::OBJECT_ID_FILTER_TARGET_SESSION_KEY,
-        ]);
+        $this->clearImportedObjectIdFilter($request);
 
         return response()->json([
             'status' => true,
@@ -360,6 +359,14 @@ class ExportDataController extends Controller
     private function importedObjectIdTarget(): string
     {
         return $this->objectIdFilterTarget(session(self::OBJECT_ID_FILTER_TARGET_SESSION_KEY));
+    }
+
+    private function clearImportedObjectIdFilter(Request $request): void
+    {
+        $request->session()->forget([
+            self::OBJECT_ID_FILTER_SESSION_KEY,
+            self::OBJECT_ID_FILTER_TARGET_SESSION_KEY,
+        ]);
     }
 
     private function objectIdFilterTarget(mixed $target): string
