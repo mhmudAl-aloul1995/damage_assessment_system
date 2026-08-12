@@ -589,6 +589,8 @@ return [
         'name_match_not_checked' => 'لم يتم الفحص',
         'approve_match' => 'اعتماد',
         'approve_selected' => 'اعتماد المحدد',
+        'select_all_matches' => 'تحديد الكل القابل للاعتماد',
+        'clear_selection' => 'إلغاء التحديد',
         'approving' => 'جاري الاعتماد...',
         'yes_approve' => 'نعم، اعتماد',
         'approve_confirm' => 'هل تريد اعتماد هذا المواطن وتحديث رقم الهوية في قاعدة البيانات و ArcGIS؟',

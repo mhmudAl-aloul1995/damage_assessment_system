@@ -68,6 +68,10 @@
                     <i class="ki-duotone ki-arrows-circle fs-2"></i>
                     {{ __('ui.missing_citizen_identities.refresh') }}
                 </button>
+                <button type="button" class="btn btn-light-warning" data-kt-missing-citizens-action="select-all-visible" disabled>
+                    <i class="ki-duotone ki-check-square fs-2"></i>
+                    <span data-kt-missing-citizens-select-all-label>{{ __('ui.missing_citizen_identities.select_all_matches') }}</span>
+                </button>
                 <button type="button" class="btn btn-light-success" data-kt-missing-citizens-action="bulk-approve" disabled>
                     <i class="ki-duotone ki-check-square fs-2"></i>
                     {{ __('ui.missing_citizen_identities.approve_selected') }}
@@ -80,7 +84,7 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold border-bottom border-gray-200 fs-7 text-uppercase gs-0">
                             <th class="w-30px">
-                                <input class="form-check-input" type="checkbox" data-kt-missing-citizens-action="select-all">
+                                <input class="form-check-input" type="checkbox" data-kt-missing-citizens-action="select-all" title="{{ __('ui.missing_citizen_identities.select_all_matches') }}">
                             </th>
                             <th>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.housing_unit_objectid') }}</th>
@@ -206,26 +210,67 @@
             var activeCandidateReportId = null;
             var manualSearchTimer = null;
 
+            var rowCheckboxes = function () {
+                return Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]'))
+                    .filter(function (checkbox) {
+                        return !checkbox.disabled;
+                    });
+            };
+
             var selectedReportIds = function () {
-                return Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]:checked'))
+                return rowCheckboxes()
+                    .filter(function (checkbox) {
+                        return checkbox.checked;
+                    })
                     .map(function (checkbox) {
                         return checkbox.value;
                     });
             };
 
+            var allVisibleRowsSelected = function () {
+                var checkboxes = rowCheckboxes();
+
+                return checkboxes.length > 0 && checkboxes.every(function (checkbox) {
+                    return checkbox.checked;
+                });
+            };
+
+            var setVisibleRowsSelection = function (checked) {
+                rowCheckboxes().forEach(function (checkbox) {
+                    checkbox.checked = checked;
+                });
+
+                updateBulkState();
+            };
+
             var updateBulkState = function () {
                 var bulkApprove = document.querySelector('[data-kt-missing-citizens-action="bulk-approve"]');
                 var selectAll = document.querySelector('[data-kt-missing-citizens-action="select-all"]');
-                var checkboxes = Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]'));
+                var selectAllVisible = document.querySelector('[data-kt-missing-citizens-action="select-all-visible"]');
+                var selectAllLabel = document.querySelector('[data-kt-missing-citizens-select-all-label]');
+                var checkboxes = rowCheckboxes();
                 var checkedCount = selectedReportIds().length;
+                var hasSelectableRows = checkboxes.length > 0;
+                var allSelected = hasSelectableRows && checkedCount === checkboxes.length;
 
                 if (bulkApprove) {
                     bulkApprove.disabled = loading || checkedCount === 0;
                 }
 
                 if (selectAll) {
-                    selectAll.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+                    selectAll.disabled = loading || !hasSelectableRows;
+                    selectAll.checked = allSelected;
                     selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+                }
+
+                if (selectAllVisible) {
+                    selectAllVisible.disabled = loading || !hasSelectableRows;
+                }
+
+                if (selectAllLabel) {
+                    selectAllLabel.textContent = allSelected
+                        ? '{{ __('ui.missing_citizen_identities.clear_selection') }}'
+                        : '{{ __('ui.missing_citizen_identities.select_all_matches') }}';
                 }
             };
 
@@ -336,6 +381,7 @@
 
                 if (rows.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
+                    updateBulkState();
                     return;
                 }
 
@@ -350,7 +396,7 @@
                         ? '<input class="form-check-input" type="checkbox" data-kt-missing-citizens-row-check value="' + escapeHtml(row.id) + '">'
                         : '';
 
-                    return '<tr>'
+                    return '<tr data-kt-missing-citizens-row="' + escapeHtml(row.id) + '">'
                         + '<td>' + checkbox + '</td>'
                         + '<td>' + escapeHtml(row.owner_name) + '</td>'
                         + '<td><span class="badge badge-light-info">' + escapeHtml(row.housing_unit_objectid) + '</span></td>'
@@ -842,6 +888,7 @@
                 var nameMatchStatus = document.querySelector('[data-kt-missing-citizens-filter="name-match-status"]');
                 var bulkApproveButton = document.querySelector('[data-kt-missing-citizens-action="bulk-approve"]');
                 var selectAll = document.querySelector('[data-kt-missing-citizens-action="select-all"]');
+                var selectAllVisible = document.querySelector('[data-kt-missing-citizens-action="select-all-visible"]');
                 var documentsButton = document.querySelector('[data-kt-missing-citizens-action="show-documents"]');
                 var hideDocumentsButton = document.querySelector('[data-kt-missing-citizens-action="hide-documents"]');
 
@@ -889,12 +936,13 @@
 
                 if (selectAll) {
                     selectAll.addEventListener('change', function (event) {
-                        Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]'))
-                            .forEach(function (checkbox) {
-                                checkbox.checked = event.target.checked;
-                            });
+                        setVisibleRowsSelection(event.target.checked);
+                    });
+                }
 
-                        updateBulkState();
+                if (selectAllVisible) {
+                    selectAllVisible.addEventListener('click', function () {
+                        setVisibleRowsSelection(!allVisibleRowsSelected());
                     });
                 }
 

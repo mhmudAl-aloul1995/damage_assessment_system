@@ -609,6 +609,8 @@ return [
         'name_match_not_checked' => 'Not checked',
         'approve_match' => 'Approve',
         'approve_selected' => 'Approve selected',
+        'select_all_matches' => 'Select approvable rows',
+        'clear_selection' => 'Clear selection',
         'approving' => 'Approving...',
         'yes_approve' => 'Yes, approve',
         'approve_confirm' => 'Approve this citizen and update the ID number in the database and ArcGIS?',

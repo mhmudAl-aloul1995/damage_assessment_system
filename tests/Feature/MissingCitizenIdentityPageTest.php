@@ -59,6 +59,8 @@ it('shows the missing citizen identities page', function (): void {
         ->assertSee(__('ui.missing_citizen_identities.unit_objectid_placeholder'))
         ->assertSee(__('ui.missing_citizen_identities.issue_owner_without_identity'))
         ->assertSee(__('ui.missing_citizen_identities.approve_selected'))
+        ->assertSee(__('ui.missing_citizen_identities.select_all_matches'))
+        ->assertSee('data-kt-missing-citizens-action="select-all-visible"', false)
         ->assertSee('kt_table_missing_citizen_identities');
 });
 
