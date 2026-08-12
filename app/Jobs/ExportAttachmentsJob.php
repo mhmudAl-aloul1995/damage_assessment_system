@@ -398,6 +398,16 @@ class ExportAttachmentsJob implements ShouldQueue
     private function writeDataWorkbook(string $dataPath, array $params, array $sources, ArcgisService $arcgis, string $token): void
     {
         if (
+            ($params['export_mode'] ?? null) === 'data_with_attachments'
+            && ($params['attachment_excel_display'] ?? 'links') === 'links'
+            && $this->attachmentExcelColumns($params) !== []
+        ) {
+            $this->writeDataWorkbookWithZipLinks($dataPath, $params, $sources, $arcgis, $token);
+
+            return;
+        }
+
+        if (
             $this->shouldIncludeAttachmentExcelColumns($params)
             && ($params['attachment_excel_display'] ?? 'links') === 'images'
             && $this->attachmentExcelColumns($params) !== []
@@ -443,6 +453,73 @@ class ExportAttachmentsJob implements ShouldQueue
             });
 
         $writer->close();
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @param  array<int, string>  $sources
+     */
+    private function writeDataWorkbookWithZipLinks(string $dataPath, array $params, array $sources, ArcgisService $arcgis, string $token): void
+    {
+        if (! is_dir(dirname($dataPath))) {
+            mkdir(dirname($dataPath), 0777, true);
+        }
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $columns = $this->dataColumns($params);
+        $attachmentColumns = $this->attachmentExcelColumns($params);
+        $labels = $this->assessmentLabels();
+        $seenPaths = [];
+
+        $headers = collect($columns)
+            ->map(fn (array $column): string => $this->columnLabel($column['field'], $labels))
+            ->merge(collect($attachmentColumns)->pluck('label'))
+            ->values()
+            ->all();
+
+        foreach ($headers as $index => $header) {
+            $columnLetter = Coordinate::stringFromColumnIndex($index + 1);
+            $sheet->setCellValue($columnLetter.'1', $header);
+            $sheet->getColumnDimension($columnLetter)->setWidth($index < count($columns) ? 16 : 24);
+        }
+
+        $sheet->getStyle('1:1')->getFont()->setBold(true)->setSize(12)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('1:1')->getFill()->setFillType('solid')->getStartColor()->setRGB('1F4E78');
+        $sheet->getStyle('1:1')->getAlignment()->setHorizontal('center');
+
+        $rowIndex = 2;
+
+        foreach ($this->dataRows($params, $sources, $columns) as $row) {
+            foreach ($columns as $index => $column) {
+                $sheet->setCellValue(Coordinate::stringFromColumnIndex($index + 1).$rowIndex, $row->{$column['alias']} ?? null);
+            }
+
+            foreach ($attachmentColumns as $attachmentIndex => $attachmentColumn) {
+                $columnIndex = count($columns) + $attachmentIndex + 1;
+                $cellCoordinate = Coordinate::stringFromColumnIndex($columnIndex).$rowIndex;
+                $links = $this->attachmentZipLinks($row, $attachmentColumn, $params, $sources, $arcgis, $token, $seenPaths);
+
+                if ($links === []) {
+                    $sheet->setCellValue($cellCoordinate, 'لا توجد مرفقات مطابقة');
+                    $sheet->getStyle($cellCoordinate)->getAlignment()->setWrapText(true);
+
+                    continue;
+                }
+
+                $linkText = 'فتح '.$attachmentColumn['label'].(count($links) > 1 ? ' ('.count($links).')' : '');
+                $sheet->setCellValue($cellCoordinate, $linkText);
+                $sheet->getCell($cellCoordinate)->getHyperlink()->setUrl($links[0]['path']);
+                $sheet->getCell($cellCoordinate)->getHyperlink()->setTooltip($links[0]['name']);
+                $sheet->getStyle($cellCoordinate)->getFont()->getColor()->setRGB('0563C1');
+                $sheet->getStyle($cellCoordinate)->getFont()->setUnderline(true);
+            }
+
+            $rowIndex++;
+        }
+
+        (new PhpSpreadsheetWriter($spreadsheet))->save($dataPath);
+        $spreadsheet->disconnectWorksheets();
     }
 
     /**
@@ -753,6 +830,46 @@ class ExportAttachmentsJob implements ShouldQueue
             ->unique(fn (array $entry): string => $entry['layer_id'].':'.$entry['object_id'].':'.($entry['attachment']['id'] ?? $entry['attachment']['name'] ?? 'attachment'))
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array{type: string, label: string}  $attachmentColumn
+     * @param  array<string, mixed>  $params
+     * @param  array<int, string>  $sources
+     * @param  array<string, int>  $seenPaths
+     * @return array<int, array{path: string, name: string}>
+     */
+    private function attachmentZipLinks(
+        object $row,
+        array $attachmentColumn,
+        array $params,
+        array $sources,
+        ArcgisService $arcgis,
+        string $token,
+        array &$seenPaths,
+    ): array {
+        return collect($this->attachmentExcelEntries($row, $attachmentColumn, $sources, $arcgis, $token))
+            ->map(function (array $entry) use ($row, $params, &$seenPaths): array {
+                $recordType = (int) $entry['layer_id'] === 1 ? 'housing_unit' : 'building';
+
+                return [
+                    'path' => $this->zipPath($this->attachmentZipRow($row), $recordType, $entry['attachment'], $params, $seenPaths),
+                    'name' => (string) ($entry['attachment']['name'] ?? $entry['attachment']['id'] ?? 'attachment'),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function attachmentZipRow(object $row): object
+    {
+        return (object) [
+            'building_objectid' => $row->__building_objectid ?? $row->building_objectid ?? null,
+            'building_globalid' => $row->__building_globalid ?? $row->building_globalid ?? null,
+            'housing_objectid' => $row->__housing_objectid ?? $row->housing_objectid ?? null,
+            'housing_globalid' => $row->__housing_globalid ?? $row->housing_globalid ?? null,
+            'owner_name' => $row->building_owner_name ?? $row->owner_name ?? null,
+        ];
     }
 
     /**

@@ -300,23 +300,14 @@ test('it exports data with selected arcgis building attachments to a zip with an
 
         $zip->close();
 
-        $reader = new Reader;
-        $reader->open($dataPath);
+        $spreadsheet = IOFactory::load($dataPath);
+        $sheet = $spreadsheet->getActiveSheet();
 
-        $rows = [];
+        expect($sheet->getCell('C2')->getValue())->toBe('فتح صور الضرر');
+        expect($sheet->getCell('C2')->getHyperlink()->getUrl())->toBe('buildings/4001/4001_building_901_damage photo.jpg');
 
-        foreach ($reader->getSheetIterator() as $sheet) {
-            foreach ($sheet->getRowIterator() as $row) {
-                $rows[] = $row->toArray();
-            }
-
-            break;
-        }
-
-        $reader->close();
+        $spreadsheet->disconnectWorksheets();
         unlink($dataPath);
-
-        expect($rows[1][2])->toContain('/attachments/901?token=arcgis-token');
     } finally {
         $export->refresh();
 
