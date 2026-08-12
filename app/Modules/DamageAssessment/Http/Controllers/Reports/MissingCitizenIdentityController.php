@@ -45,6 +45,7 @@ class MissingCitizenIdentityController extends Controller
         $afterId = max(0, $request->integer('after_id', 0));
         $search = trim($request->string('search')->toString());
         $unitObjectId = trim($request->string('unit_objectid')->toString());
+        $issueType = trim($request->string('issue_type')->toString());
         $nameMatchStatus = trim($request->string('name_match_status')->toString());
 
         $query = MissingCitizenIdentityReport::query()
@@ -52,6 +53,7 @@ class MissingCitizenIdentityController extends Controller
                 'missing_citizen_identity_reports.id',
                 'missing_citizen_identity_reports.owner_name',
                 'missing_citizen_identity_reports.id_number',
+                'missing_citizen_identity_reports.issue_type',
                 'missing_citizen_identity_reports.name_match_status',
                 'missing_citizen_identity_reports.matched_citizen_id_card_no',
                 'missing_citizen_identity_reports.matched_citizen_full_name',
@@ -77,6 +79,10 @@ class MissingCitizenIdentityController extends Controller
             }
         }
 
+        if (in_array($issueType, ['missing_civil_registry_identity', 'owner_without_identity'], true)) {
+            $query->where('missing_citizen_identity_reports.issue_type', $issueType);
+        }
+
         if (in_array($nameMatchStatus, ['matched', 'ambiguous', 'not_found', 'no_owner_name', 'not_checked'], true)) {
             $query->where('missing_citizen_identity_reports.name_match_status', $nameMatchStatus);
         }
@@ -98,7 +104,8 @@ class MissingCitizenIdentityController extends Controller
                     'id' => $report->id,
                     'owner_name' => $report->owner_name ?: '-',
                     'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
-                    'id_number1' => (string) $report->id_number,
+                    'id_number1' => filled($report->id_number) ? (string) $report->id_number : '-',
+                    'issue_type' => $report->issue_type,
                     'name_match_status' => $report->name_match_status,
                     'matched_citizen_id_card_no' => $report->matched_citizen_id_card_no,
                     'matched_citizen_full_name' => $report->matched_citizen_full_name,

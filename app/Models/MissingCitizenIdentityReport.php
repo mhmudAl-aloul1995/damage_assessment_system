@@ -11,6 +11,7 @@ class MissingCitizenIdentityReport extends Model
         'owner_name',
         'normalized_owner_name',
         'id_number',
+        'issue_type',
         'name_match_status',
         'matched_citizen_id',
         'matched_citizen_id_card_no',

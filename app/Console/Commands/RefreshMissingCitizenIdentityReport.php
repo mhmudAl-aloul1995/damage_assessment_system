@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Schema;
 
 class RefreshMissingCitizenIdentityReport extends Command
 {
+    private const ISSUE_MISSING_CIVIL_REGISTRY_IDENTITY = 'missing_civil_registry_identity';
+
+    private const ISSUE_OWNER_WITHOUT_IDENTITY = 'owner_without_identity';
+
     /**
      * The name and signature of the console command.
      *
@@ -49,8 +53,6 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'q_9_3_3_third_name__grandfather',
                 'q_9_3_4_last_name',
             ])
-            ->whereNotNull('id_number1')
-            ->where('id_number1', '<>', '')
             ->orderBy('id')
             ->chunkById($chunkSize, function ($housingUnits) use ($stagingTable, &$processed, &$missing): void {
                 $processed += $housingUnits->count();
@@ -63,23 +65,31 @@ class RefreshMissingCitizenIdentityReport extends Command
                     ->unique()
                     ->values();
 
-                if ($identityNumbers->isEmpty()) {
-                    return;
-                }
+                $activeCitizenIds = $identityNumbers->isEmpty()
+                    ? collect()
+                    : DB::table($this->citizensTable())
+                        ->where('status', 'A')
+                        ->whereIn('id_card_no', $identityNumbers)
+                        ->pluck('id_card_no')
+                        ->mapWithKeys(fn ($id): array => [(string) $id => true]);
 
-                $activeCitizenIds = DB::table($this->citizensTable())
-                    ->where('status', 'A')
-                    ->whereIn('id_card_no', $identityNumbers)
-                    ->pluck('id_card_no')
-                    ->mapWithKeys(fn ($id): array => [(string) $id => true]);
-
-                $sgazaIds = $this->sgazaIdsByNumbers($identityNumbers)
-                    ->mapWithKeys(fn ($id): array => [(string) $id => true]);
+                $sgazaIds = $identityNumbers->isEmpty()
+                    ? collect()
+                    : $this->sgazaIdsByNumbers($identityNumbers)
+                        ->mapWithKeys(fn ($id): array => [(string) $id => true]);
 
                 $existingCivilRegistryIds = $activeCitizenIds->union($sgazaIds);
 
                 $missingHousingUnits = $housingUnits
-                    ->filter(fn (HousingUnit $housingUnit): bool => ! isset($existingCivilRegistryIds[trim((string) $housingUnit->id_number1)]))
+                    ->filter(function (HousingUnit $housingUnit) use ($existingCivilRegistryIds): bool {
+                        $idNumber = trim((string) $housingUnit->id_number1);
+
+                        if ($idNumber === '') {
+                            return filled($this->ownerName($housingUnit));
+                        }
+
+                        return ! isset($existingCivilRegistryIds[$idNumber]);
+                    })
                     ->values();
 
                 if ($missingHousingUnits->isEmpty()) {
@@ -105,6 +115,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                             'owner_name' => $ownerName,
                             'normalized_owner_name' => $nameMatch['normalized_owner_name'],
                             'id_number' => trim((string) $housingUnit->id_number1),
+                            'issue_type' => $this->issueType($housingUnit),
                             'name_match_status' => $nameMatch['name_match_status'],
                             'matched_citizen_id' => $nameMatch['matched_citizen_id'],
                             'matched_citizen_id_card_no' => $nameMatch['matched_citizen_id_card_no'],
@@ -137,6 +148,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                             owner_name,
                             normalized_owner_name,
                             id_number,
+                            issue_type,
                             name_match_status,
                             matched_citizen_id,
                             matched_citizen_id_card_no,
@@ -150,6 +162,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                         owner_name,
                         normalized_owner_name,
                         id_number,
+                        issue_type,
                         name_match_status,
                         matched_citizen_id,
                         matched_citizen_id_card_no,
@@ -167,6 +180,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                             'owner_name',
                             'normalized_owner_name',
                             'id_number',
+                            'issue_type',
                             'name_match_status',
                             'matched_citizen_id',
                             'matched_citizen_id_card_no',
@@ -205,6 +219,7 @@ class RefreshMissingCitizenIdentityReport extends Command
             $table->string('owner_name')->nullable();
             $table->string('normalized_owner_name')->nullable();
             $table->string('id_number', 255);
+            $table->string('issue_type', 40)->default(self::ISSUE_MISSING_CIVIL_REGISTRY_IDENTITY);
             $table->string('name_match_status', 30)->default('not_checked');
             $table->unsignedBigInteger('matched_citizen_id')->nullable();
             $table->string('matched_citizen_id_card_no')->nullable();
@@ -285,6 +300,13 @@ class RefreshMissingCitizenIdentityReport extends Command
         return $structuredName !== ''
             ? $structuredName
             : trim((string) $housingUnit->unit_owner);
+    }
+
+    private function issueType(HousingUnit $housingUnit): string
+    {
+        return trim((string) $housingUnit->id_number1) === ''
+            ? self::ISSUE_OWNER_WITHOUT_IDENTITY
+            : self::ISSUE_MISSING_CIVIL_REGISTRY_IDENTITY;
     }
 
     private function sgazaIdsByNumbers(Collection $identityNumbers): Collection

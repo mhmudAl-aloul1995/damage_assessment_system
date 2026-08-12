@@ -55,7 +55,9 @@ it('shows the missing citizen identities page', function (): void {
         ->assertOk()
         ->assertSee(__('ui.missing_citizen_identities.title'))
         ->assertSee(__('ui.missing_citizen_identities.housing_unit_objectid'))
+        ->assertSee(__('ui.missing_citizen_identities.issue_type'))
         ->assertSee(__('ui.missing_citizen_identities.unit_objectid_placeholder'))
+        ->assertSee(__('ui.missing_citizen_identities.issue_owner_without_identity'))
         ->assertSee(__('ui.missing_citizen_identities.approve_selected'))
         ->assertSee('kt_table_missing_citizen_identities');
 });
@@ -114,7 +116,7 @@ it('returns housing unit identities that are not active citizens', function (): 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
         ->assertSuccessful();
 
-    expect(MissingCitizenIdentityReport::query()->count())->toBe(2);
+    expect(MissingCitizenIdentityReport::query()->count())->toBe(3);
 
     $response = $this
         ->actingAs(missingCitizenIdentityUser())
@@ -126,17 +128,20 @@ it('returns housing unit identities that are not active citizens', function (): 
     $response
         ->assertOk()
         ->assertJsonFragment(['housing_unit_objectid' => '1001'])
+        ->assertJsonFragment(['issue_type' => 'missing_civil_registry_identity'])
         ->assertJsonFragment(['id_number1' => '900000001'])
         ->assertJsonFragment(['matched_citizen_id_card_no' => '900000009'])
         ->assertJsonFragment(['housing_unit_objectid' => '1003'])
         ->assertJsonFragment(['id_number1' => '900000003'])
+        ->assertJsonFragment(['housing_unit_objectid' => '1004'])
+        ->assertJsonFragment(['id_number1' => '-'])
+        ->assertJsonFragment(['issue_type' => 'owner_without_identity'])
         ->assertJsonMissing(['id_number1' => '900000002'])
-        ->assertJsonMissing(['id_number1' => ''])
         ->assertJsonPath('has_more', false)
         ->assertJsonPath('per_page', 100)
-        ->assertJsonPath('total', 2)
-        ->assertJsonPath('next_cursor', 2)
-        ->assertJsonCount(2, 'data');
+        ->assertJsonPath('total', 3)
+        ->assertJsonPath('next_cursor', 3)
+        ->assertJsonCount(3, 'data');
 
     $this
         ->actingAs(missingCitizenIdentityUser())
@@ -148,6 +153,18 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonPath('total', 1)
         ->assertJsonFragment(['id_number1' => '900000001'])
         ->assertJsonMissing(['id_number1' => '900000003']);
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.data', [
+            'issue_type' => 'owner_without_identity',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonFragment(['housing_unit_objectid' => '1004'])
+        ->assertJsonFragment(['id_number1' => '-'])
+        ->assertJsonFragment(['issue_type' => 'owner_without_identity'])
+        ->assertJsonMissing(['id_number1' => '900000001']);
 
     $this
         ->actingAs(missingCitizenIdentityUser())
@@ -333,6 +350,57 @@ it('approves a single name match and syncs the new identity to arcgis', function
         return $request->url() === 'https://services.example.test/FeatureServer/1/updateFeatures'
             && str_contains((string) $request['features'], '"id_number1":"222222222"');
     });
+});
+
+it('approves an owner without identity by using the matched civil registry record', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 502],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 502,
+        'globalid' => 'owner-without-identity',
+        'unit_owner' => 'Owner Without Identity',
+        'id_number1' => '',
+    ]);
+
+    DB::table('citizens')->insert([
+        [
+            'id_card_no' => '333333339',
+            'status' => 'A',
+            'full_name' => 'Owner Without Identity',
+            'full_name_normalized' => 'OwnerWithoutIdentity',
+        ],
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
+
+    expect($report->issue_type)->toBe('owner_without_identity')
+        ->and($report->name_match_status)->toBe('matched')
+        ->and($report->matched_citizen_id_card_no)->toBe('333333339');
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
+            'confirm' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('arcgis_status', 'synced');
+
+    expect($housingUnit->fresh()->id_number1)->toBe('333333339')
+        ->and($report->fresh()->approved_at)->not->toBeNull();
 });
 
 it('lists ambiguous name candidates and approves the selected citizen', function (): void {
