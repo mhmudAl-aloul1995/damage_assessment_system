@@ -95,7 +95,7 @@
                                 <input class="form-check-input" type="checkbox" data-kt-missing-citizens-action="select-all" title="{{ __('ui.missing_citizen_identities.select_all_matches') }}">
                             </th>
                             <th>{{ __('ui.missing_citizen_identities.identity_subject') }}</th>
-                            <th>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
+                            <th id="missing_citizen_identity_name_header">{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.housing_unit_objectid') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.issue_type') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.id_number') }}</th>
@@ -197,6 +197,7 @@
             var currentIssueType = '';
             var currentNameMatchStatus = '';
             var currentIdentitySubject = 'owner';
+            var nameHeader = document.getElementById('missing_citizen_identity_name_header');
             var hasMore = false;
             var loading = false;
             var currentPerPage = 100;
@@ -877,6 +878,12 @@
                             subjectButton.classList.toggle('btn-primary', active);
                             subjectButton.classList.toggle('btn-light-primary', !active);
                         });
+
+                        if (nameHeader) {
+                            nameHeader.textContent = currentIdentitySubject === 'spouse'
+                                ? '{{ __('ui.missing_citizen_identities.spouse_name') }}'
+                                : '{{ __('ui.missing_citizen_identities.owner_name') }}';
+                        }
 
                         cursorStack = [0];
                         cursorIndex = 0;

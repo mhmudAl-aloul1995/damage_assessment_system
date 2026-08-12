@@ -600,6 +600,7 @@ return [
         'identity_spouse_3' => 'Third spouse',
         'identity_spouse_4' => 'Fourth spouse',
         'owner_name' => 'Owner name',
+        'spouse_name' => 'Spouse name',
         'housing_unit_objectid' => 'Unit number',
         'issue_type' => 'Issue type',
         'id_number' => 'ID number',

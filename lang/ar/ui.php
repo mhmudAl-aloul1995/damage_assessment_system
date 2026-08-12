@@ -580,6 +580,7 @@ return [
         'identity_spouse_3' => 'الزوجة الثالثة',
         'identity_spouse_4' => 'الزوجة الرابعة',
         'owner_name' => 'اسم المالك',
+        'spouse_name' => 'اسم الزوجة',
         'housing_unit_objectid' => 'رقم الوحدة',
         'issue_type' => 'نوع المشكلة',
         'id_number' => 'رقم الهوية',
