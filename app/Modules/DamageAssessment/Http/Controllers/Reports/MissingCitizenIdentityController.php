@@ -44,39 +44,50 @@ class MissingCitizenIdentityController extends Controller
         $perPage = min(max($request->integer('per_page', 100), 100), 500);
         $afterId = max(0, $request->integer('after_id', 0));
         $search = trim($request->string('search')->toString());
+        $unitObjectId = trim($request->string('unit_objectid')->toString());
         $nameMatchStatus = trim($request->string('name_match_status')->toString());
 
         $query = MissingCitizenIdentityReport::query()
             ->select([
-                'id',
-                'owner_name',
-                'id_number',
-                'name_match_status',
-                'matched_citizen_id_card_no',
-                'matched_citizen_full_name',
-                'matched_citizens_count',
+                'missing_citizen_identity_reports.id',
+                'missing_citizen_identity_reports.owner_name',
+                'missing_citizen_identity_reports.id_number',
+                'missing_citizen_identity_reports.name_match_status',
+                'missing_citizen_identity_reports.matched_citizen_id_card_no',
+                'missing_citizen_identity_reports.matched_citizen_full_name',
+                'missing_citizen_identity_reports.matched_citizens_count',
+                'housing_units.objectid as housing_unit_objectid',
             ])
-            ->whereNull('approved_at');
+            ->leftJoin('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
+            ->whereNull('missing_citizen_identity_reports.approved_at');
 
         if ($search !== '') {
             if (ctype_digit($search)) {
-                $query->where('id_number', 'like', $search.'%');
+                $query->where('missing_citizen_identity_reports.id_number', 'like', $search.'%');
             } else {
-                $query->where('owner_name', 'like', '%'.$search.'%');
+                $query->where('missing_citizen_identity_reports.owner_name', 'like', '%'.$search.'%');
+            }
+        }
+
+        if ($unitObjectId !== '') {
+            if (ctype_digit($unitObjectId)) {
+                $query->where('housing_units.objectid', (int) $unitObjectId);
+            } else {
+                $query->whereRaw('1 = 0');
             }
         }
 
         if (in_array($nameMatchStatus, ['matched', 'ambiguous', 'not_found', 'no_owner_name', 'not_checked'], true)) {
-            $query->where('name_match_status', $nameMatchStatus);
+            $query->where('missing_citizen_identity_reports.name_match_status', $nameMatchStatus);
         }
 
         $total = (clone $query)->count();
 
-        $query->when($afterId > 0, fn (Builder $query): Builder => $query->where('id', '>', $afterId));
+        $query->when($afterId > 0, fn (Builder $query): Builder => $query->where('missing_citizen_identity_reports.id', '>', $afterId));
 
         /** @var Collection<int, MissingCitizenIdentityReport> $rows */
         $rows = $query
-            ->orderBy('id')
+            ->orderBy('missing_citizen_identity_reports.id')
             ->limit($perPage + 1)
             ->get();
 
@@ -86,6 +97,7 @@ class MissingCitizenIdentityController extends Controller
                 ->map(fn (MissingCitizenIdentityReport $report): array => [
                     'id' => $report->id,
                     'owner_name' => $report->owner_name ?: '-',
+                    'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
                     'id_number1' => (string) $report->id_number,
                     'name_match_status' => $report->name_match_status,
                     'matched_citizen_id_card_no' => $report->matched_citizen_id_card_no,

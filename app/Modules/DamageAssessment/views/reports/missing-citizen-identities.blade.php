@@ -39,6 +39,10 @@
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
                     <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-solid w-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
                 </div>
+                <div class="position-relative">
+                    <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
+                    <input type="text" data-kt-missing-citizens-filter="unit-objectid" class="form-control form-control-solid w-175px ps-12" inputmode="numeric" placeholder="{{ __('ui.missing_citizen_identities.unit_objectid_placeholder') }}">
+                </div>
                 <select class="form-select form-select-solid w-175px" data-kt-missing-citizens-filter="name-match-status">
                     <option value="">{{ __('ui.missing_citizen_identities.all_name_matches') }}</option>
                     <option value="matched">{{ __('ui.missing_citizen_identities.name_match_matched') }}</option>
@@ -74,6 +78,7 @@
                                 <input class="form-check-input" type="checkbox" data-kt-missing-citizens-action="select-all">
                             </th>
                             <th>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
+                            <th>{{ __('ui.missing_citizen_identities.housing_unit_objectid') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.id_number') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.name_match_status') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.matched_citizen') }}</th>
@@ -169,6 +174,7 @@
             var tbody = table ? table.querySelector('tbody') : null;
             var pageInfo = document.getElementById('missing_citizens_page_info');
             var currentSearch = '';
+            var currentUnitObjectId = '';
             var currentNameMatchStatus = '';
             var hasMore = false;
             var loading = false;
@@ -322,7 +328,7 @@
                 }
 
                 if (rows.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
                     return;
                 }
 
@@ -339,6 +345,7 @@
                     return '<tr>'
                         + '<td>' + checkbox + '</td>'
                         + '<td>' + escapeHtml(row.owner_name) + '</td>'
+                        + '<td><span class="badge badge-light-info">' + escapeHtml(row.housing_unit_objectid) + '</span></td>'
                         + '<td><span class="badge badge-light-danger">' + escapeHtml(row.id_number1) + '</span></td>'
                         + '<td>' + status + '</td>'
                         + '<td>' + matchedCitizen + '</td>'
@@ -397,12 +404,13 @@
                 setButtonsState();
 
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
                 }
 
                 var params = new URLSearchParams({
                     after_id: cursor,
                     search: currentSearch,
+                    unit_objectid: currentUnitObjectId,
                     name_match_status: currentNameMatchStatus,
                     per_page: currentPerPage
                 });
@@ -435,7 +443,7 @@
                     })
                     .catch(function () {
                         if (tbody) {
-                            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
                         }
                     })
                     .finally(function () {
@@ -775,6 +783,7 @@
 
             var bindEvents = function () {
                 var search = document.querySelector('[data-kt-missing-citizens-filter="search"]');
+                var unitObjectId = document.querySelector('[data-kt-missing-citizens-filter="unit-objectid"]');
                 var searchTimer;
 
                 if (search) {
@@ -782,6 +791,19 @@
                         clearTimeout(searchTimer);
                         searchTimer = setTimeout(function () {
                             currentSearch = event.target.value;
+                            cursorStack = [0];
+                            cursorIndex = 0;
+                            nextCursor = null;
+                            loadCursor(0);
+                        }, 350);
+                    });
+                }
+
+                if (unitObjectId) {
+                    unitObjectId.addEventListener('keyup', function (event) {
+                        clearTimeout(searchTimer);
+                        searchTimer = setTimeout(function () {
+                            currentUnitObjectId = event.target.value;
                             cursorStack = [0];
                             cursorIndex = 0;
                             nextCursor = null;

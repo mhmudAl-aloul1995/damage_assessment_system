@@ -54,6 +54,8 @@ it('shows the missing citizen identities page', function (): void {
     $response
         ->assertOk()
         ->assertSee(__('ui.missing_citizen_identities.title'))
+        ->assertSee(__('ui.missing_citizen_identities.housing_unit_objectid'))
+        ->assertSee(__('ui.missing_citizen_identities.unit_objectid_placeholder'))
         ->assertSee(__('ui.missing_citizen_identities.approve_selected'))
         ->assertSee('kt_table_missing_citizen_identities');
 });
@@ -123,8 +125,10 @@ it('returns housing unit identities that are not active citizens', function (): 
 
     $response
         ->assertOk()
+        ->assertJsonFragment(['housing_unit_objectid' => '1001'])
         ->assertJsonFragment(['id_number1' => '900000001'])
         ->assertJsonFragment(['matched_citizen_id_card_no' => '900000009'])
+        ->assertJsonFragment(['housing_unit_objectid' => '1003'])
         ->assertJsonFragment(['id_number1' => '900000003'])
         ->assertJsonMissing(['id_number1' => '900000002'])
         ->assertJsonMissing(['id_number1' => ''])
@@ -144,6 +148,17 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonPath('total', 1)
         ->assertJsonFragment(['id_number1' => '900000001'])
         ->assertJsonMissing(['id_number1' => '900000003']);
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.data', [
+            'unit_objectid' => 1003,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonFragment(['housing_unit_objectid' => '1003'])
+        ->assertJsonFragment(['id_number1' => '900000003'])
+        ->assertJsonMissing(['id_number1' => '900000001']);
 });
 
 it('does not report identities that exist in sgaza civil registry', function (): void {
