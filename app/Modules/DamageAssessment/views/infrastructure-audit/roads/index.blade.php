@@ -19,6 +19,7 @@
                     </select>
                     <button type="button" id="bulk_assign_btn" class="btn btn-light-info">إسناد المحدد</button>
                 @endrole
+                <button type="button" id="open_export_modal_btn" class="btn btn-light-success" data-bs-toggle="modal" data-bs-target="#inf_roads_export_modal">تصدير تقرير</button>
                 <button type="button" id="reset_filters_btn" class="btn btn-light">إعادة تعيين الفلاتر</button>
                 <button class="btn btn-light-primary" onclick="$('#inf_roads_table').DataTable().ajax.reload(null, false)">تحديث</button>
             </div>
@@ -98,6 +99,27 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="inf_roads_export_modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تصدير تقرير الطرق</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-light-info mb-0">
+                        سيتم تصدير ملخص حسب الفلاتر الحالية ويشمل: ما تم حصره، ما تم تدقيقه، المحافظة، الحي، وأطوال الطرق.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-light-primary inf-roads-export-btn" data-format="xlsx">Excel</button>
+                    <button type="button" class="btn btn-light-danger inf-roads-export-btn" data-format="pdf">PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script')
@@ -134,6 +156,20 @@
                 ],
                 order: [[0, 'desc']]
             });
+
+            function currentFilterParams() {
+                return $.param({
+                    objectid: $('#filter_objectid').val(),
+                    municipalitie: $('#filter_municipalitie').val(),
+                    neighborhood: $('#filter_neighborhood').val(),
+                    status: $('#filter_status').val(),
+                    auditor: $('#filter_auditor').val(),
+                    field_engineer: $('#filter_field_engineer').val(),
+                    from_date: $('#filter_from_date').val(),
+                    to_date: $('#filter_to_date').val(),
+                    search: table.search()
+                });
+            }
 
             $('.audit-filter').on('change', function () {
                 table.ajax.reload();
@@ -184,6 +220,13 @@
                 }).fail(function (xhr) {
                     toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء الإسناد');
                 });
+            });
+
+            $('.inf-roads-export-btn').on('click', function () {
+                const format = $(this).data('format');
+                const url = @json(route('inf-audit.roads.export', ['format' => '__FORMAT__'])).replace('__FORMAT__', format);
+
+                window.location.href = url + '?' + currentFilterParams();
             });
         });
     </script>

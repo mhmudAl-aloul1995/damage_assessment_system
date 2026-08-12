@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Exports\InfAuditRoadsSummaryExport;
+use App\Models\InfAuditStatus;
 use App\Models\InfEditAssessment;
 use App\Models\PublicBuildingAuditHistory;
 use App\Models\PublicBuildingAuditStatus;
@@ -17,6 +19,7 @@ use App\Models\User;
 use Database\Seeders\InfAuditRolesSeeder;
 use Database\Seeders\InfAuditStatusesSeeder;
 use Illuminate\Support\Facades\Schema;
+use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -379,4 +382,86 @@ test('database officer can assign and inf engineer can audit road facilities and
 
     expect(RoadFacilityAuditHistory::query()->where('road_facility_survey_id', $road->id)->count())->toBe($historyCount);
     expect(RoadFacilityAuditStatus::query()->where('globalid', $road->globalid)->count())->toBeGreaterThan(1);
+});
+
+test('database officer can export filtered road audit summary to excel', function (): void {
+    $officer = infAuditUser('Database Officer');
+    $engineer = infAuditUser('Inf - QC/QA Engineer');
+    $assignedStatus = InfAuditStatus::query()->where('name', 'assigned')->firstOrFail();
+    $acceptedStatus = InfAuditStatus::query()->where('name', 'accepted')->firstOrFail();
+
+    $assignedRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 7001,
+        'globalid' => 'assigned-road-global-id',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza Municipality',
+        'neighborhood' => 'Old City',
+        'str_name' => 'Assigned Road',
+        'assignedto' => 'road.field.one',
+        'shape__length' => 0.001,
+    ]);
+
+    $acceptedRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 7002,
+        'globalid' => 'accepted-road-global-id',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza Municipality',
+        'neighborhood' => 'Old City',
+        'str_name' => 'Accepted Road',
+        'assignedto' => 'road.field.two',
+        'shape__length' => 0.002,
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 7003,
+        'globalid' => 'outside-filter-road-global-id',
+        'governorate' => 'Rafah',
+        'municipalitie' => 'Rafah Municipality',
+        'neighborhood' => 'Al-Salam',
+        'str_name' => 'Outside Filter Road',
+        'assignedto' => 'road.field.three',
+        'shape__length' => 0.004,
+    ]);
+
+    RoadFacilityAuditStatus::query()->create([
+        'road_facility_survey_id' => $assignedRoad->id,
+        'objectid' => $assignedRoad->objectid,
+        'globalid' => $assignedRoad->globalid,
+        'status_id' => $assignedStatus->id,
+        'assigned_to' => $engineer->id,
+        'updated_by' => $officer->id,
+    ]);
+
+    RoadFacilityAuditStatus::query()->create([
+        'road_facility_survey_id' => $acceptedRoad->id,
+        'objectid' => $acceptedRoad->objectid,
+        'globalid' => $acceptedRoad->globalid,
+        'status_id' => $acceptedStatus->id,
+        'assigned_to' => $engineer->id,
+        'updated_by' => $officer->id,
+    ]);
+
+    Excel::fake();
+    Excel::matchByRegex();
+
+    $this->actingAs($officer)
+        ->get(route('inf-audit.roads.export', [
+            'format' => 'xlsx',
+            'municipalitie' => 'Gaza Municipality',
+        ]))
+        ->assertOk();
+
+    Excel::assertDownloaded('/inf_audit_roads_report_\d{8}_\d{6}\.xlsx/', function (InfAuditRoadsSummaryExport $export): bool {
+        expect($export->array())->toBe([
+            [
+                'Gaza',
+                'Old City',
+                2,
+                1,
+                333.0,
+            ],
+        ]);
+
+        return true;
+    });
 });

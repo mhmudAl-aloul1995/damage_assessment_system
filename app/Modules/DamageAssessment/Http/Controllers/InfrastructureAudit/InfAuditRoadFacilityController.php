@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\DamageAssessment\Http\Controllers\InfrastructureAudit;
 
+use App\Exports\InfAuditRoadsSummaryExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InfAudit\InfAuditBulkAssignRequest;
 use App\Http\Requests\InfAudit\InfAuditChildStoreRequest;
@@ -20,14 +21,19 @@ use App\Models\RoadFacilitySurveyItem;
 use App\Models\User;
 use App\services\ArcgisService;
 use App\Support\Forms\RoadFacilitySurveyLayout;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Yajra\DataTables\Facades\DataTables;
 
 class InfAuditRoadFacilityController extends Controller
@@ -50,14 +56,7 @@ class InfAuditRoadFacilityController extends Controller
 
     public function data(Request $request): JsonResponse
     {
-        $query = RoadFacilitySurvey::query()
-            ->with(['infAuditAssignment.user', 'infAuditStatus.status', 'infAuditStatus.assignee'])
-            ->select('road_facility_surveys.*');
-
-        $this->joinFieldEngineer($query);
-        $this->scopeVisibleToUser($query);
-        $this->excludeFinalApproved($query);
-        $this->applyFilters($query, $request);
+        $query = $this->filteredAuditQuery($request);
 
         return DataTables::eloquent($query)
             ->addColumn('selection', fn (RoadFacilitySurvey $survey): string => '<input type="checkbox" class="form-check-input inf-audit-row-check" value="'.e((string) $survey->id).'">')
@@ -80,6 +79,29 @@ class InfAuditRoadFacilityController extends Controller
             })
             ->rawColumns(['selection', 'audit_status', 'actions'])
             ->toJson();
+    }
+
+    public function export(Request $request, string $format): BinaryFileResponse|Response
+    {
+        $format = strtolower($format);
+
+        abort_unless(in_array($format, ['xlsx', 'pdf'], true), 404);
+
+        $rows = $this->reportRows($request);
+        $fileBaseName = 'inf_audit_roads_report_'.now()->format('Ymd_His');
+
+        if ($format === 'pdf') {
+            return Pdf::loadView('damage-assessment::infrastructure-audit.roads.export_pdf', [
+                'rows' => $rows,
+                'filters' => $this->activeFilterLabels($request),
+            ])->setPaper('a4', 'landscape')->download($fileBaseName.'.pdf');
+        }
+
+        return Excel::download(
+            new InfAuditRoadsSummaryExport($rows),
+            $fileBaseName.'.xlsx',
+            ExcelFormat::XLSX,
+        );
     }
 
     public function bulkAssign(InfAuditBulkAssignRequest $request): JsonResponse
@@ -582,6 +604,119 @@ class InfAuditRoadFacilityController extends Controller
         $query->when($request->filled('status'), fn (Builder $q) => $this->whereLatestStatus($q, (string) $request->string('status')));
         $query->when($request->filled('from_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '>=', $request->date('from_date')?->toDateString()));
         $query->when($request->filled('to_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '<=', $request->date('to_date')?->toDateString()));
+    }
+
+    private function filteredAuditQuery(Request $request, bool $includeDisplayColumns = true): Builder
+    {
+        $query = RoadFacilitySurvey::query();
+
+        if ($includeDisplayColumns) {
+            $query
+                ->with(['infAuditAssignment.user', 'infAuditStatus.status', 'infAuditStatus.assignee'])
+                ->select('road_facility_surveys.*');
+
+            $this->joinFieldEngineer($query);
+        }
+
+        $this->scopeVisibleToUser($query);
+        $this->excludeFinalApproved($query);
+        $this->applyFilters($query, $request);
+        $this->applyExportSearch($query, $request);
+
+        return $query;
+    }
+
+    private function reportRows(Request $request): array
+    {
+        $lengthExpression = $this->roadLengthColumn()
+            ? 'COALESCE(SUM(COALESCE(road_facility_surveys.'.$this->roadLengthColumn().', 0)), 0) * 111000'
+            : '0';
+        $governorateExpression = Schema::hasColumn('road_facility_surveys', 'governorate')
+            ? "COALESCE(NULLIF(road_facility_surveys.governorate, ''), NULLIF(road_facility_surveys.municipalitie, ''), '-')"
+            : "COALESCE(NULLIF(road_facility_surveys.municipalitie, ''), '-')";
+        $neighborhoodExpression = "COALESCE(NULLIF(road_facility_surveys.neighborhood, ''), '-')";
+
+        return $this->filteredAuditQuery($request, false)
+            ->selectRaw($governorateExpression.' as governorate')
+            ->selectRaw($neighborhoodExpression.' as neighborhood')
+            ->selectRaw('COUNT(*) as surveyed_count')
+            ->selectRaw(
+                "SUM(CASE WHEN latest_statuses.status_name IS NOT NULL AND latest_statuses.status_name <> 'assigned' THEN 1 ELSE 0 END) as audited_count"
+            )
+            ->selectRaw($lengthExpression.' as road_length_meters')
+            ->leftJoinSub($this->latestStatusSubquery(), 'latest_statuses', function ($join): void {
+                $join->on('latest_statuses.globalid', '=', 'road_facility_surveys.globalid');
+            })
+            ->groupByRaw($governorateExpression)
+            ->groupByRaw($neighborhoodExpression)
+            ->orderByRaw($governorateExpression)
+            ->orderByRaw($neighborhoodExpression)
+            ->get()
+            ->map(fn (RoadFacilitySurvey $row): array => [
+                'governorate' => $row->governorate ?: '-',
+                'neighborhood' => $row->neighborhood ?: '-',
+                'surveyed_count' => (int) $row->surveyed_count,
+                'audited_count' => (int) $row->audited_count,
+                'road_length_meters' => round((float) $row->road_length_meters, 2),
+            ])
+            ->all();
+    }
+
+    private function latestStatusSubquery(): Builder
+    {
+        return RoadFacilityAuditStatus::query()
+            ->from('road_facility_audit_statuses as latest_road_status')
+            ->join('inf_audit_statuses', 'inf_audit_statuses.id', '=', 'latest_road_status.status_id')
+            ->whereRaw('latest_road_status.id = (select max(rfas.id) from road_facility_audit_statuses as rfas where rfas.globalid = latest_road_status.globalid)')
+            ->select([
+                'latest_road_status.globalid',
+                'inf_audit_statuses.name as status_name',
+            ]);
+    }
+
+    private function roadLengthColumn(): ?string
+    {
+        return collect(['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'])
+            ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
+    }
+
+    private function applyExportSearch(Builder $query, Request $request): void
+    {
+        $searchValue = $request->input('search.value', $request->input('search', ''));
+
+        if (is_array($searchValue)) {
+            return;
+        }
+
+        $search = trim((string) $searchValue);
+
+        if ($search === '') {
+            return;
+        }
+
+        $query->where(function (Builder $builder) use ($search): void {
+            $builder
+                ->where('road_facility_surveys.objectid', 'like', "%{$search}%")
+                ->orWhere('road_facility_surveys.str_name', 'like', "%{$search}%")
+                ->orWhere('road_facility_surveys.municipalitie', 'like', "%{$search}%")
+                ->orWhere('road_facility_surveys.neighborhood', 'like', "%{$search}%")
+                ->orWhere('road_facility_surveys.assignedto', 'like', "%{$search}%");
+        });
+    }
+
+    private function activeFilterLabels(Request $request): array
+    {
+        return [
+            'ObjectID' => $request->input('objectid'),
+            'المحافظة' => $request->input('municipalitie'),
+            'الحي' => $request->input('neighborhood'),
+            'الحالة' => $request->input('status'),
+            'المدقق' => optional(User::query()->find($request->integer('auditor')))->name,
+            'المهندس الميداني' => $request->input('field_engineer'),
+            'من تاريخ' => $request->input('from_date'),
+            'إلى تاريخ' => $request->input('to_date'),
+            'بحث' => $request->input('search'),
+        ];
     }
 
     private function joinFieldEngineer(Builder $query): void
