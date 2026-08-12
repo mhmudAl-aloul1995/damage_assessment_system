@@ -35,6 +35,14 @@
                 <h3 class="fw-bold m-0">{{ __('ui.missing_citizen_identities.table_title') }}</h3>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="btn-group" role="group" aria-label="{{ __('ui.missing_citizen_identities.identity_subject') }}">
+                    <button type="button" class="btn btn-sm btn-primary" data-kt-missing-citizens-subject="owner">
+                        {{ __('ui.missing_citizen_identities.identity_owner') }}
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light-primary" data-kt-missing-citizens-subject="spouse">
+                        {{ __('ui.missing_citizen_identities.identity_spouses') }}
+                    </button>
+                </div>
                 <div class="position-relative">
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
                     <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-solid w-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
@@ -86,6 +94,7 @@
                             <th class="w-30px">
                                 <input class="form-check-input" type="checkbox" data-kt-missing-citizens-action="select-all" title="{{ __('ui.missing_citizen_identities.select_all_matches') }}">
                             </th>
+                            <th>{{ __('ui.missing_citizen_identities.identity_subject') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.housing_unit_objectid') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.issue_type') }}</th>
@@ -187,6 +196,7 @@
             var currentUnitObjectId = '';
             var currentIssueType = '';
             var currentNameMatchStatus = '';
+            var currentIdentitySubject = 'owner';
             var hasMore = false;
             var loading = false;
             var currentPerPage = 100;
@@ -380,7 +390,7 @@
                 }
 
                 if (rows.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
                     updateBulkState();
                     return;
                 }
@@ -398,6 +408,7 @@
 
                     return '<tr data-kt-missing-citizens-row="' + escapeHtml(row.id) + '">'
                         + '<td>' + checkbox + '</td>'
+                        + '<td><span class="badge badge-light-dark">' + escapeHtml(row.identity_label) + '</span></td>'
                         + '<td>' + escapeHtml(row.owner_name) + '</td>'
                         + '<td><span class="badge badge-light-info">' + escapeHtml(row.housing_unit_objectid) + '</span></td>'
                         + '<td>' + issue + '</td>'
@@ -473,7 +484,7 @@
                 setButtonsState();
 
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
                 }
 
                 var params = new URLSearchParams({
@@ -482,6 +493,7 @@
                     unit_objectid: currentUnitObjectId,
                     issue_type: currentIssueType,
                     name_match_status: currentNameMatchStatus,
+                    identity_subject: currentIdentitySubject,
                     per_page: currentPerPage
                 });
 
@@ -513,7 +525,7 @@
                     })
                     .catch(function () {
                         if (tbody) {
-                            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
                         }
                     })
                     .finally(function () {
@@ -855,6 +867,23 @@
                 var search = document.querySelector('[data-kt-missing-citizens-filter="search"]');
                 var unitObjectId = document.querySelector('[data-kt-missing-citizens-filter="unit-objectid"]');
                 var searchTimer;
+
+                Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-subject]')).forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        currentIdentitySubject = button.getAttribute('data-kt-missing-citizens-subject') || 'owner';
+
+                        Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-subject]')).forEach(function (subjectButton) {
+                            var active = subjectButton === button;
+                            subjectButton.classList.toggle('btn-primary', active);
+                            subjectButton.classList.toggle('btn-light-primary', !active);
+                        });
+
+                        cursorStack = [0];
+                        cursorIndex = 0;
+                        nextCursor = null;
+                        loadCursor(0);
+                    });
+                });
 
                 if (search) {
                     search.addEventListener('keyup', function (event) {

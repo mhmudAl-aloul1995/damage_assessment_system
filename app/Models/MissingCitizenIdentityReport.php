@@ -8,6 +8,10 @@ class MissingCitizenIdentityReport extends Model
 {
     protected $fillable = [
         'housing_unit_id',
+        'identity_subject',
+        'identity_index',
+        'identity_name_field',
+        'identity_number_field',
         'owner_name',
         'normalized_owner_name',
         'id_number',

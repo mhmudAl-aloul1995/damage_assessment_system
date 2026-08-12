@@ -47,10 +47,14 @@ class MissingCitizenIdentityController extends Controller
         $unitObjectId = trim($request->string('unit_objectid')->toString());
         $issueType = trim($request->string('issue_type')->toString());
         $nameMatchStatus = trim($request->string('name_match_status')->toString());
+        $identitySubject = trim($request->string('identity_subject')->toString());
 
         $query = MissingCitizenIdentityReport::query()
             ->select([
                 'missing_citizen_identity_reports.id',
+                'missing_citizen_identity_reports.identity_subject',
+                'missing_citizen_identity_reports.identity_index',
+                'missing_citizen_identity_reports.identity_number_field',
                 'missing_citizen_identity_reports.owner_name',
                 'missing_citizen_identity_reports.id_number',
                 'missing_citizen_identity_reports.issue_type',
@@ -87,6 +91,10 @@ class MissingCitizenIdentityController extends Controller
             $query->where('missing_citizen_identity_reports.name_match_status', $nameMatchStatus);
         }
 
+        if (in_array($identitySubject, ['owner', 'spouse'], true)) {
+            $query->where('missing_citizen_identity_reports.identity_subject', $identitySubject);
+        }
+
         $total = (clone $query)->count();
 
         $query->when($afterId > 0, fn (Builder $query): Builder => $query->where('missing_citizen_identity_reports.id', '>', $afterId));
@@ -102,6 +110,9 @@ class MissingCitizenIdentityController extends Controller
                 ->take($perPage)
                 ->map(fn (MissingCitizenIdentityReport $report): array => [
                     'id' => $report->id,
+                    'identity_subject' => $report->identity_subject,
+                    'identity_index' => $report->identity_index,
+                    'identity_label' => $this->identityLabel($report),
                     'owner_name' => $report->owner_name ?: '-',
                     'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
                     'id_number1' => filled($report->id_number) ? (string) $report->id_number : '-',
@@ -388,6 +399,32 @@ class MissingCitizenIdentityController extends Controller
         ];
     }
 
+    private function identityNumberField(MissingCitizenIdentityReport $report): string
+    {
+        $field = (string) ($report->identity_number_field ?: 'id_number1');
+
+        if (! in_array($field, ['id_number1', 'spouse1_id', 'spouse2_id', 'spouse3_id', 'spouse4_id'], true)) {
+            return 'id_number1';
+        }
+
+        return $field;
+    }
+
+    private function identityLabel(MissingCitizenIdentityReport $report): string
+    {
+        if ($report->identity_subject === 'spouse') {
+            return match ((int) $report->identity_index) {
+                1 => __('ui.missing_citizen_identities.identity_spouse_1'),
+                2 => __('ui.missing_citizen_identities.identity_spouse_2'),
+                3 => __('ui.missing_citizen_identities.identity_spouse_3'),
+                4 => __('ui.missing_citizen_identities.identity_spouse_4'),
+                default => __('ui.missing_citizen_identities.identity_spouse'),
+            };
+        }
+
+        return __('ui.missing_citizen_identities.identity_owner');
+    }
+
     /**
      * @return array{success: bool, arcgis_success?: bool, arcgis_status?: string, reason?: string}
      */
@@ -406,12 +443,13 @@ class MissingCitizenIdentityController extends Controller
             ];
         }
 
-        $oldIdNumber = (string) $housingUnit->id_number1;
+        $identityNumberField = $this->identityNumberField($report);
+        $oldIdNumber = (string) $housingUnit->{$identityNumberField};
         $newIdNumber = (string) $citizen->id_card_no;
 
-        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $userId, $citizen): void {
+        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $userId, $citizen, $identityNumberField): void {
             $housingUnit->forceFill([
-                'id_number1' => $newIdNumber,
+                $identityNumberField => $newIdNumber,
             ])->save();
 
             $report->forceFill([
@@ -436,7 +474,7 @@ class MissingCitizenIdentityController extends Controller
             ]);
         });
 
-        $arcgisResult = $arcgisService->updateHousingUnitIdentity($housingUnit->objectid, $newIdNumber);
+        $arcgisResult = $arcgisService->updateHousingUnitIdentityField($housingUnit->objectid, $identityNumberField, $newIdNumber);
 
         $approval = MissingCitizenIdentityApproval::query()
             ->where('missing_citizen_identity_report_id', $report->id)

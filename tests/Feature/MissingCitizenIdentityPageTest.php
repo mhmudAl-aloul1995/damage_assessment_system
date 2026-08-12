@@ -790,6 +790,108 @@ it('searches sgaza by separate name part inputs without a general query', functi
         ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'));
 });
 
+it('returns missing spouse identities separately from owner identities', function (): void {
+    HousingUnit::query()->create([
+        'objectid' => 892,
+        'globalid' => 'missing-spouse-identities',
+        'unit_owner' => 'Active Owner',
+        'id_number1' => '900000020',
+        'spouse1' => 'Active Spouse',
+        'spouse1_id' => '900000021',
+        'spouse2' => 'Missing Spouse',
+        'spouse2_id' => '900000022',
+        'spouse3' => 'Blank Spouse',
+        'spouse3_id' => '',
+        'spouse4' => 'Matched Spouse',
+        'spouse4_id' => '900000024',
+    ]);
+
+    DB::table('citizens')->insert([
+        ['id_card_no' => '900000020', 'status' => 'A', 'full_name' => 'Active Owner', 'full_name_normalized' => 'ActiveOwner'],
+        ['id_card_no' => '900000021', 'status' => 'A', 'full_name' => 'Active Spouse', 'full_name_normalized' => 'ActiveSpouse'],
+        ['id_card_no' => '900000025', 'status' => 'A', 'full_name' => 'Matched Spouse', 'full_name_normalized' => 'MatchedSpouse'],
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()->count())->toBe(3)
+        ->and(MissingCitizenIdentityReport::query()->where('identity_subject', 'owner')->count())->toBe(0)
+        ->and(MissingCitizenIdentityReport::query()->where('identity_number_field', 'spouse2_id')->exists())->toBeTrue()
+        ->and(MissingCitizenIdentityReport::query()->where('identity_number_field', 'spouse3_id')->exists())->toBeTrue()
+        ->and(MissingCitizenIdentityReport::query()->where('identity_number_field', 'spouse4_id')->where('name_match_status', 'matched')->exists())->toBeTrue();
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.data', [
+            'identity_subject' => 'spouse',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total', 3)
+        ->assertJsonFragment(['identity_label' => __('ui.missing_citizen_identities.identity_spouse_2')])
+        ->assertJsonFragment(['identity_label' => __('ui.missing_citizen_identities.identity_spouse_3')])
+        ->assertJsonFragment(['identity_label' => __('ui.missing_citizen_identities.identity_spouse_4')])
+        ->assertJsonFragment(['id_number1' => '900000022'])
+        ->assertJsonFragment(['id_number1' => '-']);
+});
+
+it('approves a spouse identity match into the spouse identity field', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 893],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 893,
+        'globalid' => 'approve-spouse-identity',
+        'unit_owner' => 'Active Owner',
+        'id_number1' => '900000030',
+        'spouse2' => 'Second Spouse',
+        'spouse2_id' => '900000032',
+    ]);
+
+    DB::table('citizens')->insert([
+        ['id_card_no' => '900000030', 'status' => 'A', 'full_name' => 'Active Owner', 'full_name_normalized' => 'ActiveOwner'],
+        ['id_card_no' => '900000033', 'status' => 'A', 'full_name' => 'Second Spouse', 'full_name_normalized' => 'SecondSpouse'],
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_number_field', 'spouse2_id')
+        ->firstOrFail();
+
+    expect($report->name_match_status)->toBe('matched');
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
+            'confirm' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('arcgis_status', 'synced');
+
+    expect($housingUnit->fresh()->id_number1)->toBe('900000030')
+        ->and($housingUnit->fresh()->spouse2_id)->toBe('900000033')
+        ->and($report->fresh()->approved_at)->not->toBeNull();
+
+    Http::assertSent(function ($request): bool {
+        return $request->url() === 'https://services.example.test/FeatureServer/1/updateFeatures'
+            && str_contains((string) $request['features'], '"spouse2_id":"900000033"')
+            && ! str_contains((string) $request['features'], '"id_number1":"900000033"');
+    });
+});
+
 it('bulk approves selected single name matches', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');

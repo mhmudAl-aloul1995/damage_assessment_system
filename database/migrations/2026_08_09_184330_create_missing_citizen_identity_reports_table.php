@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('id_number', 255);
             $table->timestamps();
 
-            $table->unique('housing_unit_id', 'missing_citizen_identity_reports_unit_id_unique');
             $table->index('id_number', 'missing_citizen_identity_reports_id_number_index');
             $table->index('owner_name', 'missing_citizen_identity_reports_owner_name_index');
         });

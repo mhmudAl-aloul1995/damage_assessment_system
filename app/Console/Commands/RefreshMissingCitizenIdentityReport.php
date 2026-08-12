@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Schema;
 
 class RefreshMissingCitizenIdentityReport extends Command
 {
+    private const SUBJECT_OWNER = 'owner';
+
+    private const SUBJECT_SPOUSE = 'spouse';
+
     private const ISSUE_MISSING_CIVIL_REGISTRY_IDENTITY = 'missing_civil_registry_identity';
 
     private const ISSUE_OWNER_WITHOUT_IDENTITY = 'owner_without_identity';
@@ -52,15 +56,25 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'q_9_3_2_second_name__father',
                 'q_9_3_3_third_name__grandfather',
                 'q_9_3_4_last_name',
+                'spouse1',
+                'spouse1_id',
+                'spouse2',
+                'spouse2_id',
+                'spouse3',
+                'spouse3_id',
+                'spouse4',
+                'spouse4_id',
             ])
             ->orderBy('id')
             ->chunkById($chunkSize, function ($housingUnits) use ($stagingTable, &$processed, &$missing): void {
                 $processed += $housingUnits->count();
 
-                $identityNumbers = $housingUnits
-                    ->pluck('id_number1')
-                    ->filter()
-                    ->map(fn ($value): string => trim((string) $value))
+                $identityRows = $housingUnits
+                    ->flatMap(fn (HousingUnit $housingUnit): Collection => $this->identityRows($housingUnit))
+                    ->values();
+
+                $identityNumbers = $identityRows
+                    ->pluck('id_number')
                     ->filter()
                     ->unique()
                     ->values();
@@ -80,28 +94,28 @@ class RefreshMissingCitizenIdentityReport extends Command
 
                 $existingCivilRegistryIds = $activeCitizenIds->union($sgazaIds);
 
-                $missingHousingUnits = $housingUnits
-                    ->filter(function (HousingUnit $housingUnit) use ($existingCivilRegistryIds): bool {
-                        $idNumber = trim((string) $housingUnit->id_number1);
+                $missingIdentityRows = $identityRows
+                    ->filter(function (array $identityRow) use ($existingCivilRegistryIds): bool {
+                        $idNumber = $identityRow['id_number'];
 
                         if ($idNumber === '') {
-                            return filled($this->ownerName($housingUnit));
+                            return filled($identityRow['owner_name']);
                         }
 
                         return ! isset($existingCivilRegistryIds[$idNumber]);
                     })
                     ->values();
 
-                if ($missingHousingUnits->isEmpty()) {
+                if ($missingIdentityRows->isEmpty()) {
                     return;
                 }
 
-                $nameMatchesByUnitId = $this->nameMatchesByUnitId($missingHousingUnits);
+                $nameMatchesByIdentityKey = $this->nameMatchesByIdentityKey($missingIdentityRows);
 
-                $rows = $missingHousingUnits
-                    ->map(function (HousingUnit $housingUnit) use ($nameMatchesByUnitId): array {
-                        $ownerName = $this->ownerName($housingUnit);
-                        $nameMatch = $nameMatchesByUnitId[$housingUnit->id] ?? [
+                $rows = $missingIdentityRows
+                    ->map(function (array $identityRow) use ($nameMatchesByIdentityKey): array {
+                        $ownerName = $identityRow['owner_name'];
+                        $nameMatch = $nameMatchesByIdentityKey[$identityRow['identity_key']] ?? [
                             'normalized_owner_name' => ArabicNameNormalizer::normalize($ownerName),
                             'name_match_status' => filled($ownerName) ? 'not_found' : 'no_owner_name',
                             'matched_citizen_id' => null,
@@ -111,11 +125,15 @@ class RefreshMissingCitizenIdentityReport extends Command
                         ];
 
                         return [
-                            'housing_unit_id' => $housingUnit->id,
+                            'housing_unit_id' => $identityRow['housing_unit_id'],
+                            'identity_subject' => $identityRow['identity_subject'],
+                            'identity_index' => $identityRow['identity_index'],
+                            'identity_name_field' => $identityRow['identity_name_field'],
+                            'identity_number_field' => $identityRow['identity_number_field'],
                             'owner_name' => $ownerName,
                             'normalized_owner_name' => $nameMatch['normalized_owner_name'],
-                            'id_number' => trim((string) $housingUnit->id_number1),
-                            'issue_type' => $this->issueType($housingUnit),
+                            'id_number' => $identityRow['id_number'],
+                            'issue_type' => $this->issueType($identityRow),
                             'name_match_status' => $nameMatch['name_match_status'],
                             'matched_citizen_id' => $nameMatch['matched_citizen_id'],
                             'matched_citizen_id_card_no' => $nameMatch['matched_citizen_id_card_no'],
@@ -145,6 +163,10 @@ class RefreshMissingCitizenIdentityReport extends Command
                     INSERT INTO missing_citizen_identity_reports
                         (
                             housing_unit_id,
+                            identity_subject,
+                            identity_index,
+                            identity_name_field,
+                            identity_number_field,
                             owner_name,
                             normalized_owner_name,
                             id_number,
@@ -159,6 +181,10 @@ class RefreshMissingCitizenIdentityReport extends Command
                         )
                     SELECT
                         housing_unit_id,
+                        identity_subject,
+                        identity_index,
+                        identity_name_field,
+                        identity_number_field,
                         owner_name,
                         normalized_owner_name,
                         id_number,
@@ -177,6 +203,10 @@ class RefreshMissingCitizenIdentityReport extends Command
                     DB::table($stagingTable)
                         ->select([
                             'housing_unit_id',
+                            'identity_subject',
+                            'identity_index',
+                            'identity_name_field',
+                            'identity_number_field',
                             'owner_name',
                             'normalized_owner_name',
                             'id_number',
@@ -216,6 +246,10 @@ class RefreshMissingCitizenIdentityReport extends Command
         Schema::create($stagingTable, function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('housing_unit_id');
+            $table->string('identity_subject', 20)->default(self::SUBJECT_OWNER);
+            $table->unsignedTinyInteger('identity_index')->nullable();
+            $table->string('identity_name_field', 50)->default('unit_owner');
+            $table->string('identity_number_field', 50)->default('id_number1');
             $table->string('owner_name')->nullable();
             $table->string('normalized_owner_name')->nullable();
             $table->string('id_number', 255);
@@ -234,33 +268,34 @@ class RefreshMissingCitizenIdentityReport extends Command
     }
 
     /**
-     * @param  Collection<int, HousingUnit>  $housingUnits
+     * @param  Collection<int, array<string, mixed>>  $identityRows
      * @return array<int, array<string, mixed>>
      */
-    private function nameMatchesByUnitId(Collection $housingUnits): array
+    private function nameMatchesByIdentityKey(Collection $identityRows): array
     {
-        $normalizedNamesByUnitId = $housingUnits
-            ->mapWithKeys(fn (HousingUnit $housingUnit): array => [
-                $housingUnit->id => ArabicNameNormalizer::normalize($this->ownerName($housingUnit)),
+        $normalizedNamesByIdentityKey = $identityRows
+            ->mapWithKeys(fn (array $identityRow): array => [
+                $identityRow['identity_key'] => ArabicNameNormalizer::normalize((string) $identityRow['owner_name']),
             ])
             ->filter();
 
-        if ($normalizedNamesByUnitId->isEmpty()) {
+        if ($normalizedNamesByIdentityKey->isEmpty()) {
             return [];
         }
 
         $citizensByNormalizedName = DB::table($this->citizensTable())
             ->select(['id', 'id_card_no', 'full_name', 'full_name_normalized'])
             ->where('status', 'A')
-            ->whereIn('full_name_normalized', $normalizedNamesByUnitId->unique()->values())
+            ->whereIn('full_name_normalized', $normalizedNamesByIdentityKey->unique()->values())
             ->get()
             ->groupBy(fn ($citizen): string => (string) $citizen->full_name_normalized);
 
-        $sgazaByNormalizedName = $this->sgazaMatchesByNormalizedNames($normalizedNamesByUnitId->unique()->values());
+        $sgazaByNormalizedName = $this->sgazaMatchesByNormalizedNames($normalizedNamesByIdentityKey->unique()->values());
 
-        return $housingUnits
-            ->mapWithKeys(function (HousingUnit $housingUnit) use ($normalizedNamesByUnitId, $citizensByNormalizedName, $sgazaByNormalizedName): array {
-                $normalizedOwnerName = (string) ($normalizedNamesByUnitId[$housingUnit->id] ?? '');
+        return $identityRows
+            ->mapWithKeys(function (array $identityRow) use ($normalizedNamesByIdentityKey, $citizensByNormalizedName, $sgazaByNormalizedName): array {
+                $identityKey = (string) $identityRow['identity_key'];
+                $normalizedOwnerName = (string) ($normalizedNamesByIdentityKey[$identityKey] ?? '');
                 $citizens = $citizensByNormalizedName->get($normalizedOwnerName, collect());
                 $sgazaRecords = $sgazaByNormalizedName->get($normalizedOwnerName, collect());
                 $matches = $sgazaRecords
@@ -270,7 +305,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 $matchedCitizen = $matches->count() === 1 ? $matches->first() : null;
 
                 return [
-                    $housingUnit->id => [
+                    $identityKey => [
                         'normalized_owner_name' => $normalizedOwnerName,
                         'name_match_status' => match (true) {
                             $normalizedOwnerName === '' => 'no_owner_name',
@@ -288,6 +323,40 @@ class RefreshMissingCitizenIdentityReport extends Command
             ->all();
     }
 
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function identityRows(HousingUnit $housingUnit): Collection
+    {
+        return collect([
+            [
+                'identity_subject' => self::SUBJECT_OWNER,
+                'identity_index' => null,
+                'identity_name_field' => 'unit_owner',
+                'identity_number_field' => 'id_number1',
+                'owner_name' => $this->ownerName($housingUnit),
+                'id_number' => trim((string) $housingUnit->id_number1),
+            ],
+            ...collect(range(1, 4))->map(fn (int $index): array => [
+                'identity_subject' => self::SUBJECT_SPOUSE,
+                'identity_index' => $index,
+                'identity_name_field' => 'spouse'.$index,
+                'identity_number_field' => 'spouse'.$index.'_id',
+                'owner_name' => trim((string) $housingUnit->{'spouse'.$index}),
+                'id_number' => trim((string) $housingUnit->{'spouse'.$index.'_id'}),
+            ])->all(),
+        ])
+            ->filter(fn (array $identityRow): bool => filled($identityRow['owner_name']) || filled($identityRow['id_number']))
+            ->map(function (array $identityRow) use ($housingUnit): array {
+                return [
+                    ...$identityRow,
+                    'housing_unit_id' => $housingUnit->id,
+                    'identity_key' => $housingUnit->id.':'.$identityRow['identity_number_field'],
+                ];
+            })
+            ->values();
+    }
+
     private function ownerName(HousingUnit $housingUnit): string
     {
         $structuredName = trim(implode(' ', array_filter([
@@ -302,9 +371,12 @@ class RefreshMissingCitizenIdentityReport extends Command
             : trim((string) $housingUnit->unit_owner);
     }
 
-    private function issueType(HousingUnit $housingUnit): string
+    /**
+     * @param  array<string, mixed>  $identityRow
+     */
+    private function issueType(array $identityRow): string
     {
-        return trim((string) $housingUnit->id_number1) === ''
+        return $identityRow['id_number'] === ''
             ? self::ISSUE_OWNER_WITHOUT_IDENTITY
             : self::ISSUE_MISSING_CIVIL_REGISTRY_IDENTITY;
     }
