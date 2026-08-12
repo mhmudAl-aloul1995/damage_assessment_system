@@ -225,8 +225,9 @@ class ExportDataController extends Controller
 
             $exportType = (string) ($payload['export_type'] ?? 'excel');
             $exportMode = (string) ($payload['export_mode'] ?? 'data');
+            $includeAttachmentExcelColumns = (string) ($payload['include_attachment_excel_columns'] ?? '0') === '1';
 
-            if ($exportType === 'zip' || in_array($exportMode, ['attachments', 'data_with_attachments'], true)) {
+            if ($exportType === 'zip' || $includeAttachmentExcelColumns || in_array($exportMode, ['attachments', 'data_with_attachments'], true)) {
                 ExportAttachmentsJob::dispatch($export->id)->onQueue('exports');
             } else {
                 ExportDataJob::dispatch($export->id)->onQueue('exports');

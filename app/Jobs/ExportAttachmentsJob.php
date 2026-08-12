@@ -32,6 +32,11 @@ class ExportAttachmentsJob implements ShouldQueue
     public int $timeout = 0;
 
     /**
+     * @var array<string, array<int, array<string, mixed>>>
+     */
+    private array $attachmentInfoCache = [];
+
+    /**
      * Create a new job instance.
      */
     public function __construct(public int $exportId) {}
@@ -66,6 +71,23 @@ class ExportAttachmentsJob implements ShouldQueue
             $sources = $this->selectedSources($params);
             $rows = $this->attachmentRows($params, $sources);
 
+            if (($params['export_mode'] ?? 'data') === 'data' && $this->shouldIncludeAttachmentExcelColumns($params)) {
+                $fileName = 'exports/export_'.now()->timestamp.'.xlsx';
+                $fullPath = storage_path('app/public/'.$fileName);
+
+                $token = $arcgis->getToken();
+                $this->writeDataWorkbook($fullPath, $params, $sources, $arcgis, $token);
+
+                $export->update([
+                    'status' => 'done',
+                    'progress' => 100,
+                    'processed' => $this->dataRows($params, $sources, $this->dataColumns($params))->count(),
+                    'file_name' => $fileName,
+                ]);
+
+                return;
+            }
+
             $fileName = 'exports/attachments_'.now()->timestamp.'.zip';
             $fullPath = storage_path('app/public/'.$fileName);
 
@@ -87,7 +109,7 @@ class ExportAttachmentsJob implements ShouldQueue
             $totalRows = max(1, $rows->count());
 
             if (($params['export_mode'] ?? null) === 'data_with_attachments') {
-                $this->addDataWorkbookToZip($zip, $params, $sources);
+                $this->addDataWorkbookToZip($zip, $params, $sources, $arcgis, $token);
             }
 
             foreach ($rows as $position => $row) {
@@ -210,7 +232,7 @@ class ExportAttachmentsJob implements ShouldQueue
                 ->contains(fn (string $field): bool => ExportDataColumns::hasColumn($housingUnitsSource, $field));
 
         $query = $needsHousingJoin
-            ? DB::table("{$housingUnitsSource} as h")->join("{$buildingsSource} as b", 'b.globalid', '=', 'h.parentglobalid')
+            ? DB::table("{$buildingsSource} as b")->leftJoin("{$housingUnitsSource} as h", 'b.globalid', '=', 'h.parentglobalid')
             : DB::table("{$buildingsSource} as b");
 
         $query->select([
@@ -352,10 +374,25 @@ class ExportAttachmentsJob implements ShouldQueue
      * @param  array<string, mixed>  $params
      * @param  array<int, string>  $sources
      */
-    private function addDataWorkbookToZip(\ZipArchive $zip, array $params, array $sources): void
+    private function addDataWorkbookToZip(\ZipArchive $zip, array $params, array $sources, ArcgisService $arcgis, string $token): void
     {
         $dataPath = storage_path('app/public/exports/data_'.$this->exportId.'_'.now()->timestamp.'.xlsx');
 
+        $this->writeDataWorkbook($dataPath, $params, $sources, $arcgis, $token);
+        $zip->addFile($dataPath, 'data.xlsx');
+        register_shutdown_function(static function () use ($dataPath): void {
+            if (is_file($dataPath)) {
+                unlink($dataPath);
+            }
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @param  array<int, string>  $sources
+     */
+    private function writeDataWorkbook(string $dataPath, array $params, array $sources, ArcgisService $arcgis, string $token): void
+    {
         if (! is_dir(dirname($dataPath))) {
             mkdir(dirname($dataPath), 0777, true);
         }
@@ -371,26 +408,27 @@ class ExportAttachmentsJob implements ShouldQueue
             ->setCellAlignment(CellAlignment::CENTER);
 
         $columns = $this->dataColumns($params);
+        $attachmentColumns = $this->attachmentExcelColumns($params);
         $labels = $this->assessmentLabels();
         $writer->addRow(Row::fromValues(
-            collect($columns)->map(fn (array $column): string => $labels[$column['field']] ?? ucwords(str_replace('_', ' ', $column['field'])))->all(),
+            collect($columns)
+                ->map(fn (array $column): string => $labels[$column['field']] ?? ucwords(str_replace('_', ' ', $column['field'])))
+                ->merge(collect($attachmentColumns)->pluck('label'))
+                ->all(),
             $headerStyle,
         ));
 
         $this->dataRows($params, $sources, $columns)
-            ->each(function (object $row) use ($writer, $columns): void {
+            ->each(function (object $row) use ($writer, $columns, $attachmentColumns, $params, $sources, $arcgis, $token): void {
                 $writer->addRow(Row::fromValues(
-                    collect($columns)->map(fn (array $column): mixed => $row->{$column['alias']} ?? null)->all(),
+                    collect($columns)
+                        ->map(fn (array $column): mixed => $row->{$column['alias']} ?? null)
+                        ->merge($this->attachmentExcelValues($row, $attachmentColumns, $params, $sources, $arcgis, $token))
+                        ->all(),
                 ));
             });
 
         $writer->close();
-        $zip->addFile($dataPath, 'data.xlsx');
-        register_shutdown_function(static function () use ($dataPath): void {
-            if (is_file($dataPath)) {
-                unlink($dataPath);
-            }
-        });
     }
 
     /**
@@ -431,6 +469,103 @@ class ExportAttachmentsJob implements ShouldQueue
 
     /**
      * @param  array<string, mixed>  $params
+     * @return array<int, array{type: string, label: string}>
+     */
+    private function attachmentExcelColumns(array $params): array
+    {
+        if (! $this->shouldIncludeAttachmentExcelColumns($params)) {
+            return [];
+        }
+
+        $labels = [
+            'all' => 'كل المرفقات',
+            'images' => 'صور فقط',
+            'pdf' => 'PDF فقط',
+            'damage_photos' => 'صور الضرر',
+            'identity' => 'مرفقات الهوية',
+            'ownership' => 'وثائق الملكية',
+            'permit' => 'رخصة البلدية',
+            'other_documents' => 'مستندات أخرى',
+        ];
+
+        return collect($this->selectedAttachmentTypeFilters($params))
+            ->map(fn (string $type): array => [
+                'type' => $type,
+                'label' => $labels[$type] ?? ucwords(str_replace('_', ' ', $type)),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array{type: string, label: string}>  $attachmentColumns
+     * @param  array<string, mixed>  $params
+     * @param  array<int, string>  $sources
+     * @return array<int, string>
+     */
+    private function attachmentExcelValues(
+        object $row,
+        array $attachmentColumns,
+        array $params,
+        array $sources,
+        ArcgisService $arcgis,
+        string $token,
+    ): array {
+        if ($attachmentColumns === []) {
+            return [];
+        }
+
+        $display = (string) ($params['attachment_excel_display'] ?? 'links');
+        $records = [];
+
+        if (in_array(self::SOURCE_BUILDING_ARCGIS, $sources, true) && filled($row->__building_objectid ?? null)) {
+            $records[] = [
+                'layer_id' => 0,
+                'object_id' => (string) $row->__building_objectid,
+            ];
+        }
+
+        if (in_array(self::SOURCE_HOUSING_UNIT_ARCGIS, $sources, true) && filled($row->__housing_objectid ?? null)) {
+            $records[] = [
+                'layer_id' => 1,
+                'object_id' => (string) $row->__housing_objectid,
+            ];
+        }
+
+        return collect($attachmentColumns)
+            ->map(function (array $column) use ($records, $display, $arcgis, $token): string {
+                $values = collect($records)
+                    ->flatMap(function (array $record) use ($column, $display, $arcgis, $token): array {
+                        return collect($this->cachedArcgisAttachments($arcgis, $record['object_id'], $record['layer_id'], $token))
+                            ->filter(fn (array $attachment): bool => $this->matchesAttachmentTypeFilters($attachment, [$column['type']]))
+                            ->map(function (array $attachment) use ($record, $display, $arcgis, $token): string {
+                                $attachmentId = $attachment['id'] ?? null;
+                                $name = (string) ($attachment['name'] ?? $attachmentId ?? 'attachment');
+
+                                if ($display === 'names' || ! filled($attachmentId)) {
+                                    return $name;
+                                }
+
+                                return $arcgis->buildUrl($record['object_id'], $attachmentId, $record['layer_id'], $token);
+                            })
+                            ->all();
+                    })
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                return $values->implode("\n");
+            })
+            ->all();
+    }
+
+    private function shouldIncludeAttachmentExcelColumns(array $params): bool
+    {
+        return (string) ($params['include_attachment_excel_columns'] ?? '0') === '1';
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
      * @param  array<int, string>  $sources
      * @param  array<int, array{table: string, field: string, alias: string}>  $columns
      */
@@ -446,7 +581,7 @@ class ExportAttachmentsJob implements ShouldQueue
                 ->contains(fn (string $field): bool => ExportDataColumns::hasColumn($housingUnitsSource, $field));
 
         $query = $needsHousingJoin
-            ? DB::table("{$housingUnitsSource} as h")->join("{$buildingsSource} as b", 'b.globalid', '=', 'h.parentglobalid')
+            ? DB::table("{$buildingsSource} as b")->leftJoin("{$housingUnitsSource} as h", 'b.globalid', '=', 'h.parentglobalid')
             : DB::table("{$buildingsSource} as b");
 
         $selects = collect($columns)
@@ -461,6 +596,17 @@ class ExportAttachmentsJob implements ShouldQueue
             })
             ->all();
 
+        $selects[] = 'b.objectid as `__building_objectid`';
+        $selects[] = 'b.globalid as `__building_globalid`';
+
+        if ($needsHousingJoin) {
+            $selects[] = 'h.objectid as `__housing_objectid`';
+            $selects[] = 'h.globalid as `__housing_globalid`';
+        } else {
+            $selects[] = 'NULL as `__housing_objectid`';
+            $selects[] = 'NULL as `__housing_globalid`';
+        }
+
         $query->selectRaw(implode(', ', $selects));
         $this->applyFilters($query, $params);
 
@@ -468,6 +614,20 @@ class ExportAttachmentsJob implements ShouldQueue
             ->orderBy('b.objectid')
             ->when($needsHousingJoin, fn ($query) => $query->orderBy('h.objectid'))
             ->get();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function cachedArcgisAttachments(ArcgisService $arcgis, string $objectId, int $layerId, string $token): array
+    {
+        $key = $layerId.':'.$objectId;
+
+        if (! array_key_exists($key, $this->attachmentInfoCache)) {
+            $this->attachmentInfoCache[$key] = $arcgis->getAttachments($objectId, $layerId, $token);
+        }
+
+        return $this->attachmentInfoCache[$key];
     }
 
     /**
@@ -530,7 +690,7 @@ class ExportAttachmentsJob implements ShouldQueue
                 return true;
             }
 
-            if ($type === 'identity' && $this->containsAny($searchableText, ['identity', ' id ', 'id_', '_id', 'passport', 'هوية', 'الهويه', 'الهوية', 'جواز'])) {
+            if ($type === 'identity' && $this->containsAny($searchableText, ['identity', ' id ', 'id_', '_id', 'id-', '-id', 'passport', 'هوية', 'الهويه', 'الهوية', 'جواز'])) {
                 return true;
             }
 

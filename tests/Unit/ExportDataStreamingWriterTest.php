@@ -266,6 +266,8 @@ test('it exports data with selected arcgis building attachments to a zip with an
             'building_columns' => ['objectid', 'owner_name'],
             'attachment_sources' => ['building_arcgis'],
             'attachment_type_filters' => ['damage_photos'],
+            'include_attachment_excel_columns' => '1',
+            'attachment_excel_display' => 'links',
             'attachment_grouping' => 'by_building',
             'attachment_filename_strategy' => 'objectid_type',
             'include_attachment_index' => '1',
@@ -293,7 +295,28 @@ test('it exports data with selected arcgis building attachments to a zip with an
         expect($zip->getFromName('buildings/4001/4001_building_902_identity.pdf'))->toBeFalse();
         expect($zip->getFromName('attachments-index.csv'))->toContain('building-with-attachment');
 
+        $dataPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'export-data-with-attachment-links.xlsx';
+        file_put_contents($dataPath, $zip->getFromName('data.xlsx'));
+
         $zip->close();
+
+        $reader = new Reader;
+        $reader->open($dataPath);
+
+        $rows = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+
+            break;
+        }
+
+        $reader->close();
+        unlink($dataPath);
+
+        expect($rows[1][2])->toContain('/attachments/901?token=arcgis-token');
     } finally {
         $export->refresh();
 
@@ -379,6 +402,81 @@ test('it matches semantic attachment type filters using arabic names and arcgis 
         expect($zip->getFromName('housing_units/5001/5001_housing_unit_1003_general-photo.jpg'))->toBeFalse();
 
         $zip->close();
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
+test('it can export attachment columns as file names in an xlsx without downloading attachment files', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/6001/attachments' => Http::response([
+            'attachmentInfos' => [
+                [
+                    'id' => 1101,
+                    'name' => 'id-card.pdf',
+                    'contentType' => 'application/pdf',
+                ],
+            ],
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 6001,
+        'globalid' => 'building-with-name-column',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_mode' => 'data',
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+            'attachment_sources' => ['building_arcgis'],
+            'attachment_type_filters' => ['identity'],
+            'include_attachment_excel_columns' => '1',
+            'attachment_excel_display' => 'names',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportAttachmentsJob($export->id))->handle(app(ArcgisService::class));
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+        expect($export->file_name)->toEndWith('.xlsx');
+
+        $reader = new Reader;
+        $reader->open(storage_path('app/public/'.$export->file_name));
+
+        $rows = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+
+            break;
+        }
+
+        $reader->close();
+
+        expect($rows[1])->toBe([6001, 'id-card.pdf']);
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments/1101'));
     } finally {
         $export->refresh();
 

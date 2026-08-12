@@ -305,6 +305,24 @@
 											<option value="owner_name">اسم المالك</option>
 										</select>
 									</div>
+
+									<div class="col-lg-4 mb-4">
+										<label class="form-check form-check-custom form-check-solid mt-8">
+											<input type="hidden" name="include_attachment_excel_columns" value="0">
+											<input class="form-check-input" type="checkbox" name="include_attachment_excel_columns"
+												value="1">
+											<span class="form-check-label ms-3">إضافة المرفقات كأعمدة داخل Excel</span>
+										</label>
+									</div>
+
+									<div class="col-lg-4 mb-4">
+										<label class="form-label fw-bold" for="attachmentExcelDisplay">عرض المرفق داخل Excel</label>
+										<select id="attachmentExcelDisplay" name="attachment_excel_display"
+											class="form-select form-select-solid">
+											<option value="links">روابط</option>
+											<option value="names">أسماء الملفات فقط</option>
+										</select>
+									</div>
 								</div>
 
 								<label class="form-check form-check-custom form-check-solid">
@@ -822,8 +840,7 @@
 		}
 
 		function syncAttachmentExportOptions() {
-			const isAttachmentMode = selectedExportMode() !== 'data';
-			$('#attachmentExportOptions').toggleClass('d-none', !isAttachmentMode);
+			$('#attachmentExportOptions').removeClass('d-none');
 		}
 
 		function toggleVisibleGroup(listId, inputName, checked) {
