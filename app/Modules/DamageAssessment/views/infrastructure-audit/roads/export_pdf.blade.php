@@ -203,11 +203,13 @@
             white-space: nowrap;
         }
 
-        .governorate { width: 21%; }
-        .neighborhood { width: 21%; }
-        .count { width: 14%; }
-        .rate { width: 16%; }
-        .length { width: 20%; }
+        .governorate { width: 14%; }
+        .municipality { width: 15%; }
+        .neighborhood { width: 14%; }
+        .damage-level { width: 13%; }
+        .count { width: 10%; }
+        .rate { width: 11%; }
+        .length { width: 15%; }
 
         .footer {
             color: #8a97aa;
@@ -291,7 +293,9 @@
                     <col class="rate">
                     <col class="count">
                     <col class="count">
+                    <col class="damage-level">
                     <col class="neighborhood">
+                    <col class="municipality">
                     <col class="governorate">
                 </colgroup>
                 <thead>
@@ -300,7 +304,9 @@
                         <th>نسبة التدقيق</th>
                         <th>ما تم تدقيقه</th>
                         <th>ما تم حصره</th>
+                        <th>مستوى الضرر</th>
                         <th>الحي</th>
+                        <th>البلدية</th>
                         <th>المحافظة</th>
                     </tr>
                 </thead>
@@ -316,7 +322,9 @@
                             <td class="num">{{ $rowAuditRate }}%</td>
                             <td class="num">{{ number_format((int) $row['audited_count']) }}</td>
                             <td class="num">{{ number_format((int) $row['surveyed_count']) }}</td>
+                            <td class="text-start">{{ $row['road_damage_level'] }}</td>
                             <td class="text-start">{{ $row['neighborhood'] }}</td>
+                            <td class="text-start">{{ $row['municipality'] }}</td>
                             <td class="text-start">{{ $row['governorate'] }}</td>
                         </tr>
                     @endforeach
@@ -327,7 +335,7 @@
                         <td class="num">{{ $auditRate }}%</td>
                         <td class="num">{{ number_format((int) $totalAudited) }}</td>
                         <td class="num">{{ number_format((int) $totalSurveyed) }}</td>
-                        <td colspan="2">الإجمالي</td>
+                        <td colspan="4">الإجمالي</td>
                     </tr>
                 </tfoot>
             </table>

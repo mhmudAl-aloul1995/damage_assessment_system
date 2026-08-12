@@ -633,11 +633,15 @@ class InfAuditRoadFacilityController extends Controller
         $governorateExpression = Schema::hasColumn('road_facility_surveys', 'governorate')
             ? "COALESCE(NULLIF(road_facility_surveys.governorate, ''), NULLIF(road_facility_surveys.municipalitie, ''), '-')"
             : "COALESCE(NULLIF(road_facility_surveys.municipalitie, ''), '-')";
+        $municipalityExpression = "COALESCE(NULLIF(road_facility_surveys.municipalitie, ''), '-')";
         $neighborhoodExpression = "COALESCE(NULLIF(road_facility_surveys.neighborhood, ''), '-')";
+        $damageLevelExpression = "COALESCE(NULLIF(road_facility_surveys.road_damage_level, ''), '-')";
 
         return $this->filteredAuditQuery($request, false)
             ->selectRaw($governorateExpression.' as governorate')
+            ->selectRaw($municipalityExpression.' as municipality')
             ->selectRaw($neighborhoodExpression.' as neighborhood')
+            ->selectRaw($damageLevelExpression.' as road_damage_level')
             ->selectRaw('COUNT(*) as surveyed_count')
             ->selectRaw(
                 "SUM(CASE WHEN latest_statuses.status_name IS NOT NULL AND latest_statuses.status_name <> 'assigned' THEN 1 ELSE 0 END) as audited_count"
@@ -647,13 +651,19 @@ class InfAuditRoadFacilityController extends Controller
                 $join->on('latest_statuses.globalid', '=', 'road_facility_surveys.globalid');
             })
             ->groupByRaw($governorateExpression)
+            ->groupByRaw($municipalityExpression)
             ->groupByRaw($neighborhoodExpression)
+            ->groupByRaw($damageLevelExpression)
             ->orderByRaw($governorateExpression)
+            ->orderByRaw($municipalityExpression)
             ->orderByRaw($neighborhoodExpression)
+            ->orderByRaw($damageLevelExpression)
             ->get()
             ->map(fn (RoadFacilitySurvey $row): array => [
                 'governorate' => $row->governorate ?: '-',
+                'municipality' => $row->municipality ?: '-',
                 'neighborhood' => $row->neighborhood ?: '-',
+                'road_damage_level' => $row->road_damage_level ?: '-',
                 'surveyed_count' => (int) $row->surveyed_count,
                 'audited_count' => (int) $row->audited_count,
                 'road_length_meters' => round((float) $row->road_length_meters, 2),

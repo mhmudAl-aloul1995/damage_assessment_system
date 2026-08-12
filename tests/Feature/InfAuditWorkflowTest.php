@@ -396,6 +396,7 @@ test('database officer can export filtered road audit summary', function (): voi
         'governorate' => 'Gaza',
         'municipalitie' => 'Gaza Municipality',
         'neighborhood' => 'Old City',
+        'road_damage_level' => 'High',
         'str_name' => 'Assigned Road',
         'assignedto' => 'road.field.one',
         'shape__length' => 0.001,
@@ -407,6 +408,7 @@ test('database officer can export filtered road audit summary', function (): voi
         'governorate' => 'Gaza',
         'municipalitie' => 'Gaza Municipality',
         'neighborhood' => 'Old City',
+        'road_damage_level' => 'High',
         'str_name' => 'Accepted Road',
         'assignedto' => 'road.field.two',
         'shape__length' => 0.002,
@@ -418,6 +420,7 @@ test('database officer can export filtered road audit summary', function (): voi
         'governorate' => 'Rafah',
         'municipalitie' => 'Rafah Municipality',
         'neighborhood' => 'Al-Salam',
+        'road_damage_level' => 'Low',
         'str_name' => 'Outside Filter Road',
         'assignedto' => 'road.field.three',
         'shape__length' => 0.004,
@@ -466,7 +469,9 @@ test('database officer can export filtered road audit summary', function (): voi
         expect($export->array())->toBe([
             [
                 'Gaza',
+                'Gaza Municipality',
                 'Old City',
+                'High',
                 2,
                 1,
                 333.0,

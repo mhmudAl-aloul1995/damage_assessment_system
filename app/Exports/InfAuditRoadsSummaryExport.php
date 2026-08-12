@@ -27,7 +27,9 @@ class InfAuditRoadsSummaryExport implements FromArray, ShouldAutoSize, WithCusto
     {
         return [
             'المحافظة',
+            'البلدية',
             'الحي',
+            'مستوى الضرر',
             'ما تم حصره',
             'ما تم تدقيقه',
             'أطوال الطرق (متر)',
@@ -39,7 +41,9 @@ class InfAuditRoadsSummaryExport implements FromArray, ShouldAutoSize, WithCusto
         return collect($this->rows)
             ->map(fn (array $row): array => [
                 $row['governorate'],
+                $row['municipality'],
                 $row['neighborhood'],
+                $row['road_damage_level'],
                 $row['surveyed_count'],
                 $row['audited_count'],
                 $row['road_length_meters'],
@@ -61,14 +65,15 @@ class InfAuditRoadsSummaryExport implements FromArray, ShouldAutoSize, WithCusto
                 $sheet->setRightToLeft(true);
                 $sheet->freezePane('A9');
 
-                $sheet->mergeCells('A1:E2');
+                $sheet->mergeCells('A1:G2');
                 $sheet->mergeCells('A3:B3');
                 $sheet->setCellValue('A1', 'تقرير تدقيق الطرق');
                 $sheet->setCellValue('A3', 'Damage Assessment System');
-                $sheet->setCellValue('D3', 'تاريخ التصدير');
-                $sheet->setCellValue('E3', now()->format('Y-m-d H:i'));
+                $sheet->mergeCells('F3:G3');
+                $sheet->setCellValue('E3', 'تاريخ التصدير');
+                $sheet->setCellValue('F3', now()->format('Y-m-d H:i'));
 
-                $sheet->getStyle('A1:E3')->applyFromArray([
+                $sheet->getStyle('A1:G3')->applyFromArray([
                     'font' => [
                         'name' => 'Droid Arabic Kufi',
                         'bold' => true,
@@ -94,7 +99,7 @@ class InfAuditRoadsSummaryExport implements FromArray, ShouldAutoSize, WithCusto
                     ['range' => 'A5:A6', 'label' => 'ما تم حصره', 'value' => number_format((int) $totalSurveyed), 'color' => '009EF7', 'fill' => 'F1FAFF'],
                     ['range' => 'B5:B6', 'label' => 'ما تم تدقيقه', 'value' => number_format((int) $totalAudited), 'color' => '50CD89', 'fill' => 'E8FFF3'],
                     ['range' => 'C5:C6', 'label' => 'نسبة التدقيق', 'value' => $auditRate, 'color' => 'FFC700', 'fill' => 'FFF8DD'],
-                    ['range' => 'D5:E6', 'label' => 'أطوال الطرق (متر)', 'value' => number_format((float) $totalLength, 2), 'color' => '181C32', 'fill' => 'F9F9F9'],
+                    ['range' => 'D5:G6', 'label' => 'أطوال الطرق (متر)', 'value' => number_format((float) $totalLength, 2), 'color' => '181C32', 'fill' => 'F9F9F9'],
                 ];
 
                 foreach ($summaryCards as $card) {
@@ -129,7 +134,7 @@ class InfAuditRoadsSummaryExport implements FromArray, ShouldAutoSize, WithCusto
                 $sheet->getRowDimension(5)->setRowHeight(32);
                 $sheet->getRowDimension(6)->setRowHeight(32);
 
-                $sheet->getStyle('A8:E8')->applyFromArray([
+                $sheet->getStyle('A8:G8')->applyFromArray([
                     'font' => [
                         'name' => 'Droid Arabic Kufi',
                         'bold' => true,
@@ -145,7 +150,7 @@ class InfAuditRoadsSummaryExport implements FromArray, ShouldAutoSize, WithCusto
                     ],
                 ]);
 
-                $sheet->getStyle("A8:E{$highestRow}")->applyFromArray([
+                $sheet->getStyle("A8:G{$highestRow}")->applyFromArray([
                     'font' => [
                         'name' => 'Droid Arabic Kufi',
                     ],
@@ -162,12 +167,12 @@ class InfAuditRoadsSummaryExport implements FromArray, ShouldAutoSize, WithCusto
                     ],
                 ]);
 
-                $sheet->getStyle("A9:E{$highestRow}")->getFont()->setSize(10);
-                $sheet->getStyle("E9:E{$highestRow}")->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle("A9:G{$highestRow}")->getFont()->setSize(10);
+                $sheet->getStyle("G9:G{$highestRow}")->getNumberFormat()->setFormatCode('#,##0.00');
 
                 foreach (range(9, $highestRow) as $row) {
                     if ($row % 2 === 0) {
-                        $sheet->getStyle("A{$row}:E{$row}")->getFill()
+                        $sheet->getStyle("A{$row}:G{$row}")->getFill()
                             ->setFillType(Fill::FILL_SOLID)
                             ->getStartColor()->setRGB('FCFCFC');
                     }
