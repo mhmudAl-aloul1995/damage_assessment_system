@@ -101,6 +101,23 @@ it('groups report links into sidebar categories', function () {
         ->toContain('damage-assessment/reports/engineer-audit');
 });
 
+it('shows missing citizen identities sidebar link to auditing supervisor and project officer', function (string $roleName) {
+    $role = Role::findOrCreate($roleName, 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $urls = Sidebar::forUser($user)
+        ->flatMap(fn (array $module) => $module['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->pluck('url')
+        ->all();
+
+    expect($urls)->toContain('damage-assessment/reports/missing-citizen-identities');
+})->with([
+    'auditing supervisor' => 'Auditing Supervisor',
+    'project officer' => 'Project Officer',
+]);
+
 it('groups visible sidebar sections by module', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

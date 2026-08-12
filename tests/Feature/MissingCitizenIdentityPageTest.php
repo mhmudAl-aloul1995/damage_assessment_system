@@ -9,6 +9,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
     Schema::create('citizens', function (Blueprint $table): void {
@@ -36,9 +37,18 @@ function createSgazaTable(): void
     });
 }
 
+function missingCitizenIdentityUser(string $roleName = 'Database Officer'): User
+{
+    $role = Role::findOrCreate($roleName, 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    return $user;
+}
+
 it('shows the missing citizen identities page', function (): void {
     $response = $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->get(route('reports.missing-citizen-identities.index'));
 
     $response
@@ -46,6 +56,23 @@ it('shows the missing citizen identities page', function (): void {
         ->assertSee(__('ui.missing_citizen_identities.title'))
         ->assertSee(__('ui.missing_citizen_identities.approve_selected'))
         ->assertSee('kt_table_missing_citizen_identities');
+});
+
+it('allows auditing supervisor and project officer roles to access the missing identities page', function (string $roleName): void {
+    $this
+        ->actingAs(missingCitizenIdentityUser($roleName))
+        ->get(route('reports.missing-citizen-identities.index'))
+        ->assertOk();
+})->with([
+    'auditing supervisor' => 'Auditing Supervisor',
+    'project officer' => 'Project Officer',
+]);
+
+it('blocks users without an allowed role from the missing identities page', function (): void {
+    $this
+        ->actingAs(User::factory()->create())
+        ->get(route('reports.missing-citizen-identities.index'))
+        ->assertForbidden();
 });
 
 it('returns housing unit identities that are not active citizens', function (): void {
@@ -88,7 +115,7 @@ it('returns housing unit identities that are not active citizens', function (): 
     expect(MissingCitizenIdentityReport::query()->count())->toBe(2);
 
     $response = $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.data', [
             'after_id' => 0,
             'per_page' => 1,
@@ -108,7 +135,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonCount(2, 'data');
 
     $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.data', [
             'after_id' => 0,
             'name_match_status' => 'matched',
@@ -184,7 +211,7 @@ it('returns housing unit documents for a missing identity report', function (): 
         ->firstOrFail();
 
     $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.documents', $report))
         ->assertOk()
         ->assertJsonPath('data.0.title', 'Ownership document')
@@ -268,7 +295,7 @@ it('approves a single name match and syncs the new identity to arcgis', function
     expect($report->name_match_status)->toBe('matched');
 
     $response = $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
             'confirm' => true,
         ]);
@@ -282,7 +309,7 @@ it('approves a single name match and syncs the new identity to arcgis', function
         ->and($report->fresh()->approved_at)->not->toBeNull();
 
     $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.data'))
         ->assertOk()
         ->assertJsonMissing(['id_number1' => '111111111']);
@@ -337,7 +364,7 @@ it('lists ambiguous name candidates and approves the selected citizen', function
     expect($report->name_match_status)->toBe('ambiguous')
         ->and($report->matched_citizens_count)->toBe(2);
 
-    $user = User::factory()->create();
+    $user = missingCitizenIdentityUser();
 
     $this
         ->actingAs($user)
@@ -401,7 +428,7 @@ it('prioritizes sgaza candidates before citizens for matching names', function (
         ->and($report->matched_citizens_count)->toBe(2);
 
     $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.name-candidates', $report))
         ->assertOk()
         ->assertJsonPath('data.0.id_card_no', '555555556')
@@ -449,7 +476,7 @@ it('counts duplicate sgaza and citizen candidates with the same identity as one 
         ->and($report->matched_citizen_id_card_no)->toBe('555555557');
 
     $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.name-candidates', $report))
         ->assertOk()
         ->assertJsonCount(1, 'data')
@@ -506,7 +533,7 @@ it('searches the civil registry for unmatched names and approves a manually sele
 
     expect($report->name_match_status)->toBe('not_found');
 
-    $user = User::factory()->create();
+    $user = missingCitizenIdentityUser();
 
     $this
         ->actingAs($user)
@@ -575,7 +602,7 @@ it('searches sgaza civil registry and approves a manually selected sgaza identit
 
     expect($report->name_match_status)->toBe('not_found');
 
-    $user = User::factory()->create();
+    $user = missingCitizenIdentityUser();
 
     $this
         ->actingAs($user)
@@ -627,7 +654,7 @@ it('searches sgaza by first father grandfather and family name fields', function
     $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
 
     $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.citizen-search', [
             'report' => $report,
             'q' => 'واصل محمود سعيد لحسان',
@@ -664,7 +691,7 @@ it('searches sgaza by separate name part inputs without a general query', functi
     $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
 
     $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.citizen-search', [
             'report' => $report,
             'first_name' => 'وا',
@@ -730,7 +757,7 @@ it('bulk approves selected single name matches', function (): void {
         ->get();
 
     $this
-        ->actingAs(User::factory()->create())
+        ->actingAs(missingCitizenIdentityUser())
         ->postJson(route('reports.missing-citizen-identities.bulk-approve-name-matches'), [
             'report_ids' => $reports->pluck('id')->all(),
         ])

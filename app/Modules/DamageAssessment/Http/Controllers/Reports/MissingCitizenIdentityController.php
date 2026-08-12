@@ -25,6 +25,11 @@ use Throwable;
 
 class MissingCitizenIdentityController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('role:Database Officer|Auditing Supervisor|Project Officer');
+    }
+
     public function index(): ViewContract
     {
         return View::make('damage-assessment::reports.missing-citizen-identities', [
