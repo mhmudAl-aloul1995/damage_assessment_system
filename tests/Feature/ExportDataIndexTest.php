@@ -69,6 +69,21 @@ it('shows the assessment obstacle export filter with a readable label', function
     $response->assertSee('value="no"', false);
 });
 
+it('shows attachment export controls on the export page', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response->assertOk();
+    $response->assertSee('value="attachments"', false);
+    $response->assertSee('name="attachment_sources[]"', false);
+    $response->assertSee('value="building_arcgis"', false);
+    $response->assertSee('value="housing_unit_arcgis"', false);
+    $response->assertSee('data-type="zip"', false);
+});
+
 it('fills the neighborhood filter from unique building neighborhoods', function () {
     Filter::query()->create([
         'list_name' => 'neighborhood',

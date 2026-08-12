@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\DamageAssessment\Http\Controllers\Exports;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ExportAttachmentsJob;
 use App\Jobs\ExportDataJob;
 use App\Models\Assessment;
 use App\Models\Export;
@@ -222,7 +223,14 @@ class ExportDataController extends Controller
 
             $this->clearImportedObjectIdFilter($request);
 
-            ExportDataJob::dispatch($export->id)->onQueue('exports');
+            $exportType = (string) ($payload['export_type'] ?? 'excel');
+            $exportMode = (string) ($payload['export_mode'] ?? 'data');
+
+            if ($exportType === 'zip' || $exportMode === 'attachments') {
+                ExportAttachmentsJob::dispatch($export->id)->onQueue('exports');
+            } else {
+                ExportDataJob::dispatch($export->id)->onQueue('exports');
+            }
 
             return response()->json([
                 'status' => true,

@@ -1,10 +1,13 @@
 <?php
 
+use App\Jobs\ExportAttachmentsJob;
 use App\Jobs\ExportDataJob;
 use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\Export;
 use App\Models\User;
+use App\services\ArcgisService;
+use Illuminate\Support\Facades\Http;
 use OpenSpout\Reader\XLSX\Reader;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
@@ -212,6 +215,73 @@ test('it filters building exports by assessment obstacle', function () {
         $reader->close();
 
         expect($rows[1])->toBe([3001, 'yes']);
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
+test('it exports selected arcgis building attachments to a zip with an index', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/4001/attachments' => Http::response([
+            'attachmentInfos' => [
+                [
+                    'id' => 901,
+                    'name' => 'damage photo.jpg',
+                    'contentType' => 'image/jpeg',
+                    'size' => 12,
+                ],
+            ],
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/4001/attachments/901*' => Http::response('image-bytes'),
+    ]);
+
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 4001,
+        'globalid' => 'building-with-attachment',
+        'owner_name' => 'Attachment Owner',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_mode' => 'attachments',
+            'export_type' => 'zip',
+            'attachment_sources' => ['building_arcgis'],
+            'attachment_grouping' => 'by_building',
+            'attachment_filename_strategy' => 'objectid_type',
+            'include_attachment_index' => '1',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportAttachmentsJob($export->id))->handle(app(ArcgisService::class));
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+        expect($export->file_name)->not->toBeNull();
+
+        $zip = new \ZipArchive;
+        $zip->open(storage_path('app/public/'.$export->file_name));
+
+        expect($zip->getFromName('buildings/4001/4001_building_901_damage photo.jpg'))->toBe('image-bytes');
+        expect($zip->getFromName('attachments-index.csv'))->toContain('building-with-attachment');
+
+        $zip->close();
     } finally {
         $export->refresh();
 

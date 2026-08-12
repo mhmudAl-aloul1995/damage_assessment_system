@@ -129,6 +129,15 @@
 										</i>
 										<span>PDF (.pdf)</span>
 									</button>
+
+									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
+										data-type="zip">
+										<i class="ki-duotone ki-folder-down fs-4 text-warning">
+											<span class="path1"></span>
+											<span class="path2"></span>
+										</i>
+										<span>ZIP مرفقات</span>
+									</button>
 								</div>
 							</div>
 
@@ -212,6 +221,76 @@
 											value="{{ old('building_end_to') }}">
 									</div>
 								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="card card-bordered mb-5">
+						<div class="card-header">
+							<h3 class="card-title mb-0">نوع التصدير</h3>
+						</div>
+
+						<div class="card-body">
+							<div class="btn-group w-100 mb-6" role="group" aria-label="نوع التصدير">
+								<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeData"
+									value="data" autocomplete="off" checked>
+								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeData">
+									بيانات فقط
+								</label>
+
+								<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeAttachments"
+									value="attachments" autocomplete="off">
+								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeAttachments">
+									مرفقات فقط
+								</label>
+
+							</div>
+
+							<div id="attachmentExportOptions" class="border rounded p-4 d-none">
+								<div class="row">
+									<div class="col-lg-4 mb-4">
+										<label class="form-label fw-bold">نوع المرفق</label>
+										<div class="d-flex flex-column gap-3">
+											<label class="form-check form-check-custom form-check-solid">
+												<input class="form-check-input" type="checkbox" name="attachment_sources[]"
+													value="building_arcgis" checked>
+												<span class="form-check-label ms-3">مرفقات المباني</span>
+											</label>
+
+											<label class="form-check form-check-custom form-check-solid">
+												<input class="form-check-input" type="checkbox" name="attachment_sources[]"
+													value="housing_unit_arcgis" checked>
+												<span class="form-check-label ms-3">مرفقات الوحد السكنية</span>
+											</label>
+										</div>
+									</div>
+
+									<div class="col-lg-4 mb-4">
+										<label class="form-label fw-bold" for="attachmentGrouping">طريقة التجميع</label>
+										<select id="attachmentGrouping" name="attachment_grouping"
+											class="form-select form-select-solid">
+											<option value="by_building">مجلد لكل مبنى</option>
+											<option value="by_housing_unit">مجلد لكل وحدة سكنية</option>
+											<option value="flat">كل الملفات في مجلد واحد</option>
+										</select>
+									</div>
+
+									<div class="col-lg-4 mb-4">
+										<label class="form-label fw-bold" for="attachmentFilenameStrategy">تسمية الملفات</label>
+										<select id="attachmentFilenameStrategy" name="attachment_filename_strategy"
+											class="form-select form-select-solid">
+											<option value="objectid_type">ObjectID + نوع المرفق</option>
+											<option value="globalid">GlobalID</option>
+											<option value="owner_name">اسم المالك</option>
+										</select>
+									</div>
+								</div>
+
+								<label class="form-check form-check-custom form-check-solid">
+									<input type="hidden" name="include_attachment_index" value="0">
+									<input class="form-check-input" type="checkbox" name="include_attachment_index" value="1" checked>
+									<span class="form-check-label ms-3">تضمين ملف فهرس للمرفقات داخل ZIP</span>
+								</label>
 							</div>
 						</div>
 					</div>
@@ -717,6 +796,15 @@
 			$('.filter-select2').val(null).trigger('change');
 		}
 
+		function selectedExportMode() {
+			return $('input[name="export_mode"]:checked').val() || 'data';
+		}
+
+		function syncAttachmentExportOptions() {
+			const isAttachmentMode = selectedExportMode() !== 'data';
+			$('#attachmentExportOptions').toggleClass('d-none', !isAttachmentMode);
+		}
+
 		function toggleVisibleGroup(listId, inputName, checked) {
 			const list = document.getElementById(listId);
 			if (!list) return;
@@ -980,6 +1068,7 @@
 			filterColumns('housingSearch', 'housingColumnsList', 'housingCounter');
 			filterFilterCards();
 			syncObjectIdInputMethod();
+			syncAttachmentExportOptions();
 
 			$('.filter-select2').select2({
 				width: '100%',
@@ -1050,6 +1139,7 @@
 			});
 
 			$('input[name="objectid_input_method"]').on('change', syncObjectIdInputMethod);
+			$('input[name="export_mode"]').on('change', syncAttachmentExportOptions);
 
 			$('#resetObjectIdsFilterBtn').on('click', function () {
 				$.ajax({
@@ -1074,6 +1164,11 @@
 				if ($('.export-btn').prop('disabled')) return;
 
 				const exportType = $(this).data('type');
+				if (exportType === 'zip' && selectedExportMode() === 'data') {
+					$('#exportModeAttachments').prop('checked', true);
+					syncAttachmentExportOptions();
+				}
+
 				const formData = $('#exportForm').serializeArray();
 				formData.push({ name: 'export_type', value: exportType });
 
