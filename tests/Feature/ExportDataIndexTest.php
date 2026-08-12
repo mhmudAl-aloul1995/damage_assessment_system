@@ -24,6 +24,10 @@ it('shows export page actions including objectid import', function () {
     $response->assertSee(__('ui.exports.import_objectids'));
     $response->assertSee('name="building_end_from"', false);
     $response->assertSee('name="building_end_to"', false);
+    $response->assertSee('name="include_legal_notes"', false);
+    $response->assertSee('name="include_engineering_notes"', false);
+    $response->assertSee('name="legal_notes_filter"', false);
+    $response->assertSee('name="engineering_notes_filter"', false);
 });
 
 it('shows real database columns even when they are not assessment fields', function () {
@@ -141,6 +145,37 @@ it('allows attachment only exports without selecting data columns', function () 
         ]);
 
     expect(Export::query()->count())->toBe(1);
+});
+
+it('allows data exports with audit notes only', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('export.start'), [
+            'export_mode' => 'data',
+            'export_type' => 'excel',
+            'building_columns' => [],
+            'housing_columns' => [],
+            'include_legal_notes' => '1',
+            'legal_notes_filter' => 'with_notes',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJson([
+            'status' => true,
+        ]);
+
+    $export = Export::query()->firstOrFail();
+    $filters = json_decode((string) $export->filters, true);
+
+    expect($filters['include_legal_notes'])->toBe('1');
+    expect($filters['legal_notes_filter'])->toBe('with_notes');
+
+    Queue::assertPushed(ExportDataJob::class);
 });
 
 it('treats image attachment display as a request for excel attachment columns', function () {

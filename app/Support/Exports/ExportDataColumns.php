@@ -14,6 +14,21 @@ class ExportDataColumns
 
     public const BUILDING_UNITS_COUNT_COLUMN = 'housing_units_count';
 
+    public const LEGAL_AUDITOR_COLUMN = 'legal_auditor';
+
+    public const LEGAL_NOTES_COLUMN = 'legal_notes';
+
+    public const ENGINEERING_AUDITOR_COLUMN = 'engineering_auditor';
+
+    public const ENGINEERING_NOTES_COLUMN = 'engineering_notes';
+
+    public const AUDIT_NOTE_COLUMNS = [
+        self::LEGAL_AUDITOR_COLUMN,
+        self::LEGAL_NOTES_COLUMN,
+        self::ENGINEERING_AUDITOR_COLUMN,
+        self::ENGINEERING_NOTES_COLUMN,
+    ];
+
     private const HIDDEN_COLUMNS = [
         self::BUILDINGS_TABLE => [
             'id',
@@ -69,6 +84,100 @@ class ExportDataColumns
     public static function hasColumn(string $table, string $column): bool
     {
         return in_array($column, self::tableColumns($table), true);
+    }
+
+    public static function isAuditNoteColumn(string $column): bool
+    {
+        return in_array($column, self::AUDIT_NOTE_COLUMNS, true);
+    }
+
+    public static function auditNoteColumnLabel(string $column): ?string
+    {
+        return match ($column) {
+            self::LEGAL_AUDITOR_COLUMN => 'اسم المدقق القانوني',
+            self::LEGAL_NOTES_COLUMN => 'الملاحظات القانونية',
+            self::ENGINEERING_AUDITOR_COLUMN => 'اسم المدقق الهندسي',
+            self::ENGINEERING_NOTES_COLUMN => 'الملاحظات الهندسية',
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array<int, string>  $buildingColumns
+     * @param  array<int, string>  $housingColumns
+     * @param  array<string, mixed>  $params
+     */
+    public static function appendRequestedAuditNoteColumns(array &$buildingColumns, array &$housingColumns, array $params): void
+    {
+        $needsDefaultBuildingReference = $buildingColumns === [] && $housingColumns === [];
+
+        if ($needsDefaultBuildingReference && self::requestsAuditNoteColumns($params)) {
+            $buildingColumns[] = 'objectid';
+        }
+
+        $shouldAppendBuildingNotes = $buildingColumns !== [];
+        $shouldAppendHousingNotes = $housingColumns !== [];
+
+        if (self::truthy($params['include_legal_notes'] ?? null)) {
+            if ($shouldAppendBuildingNotes) {
+                self::appendColumns($buildingColumns, [
+                    self::LEGAL_AUDITOR_COLUMN,
+                    self::LEGAL_NOTES_COLUMN,
+                ]);
+            }
+
+            if ($shouldAppendHousingNotes) {
+                self::appendColumns($housingColumns, [
+                    self::LEGAL_AUDITOR_COLUMN,
+                    self::LEGAL_NOTES_COLUMN,
+                ]);
+            }
+        }
+
+        if (self::truthy($params['include_engineering_notes'] ?? null)) {
+            if ($shouldAppendBuildingNotes) {
+                self::appendColumns($buildingColumns, [
+                    self::ENGINEERING_AUDITOR_COLUMN,
+                    self::ENGINEERING_NOTES_COLUMN,
+                ]);
+            }
+
+            if ($shouldAppendHousingNotes) {
+                self::appendColumns($housingColumns, [
+                    self::ENGINEERING_AUDITOR_COLUMN,
+                    self::ENGINEERING_NOTES_COLUMN,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     */
+    public static function requestsAuditNoteColumns(array $params): bool
+    {
+        return self::truthy($params['include_legal_notes'] ?? null)
+            || self::truthy($params['include_engineering_notes'] ?? null)
+            || filled($params['legal_notes_filter'] ?? null)
+            || filled($params['engineering_notes_filter'] ?? null);
+    }
+
+    /**
+     * @param  array<int, string>  $columns
+     * @param  array<int, string>  $extraColumns
+     */
+    private static function appendColumns(array &$columns, array $extraColumns): void
+    {
+        foreach ($extraColumns as $column) {
+            if (! in_array($column, $columns, true)) {
+                $columns[] = $column;
+            }
+        }
+    }
+
+    private static function truthy(mixed $value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

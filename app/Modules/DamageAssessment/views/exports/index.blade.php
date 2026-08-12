@@ -251,6 +251,45 @@
 								</label>
 							</div>
 
+							<div id="auditNotesExportOptions" class="border rounded p-4 mb-6">
+								<h4 class="fw-bold mb-4">ملاحظات التدقيق</h4>
+								<div class="row">
+									<div class="col-lg-6 mb-4">
+										<label class="form-check form-check-custom form-check-solid mb-3">
+											<input type="hidden" name="include_legal_notes" value="0">
+											<input class="form-check-input" type="checkbox" id="exportIncludeLegalNotes"
+												name="include_legal_notes" value="1">
+											<span class="form-check-label ms-3">تضمين الملاحظات القانونية + اسم المدقق القانوني</span>
+										</label>
+
+										<label class="form-label fw-bold" for="legalNotesFilter">فلتر الملاحظات القانونية</label>
+										<select id="legalNotesFilter" name="legal_notes_filter"
+											class="form-select form-select-solid audit-notes-select2">
+											<option value="">كل السجلات القانونية</option>
+											<option value="with_notes">يوجد ملاحظة قانونية</option>
+											<option value="without_notes">لا يوجد ملاحظة قانونية</option>
+										</select>
+									</div>
+
+									<div class="col-lg-6 mb-4">
+										<label class="form-check form-check-custom form-check-solid mb-3">
+											<input type="hidden" name="include_engineering_notes" value="0">
+											<input class="form-check-input" type="checkbox" id="exportIncludeEngineeringNotes"
+												name="include_engineering_notes" value="1">
+											<span class="form-check-label ms-3">تضمين الملاحظات الهندسية + اسم المدقق الهندسي</span>
+										</label>
+
+										<label class="form-label fw-bold" for="engineeringNotesFilter">فلتر الملاحظات الهندسية</label>
+										<select id="engineeringNotesFilter" name="engineering_notes_filter"
+											class="form-select form-select-solid audit-notes-select2">
+											<option value="">كل السجلات الهندسية</option>
+											<option value="with_notes">يوجد ملاحظة هندسية</option>
+											<option value="without_notes">لا يوجد ملاحظة هندسية</option>
+										</select>
+									</div>
+								</div>
+							</div>
+
 							<div id="attachmentExportOptions" class="border rounded p-4 d-none">
 								<div class="row">
 									<div class="col-lg-4 mb-4">
@@ -833,6 +872,7 @@
 
 		function resetFilters() {
 			$('.filter-select2').val(null).trigger('change');
+			$('.audit-notes-select2').val('').trigger('change');
 		}
 
 		function selectedExportMode() {
@@ -841,7 +881,13 @@
 
 		function hasSelectedDataColumns(formData) {
 			return formData.some(function (field) {
-				return (field.name === 'building_columns[]' || field.name === 'housing_columns[]') && field.value;
+				return (
+					(field.name === 'building_columns[]' || field.name === 'housing_columns[]') && field.value
+				) || (
+					(field.name === 'include_legal_notes' || field.name === 'include_engineering_notes') && field.value === '1'
+				) || (
+					(field.name === 'legal_notes_filter' || field.name === 'engineering_notes_filter') && field.value
+				);
 			});
 		}
 
@@ -1137,6 +1183,24 @@
 				dir: 'rtl',
 				closeOnSelect: false,
 				placeholder: 'كل المرفقات'
+			});
+
+			$('.audit-notes-select2').select2({
+				width: '100%',
+				dir: 'rtl',
+				minimumResultsForSearch: Infinity
+			});
+
+			$('#legalNotesFilter').on('change', function () {
+				if ($(this).val()) {
+					$('#exportIncludeLegalNotes').prop('checked', true);
+				}
+			});
+
+			$('#engineeringNotesFilter').on('change', function () {
+				if ($(this).val()) {
+					$('#exportIncludeEngineeringNotes').prop('checked', true);
+				}
 			});
 
 			$('.attachment-type-select2').on('change', function () {

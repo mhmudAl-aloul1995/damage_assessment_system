@@ -211,6 +211,14 @@ class ExportDataController extends Controller
                 $payload['include_attachment_excel_columns'] = '1';
             }
 
+            if (filled($payload['legal_notes_filter'] ?? null)) {
+                $payload['include_legal_notes'] = '1';
+            }
+
+            if (filled($payload['engineering_notes_filter'] ?? null)) {
+                $payload['include_engineering_notes'] = '1';
+            }
+
             if ($this->requiresDataColumns($payload) && ! $this->hasSelectedDataColumns($payload)) {
                 return response()->json([
                     'status' => false,
@@ -439,7 +447,9 @@ class ExportDataController extends Controller
         $buildingColumns = array_filter((array) ($payload['building_columns'] ?? []), fn ($column): bool => filled($column));
         $housingColumns = array_filter((array) ($payload['housing_columns'] ?? []), fn ($column): bool => filled($column));
 
-        return $buildingColumns !== [] || $housingColumns !== [];
+        return $buildingColumns !== []
+            || $housingColumns !== []
+            || ExportDataColumns::requestsAuditNoteColumns($payload);
     }
 
     /**

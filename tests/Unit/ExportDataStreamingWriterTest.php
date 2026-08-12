@@ -2,11 +2,15 @@
 
 use App\Jobs\ExportAttachmentsJob;
 use App\Jobs\ExportDataJob;
+use App\Models\AssessmentStatus;
 use App\Models\Building;
+use App\Models\BuildingStatus;
 use App\Models\EditAssessment;
 use App\Models\Export;
+use App\Models\HousingStatus;
 use App\Models\User;
 use App\services\ArcgisService;
+use App\Support\Exports\ExportDataColumns;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use OpenSpout\Reader\XLSX\Reader;
@@ -216,6 +220,197 @@ test('it filters building exports by assessment obstacle', function () {
         $reader->close();
 
         expect($rows[1])->toBe([3001, 'yes']);
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
+test('it exports requested audit notes and auditor names from data exports', function () {
+    $user = User::factory()->create();
+    $legalAuditor = User::factory()->create(['name' => 'Legal Auditor Name']);
+    $engineeringAuditor = User::factory()->create(['name' => 'Engineering Auditor Name']);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'accepted_for_export_notes',
+        'label_en' => 'Accepted',
+        'label_ar' => 'Accepted',
+        'stage' => 'engineer',
+        'order_step' => 1,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 3101,
+        'globalid' => 'building-export-notes-included',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 3102,
+        'globalid' => 'building-export-notes-excluded',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => 3101,
+        'status_id' => $status->id,
+        'user_id' => $legalAuditor->id,
+        'type' => 'Legal Auditor',
+        'notes' => 'Legal note for data export',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => 3101,
+        'status_id' => $status->id,
+        'user_id' => $engineeringAuditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'Engineering note for data export',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => 3102,
+        'status_id' => $status->id,
+        'user_id' => $engineeringAuditor->id,
+        'type' => 'QC/QA Engineer',
+        'notes' => 'Engineering note only',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'building_columns' => ['objectid'],
+            'include_legal_notes' => '1',
+            'include_engineering_notes' => '1',
+            'legal_notes_filter' => 'with_notes',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportDataJob($export->id))->handle();
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+
+        $spreadsheet = IOFactory::load(storage_path('app/public/'.$export->file_name));
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->rangeToArray('A1:E2'))->toBe([
+            [
+                'Objectid',
+                ExportDataColumns::auditNoteColumnLabel(ExportDataColumns::LEGAL_AUDITOR_COLUMN),
+                ExportDataColumns::auditNoteColumnLabel(ExportDataColumns::LEGAL_NOTES_COLUMN),
+                ExportDataColumns::auditNoteColumnLabel(ExportDataColumns::ENGINEERING_AUDITOR_COLUMN),
+                ExportDataColumns::auditNoteColumnLabel(ExportDataColumns::ENGINEERING_NOTES_COLUMN),
+            ],
+            ['3101', 'Legal Auditor Name', 'Legal note for data export', 'Engineering Auditor Name', 'Engineering note for data export'],
+        ]);
+
+        $spreadsheet->disconnectWorksheets();
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
+test('it includes audit notes inside data workbook when exporting data with attachments', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/3201/attachments' => Http::response([
+            'attachmentInfos' => [],
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+    $legalAuditor = User::factory()->create(['name' => 'Unit Legal Auditor']);
+
+    $status = AssessmentStatus::query()->create([
+        'name' => 'legal_notes_for_export_data_zip',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'Legal Notes',
+        'stage' => 'lawyer',
+        'order_step' => 1,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 3200,
+        'globalid' => 'building-for-unit-notes',
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 3201,
+        'globalid' => 'housing-for-unit-notes',
+        'parentglobalid' => 'building-for-unit-notes',
+        'housing_unit_number' => 'A-1',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => 3201,
+        'status_id' => $status->id,
+        'user_id' => $legalAuditor->id,
+        'type' => 'Legal Auditor',
+        'notes' => 'Unit legal note',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_mode' => 'data_with_attachments',
+            'export_type' => 'zip',
+            'housing_columns' => ['objectid'],
+            'attachment_sources' => ['housing_unit_arcgis'],
+            'attachment_type_filters' => ['identity'],
+            'include_attachment_excel_columns' => '1',
+            'attachment_excel_display' => 'links',
+            'include_legal_notes' => '1',
+            'legal_notes_filter' => 'with_notes',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportAttachmentsJob($export->id))->handle(app(ArcgisService::class));
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->file_name)->not->toBeNull();
+
+        $zip = new \ZipArchive;
+        $zip->open(storage_path('app/public/'.$export->file_name));
+
+        $dataPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'export-data-with-audit-notes.xlsx';
+        file_put_contents($dataPath, $zip->getFromName('data.xlsx'));
+        $zip->close();
+
+        $spreadsheet = IOFactory::load($dataPath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->rangeToArray('A1:C2'))->toBe([
+            [
+                'Objectid',
+                ExportDataColumns::auditNoteColumnLabel(ExportDataColumns::LEGAL_AUDITOR_COLUMN),
+                ExportDataColumns::auditNoteColumnLabel(ExportDataColumns::LEGAL_NOTES_COLUMN),
+            ],
+            ['3201', 'Unit Legal Auditor', 'Unit legal note'],
+        ]);
+
+        $spreadsheet->disconnectWorksheets();
+        unlink($dataPath);
     } finally {
         $export->refresh();
 

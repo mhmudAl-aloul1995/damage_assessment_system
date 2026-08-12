@@ -255,7 +255,7 @@ class ExportAttachmentsJob implements ShouldQueue
             $query->selectRaw('NULL as housing_objectid, NULL as housing_globalid, NULL as housing_unit_number');
         }
 
-        $this->applyFilters($query, $params);
+        $this->applyFilters($query, $params, $needsHousingJoin);
 
         return $query
             ->orderBy('b.objectid')
@@ -266,7 +266,7 @@ class ExportAttachmentsJob implements ShouldQueue
     /**
      * @param  array<string, mixed>  $params
      */
-    private function applyFilters($query, array $params): void
+    private function applyFilters($query, array $params, bool $includeHousing): void
     {
         $filters = $params['filters'] ?? [];
         $buildingsSource = ExportDataColumns::BUILDINGS_TABLE;
@@ -296,6 +296,19 @@ class ExportAttachmentsJob implements ShouldQueue
                 $query->whereIn("h.{$field}", $values);
             }
         }
+
+        $this->applyAuditNotesPresenceFilter(
+            $query,
+            (string) ($params['legal_notes_filter'] ?? ''),
+            'Legal Auditor',
+            $includeHousing,
+        );
+        $this->applyAuditNotesPresenceFilter(
+            $query,
+            (string) ($params['engineering_notes_filter'] ?? ''),
+            'QC/QA Engineer',
+            $includeHousing,
+        );
 
         $importedObjectIds = collect($params['imported_object_ids'] ?? [])
             ->map(fn ($value): string => trim((string) $value))
@@ -677,6 +690,7 @@ class ExportAttachmentsJob implements ShouldQueue
             ExportDataColumns::HOUSING_UNITS_TABLE,
             array_values($params['housing_columns'] ?? []),
         );
+        ExportDataColumns::appendRequestedAuditNoteColumns($buildingColumns, $housingColumns, $params);
 
         if ($buildingColumns === [] && $housingColumns === []) {
             $buildingColumns = ['objectid', 'globalid', 'owner_name'];
@@ -914,6 +928,10 @@ class ExportAttachmentsJob implements ShouldQueue
      */
     private function columnLabel(string $field, array $labels): string
     {
+        if (ExportDataColumns::isAuditNoteColumn($field)) {
+            return ExportDataColumns::auditNoteColumnLabel($field) ?? ucwords(str_replace('_', ' ', $field));
+        }
+
         $label = trim((string) ($labels[$field] ?? ''));
 
         return $label !== '' ? $label : ucwords(str_replace('_', ' ', $field));
@@ -947,6 +965,15 @@ class ExportAttachmentsJob implements ShouldQueue
 
                 $tableAlias = $column['table'] === 'housing' ? 'h' : 'b';
 
+                if (ExportDataColumns::isAuditNoteColumn($column['field'])) {
+                    return $this->auditNoteColumnExpression(
+                        $column['table'] === 'housing' ? 'housing_statuses' : 'building_statuses',
+                        $column['table'] === 'housing' ? 'housing_id' : 'building_id',
+                        "{$tableAlias}.objectid",
+                        $column['field'],
+                    ).' as `'.$column['alias'].'`';
+                }
+
                 return "{$tableAlias}.`{$column['field']}` as `{$column['alias']}`";
             })
             ->all();
@@ -963,12 +990,58 @@ class ExportAttachmentsJob implements ShouldQueue
         }
 
         $query->selectRaw(implode(', ', $selects));
-        $this->applyFilters($query, $params);
+        $this->applyFilters($query, $params, $needsHousingJoin);
 
         return $query
             ->orderBy('b.objectid')
             ->when($needsHousingJoin, fn ($query) => $query->orderBy('h.objectid'))
             ->get();
+    }
+
+    private function auditNoteColumnExpression(string $table, string $foreignKey, string $recordIdExpression, string $column): string
+    {
+        $type = in_array($column, [ExportDataColumns::LEGAL_AUDITOR_COLUMN, ExportDataColumns::LEGAL_NOTES_COLUMN], true)
+            ? 'Legal Auditor'
+            : 'QC/QA Engineer';
+
+        $valueExpression = in_array($column, [ExportDataColumns::LEGAL_AUDITOR_COLUMN, ExportDataColumns::ENGINEERING_AUDITOR_COLUMN], true)
+            ? 'u.name'
+            : 's.notes';
+
+        $escapedType = str_replace("'", "''", $type);
+
+        return "(SELECT {$valueExpression} FROM {$table} s LEFT JOIN users u ON u.id = s.user_id WHERE s.{$foreignKey} = {$recordIdExpression} AND s.type = '{$escapedType}' ORDER BY s.updated_at DESC, s.id DESC LIMIT 1)";
+    }
+
+    private function applyAuditNotesPresenceFilter($query, string $filter, string $type, bool $includeHousing): void
+    {
+        if (! in_array($filter, ['with_notes', 'without_notes'], true)) {
+            return;
+        }
+
+        $method = $filter === 'with_notes' ? 'where' : 'whereNot';
+
+        $query->{$method}(function ($notesQuery) use ($type, $includeHousing): void {
+            $notesQuery->whereExists(function ($sub) use ($type): void {
+                $sub->select(DB::raw(1))
+                    ->from('building_statuses as bs_notes')
+                    ->whereColumn('bs_notes.building_id', 'b.objectid')
+                    ->where('bs_notes.type', $type)
+                    ->whereNotNull('bs_notes.notes')
+                    ->where('bs_notes.notes', '<>', '');
+            });
+
+            if ($includeHousing) {
+                $notesQuery->orWhereExists(function ($sub) use ($type): void {
+                    $sub->select(DB::raw(1))
+                        ->from('housing_statuses as hs_notes')
+                        ->whereColumn('hs_notes.housing_id', 'h.objectid')
+                        ->where('hs_notes.type', $type)
+                        ->whereNotNull('hs_notes.notes')
+                        ->where('hs_notes.notes', '<>', '');
+                });
+            }
+        });
     }
 
     /**

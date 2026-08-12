@@ -79,6 +79,7 @@ class ExportDataJob implements ShouldQueue
                 ExportDataColumns::HOUSING_UNITS_TABLE,
                 array_values($params['housing_columns'] ?? []),
             );
+            ExportDataColumns::appendRequestedAuditNoteColumns($buildingColumns, $housingColumns, $params);
             $filters = $params['filters'] ?? [];
             $importedObjectIds = collect($params['imported_object_ids'] ?? [])
                 ->map(fn ($value) => trim((string) $value))
@@ -161,13 +162,17 @@ class ExportDataJob implements ShouldQueue
                     continue;
                 }
 
-                if (ExportDataColumns::hasColumn($buildingsSource, $column)) {
+                if (ExportDataColumns::isAuditNoteColumn($column)) {
+                    $selects[] = $this->auditNoteColumnExpression('building_statuses', 'building_id', 'b.objectid', $column)." as `building_{$column}`";
+                } elseif (ExportDataColumns::hasColumn($buildingsSource, $column)) {
                     $selects[] = $this->editedColumnExpression('building_table', 'b', 'globalid', $column)." as `building_{$column}`";
                 }
             }
 
             foreach ($housingColumns as $column) {
-                if (ExportDataColumns::hasColumn($housingUnitsSource, $column)) {
+                if (ExportDataColumns::isAuditNoteColumn($column)) {
+                    $selects[] = $this->auditNoteColumnExpression('housing_statuses', 'housing_id', 'h.objectid', $column)." as `housing_{$column}`";
+                } elseif (ExportDataColumns::hasColumn($housingUnitsSource, $column)) {
                     $selects[] = $this->editedColumnExpression('housing_table', 'h', 'globalid', $column)." as `housing_{$column}`";
                 }
             }
@@ -202,6 +207,19 @@ class ExportDataJob implements ShouldQueue
                     $query->whereIn(DB::raw($this->editedColumnExpression('housing_table', 'h', 'globalid', $field)), $values);
                 }
             }
+
+            $this->applyAuditNotesPresenceFilter(
+                $query,
+                (string) ($params['legal_notes_filter'] ?? ''),
+                'Legal Auditor',
+                $needsHousingJoin,
+            );
+            $this->applyAuditNotesPresenceFilter(
+                $query,
+                (string) ($params['engineering_notes_filter'] ?? ''),
+                'QC/QA Engineer',
+                $needsHousingJoin,
+            );
 
             if (! empty($importedObjectIds)) {
                 $query->whereIn(
@@ -490,6 +508,8 @@ class ExportDataJob implements ShouldQueue
                 $headers[$header] = 'عدد الوحدات للمبنى';
             } elseif ($field === 'family_members_total') {
                 $headers[$header] = 'عدد أفراد الأسرة';
+            } elseif (ExportDataColumns::isAuditNoteColumn($field)) {
+                $headers[$header] = ExportDataColumns::auditNoteColumnLabel($field) ?? ucwords(str_replace('_', ' ', $field));
             } else {
                 $headers[$header] = $assessmentLabels[$field] ?? ucwords(str_replace('_', ' ', $field));
             }
@@ -522,6 +542,52 @@ class ExportDataJob implements ShouldQueue
         }
 
         return json_encode($value, JSON_UNESCAPED_UNICODE) ?: null;
+    }
+
+    private function auditNoteColumnExpression(string $table, string $foreignKey, string $recordIdExpression, string $column): string
+    {
+        $type = in_array($column, [ExportDataColumns::LEGAL_AUDITOR_COLUMN, ExportDataColumns::LEGAL_NOTES_COLUMN], true)
+            ? 'Legal Auditor'
+            : 'QC/QA Engineer';
+
+        $valueExpression = in_array($column, [ExportDataColumns::LEGAL_AUDITOR_COLUMN, ExportDataColumns::ENGINEERING_AUDITOR_COLUMN], true)
+            ? 'u.name'
+            : 's.notes';
+
+        $escapedType = str_replace("'", "''", $type);
+
+        return "(SELECT {$valueExpression} FROM {$table} s LEFT JOIN users u ON u.id = s.user_id WHERE s.{$foreignKey} = {$recordIdExpression} AND s.type = '{$escapedType}' ORDER BY s.updated_at DESC, s.id DESC LIMIT 1)";
+    }
+
+    private function applyAuditNotesPresenceFilter($query, string $filter, string $type, bool $includeHousing): void
+    {
+        if (! in_array($filter, ['with_notes', 'without_notes'], true)) {
+            return;
+        }
+
+        $method = $filter === 'with_notes' ? 'where' : 'whereNot';
+
+        $query->{$method}(function ($notesQuery) use ($type, $includeHousing): void {
+            $notesQuery->whereExists(function ($sub) use ($type): void {
+                $sub->select(DB::raw(1))
+                    ->from('building_statuses as bs_notes')
+                    ->whereColumn('bs_notes.building_id', 'b.objectid')
+                    ->where('bs_notes.type', $type)
+                    ->whereNotNull('bs_notes.notes')
+                    ->where('bs_notes.notes', '<>', '');
+            });
+
+            if ($includeHousing) {
+                $notesQuery->orWhereExists(function ($sub) use ($type): void {
+                    $sub->select(DB::raw(1))
+                        ->from('housing_statuses as hs_notes')
+                        ->whereColumn('hs_notes.housing_id', 'h.objectid')
+                        ->where('hs_notes.type', $type)
+                        ->whereNotNull('hs_notes.notes')
+                        ->where('hs_notes.notes', '<>', '');
+                });
+            }
+        });
     }
 
     /**
