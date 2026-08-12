@@ -13,6 +13,10 @@ use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\CellAlignment;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Writer;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as PhpSpreadsheetWriter;
 
 class ExportAttachmentsJob implements ShouldQueue
 {
@@ -393,6 +397,12 @@ class ExportAttachmentsJob implements ShouldQueue
      */
     private function writeDataWorkbook(string $dataPath, array $params, array $sources, ArcgisService $arcgis, string $token): void
     {
+        if (($params['attachment_excel_display'] ?? 'links') === 'images') {
+            $this->writeDataWorkbookWithImages($dataPath, $params, $sources, $arcgis, $token);
+
+            return;
+        }
+
         if (! is_dir(dirname($dataPath))) {
             mkdir(dirname($dataPath), 0777, true);
         }
@@ -429,6 +439,130 @@ class ExportAttachmentsJob implements ShouldQueue
             });
 
         $writer->close();
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @param  array<int, string>  $sources
+     */
+    private function writeDataWorkbookWithImages(string $dataPath, array $params, array $sources, ArcgisService $arcgis, string $token): void
+    {
+        if (! is_dir(dirname($dataPath))) {
+            mkdir(dirname($dataPath), 0777, true);
+        }
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $columns = $this->dataColumns($params);
+        $attachmentColumns = $this->attachmentExcelColumns($params);
+        $labels = $this->assessmentLabels();
+        $temporaryImages = [];
+
+        $headers = collect($columns)
+            ->map(fn (array $column): string => $labels[$column['field']] ?? ucwords(str_replace('_', ' ', $column['field'])))
+            ->merge(collect($attachmentColumns)->pluck('label'))
+            ->values()
+            ->all();
+
+        foreach ($headers as $index => $header) {
+            $columnLetter = Coordinate::stringFromColumnIndex($index + 1);
+            $sheet->setCellValue($columnLetter.'1', $header);
+            $sheet->getColumnDimension($columnLetter)->setWidth($index < count($columns) ? 16 : 24);
+        }
+
+        $sheet->getStyle('1:1')->getFont()->setBold(true)->setSize(12)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('1:1')->getFill()->setFillType('solid')->getStartColor()->setRGB('1F4E78');
+        $sheet->getStyle('1:1')->getAlignment()->setHorizontal('center');
+
+        $rowIndex = 2;
+
+        try {
+            foreach ($this->dataRows($params, $sources, $columns) as $row) {
+                foreach ($columns as $index => $column) {
+                    $sheet->setCellValue(Coordinate::stringFromColumnIndex($index + 1).$rowIndex, $row->{$column['alias']} ?? null);
+                }
+
+                foreach ($attachmentColumns as $attachmentIndex => $attachmentColumn) {
+                    $columnIndex = count($columns) + $attachmentIndex + 1;
+                    $columnLetter = Coordinate::stringFromColumnIndex($columnIndex);
+                    $cellCoordinate = $columnLetter.$rowIndex;
+                    $entries = $this->attachmentExcelEntries($row, $attachmentColumn, $sources, $arcgis, $token);
+                    $images = collect($entries)->filter(fn (array $entry): bool => $this->isSupportedExcelImage($entry['attachment']))->values();
+                    $nonImageNames = collect($entries)
+                        ->reject(fn (array $entry): bool => $this->isSupportedExcelImage($entry['attachment']))
+                        ->map(fn (array $entry): string => (string) ($entry['attachment']['name'] ?? $entry['attachment']['id'] ?? 'attachment'))
+                        ->values();
+
+                    if ($nonImageNames->isNotEmpty()) {
+                        $sheet->setCellValue($cellCoordinate, $nonImageNames->implode("\n"));
+                        $sheet->getStyle($cellCoordinate)->getAlignment()->setWrapText(true);
+                    }
+
+                    if ($images->isEmpty()) {
+                        continue;
+                    }
+
+                    $imagesPerLine = 3;
+                    $thumbHeight = 76;
+                    $horizontalStep = 108;
+                    $verticalStep = 86;
+                    $lines = (int) ceil($images->count() / $imagesPerLine);
+                    $sheet->getRowDimension($rowIndex)->setRowHeight(max($sheet->getRowDimension($rowIndex)->getRowHeight(), $lines * 68));
+                    $sheet->getColumnDimension($columnLetter)->setWidth(max(
+                        $sheet->getColumnDimension($columnLetter)->getWidth(),
+                        min(52, $images->count() * 16)
+                    ));
+
+                    foreach ($images as $imageIndex => $entry) {
+                        $attachment = $entry['attachment'];
+                        $attachmentId = $attachment['id'] ?? null;
+
+                        if (! filled($attachmentId)) {
+                            continue;
+                        }
+
+                        $download = $arcgis->downloadAttachment($entry['object_id'], $entry['layer_id'], $attachmentId, $token);
+
+                        if (! ($download['success'] ?? false) || ! isset($download['body'])) {
+                            continue;
+                        }
+
+                        $extension = $this->excelImageExtension($attachment);
+                        $temporaryImage = tempnam(sys_get_temp_dir(), 'export-attachment-');
+
+                        if ($temporaryImage === false) {
+                            continue;
+                        }
+
+                        $temporaryImageWithExtension = $temporaryImage.'.'.$extension;
+                        rename($temporaryImage, $temporaryImageWithExtension);
+                        file_put_contents($temporaryImageWithExtension, (string) $download['body']);
+                        $temporaryImages[] = $temporaryImageWithExtension;
+
+                        $drawing = new Drawing;
+                        $drawing->setName((string) ($attachment['name'] ?? 'attachment'));
+                        $drawing->setPath($temporaryImageWithExtension);
+                        $drawing->setCoordinates($cellCoordinate);
+                        $drawing->setHeight($thumbHeight);
+                        $drawing->setOffsetX(6 + (($imageIndex % $imagesPerLine) * $horizontalStep));
+                        $drawing->setOffsetY(6 + ((int) floor($imageIndex / $imagesPerLine) * $verticalStep));
+                        $drawing->setWorksheet($sheet);
+                    }
+                }
+
+                $rowIndex++;
+            }
+
+            (new PhpSpreadsheetWriter($spreadsheet))->save($dataPath);
+        } finally {
+            foreach ($temporaryImages as $temporaryImage) {
+                if (is_file($temporaryImage)) {
+                    unlink($temporaryImage);
+                }
+            }
+
+            $spreadsheet->disconnectWorksheets();
+        }
     }
 
     /**
@@ -515,7 +649,6 @@ class ExportAttachmentsJob implements ShouldQueue
             return [];
         }
 
-        $display = (string) ($params['attachment_excel_display'] ?? 'links');
         $records = [];
 
         if (in_array(self::SOURCE_BUILDING_ARCGIS, $sources, true) && filled($row->__building_objectid ?? null)) {
@@ -533,16 +666,16 @@ class ExportAttachmentsJob implements ShouldQueue
         }
 
         return collect($attachmentColumns)
-            ->map(function (array $column) use ($records, $display, $arcgis, $token): string {
+            ->map(function (array $column) use ($records, $arcgis, $token): string {
                 $values = collect($records)
-                    ->flatMap(function (array $record) use ($column, $display, $arcgis, $token): array {
+                    ->flatMap(function (array $record) use ($column, $arcgis, $token): array {
                         return collect($this->cachedArcgisAttachments($arcgis, $record['object_id'], $record['layer_id'], $token))
                             ->filter(fn (array $attachment): bool => $this->matchesAttachmentTypeFilters($attachment, [$column['type']]))
-                            ->map(function (array $attachment) use ($record, $display, $arcgis, $token): string {
+                            ->map(function (array $attachment) use ($record, $arcgis, $token): string {
                                 $attachmentId = $attachment['id'] ?? null;
                                 $name = (string) ($attachment['name'] ?? $attachmentId ?? 'attachment');
 
-                                if ($display === 'names' || ! filled($attachmentId)) {
+                                if (! filled($attachmentId)) {
                                     return $name;
                                 }
 
@@ -557,6 +690,82 @@ class ExportAttachmentsJob implements ShouldQueue
                 return $values->implode("\n");
             })
             ->all();
+    }
+
+    /**
+     * @param  array{type: string, label: string}  $attachmentColumn
+     * @param  array<int, string>  $sources
+     * @return array<int, array{layer_id: int, object_id: string, attachment: array<string, mixed>}>
+     */
+    private function attachmentExcelEntries(
+        object $row,
+        array $attachmentColumn,
+        array $sources,
+        ArcgisService $arcgis,
+        string $token,
+    ): array {
+        $records = [];
+
+        if (in_array(self::SOURCE_BUILDING_ARCGIS, $sources, true) && filled($row->__building_objectid ?? null)) {
+            $records[] = [
+                'layer_id' => 0,
+                'object_id' => (string) $row->__building_objectid,
+            ];
+        }
+
+        if (in_array(self::SOURCE_HOUSING_UNIT_ARCGIS, $sources, true) && filled($row->__housing_objectid ?? null)) {
+            $records[] = [
+                'layer_id' => 1,
+                'object_id' => (string) $row->__housing_objectid,
+            ];
+        }
+
+        return collect($records)
+            ->flatMap(function (array $record) use ($attachmentColumn, $arcgis, $token): array {
+                return collect($this->cachedArcgisAttachments($arcgis, $record['object_id'], $record['layer_id'], $token))
+                    ->filter(fn (array $attachment): bool => $this->matchesAttachmentTypeFilters($attachment, [$attachmentColumn['type']]))
+                    ->map(fn (array $attachment): array => [
+                        'layer_id' => $record['layer_id'],
+                        'object_id' => $record['object_id'],
+                        'attachment' => $attachment,
+                    ])
+                    ->all();
+            })
+            ->unique(fn (array $entry): string => $entry['layer_id'].':'.$entry['object_id'].':'.($entry['attachment']['id'] ?? $entry['attachment']['name'] ?? 'attachment'))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $attachment
+     */
+    private function isSupportedExcelImage(array $attachment): bool
+    {
+        $contentType = mb_strtolower((string) ($attachment['contentType'] ?? ''));
+        $extension = $this->excelImageExtension($attachment);
+
+        return str_starts_with($contentType, 'image/')
+            && in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'bmp'], true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attachment
+     */
+    private function excelImageExtension(array $attachment): string
+    {
+        $extension = mb_strtolower(pathinfo((string) ($attachment['name'] ?? ''), PATHINFO_EXTENSION));
+
+        if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'bmp'], true)) {
+            return $extension;
+        }
+
+        return match (mb_strtolower((string) ($attachment['contentType'] ?? ''))) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/bmp', 'image/x-ms-bmp' => 'bmp',
+            default => 'png',
+        };
     }
 
     private function shouldIncludeAttachmentExcelColumns(array $params): bool

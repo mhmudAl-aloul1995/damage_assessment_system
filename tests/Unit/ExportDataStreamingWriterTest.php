@@ -411,7 +411,9 @@ test('it matches semantic attachment type filters using arabic names and arcgis 
     }
 });
 
-test('it can export attachment columns as file names in an xlsx without downloading attachment files', function () {
+test('it can export all image attachments inside xlsx attachment columns', function () {
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=');
+
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
             'token' => 'arcgis-token',
@@ -420,10 +422,21 @@ test('it can export attachment columns as file names in an xlsx without download
             'attachmentInfos' => [
                 [
                     'id' => 1101,
-                    'name' => 'id-card.pdf',
-                    'contentType' => 'application/pdf',
+                    'name' => 'id-card-front.png',
+                    'contentType' => 'image/png',
+                ],
+                [
+                    'id' => 1102,
+                    'name' => 'id-card-back.png',
+                    'contentType' => 'image/png',
                 ],
             ],
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/6001/attachments/1101*' => Http::response($png, 200, [
+            'Content-Type' => 'image/png',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/0/6001/attachments/1102*' => Http::response($png, 200, [
+            'Content-Type' => 'image/png',
         ]),
     ]);
 
@@ -443,7 +456,7 @@ test('it can export attachment columns as file names in an xlsx without download
             'attachment_sources' => ['building_arcgis'],
             'attachment_type_filters' => ['identity'],
             'include_attachment_excel_columns' => '1',
-            'attachment_excel_display' => 'names',
+            'attachment_excel_display' => 'images',
         ], JSON_UNESCAPED_UNICODE),
         'user_id' => $user->id,
         'progress' => 0,
@@ -460,23 +473,15 @@ test('it can export attachment columns as file names in an xlsx without download
         expect($export->processed)->toBe(1);
         expect($export->file_name)->toEndWith('.xlsx');
 
-        $reader = new Reader;
-        $reader->open(storage_path('app/public/'.$export->file_name));
+        $spreadsheet = IOFactory::load(storage_path('app/public/'.$export->file_name));
+        $sheet = $spreadsheet->getActiveSheet();
 
-        $rows = [];
+        expect($sheet->getCell('A2')->getValue())->toBe(6001);
+        expect($sheet->getDrawingCollection()->count())->toBe(2);
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/attachments/1101'));
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/attachments/1102'));
 
-        foreach ($reader->getSheetIterator() as $sheet) {
-            foreach ($sheet->getRowIterator() as $row) {
-                $rows[] = $row->toArray();
-            }
-
-            break;
-        }
-
-        $reader->close();
-
-        expect($rows[1])->toBe([6001, 'id-card.pdf']);
-        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments/1101'));
+        $spreadsheet->disconnectWorksheets();
     } finally {
         $export->refresh();
 

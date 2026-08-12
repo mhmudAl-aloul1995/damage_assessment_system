@@ -320,7 +320,7 @@
 										<select id="attachmentExcelDisplay" name="attachment_excel_display"
 											class="form-select form-select-solid">
 											<option value="links">روابط</option>
-											<option value="names">أسماء الملفات فقط</option>
+											<option value="images">صور داخل Excel</option>
 										</select>
 									</div>
 								</div>

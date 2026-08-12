@@ -84,7 +84,7 @@ it('shows attachment export controls on the export page', function () {
     $response->assertSee('name="include_attachment_excel_columns"', false);
     $response->assertSee('name="attachment_excel_display"', false);
     $response->assertSee('value="links"', false);
-    $response->assertSee('value="names"', false);
+    $response->assertSee('value="images"', false);
     $response->assertSee('value="building_arcgis"', false);
     $response->assertSee('value="housing_unit_arcgis"', false);
     $response->assertSee('value="damage_photos"', false);
