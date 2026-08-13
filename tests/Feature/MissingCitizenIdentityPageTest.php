@@ -1029,6 +1029,45 @@ it('matches a bad spouse name to the only wife registered for the breadwinner', 
         ->and($report->matched_citizen_full_name)->toBe('غاليه علي أحمد بدر');
 });
 
+it('uses the husband registry spouse as the primary match instead of adding the same wife again', function (): void {
+    createHusbandRegistryTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 9012,
+        'globalid' => 'partial-spouse-name-registry-match',
+        'unit_owner' => 'عمر فتحي محمد بدر',
+        'id_number1' => '800407728',
+        'marital_status' => 'Married',
+        'spouse1' => 'اسلام الشافعي بدر',
+        'spouse1_id' => '801390356',
+        'spouse2' => null,
+        'spouse2_id' => null,
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '801390956',
+        'full_name' => 'اسلام الشافعي اسماعيل بدر',
+        'full_name_normalized' => 'اسلامالشافعيسماعيلبدر',
+        'breadwinner_id_card_no' => '800407728',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $reports = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_subject', 'spouse')
+        ->orderBy('identity_index')
+        ->get();
+
+    expect($reports)->toHaveCount(1)
+        ->and($reports->first()->identity_number_field)->toBe('spouse1_id')
+        ->and($reports->first()->name_match_status)->toBe('matched')
+        ->and($reports->first()->matched_citizen_id_card_no)->toBe('801390956')
+        ->and($reports->first()->matched_citizen_full_name)->toBe('اسلام الشافعي اسماعيل بدر');
+});
+
 it('matches and approves missing spouse identities from the husband registry table', function (): void {
     createHusbandRegistryTable();
 

@@ -465,11 +465,6 @@ class RefreshMissingCitizenIdentityReport extends Command
                     ->map(fn ($idNumber): string => trim((string) $idNumber))
                     ->filter()
                     ->flip();
-                $existingNames = $existingSpouseRows
-                    ->pluck('owner_name')
-                    ->map(fn ($name): string => ArabicNameNormalizer::normalize((string) $name))
-                    ->filter()
-                    ->flip();
                 $supportedSpouseSlots = $this->supportedSpouseSlots($housingUnit);
                 $availableSlots = $supportedSpouseSlots > 0
                     ? collect(range(1, $supportedSpouseSlots))
@@ -483,13 +478,15 @@ class RefreshMissingCitizenIdentityReport extends Command
                 }
 
                 return $registryRecords
-                    ->filter(function ($record) use ($existingIdNumbers, $existingNames): bool {
+                    ->filter(function ($record) use ($existingIdNumbers, $existingSpouseRows): bool {
                         $idNumber = trim((string) $record->id_card_no);
-                        $normalizedName = ArabicNameNormalizer::normalize((string) $record->full_name);
 
                         return $idNumber !== ''
                             && ! isset($existingIdNumbers[$idNumber])
-                            && ! isset($existingNames[$normalizedName]);
+                            && ! $existingSpouseRows->contains(fn (array $identityRow): bool => $this->spouseRegistryNameMatches(
+                                (string) $identityRow['owner_name'],
+                                (string) $record->full_name
+                            ));
                     })
                     ->take($availableSlots->count())
                     ->values()
@@ -684,11 +681,12 @@ class RefreshMissingCitizenIdentityReport extends Command
                 ->whereRaw('TRIM(breadwinner_id_card_no) = ?', [$breadwinnerIdCardNo])
                 ->get();
 
-            $nameMatches = $normalizedOwnerName === ''
-                ? collect()
-                : $registryRecords
-                    ->filter(fn ($record): bool => (string) $record->full_name_normalized === $normalizedOwnerName)
-                    ->values();
+            $nameMatches = $registryRecords
+                ->filter(fn ($record): bool => $this->spouseRegistryNameMatches(
+                    (string) $identityRow['owner_name'],
+                    (string) $record->full_name
+                ))
+                ->values();
 
             if ($nameMatches->isNotEmpty()) {
                 return $nameMatches;
@@ -700,6 +698,49 @@ class RefreshMissingCitizenIdentityReport extends Command
         } catch (Throwable) {
             return collect();
         }
+    }
+
+    private function spouseRegistryNameMatches(string $housingSpouseName, string $registrySpouseName): bool
+    {
+        $normalizedHousingName = ArabicNameNormalizer::normalize($housingSpouseName);
+        $normalizedRegistryName = ArabicNameNormalizer::normalize($registrySpouseName);
+
+        if ($normalizedHousingName === '' || $normalizedRegistryName === '') {
+            return false;
+        }
+
+        if ($normalizedHousingName === $normalizedRegistryName) {
+            return true;
+        }
+
+        $housingNameParts = $this->normalizedNameParts($housingSpouseName);
+        $registryNameParts = $this->normalizedNameParts($registrySpouseName);
+
+        if ($housingNameParts->count() < 2 || $registryNameParts->count() < 2) {
+            return false;
+        }
+
+        $shorterNameParts = $housingNameParts->count() <= $registryNameParts->count()
+            ? $housingNameParts
+            : $registryNameParts;
+        $longerNameParts = $housingNameParts->count() <= $registryNameParts->count()
+            ? $registryNameParts
+            : $housingNameParts;
+
+        return $shorterNameParts
+            ->diff($longerNameParts)
+            ->isEmpty();
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function normalizedNameParts(string $name): Collection
+    {
+        return collect(preg_split('/\s+/u', trim($name)) ?: [])
+            ->map(fn (string $part): string => ArabicNameNormalizer::normalize($part))
+            ->filter()
+            ->values();
     }
 
     private function sgazaMatchesByNormalizedNames(Collection $normalizedNames): Collection
