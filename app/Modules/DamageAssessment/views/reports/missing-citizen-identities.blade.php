@@ -141,10 +141,6 @@
                 <div class="modal-body">
                     <div class="bg-light-danger rounded p-4 mb-5 overflow-hidden">
                         <div class="d-flex align-items-center gap-4 flex-nowrap min-w-0">
-                            <div class="d-flex align-items-center gap-3 flex-shrink-0">
-                                <span class="text-muted fw-semibold">{{ __('ui.missing_citizen_identities.current_missing_id_number') }}</span>
-                                <span class="badge badge-light-danger fs-6" id="missing_citizen_candidates_id_number">-</span>
-                            </div>
                             <div class="d-flex align-items-center gap-2 overflow-auto flex-nowrap flex-grow-1 min-w-0 pb-1" id="missing_citizen_identity_summary" style="white-space: nowrap; scrollbar-width: thin;"></div>
                         </div>
                     </div>
@@ -246,7 +242,6 @@
             var csrfToken = @json(csrf_token());
             var candidatesModalElement = document.getElementById('missing_citizen_candidates_modal');
             var candidatesBody = document.getElementById('missing_citizen_candidates_body');
-            var candidatesIdNumber = document.getElementById('missing_citizen_candidates_id_number');
             var identitySummary = document.getElementById('missing_citizen_identity_summary');
             var documentsPanel = document.getElementById('missing_citizen_documents_panel');
             var documentsBody = document.getElementById('missing_citizen_documents_body');
@@ -519,11 +514,11 @@
                 }
 
                 if (row.can_show_name_candidates) {
-                    return '<button type="button" class="btn btn-sm btn-light-warning" data-kt-missing-citizens-action="show-candidates" data-report-id="' + escapeHtml(row.id) + '" data-id-number="' + escapeHtml(row.id_number1) + '">{{ __('ui.missing_citizen_identities.show_candidates') }}</button>';
+                    return '<button type="button" class="btn btn-sm btn-light-warning" data-kt-missing-citizens-action="show-candidates" data-report-id="' + escapeHtml(row.id) + '">{{ __('ui.missing_citizen_identities.show_candidates') }}</button>';
                 }
 
                 if (row.can_search_citizens) {
-                    return '<button type="button" class="btn btn-sm btn-light-primary" data-kt-missing-citizens-action="search-citizens" data-report-id="' + escapeHtml(row.id) + '" data-id-number="' + escapeHtml(row.id_number1) + '" data-owner-name="' + escapeHtml(row.owner_name) + '">{{ __('ui.missing_citizen_identities.search_civil_registry') }}</button>';
+                    return '<button type="button" class="btn btn-sm btn-light-primary" data-kt-missing-citizens-action="search-citizens" data-report-id="' + escapeHtml(row.id) + '" data-owner-name="' + escapeHtml(row.owner_name) + '">{{ __('ui.missing_citizen_identities.search_civil_registry') }}</button>';
                 }
 
                 return '<span class="text-muted">-</span>';
@@ -625,14 +620,10 @@
                     });
             };
 
-            var showCandidates = function (reportId, idNumber) {
+            var showCandidates = function (reportId) {
                 activeCandidateReportId = reportId;
                 resetDocuments();
                 renderIdentitySummary(reportId);
-
-                if (candidatesIdNumber) {
-                    candidatesIdNumber.textContent = idNumber || '-';
-                }
 
                 if (manualSearch) {
                     manualSearch.value = '';
@@ -809,14 +800,10 @@
                 });
             };
 
-            var showCitizenSearch = function (reportId, idNumber, ownerName) {
+            var showCitizenSearch = function (reportId, ownerName) {
                 activeCandidateReportId = reportId;
                 resetDocuments();
                 renderIdentitySummary(reportId);
-
-                if (candidatesIdNumber) {
-                    candidatesIdNumber.textContent = idNumber || '-';
-                }
 
                 if (manualSearch) {
                     manualSearch.value = '';
@@ -1148,10 +1135,7 @@
                         var candidatesButton = event.target.closest('[data-kt-missing-citizens-action="show-candidates"]');
 
                         if (candidatesButton && !loading) {
-                            showCandidates(
-                                candidatesButton.getAttribute('data-report-id'),
-                                candidatesButton.getAttribute('data-id-number')
-                            );
+                            showCandidates(candidatesButton.getAttribute('data-report-id'));
 
                             return;
                         }
@@ -1161,7 +1145,6 @@
                         if (searchCitizensButton && !loading) {
                             showCitizenSearch(
                                 searchCitizensButton.getAttribute('data-report-id'),
-                                searchCitizensButton.getAttribute('data-id-number'),
                                 searchCitizensButton.getAttribute('data-owner-name')
                             );
                         }
