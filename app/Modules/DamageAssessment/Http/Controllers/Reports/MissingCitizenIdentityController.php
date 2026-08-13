@@ -63,6 +63,11 @@ class MissingCitizenIdentityController extends Controller
                 'missing_citizen_identity_reports.matched_citizen_full_name',
                 'missing_citizen_identity_reports.matched_citizens_count',
                 'housing_units.objectid as housing_unit_objectid',
+                'housing_units.unit_owner as housing_unit_owner_name',
+                'housing_units.q_9_3_1_first_name',
+                'housing_units.q_9_3_2_second_name__father',
+                'housing_units.q_9_3_3_third_name__grandfather',
+                'housing_units.q_9_3_4_last_name',
             ])
             ->leftJoin('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
             ->whereNull('missing_citizen_identity_reports.approved_at');
@@ -113,6 +118,7 @@ class MissingCitizenIdentityController extends Controller
                     'identity_subject' => $report->identity_subject,
                     'identity_index' => $report->identity_index,
                     'identity_label' => $this->identityLabel($report),
+                    'housing_unit_owner_name' => $this->reportHousingUnitOwnerName($report),
                     'owner_name' => $report->owner_name ?: '-',
                     'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
                     'id_number1' => filled($report->id_number) ? (string) $report->id_number : '-',
@@ -452,6 +458,22 @@ class MissingCitizenIdentityController extends Controller
         }
 
         return __('ui.missing_citizen_identities.identity_owner');
+    }
+
+    private function reportHousingUnitOwnerName(MissingCitizenIdentityReport $report): string
+    {
+        $structuredName = trim(implode(' ', array_filter([
+            trim((string) ($report->q_9_3_1_first_name ?? '')),
+            trim((string) ($report->q_9_3_2_second_name__father ?? '')),
+            trim((string) ($report->q_9_3_3_third_name__grandfather ?? '')),
+            trim((string) ($report->q_9_3_4_last_name ?? '')),
+        ])));
+
+        $ownerName = $structuredName !== ''
+            ? $structuredName
+            : trim((string) ($report->housing_unit_owner_name ?? ''));
+
+        return $ownerName !== '' ? $ownerName : '-';
     }
 
     /**

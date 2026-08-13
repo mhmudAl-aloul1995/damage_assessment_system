@@ -833,11 +833,13 @@ it('returns missing spouse identities separately from owner identities', functio
         ->and(MissingCitizenIdentityReport::query()->where('identity_number_field', 'spouse3_id')->exists())->toBeTrue()
         ->and(MissingCitizenIdentityReport::query()->where('identity_number_field', 'spouse4_id')->where('name_match_status', 'matched')->exists())->toBeTrue();
 
-    $this
+    $response = $this
         ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.data', [
             'identity_subject' => 'spouse',
-        ]))
+        ]));
+
+    $response
         ->assertOk()
         ->assertJsonPath('total', 3)
         ->assertJsonFragment(['identity_label' => __('ui.missing_citizen_identities.identity_spouse_2')])
@@ -845,6 +847,11 @@ it('returns missing spouse identities separately from owner identities', functio
         ->assertJsonFragment(['identity_label' => __('ui.missing_citizen_identities.identity_spouse_4')])
         ->assertJsonFragment(['id_number1' => '900000022'])
         ->assertJsonFragment(['id_number1' => '-']);
+
+    $spouse2Row = collect($response->json('data'))->firstWhere('id_number1', '900000022');
+
+    expect($spouse2Row['housing_unit_owner_name'])->toBe('Active Owner')
+        ->and($spouse2Row['owner_name'])->toBe('Missing Spouse');
 });
 
 it('approves a spouse identity match into the spouse identity field', function (): void {

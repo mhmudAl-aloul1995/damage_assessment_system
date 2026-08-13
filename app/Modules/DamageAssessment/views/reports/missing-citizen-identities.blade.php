@@ -95,6 +95,7 @@
                                 <input class="form-check-input" type="checkbox" data-kt-missing-citizens-action="select-all" title="{{ __('ui.missing_citizen_identities.select_all_matches') }}">
                             </th>
                             <th>{{ __('ui.missing_citizen_identities.identity_subject') }}</th>
+                            <th>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th id="missing_citizen_identity_name_header">{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.housing_unit_objectid') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.issue_type') }}</th>
@@ -391,7 +392,7 @@
                 }
 
                 if (rows.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
                     updateBulkState();
                     return;
                 }
@@ -410,6 +411,7 @@
                     return '<tr data-kt-missing-citizens-row="' + escapeHtml(row.id) + '">'
                         + '<td>' + checkbox + '</td>'
                         + '<td><span class="badge badge-light-dark">' + escapeHtml(row.identity_label) + '</span></td>'
+                        + '<td>' + escapeHtml(row.housing_unit_owner_name) + '</td>'
                         + '<td>' + escapeHtml(row.owner_name) + '</td>'
                         + '<td><span class="badge badge-light-info">' + escapeHtml(row.housing_unit_objectid) + '</span></td>'
                         + '<td>' + issue + '</td>'
@@ -485,7 +487,7 @@
                 setButtonsState();
 
                 if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
                 }
 
                 var params = new URLSearchParams({
@@ -526,7 +528,7 @@
                     })
                     .catch(function () {
                         if (tbody) {
-                            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-10">{{ __('ui.messages.unexpected_error') }}</td></tr>';
                         }
                     })
                     .finally(function () {
