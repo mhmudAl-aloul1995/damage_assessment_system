@@ -1315,6 +1315,77 @@ it('does not report spouse rows when the marital status is not married', functio
         ->exists())->toBeFalse();
 });
 
+it('does not report a female owner spouse identity when it matches the registry breadwinner', function (): void {
+    createHusbandRegistryTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 9013,
+        'globalid' => 'female-owner-existing-husband',
+        'unit_owner' => 'Female Owner',
+        'id_number1' => '970000001',
+        'marital_status' => 'Married',
+        'spouse1' => 'Female Owner Husband',
+        'spouse1_id' => '970000002',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '970000001',
+        'full_name' => 'Female Owner',
+        'full_name_normalized' => 'FemaleOwner',
+        'breadwinner_id_card_no' => '970000002',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_number_field', 'spouse1_id')
+        ->exists())->toBeFalse();
+});
+
+it('matches a female owner spouse identity from the registry breadwinner', function (): void {
+    createHusbandRegistryTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 9014,
+        'globalid' => 'female-owner-wrong-husband',
+        'unit_owner' => 'Female Owner',
+        'id_number1' => '970000011',
+        'marital_status' => 'Married',
+        'spouse1' => 'Female Owner Husband',
+        'spouse1_id' => '999999999',
+    ]);
+
+    DB::table('citizens')->insert([
+        'status' => 'A',
+        'id_card_no' => '970000012',
+        'full_name' => 'Female Owner Husband',
+        'full_name_normalized' => 'FemaleOwnerHusband',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '970000011',
+        'full_name' => 'Female Owner',
+        'full_name_normalized' => 'FemaleOwner',
+        'breadwinner_id_card_no' => '970000012',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_number_field', 'spouse1_id')
+        ->firstOrFail();
+
+    expect($report->name_match_status)->toBe('matched')
+        ->and($report->matched_citizen_id_card_no)->toBe('970000012')
+        ->and($report->matched_citizen_full_name)->toBe('Female Owner Husband');
+});
+
 it('creates spouse rows from the husband registry when the owner is female', function (): void {
     createHusbandRegistryTable();
 

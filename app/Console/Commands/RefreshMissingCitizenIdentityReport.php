@@ -308,14 +308,15 @@ class RefreshMissingCitizenIdentityReport extends Command
                 ->groupBy(fn ($citizen): string => (string) $citizen->full_name_normalized);
 
         $sgazaByNormalizedName = $this->sgazaMatchesByNormalizedNames($uniqueNormalizedNames);
+        $husbandRegistryRecordsByBreadwinnerId = $this->husbandRegistryRecordsByBreadwinnerId($identityRows);
 
         return $identityRows
-            ->mapWithKeys(function (array $identityRow) use ($normalizedNamesByIdentityKey, $citizensByNormalizedName, $sgazaByNormalizedName): array {
+            ->mapWithKeys(function (array $identityRow) use ($normalizedNamesByIdentityKey, $citizensByNormalizedName, $sgazaByNormalizedName, $husbandRegistryRecordsByBreadwinnerId): array {
                 $identityKey = (string) $identityRow['identity_key'];
                 $normalizedOwnerName = (string) ($normalizedNamesByIdentityKey[$identityKey] ?? '');
                 $citizens = $citizensByNormalizedName->get($normalizedOwnerName, collect());
                 $sgazaRecords = $sgazaByNormalizedName->get($normalizedOwnerName, collect());
-                $husbandRegistryRecords = $this->husbandRegistryMatches($identityRow, $normalizedOwnerName);
+                $husbandRegistryRecords = $this->husbandRegistryMatches($identityRow, $husbandRegistryRecordsByBreadwinnerId);
                 $matches = $husbandRegistryRecords
                     ->merge($sgazaRecords)
                     ->merge($citizens)
@@ -411,8 +412,8 @@ class RefreshMissingCitizenIdentityReport extends Command
                 ->where('status', 'A')
                 ->where(function ($query) use ($breadwinnerIdCardNumbers): void {
                     $query
-                        ->whereIn(DB::raw('TRIM(breadwinner_id_card_no)'), $breadwinnerIdCardNumbers)
-                        ->orWhereIn(DB::raw('TRIM(id_card_no)'), $breadwinnerIdCardNumbers);
+                        ->whereIn('breadwinner_id_card_no', $breadwinnerIdCardNumbers)
+                        ->orWhereIn('id_card_no', $breadwinnerIdCardNumbers);
                 })
                 ->orderBy('id_card_no')
                 ->get();
@@ -625,15 +626,27 @@ class RefreshMissingCitizenIdentityReport extends Command
         $breadwinnerIdCardNumbers = $spouseRows->pluck('breadwinner_id_card_no')->unique()->values();
 
         try {
-            return DB::table($this->husbandRegistryTable())
+            $wifeKeys = DB::table($this->husbandRegistryTable())
                 ->selectRaw('TRIM(id_card_no) as id_card_no, TRIM(breadwinner_id_card_no) as breadwinner_id_card_no')
                 ->where('status', 'A')
-                ->whereIn(DB::raw('TRIM(id_card_no)'), $identityNumbers)
-                ->whereIn(DB::raw('TRIM(breadwinner_id_card_no)'), $breadwinnerIdCardNumbers)
+                ->whereIn('id_card_no', $identityNumbers)
+                ->whereIn('breadwinner_id_card_no', $breadwinnerIdCardNumbers)
                 ->get()
                 ->mapWithKeys(fn ($record): array => [
                     $this->husbandRegistryIdentityKey((string) $record->breadwinner_id_card_no, (string) $record->id_card_no) => true,
                 ]);
+
+            $femaleOwnerHusbandKeys = DB::table($this->husbandRegistryTable())
+                ->selectRaw('TRIM(id_card_no) as id_card_no, TRIM(breadwinner_id_card_no) as breadwinner_id_card_no')
+                ->where('status', 'A')
+                ->whereIn('id_card_no', $breadwinnerIdCardNumbers)
+                ->whereIn('breadwinner_id_card_no', $identityNumbers)
+                ->get()
+                ->mapWithKeys(fn ($record): array => [
+                    $this->husbandRegistryIdentityKey((string) $record->id_card_no, (string) $record->breadwinner_id_card_no) => true,
+                ]);
+
+            return $wifeKeys->union($femaleOwnerHusbandKeys);
         } catch (Throwable) {
             return collect();
         }
@@ -647,7 +660,7 @@ class RefreshMissingCitizenIdentityReport extends Command
     /**
      * @param  array<string, mixed>  $identityRow
      */
-    private function husbandRegistryMatches(array $identityRow, string $normalizedOwnerName): Collection
+    private function husbandRegistryMatches(array $identityRow, Collection $registryRecordsByBreadwinnerId): Collection
     {
         if (filled($identityRow['registry_candidate_id_card_no'] ?? null)) {
             return collect([
@@ -669,6 +682,46 @@ class RefreshMissingCitizenIdentityReport extends Command
             return collect();
         }
 
+        $registryRecords = $registryRecordsByBreadwinnerId->get($breadwinnerIdCardNo, collect());
+
+        if ($registryRecords->isEmpty()) {
+            return collect();
+        }
+
+        $nameMatches = $registryRecords
+            ->filter(fn ($record): bool => $this->spouseRegistryNameMatches(
+                (string) $identityRow['owner_name'],
+                (string) $record->full_name
+            ))
+            ->values();
+
+        if ($nameMatches->isNotEmpty()) {
+            return $nameMatches;
+        }
+
+        return $registryRecords->count() === 1
+            ? $registryRecords
+            : collect();
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $identityRows
+     * @return Collection<string, Collection<int, object>>
+     */
+    private function husbandRegistryRecordsByBreadwinnerId(Collection $identityRows): Collection
+    {
+        $breadwinnerIdCardNumbers = $identityRows
+            ->filter(fn (array $identityRow): bool => $identityRow['identity_subject'] === self::SUBJECT_SPOUSE)
+            ->pluck('breadwinner_id_card_no')
+            ->map(fn ($idNumber): string => trim((string) $idNumber))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($breadwinnerIdCardNumbers->isEmpty()) {
+            return collect();
+        }
+
         try {
             $registryRecords = DB::table($this->husbandRegistryTable())
                 ->select([
@@ -676,25 +729,95 @@ class RefreshMissingCitizenIdentityReport extends Command
                     'id_card_no',
                     'full_name',
                     'full_name_normalized',
+                    'breadwinner_id_card_no',
                 ])
                 ->where('status', 'A')
-                ->whereRaw('TRIM(breadwinner_id_card_no) = ?', [$breadwinnerIdCardNo])
+                ->where(function ($query) use ($breadwinnerIdCardNumbers): void {
+                    $query
+                        ->whereIn('breadwinner_id_card_no', $breadwinnerIdCardNumbers)
+                        ->orWhereIn('id_card_no', $breadwinnerIdCardNumbers);
+                })
                 ->get();
 
-            $nameMatches = $registryRecords
-                ->filter(fn ($record): bool => $this->spouseRegistryNameMatches(
-                    (string) $identityRow['owner_name'],
-                    (string) $record->full_name
-                ))
-                ->values();
+            $wifeRecordsByBreadwinnerId = $registryRecords
+                ->filter(fn ($record): bool => filled($record->breadwinner_id_card_no))
+                ->groupBy(fn ($record): string => trim((string) $record->breadwinner_id_card_no));
+            $femaleOwnerHusbandRecords = $this->femaleOwnerHusbandRecords($registryRecords, $breadwinnerIdCardNumbers);
 
-            if ($nameMatches->isNotEmpty()) {
-                return $nameMatches;
-            }
+            return $wifeRecordsByBreadwinnerId
+                ->keys()
+                ->merge($femaleOwnerHusbandRecords->keys())
+                ->unique()
+                ->mapWithKeys(fn (string $ownerIdCardNo): array => [
+                    $ownerIdCardNo => $wifeRecordsByBreadwinnerId
+                        ->get($ownerIdCardNo, collect())
+                        ->merge($femaleOwnerHusbandRecords->get($ownerIdCardNo, collect()))
+                        ->unique(fn ($record): string => trim((string) $record->id_card_no))
+                        ->values(),
+                ]);
+        } catch (Throwable) {
+            return collect();
+        }
+    }
 
-            return $registryRecords->count() === 1
-                ? $registryRecords
-                : collect();
+    /**
+     * @param  Collection<int, object>  $registryRecords
+     * @return Collection<string, Collection<int, object>>
+     */
+    private function femaleOwnerHusbandRecords(Collection $registryRecords, Collection $ownerIdCardNumbers): Collection
+    {
+        $ownerIdCardNumberKeys = $ownerIdCardNumbers->flip();
+        $ownerAsWifeRecords = $registryRecords
+            ->filter(fn ($record): bool => isset($ownerIdCardNumberKeys[trim((string) $record->id_card_no)])
+                && filled($record->breadwinner_id_card_no))
+            ->values();
+
+        if ($ownerAsWifeRecords->isEmpty()) {
+            return collect();
+        }
+
+        $husbandIdCardNumbers = $ownerAsWifeRecords
+            ->pluck('breadwinner_id_card_no')
+            ->map(fn ($idNumber): string => trim((string) $idNumber))
+            ->filter()
+            ->unique()
+            ->values();
+        $husbandNamesByIdCardNo = $this->citizenNamesByIdCardNo($husbandIdCardNumbers);
+
+        return $ownerAsWifeRecords
+            ->mapToGroups(function ($record) use ($husbandNamesByIdCardNo): array {
+                $ownerIdCardNo = trim((string) $record->id_card_no);
+                $husbandIdCardNo = trim((string) $record->breadwinner_id_card_no);
+                $husbandName = trim((string) ($husbandNamesByIdCardNo[$husbandIdCardNo] ?? $husbandIdCardNo));
+
+                return [
+                    $ownerIdCardNo => (object) [
+                        'id' => 0,
+                        'id_card_no' => $husbandIdCardNo,
+                        'full_name' => $husbandName,
+                        'full_name_normalized' => ArabicNameNormalizer::normalize($husbandName),
+                        'breadwinner_id_card_no' => '',
+                    ],
+                ];
+            });
+    }
+
+    private function citizenNamesByIdCardNo(Collection $idCardNumbers): Collection
+    {
+        if ($idCardNumbers->isEmpty()) {
+            return collect();
+        }
+
+        try {
+            return DB::table($this->citizensTable())
+                ->select(['id_card_no', 'full_name'])
+                ->where('status', 'A')
+                ->whereIn('id_card_no', $idCardNumbers)
+                ->get()
+                ->mapWithKeys(fn ($record): array => [
+                    trim((string) $record->id_card_no) => trim((string) $record->full_name),
+                ])
+                ->filter();
         } catch (Throwable) {
             return collect();
         }
