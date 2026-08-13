@@ -184,7 +184,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/missing-citizen-identities', [MissingCitizenIdentityController::class, 'index'])
                 ->name('missing-citizen-identities.index');
 
-            Route::get('/missing-citizen-identities/data', [MissingCitizenIdentityController::class, 'data'])
+            Route::match(['get', 'post'], '/missing-citizen-identities/data', [MissingCitizenIdentityController::class, 'data'])
                 ->name('missing-citizen-identities.data');
 
             Route::post('/missing-citizen-identities/{report}/approve-name-match', [MissingCitizenIdentityController::class, 'approveNameMatch'])

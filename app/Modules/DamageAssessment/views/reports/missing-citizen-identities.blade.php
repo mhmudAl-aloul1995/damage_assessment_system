@@ -585,7 +585,7 @@
                     tbody.innerHTML = '<tr><td colspan="' + visibleColumnsCount() + '" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
                 }
 
-                var params = new URLSearchParams({
+                var params = {
                     after_id: cursor,
                     search: currentSearch,
                     unit_objectid: normalizedUnitObjectIds(),
@@ -593,15 +593,25 @@
                     name_match_status: currentNameMatchStatus,
                     identity_subject: currentIdentitySubject,
                     per_page: currentPerPage
-                });
+                };
 
-                fetch("{{ route('reports.missing-citizen-identities.data') }}?" + params.toString(), {
+                fetch("{{ route('reports.missing-citizen-identities.data') }}", {
+                    method: 'POST',
                     headers: {
-                        'Accept': 'application/json'
-                    }
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify(params)
                 })
                     .then(function (response) {
-                        return response.json();
+                        return response.json().then(function (payload) {
+                            if (!response.ok) {
+                                throw payload;
+                            }
+
+                            return payload;
+                        });
                     })
                     .then(function (payload) {
                         hasMore = Boolean(payload.has_more);
