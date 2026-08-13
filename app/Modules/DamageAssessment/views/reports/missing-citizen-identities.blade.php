@@ -96,10 +96,11 @@
                             </th>
                             <th>{{ __('ui.missing_citizen_identities.identity_subject') }}</th>
                             <th class="d-none" data-kt-missing-citizens-owner-context>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
+                            <th class="d-none" data-kt-missing-citizens-owner-context>{{ __('ui.missing_citizen_identities.owner_id_number') }}</th>
                             <th id="missing_citizen_identity_name_header">{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.housing_unit_objectid') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.issue_type') }}</th>
-                            <th>{{ __('ui.missing_citizen_identities.id_number') }}</th>
+                            <th id="missing_citizen_identity_number_header">{{ __('ui.missing_citizen_identities.id_number') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.name_match_status') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.matched_citizen') }}</th>
                             <th class="text-end">{{ __('ui.missing_citizen_identities.actions') }}</th>
@@ -199,6 +200,7 @@
             var currentNameMatchStatus = '';
             var currentIdentitySubject = 'owner';
             var nameHeader = document.getElementById('missing_citizen_identity_name_header');
+            var idNumberHeader = document.getElementById('missing_citizen_identity_number_header');
             var hasMore = false;
             var loading = false;
             var currentPerPage = 100;
@@ -315,7 +317,7 @@
             };
 
             var visibleColumnsCount = function () {
-                return currentIdentitySubject === 'spouse' ? 10 : 9;
+                return currentIdentitySubject === 'spouse' ? 11 : 9;
             };
 
             var updateOwnerContextVisibility = function () {
@@ -426,6 +428,7 @@
                         + '<td>' + checkbox + '</td>'
                         + '<td><span class="badge badge-light-dark">' + escapeHtml(row.identity_label) + '</span></td>'
                         + '<td class="' + ownerContextClass() + '" data-kt-missing-citizens-owner-context>' + escapeHtml(row.housing_unit_owner_name) + '</td>'
+                        + '<td class="' + ownerContextClass() + '" data-kt-missing-citizens-owner-context><span class="badge badge-light-primary">' + escapeHtml(row.housing_unit_owner_id_number) + '</span></td>'
                         + '<td>' + escapeHtml(row.owner_name) + '</td>'
                         + '<td><span class="badge badge-light-info">' + escapeHtml(row.housing_unit_objectid) + '</span></td>'
                         + '<td>' + issue + '</td>'
@@ -899,6 +902,12 @@
                             nameHeader.textContent = currentIdentitySubject === 'spouse'
                                 ? '{{ __('ui.missing_citizen_identities.spouse_name') }}'
                                 : '{{ __('ui.missing_citizen_identities.owner_name') }}';
+                        }
+
+                        if (idNumberHeader) {
+                            idNumberHeader.textContent = currentIdentitySubject === 'spouse'
+                                ? '{{ __('ui.missing_citizen_identities.spouse_id_number') }}'
+                                : '{{ __('ui.missing_citizen_identities.id_number') }}';
                         }
 
                         updateOwnerContextVisibility();

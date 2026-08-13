@@ -581,6 +581,8 @@ return [
         'identity_spouse_4' => 'الزوج/ة الرابعة',
         'owner_name' => 'اسم المالك',
         'spouse_name' => 'اسم الزوج/الزوجة',
+        'owner_id_number' => 'رقم هوية المالك',
+        'spouse_id_number' => 'رقم هوية الزوج/الزوجة',
         'housing_unit_objectid' => 'رقم الوحدة',
         'issue_type' => 'نوع المشكلة',
         'id_number' => 'رقم الهوية',

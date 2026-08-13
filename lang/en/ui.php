@@ -601,6 +601,8 @@ return [
         'identity_spouse_4' => 'Fourth spouse/partner',
         'owner_name' => 'Owner name',
         'spouse_name' => 'Spouse/partner name',
+        'owner_id_number' => 'Owner ID number',
+        'spouse_id_number' => 'Spouse/partner ID number',
         'housing_unit_objectid' => 'Unit number',
         'issue_type' => 'Issue type',
         'id_number' => 'ID number',

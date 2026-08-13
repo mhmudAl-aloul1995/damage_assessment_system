@@ -845,12 +845,14 @@ it('returns missing spouse identities separately from owner identities', functio
         ->assertJsonFragment(['identity_label' => __('ui.missing_citizen_identities.identity_spouse_2')])
         ->assertJsonFragment(['identity_label' => __('ui.missing_citizen_identities.identity_spouse_3')])
         ->assertJsonFragment(['identity_label' => __('ui.missing_citizen_identities.identity_spouse_4')])
+        ->assertJsonFragment(['housing_unit_owner_id_number' => '900000020'])
         ->assertJsonFragment(['id_number1' => '900000022'])
         ->assertJsonFragment(['id_number1' => '-']);
 
     $spouse2Row = collect($response->json('data'))->firstWhere('id_number1', '900000022');
 
     expect($spouse2Row['housing_unit_owner_name'])->toBe('Active Owner')
+        ->and($spouse2Row['housing_unit_owner_id_number'])->toBe('900000020')
         ->and($spouse2Row['owner_name'])->toBe('Missing Spouse');
 });
 
