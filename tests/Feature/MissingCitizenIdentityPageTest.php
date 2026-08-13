@@ -63,6 +63,11 @@ it('shows the missing citizen identities page', function (): void {
         ->actingAs(missingCitizenIdentityUser())
         ->get(route('reports.missing-citizen-identities.index'));
 
+    $content = $response->getContent();
+    $nameHeaderPosition = strpos($content, 'missing_citizen_identity_name_header');
+    $idNumberHeaderPosition = strpos($content, 'missing_citizen_identity_number_header');
+    $unitNumberHeaderPosition = strpos($content, __('ui.missing_citizen_identities.housing_unit_objectid'), $idNumberHeaderPosition);
+
     $response
         ->assertOk()
         ->assertSee(__('ui.missing_citizen_identities.title'))
@@ -74,6 +79,11 @@ it('shows the missing citizen identities page', function (): void {
         ->assertSee(__('ui.missing_citizen_identities.select_all_matches'))
         ->assertSee('data-kt-missing-citizens-action="select-all-visible"', false)
         ->assertSee('kt_table_missing_citizen_identities');
+
+    expect($nameHeaderPosition)
+        ->toBeLessThan($idNumberHeaderPosition)
+        ->and($idNumberHeaderPosition)
+        ->toBeLessThan($unitNumberHeaderPosition);
 });
 
 it('allows auditing supervisor and project officer roles to access the missing identities page', function (string $roleName): void {

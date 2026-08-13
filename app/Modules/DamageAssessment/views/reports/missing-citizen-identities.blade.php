@@ -98,9 +98,9 @@
                             <th class="d-none" data-kt-missing-citizens-owner-context>{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th class="d-none" data-kt-missing-citizens-owner-context>{{ __('ui.missing_citizen_identities.owner_id_number') }}</th>
                             <th id="missing_citizen_identity_name_header">{{ __('ui.missing_citizen_identities.owner_name') }}</th>
+                            <th id="missing_citizen_identity_number_header">{{ __('ui.missing_citizen_identities.id_number') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.housing_unit_objectid') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.issue_type') }}</th>
-                            <th id="missing_citizen_identity_number_header">{{ __('ui.missing_citizen_identities.id_number') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.name_match_status') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.matched_citizen') }}</th>
                             <th class="text-end">{{ __('ui.missing_citizen_identities.actions') }}</th>
@@ -430,9 +430,9 @@
                         + '<td class="' + ownerContextClass() + '" data-kt-missing-citizens-owner-context>' + escapeHtml(row.housing_unit_owner_name) + '</td>'
                         + '<td class="' + ownerContextClass() + '" data-kt-missing-citizens-owner-context><span class="badge badge-light-primary">' + escapeHtml(row.housing_unit_owner_id_number) + '</span></td>'
                         + '<td>' + escapeHtml(row.owner_name) + '</td>'
+                        + '<td><span class="badge badge-light-danger">' + escapeHtml(row.id_number1) + '</span></td>'
                         + '<td><span class="badge badge-light-info">' + escapeHtml(row.housing_unit_objectid) + '</span></td>'
                         + '<td>' + issue + '</td>'
-                        + '<td><span class="badge badge-light-danger">' + escapeHtml(row.id_number1) + '</span></td>'
                         + '<td>' + status + '</td>'
                         + '<td>' + matchedCitizen + '</td>'
                         + '<td class="text-end">' + action + '</td>'
