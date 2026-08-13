@@ -595,7 +595,7 @@ return [
         'issue_owner_without_identity' => 'هوية غير مدخلة',
         'name_match_matched' => 'تطابق واحد',
         'name_match_ambiguous' => 'أكثر من تطابق',
-        'name_match_not_found' => 'لا يوجد تطابق',
+        'name_match_not_found' => 'لا يوجد اسم مطابق',
         'name_match_no_owner' => 'لا يوجد اسم',
         'name_match_not_checked' => 'لم يتم الفحص',
         'approve_match' => 'اعتماد',

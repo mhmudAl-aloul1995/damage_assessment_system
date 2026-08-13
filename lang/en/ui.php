@@ -615,7 +615,7 @@ return [
         'issue_owner_without_identity' => 'ID not entered',
         'name_match_matched' => 'Single match',
         'name_match_ambiguous' => 'Multiple matches',
-        'name_match_not_found' => 'No match',
+        'name_match_not_found' => 'No matching name',
         'name_match_no_owner' => 'No owner name',
         'name_match_not_checked' => 'Not checked',
         'approve_match' => 'Approve',
