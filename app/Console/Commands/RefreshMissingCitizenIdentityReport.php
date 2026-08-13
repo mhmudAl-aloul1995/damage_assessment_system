@@ -74,6 +74,10 @@ class RefreshMissingCitizenIdentityReport extends Command
                     ->flatMap(fn (HousingUnit $housingUnit): Collection => $this->identityRows($housingUnit))
                     ->values();
 
+                $identityRows = $identityRows
+                    ->merge($this->husbandRegistryFallbackIdentityRows($housingUnits, $identityRows))
+                    ->values();
+
                 $identityNumbers = $identityRows
                     ->pluck('id_number')
                     ->filter()
@@ -370,6 +374,99 @@ class RefreshMissingCitizenIdentityReport extends Command
                     'housing_unit_id' => $housingUnit->id,
                     'identity_key' => $housingUnit->id.':'.$identityRow['identity_number_field'],
                 ];
+            })
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, HousingUnit>  $housingUnits
+     * @param  Collection<int, array<string, mixed>>  $identityRows
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function husbandRegistryFallbackIdentityRows(Collection $housingUnits, Collection $identityRows): Collection
+    {
+        $husbandIdCardNumbers = $housingUnits
+            ->pluck('id_number1')
+            ->map(fn ($idNumber): string => trim((string) $idNumber))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($husbandIdCardNumbers->isEmpty()) {
+            return collect();
+        }
+
+        try {
+            $registryRecordsByHusbandId = DB::table($this->husbandRegistryTable())
+                ->select(['id_card_no', 'full_name', 'full_name_normalized', 'husband_id_card_no'])
+                ->where('status', 'A')
+                ->whereIn(DB::raw('TRIM(husband_id_card_no)'), $husbandIdCardNumbers)
+                ->orderBy('id_card_no')
+                ->get()
+                ->groupBy(fn ($record): string => trim((string) $record->husband_id_card_no));
+        } catch (Throwable) {
+            return collect();
+        }
+
+        $spouseRowsByUnitId = $identityRows
+            ->filter(fn (array $identityRow): bool => $identityRow['identity_subject'] === self::SUBJECT_SPOUSE)
+            ->groupBy('housing_unit_id');
+
+        return $housingUnits
+            ->flatMap(function (HousingUnit $housingUnit) use ($registryRecordsByHusbandId, $spouseRowsByUnitId): Collection {
+                $husbandIdCardNo = trim((string) $housingUnit->id_number1);
+                $registryRecords = $registryRecordsByHusbandId->get($husbandIdCardNo, collect());
+
+                if ($registryRecords->isEmpty()) {
+                    return collect();
+                }
+
+                $existingSpouseRows = $spouseRowsByUnitId->get($housingUnit->id, collect());
+                $existingIdNumbers = $existingSpouseRows
+                    ->pluck('id_number')
+                    ->map(fn ($idNumber): string => trim((string) $idNumber))
+                    ->filter()
+                    ->flip();
+                $existingNames = $existingSpouseRows
+                    ->pluck('owner_name')
+                    ->map(fn ($name): string => ArabicNameNormalizer::normalize((string) $name))
+                    ->filter()
+                    ->flip();
+                $availableSlots = collect(range(1, 4))
+                    ->filter(fn (int $index): bool => trim((string) $housingUnit->{'spouse'.$index}) === ''
+                        && trim((string) $housingUnit->{'spouse'.$index.'_id'}) === '')
+                    ->values();
+
+                if ($availableSlots->isEmpty()) {
+                    return collect();
+                }
+
+                return $registryRecords
+                    ->filter(function ($record) use ($existingIdNumbers, $existingNames): bool {
+                        $idNumber = trim((string) $record->id_card_no);
+                        $normalizedName = ArabicNameNormalizer::normalize((string) $record->full_name);
+
+                        return $idNumber !== ''
+                            && ! isset($existingIdNumbers[$idNumber])
+                            && ! isset($existingNames[$normalizedName]);
+                    })
+                    ->take($availableSlots->count())
+                    ->values()
+                    ->map(function ($record, int $recordIndex) use ($availableSlots, $housingUnit, $husbandIdCardNo): array {
+                        $slot = (int) $availableSlots[$recordIndex];
+
+                        return [
+                            'identity_subject' => self::SUBJECT_SPOUSE,
+                            'identity_index' => $slot,
+                            'identity_name_field' => 'spouse'.$slot,
+                            'identity_number_field' => 'spouse'.$slot.'_id',
+                            'owner_name' => trim((string) $record->full_name),
+                            'id_number' => '',
+                            'husband_id_card_no' => $husbandIdCardNo,
+                            'housing_unit_id' => $housingUnit->id,
+                            'identity_key' => $housingUnit->id.':spouse'.$slot.'_id',
+                        ];
+                    });
             })
             ->values();
     }

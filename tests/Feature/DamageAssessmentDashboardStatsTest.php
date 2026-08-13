@@ -2,7 +2,9 @@
 
 use App\Models\Building;
 use App\Models\HousingUnit;
+use App\Models\InfAuditStatus;
 use App\Models\PublicBuildingSurvey;
+use App\Models\RoadFacilityAuditStatus;
 use App\Models\RoadFacilitySurvey;
 use App\Models\User;
 use App\Services\ArcgisService;
@@ -122,6 +124,50 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertSee('data-period="day"', false)
         ->assertSee('data-period="all"', false)
         ->assertSee('Rimal');
+});
+
+it('excludes final approved road facilities from dashboard road audit totals', function () {
+    $user = User::factory()->create();
+    $finalStatus = InfAuditStatus::query()->create([
+        'name' => 'final_approval',
+        'label_en' => 'Final Approval',
+        'label_ar' => 'اعتماد نهائي',
+    ]);
+
+    $openRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 2101,
+        'globalid' => 'open-road-audit-global-id',
+        'str_name' => 'Open Audit Road',
+        'field_status' => 'COMPLETED',
+        'road_damage_level' => 'severe',
+        'shape__length' => 0.1,
+    ]);
+
+    $finalRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 2102,
+        'globalid' => 'final-road-audit-global-id',
+        'str_name' => 'Final Audit Road',
+        'field_status' => 'COMPLETED',
+        'road_damage_level' => 'severe',
+        'shape__length' => 0.2,
+    ]);
+
+    RoadFacilityAuditStatus::query()->create([
+        'road_facility_survey_id' => $finalRoad->id,
+        'objectid' => $finalRoad->objectid,
+        'globalid' => $finalRoad->globalid,
+        'status_id' => $finalStatus->id,
+        'updated_by' => $user->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertViewHas('roadFacilityStats', function (array $stats): bool {
+            return (int) $stats['total_surveys'] === 1
+                && (int) $stats['damaged_roads'] === 1
+                && abs((float) $stats['completed_road_length_km'] - 11.1) < 0.0001;
+        });
 });
 
 it('prevents field engineers from viewing the main damage assessment dashboard', function () {

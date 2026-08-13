@@ -994,6 +994,70 @@ it('matches and approves missing spouse identities from the husband registry tab
     expect($housingUnit->fresh()->spouse3_id)->toBe('920000003');
 });
 
+it('creates spouse rows from the husband registry when housing spouse fields are empty', function (): void {
+    createHusbandRegistryTable();
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 896],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 896,
+        'globalid' => 'registry-only-spouse',
+        'unit_owner' => 'Registry Only Husband',
+        'id_number1' => '930000001',
+        'spouse1' => null,
+        'spouse1_id' => null,
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '930000002',
+        'full_name' => 'Registry Only Spouse',
+        'full_name_normalized' => 'RegistryOnlySpouse',
+        'husband_id_card_no' => '930000001',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_number_field', 'spouse1_id')
+        ->firstOrFail();
+
+    expect($report->owner_name)->toBe('Registry Only Spouse')
+        ->and($report->id_number)->toBe('')
+        ->and($report->name_match_status)->toBe('matched')
+        ->and($report->matched_citizen_id_card_no)->toBe('930000002');
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
+            'confirm' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('arcgis_status', 'synced');
+
+    expect($housingUnit->fresh()->spouse1)->toBe('Registry Only Spouse')
+        ->and($housingUnit->fresh()->spouse1_id)->toBe('930000002');
+
+    Http::assertSent(function ($request): bool {
+        return $request->url() === 'https://services.example.test/FeatureServer/1/updateFeatures'
+            && str_contains((string) $request['features'], '"spouse1":"Registry Only Spouse"')
+            && str_contains((string) $request['features'], '"spouse1_id":"930000002"');
+    });
+});
+
 it('bulk approves selected single name matches', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');

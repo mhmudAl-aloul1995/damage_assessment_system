@@ -284,6 +284,16 @@ class ArcgisService
 
     public function updateHousingUnitIdentityField(int|string|null $objectId, string $field, string $idNumber): array
     {
+        return $this->updateHousingUnitFields($objectId, [
+            $field => $idNumber,
+        ]);
+    }
+
+    /**
+     * @param  array<string, string>  $attributes
+     */
+    public function updateHousingUnitFields(int|string|null $objectId, array $attributes): array
+    {
         if (! filled($objectId)) {
             return [
                 'success' => true,
@@ -306,7 +316,7 @@ class ArcgisService
                     [
                         'attributes' => [
                             'objectid' => $objectId,
-                            $field => $idNumber,
+                            ...$attributes,
                         ],
                     ],
                 ], JSON_THROW_ON_ERROR),

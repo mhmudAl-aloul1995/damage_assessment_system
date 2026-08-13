@@ -428,6 +428,17 @@ class MissingCitizenIdentityController extends Controller
         return $field;
     }
 
+    private function identityNameField(MissingCitizenIdentityReport $report): ?string
+    {
+        $field = (string) $report->identity_name_field;
+
+        if (! in_array($field, ['spouse1', 'spouse2', 'spouse3', 'spouse4'], true)) {
+            return null;
+        }
+
+        return $field;
+    }
+
     private function identityLabel(MissingCitizenIdentityReport $report): string
     {
         if ($report->identity_subject === 'spouse') {
@@ -462,13 +473,23 @@ class MissingCitizenIdentityController extends Controller
         }
 
         $identityNumberField = $this->identityNumberField($report);
+        $identityNameField = $this->identityNameField($report);
         $oldIdNumber = (string) $housingUnit->{$identityNumberField};
         $newIdNumber = (string) $citizen->id_card_no;
+        $housingUnitUpdates = [
+            $identityNumberField => $newIdNumber,
+        ];
 
-        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $userId, $citizen, $identityNumberField): void {
-            $housingUnit->forceFill([
-                $identityNumberField => $newIdNumber,
-            ])->save();
+        if (
+            $identityNameField !== null
+            && trim((string) $housingUnit->{$identityNameField}) === ''
+            && filled($report->owner_name)
+        ) {
+            $housingUnitUpdates[$identityNameField] = (string) $report->owner_name;
+        }
+
+        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $userId, $citizen, $housingUnitUpdates): void {
+            $housingUnit->forceFill($housingUnitUpdates)->save();
 
             $report->forceFill([
                 'matched_citizen_id' => $citizen->id,
@@ -492,7 +513,7 @@ class MissingCitizenIdentityController extends Controller
             ]);
         });
 
-        $arcgisResult = $arcgisService->updateHousingUnitIdentityField($housingUnit->objectid, $identityNumberField, $newIdNumber);
+        $arcgisResult = $arcgisService->updateHousingUnitFields($housingUnit->objectid, $housingUnitUpdates);
 
         $approval = MissingCitizenIdentityApproval::query()
             ->where('missing_citizen_identity_report_id', $report->id)

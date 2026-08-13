@@ -610,7 +610,7 @@ return [
         'all_name_matches' => 'All name match statuses',
         'all_issue_types' => 'All issue types',
         'issue_missing_civil_registry_identity' => 'Missing civil registry identity',
-        'issue_owner_without_identity' => 'Owner without ID',
+        'issue_owner_without_identity' => 'ID not entered',
         'name_match_matched' => 'Single match',
         'name_match_ambiguous' => 'Multiple matches',
         'name_match_not_found' => 'No match',

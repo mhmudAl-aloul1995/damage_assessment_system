@@ -590,7 +590,7 @@ return [
         'all_name_matches' => 'كل حالات مطابقة الاسم',
         'all_issue_types' => 'كل أنواع المشاكل',
         'issue_missing_civil_registry_identity' => 'هوية غير موجودة',
-        'issue_owner_without_identity' => 'مالك بدون هوية',
+        'issue_owner_without_identity' => 'هوية غير مدخلة',
         'name_match_matched' => 'تطابق واحد',
         'name_match_ambiguous' => 'أكثر من تطابق',
         'name_match_not_found' => 'لا يوجد تطابق',
