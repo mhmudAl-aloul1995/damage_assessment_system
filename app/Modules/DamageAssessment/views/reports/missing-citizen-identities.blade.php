@@ -152,44 +152,46 @@
                         </div>
                         <div id="missing_citizen_documents_body"></div>
                     </div>
-                    <div class="position-relative mb-5">
-                        <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
-                        <input type="text" class="form-control form-control-solid ps-12 pe-12" id="missing_citizen_manual_search" placeholder="{{ __('ui.missing_citizen_identities.citizen_search_placeholder') }}">
-                        <button type="button" class="btn btn-sm btn-icon btn-light position-absolute top-50 translate-middle-y end-0 me-2" data-kt-missing-citizen-clear-input="#missing_citizen_manual_search">
-                            <i class="ki-duotone ki-cross fs-2"></i>
+                    <div class="input-group mb-5">
+                        <button type="button" class="btn btn-light-danger" data-kt-missing-citizen-clear-input="#missing_citizen_manual_search">
+                            مسح
                         </button>
+                        <div class="position-relative flex-grow-1">
+                            <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
+                            <input type="text" class="form-control form-control-solid ps-12" id="missing_citizen_manual_search" placeholder="{{ __('ui.missing_citizen_identities.citizen_search_placeholder') }}">
+                        </div>
                     </div>
                     <div class="row g-3 mb-5">
                         <div class="col-md-3">
-                            <div class="position-relative">
-                                <input type="text" class="form-control form-control-solid pe-12" data-kt-missing-citizen-name-part="first_name" placeholder="{{ __('ui.missing_citizen_identities.first_name') }}">
-                                <button type="button" class="btn btn-sm btn-icon btn-light position-absolute top-50 translate-middle-y end-0 me-2" data-kt-missing-citizen-clear-nearest>
-                                    <i class="ki-duotone ki-cross fs-2"></i>
+                            <div class="input-group">
+                                <button type="button" class="btn btn-light-danger" data-kt-missing-citizen-clear-nearest>
+                                    مسح
                                 </button>
+                                <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-name-part="first_name" placeholder="{{ __('ui.missing_citizen_identities.first_name') }}">
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="position-relative">
-                                <input type="text" class="form-control form-control-solid pe-12" data-kt-missing-citizen-name-part="father_name" placeholder="{{ __('ui.missing_citizen_identities.father_name') }}">
-                                <button type="button" class="btn btn-sm btn-icon btn-light position-absolute top-50 translate-middle-y end-0 me-2" data-kt-missing-citizen-clear-nearest>
-                                    <i class="ki-duotone ki-cross fs-2"></i>
+                            <div class="input-group">
+                                <button type="button" class="btn btn-light-danger" data-kt-missing-citizen-clear-nearest>
+                                    مسح
                                 </button>
+                                <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-name-part="father_name" placeholder="{{ __('ui.missing_citizen_identities.father_name') }}">
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="position-relative">
-                                <input type="text" class="form-control form-control-solid pe-12" data-kt-missing-citizen-name-part="grandfather_name" placeholder="{{ __('ui.missing_citizen_identities.grandfather_name') }}">
-                                <button type="button" class="btn btn-sm btn-icon btn-light position-absolute top-50 translate-middle-y end-0 me-2" data-kt-missing-citizen-clear-nearest>
-                                    <i class="ki-duotone ki-cross fs-2"></i>
+                            <div class="input-group">
+                                <button type="button" class="btn btn-light-danger" data-kt-missing-citizen-clear-nearest>
+                                    مسح
                                 </button>
+                                <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-name-part="grandfather_name" placeholder="{{ __('ui.missing_citizen_identities.grandfather_name') }}">
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="position-relative">
-                                <input type="text" class="form-control form-control-solid pe-12" data-kt-missing-citizen-name-part="family_name" placeholder="{{ __('ui.missing_citizen_identities.family_name') }}">
-                                <button type="button" class="btn btn-sm btn-icon btn-light position-absolute top-50 translate-middle-y end-0 me-2" data-kt-missing-citizen-clear-nearest>
-                                    <i class="ki-duotone ki-cross fs-2"></i>
+                            <div class="input-group">
+                                <button type="button" class="btn btn-light-danger" data-kt-missing-citizen-clear-nearest>
+                                    مسح
                                 </button>
+                                <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-name-part="family_name" placeholder="{{ __('ui.missing_citizen_identities.family_name') }}">
                             </div>
                         </div>
                     </div>
@@ -1161,7 +1163,7 @@
 
                 Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizen-clear-nearest]')).forEach(function (button) {
                     button.addEventListener('click', function () {
-                        var wrapper = button.closest('.position-relative');
+                        var wrapper = button.closest('.input-group');
                         var input = wrapper ? wrapper.querySelector('input') : null;
 
                         if (input) {
