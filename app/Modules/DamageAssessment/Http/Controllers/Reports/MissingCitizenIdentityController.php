@@ -249,7 +249,7 @@ class MissingCitizenIdentityController extends Controller
         ]);
     }
 
-    public function documents(MissingCitizenIdentityReport $report, ArcgisService $arcgisService): JsonResponse
+    public function documents(MissingCitizenIdentityReport $report): JsonResponse
     {
         $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
 
@@ -261,7 +261,7 @@ class MissingCitizenIdentityController extends Controller
         }
 
         return response()->json([
-            'data' => $this->housingUnitDocuments($housingUnit, $arcgisService),
+            'data' => $this->housingUnitOwnershipDocuments($housingUnit),
         ]);
     }
 
@@ -583,49 +583,11 @@ class MissingCitizenIdentityController extends Controller
     /**
      * @return array<int, array{title: string, url: string, type: string, source: string, content_type?: string, size?: int|null}>
      */
-    private function housingUnitDocuments(HousingUnit $housingUnit, ArcgisService $arcgisService): array
+    private function housingUnitOwnershipDocuments(HousingUnit $housingUnit): array
     {
         $documents = collect();
 
-        if (filled($housingUnit->objectid)) {
-            try {
-                $token = $arcgisService->getToken();
-                $layerId = $arcgisService->getLayerId(HousingUnit::class);
-
-                collect($arcgisService->getAttachments($housingUnit->objectid, $layerId, $token))
-                    ->each(function (array $attachment) use ($arcgisService, $documents, $housingUnit, $layerId, $token): void {
-                        $attachmentId = $attachment['id'] ?? null;
-
-                        if (! filled($attachmentId)) {
-                            return;
-                        }
-
-                        $url = $arcgisService->buildUrl($housingUnit->objectid, $attachmentId, $layerId, $token);
-
-                        $documents->push([
-                            'title' => (string) ($attachment['name'] ?? __('ui.missing_citizen_identities.arcgis_attachment')),
-                            'url' => $url,
-                            'type' => $this->documentType($url, (string) ($attachment['contentType'] ?? '')),
-                            'source' => __('ui.missing_citizen_identities.source_arcgis'),
-                            'content_type' => (string) ($attachment['contentType'] ?? ''),
-                            'size' => $attachment['size'] ?? null,
-                        ]);
-                    });
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-        }
-
         $this->collectDocumentsFromValue($documents, $housingUnit->ownership_image, __('ui.missing_citizen_identities.ownership_document'));
-        $this->collectDocumentsFromValue($documents, $housingUnit->attachments, __('ui.missing_citizen_identities.local_attachments'));
-
-        collect([
-            'damge_photo_2' => __('ui.missing_citizen_identities.damage_photo_2'),
-            'damge_photo_3' => __('ui.missing_citizen_identities.damage_photo_3'),
-            'damge_photo_4' => __('ui.missing_citizen_identities.damage_photo_4'),
-        ])->each(function (string $label, string $field) use ($documents, $housingUnit): void {
-            $this->collectDocumentsFromValue($documents, $housingUnit->{$field}, $label);
-        });
 
         return $documents
             ->filter(fn (array $document): bool => filled($document['url'] ?? null))

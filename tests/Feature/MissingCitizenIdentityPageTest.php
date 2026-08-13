@@ -228,7 +228,7 @@ it('does not report identities that exist in sgaza civil registry', function ():
     expect(MissingCitizenIdentityReport::query()->count())->toBe(0);
 });
 
-it('returns housing unit documents for a missing identity report', function (): void {
+it('returns only ownership documents for a missing identity report', function (): void {
     Schema::table('housing_units', function (Blueprint $table): void {
         if (! Schema::hasColumn('housing_units', 'attachments')) {
             $table->text('attachments')->nullable();
@@ -278,14 +278,10 @@ it('returns housing unit documents for a missing identity report', function (): 
         ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.documents', $report))
         ->assertOk()
+        ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.url', 'https://example.test/documents/ownership-field.pdf')
         ->assertJsonPath('data.0.type', 'pdf')
-        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.ownership_document'))
-        ->assertJsonPath('data.1.title', 'Ownership document')
-        ->assertJsonPath('data.1.source', __('ui.missing_citizen_identities.local_attachments'))
-        ->assertJsonPath('data.2.url', 'https://example.test/photos/damage.jpg')
-        ->assertJsonPath('data.2.type', 'image')
-        ->assertJsonPath('data.2.source', __('ui.missing_citizen_identities.damage_photo_2'));
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.ownership_document'));
 });
 
 it('returns a clean json response when a report was refreshed away', function (): void {

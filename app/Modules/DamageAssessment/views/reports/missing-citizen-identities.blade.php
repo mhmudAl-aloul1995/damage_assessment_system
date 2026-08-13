@@ -395,7 +395,16 @@
                         });
                     })
                     .then(function (payload) {
-                        renderDocuments(payload.data || []);
+                        var documents = payload.data || [];
+
+                        if (documents.length > 0 && documents[0].url) {
+                            resetDocuments();
+                            window.open(documents[0].url, '_blank', 'noopener');
+
+                            return;
+                        }
+
+                        renderDocuments(documents);
                     })
                     .catch(function (payload) {
                         documentsBody.innerHTML = '<div class="text-danger text-center py-5">' + escapeHtml(payload.message || '{{ __('ui.messages.unexpected_error') }}') + '</div>';
