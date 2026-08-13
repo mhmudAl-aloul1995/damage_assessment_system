@@ -297,18 +297,17 @@ class RefreshMissingCitizenIdentityReport extends Command
             ])
             ->filter();
 
-        if ($normalizedNamesByIdentityKey->isEmpty()) {
-            return [];
-        }
+        $uniqueNormalizedNames = $normalizedNamesByIdentityKey->unique()->values();
+        $citizensByNormalizedName = $uniqueNormalizedNames->isEmpty()
+            ? collect()
+            : DB::table($this->citizensTable())
+                ->select(['id', 'id_card_no', 'full_name', 'full_name_normalized'])
+                ->where('status', 'A')
+                ->whereIn('full_name_normalized', $uniqueNormalizedNames)
+                ->get()
+                ->groupBy(fn ($citizen): string => (string) $citizen->full_name_normalized);
 
-        $citizensByNormalizedName = DB::table($this->citizensTable())
-            ->select(['id', 'id_card_no', 'full_name', 'full_name_normalized'])
-            ->where('status', 'A')
-            ->whereIn('full_name_normalized', $normalizedNamesByIdentityKey->unique()->values())
-            ->get()
-            ->groupBy(fn ($citizen): string => (string) $citizen->full_name_normalized);
-
-        $sgazaByNormalizedName = $this->sgazaMatchesByNormalizedNames($normalizedNamesByIdentityKey->unique()->values());
+        $sgazaByNormalizedName = $this->sgazaMatchesByNormalizedNames($uniqueNormalizedNames);
 
         return $identityRows
             ->mapWithKeys(function (array $identityRow) use ($normalizedNamesByIdentityKey, $citizensByNormalizedName, $sgazaByNormalizedName): array {
@@ -328,9 +327,9 @@ class RefreshMissingCitizenIdentityReport extends Command
                     $identityKey => [
                         'normalized_owner_name' => $normalizedOwnerName,
                         'name_match_status' => match (true) {
-                            $normalizedOwnerName === '' => 'no_owner_name',
                             $matches->count() === 1 => 'matched',
                             $matches->count() > 1 => 'ambiguous',
+                            $normalizedOwnerName === '' => 'no_owner_name',
                             default => 'not_found',
                         },
                         'matched_citizen_id' => $matchedCitizen?->id,
@@ -663,7 +662,7 @@ class RefreshMissingCitizenIdentityReport extends Command
             ]);
         }
 
-        if ($identityRow['identity_subject'] !== self::SUBJECT_SPOUSE || $normalizedOwnerName === '') {
+        if ($identityRow['identity_subject'] !== self::SUBJECT_SPOUSE) {
             return collect();
         }
 
@@ -685,9 +684,11 @@ class RefreshMissingCitizenIdentityReport extends Command
                 ->whereRaw('TRIM(breadwinner_id_card_no) = ?', [$breadwinnerIdCardNo])
                 ->get();
 
-            $nameMatches = $registryRecords
-                ->filter(fn ($record): bool => (string) $record->full_name_normalized === $normalizedOwnerName)
-                ->values();
+            $nameMatches = $normalizedOwnerName === ''
+                ? collect()
+                : $registryRecords
+                    ->filter(fn ($record): bool => (string) $record->full_name_normalized === $normalizedOwnerName)
+                    ->values();
 
             if ($nameMatches->isNotEmpty()) {
                 return $nameMatches;

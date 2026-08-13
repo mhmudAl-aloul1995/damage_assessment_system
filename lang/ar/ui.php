@@ -608,6 +608,7 @@ return [
         'bulk_approve_confirm' => 'هل تريد اعتماد كل السجلات المحددة؟ سيتم تحديث قاعدة البيانات و ArcGIS للسجلات ذات التطابق الواحد فقط.',
         'bulk_approved_success' => 'تم اعتماد :approved سجل، فشل :failed، وتم تجاهل :skipped.',
         'bulk_approved_done' => 'تم تنفيذ الاعتماد الجماعي.',
+        'report_missing' => 'هذا السجل لم يعد موجودًا بعد تحديث الكاش. حدّث الجدول وحاول مرة أخرى.',
         'show_candidates' => 'عرض المرشحين',
         'search_civil_registry' => 'بحث في السجل المدني',
         'candidates_title' => 'المرشحون المطابقون للاسم',

@@ -176,6 +176,11 @@ Route::middleware('auth')->group(function () {
     Route::prefix('reports')
         ->name('reports.')
         ->group(function () {
+            $missingCitizenIdentityReportResponse = fn () => response()->json([
+                'message' => __('ui.missing_citizen_identities.report_missing'),
+                'data' => [],
+            ], 404);
+
             Route::get('/missing-citizen-identities', [MissingCitizenIdentityController::class, 'index'])
                 ->name('missing-citizen-identities.index');
 
@@ -183,19 +188,23 @@ Route::middleware('auth')->group(function () {
                 ->name('missing-citizen-identities.data');
 
             Route::post('/missing-citizen-identities/{report}/approve-name-match', [MissingCitizenIdentityController::class, 'approveNameMatch'])
-                ->name('missing-citizen-identities.approve-name-match');
+                ->name('missing-citizen-identities.approve-name-match')
+                ->missing($missingCitizenIdentityReportResponse);
 
             Route::post('/missing-citizen-identities/bulk-approve-name-matches', [MissingCitizenIdentityController::class, 'bulkApproveNameMatches'])
                 ->name('missing-citizen-identities.bulk-approve-name-matches');
 
             Route::get('/missing-citizen-identities/{report}/name-candidates', [MissingCitizenIdentityController::class, 'nameCandidates'])
-                ->name('missing-citizen-identities.name-candidates');
+                ->name('missing-citizen-identities.name-candidates')
+                ->missing($missingCitizenIdentityReportResponse);
 
             Route::get('/missing-citizen-identities/{report}/citizen-search', [MissingCitizenIdentityController::class, 'citizenSearch'])
-                ->name('missing-citizen-identities.citizen-search');
+                ->name('missing-citizen-identities.citizen-search')
+                ->missing($missingCitizenIdentityReportResponse);
 
             Route::get('/missing-citizen-identities/{report}/documents', [MissingCitizenIdentityController::class, 'documents'])
-                ->name('missing-citizen-identities.documents');
+                ->name('missing-citizen-identities.documents')
+                ->missing($missingCitizenIdentityReportResponse);
             Route::get('/damage-statistics', [DamageStatisticsReportController::class, 'index'])
                 ->name('damage-statistics.index');
 

@@ -278,6 +278,15 @@ it('returns housing unit documents for a missing identity report', function (): 
         ->assertJsonPath('data.1.source', __('ui.missing_citizen_identities.damage_photo_2'));
 });
 
+it('returns a clean json response when a report was refreshed away', function (): void {
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.name-candidates', ['report' => 55333]))
+        ->assertNotFound()
+        ->assertJsonPath('message', __('ui.missing_citizen_identities.report_missing'))
+        ->assertJsonPath('data', []);
+});
+
 it('matches sgaza records using structured housing unit owner name fields', function (): void {
     createSgazaTable();
 
@@ -993,7 +1002,7 @@ it('matches a bad spouse name to the only wife registered for the breadwinner', 
         'unit_owner' => 'Bad Spouse Name Husband',
         'id_number1' => '934953951',
         'marital_status' => 'Married',
-        'spouse1' => 'ا',
+        'spouse1' => '|',
         'spouse1_id' => '999999999',
     ]);
 
@@ -1013,7 +1022,7 @@ it('matches a bad spouse name to the only wife registered for the breadwinner', 
         ->where('identity_number_field', 'spouse1_id')
         ->firstOrFail();
 
-    expect($report->owner_name)->toBe('ا')
+    expect($report->owner_name)->toBe('|')
         ->and($report->id_number)->toBe('999999999')
         ->and($report->name_match_status)->toBe('matched')
         ->and($report->matched_citizen_id_card_no)->toBe('928640739')

@@ -628,6 +628,7 @@ return [
         'bulk_approve_confirm' => 'Approve all selected records? Only single name matches will update the database and ArcGIS.',
         'bulk_approved_success' => 'Approved :approved records, failed :failed, skipped :skipped.',
         'bulk_approved_done' => 'Bulk approval completed.',
+        'report_missing' => 'This report is no longer available after the cache refresh. Refresh the table and try again.',
         'show_candidates' => 'Show candidates',
         'search_civil_registry' => 'Search civil registry',
         'candidates_title' => 'Name match candidates',
