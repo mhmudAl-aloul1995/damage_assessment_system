@@ -563,6 +563,16 @@
                 return '<span class="badge ' + (classes[status] || 'badge-light') + '">' + escapeHtml(labels[status] || status) + suffix + '</span>';
             };
 
+            var normalizedUnitObjectIds = function () {
+                var matches = String(currentUnitObjectId || '').match(/\d+/g) || [];
+
+                return matches
+                    .filter(function (value, index, values) {
+                        return Number(value) > 0 && values.indexOf(value) === index;
+                    })
+                    .join(',');
+            };
+
             var loadCursor = function (cursor) {
                 if (loading) {
                     return;
@@ -578,7 +588,7 @@
                 var params = new URLSearchParams({
                     after_id: cursor,
                     search: currentSearch,
-                    unit_objectid: currentUnitObjectId,
+                    unit_objectid: normalizedUnitObjectIds(),
                     issue_type: currentIssueType,
                     name_match_status: currentNameMatchStatus,
                     identity_subject: currentIdentitySubject,
