@@ -674,7 +674,7 @@ class RefreshMissingCitizenIdentityReport extends Command
         }
 
         try {
-            return DB::table($this->husbandRegistryTable())
+            $registryRecords = DB::table($this->husbandRegistryTable())
                 ->select([
                     DB::raw('0 as id'),
                     'id_card_no',
@@ -683,8 +683,19 @@ class RefreshMissingCitizenIdentityReport extends Command
                 ])
                 ->where('status', 'A')
                 ->whereRaw('TRIM(breadwinner_id_card_no) = ?', [$breadwinnerIdCardNo])
-                ->where('full_name_normalized', $normalizedOwnerName)
                 ->get();
+
+            $nameMatches = $registryRecords
+                ->filter(fn ($record): bool => (string) $record->full_name_normalized === $normalizedOwnerName)
+                ->values();
+
+            if ($nameMatches->isNotEmpty()) {
+                return $nameMatches;
+            }
+
+            return $registryRecords->count() === 1
+                ? $registryRecords
+                : collect();
         } catch (Throwable) {
             return collect();
         }
