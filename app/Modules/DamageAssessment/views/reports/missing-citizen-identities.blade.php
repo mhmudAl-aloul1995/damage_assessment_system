@@ -61,15 +61,16 @@
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
                     <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-sm form-control-solid w-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
                 </div>
-                <div class="position-relative flex-shrink-0">
-                    <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
-                    <input type="text" data-kt-missing-citizens-filter="unit-objectid" class="form-control form-control-sm form-control-solid w-175px ps-12" inputmode="numeric" placeholder="{{ __('ui.missing_citizen_identities.unit_objectid_placeholder') }}">
+                <div class="input-group input-group-sm flex-shrink-0 w-250px">
+                    <span class="input-group-text border-0 bg-light">
+                        <i class="ki-duotone ki-magnifier fs-3"></i>
+                    </span>
+                    <input type="text" data-kt-missing-citizens-filter="unit-objectid" class="form-control form-control-sm form-control-solid" inputmode="numeric" placeholder="{{ __('ui.missing_citizen_identities.unit_objectid_placeholder') }}">
+                    <button type="button" class="btn btn-sm btn-light-info btn-icon position-relative" data-kt-missing-citizens-action="open-unit-objectids-modal" title="فلترة متعددة">
+                        <i class="ki-duotone ki-plus fs-2"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge badge-circle badge-primary d-none" data-kt-missing-citizens-unit-objectids-count>0</span>
+                    </button>
                 </div>
-                <button type="button" class="btn btn-sm btn-light-info text-nowrap flex-shrink-0" data-kt-missing-citizens-action="open-unit-objectids-modal">
-                    <i class="ki-duotone ki-row-horizontal fs-3"></i>
-                    فلترة متعددة
-                    <span class="badge badge-light-primary ms-2 d-none" data-kt-missing-citizens-unit-objectids-count>0</span>
-                </button>
                 <select class="form-select form-select-sm form-select-solid w-200px flex-shrink-0" data-kt-missing-citizens-filter="issue-type">
                     <option value="">{{ __('ui.missing_citizen_identities.all_issue_types') }}</option>
                     <option value="missing_civil_registry_identity">{{ __('ui.missing_citizen_identities.issue_missing_civil_registry_identity') }}</option>
