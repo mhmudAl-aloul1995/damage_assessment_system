@@ -1056,6 +1056,10 @@ it('returns missing spouse identities separately from owner identities', functio
         'globalid' => 'missing-spouse-identities',
         'unit_owner' => 'Active Owner',
         'id_number1' => '900000020',
+        'q_9_3_1_first_name' => 'Active',
+        'q_9_3_2_second_name__father' => 'Owner',
+        'q_9_3_3_third_name__grandfather' => 'Father',
+        'q_9_3_4_last_name' => 'Family',
         'marital_status' => 'Married',
         'spouse1' => 'Active Spouse',
         'spouse1_id' => '900000021',
@@ -1100,9 +1104,36 @@ it('returns missing spouse identities separately from owner identities', functio
 
     $spouse2Row = collect($response->json('data'))->firstWhere('id_number1', '900000022');
 
-    expect($spouse2Row['housing_unit_owner_name'])->toBe('Active Owner')
+    expect($spouse2Row['housing_unit_owner_name'])->toBe('Active Owner Father Family')
         ->and($spouse2Row['housing_unit_owner_id_number'])->toBe('900000020')
-        ->and($spouse2Row['owner_name'])->toBe('Missing Spouse');
+        ->and($spouse2Row['owner_name'])->toBe('Missing Spouse')
+        ->and($spouse2Row['housing_unit_identity_details'])->toBe([
+            [
+                'label' => __('ui.missing_citizen_identities.identity_owner'),
+                'name' => 'Active Owner Father Family',
+                'id_number' => '900000020',
+            ],
+            [
+                'label' => __('ui.missing_citizen_identities.identity_spouse_1'),
+                'name' => 'Active Spouse',
+                'id_number' => '900000021',
+            ],
+            [
+                'label' => __('ui.missing_citizen_identities.identity_spouse_2'),
+                'name' => 'Missing Spouse',
+                'id_number' => '900000022',
+            ],
+            [
+                'label' => __('ui.missing_citizen_identities.identity_spouse_3'),
+                'name' => 'Blank Spouse',
+                'id_number' => '-',
+            ],
+            [
+                'label' => __('ui.missing_citizen_identities.identity_spouse_4'),
+                'name' => 'Matched Spouse',
+                'id_number' => '900000024',
+            ],
+        ]);
 });
 
 it('approves a spouse identity match into the spouse identity field', function (): void {

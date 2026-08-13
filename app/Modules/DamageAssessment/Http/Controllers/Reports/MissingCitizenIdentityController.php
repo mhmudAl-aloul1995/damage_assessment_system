@@ -69,6 +69,14 @@ class MissingCitizenIdentityController extends Controller
                 'housing_units.q_9_3_2_second_name__father',
                 'housing_units.q_9_3_3_third_name__grandfather',
                 'housing_units.q_9_3_4_last_name',
+                'housing_units.spouse1',
+                'housing_units.spouse1_id',
+                'housing_units.spouse2',
+                'housing_units.spouse2_id',
+                'housing_units.spouse3',
+                'housing_units.spouse3_id',
+                'housing_units.spouse4',
+                'housing_units.spouse4_id',
             ])
             ->leftJoin('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
             ->whereNull('missing_citizen_identity_reports.approved_at');
@@ -123,6 +131,7 @@ class MissingCitizenIdentityController extends Controller
                     'owner_name' => $report->owner_name ?: '-',
                     'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
                     'housing_unit_owner_id_number' => filled($report->housing_unit_owner_id_number) ? (string) $report->housing_unit_owner_id_number : '-',
+                    'housing_unit_identity_details' => $this->housingUnitIdentityDetails($report),
                     'id_number1' => filled($report->id_number) ? (string) $report->id_number : '-',
                     'issue_type' => $report->issue_type,
                     'name_match_status' => $report->name_match_status,
@@ -458,6 +467,38 @@ class MissingCitizenIdentityController extends Controller
             : trim((string) ($report->housing_unit_owner_name ?? ''));
 
         return $ownerName !== '' ? $ownerName : '-';
+    }
+
+    /**
+     * @return list<array{label: string, name: string, id_number: string}>
+     */
+    private function housingUnitIdentityDetails(MissingCitizenIdentityReport $report): array
+    {
+        return collect([
+            [
+                'label' => __('ui.missing_citizen_identities.identity_owner'),
+                'name' => $this->reportHousingUnitOwnerName($report),
+                'id_number' => filled($report->housing_unit_owner_id_number) ? (string) $report->housing_unit_owner_id_number : '-',
+            ],
+            ...collect(range(1, 4))->map(fn (int $index): array => [
+                'label' => match ($index) {
+                    1 => __('ui.missing_citizen_identities.identity_spouse_1'),
+                    2 => __('ui.missing_citizen_identities.identity_spouse_2'),
+                    3 => __('ui.missing_citizen_identities.identity_spouse_3'),
+                    default => __('ui.missing_citizen_identities.identity_spouse_4'),
+                },
+                'name' => trim((string) ($report->{'spouse'.$index} ?? '')),
+                'id_number' => trim((string) ($report->{'spouse'.$index.'_id'} ?? '')),
+            ])->all(),
+        ])
+            ->map(fn (array $detail): array => [
+                'label' => $detail['label'],
+                'name' => $detail['name'] !== '' ? $detail['name'] : '-',
+                'id_number' => $detail['id_number'] !== '' ? $detail['id_number'] : '-',
+            ])
+            ->filter(fn (array $detail): bool => $detail['name'] !== '-' || $detail['id_number'] !== '-')
+            ->values()
+            ->all();
     }
 
     /**

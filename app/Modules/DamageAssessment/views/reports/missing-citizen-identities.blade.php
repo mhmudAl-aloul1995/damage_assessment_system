@@ -133,11 +133,14 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div class="d-flex align-items-center justify-content-between bg-light-danger rounded p-4 mb-5">
-                        <span class="text-muted fw-semibold">{{ __('ui.missing_citizen_identities.current_missing_id_number') }}</span>
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="badge badge-light-danger fs-6" id="missing_citizen_candidates_id_number">-</span>
-                            <button type="button" class="btn btn-sm btn-light-info" data-kt-missing-citizens-action="show-documents">
+                    <div class="bg-light-danger rounded p-4 mb-5">
+                        <div class="d-flex align-items-center justify-content-between gap-4 flex-wrap flex-lg-nowrap">
+                            <div class="d-flex align-items-center gap-3 flex-shrink-0">
+                                <span class="text-muted fw-semibold">{{ __('ui.missing_citizen_identities.current_missing_id_number') }}</span>
+                                <span class="badge badge-light-danger fs-6" id="missing_citizen_candidates_id_number">-</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 overflow-auto flex-nowrap flex-grow-1" id="missing_citizen_identity_summary" style="white-space: nowrap;"></div>
+                            <button type="button" class="btn btn-sm btn-light-info flex-shrink-0" data-kt-missing-citizens-action="show-documents">
                                 <i class="ki-duotone ki-document fs-3"></i>
                                 {{ __('ui.missing_citizen_identities.show_unit_documents') }}
                             </button>
@@ -242,12 +245,14 @@
             var candidatesModalElement = document.getElementById('missing_citizen_candidates_modal');
             var candidatesBody = document.getElementById('missing_citizen_candidates_body');
             var candidatesIdNumber = document.getElementById('missing_citizen_candidates_id_number');
+            var identitySummary = document.getElementById('missing_citizen_identity_summary');
             var documentsPanel = document.getElementById('missing_citizen_documents_panel');
             var documentsBody = document.getElementById('missing_citizen_documents_body');
             var manualSearch = document.getElementById('missing_citizen_manual_search');
             var namePartInputs = Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizen-name-part]'));
             var activeCandidateReportId = null;
             var manualSearchTimer = null;
+            var rowsByReportId = {};
 
             var rowCheckboxes = function () {
                 return Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]'))
@@ -436,10 +441,37 @@
                     });
             };
 
+            var renderIdentitySummary = function (reportId) {
+                if (!identitySummary) {
+                    return;
+                }
+
+                var row = rowsByReportId[String(reportId)] || {};
+                var details = row.housing_unit_identity_details || [];
+
+                if (details.length === 0) {
+                    identitySummary.innerHTML = '';
+                    identitySummary.classList.add('d-none');
+
+                    return;
+                }
+
+                identitySummary.classList.remove('d-none');
+                identitySummary.innerHTML = details.map(function (detail) {
+                    return '<span class="badge badge-light d-inline-flex align-items-center gap-2 border border-gray-300 px-3 py-2">'
+                        + '<span class="text-gray-600">' + escapeHtml(detail.label) + '</span>'
+                        + '<span class="fw-bold text-gray-900">' + escapeHtml(detail.name) + '</span>'
+                        + '<span class="badge badge-light-primary">' + escapeHtml(detail.id_number) + '</span>'
+                        + '</span>';
+                }).join('');
+            };
+
             var renderRows = function (rows) {
                 if (!tbody) {
                     return;
                 }
+
+                rowsByReportId = {};
 
                 if (rows.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="' + visibleColumnsCount() + '" class="text-center text-muted py-10">{{ __('ui.missing_citizen_identities.empty_table') }}</td></tr>';
@@ -448,6 +480,7 @@
                 }
 
                 tbody.innerHTML = rows.map(function (row) {
+                    rowsByReportId[String(row.id)] = row;
                     var status = matchStatusBadge(row);
                     var matchedCitizen = row.matched_citizen_full_name
                         ? '<div class="fw-semibold">' + escapeHtml(row.matched_citizen_full_name) + '</div><span class="badge badge-light-success">' + escapeHtml(row.matched_citizen_id_card_no) + '</span>'
@@ -591,6 +624,7 @@
             var showCandidates = function (reportId, idNumber) {
                 activeCandidateReportId = reportId;
                 resetDocuments();
+                renderIdentitySummary(reportId);
 
                 if (candidatesIdNumber) {
                     candidatesIdNumber.textContent = idNumber || '-';
@@ -774,6 +808,7 @@
             var showCitizenSearch = function (reportId, idNumber, ownerName) {
                 activeCandidateReportId = reportId;
                 resetDocuments();
+                renderIdentitySummary(reportId);
 
                 if (candidatesIdNumber) {
                     candidatesIdNumber.textContent = idNumber || '-';
