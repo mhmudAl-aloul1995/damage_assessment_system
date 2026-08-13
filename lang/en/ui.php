@@ -642,7 +642,7 @@ return [
         'source_access' => 'Access',
         'source_sgaza' => 'SGaza',
         'source_husband_registry' => 'Husband registry',
-        'husband_id_card_no' => 'Husband ID',
+        'breadwinner_id_card_no' => 'Husband/breadwinner ID',
         'mother_name' => 'Mother name',
         'neighborhood' => 'Neighborhood',
         'birth_date' => 'Birth date',

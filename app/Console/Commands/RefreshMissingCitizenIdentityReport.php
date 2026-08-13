@@ -97,15 +97,12 @@ class RefreshMissingCitizenIdentityReport extends Command
                     : $this->sgazaIdsByNumbers($identityNumbers)
                         ->mapWithKeys(fn ($id): array => [(string) $id => true]);
 
-                $husbandRegistryIds = $identityNumbers->isEmpty()
-                    ? collect()
-                    : $this->husbandRegistryIdsByNumbers($identityNumbers)
-                        ->mapWithKeys(fn ($id): array => [(string) $id => true]);
+                $husbandRegistryIdentityKeys = $this->husbandRegistryIdentityKeys($identityRows);
 
                 $existingCivilRegistryIds = $activeCitizenIds->union($sgazaIds);
 
                 $missingIdentityRows = $identityRows
-                    ->filter(function (array $identityRow) use ($existingCivilRegistryIds, $husbandRegistryIds): bool {
+                    ->filter(function (array $identityRow) use ($existingCivilRegistryIds, $husbandRegistryIdentityKeys): bool {
                         $idNumber = $identityRow['id_number'];
 
                         if ($idNumber === '') {
@@ -118,7 +115,10 @@ class RefreshMissingCitizenIdentityReport extends Command
 
                         return ! (
                             $identityRow['identity_subject'] === self::SUBJECT_SPOUSE
-                            && isset($husbandRegistryIds[$idNumber])
+                            && isset($husbandRegistryIdentityKeys[$this->husbandRegistryIdentityKey(
+                                (string) ($identityRow['breadwinner_id_card_no'] ?? ''),
+                                $idNumber
+                            )])
                         );
                     })
                     ->values();
@@ -355,7 +355,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'identity_number_field' => 'id_number1',
                 'owner_name' => $this->ownerName($housingUnit),
                 'id_number' => trim((string) $housingUnit->id_number1),
-                'husband_id_card_no' => null,
+                'breadwinner_id_card_no' => null,
                 'registry_candidate_id_card_no' => null,
                 'registry_candidate_full_name' => null,
             ],
@@ -366,7 +366,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'identity_number_field' => 'spouse'.$index.'_id',
                 'owner_name' => trim((string) $housingUnit->{'spouse'.$index}),
                 'id_number' => trim((string) $housingUnit->{'spouse'.$index.'_id'}),
-                'husband_id_card_no' => trim((string) $housingUnit->id_number1),
+                'breadwinner_id_card_no' => trim((string) $housingUnit->id_number1),
                 'registry_candidate_id_card_no' => null,
                 'registry_candidate_full_name' => null,
             ])->all(),
@@ -389,25 +389,25 @@ class RefreshMissingCitizenIdentityReport extends Command
      */
     private function husbandRegistryFallbackIdentityRows(Collection $housingUnits, Collection $identityRows): Collection
     {
-        $husbandIdCardNumbers = $housingUnits
+        $breadwinnerIdCardNumbers = $housingUnits
             ->pluck('id_number1')
             ->map(fn ($idNumber): string => trim((string) $idNumber))
             ->filter()
             ->unique()
             ->values();
 
-        if ($husbandIdCardNumbers->isEmpty()) {
+        if ($breadwinnerIdCardNumbers->isEmpty()) {
             return collect();
         }
 
         try {
             $registryRecords = DB::table($this->husbandRegistryTable())
-                ->select(['id_card_no', 'full_name', 'full_name_normalized', 'husband_id_card_no'])
+                ->select(['id_card_no', 'full_name', 'full_name_normalized', 'breadwinner_id_card_no'])
                 ->where('status', 'A')
-                ->where(function ($query) use ($husbandIdCardNumbers): void {
+                ->where(function ($query) use ($breadwinnerIdCardNumbers): void {
                     $query
-                        ->whereIn(DB::raw('TRIM(husband_id_card_no)'), $husbandIdCardNumbers)
-                        ->orWhereIn(DB::raw('TRIM(id_card_no)'), $husbandIdCardNumbers);
+                        ->whereIn(DB::raw('TRIM(breadwinner_id_card_no)'), $breadwinnerIdCardNumbers)
+                        ->orWhereIn(DB::raw('TRIM(id_card_no)'), $breadwinnerIdCardNumbers);
                 })
                 ->orderBy('id_card_no')
                 ->get();
@@ -415,38 +415,38 @@ class RefreshMissingCitizenIdentityReport extends Command
             return collect();
         }
 
-        $registryRecordsByHusbandId = $registryRecords
-            ->filter(fn ($record): bool => filled($record->husband_id_card_no))
-            ->groupBy(fn ($record): string => trim((string) $record->husband_id_card_no));
+        $registryRecordsByBreadwinnerId = $registryRecords
+            ->filter(fn ($record): bool => filled($record->breadwinner_id_card_no))
+            ->groupBy(fn ($record): string => trim((string) $record->breadwinner_id_card_no));
         $registryRecordsByIdCardNo = $registryRecords
             ->filter(fn ($record): bool => filled($record->id_card_no))
             ->keyBy(fn ($record): string => trim((string) $record->id_card_no));
-        $husbandIdCardNumbersFromFemaleOwners = $registryRecordsByIdCardNo
-            ->only($husbandIdCardNumbers->all())
-            ->pluck('husband_id_card_no')
+        $breadwinnerIdCardNumbersFromFemaleOwners = $registryRecordsByIdCardNo
+            ->only($breadwinnerIdCardNumbers->all())
+            ->pluck('breadwinner_id_card_no')
             ->map(fn ($idNumber): string => trim((string) $idNumber))
             ->filter()
             ->unique()
             ->values();
-        $husbandNamesByIdCardNo = $this->husbandNamesByIdCardNo($husbandIdCardNumbersFromFemaleOwners, $registryRecordsByIdCardNo);
+        $breadwinnerNamesByIdCardNo = $this->husbandNamesByIdCardNo($breadwinnerIdCardNumbersFromFemaleOwners, $registryRecordsByIdCardNo);
 
         $spouseRowsByUnitId = $identityRows
             ->filter(fn (array $identityRow): bool => $identityRow['identity_subject'] === self::SUBJECT_SPOUSE)
             ->groupBy('housing_unit_id');
 
         return $housingUnits
-            ->flatMap(function (HousingUnit $housingUnit) use ($registryRecordsByHusbandId, $registryRecordsByIdCardNo, $husbandNamesByIdCardNo, $spouseRowsByUnitId): Collection {
-                $husbandIdCardNo = trim((string) $housingUnit->id_number1);
-                $registryRecords = $registryRecordsByHusbandId->get($husbandIdCardNo, collect());
-                $ownerAsWife = $registryRecordsByIdCardNo->get($husbandIdCardNo);
+            ->flatMap(function (HousingUnit $housingUnit) use ($registryRecordsByBreadwinnerId, $registryRecordsByIdCardNo, $breadwinnerNamesByIdCardNo, $spouseRowsByUnitId): Collection {
+                $breadwinnerIdCardNo = trim((string) $housingUnit->id_number1);
+                $registryRecords = $registryRecordsByBreadwinnerId->get($breadwinnerIdCardNo, collect());
+                $ownerAsWife = $registryRecordsByIdCardNo->get($breadwinnerIdCardNo);
 
-                if ($ownerAsWife !== null && filled($ownerAsWife->husband_id_card_no)) {
-                    $husbandIdentity = trim((string) $ownerAsWife->husband_id_card_no);
+                if ($ownerAsWife !== null && filled($ownerAsWife->breadwinner_id_card_no)) {
+                    $breadwinnerIdentity = trim((string) $ownerAsWife->breadwinner_id_card_no);
                     $registryRecords = $registryRecords->push((object) [
-                        'id_card_no' => $husbandIdentity,
-                        'full_name' => $husbandNamesByIdCardNo[$husbandIdentity] ?? $husbandIdentity,
-                        'full_name_normalized' => ArabicNameNormalizer::normalize((string) ($husbandNamesByIdCardNo[$husbandIdentity] ?? '')),
-                        'husband_id_card_no' => '',
+                        'id_card_no' => $breadwinnerIdentity,
+                        'full_name' => $breadwinnerNamesByIdCardNo[$breadwinnerIdentity] ?? $breadwinnerIdentity,
+                        'full_name_normalized' => ArabicNameNormalizer::normalize((string) ($breadwinnerNamesByIdCardNo[$breadwinnerIdentity] ?? '')),
+                        'breadwinner_id_card_no' => '',
                     ]);
                 }
 
@@ -485,7 +485,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                     })
                     ->take($availableSlots->count())
                     ->values()
-                    ->map(function ($record, int $recordIndex) use ($availableSlots, $housingUnit, $husbandIdCardNo): array {
+                    ->map(function ($record, int $recordIndex) use ($availableSlots, $housingUnit, $breadwinnerIdCardNo): array {
                         $slot = (int) $availableSlots[$recordIndex];
 
                         return [
@@ -495,7 +495,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                             'identity_number_field' => 'spouse'.$slot.'_id',
                             'owner_name' => trim((string) $record->full_name),
                             'id_number' => '',
-                            'husband_id_card_no' => $husbandIdCardNo,
+                            'breadwinner_id_card_no' => $breadwinnerIdCardNo,
                             'registry_candidate_id_card_no' => trim((string) $record->id_card_no),
                             'registry_candidate_full_name' => trim((string) $record->full_name),
                             'housing_unit_id' => $housingUnit->id,
@@ -585,26 +585,45 @@ class RefreshMissingCitizenIdentityReport extends Command
             ->pluck('id_number');
     }
 
-    private function husbandRegistryIdsByNumbers(Collection $identityNumbers): Collection
+    /**
+     * @param  Collection<int, array<string, mixed>>  $identityRows
+     */
+    private function husbandRegistryIdentityKeys(Collection $identityRows): Collection
     {
-        $identityNumbers = $identityNumbers
-            ->map(fn ($identityNumber): string => trim((string) $identityNumber))
-            ->filter()
+        $spouseRows = $identityRows
+            ->filter(fn (array $identityRow): bool => $identityRow['identity_subject'] === self::SUBJECT_SPOUSE)
+            ->map(fn (array $identityRow): array => [
+                'id_number' => trim((string) $identityRow['id_number']),
+                'breadwinner_id_card_no' => trim((string) ($identityRow['breadwinner_id_card_no'] ?? '')),
+            ])
+            ->filter(fn (array $identityRow): bool => $identityRow['id_number'] !== '' && $identityRow['breadwinner_id_card_no'] !== '')
             ->values();
 
-        if ($identityNumbers->isEmpty()) {
+        if ($spouseRows->isEmpty()) {
             return collect();
         }
+
+        $identityNumbers = $spouseRows->pluck('id_number')->unique()->values();
+        $breadwinnerIdCardNumbers = $spouseRows->pluck('breadwinner_id_card_no')->unique()->values();
 
         try {
             return DB::table($this->husbandRegistryTable())
-                ->selectRaw('TRIM(id_card_no) as id_card_no')
+                ->selectRaw('TRIM(id_card_no) as id_card_no, TRIM(breadwinner_id_card_no) as breadwinner_id_card_no')
                 ->where('status', 'A')
                 ->whereIn(DB::raw('TRIM(id_card_no)'), $identityNumbers)
-                ->pluck('id_card_no');
+                ->whereIn(DB::raw('TRIM(breadwinner_id_card_no)'), $breadwinnerIdCardNumbers)
+                ->get()
+                ->mapWithKeys(fn ($record): array => [
+                    $this->husbandRegistryIdentityKey((string) $record->breadwinner_id_card_no, (string) $record->id_card_no) => true,
+                ]);
         } catch (Throwable) {
             return collect();
         }
+    }
+
+    private function husbandRegistryIdentityKey(string $breadwinnerIdCardNo, string $spouseIdCardNo): string
+    {
+        return trim($breadwinnerIdCardNo).':'.trim($spouseIdCardNo);
     }
 
     /**
@@ -626,9 +645,9 @@ class RefreshMissingCitizenIdentityReport extends Command
             return collect();
         }
 
-        $husbandIdCardNo = trim((string) ($identityRow['husband_id_card_no'] ?? ''));
+        $breadwinnerIdCardNo = trim((string) ($identityRow['breadwinner_id_card_no'] ?? ''));
 
-        if ($husbandIdCardNo === '') {
+        if ($breadwinnerIdCardNo === '') {
             return collect();
         }
 
@@ -641,7 +660,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                     'full_name_normalized',
                 ])
                 ->where('status', 'A')
-                ->whereRaw('TRIM(husband_id_card_no) = ?', [$husbandIdCardNo])
+                ->whereRaw('TRIM(breadwinner_id_card_no) = ?', [$breadwinnerIdCardNo])
                 ->where('full_name_normalized', $normalizedOwnerName)
                 ->get();
         } catch (Throwable) {

@@ -622,7 +622,7 @@ return [
         'source_access' => 'Access',
         'source_sgaza' => 'SGaza',
         'source_husband_registry' => 'سجل ربط الزوج',
-        'husband_id_card_no' => 'هوية الزوج',
+        'breadwinner_id_card_no' => 'هوية الزوج/المعيل',
         'mother_name' => 'اسم الأم',
         'neighborhood' => 'الحي',
         'birth_date' => 'تاريخ الميلاد',

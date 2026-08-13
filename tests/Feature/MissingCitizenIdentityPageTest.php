@@ -45,7 +45,7 @@ function createHusbandRegistryTable(): void
         $table->string('id_card_no')->nullable();
         $table->string('full_name')->nullable();
         $table->string('full_name_normalized')->nullable();
-        $table->string('husband_id_card_no')->nullable();
+        $table->string('breadwinner_id_card_no')->nullable();
     });
 }
 
@@ -940,7 +940,7 @@ it('does not report spouse identities found in the husband registry table', func
         'id_card_no' => '910000002',
         'full_name' => 'Registry Spouse',
         'full_name_normalized' => 'RegistrySpouse',
-        'husband_id_card_no' => '910000001',
+        'breadwinner_id_card_no' => '910000001',
     ]);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
@@ -949,6 +949,35 @@ it('does not report spouse identities found in the husband registry table', func
     expect(MissingCitizenIdentityReport::query()
         ->where('identity_number_field', 'spouse1_id')
         ->exists())->toBeFalse();
+});
+
+it('keeps spouse identities missing when the registry wife belongs to another breadwinner', function (): void {
+    createHusbandRegistryTable();
+
+    HousingUnit::query()->create([
+        'objectid' => 898,
+        'globalid' => 'spouse-id-linked-to-another-breadwinner',
+        'unit_owner' => 'Registry Husband',
+        'id_number1' => '910000001',
+        'spouse1' => 'Registry Spouse',
+        'spouse1_id' => '910000002',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '910000002',
+        'full_name' => 'Registry Spouse',
+        'full_name_normalized' => 'RegistrySpouse',
+        'breadwinner_id_card_no' => '910000009',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()
+        ->where('identity_number_field', 'spouse1_id')
+        ->where('id_number', '910000002')
+        ->exists())->toBeTrue();
 });
 
 it('matches and approves missing spouse identities from the husband registry table', function (): void {
@@ -981,7 +1010,7 @@ it('matches and approves missing spouse identities from the husband registry tab
         'id_card_no' => '920000003',
         'full_name' => 'Registry Third Spouse',
         'full_name_normalized' => 'RegistryThirdSpouse',
-        'husband_id_card_no' => '920000001',
+        'breadwinner_id_card_no' => '920000001',
     ]);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
@@ -1043,7 +1072,7 @@ it('creates spouse rows from the husband registry when housing spouse fields are
         'id_card_no' => '930000002',
         'full_name' => 'Registry Only Spouse',
         'full_name_normalized' => 'RegistryOnlySpouse',
-        'husband_id_card_no' => '930000001',
+        'breadwinner_id_card_no' => '930000001',
     ]);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
@@ -1075,6 +1104,85 @@ it('creates spouse rows from the husband registry when housing spouse fields are
             && str_contains((string) $request['features'], '"spouse1":"Registry Only Spouse"')
             && str_contains((string) $request['features'], '"spouse1_id":"930000002"');
     });
+});
+
+it('creates spouse rows only up to the four supported spouse slots', function (): void {
+    createHusbandRegistryTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 899,
+        'globalid' => 'multiple-registry-spouses',
+        'unit_owner' => 'Multiple Spouses Husband',
+        'id_number1' => '950000001',
+        'spouse1' => 'Existing First Spouse',
+        'spouse1_id' => '950000002',
+        'spouse2' => null,
+        'spouse2_id' => null,
+        'spouse3' => null,
+        'spouse3_id' => null,
+        'spouse4' => null,
+        'spouse4_id' => null,
+    ]);
+
+    DB::table('citizens')->insert([
+        'status' => 'A',
+        'id_card_no' => '950000001',
+        'full_name' => 'Multiple Spouses Husband',
+        'full_name_normalized' => 'MultipleSpousesHusband',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        [
+            'status' => 'A',
+            'id_card_no' => '950000002',
+            'full_name' => 'Existing First Spouse',
+            'full_name_normalized' => 'ExistingFirstSpouse',
+            'breadwinner_id_card_no' => '950000001',
+        ],
+        [
+            'status' => 'A',
+            'id_card_no' => '950000003',
+            'full_name' => 'Second Registry Spouse',
+            'full_name_normalized' => 'SecondRegistrySpouse',
+            'breadwinner_id_card_no' => '950000001',
+        ],
+        [
+            'status' => 'A',
+            'id_card_no' => '950000004',
+            'full_name' => 'Third Registry Spouse',
+            'full_name_normalized' => 'ThirdRegistrySpouse',
+            'breadwinner_id_card_no' => '950000001',
+        ],
+        [
+            'status' => 'A',
+            'id_card_no' => '950000005',
+            'full_name' => 'Fourth Registry Spouse',
+            'full_name_normalized' => 'FourthRegistrySpouse',
+            'breadwinner_id_card_no' => '950000001',
+        ],
+        [
+            'status' => 'A',
+            'id_card_no' => '950000006',
+            'full_name' => 'Fifth Registry Spouse',
+            'full_name_normalized' => 'FifthRegistrySpouse',
+            'breadwinner_id_card_no' => '950000001',
+        ],
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $reports = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_subject', 'spouse')
+        ->orderBy('identity_index')
+        ->get();
+
+    expect($reports)->toHaveCount(3)
+        ->and($reports->pluck('identity_number_field')->all())->toBe(['spouse2_id', 'spouse3_id', 'spouse4_id'])
+        ->and($reports->pluck('matched_citizen_id_card_no')->all())->toBe(['950000003', '950000004', '950000005'])
+        ->and($reports->pluck('matched_citizen_id_card_no'))->not->toContain('950000002')
+        ->and($reports->pluck('matched_citizen_id_card_no'))->not->toContain('950000006');
 });
 
 it('creates spouse rows from the husband registry when the owner is female', function (): void {
@@ -1114,7 +1222,7 @@ it('creates spouse rows from the husband registry when the owner is female', fun
         'id_card_no' => '940000001',
         'full_name' => 'Female Owner',
         'full_name_normalized' => 'FemaleOwner',
-        'husband_id_card_no' => '940000002',
+        'breadwinner_id_card_no' => '940000002',
     ]);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])

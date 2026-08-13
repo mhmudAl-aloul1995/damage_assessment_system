@@ -805,17 +805,17 @@ class MissingCitizenIdentityController extends Controller
             return collect();
         }
 
-        $husbandIdCardNo = $this->reportHusbandIdCardNo($report);
+        $breadwinnerIdCardNo = $this->reportBreadwinnerIdCardNo($report);
 
-        if ($husbandIdCardNo === '') {
+        if ($breadwinnerIdCardNo === '') {
             return collect();
         }
 
         try {
             $query = DB::table($this->husbandRegistryTable())
-                ->select(['id_card_no', 'full_name', 'husband_id_card_no'])
+                ->select(['id_card_no', 'full_name', 'breadwinner_id_card_no'])
                 ->where('status', 'A')
-                ->whereRaw('TRIM(husband_id_card_no) = ?', [$husbandIdCardNo]);
+                ->whereRaw('TRIM(breadwinner_id_card_no) = ?', [$breadwinnerIdCardNo]);
 
             if (ctype_digit($search)) {
                 $query->where('id_card_no', 'like', $search.'%');
@@ -847,17 +847,17 @@ class MissingCitizenIdentityController extends Controller
             return collect();
         }
 
-        $husbandIdCardNo = $this->reportHusbandIdCardNo($report);
+        $breadwinnerIdCardNo = $this->reportBreadwinnerIdCardNo($report);
 
-        if ($husbandIdCardNo === '') {
+        if ($breadwinnerIdCardNo === '') {
             return collect();
         }
 
         try {
             return DB::table($this->husbandRegistryTable())
-                ->select(['id_card_no', 'full_name', 'husband_id_card_no'])
+                ->select(['id_card_no', 'full_name', 'breadwinner_id_card_no'])
                 ->where('status', 'A')
-                ->whereRaw('TRIM(husband_id_card_no) = ?', [$husbandIdCardNo])
+                ->whereRaw('TRIM(breadwinner_id_card_no) = ?', [$breadwinnerIdCardNo])
                 ->where('full_name_normalized', $report->normalized_owner_name)
                 ->orderBy('id_card_no')
                 ->limit(20)
@@ -1021,7 +1021,7 @@ class MissingCitizenIdentityController extends Controller
         ];
     }
 
-    private function reportHusbandIdCardNo(MissingCitizenIdentityReport $report): string
+    private function reportBreadwinnerIdCardNo(MissingCitizenIdentityReport $report): string
     {
         $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
 
@@ -1039,8 +1039,8 @@ class MissingCitizenIdentityController extends Controller
             'id_card_no' => (string) $record->id_card_no,
             'full_name' => $record->full_name ?: '-',
             'source' => __('ui.missing_citizen_identities.source_husband_registry'),
-            'details' => filled($record->husband_id_card_no ?? null)
-                ? __('ui.missing_citizen_identities.husband_id_card_no').': '.$record->husband_id_card_no
+            'details' => filled($record->breadwinner_id_card_no ?? null)
+                ? __('ui.missing_citizen_identities.breadwinner_id_card_no').': '.$record->breadwinner_id_card_no
                 : '',
         ];
     }
