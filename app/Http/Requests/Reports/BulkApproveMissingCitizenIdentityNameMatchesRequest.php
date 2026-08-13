@@ -22,7 +22,7 @@ class BulkApproveMissingCitizenIdentityNameMatchesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'report_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'report_ids' => ['required', 'array', 'min:1', 'max:500'],
             'report_ids.*' => ['integer'],
         ];
     }

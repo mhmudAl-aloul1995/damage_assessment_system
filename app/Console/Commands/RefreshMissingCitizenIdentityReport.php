@@ -57,6 +57,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'q_9_3_2_second_name__father',
                 'q_9_3_3_third_name__grandfather',
                 'q_9_3_4_last_name',
+                'no_spouses',
                 'spouse1',
                 'spouse1_id',
                 'spouse2',
@@ -465,7 +466,8 @@ class RefreshMissingCitizenIdentityReport extends Command
                     ->map(fn ($name): string => ArabicNameNormalizer::normalize((string) $name))
                     ->filter()
                     ->flip();
-                $availableSlots = collect(range(1, 4))
+                $supportedSpouseSlots = $this->supportedSpouseSlots($housingUnit);
+                $availableSlots = collect(range(1, $supportedSpouseSlots))
                     ->filter(fn (int $index): bool => trim((string) $housingUnit->{'spouse'.$index}) === ''
                         && trim((string) $housingUnit->{'spouse'.$index.'_id'}) === '')
                     ->values();
@@ -504,6 +506,13 @@ class RefreshMissingCitizenIdentityReport extends Command
                     });
             })
             ->values();
+    }
+
+    private function supportedSpouseSlots(HousingUnit $housingUnit): int
+    {
+        $declaredSpouses = (int) trim((string) $housingUnit->no_spouses);
+
+        return min(max($declaredSpouses, 1), 4);
     }
 
     private function husbandNamesByIdCardNo(Collection $idCardNumbers, Collection $registryRecordsByIdCardNo): Collection

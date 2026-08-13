@@ -1063,6 +1063,7 @@ it('creates spouse rows from the husband registry when housing spouse fields are
         'globalid' => 'registry-only-spouse',
         'unit_owner' => 'Registry Only Husband',
         'id_number1' => '930000001',
+        'no_spouses' => 1,
         'spouse1' => null,
         'spouse1_id' => null,
     ]);
@@ -1114,6 +1115,7 @@ it('creates spouse rows only up to the four supported spouse slots', function ()
         'globalid' => 'multiple-registry-spouses',
         'unit_owner' => 'Multiple Spouses Husband',
         'id_number1' => '950000001',
+        'no_spouses' => 4,
         'spouse1' => 'Existing First Spouse',
         'spouse1_id' => '950000002',
         'spouse2' => null,
@@ -1183,6 +1185,45 @@ it('creates spouse rows only up to the four supported spouse slots', function ()
         ->and($reports->pluck('matched_citizen_id_card_no')->all())->toBe(['950000003', '950000004', '950000005'])
         ->and($reports->pluck('matched_citizen_id_card_no'))->not->toContain('950000002')
         ->and($reports->pluck('matched_citizen_id_card_no'))->not->toContain('950000006');
+});
+
+it('does not create a second spouse row when the declared spouse count is one', function (): void {
+    createHusbandRegistryTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 900,
+        'globalid' => 'single-declared-spouse',
+        'unit_owner' => 'Single Declared Husband',
+        'id_number1' => '960000001',
+        'no_spouses' => 1,
+        'spouse1' => null,
+        'spouse1_id' => '999999999',
+        'spouse2' => null,
+        'spouse2_id' => null,
+    ]);
+
+    DB::table('citizens')->insert([
+        'status' => 'A',
+        'id_card_no' => '960000001',
+        'full_name' => 'Single Declared Husband',
+        'full_name_normalized' => 'SingleDeclaredHusband',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '960000002',
+        'full_name' => 'Registry Single Spouse',
+        'full_name_normalized' => 'RegistrySingleSpouse',
+        'breadwinner_id_card_no' => '960000001',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_number_field', 'spouse2_id')
+        ->exists())->toBeFalse();
 });
 
 it('creates spouse rows from the husband registry when the owner is female', function (): void {
@@ -1313,4 +1354,26 @@ it('bulk approves selected single name matches', function (): void {
     expect($firstHousingUnit->fresh()->id_number1)->toBe('801801801')
         ->and($secondHousingUnit->fresh()->id_number1)->toBe('802802802')
         ->and(MissingCitizenIdentityApproval::query()->whereIn('housing_unit_id', [$firstHousingUnit->id, $secondHousingUnit->id])->count())->toBe(2);
+});
+
+it('allows bulk approving up to five hundred selected reports', function (): void {
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.bulk-approve-name-matches'), [
+            'report_ids' => range(1, 500),
+        ])
+        ->assertOk()
+        ->assertJsonPath('approved', 0)
+        ->assertJsonPath('failed', 0)
+        ->assertJsonPath('skipped', 0);
+});
+
+it('rejects bulk approving more than five hundred selected reports', function (): void {
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.bulk-approve-name-matches'), [
+            'report_ids' => range(1, 501),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('report_ids');
 });
