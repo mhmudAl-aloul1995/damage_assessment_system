@@ -616,6 +616,7 @@ class MissingCitizenIdentityController extends Controller
             }
         }
 
+        $this->collectDocumentsFromValue($documents, $housingUnit->ownership_image, __('ui.missing_citizen_identities.ownership_document'));
         $this->collectDocumentsFromValue($documents, $housingUnit->attachments, __('ui.missing_citizen_identities.local_attachments'));
 
         collect([

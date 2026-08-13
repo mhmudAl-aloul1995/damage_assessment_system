@@ -234,6 +234,10 @@ it('returns housing unit documents for a missing identity report', function (): 
             $table->text('attachments')->nullable();
         }
 
+        if (! Schema::hasColumn('housing_units', 'ownership_image')) {
+            $table->text('ownership_image')->nullable();
+        }
+
         if (! Schema::hasColumn('housing_units', 'damge_photo_2')) {
             $table->text('damge_photo_2')->nullable();
         }
@@ -249,6 +253,7 @@ it('returns housing unit documents for a missing identity report', function (): 
         'globalid' => 'missing-identity-documents',
         'unit_owner' => 'Document Owner',
         'id_number1' => '900000010',
+        'ownership_image' => 'https://example.test/documents/ownership-field.pdf',
         'attachments' => json_encode([
             [
                 'name' => 'Ownership document',
@@ -258,6 +263,9 @@ it('returns housing unit documents for a missing identity report', function (): 
         ], JSON_THROW_ON_ERROR),
         'damge_photo_2' => 'https://example.test/photos/damage.jpg',
     ]);
+    DB::table('housing_units')
+        ->where('id', $housingUnit->id)
+        ->update(['ownership_image' => 'https://example.test/documents/ownership-field.pdf']);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
         ->assertSuccessful();
@@ -270,12 +278,14 @@ it('returns housing unit documents for a missing identity report', function (): 
         ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.documents', $report))
         ->assertOk()
-        ->assertJsonPath('data.0.title', 'Ownership document')
+        ->assertJsonPath('data.0.url', 'https://example.test/documents/ownership-field.pdf')
         ->assertJsonPath('data.0.type', 'pdf')
-        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.local_attachments'))
-        ->assertJsonPath('data.1.url', 'https://example.test/photos/damage.jpg')
-        ->assertJsonPath('data.1.type', 'image')
-        ->assertJsonPath('data.1.source', __('ui.missing_citizen_identities.damage_photo_2'));
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.ownership_document'))
+        ->assertJsonPath('data.1.title', 'Ownership document')
+        ->assertJsonPath('data.1.source', __('ui.missing_citizen_identities.local_attachments'))
+        ->assertJsonPath('data.2.url', 'https://example.test/photos/damage.jpg')
+        ->assertJsonPath('data.2.type', 'image')
+        ->assertJsonPath('data.2.source', __('ui.missing_citizen_identities.damage_photo_2'));
 });
 
 it('returns a clean json response when a report was refreshed away', function (): void {

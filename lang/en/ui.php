@@ -657,6 +657,7 @@ return [
         'source_arcgis' => 'ArcGIS',
         'local_attachments' => 'Local attachments',
         'arcgis_attachment' => 'ArcGIS attachment',
+        'ownership_document' => 'Ownership document',
         'damage_photo_2' => 'Damage photo 2',
         'damage_photo_3' => 'Damage photo 3',
         'damage_photo_4' => 'Damage photo 4',

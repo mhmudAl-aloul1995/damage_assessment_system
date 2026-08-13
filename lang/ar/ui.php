@@ -637,6 +637,7 @@ return [
         'source_arcgis' => 'ArcGIS',
         'local_attachments' => 'مرفقات محلية',
         'arcgis_attachment' => 'مرفق ArcGIS',
+        'ownership_document' => 'وثيقة الملكية',
         'damage_photo_2' => 'صورة الضرر 2',
         'damage_photo_3' => 'صورة الضرر 3',
         'damage_photo_4' => 'صورة الضرر 4',
