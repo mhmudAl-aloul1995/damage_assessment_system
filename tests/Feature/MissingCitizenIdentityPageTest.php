@@ -818,6 +818,7 @@ it('returns missing spouse identities separately from owner identities', functio
         'globalid' => 'missing-spouse-identities',
         'unit_owner' => 'Active Owner',
         'id_number1' => '900000020',
+        'marital_status' => 'Married',
         'spouse1' => 'Active Spouse',
         'spouse1_id' => '900000021',
         'spouse2' => 'Missing Spouse',
@@ -885,6 +886,7 @@ it('approves a spouse identity match into the spouse identity field', function (
         'globalid' => 'approve-spouse-identity',
         'unit_owner' => 'Active Owner',
         'id_number1' => '900000030',
+        'marital_status' => 'Married',
         'spouse2' => 'Second Spouse',
         'spouse2_id' => '900000032',
     ]);
@@ -931,6 +933,7 @@ it('does not report spouse identities found in the husband registry table', func
         'globalid' => 'spouse-id-found-in-husband-registry',
         'unit_owner' => 'Registry Husband',
         'id_number1' => '910000001',
+        'marital_status' => 'Married',
         'spouse1' => 'Registry Spouse',
         'spouse1_id' => '910000002',
     ]);
@@ -959,6 +962,7 @@ it('keeps spouse identities missing when the registry wife belongs to another br
         'globalid' => 'spouse-id-linked-to-another-breadwinner',
         'unit_owner' => 'Registry Husband',
         'id_number1' => '910000001',
+        'marital_status' => 'Married',
         'spouse1' => 'Registry Spouse',
         'spouse1_id' => '910000002',
     ]);
@@ -1001,6 +1005,7 @@ it('matches and approves missing spouse identities from the husband registry tab
         'globalid' => 'spouse-match-from-husband-registry',
         'unit_owner' => 'Registry Husband',
         'id_number1' => '920000001',
+        'marital_status' => 'Married',
         'spouse3' => 'Registry Third Spouse',
         'spouse3_id' => '',
     ]);
@@ -1063,7 +1068,7 @@ it('creates spouse rows from the husband registry when housing spouse fields are
         'globalid' => 'registry-only-spouse',
         'unit_owner' => 'Registry Only Husband',
         'id_number1' => '930000001',
-        'no_spouses' => 1,
+        'marital_status' => 'Married',
         'spouse1' => null,
         'spouse1_id' => null,
     ]);
@@ -1115,7 +1120,7 @@ it('creates spouse rows only up to the four supported spouse slots', function ()
         'globalid' => 'multiple-registry-spouses',
         'unit_owner' => 'Multiple Spouses Husband',
         'id_number1' => '950000001',
-        'no_spouses' => 4,
+        'marital_status' => 'Married',
         'spouse1' => 'Existing First Spouse',
         'spouse1_id' => '950000002',
         'spouse2' => null,
@@ -1187,7 +1192,7 @@ it('creates spouse rows only up to the four supported spouse slots', function ()
         ->and($reports->pluck('matched_citizen_id_card_no'))->not->toContain('950000006');
 });
 
-it('does not create a second spouse row when the declared spouse count is one', function (): void {
+it('does not report spouse rows when the marital status is not married', function (): void {
     createHusbandRegistryTable();
 
     $housingUnit = HousingUnit::query()->create([
@@ -1195,7 +1200,7 @@ it('does not create a second spouse row when the declared spouse count is one', 
         'globalid' => 'single-declared-spouse',
         'unit_owner' => 'Single Declared Husband',
         'id_number1' => '960000001',
-        'no_spouses' => 1,
+        'marital_status' => 'Single2',
         'spouse1' => null,
         'spouse1_id' => '999999999',
         'spouse2' => null,
@@ -1222,7 +1227,7 @@ it('does not create a second spouse row when the declared spouse count is one', 
 
     expect(MissingCitizenIdentityReport::query()
         ->where('housing_unit_id', $housingUnit->id)
-        ->where('identity_number_field', 'spouse2_id')
+        ->where('identity_subject', 'spouse')
         ->exists())->toBeFalse();
 });
 
@@ -1247,6 +1252,7 @@ it('creates spouse rows from the husband registry when the owner is female', fun
         'globalid' => 'female-owner-registry-spouse',
         'unit_owner' => 'Female Owner',
         'id_number1' => '940000001',
+        'marital_status' => 'Married',
         'spouse1' => null,
         'spouse1_id' => null,
     ]);

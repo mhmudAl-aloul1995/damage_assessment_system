@@ -57,7 +57,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'q_9_3_2_second_name__father',
                 'q_9_3_3_third_name__grandfather',
                 'q_9_3_4_last_name',
-                'no_spouses',
+                'marital_status',
                 'spouse1',
                 'spouse1_id',
                 'spouse2',
@@ -348,6 +348,21 @@ class RefreshMissingCitizenIdentityReport extends Command
      */
     private function identityRows(HousingUnit $housingUnit): Collection
     {
+        $supportedSpouseSlots = $this->supportedSpouseSlots($housingUnit);
+        $spouseRows = $supportedSpouseSlots > 0
+            ? collect(range(1, $supportedSpouseSlots))->map(fn (int $index): array => [
+                'identity_subject' => self::SUBJECT_SPOUSE,
+                'identity_index' => $index,
+                'identity_name_field' => 'spouse'.$index,
+                'identity_number_field' => 'spouse'.$index.'_id',
+                'owner_name' => trim((string) $housingUnit->{'spouse'.$index}),
+                'id_number' => trim((string) $housingUnit->{'spouse'.$index.'_id'}),
+                'breadwinner_id_card_no' => trim((string) $housingUnit->id_number1),
+                'registry_candidate_id_card_no' => null,
+                'registry_candidate_full_name' => null,
+            ])
+            : collect();
+
         return collect([
             [
                 'identity_subject' => self::SUBJECT_OWNER,
@@ -360,17 +375,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'registry_candidate_id_card_no' => null,
                 'registry_candidate_full_name' => null,
             ],
-            ...collect(range(1, 4))->map(fn (int $index): array => [
-                'identity_subject' => self::SUBJECT_SPOUSE,
-                'identity_index' => $index,
-                'identity_name_field' => 'spouse'.$index,
-                'identity_number_field' => 'spouse'.$index.'_id',
-                'owner_name' => trim((string) $housingUnit->{'spouse'.$index}),
-                'id_number' => trim((string) $housingUnit->{'spouse'.$index.'_id'}),
-                'breadwinner_id_card_no' => trim((string) $housingUnit->id_number1),
-                'registry_candidate_id_card_no' => null,
-                'registry_candidate_full_name' => null,
-            ])->all(),
+            ...$spouseRows->all(),
         ])
             ->filter(fn (array $identityRow): bool => filled($identityRow['owner_name']) || filled($identityRow['id_number']))
             ->map(function (array $identityRow) use ($housingUnit): array {
@@ -467,10 +472,12 @@ class RefreshMissingCitizenIdentityReport extends Command
                     ->filter()
                     ->flip();
                 $supportedSpouseSlots = $this->supportedSpouseSlots($housingUnit);
-                $availableSlots = collect(range(1, $supportedSpouseSlots))
-                    ->filter(fn (int $index): bool => trim((string) $housingUnit->{'spouse'.$index}) === ''
-                        && trim((string) $housingUnit->{'spouse'.$index.'_id'}) === '')
-                    ->values();
+                $availableSlots = $supportedSpouseSlots > 0
+                    ? collect(range(1, $supportedSpouseSlots))
+                        ->filter(fn (int $index): bool => trim((string) $housingUnit->{'spouse'.$index}) === ''
+                            && trim((string) $housingUnit->{'spouse'.$index.'_id'}) === '')
+                        ->values()
+                    : collect();
 
                 if ($availableSlots->isEmpty()) {
                     return collect();
@@ -510,9 +517,15 @@ class RefreshMissingCitizenIdentityReport extends Command
 
     private function supportedSpouseSlots(HousingUnit $housingUnit): int
     {
-        $declaredSpouses = (int) trim((string) $housingUnit->no_spouses);
+        return $this->isMarried($housingUnit) ? 4 : 0;
+    }
 
-        return min(max($declaredSpouses, 1), 4);
+    private function isMarried(HousingUnit $housingUnit): bool
+    {
+        $maritalStatus = mb_strtolower(trim((string) $housingUnit->marital_status));
+
+        return $maritalStatus === 'married'
+            || str_contains($maritalStatus, 'متزوج');
     }
 
     private function husbandNamesByIdCardNo(Collection $idCardNumbers, Collection $registryRecordsByIdCardNo): Collection
