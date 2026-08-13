@@ -457,9 +457,9 @@
                 identitySummary.innerHTML = details.map(function (detail) {
                     var title = detail.label + ' - ' + detail.name + ' - ' + detail.id_number;
 
-                    return '<span class="badge badge-light d-inline-flex align-items-center gap-2 border border-gray-300 px-3 py-2 flex-shrink-0 mw-250px" title="' + escapeHtml(title) + '">'
+                    return '<span class="badge badge-light d-inline-flex align-items-center gap-2 border border-gray-300 px-3 py-2 flex-shrink-0" title="' + escapeHtml(title) + '">'
                         + '<span class="text-gray-600 flex-shrink-0">' + escapeHtml(detail.label) + '</span>'
-                        + '<span class="fw-bold text-gray-900 d-inline-block text-truncate mw-125px">' + escapeHtml(detail.name) + '</span>'
+                        + '<span class="fw-bold text-gray-900 d-inline-block">' + escapeHtml(detail.name) + '</span>'
                         + '<span class="badge badge-light-primary flex-shrink-0">' + escapeHtml(detail.id_number) + '</span>'
                         + '</span>';
                 }).join('');
