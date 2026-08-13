@@ -97,6 +97,8 @@ class SurveyReportController extends Controller
 
     public function roadFacilities(Request $request): View
     {
+        $hasDateFilter = $request->filled('start_date') || $request->filled('end_date');
+
         [$startDate, $endDate] = $this->resolveDates(
             $request,
             $this->resolveRoadFacilitiesMinimumDate(),
@@ -107,14 +109,15 @@ class SurveyReportController extends Controller
             ->withCount('items')
             ->get();
 
-        $surveys = $surveys
-            ->filter(function (RoadFacilitySurvey $survey) use ($startDate, $endDate): bool {
+        if ($hasDateFilter) {
+            $surveys = $surveys->filter(function (RoadFacilitySurvey $survey) use ($startDate, $endDate): bool {
                 $effectiveDate = $this->resolveRoadFacilityEffectiveDate($survey);
 
                 return $effectiveDate !== null
                     && $effectiveDate->betweenIncluded($startDate, $endDate);
             })
-            ->values();
+                ->values();
+        }
 
         $damageCounts = collect([
             'destroyed' => $surveys->where('road_damage_level', 'destroyed')->count(),

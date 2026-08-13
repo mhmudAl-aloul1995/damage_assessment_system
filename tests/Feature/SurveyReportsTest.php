@@ -143,3 +143,60 @@ it('shows the road facilities report page with summary metrics and curve chart d
             && in_array(2, $curveChart['series'], true);
     });
 });
+
+it('shows all road facilities by default and filters them only when dates are submitted', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+
+    $viewerRole = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole($viewerRole);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 3901,
+        'globalid' => 'road-facility-default-report-in-range',
+        'str_name' => 'In Range Road',
+        'road_damage_level' => 'severe',
+        'submissiondate' => '2026-03-05 09:30:00',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 3902,
+        'globalid' => 'road-facility-default-report-outside-range',
+        'str_name' => 'Outside Range Road',
+        'road_damage_level' => 'minor',
+        'submissiondate' => '2024-01-10 13:00:00',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 3903,
+        'globalid' => 'road-facility-default-report-without-submission',
+        'str_name' => 'No Submission Road',
+        'road_damage_level' => 'moderate',
+        'submissiondate' => null,
+        'created_at' => null,
+        'updated_at' => null,
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('reports.road-facilities'))
+        ->assertOk()
+        ->assertViewHas('summaryCards', function (array $summaryCards): bool {
+            return collect($summaryCards)->contains(fn (array $card): bool => $card['label'] === 'Total Surveys' && $card['value'] === 3);
+        });
+
+    $this->actingAs($viewer)
+        ->get(route('reports.road-facilities', [
+            'start_date' => '2026-03-01',
+            'end_date' => '2026-03-31',
+        ]))
+        ->assertOk()
+        ->assertViewHas('summaryCards', function (array $summaryCards): bool {
+            return collect($summaryCards)->contains(fn (array $card): bool => $card['label'] === 'Total Surveys' && $card['value'] === 1);
+        });
+});
