@@ -63,7 +63,7 @@
                 </div>
                 <div class="position-relative flex-shrink-0">
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
-                    <input type="text" data-kt-missing-citizens-filter="unit-objectid" class="form-control form-control-sm form-control-solid w-225px ps-12" placeholder="{{ __('ui.missing_citizen_identities.unit_objectid_placeholder') }}">
+                    <textarea data-kt-missing-citizens-filter="unit-objectid" class="form-control form-control-sm form-control-solid w-225px ps-12" rows="1" style="resize: none;" placeholder="{{ __('ui.missing_citizen_identities.unit_objectid_placeholder') }}"></textarea>
                 </div>
                 <select class="form-select form-select-sm form-select-solid w-200px flex-shrink-0" data-kt-missing-citizens-filter="issue-type">
                     <option value="">{{ __('ui.missing_citizen_identities.all_issue_types') }}</option>
