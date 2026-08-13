@@ -644,6 +644,7 @@ return [
         'source_sgaza' => 'SGaza',
         'source_husband_registry' => 'Husband registry',
         'breadwinner_id_card_no' => 'Husband/breadwinner ID',
+        'linked_owner_id_card_no' => 'Linked owner ID',
         'mother_name' => 'Mother name',
         'neighborhood' => 'Neighborhood',
         'birth_date' => 'Birth date',

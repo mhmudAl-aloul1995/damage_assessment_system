@@ -176,6 +176,8 @@ class MissingCitizenIdentityController extends Controller
             ? $husbandRegistryRecords->merge($sgazaRecords)->merge($citizens)->merge($accessRecords)
             : $sgazaRecords->merge($citizens)->merge($accessRecords);
 
+        $orderedRecords = $this->enrichSpouseCandidatesWithHusbandRegistryHints($report, $orderedRecords);
+
         return response()->json([
             'data' => $orderedRecords
                 ->unique('id_card_no')
@@ -217,9 +219,12 @@ class MissingCitizenIdentityController extends Controller
         $sgazaCandidates = $this->sgazaNameCandidates($report->normalized_owner_name);
 
         return response()->json([
-            'data' => $husbandRegistryCandidates
-                ->merge($sgazaCandidates)
-                ->merge($candidates)
+            'data' => $this->enrichSpouseCandidatesWithHusbandRegistryHints(
+                $report,
+                $husbandRegistryCandidates
+                    ->merge($sgazaCandidates)
+                    ->merge($candidates)
+            )
                 ->unique('id_card_no')
                 ->take(20)
                 ->values(),
@@ -1046,6 +1051,119 @@ class MissingCitizenIdentityController extends Controller
             'id_card_no' => $record->id_number,
             'full_name' => $this->sgazaFullName($record),
         ];
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $candidates
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function enrichSpouseCandidatesWithHusbandRegistryHints(MissingCitizenIdentityReport $report, Collection $candidates): Collection
+    {
+        if ($report->identity_subject !== 'spouse' || $candidates->isEmpty()) {
+            return $candidates;
+        }
+
+        $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
+
+        if (! $housingUnit instanceof HousingUnit) {
+            return $candidates;
+        }
+
+        $ownerIdCardNo = trim((string) $housingUnit->id_number1);
+
+        if ($ownerIdCardNo === '') {
+            return $candidates;
+        }
+
+        $candidateIdCardNumbers = $candidates
+            ->pluck('id_card_no')
+            ->map(fn ($idCardNo): string => trim((string) $idCardNo))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($candidateIdCardNumbers->isEmpty()) {
+            return $candidates;
+        }
+
+        $hintsByIdCardNo = $this->isFemaleOwner($housingUnit)
+            ? $this->femaleOwnerHusbandRegistryHints($ownerIdCardNo, $candidateIdCardNumbers)
+            : $this->maleOwnerWifeRegistryHints($candidateIdCardNumbers);
+
+        if ($hintsByIdCardNo->isEmpty()) {
+            return $candidates;
+        }
+
+        return $candidates
+            ->map(function (array $candidate) use ($hintsByIdCardNo): array {
+                $idCardNo = trim((string) ($candidate['id_card_no'] ?? ''));
+                $hint = (string) ($hintsByIdCardNo[$idCardNo] ?? '');
+
+                if ($hint === '') {
+                    return $candidate;
+                }
+
+                $candidate['details'] = collect([
+                    $candidate['details'] ?? '',
+                    $hint,
+                ])
+                    ->filter()
+                    ->unique()
+                    ->implode(' | ');
+
+                return $candidate;
+            })
+            ->values();
+    }
+
+    private function isFemaleOwner(HousingUnit $housingUnit): bool
+    {
+        $sex = mb_strtolower(trim((string) $housingUnit->sex));
+        $sexLabel = trim((string) ($housingUnit->sex_str ?? ''));
+
+        return $sex === 'f'
+            || $sex === 'female'
+            || str_contains($sexLabel, 'أنثى');
+    }
+
+    private function maleOwnerWifeRegistryHints(Collection $candidateIdCardNumbers): Collection
+    {
+        try {
+            return DB::table($this->husbandRegistryTable())
+                ->selectRaw('TRIM(id_card_no) as id_card_no, TRIM(breadwinner_id_card_no) as breadwinner_id_card_no')
+                ->where('status', 'A')
+                ->whereIn('id_card_no', $candidateIdCardNumbers)
+                ->whereColumn('id_card_no', '<>', 'breadwinner_id_card_no')
+                ->get()
+                ->groupBy(fn ($record): string => (string) $record->id_card_no)
+                ->map(fn (Collection $records): string => $records
+                    ->pluck('breadwinner_id_card_no')
+                    ->map(fn ($idCardNo): string => trim((string) $idCardNo))
+                    ->filter()
+                    ->unique()
+                    ->map(fn (string $idCardNo): string => __('ui.missing_citizen_identities.breadwinner_id_card_no').': '.$idCardNo)
+                    ->implode(' | ')
+                );
+        } catch (Throwable) {
+            return collect();
+        }
+    }
+
+    private function femaleOwnerHusbandRegistryHints(string $ownerIdCardNo, Collection $candidateIdCardNumbers): Collection
+    {
+        try {
+            return DB::table($this->husbandRegistryTable())
+                ->selectRaw('TRIM(id_card_no) as id_card_no, TRIM(breadwinner_id_card_no) as breadwinner_id_card_no')
+                ->where('status', 'A')
+                ->where('id_card_no', $ownerIdCardNo)
+                ->whereIn('breadwinner_id_card_no', $candidateIdCardNumbers)
+                ->get()
+                ->mapWithKeys(fn ($record): array => [
+                    (string) $record->breadwinner_id_card_no => __('ui.missing_citizen_identities.linked_owner_id_card_no').': '.(string) $record->id_card_no,
+                ]);
+        } catch (Throwable) {
+            return collect();
+        }
     }
 
     private function husbandRegistryRecordByIdNumber(string $idNumber): ?object

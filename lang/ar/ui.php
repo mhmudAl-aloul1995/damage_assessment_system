@@ -624,6 +624,7 @@ return [
         'source_sgaza' => 'SGaza',
         'source_husband_registry' => 'سجل ربط الزوج',
         'breadwinner_id_card_no' => 'هوية الزوج/المعيل',
+        'linked_owner_id_card_no' => 'مرتبط بالمالكة',
         'mother_name' => 'اسم الأم',
         'neighborhood' => 'الحي',
         'birth_date' => 'تاريخ الميلاد',

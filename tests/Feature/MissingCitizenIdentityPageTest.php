@@ -945,6 +945,111 @@ it('searches spouse name parts in the husband registry before sgaza and citizens
         ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_husband_registry'));
 });
 
+it('adds husband registry breadwinner hints to spouse candidates from sgaza', function (): void {
+    createSgazaTable();
+    createHusbandRegistryTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8913,
+        'globalid' => 'sgaza-spouse-breadwinner-hint',
+        'unit_owner' => 'Hint Husband',
+        'id_number1' => '900176942',
+        'sex' => 'M',
+        'marital_status' => 'Married',
+        'spouse1' => 'شيما نمر محمد الاشقر',
+        'spouse1_id' => '999999999',
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '901111111',
+        'first_name' => 'شيما',
+        'father_name' => 'نمر',
+        'grandfather_name' => 'محمد',
+        'family_name' => 'الاشقر',
+        'full_name' => 'شيما نمر محمد الاشقر',
+        'full_name_normalized' => 'شيمازمرمحمدالاشقر',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '901111111',
+        'full_name' => 'شيما نمر محمد الاشقر',
+        'full_name_normalized' => 'شيمازمرمحمدالاشقر',
+        'breadwinner_id_card_no' => '900176943',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_subject', 'spouse')
+        ->firstOrFail();
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.citizen-search', [
+            'report' => $report,
+            'q' => '901111',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.id_card_no', '901111111')
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'))
+        ->assertJsonPath('data.0.details', __('ui.missing_citizen_identities.breadwinner_id_card_no').': 900176943');
+});
+
+it('adds female owner registry hints to spouse husband candidates', function (): void {
+    createSgazaTable();
+    createHusbandRegistryTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8914,
+        'globalid' => 'female-owner-spouse-hint',
+        'unit_owner' => 'Female Owner',
+        'id_number1' => '970000021',
+        'sex' => 'F',
+        'marital_status' => 'Married',
+        'spouse1' => 'Female Owner Husband',
+        'spouse1_id' => '999999999',
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '970000022',
+        'first_name' => 'Female',
+        'father_name' => 'Owner',
+        'grandfather_name' => 'Husband',
+        'family_name' => 'Candidate',
+        'full_name' => 'Female Owner Husband Candidate',
+        'full_name_normalized' => 'FemaleOwnerHusbandCandidate',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '970000021',
+        'full_name' => 'Female Owner',
+        'full_name_normalized' => 'FemaleOwner',
+        'breadwinner_id_card_no' => '970000022',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_subject', 'spouse')
+        ->firstOrFail();
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.citizen-search', [
+            'report' => $report,
+            'q' => '970000022',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.id_card_no', '970000022')
+        ->assertJsonPath('data.0.details', __('ui.missing_citizen_identities.linked_owner_id_card_no').': 970000021');
+});
+
 it('returns missing spouse identities separately from owner identities', function (): void {
     HousingUnit::query()->create([
         'objectid' => 892,
