@@ -249,7 +249,7 @@ class MissingCitizenIdentityController extends Controller
         ]);
     }
 
-    public function documents(MissingCitizenIdentityReport $report): JsonResponse
+    public function documents(MissingCitizenIdentityReport $report, ArcgisService $arcgisService): JsonResponse
     {
         $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
 
@@ -261,7 +261,7 @@ class MissingCitizenIdentityController extends Controller
         }
 
         return response()->json([
-            'data' => $this->housingUnitOwnershipDocuments($housingUnit),
+            'data' => $this->housingUnitOwnershipDocuments($housingUnit, $arcgisService),
         ]);
     }
 
@@ -583,11 +583,42 @@ class MissingCitizenIdentityController extends Controller
     /**
      * @return array<int, array{title: string, url: string, type: string, source: string, content_type?: string, size?: int|null}>
      */
-    private function housingUnitOwnershipDocuments(HousingUnit $housingUnit): array
+    private function housingUnitOwnershipDocuments(HousingUnit $housingUnit, ArcgisService $arcgisService): array
     {
         $documents = collect();
 
-        $this->collectDocumentsFromValue($documents, $housingUnit->ownership_image, __('ui.missing_citizen_identities.ownership_document'));
+        if (filled($housingUnit->objectid)) {
+            try {
+                $token = $arcgisService->getToken();
+                $layerId = $arcgisService->getLayerId(HousingUnit::class);
+
+                collect($arcgisService->getAttachments($housingUnit->objectid, $layerId, $token))
+                    ->filter(fn (array $attachment): bool => str_contains(
+                        mb_strtolower((string) ($attachment['name'] ?? '')),
+                        'ownership_image'
+                    ))
+                    ->each(function (array $attachment) use ($arcgisService, $documents, $housingUnit, $layerId, $token): void {
+                        $attachmentId = $attachment['id'] ?? null;
+
+                        if (! filled($attachmentId)) {
+                            return;
+                        }
+
+                        $url = $arcgisService->buildUrl($housingUnit->objectid, $attachmentId, $layerId, $token);
+
+                        $documents->push([
+                            'title' => (string) ($attachment['name'] ?? __('ui.missing_citizen_identities.ownership_document')),
+                            'url' => $url,
+                            'type' => $this->documentType($url, (string) ($attachment['contentType'] ?? '')),
+                            'source' => __('ui.missing_citizen_identities.source_arcgis'),
+                            'content_type' => (string) ($attachment['contentType'] ?? ''),
+                            'size' => $attachment['size'] ?? null,
+                        ]);
+                    });
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
 
         return $documents
             ->filter(fn (array $document): bool => filled($document['url'] ?? null))

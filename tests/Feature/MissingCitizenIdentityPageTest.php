@@ -228,24 +228,25 @@ it('does not report identities that exist in sgaza civil registry', function ():
     expect(MissingCitizenIdentityReport::query()->count())->toBe(0);
 });
 
-it('returns only ownership documents for a missing identity report', function (): void {
-    Schema::table('housing_units', function (Blueprint $table): void {
-        if (! Schema::hasColumn('housing_units', 'attachments')) {
-            $table->text('attachments')->nullable();
-        }
-
-        if (! Schema::hasColumn('housing_units', 'ownership_image')) {
-            $table->text('ownership_image')->nullable();
-        }
-
-        if (! Schema::hasColumn('housing_units', 'damge_photo_2')) {
-            $table->text('damge_photo_2')->nullable();
-        }
-    });
-
+it('returns only arcgis ownership image attachments for a missing identity report', function (): void {
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
-        'https://services2.arcgis.com/*/FeatureServer/1/910/attachments' => Http::response(['attachmentInfos' => []]),
+        'https://services2.arcgis.com/*/FeatureServer/1/910/attachments' => Http::response([
+            'attachmentInfos' => [
+                [
+                    'id' => 22,
+                    'name' => 'ownership_image_910.pdf',
+                    'contentType' => 'application/pdf',
+                    'size' => 1200,
+                ],
+                [
+                    'id' => 23,
+                    'name' => 'damage_photo_2.jpg',
+                    'contentType' => 'image/jpeg',
+                    'size' => 900,
+                ],
+            ],
+        ]),
     ]);
 
     $housingUnit = HousingUnit::query()->create([
@@ -253,19 +254,7 @@ it('returns only ownership documents for a missing identity report', function ()
         'globalid' => 'missing-identity-documents',
         'unit_owner' => 'Document Owner',
         'id_number1' => '900000010',
-        'ownership_image' => 'https://example.test/documents/ownership-field.pdf',
-        'attachments' => json_encode([
-            [
-                'name' => 'Ownership document',
-                'url' => 'https://example.test/documents/ownership.pdf',
-                'contentType' => 'application/pdf',
-            ],
-        ], JSON_THROW_ON_ERROR),
-        'damge_photo_2' => 'https://example.test/photos/damage.jpg',
     ]);
-    DB::table('housing_units')
-        ->where('id', $housingUnit->id)
-        ->update(['ownership_image' => 'https://example.test/documents/ownership-field.pdf']);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
         ->assertSuccessful();
@@ -279,9 +268,10 @@ it('returns only ownership documents for a missing identity report', function ()
         ->getJson(route('reports.missing-citizen-identities.documents', $report))
         ->assertOk()
         ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.url', 'https://example.test/documents/ownership-field.pdf')
+        ->assertJsonPath('data.0.title', 'ownership_image_910.pdf')
+        ->assertJsonPath('data.0.url', 'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/910/attachments/22?token=arcgis-token')
         ->assertJsonPath('data.0.type', 'pdf')
-        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.ownership_document'));
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_arcgis'));
 });
 
 it('returns a clean json response when a report was refreshed away', function (): void {
