@@ -62,9 +62,14 @@
                     <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-sm form-control-solid w-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
                 </div>
                 <div class="position-relative flex-shrink-0">
-                    <i class="ki-duotone ki-magnifier fs-3 position-absolute top-0 mt-4 ms-4"></i>
-                    <textarea data-kt-missing-citizens-filter="unit-objectid" class="form-control form-control-sm form-control-solid w-300px ps-12 py-3" rows="3" style="min-height: 76px; resize: vertical; line-height: 1.5;" placeholder="{{ __('ui.missing_citizen_identities.unit_objectid_placeholder') }}"></textarea>
+                    <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
+                    <input type="text" data-kt-missing-citizens-filter="unit-objectid" class="form-control form-control-sm form-control-solid w-175px ps-12" inputmode="numeric" placeholder="{{ __('ui.missing_citizen_identities.unit_objectid_placeholder') }}">
                 </div>
+                <button type="button" class="btn btn-sm btn-light-info text-nowrap flex-shrink-0" data-kt-missing-citizens-action="open-unit-objectids-modal">
+                    <i class="ki-duotone ki-row-horizontal fs-3"></i>
+                    فلترة متعددة
+                    <span class="badge badge-light-primary ms-2 d-none" data-kt-missing-citizens-unit-objectids-count>0</span>
+                </button>
                 <select class="form-select form-select-sm form-select-solid w-200px flex-shrink-0" data-kt-missing-citizens-filter="issue-type">
                     <option value="">{{ __('ui.missing_citizen_identities.all_issue_types') }}</option>
                     <option value="missing_civil_registry_identity">{{ __('ui.missing_citizen_identities.issue_missing_civil_registry_identity') }}</option>
@@ -214,6 +219,31 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="missing_citizen_unit_objectids_modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">فلترة متعددة لأرقام الوحدات</h3>
+                    <button type="button" class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="ki-duotone ki-cross fs-1"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-semibold text-gray-700" for="missing_citizen_unit_objectids_textarea">ألصق أرقام الوحدات السكنية</label>
+                    <textarea class="form-control form-control-solid" id="missing_citizen_unit_objectids_textarea" data-kt-missing-citizens-unit-objectids-textarea rows="8" style="resize: vertical;" placeholder="49869&#10;49838&#10;50120"></textarea>
+                    <div class="d-flex align-items-center justify-content-between mt-3">
+                        <div class="text-muted fs-7">يمكن الفصل بسطر جديد، فاصلة، أو مسافة.</div>
+                        <div class="badge badge-light-primary" data-kt-missing-citizens-unit-objectids-preview>0 رقم</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-kt-missing-citizens-action="clear-unit-objectids">مسح</button>
+                    <button type="button" class="btn btn-primary" data-kt-missing-citizens-action="apply-unit-objectids">تطبيق الفلتر</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script')
@@ -249,9 +279,14 @@
             var documentsBody = document.getElementById('missing_citizen_documents_body');
             var manualSearch = document.getElementById('missing_citizen_manual_search');
             var namePartInputs = Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizen-name-part]'));
+            var unitObjectIdsModalElement = document.getElementById('missing_citizen_unit_objectids_modal');
+            var unitObjectIdsTextarea = document.querySelector('[data-kt-missing-citizens-unit-objectids-textarea]');
+            var unitObjectIdsPreview = document.querySelector('[data-kt-missing-citizens-unit-objectids-preview]');
+            var unitObjectIdsCount = document.querySelector('[data-kt-missing-citizens-unit-objectids-count]');
             var activeCandidateReportId = null;
             var manualSearchTimer = null;
             var rowsByReportId = {};
+            var currentUnitObjectIds = '';
 
             var rowCheckboxes = function () {
                 return Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-row-check]'))
@@ -563,14 +598,35 @@
                 return '<span class="badge ' + (classes[status] || 'badge-light') + '">' + escapeHtml(labels[status] || status) + suffix + '</span>';
             };
 
-            var normalizedUnitObjectIds = function () {
-                var matches = String(currentUnitObjectId || '').match(/\d+/g) || [];
+            var extractUnitObjectIds = function (value) {
+                var matches = String(value || '').match(/\d+/g) || [];
 
                 return matches
                     .filter(function (value, index, values) {
                         return Number(value) > 0 && values.indexOf(value) === index;
                     })
-                    .join(',');
+                    .map(function (value) {
+                        return String(Number(value));
+                    });
+            };
+
+            var normalizedUnitObjectIds = function () {
+                var source = currentUnitObjectIds || currentUnitObjectId;
+
+                return extractUnitObjectIds(source).join(',');
+            };
+
+            var updateUnitObjectIdsState = function () {
+                var count = extractUnitObjectIds(currentUnitObjectIds).length;
+
+                if (unitObjectIdsCount) {
+                    unitObjectIdsCount.textContent = count;
+                    unitObjectIdsCount.classList.toggle('d-none', count === 0);
+                }
+
+                if (unitObjectIdsPreview) {
+                    unitObjectIdsPreview.textContent = count + ' رقم';
+                }
             };
 
             var loadCursor = function (cursor) {
@@ -1030,6 +1086,8 @@
                         clearTimeout(searchTimer);
                         searchTimer = setTimeout(function () {
                             currentUnitObjectId = event.target.value;
+                            currentUnitObjectIds = '';
+                            updateUnitObjectIdsState();
                             cursorStack = [0];
                             cursorIndex = 0;
                             nextCursor = null;
@@ -1047,6 +1105,9 @@
                 var selectAllVisible = document.querySelector('[data-kt-missing-citizens-action="select-all-visible"]');
                 var documentsButton = document.querySelector('[data-kt-missing-citizens-action="show-documents"]');
                 var hideDocumentsButton = document.querySelector('[data-kt-missing-citizens-action="hide-documents"]');
+                var openUnitObjectIdsModal = document.querySelector('[data-kt-missing-citizens-action="open-unit-objectids-modal"]');
+                var applyUnitObjectIds = document.querySelector('[data-kt-missing-citizens-action="apply-unit-objectids"]');
+                var clearUnitObjectIds = document.querySelector('[data-kt-missing-citizens-action="clear-unit-objectids"]');
 
                 if (refresh) {
                     refresh.addEventListener('click', function () {
@@ -1112,6 +1173,67 @@
 
                 if (hideDocumentsButton) {
                     hideDocumentsButton.addEventListener('click', resetDocuments);
+                }
+
+                if (openUnitObjectIdsModal) {
+                    openUnitObjectIdsModal.addEventListener('click', function () {
+                        if (unitObjectIdsTextarea) {
+                            unitObjectIdsTextarea.value = currentUnitObjectIds;
+                            updateUnitObjectIdsState();
+                        }
+
+                        if (unitObjectIdsModalElement && window.bootstrap) {
+                            bootstrap.Modal.getOrCreateInstance(unitObjectIdsModalElement).show();
+                        }
+                    });
+                }
+
+                if (unitObjectIdsTextarea) {
+                    unitObjectIdsTextarea.addEventListener('input', function (event) {
+                        var count = extractUnitObjectIds(event.target.value).length;
+
+                        if (unitObjectIdsPreview) {
+                            unitObjectIdsPreview.textContent = count + ' رقم';
+                        }
+                    });
+                }
+
+                if (applyUnitObjectIds) {
+                    applyUnitObjectIds.addEventListener('click', function () {
+                        currentUnitObjectIds = unitObjectIdsTextarea ? extractUnitObjectIds(unitObjectIdsTextarea.value).join('\n') : '';
+                        currentUnitObjectId = '';
+
+                        if (unitObjectId) {
+                            unitObjectId.value = '';
+                        }
+
+                        updateUnitObjectIdsState();
+
+                        if (unitObjectIdsModalElement && window.bootstrap) {
+                            bootstrap.Modal.getOrCreateInstance(unitObjectIdsModalElement).hide();
+                        }
+
+                        cursorStack = [0];
+                        cursorIndex = 0;
+                        nextCursor = null;
+                        loadCursor(0);
+                    });
+                }
+
+                if (clearUnitObjectIds) {
+                    clearUnitObjectIds.addEventListener('click', function () {
+                        currentUnitObjectIds = '';
+
+                        if (unitObjectIdsTextarea) {
+                            unitObjectIdsTextarea.value = '';
+                        }
+
+                        updateUnitObjectIdsState();
+                        cursorStack = [0];
+                        cursorIndex = 0;
+                        nextCursor = null;
+                        loadCursor(0);
+                    });
                 }
 
                 var previous = document.querySelector('[data-kt-missing-citizens-action="previous"]');
@@ -1235,6 +1357,7 @@
                 init: function () {
                     bindEvents();
                     updateOwnerContextVisibility();
+                    updateUnitObjectIdsState();
                     loadCursor(0);
                 }
             };
