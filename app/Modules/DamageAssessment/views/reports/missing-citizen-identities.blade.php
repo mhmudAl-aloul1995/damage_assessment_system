@@ -84,14 +84,6 @@
                     <option value="no_owner_name">{{ __('ui.missing_citizen_identities.name_match_no_owner') }}</option>
                     <option value="not_checked">{{ __('ui.missing_citizen_identities.name_match_not_checked') }}</option>
                 </select>
-                <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                    <span class="text-muted fs-7">{{ __('ui.missing_citizen_identities.rows_per_page') }}</span>
-                    <select class="form-select form-select-sm form-select-solid w-100px" data-kt-missing-citizens-filter="per-page">
-                        <option value="100" selected>100</option>
-                        <option value="200">200</option>
-                        <option value="500">500</option>
-                    </select>
-                </div>
             </div>
         </div>
         <div class="card-body">
@@ -119,6 +111,14 @@
             </div>
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-5">
                 <div class="text-muted fs-7" id="missing_citizens_page_info"></div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted fs-7">{{ __('ui.missing_citizen_identities.rows_per_page') }}</span>
+                    <select class="form-select form-select-sm form-select-solid w-100px" data-kt-missing-citizens-filter="per-page">
+                        <option value="100" selected>100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-light" data-kt-missing-citizens-action="previous">
                         {{ __('ui.missing_citizen_identities.previous') }}
