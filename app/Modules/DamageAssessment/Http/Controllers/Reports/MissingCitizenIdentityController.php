@@ -90,8 +90,10 @@ class MissingCitizenIdentityController extends Controller
         }
 
         if ($unitObjectId !== '') {
-            if (ctype_digit($unitObjectId)) {
-                $query->where('housing_units.objectid', (int) $unitObjectId);
+            $unitObjectIds = $this->housingUnitObjectIds($unitObjectId);
+
+            if ($unitObjectIds !== []) {
+                $query->whereIn('housing_units.objectid', $unitObjectIds);
             } else {
                 $query->whereRaw('1 = 0');
             }
@@ -467,6 +469,21 @@ class MissingCitizenIdentityController extends Controller
             : trim((string) ($report->housing_unit_owner_name ?? ''));
 
         return $ownerName !== '' ? $ownerName : '-';
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function housingUnitObjectIds(string $unitObjectId): array
+    {
+        preg_match_all('/\d+/', $unitObjectId, $matches);
+
+        return collect($matches[0] ?? [])
+            ->map(fn (string $objectId): int => (int) $objectId)
+            ->filter(fn (int $objectId): bool => $objectId > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
