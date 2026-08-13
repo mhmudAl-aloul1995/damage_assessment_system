@@ -16,6 +16,10 @@ beforeEach(function (): void {
         $table->id();
         $table->string('id_card_no')->nullable();
         $table->string('status')->nullable();
+        $table->string('first_name')->nullable();
+        $table->string('father_name')->nullable();
+        $table->string('grand_name')->nullable();
+        $table->string('family_name')->nullable();
         $table->string('full_name')->nullable();
         $table->string('full_name_normalized')->nullable();
     });
@@ -43,6 +47,10 @@ function createHusbandRegistryTable(): void
         $table->id();
         $table->string('status')->default('A');
         $table->string('id_card_no')->nullable();
+        $table->string('first_name')->nullable();
+        $table->string('father_name')->nullable();
+        $table->string('grand_name')->nullable();
+        $table->string('family_name')->nullable();
         $table->string('full_name')->nullable();
         $table->string('full_name_normalized')->nullable();
         $table->string('breadwinner_id_card_no')->nullable();
@@ -815,6 +823,126 @@ it('searches sgaza by separate name part inputs without a general query', functi
         ->assertJsonPath('data.0.id_card_no', '966605552')
         ->assertJsonPath('data.0.full_name', 'واصل محمود سعيد لحسان')
         ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'));
+});
+
+it('searches by identity number without mixing name part filters and prefers sgaza over citizens', function (): void {
+    createSgazaTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8911,
+        'globalid' => 'identity-search-with-name-parts',
+        'unit_owner' => 'Unknown Owner',
+        'id_number1' => '123450000',
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '123456789',
+        'first_name' => 'Identity',
+        'father_name' => 'Search',
+        'grandfather_name' => 'Preferred',
+        'family_name' => 'Sgaza',
+        'full_name' => 'Identity Search Preferred Sgaza',
+        'full_name_normalized' => 'IdentitySearchPreferredSgaza',
+    ]);
+
+    DB::table('citizens')->insert([
+        'status' => 'A',
+        'id_card_no' => '123456789',
+        'first_name' => 'Conflicting',
+        'father_name' => 'Name',
+        'grand_name' => 'Parts',
+        'family_name' => 'Citizen',
+        'full_name' => 'Conflicting Name Parts Citizen',
+        'full_name_normalized' => 'ConflictingNamePartsCitizen',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->firstOrFail();
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.citizen-search', [
+            'report' => $report,
+            'q' => '123456',
+            'first_name' => 'NoMatch',
+            'father_name' => 'NoMatch',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.id_card_no', '123456789')
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'));
+});
+
+it('searches spouse name parts in the husband registry before sgaza and citizens', function (): void {
+    createSgazaTable();
+    createHusbandRegistryTable();
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8912,
+        'globalid' => 'spouse-registry-name-part-search',
+        'unit_owner' => 'Registry Husband',
+        'id_number1' => '880000001',
+        'marital_status' => 'Married',
+        'spouse1' => 'Registry Wife',
+        'spouse1_id' => '999999999',
+    ]);
+
+    DB::table('citizens_to_set_husband_id')->insert([
+        'status' => 'A',
+        'id_card_no' => '880000002',
+        'first_name' => 'Registry',
+        'father_name' => 'Wife',
+        'grand_name' => 'From',
+        'family_name' => 'Table',
+        'full_name' => 'Registry Wife From Table',
+        'full_name_normalized' => 'RegistryWifeFromTable',
+        'breadwinner_id_card_no' => '880000001',
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '880000003',
+        'first_name' => 'Registry',
+        'father_name' => 'Wife',
+        'grandfather_name' => 'From',
+        'family_name' => 'Table',
+        'full_name' => 'Registry Wife From Table',
+        'full_name_normalized' => 'RegistryWifeFromTable',
+    ]);
+
+    DB::table('citizens')->insert([
+        'status' => 'A',
+        'id_card_no' => '880000004',
+        'first_name' => 'Registry',
+        'father_name' => 'Wife',
+        'grand_name' => 'From',
+        'family_name' => 'Table',
+        'full_name' => 'Registry Wife From Table',
+        'full_name_normalized' => 'RegistryWifeFromTable',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()
+        ->where('housing_unit_id', $housingUnit->id)
+        ->where('identity_subject', 'spouse')
+        ->firstOrFail();
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.citizen-search', [
+            'report' => $report,
+            'first_name' => 'Registry',
+            'father_name' => 'Wife',
+            'grandfather_name' => 'From',
+            'family_name' => 'Table',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.id_card_no', '880000002')
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_husband_registry'));
 });
 
 it('returns missing spouse identities separately from owner identities', function (): void {

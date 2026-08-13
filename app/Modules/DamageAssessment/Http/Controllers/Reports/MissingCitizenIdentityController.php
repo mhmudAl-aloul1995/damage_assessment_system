@@ -153,6 +153,13 @@ class MissingCitizenIdentityController extends Controller
 
         $search = trim($request->string('q')->toString());
         $nameParts = $this->searchNameParts($request);
+        $isIdentitySearch = ctype_digit($search);
+
+        if ($isIdentitySearch) {
+            $nameParts = collect();
+        } elseif ($search !== '') {
+            $nameParts = collect();
+        }
 
         if (mb_strlen($search) < 2 && $nameParts->isEmpty()) {
             return response()->json([
@@ -160,47 +167,17 @@ class MissingCitizenIdentityController extends Controller
             ]);
         }
 
-        $query = DB::table($this->citizensTable())
-            ->select(['id', 'id_card_no', 'full_name'])
-            ->where('status', 'A');
-
-        if (ctype_digit($search)) {
-            $query->where('id_card_no', 'like', $search.'%');
-        } elseif ($search !== '') {
-            $normalizedSearch = ArabicNameNormalizer::normalize($search);
-
-            if ($normalizedSearch === '' && $nameParts->isEmpty()) {
-                return response()->json([
-                    'data' => [],
-                ]);
-            }
-
-            $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
-        } else {
-            $query->whereRaw('1 = 0');
-        }
-
-        $citizens = $query
-            ->orderBy('id')
-            ->limit(20)
-            ->get()
-            ->map(fn ($citizen): array => [
-                'id' => 'citizen:'.$citizen->id,
-                'id_card_no' => (string) $citizen->id_card_no,
-                'full_name' => $citizen->full_name ?: '-',
-                'source' => __('ui.missing_citizen_identities.source_citizens'),
-            ])
-            ->values();
-
-        $husbandRegistryRecords = $this->searchHusbandRegistry($report, $search);
+        $citizens = $this->searchCitizensCivilRegistry($search, $nameParts);
+        $husbandRegistryRecords = $this->searchHusbandRegistry($report, $search, $nameParts);
         $sgazaRecords = $this->searchSgazaCivilRegistry($search, $nameParts);
         $accessRecords = $this->searchAccessCivilRegistry($search);
 
+        $orderedRecords = $report->identity_subject === 'spouse'
+            ? $husbandRegistryRecords->merge($sgazaRecords)->merge($citizens)->merge($accessRecords)
+            : $sgazaRecords->merge($citizens)->merge($accessRecords);
+
         return response()->json([
-            'data' => $husbandRegistryRecords
-                ->merge($sgazaRecords)
-                ->merge($citizens)
-                ->merge($accessRecords)
+            'data' => $orderedRecords
                 ->unique('id_card_no')
                 ->take(20)
                 ->values(),
@@ -793,7 +770,47 @@ class MissingCitizenIdentityController extends Controller
         ])->filter();
     }
 
-    private function searchHusbandRegistry(MissingCitizenIdentityReport $report, string $search): Collection
+    private function searchCitizensCivilRegistry(string $search, Collection $nameParts): Collection
+    {
+        $query = DB::table($this->citizensTable())
+            ->select(['id', 'id_card_no', 'full_name'])
+            ->where('status', 'A');
+
+        if (ctype_digit($search)) {
+            $query->where('id_card_no', 'like', $search.'%');
+        } elseif ($nameParts->isNotEmpty()) {
+            $this->applyNamePartSearch($query, $nameParts, [
+                'first_name' => 'first_name',
+                'father_name' => 'father_name',
+                'grandfather_name' => 'grand_name',
+                'family_name' => 'family_name',
+            ], $this->citizensTable());
+        } elseif ($search !== '') {
+            $normalizedSearch = ArabicNameNormalizer::normalize($search);
+
+            if ($normalizedSearch === '') {
+                return collect();
+            }
+
+            $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
+        } else {
+            return collect();
+        }
+
+        return $query
+            ->orderBy('id')
+            ->limit(20)
+            ->get()
+            ->map(fn ($citizen): array => [
+                'id' => 'citizen:'.$citizen->id,
+                'id_card_no' => (string) $citizen->id_card_no,
+                'full_name' => $citizen->full_name ?: '-',
+                'source' => __('ui.missing_citizen_identities.source_citizens'),
+            ])
+            ->values();
+    }
+
+    private function searchHusbandRegistry(MissingCitizenIdentityReport $report, string $search, Collection $nameParts): Collection
     {
         if ($report->identity_subject !== 'spouse') {
             return collect();
@@ -813,6 +830,13 @@ class MissingCitizenIdentityController extends Controller
 
             if (ctype_digit($search)) {
                 $query->where('id_card_no', 'like', $search.'%');
+            } elseif ($nameParts->isNotEmpty()) {
+                $this->applyNamePartSearch($query, $nameParts, [
+                    'first_name' => 'first_name',
+                    'father_name' => 'father_name',
+                    'grandfather_name' => 'grand_name',
+                    'family_name' => 'family_name',
+                ], $this->husbandRegistryTable());
             } elseif ($search !== '') {
                 $normalizedSearch = ArabicNameNormalizer::normalize($search);
 
@@ -833,6 +857,37 @@ class MissingCitizenIdentityController extends Controller
         } catch (Throwable) {
             return collect();
         }
+    }
+
+    /**
+     * @param  array<string, string>  $columnMap
+     */
+    private function applyNamePartSearch(QueryBuilder $query, Collection $nameParts, array $columnMap, string $table): void
+    {
+        $hasStructuredColumns = false;
+
+        foreach ($nameParts as $inputName => $value) {
+            $column = $columnMap[$inputName] ?? null;
+
+            if ($column !== null && Schema::hasColumn($table, $column)) {
+                $query->where($column, 'like', $value.'%');
+                $hasStructuredColumns = true;
+            }
+        }
+
+        if ($hasStructuredColumns) {
+            return;
+        }
+
+        $normalizedName = ArabicNameNormalizer::normalize($nameParts->values()->implode(' '));
+
+        if ($normalizedName === '') {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->where('full_name_normalized', 'like', $normalizedName.'%');
     }
 
     private function husbandRegistryNameCandidates(MissingCitizenIdentityReport $report): Collection
