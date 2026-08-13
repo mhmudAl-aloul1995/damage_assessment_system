@@ -30,12 +30,12 @@
     </div>
 
     <div class="card card-flush shadow-sm">
-        <div class="card-header pt-6 d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div class="card-title">
+        <div class="card-header pt-6 d-flex justify-content-between align-items-center flex-nowrap gap-3 overflow-hidden">
+            <div class="card-title flex-shrink-0">
                 <h3 class="fw-bold m-0">{{ __('ui.missing_citizen_identities.table_title') }}</h3>
             </div>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <div class="btn-group" role="group" aria-label="{{ __('ui.missing_citizen_identities.identity_subject') }}">
+            <div class="d-flex align-items-center gap-2 flex-nowrap overflow-auto min-w-0 pb-2" style="scrollbar-width: thin;">
+                <div class="btn-group flex-shrink-0" role="group" aria-label="{{ __('ui.missing_citizen_identities.identity_subject') }}">
                     <button type="button" class="btn btn-sm btn-primary" data-kt-missing-citizens-subject="owner">
                         {{ __('ui.missing_citizen_identities.identity_owner') }}
                     </button>
@@ -43,20 +43,20 @@
                         {{ __('ui.missing_citizen_identities.identity_spouses') }}
                     </button>
                 </div>
-                <div class="position-relative">
+                <div class="position-relative flex-shrink-0">
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
                     <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-solid w-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
                 </div>
-                <div class="position-relative">
+                <div class="position-relative flex-shrink-0">
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
                     <input type="text" data-kt-missing-citizens-filter="unit-objectid" class="form-control form-control-solid w-175px ps-12" inputmode="numeric" placeholder="{{ __('ui.missing_citizen_identities.unit_objectid_placeholder') }}">
                 </div>
-                <select class="form-select form-select-solid w-200px" data-kt-missing-citizens-filter="issue-type">
+                <select class="form-select form-select-solid w-200px flex-shrink-0" data-kt-missing-citizens-filter="issue-type">
                     <option value="">{{ __('ui.missing_citizen_identities.all_issue_types') }}</option>
                     <option value="missing_civil_registry_identity">{{ __('ui.missing_citizen_identities.issue_missing_civil_registry_identity') }}</option>
                     <option value="owner_without_identity">{{ __('ui.missing_citizen_identities.issue_owner_without_identity') }}</option>
                 </select>
-                <select class="form-select form-select-solid w-175px" data-kt-missing-citizens-filter="name-match-status">
+                <select class="form-select form-select-solid w-175px flex-shrink-0" data-kt-missing-citizens-filter="name-match-status">
                     <option value="">{{ __('ui.missing_citizen_identities.all_name_matches') }}</option>
                     <option value="matched">{{ __('ui.missing_citizen_identities.name_match_matched') }}</option>
                     <option value="ambiguous">{{ __('ui.missing_citizen_identities.name_match_ambiguous') }}</option>
@@ -64,7 +64,7 @@
                     <option value="no_owner_name">{{ __('ui.missing_citizen_identities.name_match_no_owner') }}</option>
                     <option value="not_checked">{{ __('ui.missing_citizen_identities.name_match_not_checked') }}</option>
                 </select>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
                     <span class="text-muted fs-7">{{ __('ui.missing_citizen_identities.rows_per_page') }}</span>
                     <select class="form-select form-select-solid w-100px" data-kt-missing-citizens-filter="per-page">
                         <option value="100" selected>100</option>
@@ -72,15 +72,15 @@
                         <option value="500">500</option>
                     </select>
                 </div>
-                <button type="button" class="btn btn-light-primary" data-kt-missing-citizens-action="refresh">
+                <button type="button" class="btn btn-light-primary text-nowrap flex-shrink-0" data-kt-missing-citizens-action="refresh">
                     <i class="ki-duotone ki-arrows-circle fs-2"></i>
                     {{ __('ui.missing_citizen_identities.refresh') }}
                 </button>
-                <button type="button" class="btn btn-light-warning" data-kt-missing-citizens-action="select-all-visible" disabled>
+                <button type="button" class="btn btn-light-warning text-nowrap flex-shrink-0" data-kt-missing-citizens-action="select-all-visible" disabled>
                     <i class="ki-duotone ki-check-square fs-2"></i>
                     <span data-kt-missing-citizens-select-all-label>{{ __('ui.missing_citizen_identities.select_all_matches') }}</span>
                 </button>
-                <button type="button" class="btn btn-light-success" data-kt-missing-citizens-action="bulk-approve" disabled>
+                <button type="button" class="btn btn-light-success text-nowrap flex-shrink-0" data-kt-missing-citizens-action="bulk-approve" disabled>
                     <i class="ki-duotone ki-check-square fs-2"></i>
                     {{ __('ui.missing_citizen_identities.approve_selected') }}
                 </button>
