@@ -620,7 +620,6 @@ class InfAuditRoadFacilityController extends Controller
         }
 
         $this->scopeVisibleToUser($query);
-        $this->excludeFinalApproved($query);
         $this->applyFilters($query, $request);
         $this->applyExportSearch($query, $request);
 
@@ -825,18 +824,6 @@ class InfAuditRoadFacilityController extends Controller
             ])
             ->values()
             ->all();
-    }
-
-    private function excludeFinalApproved(Builder $query): void
-    {
-        $query->whereNotExists(function ($subQuery): void {
-            $subQuery->selectRaw('1')
-                ->from('road_facility_audit_statuses as latest_road_status')
-                ->join('inf_audit_statuses', 'inf_audit_statuses.id', '=', 'latest_road_status.status_id')
-                ->whereColumn('latest_road_status.globalid', 'road_facility_surveys.globalid')
-                ->whereIn('inf_audit_statuses.name', self::FINAL_STATUS_NAMES)
-                ->whereRaw('latest_road_status.id = (select max(rfas.id) from road_facility_audit_statuses as rfas where rfas.globalid = road_facility_surveys.globalid)');
-        });
     }
 
     private function whereLatestStatus(Builder $query, string $status): void

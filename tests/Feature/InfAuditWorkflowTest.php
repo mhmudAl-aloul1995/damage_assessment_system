@@ -384,6 +384,51 @@ test('database officer can assign and inf engineer can audit road facilities and
     expect(RoadFacilityAuditStatus::query()->where('globalid', $road->globalid)->count())->toBeGreaterThan(1);
 });
 
+test('road audit table includes final approved roads in the total', function (): void {
+    $officer = infAuditUser('Database Officer');
+    $finalStatus = InfAuditStatus::query()->where('name', 'final_approval')->firstOrFail();
+
+    $openRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 6401,
+        'globalid' => 'road-audit-open-total-global-id',
+        'str_name' => 'Open Total Road',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $finalRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 6402,
+        'globalid' => 'road-audit-final-total-global-id',
+        'str_name' => 'Final Total Road',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    RoadFacilityAuditStatus::query()->create([
+        'road_facility_survey_id' => $finalRoad->id,
+        'objectid' => $finalRoad->objectid,
+        'globalid' => $finalRoad->globalid,
+        'status_id' => $finalStatus->id,
+        'updated_by' => $officer->id,
+    ]);
+
+    $this->actingAs($officer)
+        ->getJson(route('inf-audit.roads.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonPath('recordsTotal', 2)
+        ->assertJsonPath('recordsFiltered', 2)
+        ->assertJsonFragment([
+            'objectid' => $openRoad->objectid,
+        ])
+        ->assertJsonFragment([
+            'objectid' => $finalRoad->objectid,
+        ]);
+});
+
 test('database officer can export filtered road audit summary', function (): void {
     $officer = infAuditUser('Database Officer');
     $engineer = infAuditUser('Inf - QC/QA Engineer');

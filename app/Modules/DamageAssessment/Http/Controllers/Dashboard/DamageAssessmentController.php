@@ -30,8 +30,6 @@ use Yajra\Datatables\Datatables;
 
 class DamageAssessmentController extends Controller
 {
-    private const ROAD_AUDIT_FINAL_STATUS_NAMES = ['final_approval', 'accepted_final', 'final'];
-
     private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES = [
         'ياسمين ماهر مصطفى ابومدللة',
         'غادة محمود عبدالحي الهباش',
@@ -2150,25 +2148,8 @@ class DamageAssessmentController extends Controller
     {
         $query = RoadFacilitySurvey::query();
         $this->applyDashboardMapFilters($query, $request, '', 'creationdate');
-        $this->excludeFinalApprovedRoadFacilities($query);
 
         return $query;
-    }
-
-    private function excludeFinalApprovedRoadFacilities(Builder $query): void
-    {
-        if (! Schema::hasTable('road_facility_audit_statuses') || ! Schema::hasTable('inf_audit_statuses')) {
-            return;
-        }
-
-        $query->whereNotExists(function ($subQuery): void {
-            $subQuery->selectRaw('1')
-                ->from('road_facility_audit_statuses as latest_road_status')
-                ->join('inf_audit_statuses', 'inf_audit_statuses.id', '=', 'latest_road_status.status_id')
-                ->whereColumn('latest_road_status.globalid', 'road_facility_surveys.globalid')
-                ->whereIn('inf_audit_statuses.name', self::ROAD_AUDIT_FINAL_STATUS_NAMES)
-                ->whereRaw('latest_road_status.id = (select max(rfas.id) from road_facility_audit_statuses as rfas where rfas.globalid = road_facility_surveys.globalid)');
-        });
     }
 
     private function dashboardCompletedRoadLengthKilometers(Request $request): float
