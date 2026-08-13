@@ -128,22 +128,24 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">{{ __('ui.missing_citizen_identities.candidates_title') }}</h3>
-                    <button type="button" class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal" aria-label="Close">
-                        <i class="ki-duotone ki-cross fs-1"></i>
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-light-info" data-kt-missing-citizens-action="show-documents">
+                            <i class="ki-duotone ki-document fs-3"></i>
+                            {{ __('ui.missing_citizen_identities.show_unit_documents') }}
+                        </button>
+                        <button type="button" class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="ki-duotone ki-cross fs-1"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="modal-body">
-                    <div class="bg-light-danger rounded p-4 mb-5">
-                        <div class="d-flex align-items-center justify-content-between gap-4 flex-wrap flex-lg-nowrap">
+                    <div class="bg-light-danger rounded p-4 mb-5 overflow-hidden">
+                        <div class="d-flex align-items-center gap-4 flex-nowrap min-w-0">
                             <div class="d-flex align-items-center gap-3 flex-shrink-0">
                                 <span class="text-muted fw-semibold">{{ __('ui.missing_citizen_identities.current_missing_id_number') }}</span>
                                 <span class="badge badge-light-danger fs-6" id="missing_citizen_candidates_id_number">-</span>
                             </div>
-                            <div class="d-flex align-items-center gap-2 overflow-auto flex-nowrap flex-grow-1" id="missing_citizen_identity_summary" style="white-space: nowrap;"></div>
-                            <button type="button" class="btn btn-sm btn-light-info flex-shrink-0" data-kt-missing-citizens-action="show-documents">
-                                <i class="ki-duotone ki-document fs-3"></i>
-                                {{ __('ui.missing_citizen_identities.show_unit_documents') }}
-                            </button>
+                            <div class="d-flex align-items-center gap-2 overflow-auto flex-nowrap flex-grow-1 min-w-0 pb-1" id="missing_citizen_identity_summary" style="white-space: nowrap; scrollbar-width: thin;"></div>
                         </div>
                     </div>
                     <div class="bg-light rounded p-4 mb-5 d-none" id="missing_citizen_documents_panel">
@@ -458,10 +460,12 @@
 
                 identitySummary.classList.remove('d-none');
                 identitySummary.innerHTML = details.map(function (detail) {
-                    return '<span class="badge badge-light d-inline-flex align-items-center gap-2 border border-gray-300 px-3 py-2">'
-                        + '<span class="text-gray-600">' + escapeHtml(detail.label) + '</span>'
-                        + '<span class="fw-bold text-gray-900">' + escapeHtml(detail.name) + '</span>'
-                        + '<span class="badge badge-light-primary">' + escapeHtml(detail.id_number) + '</span>'
+                    var title = detail.label + ' - ' + detail.name + ' - ' + detail.id_number;
+
+                    return '<span class="badge badge-light d-inline-flex align-items-center gap-2 border border-gray-300 px-3 py-2 flex-shrink-0 mw-250px" title="' + escapeHtml(title) + '">'
+                        + '<span class="text-gray-600 flex-shrink-0">' + escapeHtml(detail.label) + '</span>'
+                        + '<span class="fw-bold text-gray-900 d-inline-block text-truncate mw-125px">' + escapeHtml(detail.name) + '</span>'
+                        + '<span class="badge badge-light-primary flex-shrink-0">' + escapeHtml(detail.id_number) + '</span>'
                         + '</span>';
                 }).join('');
             };
