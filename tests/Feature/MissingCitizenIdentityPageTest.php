@@ -21,6 +21,8 @@ beforeEach(function (): void {
         $table->string('family_name')->nullable();
         $table->string('full_name')->nullable();
         $table->string('full_name_normalized')->nullable();
+        $table->date('birth_date')->nullable();
+        $table->string('mobile_number')->nullable();
     });
 });
 
@@ -956,6 +958,7 @@ it('searches spouse name parts in the husband registry before citizens and sgaza
         'globalid' => 'spouse-registry-name-part-search',
         'unit_owner' => 'Registry Husband',
         'id_number1' => '880000001',
+        'mobile_number' => '0598800001',
         'marital_status' => 'Married',
         'spouse1' => 'Registry Wife',
         'spouse1_id' => '999999999',
@@ -997,14 +1000,42 @@ it('searches spouse name parts in the husband registry before citizens and sgaza
     ]);
 
     DB::table('citizens')->insert([
-        'status' => 'A',
-        'id_card_no' => '880000004',
-        'first_name' => 'Registry',
-        'father_name' => 'Wife',
-        'grand_name' => 'From',
-        'family_name' => 'Table',
-        'full_name' => 'Registry Wife From Table',
-        'full_name_normalized' => 'RegistryWifeFromTable',
+        [
+            'status' => 'A',
+            'id_card_no' => '880000001',
+            'first_name' => 'Registry',
+            'father_name' => 'Husband',
+            'grand_name' => 'From',
+            'family_name' => 'Table',
+            'full_name' => 'Registry Husband From Table',
+            'full_name_normalized' => 'RegistryHusbandFromTable',
+            'birth_date' => '1975-05-01',
+            'mobile_number' => null,
+        ],
+        [
+            'status' => 'A',
+            'id_card_no' => '880000002',
+            'first_name' => 'Registry',
+            'father_name' => 'Wife',
+            'grand_name' => 'From',
+            'family_name' => 'Table',
+            'full_name' => 'Registry Wife From Table',
+            'full_name_normalized' => 'RegistryWifeFromTable',
+            'birth_date' => '1980-02-03',
+            'mobile_number' => '0598800002',
+        ],
+        [
+            'status' => 'A',
+            'id_card_no' => '880000004',
+            'first_name' => 'Registry',
+            'father_name' => 'Wife',
+            'grand_name' => 'From',
+            'family_name' => 'Table',
+            'full_name' => 'Registry Wife From Table',
+            'full_name_normalized' => 'RegistryWifeFromTable',
+            'birth_date' => null,
+            'mobile_number' => null,
+        ],
     ]);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
@@ -1028,7 +1059,11 @@ it('searches spouse name parts in the husband registry before citizens and sgaza
         ->assertJsonPath('data.0.id_card_no', '880000002')
         ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_husband_registry'))
         ->assertJsonPath('data.0.related_spouse_name', 'Registry Husband From Table')
-        ->assertJsonPath('data.0.related_spouse_id_number', '880000001');
+        ->assertJsonPath('data.0.related_spouse_id_number', '880000001')
+        ->assertJsonPath('data.0.citizen_birth_date', '1980-02-03')
+        ->assertJsonPath('data.0.citizen_mobile_number', '0598800002')
+        ->assertJsonPath('data.0.related_spouse_birth_date', '1975-05-01')
+        ->assertJsonPath('data.0.related_spouse_mobile_number', '0598800001');
 
     $this
         ->actingAs(missingCitizenIdentityUser())

@@ -172,6 +172,7 @@ class MissingCitizenIdentityController extends Controller
 
             return response()->json([
                 'data' => $this->enrichCandidatesWithSpouseRegistryColumns($registryCandidates)
+                    ->pipe(fn (Collection $candidates): Collection => $this->enrichCandidatesWithCivilDetails($report, $candidates))
                     ->unique('id_card_no')
                     ->take(20)
                     ->values(),
@@ -200,6 +201,7 @@ class MissingCitizenIdentityController extends Controller
 
         $orderedRecords = $this->enrichSpouseCandidatesWithHusbandRegistryHints($report, $orderedRecords);
         $orderedRecords = $this->enrichCandidatesWithSpouseRegistryColumns($orderedRecords);
+        $orderedRecords = $this->enrichCandidatesWithCivilDetails($report, $orderedRecords);
 
         return response()->json([
             'data' => $orderedRecords
@@ -248,6 +250,7 @@ class MissingCitizenIdentityController extends Controller
                     ->merge($candidates)
                     ->merge($sgazaCandidates)
             ))
+                ->pipe(fn (Collection $candidates): Collection => $this->enrichCandidatesWithCivilDetails($report, $candidates))
                 ->unique('id_card_no')
                 ->take(20)
                 ->values(),
@@ -1378,6 +1381,248 @@ class MissingCitizenIdentityController extends Controller
      * @param  Collection<int, array<string, mixed>>  $candidates
      * @return Collection<int, array<string, mixed>>
      */
+    private function enrichCandidatesWithCivilDetails(MissingCitizenIdentityReport $report, Collection $candidates): Collection
+    {
+        if ($candidates->isEmpty()) {
+            return $candidates;
+        }
+
+        $idCardNumbers = $candidates
+            ->flatMap(function (array $candidate): array {
+                return [
+                    trim((string) ($candidate['id_card_no'] ?? '')),
+                    ...$this->idNumbersFromText((string) ($candidate['related_spouse_id_number'] ?? '')),
+                ];
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($idCardNumbers->isEmpty()) {
+            return $this->withEmptyCivilDetails($candidates);
+        }
+
+        $detailsByIdCardNo = $this->civilDetailsByIdCardNo($idCardNumbers);
+        $housingMobilesByIdCardNo = $this->housingMobileFallbacksByIdCardNo($report);
+
+        return $candidates
+            ->map(function (array $candidate) use ($detailsByIdCardNo, $housingMobilesByIdCardNo): array {
+                $idCardNo = trim((string) ($candidate['id_card_no'] ?? ''));
+                $candidateDetails = $detailsByIdCardNo[$idCardNo] ?? [];
+                $candidateMobileNumber = $candidateDetails['mobile_number'] ?? null;
+
+                if (! filled($candidateMobileNumber) || $candidateMobileNumber === '-') {
+                    $candidateMobileNumber = $housingMobilesByIdCardNo[$idCardNo] ?? null;
+                }
+
+                $candidate['citizen_birth_date'] = $this->displayValue($candidate['citizen_birth_date'] ?? $candidateDetails['birth_date'] ?? null);
+                $candidate['citizen_mobile_number'] = $this->displayValue($candidateMobileNumber);
+
+                $relatedIdCardNumbers = $this->idNumbersFromText((string) ($candidate['related_spouse_id_number'] ?? ''));
+                $relatedBirthDates = collect($relatedIdCardNumbers)
+                    ->map(fn (string $relatedIdCardNo): string => $this->displayValue($detailsByIdCardNo[$relatedIdCardNo]['birth_date'] ?? null))
+                    ->reject(fn (string $value): bool => $value === '-')
+                    ->unique()
+                    ->values();
+                $relatedMobileNumbers = collect($relatedIdCardNumbers)
+                    ->map(function (string $relatedIdCardNo) use ($detailsByIdCardNo, $housingMobilesByIdCardNo): string {
+                        $mobileNumber = $detailsByIdCardNo[$relatedIdCardNo]['mobile_number'] ?? null;
+
+                        if (! filled($mobileNumber) || $mobileNumber === '-') {
+                            $mobileNumber = $housingMobilesByIdCardNo[$relatedIdCardNo] ?? null;
+                        }
+
+                        return $this->displayValue($mobileNumber);
+                    })
+                    ->reject(fn (string $value): bool => $value === '-')
+                    ->unique()
+                    ->values();
+
+                $candidate['related_spouse_birth_date'] = $relatedBirthDates->isNotEmpty() ? $relatedBirthDates->implode(', ') : '-';
+                $candidate['related_spouse_mobile_number'] = $relatedMobileNumbers->isNotEmpty() ? $relatedMobileNumbers->implode(', ') : '-';
+
+                return $candidate;
+            })
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, string>  $idCardNumbers
+     * @return Collection<string, array{birth_date: string, mobile_number: string}>
+     */
+    private function civilDetailsByIdCardNo(Collection $idCardNumbers): Collection
+    {
+        $citizenDetails = $this->citizenDetailsByIdCardNo($idCardNumbers);
+        $sgazaBirthDates = $this->sgazaBirthDatesByIdCardNo($idCardNumbers);
+
+        return $idCardNumbers
+            ->mapWithKeys(function (string $idCardNo) use ($citizenDetails, $sgazaBirthDates): array {
+                $details = $citizenDetails[$idCardNo] ?? [];
+
+                return [
+                    $idCardNo => [
+                        'birth_date' => $this->displayValue($details['birth_date'] ?? $sgazaBirthDates[$idCardNo] ?? null),
+                        'mobile_number' => $this->displayValue($details['mobile_number'] ?? null),
+                    ],
+                ];
+            });
+    }
+
+    /**
+     * @param  Collection<int, string>  $idCardNumbers
+     * @return Collection<string, array{birth_date: string|null, mobile_number: string|null}>
+     */
+    private function citizenDetailsByIdCardNo(Collection $idCardNumbers): Collection
+    {
+        $birthDateColumn = $this->firstExistingColumn($this->citizensTable(), [
+            'birth_date',
+            'date_of_birth',
+            'dob',
+            'birthday',
+            'birthdate',
+            'تاريخ الميلاد',
+        ]);
+        $mobileColumn = $this->firstExistingColumn($this->citizensTable(), [
+            'mobile_number',
+            'mobile',
+            'phone',
+            'phone_number',
+            'contact_number',
+            'رقم الجوال',
+        ]);
+
+        if ($birthDateColumn === null && $mobileColumn === null) {
+            return collect();
+        }
+
+        $select = ['id_card_no'];
+
+        if ($birthDateColumn !== null) {
+            $select[] = $birthDateColumn.' as birth_date';
+        }
+
+        if ($mobileColumn !== null) {
+            $select[] = $mobileColumn.' as mobile_number';
+        }
+
+        return DB::table($this->citizensTable())
+            ->select($select)
+            ->whereIn('id_card_no', $idCardNumbers)
+            ->get()
+            ->mapWithKeys(fn ($record): array => [
+                trim((string) $record->id_card_no) => [
+                    'birth_date' => $this->formatDateValue($record->birth_date ?? null),
+                    'mobile_number' => trim((string) ($record->mobile_number ?? '')) ?: null,
+                ],
+            ]);
+    }
+
+    /**
+     * @param  Collection<int, string>  $idCardNumbers
+     * @return Collection<string, string>
+     */
+    private function sgazaBirthDatesByIdCardNo(Collection $idCardNumbers): Collection
+    {
+        if (! Schema::hasTable('sgaza') || ! Schema::hasColumn('sgaza', 'id_number')) {
+            return collect();
+        }
+
+        $birthDateColumn = $this->firstExistingColumn('sgaza', [
+            'birth_date',
+            'تاريخ الميلاد',
+            'ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯',
+        ]);
+
+        if ($birthDateColumn === null) {
+            return collect();
+        }
+
+        return DB::table('sgaza')
+            ->select(['id_number', $birthDateColumn.' as birth_date'])
+            ->whereIn('id_number', $idCardNumbers)
+            ->get()
+            ->mapWithKeys(fn ($record): array => [
+                trim((string) $record->id_number) => $this->formatDateValue($record->birth_date ?? null),
+            ])
+            ->filter();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function housingMobileFallbacksByIdCardNo(MissingCitizenIdentityReport $report): array
+    {
+        $housingUnit = HousingUnit::query()->find($report->housing_unit_id);
+
+        if (! $housingUnit instanceof HousingUnit) {
+            return [];
+        }
+
+        $ownerIdCardNo = trim((string) $housingUnit->id_number1);
+        $mobileNumber = trim((string) ($housingUnit->mobile_number ?: $housingUnit->additional_mobile ?: ''));
+
+        if ($ownerIdCardNo === '' || $mobileNumber === '') {
+            return [];
+        }
+
+        return [$ownerIdCardNo => $mobileNumber];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function idNumbersFromText(string $value): array
+    {
+        preg_match_all('/\d+/', $value, $matches);
+
+        return collect($matches[0] ?? [])
+            ->map(fn (string $idNumber): string => trim($idNumber))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<string>  $columns
+     */
+    private function firstExistingColumn(string $table, array $columns): ?string
+    {
+        foreach ($columns as $column) {
+            if (Schema::hasColumn($table, $column)) {
+                return $column;
+            }
+        }
+
+        return null;
+    }
+
+    private function formatDateValue(mixed $value): ?string
+    {
+        if (! filled($value)) {
+            return null;
+        }
+
+        $timestamp = strtotime((string) $value);
+
+        if ($timestamp === false) {
+            return trim((string) $value);
+        }
+
+        return date('Y-m-d', $timestamp);
+    }
+
+    private function displayValue(mixed $value): string
+    {
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : '-';
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $candidates
+     * @return Collection<int, array<string, mixed>>
+     */
     private function withEmptySpouseRegistryColumns(Collection $candidates): Collection
     {
         return $candidates
@@ -1443,6 +1688,8 @@ class MissingCitizenIdentityController extends Controller
             'id_card_no' => (string) $record->id_number,
             'full_name' => $this->sgazaFullName($record),
             'source' => __('ui.missing_citizen_identities.source_sgaza'),
+            'citizen_birth_date' => $this->displayValue($this->formatDateValue($record->birth_date ?? null)),
+            'citizen_mobile_number' => '-',
             'details' => collect([
                 filled($record->mother_name ?? null) ? __('ui.missing_citizen_identities.mother_name').': '.$record->mother_name : null,
                 filled($record->neighborhood ?? null) ? __('ui.missing_citizen_identities.neighborhood').': '.$record->neighborhood : null,
