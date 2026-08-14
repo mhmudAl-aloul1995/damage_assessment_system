@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\AccessCivilRegistryRecord;
 use App\Models\HousingUnit;
 use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
@@ -534,7 +533,7 @@ it('lists ambiguous name candidates and approves the selected citizen', function
         ->and($report->fresh()->approved_at)->not->toBeNull();
 });
 
-it('prioritizes sgaza candidates before citizens for matching names', function (): void {
+it('prioritizes citizens candidates before sgaza for matching names', function (): void {
     createSgazaTable();
 
     $housingUnit = HousingUnit::query()->create([
@@ -575,10 +574,10 @@ it('prioritizes sgaza candidates before citizens for matching names', function (
         ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.name-candidates', $report))
         ->assertOk()
-        ->assertJsonPath('data.0.id_card_no', '555555556')
-        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'))
-        ->assertJsonPath('data.1.id_card_no', '444444445')
-        ->assertJsonPath('data.1.source', __('ui.missing_citizen_identities.source_citizens'));
+        ->assertJsonPath('data.0.id_card_no', '444444445')
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_citizens'))
+        ->assertJsonPath('data.1.id_card_no', '555555556')
+        ->assertJsonPath('data.1.source', __('ui.missing_citizen_identities.source_sgaza'));
 });
 
 it('counts duplicate sgaza and citizen candidates with the same identity as one match', function (): void {
@@ -651,23 +650,10 @@ it('searches the civil registry for unmatched names and approves a manually sele
     DB::table('citizens')->insert([
         [
             'id_card_no' => '666666666',
-            'status' => 'I',
+            'status' => 'A',
             'full_name' => 'Correct Citizen',
             'full_name_normalized' => 'CorrectCitizen',
         ],
-    ]);
-
-    $accessRecord = AccessCivilRegistryRecord::query()->create([
-        'id_card_no' => '666666666',
-        'first_name' => 'Correct',
-        'father_name' => 'Access',
-        'grand_name' => 'Civil',
-        'family_name' => 'Registry',
-        'full_name' => 'Correct Access Civil Registry',
-        'full_name_normalized' => 'CorrectAccessCivilRegistry',
-        'mother_name' => 'Mother',
-        'neighborhood' => 'Neighborhood',
-        'birth_date' => '1980-01-01',
     ]);
 
     $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
@@ -687,13 +673,15 @@ it('searches the civil registry for unmatched names and approves a manually sele
         ]))
         ->assertOk()
         ->assertJsonFragment(['id_card_no' => '666666666'])
-        ->assertJsonFragment(['source' => __('ui.missing_citizen_identities.source_access')]);
+        ->assertJsonFragment(['source' => __('ui.missing_citizen_identities.source_citizens')]);
+
+    $chosenCitizenId = DB::table('citizens')->where('id_card_no', '666666666')->value('id');
 
     $this
         ->actingAs($user)
         ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
             'confirm' => true,
-            'citizen_id' => 'access:'.$accessRecord->id,
+            'citizen_id' => (string) $chosenCitizenId,
         ])
         ->assertOk()
         ->assertJsonPath('arcgis_status', 'synced');
@@ -849,7 +837,7 @@ it('searches sgaza by separate name part inputs without a general query', functi
         ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'));
 });
 
-it('searches by identity number without mixing name part filters and prefers sgaza over citizens', function (): void {
+it('searches by identity number without mixing name part filters and prefers citizens over sgaza', function (): void {
     createSgazaTable();
 
     $housingUnit = HousingUnit::query()->create([
@@ -897,10 +885,10 @@ it('searches by identity number without mixing name part filters and prefers sga
         ]))
         ->assertOk()
         ->assertJsonPath('data.0.id_card_no', '123456789')
-        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_sgaza'));
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_citizens'));
 });
 
-it('searches spouse name parts in the husband registry before sgaza and citizens', function (): void {
+it('searches spouse name parts in the husband registry before citizens and sgaza', function (): void {
     createSgazaTable();
     createHusbandRegistryTable();
 

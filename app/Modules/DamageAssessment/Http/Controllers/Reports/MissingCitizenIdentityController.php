@@ -5,7 +5,6 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Reports;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reports\ApproveMissingCitizenIdentityNameMatchRequest;
 use App\Http\Requests\Reports\BulkApproveMissingCitizenIdentityNameMatchesRequest;
-use App\Models\AccessCivilRegistryRecord;
 use App\Models\HousingUnit;
 use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
@@ -194,11 +193,10 @@ class MissingCitizenIdentityController extends Controller
         $citizens = $this->searchCitizensCivilRegistry($search, $nameParts);
         $husbandRegistryRecords = $this->searchHusbandRegistry($report, $search, $nameParts);
         $sgazaRecords = $this->searchSgazaCivilRegistry($search, $nameParts);
-        $accessRecords = $this->searchAccessCivilRegistry($search);
 
         $orderedRecords = $report->identity_subject === 'spouse'
-            ? $husbandRegistryRecords->merge($sgazaRecords)->merge($citizens)->merge($accessRecords)
-            : $sgazaRecords->merge($citizens)->merge($accessRecords);
+            ? $husbandRegistryRecords->merge($citizens)->merge($sgazaRecords)
+            : $citizens->merge($sgazaRecords);
 
         $orderedRecords = $this->enrichSpouseCandidatesWithHusbandRegistryHints($report, $orderedRecords);
         $orderedRecords = $this->enrichCandidatesWithSpouseRegistryColumns($orderedRecords);
@@ -247,8 +245,8 @@ class MissingCitizenIdentityController extends Controller
             'data' => $this->enrichCandidatesWithSpouseRegistryColumns($this->enrichSpouseCandidatesWithHusbandRegistryHints(
                 $report,
                 $husbandRegistryCandidates
-                    ->merge($sgazaCandidates)
                     ->merge($candidates)
+                    ->merge($sgazaCandidates)
             ))
                 ->unique('id_card_no')
                 ->take(20)
@@ -354,20 +352,6 @@ class MissingCitizenIdentityController extends Controller
     {
         if ($request->filled('citizen_id')) {
             $selectedCitizen = (string) $request->input('citizen_id');
-
-            if (str_starts_with($selectedCitizen, 'access:')) {
-                $record = AccessCivilRegistryRecord::query()->find((int) Str::after($selectedCitizen, 'access:'));
-
-                if (! $record instanceof AccessCivilRegistryRecord || ! filled($record->id_card_no)) {
-                    return null;
-                }
-
-                return (object) [
-                    'id' => 0,
-                    'id_card_no' => $record->id_card_no,
-                    'full_name' => $record->full_name,
-                ];
-            }
 
             if (str_starts_with($selectedCitizen, 'sgaza:')) {
                 $record = $this->sgazaRecordByIdNumber((string) Str::after($selectedCitizen, 'sgaza:'));
@@ -797,44 +781,6 @@ class MissingCitizenIdentityController extends Controller
             'pdf' => 'pdf',
             default => 'file',
         };
-    }
-
-    private function searchAccessCivilRegistry(string $search): Collection
-    {
-        if (! Schema::hasTable('access_civil_registry_records')) {
-            return collect();
-        }
-
-        $query = AccessCivilRegistryRecord::query()
-            ->select(['id', 'id_card_no', 'full_name', 'mother_name', 'neighborhood', 'birth_date']);
-
-        if (ctype_digit($search)) {
-            $query->where('id_card_no', 'like', $search.'%');
-        } else {
-            $normalizedSearch = ArabicNameNormalizer::normalize($search);
-
-            if ($normalizedSearch === '') {
-                return collect();
-            }
-
-            $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
-        }
-
-        return $query
-            ->orderBy('id')
-            ->limit(20)
-            ->get()
-            ->map(fn (AccessCivilRegistryRecord $record): array => [
-                'id' => 'access:'.$record->id,
-                'id_card_no' => (string) $record->id_card_no,
-                'full_name' => $record->full_name ?: '-',
-                'source' => __('ui.missing_citizen_identities.source_access'),
-                'details' => collect([
-                    $record->mother_name ? __('ui.missing_citizen_identities.mother_name').': '.$record->mother_name : null,
-                    $record->neighborhood ? __('ui.missing_citizen_identities.neighborhood').': '.$record->neighborhood : null,
-                    $record->birth_date ? __('ui.missing_citizen_identities.birth_date').': '.$record->birth_date->format('Y-m-d') : null,
-                ])->filter()->implode(' | '),
-            ]);
     }
 
     private function searchNameParts(Request $request): Collection
