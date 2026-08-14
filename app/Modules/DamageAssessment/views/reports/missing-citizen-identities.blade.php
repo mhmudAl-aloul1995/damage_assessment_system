@@ -171,6 +171,24 @@
                         </div>
                     </div>
                     <div class="row g-3 mb-5">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <button type="button" class="btn btn-light-danger" data-kt-missing-citizen-clear-nearest>
+                                    مسح
+                                </button>
+                                <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-spouse-registry="breadwinner_id_card_no" inputmode="numeric" placeholder="هوية الزوج/المعيل">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <button type="button" class="btn btn-light-danger" data-kt-missing-citizen-clear-nearest>
+                                    مسح
+                                </button>
+                                <input type="text" class="form-control form-control-solid" data-kt-missing-citizen-spouse-registry="wife_id_card_no" inputmode="numeric" placeholder="هوية الزوجة">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-5">
                         <div class="col-md-3">
                             <div class="input-group">
                                 <button type="button" class="btn btn-light-danger" data-kt-missing-citizen-clear-nearest>
@@ -282,6 +300,7 @@
             var documentsBody = document.getElementById('missing_citizen_documents_body');
             var manualSearch = document.getElementById('missing_citizen_manual_search');
             var namePartInputs = Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizen-name-part]'));
+            var spouseRegistryInputs = Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizen-spouse-registry]'));
             var unitObjectIdsModalElement = document.getElementById('missing_citizen_unit_objectids_modal');
             var unitObjectIdsTextarea = document.querySelector('[data-kt-missing-citizens-unit-objectids-textarea]');
             var unitObjectIdsPreview = document.querySelector('[data-kt-missing-citizens-unit-objectids-preview]');
@@ -709,6 +728,7 @@
                 if (manualSearch) {
                     manualSearch.value = '';
                 }
+                clearSpouseRegistryInputs();
                 clearNamePartInputs();
 
                 if (candidatesBody) {
@@ -836,6 +856,14 @@
                 });
             };
 
+            var clearSpouseRegistryInputs = function (exceptInput) {
+                spouseRegistryInputs.forEach(function (input) {
+                    if (input !== exceptInput) {
+                        input.value = '';
+                    }
+                });
+            };
+
             var triggerCitizenSearch = function () {
                 clearTimeout(manualSearchTimer);
                 manualSearchTimer = setTimeout(function () {
@@ -868,6 +896,18 @@
                     return params;
                 }
 
+                spouseRegistryInputs.forEach(function (input) {
+                    if (input.value.trim() !== '') {
+                        params.set(input.getAttribute('data-kt-missing-citizen-spouse-registry'), input.value.trim());
+                    }
+                });
+
+                if (Array.from(params.values()).some(function (value) {
+                    return value.length >= 2;
+                })) {
+                    return params;
+                }
+
                 namePartInputs.forEach(function (input) {
                     if (input.value.trim() !== '') {
                         params.set(input.getAttribute('data-kt-missing-citizen-name-part'), input.value.trim());
@@ -891,6 +931,7 @@
                 if (manualSearch) {
                     manualSearch.value = '';
                 }
+                clearSpouseRegistryInputs();
                 fillNamePartInputs(ownerName);
 
                 if (candidatesBody) {
@@ -1304,11 +1345,24 @@
                     manualSearch.addEventListener('keyup', function (event) {
                         if (event.target.value.trim() !== '') {
                             clearNamePartInputs();
+                            clearSpouseRegistryInputs();
                         }
 
                         triggerCitizenSearch();
                     });
                 }
+
+                spouseRegistryInputs.forEach(function (input) {
+                    input.addEventListener('keyup', function () {
+                        if (manualSearch) {
+                            manualSearch.value = '';
+                        }
+
+                        clearNamePartInputs();
+                        clearSpouseRegistryInputs(input);
+                        triggerCitizenSearch();
+                    });
+                });
 
                 namePartInputs.forEach(function (input) {
                     input.addEventListener('keyup', function () {
@@ -1316,6 +1370,7 @@
                             manualSearch.value = '';
                         }
 
+                        clearSpouseRegistryInputs();
                         triggerCitizenSearch();
                     });
                 });

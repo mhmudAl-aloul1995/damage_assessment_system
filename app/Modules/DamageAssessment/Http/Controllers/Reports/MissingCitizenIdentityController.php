@@ -163,8 +163,21 @@ class MissingCitizenIdentityController extends Controller
         }
 
         $search = trim($request->string('q')->toString());
+        $breadwinnerIdCardNo = trim($request->string('breadwinner_id_card_no')->toString());
+        $wifeIdCardNo = trim($request->string('wife_id_card_no')->toString());
         $nameParts = $this->searchNameParts($request);
         $isIdentitySearch = ctype_digit($search);
+
+        if ($breadwinnerIdCardNo !== '' || $wifeIdCardNo !== '') {
+            $registryCandidates = $this->searchSpouseRegistryByIdentityNumbers($breadwinnerIdCardNo, $wifeIdCardNo);
+
+            return response()->json([
+                'data' => $this->enrichCandidatesWithSpouseRegistryColumns($registryCandidates)
+                    ->unique('id_card_no')
+                    ->take(20)
+                    ->values(),
+            ]);
+        }
 
         if ($isIdentitySearch) {
             $nameParts = collect();
@@ -911,6 +924,43 @@ class MissingCitizenIdentityController extends Controller
                 $query->where('full_name_normalized', 'like', $normalizedSearch.'%');
             } else {
                 return collect();
+            }
+
+            return $query
+                ->orderBy('id_card_no')
+                ->limit(20)
+                ->get()
+                ->map(fn ($record): array => $this->husbandRegistryRecordToCandidate($record));
+        } catch (Throwable) {
+            return collect();
+        }
+    }
+
+    private function searchSpouseRegistryByIdentityNumbers(string $breadwinnerIdCardNo, string $wifeIdCardNo): Collection
+    {
+        $breadwinnerIdCardNo = trim($breadwinnerIdCardNo);
+        $wifeIdCardNo = trim($wifeIdCardNo);
+
+        if (
+            ($breadwinnerIdCardNo === '' || ! ctype_digit($breadwinnerIdCardNo))
+            && ($wifeIdCardNo === '' || ! ctype_digit($wifeIdCardNo))
+        ) {
+            return collect();
+        }
+
+        try {
+            $query = DB::table($this->husbandRegistryTable())
+                ->select(['id_card_no', 'full_name', 'breadwinner_id_card_no'])
+                ->where('status', 'A');
+
+            if ($breadwinnerIdCardNo !== '' && ctype_digit($breadwinnerIdCardNo)) {
+                $query
+                    ->whereRaw('TRIM(breadwinner_id_card_no) = ?', [$breadwinnerIdCardNo])
+                    ->whereRaw('TRIM(id_card_no) <> TRIM(breadwinner_id_card_no)');
+            }
+
+            if ($wifeIdCardNo !== '' && ctype_digit($wifeIdCardNo)) {
+                $query->whereRaw('TRIM(id_card_no) = ?', [$wifeIdCardNo]);
             }
 
             return $query

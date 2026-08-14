@@ -982,6 +982,28 @@ it('searches spouse name parts in the husband registry before sgaza and citizens
         ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_husband_registry'))
         ->assertJsonPath('data.0.related_spouse_name', 'Registry Husband From Table')
         ->assertJsonPath('data.0.related_spouse_id_number', '880000001');
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.citizen-search', [
+            'report' => $report,
+            'breadwinner_id_card_no' => '880000001',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.id_card_no', '880000002')
+        ->assertJsonPath('data.0.related_spouse_name', 'Registry Husband From Table')
+        ->assertJsonPath('data.0.related_spouse_id_number', '880000001');
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.citizen-search', [
+            'report' => $report,
+            'wife_id_card_no' => '880000002',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('data.0.id_card_no', '880000002')
+        ->assertJsonPath('data.0.related_spouse_name', 'Registry Husband From Table')
+        ->assertJsonPath('data.0.related_spouse_id_number', '880000001');
 });
 
 it('adds husband registry breadwinner hints to spouse candidates from sgaza', function (): void {
