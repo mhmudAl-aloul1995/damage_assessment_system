@@ -165,6 +165,8 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonFragment(['housing_unit_objectid' => '1001'])
         ->assertJsonFragment(['issue_type' => 'missing_civil_registry_identity'])
         ->assertJsonFragment(['id_number1' => '900000001'])
+        ->assertJsonFragment(['identity_name_field' => 'unit_owner'])
+        ->assertJsonFragment(['identity_number_field' => 'id_number1'])
         ->assertJsonFragment(['matched_citizen_id_card_no' => '900000009'])
         ->assertJsonFragment(['housing_unit_objectid' => '1003'])
         ->assertJsonFragment(['id_number1' => '900000003'])

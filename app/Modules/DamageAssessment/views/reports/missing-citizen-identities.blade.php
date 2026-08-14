@@ -152,6 +152,13 @@
                             <div class="d-flex align-items-center gap-2 overflow-auto flex-nowrap flex-grow-1 min-w-0 pb-1" id="missing_citizen_identity_summary" style="white-space: nowrap; scrollbar-width: thin;"></div>
                         </div>
                     </div>
+                    <div class="alert alert-primary d-flex align-items-start gap-3 mb-5" id="missing_citizen_approval_target" role="alert">
+                        <i class="ki-duotone ki-information-5 fs-2x text-primary flex-shrink-0"></i>
+                        <div class="min-w-0">
+                            <div class="fw-bold text-gray-900" data-kt-missing-citizens-approval-title></div>
+                            <div class="text-gray-700 fs-7 mt-1" data-kt-missing-citizens-approval-description></div>
+                        </div>
+                    </div>
                     <div class="bg-light rounded p-4 mb-5 d-none" id="missing_citizen_documents_panel">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <div class="fw-bold text-gray-800">{{ __('ui.missing_citizen_identities.unit_documents') }}</div>
@@ -298,6 +305,9 @@
             var candidatesModalElement = document.getElementById('missing_citizen_candidates_modal');
             var candidatesBody = document.getElementById('missing_citizen_candidates_body');
             var identitySummary = document.getElementById('missing_citizen_identity_summary');
+            var approvalTarget = document.getElementById('missing_citizen_approval_target');
+            var approvalTargetTitle = document.querySelector('[data-kt-missing-citizens-approval-title]');
+            var approvalTargetDescription = document.querySelector('[data-kt-missing-citizens-approval-description]');
             var documentsPanel = document.getElementById('missing_citizen_documents_panel');
             var documentsBody = document.getElementById('missing_citizen_documents_body');
             var manualSearch = document.getElementById('missing_citizen_manual_search');
@@ -526,6 +536,27 @@
                 }).join('');
             };
 
+            var renderApprovalTarget = function (reportId) {
+                if (!approvalTarget || !approvalTargetTitle || !approvalTargetDescription) {
+                    return;
+                }
+
+                var row = rowsByReportId[String(reportId)] || {};
+                var label = row.identity_label || '-';
+                var personName = row.owner_name || '-';
+                var idNumber = row.id_number1 || '-';
+                var nameField = row.identity_name_field || (row.identity_subject === 'owner' ? 'unit_owner' : '-');
+                var numberField = row.identity_number_field || (row.identity_subject === 'owner' ? 'id_number1' : '-');
+                var targetText = label + (personName && personName !== '-' ? ' - ' + personName : '');
+                var fieldsText = nameField && nameField !== '-'
+                    ? numberField + ' + ' + nameField
+                    : numberField;
+
+                approvalTargetTitle.textContent = 'الاعتماد الحالي لصالح: ' + targetText;
+                approvalTargetDescription.textContent = 'عند الضغط على اعتماد هذا المواطن سيتم تحديث هذا الهدف فقط: ' + fieldsText + '. الرقم الموجود حالياً في السطر: ' + idNumber + '.';
+                approvalTarget.classList.remove('d-none');
+            };
+
             var renderRows = function (rows) {
                 if (!tbody) {
                     return;
@@ -726,6 +757,7 @@
                 activeCandidateReportId = reportId;
                 resetDocuments();
                 renderIdentitySummary(reportId);
+                renderApprovalTarget(reportId);
 
                 if (manualSearch) {
                     manualSearch.value = '';
@@ -940,6 +972,7 @@
                 activeCandidateReportId = reportId;
                 resetDocuments();
                 renderIdentitySummary(reportId);
+                renderApprovalTarget(reportId);
 
                 if (manualSearch) {
                     manualSearch.value = '';

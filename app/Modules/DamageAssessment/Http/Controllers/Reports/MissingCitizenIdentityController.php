@@ -128,6 +128,8 @@ class MissingCitizenIdentityController extends Controller
                     'identity_subject' => $report->identity_subject,
                     'identity_index' => $report->identity_index,
                     'identity_label' => $this->identityLabel($report),
+                    'identity_name_field' => $this->identityNameField($report),
+                    'identity_number_field' => $report->identity_number_field,
                     'housing_unit_owner_name' => $this->reportHousingUnitOwnerName($report),
                     'owner_name' => $report->owner_name ?: '-',
                     'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
@@ -433,6 +435,10 @@ class MissingCitizenIdentityController extends Controller
     private function identityNameField(MissingCitizenIdentityReport $report): ?string
     {
         $field = (string) $report->identity_name_field;
+
+        if ($field === '' && $report->identity_subject === 'owner') {
+            return 'unit_owner';
+        }
 
         if (! in_array($field, ['unit_owner', 'spouse1', 'spouse2', 'spouse3', 'spouse4'], true)) {
             return null;
