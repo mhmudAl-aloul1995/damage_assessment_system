@@ -547,7 +547,7 @@ class MissingCitizenIdentityController extends Controller
         $identityNameField = $this->identityNameField($report);
         $oldIdNumber = (string) $housingUnit->{$identityNumberField};
         $newIdNumber = (string) $citizen->id_card_no;
-        $newFullName = trim((string) $citizen->full_name);
+        $newFullName = $this->preferredCitizenFullName($newIdNumber, trim((string) $citizen->full_name));
         $housingUnitUpdates = [
             $identityNumberField => $newIdNumber,
         ];
@@ -559,13 +559,13 @@ class MissingCitizenIdentityController extends Controller
             ];
         }
 
-        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $userId, $citizen, $housingUnitUpdates): void {
+        DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $newFullName, $userId, $citizen, $housingUnitUpdates): void {
             $housingUnit->forceFill($housingUnitUpdates)->save();
 
             $report->forceFill([
                 'matched_citizen_id' => $citizen->id,
                 'matched_citizen_id_card_no' => $citizen->id_card_no,
-                'matched_citizen_full_name' => $citizen->full_name,
+                'matched_citizen_full_name' => $newFullName,
                 'approved_at' => now(),
                 'approved_by' => $userId,
             ])->save();
@@ -578,7 +578,7 @@ class MissingCitizenIdentityController extends Controller
                 'new_id_number' => $newIdNumber,
                 'owner_name' => $report->owner_name,
                 'citizen_id' => $citizen->id,
-                'citizen_full_name' => $citizen->full_name,
+                'citizen_full_name' => $newFullName,
                 'approved_by' => $userId,
                 'arcgis_sync_status' => 'pending',
             ]);
@@ -1623,6 +1623,29 @@ class MissingCitizenIdentityController extends Controller
         $value = trim((string) $value);
 
         return $value !== '' ? $value : '-';
+    }
+
+    private function preferredCitizenFullName(string $idNumber, string $fallbackName): string
+    {
+        if ($idNumber === '' || ! Schema::hasTable($this->citizensTable()) || ! Schema::hasColumn($this->citizensTable(), 'full_name')) {
+            return $fallbackName;
+        }
+
+        $fullName = DB::table($this->citizensTable())
+            ->where('id_card_no', $idNumber)
+            ->where('status', 'A')
+            ->value('full_name');
+
+        $fullName = trim((string) $fullName);
+
+        return $this->wordCount($fullName) > $this->wordCount($fallbackName) ? $fullName : $fallbackName;
+    }
+
+    private function wordCount(string $value): int
+    {
+        return collect(preg_split('/\s+/u', trim($value)) ?: [])
+            ->filter()
+            ->count();
     }
 
     /**

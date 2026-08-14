@@ -78,6 +78,32 @@ it('imports pasted housing unit objectids from textarea input', function () {
     expect(session('exports.imported_object_id_target'))->toBe('housing_unit');
 });
 
+it('does not reload the export page after importing objectids', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response
+        ->assertOk()
+        ->assertDontSee('window.location.reload();', false);
+});
+
+it('reads checked export columns directly before showing the no columns warning', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee('function checkedColumnValues(inputName)', false)
+        ->assertSee("appendMissingFormFields(formData, 'building_columns[]', checkedColumnValues('building_columns[]'));", false)
+        ->assertSee('const formData = exportFormData();', false);
+});
+
 it('passes imported objectids into the export payload', function () {
     Queue::fake();
 

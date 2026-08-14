@@ -8,6 +8,7 @@ use App\Models\MissingCitizenIdentityReport;
 use App\services\ArcgisService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class BackfillApprovedMissingCitizenSpouseNames extends Command
@@ -97,8 +98,8 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
     {
         $identityNameField = (string) $report->identity_name_field;
         $identityNumberField = (string) $report->identity_number_field;
-        $fullName = trim((string) $report->matched_citizen_full_name);
         $idNumber = trim((string) $report->matched_citizen_id_card_no);
+        $fullName = $this->preferredCitizenFullName($idNumber, trim((string) $report->matched_citizen_full_name));
 
         if ($fullName === '' || $fullName === '-' || $idNumber === '') {
             return ['status' => 'skipped', 'database_updated' => false];
@@ -240,5 +241,37 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
     private function identityFields(): array
     {
         return ['id_number1', ...$this->spouseIdentityFields()];
+    }
+
+    private function preferredCitizenFullName(string $idNumber, string $fallbackName): string
+    {
+        if ($idNumber === '' || ! Schema::hasTable($this->citizensTable()) || ! Schema::hasColumn($this->citizensTable(), 'full_name')) {
+            return $fallbackName;
+        }
+
+        $fullName = DB::table($this->citizensTable())
+            ->where('id_card_no', $idNumber)
+            ->where('status', 'A')
+            ->value('full_name');
+
+        $fullName = trim((string) $fullName);
+
+        return $this->wordCount($fullName) > $this->wordCount($fallbackName) ? $fullName : $fallbackName;
+    }
+
+    private function wordCount(string $value): int
+    {
+        return collect(preg_split('/\s+/u', trim($value)) ?: [])
+            ->filter()
+            ->count();
+    }
+
+    private function citizensTable(): string
+    {
+        if (app()->environment('testing')) {
+            return 'citizens';
+        }
+
+        return 'phc_dashboard.citizens';
     }
 }

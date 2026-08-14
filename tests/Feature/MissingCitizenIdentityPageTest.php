@@ -1386,9 +1386,16 @@ it('backfills previously approved owner and spouse names into the database and a
         'name_match_status' => 'matched',
         'matched_citizen_id' => 0,
         'matched_citizen_id_card_no' => '900000042',
-        'matched_citizen_full_name' => 'Correct Approved Spouse',
+        'matched_citizen_full_name' => 'Correct Spouse',
         'matched_citizens_count' => 1,
         'approved_at' => now(),
+    ]);
+
+    DB::table('citizens')->insert([
+        'id_card_no' => '900000042',
+        'status' => 'A',
+        'full_name' => 'Correct Approved Spouse Full',
+        'full_name_normalized' => 'CorrectApprovedSpouseFull',
     ]);
 
     $ownerReport = MissingCitizenIdentityReport::query()->create([
@@ -1417,7 +1424,7 @@ it('backfills previously approved owner and spouse names into the database and a
         'new_id_number' => '900000042',
         'owner_name' => 'Old Spouse Name',
         'citizen_id' => 0,
-        'citizen_full_name' => 'Correct Approved Spouse',
+        'citizen_full_name' => 'Correct Spouse',
         'arcgis_sync_status' => 'synced',
     ]);
 
@@ -1437,7 +1444,7 @@ it('backfills previously approved owner and spouse names into the database and a
         ->artisan('missing-citizen-identities:backfill-approved-identities', ['--chunk' => 1])
         ->assertSuccessful();
 
-    expect($housingUnit->fresh()->spouse1)->toBe('Correct Approved Spouse')
+    expect($housingUnit->fresh()->spouse1)->toBe('Correct Approved Spouse Full')
         ->and($housingUnit->fresh()->spouse1_id)->toBe('900000042')
         ->and($ownerHousingUnit->fresh()->unit_owner)->toBe('Correct Owner Approved Family')
         ->and($ownerHousingUnit->fresh()->id_number1)->toBe('900000052')
@@ -1451,7 +1458,7 @@ it('backfills previously approved owner and spouse names into the database and a
 
     Http::assertSent(function ($request): bool {
         return $request->url() === 'https://services.example.test/FeatureServer/1/updateFeatures'
-            && str_contains((string) $request['features'], '"spouse1":"Correct Approved Spouse"')
+            && str_contains((string) $request['features'], '"spouse1":"Correct Approved Spouse Full"')
             && str_contains((string) $request['features'], '"spouse1_id":"900000042"');
     });
 

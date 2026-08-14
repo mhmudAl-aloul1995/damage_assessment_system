@@ -879,7 +879,42 @@
 			return $('input[name="export_mode"]:checked').val() || 'data';
 		}
 
+		function checkedColumnValues(inputName) {
+			return $('input[name="' + inputName + '"]:checked').map(function () {
+				return this.value;
+			}).get().filter(Boolean);
+		}
+
+		function appendMissingFormFields(formData, inputName, values) {
+			const existingValues = formData
+				.filter(function (field) {
+					return field.name === inputName;
+				})
+				.map(function (field) {
+					return field.value;
+				});
+
+			values.forEach(function (value) {
+				if (!existingValues.includes(value)) {
+					formData.push({ name: inputName, value: value });
+				}
+			});
+		}
+
+		function exportFormData() {
+			const formData = $('#exportForm').serializeArray();
+
+			appendMissingFormFields(formData, 'building_columns[]', checkedColumnValues('building_columns[]'));
+			appendMissingFormFields(formData, 'housing_columns[]', checkedColumnValues('housing_columns[]'));
+
+			return formData;
+		}
+
 		function hasSelectedDataColumns(formData) {
+			if (checkedColumnValues('building_columns[]').length > 0 || checkedColumnValues('housing_columns[]').length > 0) {
+				return true;
+			}
+
 			return formData.some(function (field) {
 				return (
 					(field.name === 'building_columns[]' || field.name === 'housing_columns[]') && field.value
@@ -1249,7 +1284,6 @@
 							modalInstance.hide();
 						}
 						form.reset();
-						window.location.reload();
 					},
 					error: function (xhr) {
 						const message = xhr.responseJSON?.message || @json(__('ui.exports.objectid_import_failed'));
@@ -1306,7 +1340,7 @@
 
 				syncAttachmentExcelDisplay();
 
-				const formData = $('#exportForm').serializeArray();
+				const formData = exportFormData();
 
 				if (requiresDataColumnsForExport() && !hasSelectedDataColumns(formData)) {
 					toastr.error('يرجى اختيار عمود واحد على الأقل من أعمدة البيانات قبل التصدير.');
