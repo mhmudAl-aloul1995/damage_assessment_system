@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Export;
 use App\services\ArcgisService;
+use App\services\HousingUnitCivilRegistryNameBackfillService;
 use App\Support\Exports\ExportDataColumns;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -992,6 +993,22 @@ class ExportAttachmentsJob implements ShouldQueue
         $query->selectRaw(implode(', ', $selects));
         $this->applyFilters($query, $params, $needsHousingJoin);
 
+        if ($needsHousingJoin && $this->truthy($params['update_housing_names_from_civil_registry'] ?? null)) {
+            $housingColumns = collect($columns)
+                ->filter(fn (array $column): bool => $column['table'] === 'housing')
+                ->pluck('field')
+                ->values()
+                ->all();
+
+            $backfillCounts = app(HousingUnitCivilRegistryNameBackfillService::class)
+                ->updateFilteredQuery(clone $query, $housingColumns);
+
+            Log::info('Attachment export civil registry housing name backfill finished', [
+                'export_id' => $this->exportId,
+                ...$backfillCounts,
+            ]);
+        }
+
         return $query
             ->orderBy('b.objectid')
             ->when($needsHousingJoin, fn ($query) => $query->orderBy('h.objectid'))
@@ -1042,6 +1059,11 @@ class ExportAttachmentsJob implements ShouldQueue
                 });
             }
         });
+    }
+
+    private function truthy(mixed $value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

@@ -28,6 +28,8 @@ it('shows export page actions including objectid import', function () {
     $response->assertSee('name="include_engineering_notes"', false);
     $response->assertSee('name="legal_notes_filter"', false);
     $response->assertSee('name="engineering_notes_filter"', false);
+    $response->assertSee('name="update_housing_names_from_civil_registry"', false);
+    $response->assertSee('تحديث أسماء المالك/الزوجات من السجل المدني قبل التصدير');
 });
 
 it('shows real database columns even when they are not assessment fields', function () {

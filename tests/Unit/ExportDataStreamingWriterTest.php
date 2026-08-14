@@ -11,8 +11,10 @@ use App\Models\HousingStatus;
 use App\Models\User;
 use App\services\ArcgisService;
 use App\Support\Exports\ExportDataColumns;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use OpenSpout\Reader\XLSX\Reader;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
@@ -215,6 +217,126 @@ test('it filters building exports by audited building end date range', function 
         if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
             unlink(storage_path('app/public/'.$export->file_name));
         }
+    }
+});
+
+test('it can update filtered selected housing names from civil registry before exporting', function () {
+    Schema::create('citizens', function (Blueprint $table): void {
+        $table->id();
+        $table->string('id_card_no')->nullable();
+        $table->string('status')->nullable();
+        $table->string('full_name')->nullable();
+    });
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 5101],
+            ],
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+
+    DB::table('buildings')->insert([
+        [
+            'objectid' => 5001,
+            'globalid' => 'filtered-building',
+            'neighborhood' => 'Rimal',
+        ],
+        [
+            'objectid' => 5002,
+            'globalid' => 'outside-building',
+            'neighborhood' => 'Zeitoun',
+        ],
+    ]);
+
+    DB::table('housing_units')->insert([
+        [
+            'objectid' => 5101,
+            'globalid' => 'filtered-unit',
+            'parentglobalid' => 'filtered-building',
+            'unit_owner' => 'Owner Short',
+            'id_number1' => '930000001',
+            'spouse1' => 'Wife Short',
+            'spouse1_id' => '930000002',
+            'spouse2' => 'Second Wife Short',
+            'spouse2_id' => '930000003',
+            'q_9_3_1_first_name' => 'Keep',
+        ],
+        [
+            'objectid' => 5102,
+            'globalid' => 'outside-unit',
+            'parentglobalid' => 'outside-building',
+            'unit_owner' => 'Outside Owner Short',
+            'id_number1' => '930000004',
+            'spouse1' => 'Outside Wife Short',
+            'spouse1_id' => '930000005',
+            'spouse2' => null,
+            'spouse2_id' => null,
+            'q_9_3_1_first_name' => null,
+        ],
+    ]);
+
+    DB::table('citizens')->insert([
+        ['id_card_no' => '930000001', 'status' => 'A', 'full_name' => 'Owner Full Registry Name'],
+        ['id_card_no' => '930000002', 'status' => 'A', 'full_name' => 'First Wife Registry Name'],
+        ['id_card_no' => '930000003', 'status' => 'A', 'full_name' => 'Second Wife Registry Name'],
+        ['id_card_no' => '930000004', 'status' => 'A', 'full_name' => 'Outside Owner Registry Name'],
+        ['id_card_no' => '930000005', 'status' => 'A', 'full_name' => 'Outside Wife Registry Name'],
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'building_columns' => ['objectid'],
+            'housing_columns' => ['unit_owner', 'spouse1_id'],
+            'filters' => [
+                'neighborhood' => ['Rimal'],
+            ],
+            'update_housing_names_from_civil_registry' => '1',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    (new ExportDataJob($export->id))->handle();
+
+    $filteredUnit = DB::table('housing_units')->where('objectid', 5101)->first();
+    $outsideUnit = DB::table('housing_units')->where('objectid', 5102)->first();
+
+    expect($filteredUnit->unit_owner)->toBe('Owner Full Registry Name')
+        ->and($filteredUnit->spouse1)->toBe('First Wife Registry Name')
+        ->and($filteredUnit->spouse2)->toBe('Second Wife Short')
+        ->and($filteredUnit->q_9_3_1_first_name)->toBe('Keep')
+        ->and($outsideUnit->unit_owner)->toBe('Outside Owner Short')
+        ->and($outsideUnit->spouse1)->toBe('Outside Wife Short');
+
+    Http::assertSent(function ($request): bool {
+        if ($request->url() !== 'https://services.example.test/FeatureServer/1/updateFeatures') {
+            return false;
+        }
+
+        $features = (string) $request['features'];
+
+        return str_contains($features, '"unit_owner":"Owner Full Registry Name"')
+            && str_contains($features, '"spouse1":"First Wife Registry Name"')
+            && ! str_contains($features, 'spouse2')
+            && ! str_contains($features, 'q_9_3_1_first_name')
+            && ! str_contains($features, 'Outside Owner Registry Name');
+    });
+
+    $export->refresh();
+
+    if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+        unlink(storage_path('app/public/'.$export->file_name));
     }
 });
 

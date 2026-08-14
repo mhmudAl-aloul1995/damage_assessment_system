@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Export;
+use App\services\HousingUnitCivilRegistryNameBackfillService;
 use App\Support\Exports\ExportDataColumns;
 use Illuminate\Bus\Queueable;
 use Illuminate\Container\Container;
@@ -228,6 +229,16 @@ class ExportDataJob implements ShouldQueue
                     $importedObjectIdTarget === 'housing_unit' ? 'h.objectid' : 'b.objectid',
                     $importedObjectIds,
                 );
+            }
+
+            if ($needsHousingJoin && $this->truthy($params['update_housing_names_from_civil_registry'] ?? null)) {
+                $backfillCounts = app(HousingUnitCivilRegistryNameBackfillService::class)
+                    ->updateFilteredQuery(clone $query, $housingColumns);
+
+                Log::info('Export civil registry housing name backfill finished', [
+                    'export_id' => $export->id,
+                    ...$backfillCounts,
+                ]);
             }
 
             Log::info('Export query prepared', [
@@ -602,5 +613,10 @@ class ExportDataJob implements ShouldQueue
         }
 
         Log::info($message, $context);
+    }
+
+    private function truthy(mixed $value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 }

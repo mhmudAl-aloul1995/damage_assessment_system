@@ -250,6 +250,20 @@
 								</label>
 							</div>
 
+							<div class="border rounded p-4 mb-6 bg-light-primary">
+								<label class="form-check form-check-custom form-check-solid align-items-start">
+									<input type="hidden" name="update_housing_names_from_civil_registry" value="0">
+									<input class="form-check-input mt-1" type="checkbox"
+										name="update_housing_names_from_civil_registry" value="1">
+									<span class="form-check-label ms-3">
+										<strong class="d-block">تحديث أسماء المالك/الزوجات من السجل المدني قبل التصدير</strong>
+										<small class="text-muted d-block mt-1">
+											يطبق فقط على الوحدات المطابقة للفلاتر الحالية وعلى أعمدة الهوية/الاسم المختارة، دون تعديل حقول الاسم المفصلة q_9_3.
+										</small>
+									</span>
+								</label>
+							</div>
+
 							<div id="auditNotesExportOptions" class="border rounded p-4 mb-6">
 								<h4 class="fw-bold mb-4">ملاحظات التدقيق</h4>
 								<div class="row">
