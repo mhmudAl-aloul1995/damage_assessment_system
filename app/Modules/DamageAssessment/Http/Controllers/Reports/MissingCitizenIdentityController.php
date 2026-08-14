@@ -538,16 +538,13 @@ class MissingCitizenIdentityController extends Controller
         $identityNameField = $this->identityNameField($report);
         $oldIdNumber = (string) $housingUnit->{$identityNumberField};
         $newIdNumber = (string) $citizen->id_card_no;
+        $newFullName = trim((string) $citizen->full_name);
         $housingUnitUpdates = [
             $identityNumberField => $newIdNumber,
         ];
 
-        if (
-            $identityNameField !== null
-            && trim((string) $housingUnit->{$identityNameField}) === ''
-            && filled($report->owner_name)
-        ) {
-            $housingUnitUpdates[$identityNameField] = (string) $report->owner_name;
+        if ($identityNameField !== null && $newFullName !== '' && $newFullName !== '-') {
+            $housingUnitUpdates[$identityNameField] = $newFullName;
         }
 
         DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $userId, $citizen, $housingUnitUpdates): void {
