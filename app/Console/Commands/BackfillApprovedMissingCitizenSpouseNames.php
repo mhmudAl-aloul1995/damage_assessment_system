@@ -8,6 +8,7 @@ use App\Models\MissingCitizenIdentityReport;
 use App\services\ArcgisService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class BackfillApprovedMissingCitizenSpouseNames extends Command
 {
@@ -44,13 +45,19 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
             'skipped' => 0,
         ];
 
-        MissingCitizenIdentityReport::query()
+        $query = MissingCitizenIdentityReport::query()
             ->whereIn('identity_subject', ['owner', 'spouse'])
             ->whereNotNull('approved_at')
             ->whereNotNull('matched_citizen_full_name')
             ->whereIn('identity_number_field', $this->identityFields())
-            ->orderBy('id')
-            ->chunkById($chunkSize, function ($reports) use (&$counts, $dryRun, $arcgisService): void {
+            ->orderBy('id');
+
+        $total = (clone $query)->count();
+        $bar = $this->output->createProgressBar($total);
+        $bar->start();
+
+        $query
+            ->chunkById($chunkSize, function ($reports) use (&$counts, $dryRun, $arcgisService, $bar): void {
                 foreach ($reports as $report) {
                     $counts['eligible']++;
                     $result = $this->backfillReport($report, $dryRun, $arcgisService);
@@ -59,8 +66,13 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
                     if ($result['database_updated']) {
                         $counts['updated_database']++;
                     }
+
+                    $bar->advance();
                 }
             });
+
+        $bar->finish();
+        $this->newLine(2);
 
         $this->components->info($dryRun ? 'Dry run complete.' : 'Backfill complete.');
         $this->table(
@@ -112,7 +124,16 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
             $housingUnit->forceFill($updates)->save();
         });
 
-        $arcgisResult = $arcgisService->updateHousingUnitFields($housingUnit->objectid, $updates);
+        try {
+            $arcgisResult = $arcgisService->updateHousingUnitFields($housingUnit->objectid, $updates);
+        } catch (Throwable $throwable) {
+            $arcgisResult = [
+                'success' => false,
+                'status' => 'failed',
+                'message' => $throwable->getMessage(),
+                'response' => null,
+            ];
+        }
         $this->recordArcgisResult($report, $arcgisResult);
         $arcgisStatus = (string) ($arcgisResult['status'] ?? 'failed');
 

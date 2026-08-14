@@ -307,6 +307,7 @@ class ArcgisService
         $layerUrl = rtrim((string) config('services.arcgis.housing_units_url'), '/');
 
         $response = Http::asForm()
+            ->timeout(30)
             ->withoutVerifying()
             ->acceptJson()
             ->post($layerUrl.'/updateFeatures', [
