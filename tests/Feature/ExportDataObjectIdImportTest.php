@@ -114,8 +114,9 @@ it('can render imported objectids on the export page without reloading', functio
 
     $response
         ->assertOk()
+        ->assertSee('function objectIdsFromImportResponse(response, formData)', false)
         ->assertSee('function renderImportedObjectIds(objectIds, target)', false)
-        ->assertSee('renderImportedObjectIds(response.object_ids || [], response.target ||', false)
+        ->assertSee('renderImportedObjectIds(objectIdsFromImportResponse(response, formData), response.target ||', false)
         ->assertSee('id="importedObjectIdsInputs"', false)
         ->assertDontSee('window.location.reload();', false);
 });

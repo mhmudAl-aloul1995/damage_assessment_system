@@ -1088,8 +1088,35 @@
 			}
 		}
 
+		function normalizeObjectIdsForDisplay(objectIds) {
+			const values = Array.isArray(objectIds)
+				? objectIds
+				: Object.values(objectIds || {});
+
+			return [...new Set(values
+				.map(function (value) {
+					const match = String(value || '').trim().match(/^\d+(?:\.0+)?$/);
+
+					return match ? String(parseInt(match[0], 10)) : '';
+				})
+				.filter(Boolean))];
+		}
+
+		function objectIdsFromImportResponse(response, formData) {
+			const responseIds = normalizeObjectIdsForDisplay(response.object_ids || response.objectIds || []);
+
+			if (responseIds.length > 0) {
+				return responseIds;
+			}
+
+			const pastedText = formData.get('objectids_text') || '';
+			const matches = String(pastedText).match(/\d+(?:\.0+)?/g) || [];
+
+			return normalizeObjectIdsForDisplay(matches);
+		}
+
 		function renderImportedObjectIds(objectIds, target) {
-			const ids = Array.isArray(objectIds) ? objectIds : [];
+			const ids = normalizeObjectIdsForDisplay(objectIds);
 			const targetLabels = {
 				building: @json(__('ui.exports.objectid_target_building')),
 				housing_unit: @json(__('ui.exports.objectid_target_housing_unit'))
@@ -1326,11 +1353,12 @@
 					url: @json(route('export.data.objectids.import')),
 					type: 'POST',
 					data: formData,
+					dataType: 'json',
 					processData: false,
 					contentType: false,
 					success: function (response) {
 						toastr.success(response.message);
-						renderImportedObjectIds(response.object_ids || [], response.target || 'building');
+						renderImportedObjectIds(objectIdsFromImportResponse(response, formData), response.target || 'building');
 						const modalElement = document.getElementById('importObjectIdsModal');
 						const modalInstance = bootstrap.Modal.getInstance(modalElement);
 						if (modalInstance) {
