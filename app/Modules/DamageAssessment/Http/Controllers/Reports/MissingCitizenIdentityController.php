@@ -188,6 +188,7 @@ class MissingCitizenIdentityController extends Controller
             : $sgazaRecords->merge($citizens)->merge($accessRecords);
 
         $orderedRecords = $this->enrichSpouseCandidatesWithHusbandRegistryHints($report, $orderedRecords);
+        $orderedRecords = $this->enrichCandidatesWithSpouseRegistryColumns($orderedRecords);
 
         return response()->json([
             'data' => $orderedRecords
@@ -230,12 +231,12 @@ class MissingCitizenIdentityController extends Controller
         $sgazaCandidates = $this->sgazaNameCandidates($report->normalized_owner_name);
 
         return response()->json([
-            'data' => $this->enrichSpouseCandidatesWithHusbandRegistryHints(
+            'data' => $this->enrichCandidatesWithSpouseRegistryColumns($this->enrichSpouseCandidatesWithHusbandRegistryHints(
                 $report,
                 $husbandRegistryCandidates
                     ->merge($sgazaCandidates)
                     ->merge($candidates)
-            )
+            ))
                 ->unique('id_card_no')
                 ->take(20)
                 ->values(),
@@ -1222,6 +1223,128 @@ class MissingCitizenIdentityController extends Controller
         } catch (Throwable) {
             return collect();
         }
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $candidates
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function enrichCandidatesWithSpouseRegistryColumns(Collection $candidates): Collection
+    {
+        if ($candidates->isEmpty()) {
+            return $candidates;
+        }
+
+        $candidateIdCardNumbers = $candidates
+            ->pluck('id_card_no')
+            ->map(fn ($idCardNo): string => trim((string) $idCardNo))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($candidateIdCardNumbers->isEmpty()) {
+            return $this->withEmptySpouseRegistryColumns($candidates);
+        }
+
+        try {
+            $records = DB::table($this->husbandRegistryTable())
+                ->select(['id_card_no', 'full_name', 'breadwinner_id_card_no'])
+                ->where('status', 'A')
+                ->where(function (QueryBuilder $query) use ($candidateIdCardNumbers): void {
+                    $query
+                        ->whereIn('id_card_no', $candidateIdCardNumbers)
+                        ->orWhereIn('breadwinner_id_card_no', $candidateIdCardNumbers);
+                })
+                ->get();
+        } catch (Throwable) {
+            return $this->withEmptySpouseRegistryColumns($candidates);
+        }
+
+        $namesByIdCardNo = $records
+            ->mapWithKeys(fn ($record): array => [
+                trim((string) $record->id_card_no) => trim((string) $record->full_name),
+            ]);
+
+        $breadwinnerIdCardNumbers = $records
+            ->pluck('breadwinner_id_card_no')
+            ->map(fn ($idCardNo): string => trim((string) $idCardNo))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($breadwinnerIdCardNumbers->isNotEmpty()) {
+            DB::table($this->husbandRegistryTable())
+                ->select(['id_card_no', 'full_name'])
+                ->where('status', 'A')
+                ->whereIn('id_card_no', $breadwinnerIdCardNumbers)
+                ->get()
+                ->each(function ($record) use ($namesByIdCardNo): void {
+                    $idCardNo = trim((string) $record->id_card_no);
+
+                    if ($idCardNo !== '' && ! filled($namesByIdCardNo[$idCardNo] ?? null)) {
+                        $namesByIdCardNo[$idCardNo] = trim((string) $record->full_name);
+                    }
+                });
+        }
+
+        $breadwinnerIdByWifeId = $records
+            ->filter(fn ($record): bool => trim((string) $record->id_card_no) !== trim((string) $record->breadwinner_id_card_no))
+            ->filter(fn ($record): bool => $candidateIdCardNumbers->contains(trim((string) $record->id_card_no)))
+            ->mapWithKeys(fn ($record): array => [
+                trim((string) $record->id_card_no) => trim((string) $record->breadwinner_id_card_no),
+            ]);
+
+        $wivesByBreadwinnerId = $records
+            ->filter(fn ($record): bool => trim((string) $record->id_card_no) !== trim((string) $record->breadwinner_id_card_no))
+            ->filter(fn ($record): bool => $candidateIdCardNumbers->contains(trim((string) $record->breadwinner_id_card_no)))
+            ->groupBy(fn ($record): string => trim((string) $record->breadwinner_id_card_no));
+
+        return $candidates
+            ->map(function (array $candidate) use ($breadwinnerIdByWifeId, $namesByIdCardNo, $wivesByBreadwinnerId): array {
+                $idCardNo = trim((string) ($candidate['id_card_no'] ?? ''));
+                $breadwinnerIdCardNo = (string) ($breadwinnerIdByWifeId[$idCardNo] ?? '');
+
+                if ($breadwinnerIdCardNo !== '') {
+                    $candidate['related_spouse_name'] = $namesByIdCardNo[$breadwinnerIdCardNo] ?? '-';
+                    $candidate['related_spouse_id_number'] = $breadwinnerIdCardNo;
+
+                    return $candidate;
+                }
+
+                $wives = $wivesByBreadwinnerId[$idCardNo] ?? collect();
+
+                $candidate['related_spouse_name'] = $wives
+                    ->pluck('full_name')
+                    ->map(fn ($name): string => trim((string) $name))
+                    ->filter()
+                    ->unique()
+                    ->implode('، ') ?: '-';
+                $candidate['related_spouse_id_number'] = $wives
+                    ->pluck('id_card_no')
+                    ->map(fn ($idNumber): string => trim((string) $idNumber))
+                    ->filter()
+                    ->unique()
+                    ->implode('، ') ?: '-';
+
+                return $candidate;
+            })
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $candidates
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function withEmptySpouseRegistryColumns(Collection $candidates): Collection
+    {
+        return $candidates
+            ->map(function (array $candidate): array {
+                $candidate['related_spouse_name'] = '-';
+                $candidate['related_spouse_id_number'] = '-';
+
+                return $candidate;
+            })
+            ->values();
     }
 
     private function husbandRegistryRecordByIdNumber(string $idNumber): ?object

@@ -210,6 +210,8 @@
                                 <tr class="text-muted fw-bold fs-7">
                                     <th>{{ __('ui.missing_citizen_identities.matched_citizen') }}</th>
                                     <th>{{ __('ui.missing_citizen_identities.id_number') }}</th>
+                                    <th>اسم الزوج/ة</th>
+                                    <th>هوية الزوج/ة</th>
                                     <th class="text-end">{{ __('ui.missing_citizen_identities.actions') }}</th>
                                 </tr>
                             </thead>
@@ -710,7 +712,7 @@
                 clearNamePartInputs();
 
                 if (candidatesBody) {
-                    candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
+                    candidatesBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
                 }
 
                 if (candidatesModalElement && window.bootstrap) {
@@ -742,7 +744,7 @@
                     })
                     .catch(function (payload) {
                         if (candidatesBody) {
-                            candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-8">' + escapeHtml(payload.message || '{{ __('ui.messages.unexpected_error') }}') + '</td></tr>';
+                            candidatesBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-8">' + escapeHtml(payload.message || '{{ __('ui.messages.unexpected_error') }}') + '</td></tr>';
                         }
                     });
             };
@@ -753,7 +755,7 @@
                 }
 
                 if (candidates.length === 0) {
-                    candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.no_candidates') }}</td></tr>';
+                    candidatesBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.no_candidates') }}</td></tr>';
                     return;
                 }
 
@@ -768,6 +770,8 @@
                     return '<tr>'
                         + '<td><div class="fw-semibold">' + escapeHtml(candidate.full_name) + source + '</div>' + details + '</td>'
                         + '<td><span class="badge badge-light-primary">' + escapeHtml(candidate.id_card_no) + '</span></td>'
+                        + '<td>' + escapeHtml(candidate.related_spouse_name) + '</td>'
+                        + '<td><span class="badge badge-light-info">' + escapeHtml(candidate.related_spouse_id_number) + '</span></td>'
                         + '<td class="text-end"><button type="button" class="btn btn-sm btn-light-success" data-kt-missing-citizens-action="approve-candidate" data-citizen-id="' + escapeHtml(candidate.id) + '">{{ __('ui.missing_citizen_identities.approve_this_candidate') }}</button></td>'
                         + '</tr>';
                 }).join('');
@@ -890,7 +894,7 @@
                 fillNamePartInputs(ownerName);
 
                 if (candidatesBody) {
-                    candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.type_to_search_citizens') }}</td></tr>';
+                    candidatesBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.type_to_search_citizens') }}</td></tr>';
                 }
 
                 if (candidatesModalElement && window.bootstrap) {
@@ -908,11 +912,11 @@
                 }
 
                 if (!hasCitizenSearchValues()) {
-                    candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.type_to_search_citizens') }}</td></tr>';
+                    candidatesBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.type_to_search_citizens') }}</td></tr>';
                     return;
                 }
 
-                candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
+                candidatesBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
 
                 fetch(citizenSearchUrlTemplate.replace('__REPORT__', reportId) + '?' + citizenSearchParams().toString(), {
                     headers: {
@@ -932,7 +936,7 @@
                         renderCandidateRows(payload.data || []);
                     })
                     .catch(function (payload) {
-                        candidatesBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-8">' + escapeHtml(payload.message || '{{ __('ui.messages.unexpected_error') }}') + '</td></tr>';
+                        candidatesBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-8">' + escapeHtml(payload.message || '{{ __('ui.messages.unexpected_error') }}') + '</td></tr>';
                     });
             };
 

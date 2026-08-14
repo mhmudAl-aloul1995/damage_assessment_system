@@ -915,15 +915,28 @@ it('searches spouse name parts in the husband registry before sgaza and citizens
     ]);
 
     DB::table('citizens_to_set_husband_id')->insert([
-        'status' => 'A',
-        'id_card_no' => '880000002',
-        'first_name' => 'Registry',
-        'father_name' => 'Wife',
-        'grand_name' => 'From',
-        'family_name' => 'Table',
-        'full_name' => 'Registry Wife From Table',
-        'full_name_normalized' => 'RegistryWifeFromTable',
-        'breadwinner_id_card_no' => '880000001',
+        [
+            'status' => 'A',
+            'id_card_no' => '880000001',
+            'first_name' => 'Registry',
+            'father_name' => 'Husband',
+            'grand_name' => 'From',
+            'family_name' => 'Table',
+            'full_name' => 'Registry Husband From Table',
+            'full_name_normalized' => 'RegistryHusbandFromTable',
+            'breadwinner_id_card_no' => '880000001',
+        ],
+        [
+            'status' => 'A',
+            'id_card_no' => '880000002',
+            'first_name' => 'Registry',
+            'father_name' => 'Wife',
+            'grand_name' => 'From',
+            'family_name' => 'Table',
+            'full_name' => 'Registry Wife From Table',
+            'full_name_normalized' => 'RegistryWifeFromTable',
+            'breadwinner_id_card_no' => '880000001',
+        ],
     ]);
 
     DB::table('sgaza')->insert([
@@ -966,7 +979,9 @@ it('searches spouse name parts in the husband registry before sgaza and citizens
         ]))
         ->assertOk()
         ->assertJsonPath('data.0.id_card_no', '880000002')
-        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_husband_registry'));
+        ->assertJsonPath('data.0.source', __('ui.missing_citizen_identities.source_husband_registry'))
+        ->assertJsonPath('data.0.related_spouse_name', 'Registry Husband From Table')
+        ->assertJsonPath('data.0.related_spouse_id_number', '880000001');
 });
 
 it('adds husband registry breadwinner hints to spouse candidates from sgaza', function (): void {
