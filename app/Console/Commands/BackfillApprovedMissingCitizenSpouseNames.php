@@ -37,6 +37,7 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
 
         $counts = [
             'eligible' => 0,
+            'would_update' => 0,
             'updated_database' => 0,
             'synced_arcgis' => 0,
             'failed_arcgis' => 0,
@@ -66,6 +67,7 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
             ['Metric', 'Count'],
             [
                 ['Eligible approved identity reports', $counts['eligible']],
+                ['Would update', $counts['would_update']],
                 ['Housing units updated', $counts['updated_database']],
                 ['ArcGIS synced', $counts['synced_arcgis']],
                 ['ArcGIS failed', $counts['failed_arcgis']],
@@ -103,7 +105,7 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
         }
 
         if ($dryRun) {
-            return ['status' => 'skipped', 'database_updated' => false];
+            return ['status' => 'would_update', 'database_updated' => false];
         }
 
         DB::transaction(function () use ($housingUnit, $updates): void {
