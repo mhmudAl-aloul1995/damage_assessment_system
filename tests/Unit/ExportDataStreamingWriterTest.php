@@ -90,6 +90,58 @@ test('it streams export rows to an xlsx file without internal columns', function
     }
 });
 
+test('it updates processed rows while streaming the export file', function () {
+    $user = User::factory()->create();
+    $export = Export::query()->create([
+        'status' => 'processing',
+        'filters' => json_encode([
+            'building_columns' => ['objectid'],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    $job = new class($export->id) extends ExportDataJob
+    {
+        public function write(string $path, iterable $rows, Export $export): int
+        {
+            return $this->writeExportFile($path, $rows, [], $export);
+        }
+    };
+
+    $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'export-data-progress-test.xlsx';
+
+    if (is_file($path)) {
+        unlink($path);
+    }
+
+    $rows = (function () use ($export) {
+        yield [
+            'export_row_id' => 1,
+            'objectid' => 1,
+        ];
+
+        expect($export->fresh()->processed)->toBe(1);
+
+        yield [
+            'export_row_id' => 2,
+            'objectid' => 2,
+        ];
+    })();
+
+    try {
+        $processed = $job->write($path, $rows, $export);
+
+        expect($processed)->toBe(2);
+    } finally {
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+});
+
 test('it filters building exports by audited building end date range', function () {
     $user = User::factory()->create();
 

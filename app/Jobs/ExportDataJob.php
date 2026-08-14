@@ -33,6 +33,8 @@ class ExportDataJob implements ShouldQueue
 
     private const HEADER_COLUMN_PADDING = 4;
 
+    private const PROGRESS_UPDATE_ROW_INTERVAL = 50;
+
     public int $tries = 3;
 
     public int $timeout = 0;
@@ -409,7 +411,7 @@ class ExportDataJob implements ShouldQueue
                 $writer->addRow(Row::fromValues($this->exportValues($row, array_keys($headers)), $dataStyle));
                 $processed++;
 
-                if ($processed % 200 === 0) {
+                if ($processed === 1 || $processed % self::PROGRESS_UPDATE_ROW_INTERVAL === 0) {
                     $export->update([
                         'progress' => min(95, max(1, (int) floor($processed / 100))),
                         'processed' => $processed,
