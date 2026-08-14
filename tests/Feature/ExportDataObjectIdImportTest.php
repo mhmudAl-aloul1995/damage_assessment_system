@@ -28,7 +28,8 @@ it('imports objectids from uploaded file and stores unique cleaned values in ses
     $response
         ->assertOk()
         ->assertJsonPath('status', true)
-        ->assertJsonPath('count', 3);
+        ->assertJsonPath('count', 3)
+        ->assertJsonPath('object_ids', ['1001', '1002', '1003']);
 
     expect(session('exports.imported_object_ids'))->toBe(['1001', '1002', '1003']);
     expect(session('exports.imported_object_id_target'))->toBe('building');
@@ -102,6 +103,21 @@ it('reads checked export columns directly before showing the no columns warning'
         ->assertSee('function checkedColumnValues(inputName)', false)
         ->assertSee("appendMissingFormFields(formData, 'building_columns[]', checkedColumnValues('building_columns[]'));", false)
         ->assertSee('const formData = exportFormData();', false);
+});
+
+it('can render imported objectids on the export page without reloading', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee('function renderImportedObjectIds(objectIds, target)', false)
+        ->assertSee('renderImportedObjectIds(response.object_ids || [], response.target ||', false)
+        ->assertSee('id="importedObjectIdsInputs"', false)
+        ->assertDontSee('window.location.reload();', false);
 });
 
 it('passes imported objectids into the export payload', function () {
@@ -269,8 +285,8 @@ it('marks an orphaned processing export as failed when checking status', functio
     ]);
 
     $export->forceFill([
-        'created_at' => now()->subMinutes(5),
-        'updated_at' => now()->subMinutes(5),
+        'created_at' => now()->subSeconds(11),
+        'updated_at' => now()->subSeconds(11),
     ])->save();
 
     $response = $this

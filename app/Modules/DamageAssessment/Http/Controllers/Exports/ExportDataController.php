@@ -57,7 +57,7 @@ class ExportDataController extends Controller
         ],
     ];
 
-    private const ORPHANED_PENDING_MINUTES = 1;
+    private const PENDING_INLINE_FALLBACK_SECONDS = 10;
 
     private const ORPHANED_PROCESSING_MINUTES = 2;
 
@@ -323,6 +323,7 @@ class ExportDataController extends Controller
             'message' => __('ui.exports.objectid_import_success', ['count' => count($objectIds)]),
             'count' => count($objectIds),
             'target' => $target,
+            'object_ids' => $objectIds,
         ]);
     }
 
@@ -555,7 +556,7 @@ class ExportDataController extends Controller
             && $export->file_name === null
             && (int) ($export->progress ?? 0) === 0
             && (int) ($export->processed ?? 0) === 0
-            && $export->updated_at?->lt(now()->subMinutes(self::ORPHANED_PENDING_MINUTES));
+            && $export->updated_at?->lt(now()->subSeconds(self::PENDING_INLINE_FALLBACK_SECONDS));
     }
 
     private function hasExportsQueueJob(): bool

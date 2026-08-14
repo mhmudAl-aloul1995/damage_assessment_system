@@ -33,15 +33,14 @@
 						{{ __('ui.exports.import_objectids') }}
 					</button>
 
-					@if(!empty($importedObjectIds))
-						<button type="button" class="btn btn-sm btn-light-danger" id="resetObjectIdsFilterBtn">
-							<i class="ki-duotone ki-cross-circle fs-5">
-								<span class="path1"></span>
-								<span class="path2"></span>
-							</i>
-							{{ __('ui.exports.reset_objectid_import_filter') }}
-						</button>
-					@endif
+					<button type="button" class="btn btn-sm btn-light-danger {{ empty($importedObjectIds) ? 'd-none' : '' }}"
+						id="resetObjectIdsFilterBtn">
+						<i class="ki-duotone ki-cross-circle fs-5">
+							<span class="path1"></span>
+							<span class="path2"></span>
+						</i>
+						{{ __('ui.exports.reset_objectid_import_filter') }}
+					</button>
 				</div>
 
 			</div>
@@ -53,17 +52,16 @@
 					</div>
 				@endif
 
-				@if(!empty($importedObjectIds))
-					<div
-						class="alert alert-info d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+					<div id="objectIdsFilterSummary"
+						class="alert alert-info flex-column flex-md-row align-items-md-center justify-content-between gap-3 {{ empty($importedObjectIds) ? 'd-none' : 'd-flex' }}">
 						<div>
 							<strong>{{ __('ui.exports.objectid_import_active') }}</strong>
-							<div class="text-muted fs-7 mt-1">
+							<div class="text-muted fs-7 mt-1" id="objectIdsFilterSummaryText">
 								{{ __('ui.exports.objectid_import_active_count', ['count' => count($importedObjectIds)]) }}
 								{{ __('ui.exports.objectid_import_active_target', ['target' => __('ui.exports.objectid_target_' . $importedObjectIdTarget)]) }}
 							</div>
 						</div>
-						<div class="d-flex flex-wrap gap-2">
+						<div class="d-flex flex-wrap gap-2" id="objectIdsFilterBadges">
 							@foreach(array_slice($importedObjectIds, 0, 8) as $objectId)
 								<span class="badge badge-light-primary">{{ $objectId }}</span>
 							@endforeach
@@ -72,16 +70,17 @@
 							@endif
 						</div>
 					</div>
-				@endif
 
 				<form id="exportForm" method="POST">
 					@csrf
-					@if(!empty($importedObjectIds))
+					<div id="importedObjectIdsInputs">
 						@foreach($importedObjectIds as $objectId)
 							<input type="hidden" name="imported_object_ids[]" value="{{ $objectId }}">
 						@endforeach
-						<input type="hidden" name="imported_object_id_target" value="{{ $importedObjectIdTarget }}">
-					@endif
+						@if(!empty($importedObjectIds))
+							<input type="hidden" name="imported_object_id_target" value="{{ $importedObjectIdTarget }}">
+						@endif
+					</div>
 
 					{{-- FILTERS --}}
 					<div class="card card-bordered mb-5">
@@ -1089,6 +1088,59 @@
 			}
 		}
 
+		function renderImportedObjectIds(objectIds, target) {
+			const ids = Array.isArray(objectIds) ? objectIds : [];
+			const targetLabels = {
+				building: @json(__('ui.exports.objectid_target_building')),
+				housing_unit: @json(__('ui.exports.objectid_target_housing_unit'))
+			};
+
+			$('#objectIdsFilterSummary')
+				.toggleClass('d-none', ids.length === 0)
+				.toggleClass('d-flex', ids.length > 0);
+			$('#resetObjectIdsFilterBtn').toggleClass('d-none', ids.length === 0);
+
+			const summaryText = @json(__('ui.exports.objectid_import_active_count', ['count' => '__COUNT__']))
+				.replace('__COUNT__', ids.length)
+				+ ' '
+				+ @json(__('ui.exports.objectid_import_active_target', ['target' => '__TARGET__']))
+					.replace('__TARGET__', targetLabels[target] || targetLabels.building);
+
+			$('#objectIdsFilterSummaryText').text(summaryText);
+
+			const badges = $('#objectIdsFilterBadges').empty();
+			ids.slice(0, 8).forEach(function (objectId) {
+				$('<span>')
+					.addClass('badge badge-light-primary')
+					.text(objectId)
+					.appendTo(badges);
+			});
+
+			if (ids.length > 8) {
+				$('<span>')
+					.addClass('badge badge-light')
+					.text('+' + (ids.length - 8))
+					.appendTo(badges);
+			}
+
+			const inputs = $('#importedObjectIdsInputs').empty();
+			ids.forEach(function (objectId) {
+				$('<input>')
+					.attr('type', 'hidden')
+					.attr('name', 'imported_object_ids[]')
+					.val(objectId)
+					.appendTo(inputs);
+			});
+
+			if (ids.length > 0) {
+				$('<input>')
+					.attr('type', 'hidden')
+					.attr('name', 'imported_object_id_target')
+					.val(target || 'building')
+					.appendTo(inputs);
+			}
+		}
+
 		function showPreparingCard() {
 			$('#exportResult').html(`
 																<div class="card p-4 text-center">
@@ -1278,6 +1330,7 @@
 					contentType: false,
 					success: function (response) {
 						toastr.success(response.message);
+						renderImportedObjectIds(response.object_ids || [], response.target || 'building');
 						const modalElement = document.getElementById('importObjectIdsModal');
 						const modalInstance = bootstrap.Modal.getInstance(modalElement);
 						if (modalInstance) {
@@ -1319,7 +1372,7 @@
 					},
 					success: function (response) {
 						toastr.success(response.message);
-						window.location.reload();
+						renderImportedObjectIds([], 'building');
 					},
 					error: function (xhr) {
 						toastr.error(xhr.responseJSON?.message || @json(__('ui.exports.objectid_import_reset_failed')));
