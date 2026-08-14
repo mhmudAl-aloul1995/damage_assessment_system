@@ -431,7 +431,7 @@ class MissingCitizenIdentityController extends Controller
     {
         $field = (string) $report->identity_name_field;
 
-        if (! in_array($field, ['spouse1', 'spouse2', 'spouse3', 'spouse4'], true)) {
+        if (! in_array($field, ['unit_owner', 'spouse1', 'spouse2', 'spouse3', 'spouse4'], true)) {
             return null;
         }
 
@@ -544,7 +544,10 @@ class MissingCitizenIdentityController extends Controller
         ];
 
         if ($identityNameField !== null && $newFullName !== '' && $newFullName !== '-') {
-            $housingUnitUpdates[$identityNameField] = $newFullName;
+            $housingUnitUpdates = [
+                ...$housingUnitUpdates,
+                ...$this->housingUnitNameUpdates($identityNameField, $newFullName),
+            ];
         }
 
         DB::transaction(function () use ($housingUnit, $report, $oldIdNumber, $newIdNumber, $userId, $citizen, $housingUnitUpdates): void {
@@ -594,6 +597,39 @@ class MissingCitizenIdentityController extends Controller
             'success' => true,
             'arcgis_success' => (bool) ($arcgisResult['success'] ?? false),
             'arcgis_status' => $arcgisResult['status'] ?? 'failed',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function housingUnitNameUpdates(string $identityNameField, string $fullName): array
+    {
+        if ($identityNameField !== 'unit_owner') {
+            return [$identityNameField => $fullName];
+        }
+
+        return [
+            'unit_owner' => $fullName,
+            ...$this->ownerStructuredNameUpdates($fullName),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function ownerStructuredNameUpdates(string $fullName): array
+    {
+        $parts = collect(preg_split('/\s+/u', trim($fullName)) ?: [])
+            ->map(fn (string $part): string => trim($part))
+            ->filter()
+            ->values();
+
+        return [
+            'q_9_3_1_first_name' => (string) ($parts[0] ?? ''),
+            'q_9_3_2_second_name__father' => (string) ($parts[1] ?? ''),
+            'q_9_3_3_third_name__grandfather' => (string) ($parts[2] ?? ''),
+            'q_9_3_4_last_name' => $parts->slice(3)->implode(' '),
         ];
     }
 

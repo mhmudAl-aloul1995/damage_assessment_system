@@ -412,6 +412,65 @@ it('approves a single name match and syncs the new identity to arcgis', function
     });
 });
 
+it('approves an owner identity match into the owner name fields and arcgis', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 503],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 503,
+        'globalid' => 'approve-owner-name-fields',
+        'unit_owner' => 'Wrong Owner Name',
+        'id_number1' => '111111112',
+    ]);
+
+    DB::table('citizens')->insert([
+        'id_card_no' => '222222223',
+        'status' => 'A',
+        'full_name' => 'Correct Owner Full Family',
+        'full_name_normalized' => 'CorrectOwnerFullFamily',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    $report = MissingCitizenIdentityReport::query()->where('housing_unit_id', $housingUnit->id)->firstOrFail();
+    $chosenCitizenId = DB::table('citizens')->where('id_card_no', '222222223')->value('id');
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.approve-name-match', $report), [
+            'confirm' => true,
+            'citizen_id' => (string) $chosenCitizenId,
+        ])
+        ->assertOk()
+        ->assertJsonPath('arcgis_status', 'synced');
+
+    expect($housingUnit->fresh()->id_number1)->toBe('222222223')
+        ->and($housingUnit->fresh()->unit_owner)->toBe('Correct Owner Full Family')
+        ->and($housingUnit->fresh()->q_9_3_1_first_name)->toBe('Correct')
+        ->and($housingUnit->fresh()->q_9_3_2_second_name__father)->toBe('Owner')
+        ->and($housingUnit->fresh()->q_9_3_3_third_name__grandfather)->toBe('Full')
+        ->and($housingUnit->fresh()->q_9_3_4_last_name)->toBe('Family');
+
+    Http::assertSent(function ($request): bool {
+        return $request->url() === 'https://services.example.test/FeatureServer/1/updateFeatures'
+            && str_contains((string) $request['features'], '"id_number1":"222222223"')
+            && str_contains((string) $request['features'], '"unit_owner":"Correct Owner Full Family"')
+            && str_contains((string) $request['features'], '"q_9_3_1_first_name":"Correct"')
+            && str_contains((string) $request['features'], '"q_9_3_4_last_name":"Family"');
+    });
+});
+
 it('approves an owner without identity by using the matched civil registry record', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
@@ -1246,7 +1305,7 @@ it('approves a spouse identity match into the spouse identity field', function (
     });
 });
 
-it('backfills previously approved spouse names into the database and arcgis', function (): void {
+it('backfills previously approved owner and spouse names into the database and arcgis', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
     config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
@@ -1270,6 +1329,13 @@ it('backfills previously approved spouse names into the database and arcgis', fu
         'spouse1_id' => '900000041',
     ]);
 
+    $ownerHousingUnit = HousingUnit::query()->create([
+        'objectid' => 891,
+        'globalid' => 'approved-owner-name-backfill',
+        'unit_owner' => 'Old Owner Name',
+        'id_number1' => '900000050',
+    ]);
+
     $report = MissingCitizenIdentityReport::query()->create([
         'housing_unit_id' => $housingUnit->id,
         'identity_subject' => 'spouse',
@@ -1288,6 +1354,24 @@ it('backfills previously approved spouse names into the database and arcgis', fu
         'approved_at' => now(),
     ]);
 
+    $ownerReport = MissingCitizenIdentityReport::query()->create([
+        'housing_unit_id' => $ownerHousingUnit->id,
+        'identity_subject' => 'owner',
+        'identity_index' => 0,
+        'identity_name_field' => 'unit_owner',
+        'identity_number_field' => 'id_number1',
+        'owner_name' => 'Old Owner Name',
+        'normalized_owner_name' => 'OldOwnerName',
+        'id_number' => '900000050',
+        'issue_type' => 'missing_civil_registry_identity',
+        'name_match_status' => 'matched',
+        'matched_citizen_id' => 0,
+        'matched_citizen_id_card_no' => '900000052',
+        'matched_citizen_full_name' => 'Correct Owner Approved Family',
+        'matched_citizens_count' => 1,
+        'approved_at' => now(),
+    ]);
+
     MissingCitizenIdentityApproval::query()->create([
         'missing_citizen_identity_report_id' => $report->id,
         'housing_unit_id' => $housingUnit->id,
@@ -1300,19 +1384,46 @@ it('backfills previously approved spouse names into the database and arcgis', fu
         'arcgis_sync_status' => 'synced',
     ]);
 
+    MissingCitizenIdentityApproval::query()->create([
+        'missing_citizen_identity_report_id' => $ownerReport->id,
+        'housing_unit_id' => $ownerHousingUnit->id,
+        'housing_unit_objectid' => $ownerHousingUnit->objectid,
+        'old_id_number' => '900000050',
+        'new_id_number' => '900000052',
+        'owner_name' => 'Old Owner Name',
+        'citizen_id' => 0,
+        'citizen_full_name' => 'Correct Owner Approved Family',
+        'arcgis_sync_status' => 'synced',
+    ]);
+
     $this
-        ->artisan('missing-citizen-identities:backfill-approved-spouse-names', ['--chunk' => 1])
+        ->artisan('missing-citizen-identities:backfill-approved-identities', ['--chunk' => 1])
         ->assertSuccessful();
 
     expect($housingUnit->fresh()->spouse1)->toBe('Correct Approved Spouse')
         ->and($housingUnit->fresh()->spouse1_id)->toBe('900000042')
+        ->and($ownerHousingUnit->fresh()->unit_owner)->toBe('Correct Owner Approved Family')
+        ->and($ownerHousingUnit->fresh()->id_number1)->toBe('900000052')
+        ->and($ownerHousingUnit->fresh()->q_9_3_1_first_name)->toBe('Correct')
+        ->and($ownerHousingUnit->fresh()->q_9_3_2_second_name__father)->toBe('Owner')
+        ->and($ownerHousingUnit->fresh()->q_9_3_3_third_name__grandfather)->toBe('Approved')
+        ->and($ownerHousingUnit->fresh()->q_9_3_4_last_name)->toBe('Family')
         ->and($report->fresh()->arcgis_sync_status)->toBe('synced')
+        ->and($ownerReport->fresh()->arcgis_sync_status)->toBe('synced')
         ->and(MissingCitizenIdentityApproval::query()->where('missing_citizen_identity_report_id', $report->id)->latest('id')->first()?->arcgis_sync_status)->toBe('synced');
 
     Http::assertSent(function ($request): bool {
         return $request->url() === 'https://services.example.test/FeatureServer/1/updateFeatures'
             && str_contains((string) $request['features'], '"spouse1":"Correct Approved Spouse"')
             && str_contains((string) $request['features'], '"spouse1_id":"900000042"');
+    });
+
+    Http::assertSent(function ($request): bool {
+        return $request->url() === 'https://services.example.test/FeatureServer/1/updateFeatures'
+            && str_contains((string) $request['features'], '"unit_owner":"Correct Owner Approved Family"')
+            && str_contains((string) $request['features'], '"id_number1":"900000052"')
+            && str_contains((string) $request['features'], '"q_9_3_1_first_name":"Correct"')
+            && str_contains((string) $request['features'], '"q_9_3_4_last_name":"Family"');
     });
 });
 

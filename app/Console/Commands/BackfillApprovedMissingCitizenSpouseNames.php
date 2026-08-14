@@ -16,8 +16,8 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
      *
      * @var string
      */
-    protected $signature = 'missing-citizen-identities:backfill-approved-spouse-names
-        {--dry-run : Show eligible approved spouse rows without changing local database or ArcGIS}
+    protected $signature = 'missing-citizen-identities:backfill-approved-identities
+        {--dry-run : Show eligible approved identity rows without changing local database or ArcGIS}
         {--chunk=200 : Approved reports processed per batch}';
 
     /**
@@ -25,7 +25,7 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
      *
      * @var string
      */
-    protected $description = 'Backfill approved spouse names into housing units and ArcGIS from missing identity approvals.';
+    protected $description = 'Backfill approved owner and spouse identity names into housing units and ArcGIS.';
 
     /**
      * Execute the console command.
@@ -44,11 +44,10 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
         ];
 
         MissingCitizenIdentityReport::query()
-            ->where('identity_subject', 'spouse')
+            ->whereIn('identity_subject', ['owner', 'spouse'])
             ->whereNotNull('approved_at')
             ->whereNotNull('matched_citizen_full_name')
-            ->whereIn('identity_name_field', $this->spouseNameFields())
-            ->whereIn('identity_number_field', $this->spouseIdentityFields())
+            ->whereIn('identity_number_field', $this->identityFields())
             ->orderBy('id')
             ->chunkById($chunkSize, function ($reports) use (&$counts, $dryRun, $arcgisService): void {
                 foreach ($reports as $report) {
@@ -66,7 +65,7 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
         $this->table(
             ['Metric', 'Count'],
             [
-                ['Eligible approved spouse reports', $counts['eligible']],
+                ['Eligible approved identity reports', $counts['eligible']],
                 ['Housing units updated', $counts['updated_database']],
                 ['ArcGIS synced', $counts['synced_arcgis']],
                 ['ArcGIS failed', $counts['failed_arcgis']],
@@ -97,10 +96,11 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
             return ['status' => 'skipped', 'database_updated' => false];
         }
 
-        $updates = [
-            $identityNameField => $fullName,
-            $identityNumberField => $idNumber,
-        ];
+        $updates = $this->housingUnitUpdates($report, $identityNameField, $identityNumberField, $fullName, $idNumber);
+
+        if ($updates === []) {
+            return ['status' => 'skipped', 'database_updated' => false];
+        }
 
         if ($dryRun) {
             return ['status' => 'skipped', 'database_updated' => false];
@@ -149,6 +149,55 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
     /**
      * @return list<string>
      */
+    /**
+     * @return array<string, string>
+     */
+    private function housingUnitUpdates(
+        MissingCitizenIdentityReport $report,
+        string $identityNameField,
+        string $identityNumberField,
+        string $fullName,
+        string $idNumber
+    ): array {
+        if ($report->identity_subject === 'owner') {
+            return [
+                'id_number1' => $idNumber,
+                'unit_owner' => $fullName,
+                ...$this->ownerStructuredNameUpdates($fullName),
+            ];
+        }
+
+        if (! in_array($identityNameField, $this->spouseNameFields(), true) || ! in_array($identityNumberField, $this->spouseIdentityFields(), true)) {
+            return [];
+        }
+
+        return [
+            $identityNameField => $fullName,
+            $identityNumberField => $idNumber,
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function ownerStructuredNameUpdates(string $fullName): array
+    {
+        $parts = collect(preg_split('/\s+/u', trim($fullName)) ?: [])
+            ->map(fn (string $part): string => trim($part))
+            ->filter()
+            ->values();
+
+        return [
+            'q_9_3_1_first_name' => (string) ($parts[0] ?? ''),
+            'q_9_3_2_second_name__father' => (string) ($parts[1] ?? ''),
+            'q_9_3_3_third_name__grandfather' => (string) ($parts[2] ?? ''),
+            'q_9_3_4_last_name' => $parts->slice(3)->implode(' '),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
     private function spouseNameFields(): array
     {
         return ['spouse1', 'spouse2', 'spouse3', 'spouse4'];
@@ -160,5 +209,13 @@ class BackfillApprovedMissingCitizenSpouseNames extends Command
     private function spouseIdentityFields(): array
     {
         return ['spouse1_id', 'spouse2_id', 'spouse3_id', 'spouse4_id'];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function identityFields(): array
+    {
+        return ['id_number1', ...$this->spouseIdentityFields()];
     }
 }
