@@ -1471,6 +1471,94 @@ it('backfills previously approved owner and spouse names into the database and a
     });
 });
 
+it('backfills housing unit owner and spouse names from civil registry identity numbers only', function (): void {
+    createSgazaTable();
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 993],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 993,
+        'globalid' => 'housing-unit-name-registry-backfill',
+        'unit_owner' => 'Owner Short',
+        'id_number1' => '920000001',
+        'q_9_3_1_first_name' => 'Keep',
+        'q_9_3_2_second_name__father' => 'These',
+        'q_9_3_3_third_name__grandfather' => 'Owner',
+        'q_9_3_4_last_name' => 'Fields',
+        'spouse1' => 'Wife Short',
+        'spouse1_id' => '920000002',
+        'spouse2' => 'Second Short',
+        'spouse2_id' => '920000003',
+        'spouse3' => 'Repeated Placeholder',
+        'spouse3_id' => '999999999',
+    ]);
+
+    DB::table('citizens')->insert([
+        [
+            'id_card_no' => '920000001',
+            'status' => 'A',
+            'full_name' => 'Owner Full Civil Registry',
+            'full_name_normalized' => 'OwnerFullCivilRegistry',
+        ],
+        [
+            'id_card_no' => '920000002',
+            'status' => 'A',
+            'full_name' => 'First Wife Full Registry',
+            'full_name_normalized' => 'FirstWifeFullRegistry',
+        ],
+    ]);
+
+    DB::table('sgaza')->insert([
+        'id_number' => '920000003',
+        'first_name' => 'Second',
+        'father_name' => 'Wife',
+        'grandfather_name' => 'Civil',
+        'family_name' => 'Registry',
+    ]);
+
+    $this
+        ->artisan('housing-units:backfill-names-from-civil-registry', ['--chunk' => 1])
+        ->assertSuccessful();
+
+    $housingUnit->refresh();
+
+    expect($housingUnit->unit_owner)->toBe('Owner Full Civil Registry')
+        ->and($housingUnit->spouse1)->toBe('First Wife Full Registry')
+        ->and($housingUnit->spouse2)->toBe('Second Wife Civil Registry')
+        ->and($housingUnit->spouse3)->toBe('Repeated Placeholder')
+        ->and($housingUnit->q_9_3_1_first_name)->toBe('Keep')
+        ->and($housingUnit->q_9_3_2_second_name__father)->toBe('These')
+        ->and($housingUnit->q_9_3_3_third_name__grandfather)->toBe('Owner')
+        ->and($housingUnit->q_9_3_4_last_name)->toBe('Fields');
+
+    Http::assertSent(function ($request): bool {
+        if ($request->url() !== 'https://services.example.test/FeatureServer/1/updateFeatures') {
+            return false;
+        }
+
+        $features = (string) $request['features'];
+
+        return str_contains($features, '"unit_owner":"Owner Full Civil Registry"')
+            && str_contains($features, '"spouse1":"First Wife Full Registry"')
+            && str_contains($features, '"spouse2":"Second Wife Civil Registry"')
+            && ! str_contains($features, 'q_9_3_1_first_name')
+            && ! str_contains($features, 'q_9_3_2_second_name__father')
+            && ! str_contains($features, 'q_9_3_3_third_name__grandfather')
+            && ! str_contains($features, 'q_9_3_4_last_name');
+    });
+});
+
 it('does not report spouse identities found in the husband registry table', function (): void {
     createHusbandRegistryTable();
 
