@@ -908,12 +908,7 @@ class MissingCitizenIdentityController extends Controller
             if (ctype_digit($search)) {
                 $query->where('id_card_no', 'like', $search.'%');
             } elseif ($nameParts->isNotEmpty()) {
-                $this->applyNamePartSearch($query, $nameParts, [
-                    'first_name' => 'first_name',
-                    'father_name' => 'father_name',
-                    'grandfather_name' => 'grand_name',
-                    'family_name' => 'family_name',
-                ], $this->husbandRegistryTable());
+                $this->applyHusbandRegistryNamePartSearch($query, $nameParts);
             } elseif ($search !== '') {
                 $normalizedSearch = ArabicNameNormalizer::normalize($search);
 
@@ -971,6 +966,25 @@ class MissingCitizenIdentityController extends Controller
         } catch (Throwable) {
             return collect();
         }
+    }
+
+    private function applyHusbandRegistryNamePartSearch(QueryBuilder $query, Collection $nameParts): void
+    {
+        $normalizedName = ArabicNameNormalizer::normalize($nameParts->values()->implode(' '));
+
+        if ($normalizedName === '') {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        if (Schema::hasColumn($this->husbandRegistryTable(), 'full_name_normalized')) {
+            $query->where('full_name_normalized', 'like', $normalizedName.'%');
+
+            return;
+        }
+
+        $query->where('full_name', 'like', '%'.$nameParts->values()->implode(' ').'%');
     }
 
     /**
