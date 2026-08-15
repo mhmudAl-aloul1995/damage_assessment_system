@@ -958,7 +958,27 @@
 			});
 		}
 
+		function syncSelectedColumnsIntoForm() {
+			$('.selected-export-column-mirror').remove();
+
+			[
+				{ name: 'building_columns[]', values: checkedColumnValues('building_columns[]') },
+				{ name: 'housing_columns[]', values: checkedColumnValues('housing_columns[]') }
+			].forEach(function (group) {
+				group.values.forEach(function (value) {
+					$('<input>')
+						.attr('type', 'hidden')
+						.attr('name', group.name)
+						.addClass('selected-export-column-mirror')
+						.val(value)
+						.appendTo('#exportForm');
+				});
+			});
+		}
+
 		function exportFormData() {
+			syncSelectedColumnsIntoForm();
+
 			const formData = $('#exportForm').serializeArray();
 
 			appendMissingFormFields(formData, 'building_columns[]', checkedColumnValues('building_columns[]'));

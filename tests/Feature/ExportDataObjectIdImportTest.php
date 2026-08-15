@@ -101,6 +101,8 @@ it('reads checked export columns directly before showing the no columns warning'
     $response
         ->assertOk()
         ->assertSee('function checkedColumnValues(inputName)', false)
+        ->assertSee('function syncSelectedColumnsIntoForm()', false)
+        ->assertSee('syncSelectedColumnsIntoForm();', false)
         ->assertSee("appendMissingFormFields(formData, 'building_columns[]', checkedColumnValues('building_columns[]'));", false)
         ->assertSee('const formData = exportFormData();', false);
 });
