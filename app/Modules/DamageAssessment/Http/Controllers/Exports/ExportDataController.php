@@ -147,8 +147,10 @@ class ExportDataController extends Controller
             ->where('user_id', auth()->id())
             ->findOrFail($id);
 
-        if ($this->shouldRunPendingExportInline($export)) {
-            if ($this->shouldUseAttachmentsJob(json_decode((string) $export->filters, true) ?: [])) {
+        $exportPayload = json_decode((string) $export->filters, true) ?: [];
+
+        if ($this->shouldRunPendingExportInline($export, $exportPayload)) {
+            if ($this->shouldUseAttachmentsJob($exportPayload)) {
                 (new ExportAttachmentsJob($export->id))->handle(app(ArcgisService::class));
             } else {
                 (new ExportDataJob($export->id))->handle();
@@ -317,9 +319,14 @@ class ExportDataController extends Controller
     public function importObjectIds(ObjectIdImportRequest $request): JsonResponse
     {
         $target = $this->objectIdFilterTarget($request->input('objectid_filter_target'));
-        $objectIds = $request->filled('objectids_text')
-            ? $this->objectIdsFromText((string) $request->input('objectids_text'))
-            : $this->objectIdsFromFile($request, $target);
+
+        if ($request->filled('objectids_text')) {
+            $objectIdsText = (string) $request->input('objectids_text');
+            $target = $this->objectIdTargetFromText($objectIdsText) ?? $target;
+            $objectIds = $this->objectIdsFromText($objectIdsText);
+        } else {
+            $objectIds = $this->objectIdsFromFile($request, $target);
+        }
 
         if (empty($objectIds)) {
             return response()->json([
@@ -394,6 +401,29 @@ class ExportDataController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function objectIdTargetFromText(string $text): ?string
+    {
+        $lines = preg_split('/\R/u', $text) ?: [];
+
+        foreach ($lines as $line) {
+            $normalizedLine = $this->normalizeObjectIdColumnName((string) $line);
+
+            if ($normalizedLine === '' || preg_match('/[^\d]+/u', $normalizedLine) !== 1) {
+                continue;
+            }
+
+            foreach (self::OBJECT_ID_COLUMN_ALIASES as $target => $aliases) {
+                foreach ($aliases as $alias) {
+                    if (str_contains($normalizedLine, $alias)) {
+                        return $target;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     public function resetImportedObjectIds(Request $request): JsonResponse
@@ -565,9 +595,13 @@ class ExportDataController extends Controller
             && ! $this->hasExportsQueueJob();
     }
 
-    private function shouldRunPendingExportInline(Export $export): bool
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function shouldRunPendingExportInline(Export $export, array $payload): bool
     {
         return $export->status === 'pending'
+            && ! $this->shouldUseAttachmentsJob($payload)
             && $export->file_name === null
             && (int) ($export->progress ?? 0) === 0
             && (int) ($export->processed ?? 0) === 0

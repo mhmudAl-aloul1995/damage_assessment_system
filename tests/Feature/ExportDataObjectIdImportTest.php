@@ -9,7 +9,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use OpenSpout\Reader\XLSX\Reader;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 
 it('imports objectids from uploaded file and stores unique cleaned values in session', function () {
     $user = User::factory()->create();
@@ -77,6 +76,46 @@ it('imports pasted housing unit objectids from textarea input', function () {
 
     expect(session('exports.imported_object_ids'))->toBe(['1', '2', '3']);
     expect(session('exports.imported_object_id_target'))->toBe('housing_unit');
+});
+
+it('detects pasted housing unit objectids from the unit number header', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('export.data.objectids.import'), [
+            'objectid_filter_target' => 'building',
+            'objectids_text' => "ObjectID رقم الوحدة\n1\n2\n2\n3\n",
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('count', 3)
+        ->assertJsonPath('target', 'housing_unit');
+
+    expect(session('exports.imported_object_ids'))->toBe(['1', '2', '3']);
+    expect(session('exports.imported_object_id_target'))->toBe('housing_unit');
+});
+
+it('detects pasted building objectids from the building header', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('export.data.objectids.import'), [
+            'objectid_filter_target' => 'housing_unit',
+            'objectids_text' => "objectid للمبنى\n1105\n1105\n1261\n",
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('count', 2)
+        ->assertJsonPath('target', 'building');
+
+    expect(session('exports.imported_object_ids'))->toBe(['1105', '1261']);
+    expect(session('exports.imported_object_id_target'))->toBe('building');
 });
 
 it('does not reload the export page after importing objectids', function () {
@@ -377,7 +416,7 @@ it('runs an orphaned pending export inline when checking status', function () {
     }
 });
 
-it('runs an orphaned pending attachment column export with the attachment job when checking status', function () {
+it('keeps pending attachment exports queued instead of running them inline when checking status', function () {
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
             'token' => 'arcgis-token',
@@ -422,21 +461,12 @@ it('runs an orphaned pending attachment column export with the attachment job wh
 
     $response
         ->assertOk()
-        ->assertJsonPath('status', 'done')
-        ->assertJsonPath('processed', 1)
-        ->assertJsonPath('total_rows', 1);
+        ->assertJsonPath('status', 'pending')
+        ->assertJsonPath('processed', 0)
+        ->assertJsonPath('total_rows', null);
 
     $export->refresh();
 
-    $spreadsheet = IOFactory::load(storage_path('app/public/'.$export->file_name));
-    $sheet = $spreadsheet->getActiveSheet();
-
-    expect($sheet->getCell('A1')->getValue())->toBe('Objectid');
-    expect($sheet->getCell('B2')->getValue())->toBe('لا توجد مرفقات مطابقة');
-
-    $spreadsheet->disconnectWorksheets();
-
-    if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
-        unlink(storage_path('app/public/'.$export->file_name));
-    }
+    expect($export->status)->toBe('pending');
+    expect($export->file_name)->toBeNull();
 });
