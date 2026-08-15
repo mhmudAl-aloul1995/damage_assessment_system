@@ -895,6 +895,7 @@
 	<script>
 		let exportInterval = null;
 		let isDownloaded = false;
+		let activeExportId = null;
 
 		function resetFilters() {
 			$('.filter-select2').val(null).trigger('change');
@@ -1246,8 +1247,22 @@
 																	</div>
 
 																	<div id="processedCount" class="text-muted small mt-2"></div>
+
+																	<div class="mt-4">
+																		<button type="button" class="btn btn-sm btn-light-danger" id="cancelCurrentExportBtn" disabled>
+																			<i class="ki-duotone ki-cross-circle fs-5">
+																				<span class="path1"></span>
+																				<span class="path2"></span>
+																			</i>
+																			إيقاف التحميل
+																		</button>
+																	</div>
 																</div>
 															`);
+		}
+
+		function syncCancelExportButton() {
+			$('#cancelCurrentExportBtn').prop('disabled', !activeExportId);
 		}
 
 		function showError(message) {
@@ -1260,6 +1275,7 @@
 			enableExportButtons();
 			stopExportInterval();
 			isDownloaded = false;
+			activeExportId = null;
 		}
 
 		function showSuccess(fileUrl) {
@@ -1275,28 +1291,36 @@
 			enableExportButtons();
 			stopExportInterval();
 			isDownloaded = true;
+			activeExportId = null;
 		}
 
-		function updateProgress(progress, processed) {
+		function updateProgress(progress, processed, totalRows = null) {
 			progress = parseInt(progress || 0);
 			processed = parseInt(processed || 0);
+			totalRows = parseInt(totalRows || 0);
 
 			$('#progressBar')
 				.css('width', progress + '%')
 				.text(progress + '%');
 
-			$('#processedCount').text(@json(__('ui.exports.processed_records', ['count' => '__COUNT__'])).replace('__COUNT__', processed));
+			if (totalRows > 0) {
+				$('#processedCount').text('تم تجهيز ' + processed + ' من ' + totalRows + ' صف');
+			} else {
+				$('#processedCount').text(@json(__('ui.exports.processed_records', ['count' => '__COUNT__'])).replace('__COUNT__', processed));
+			}
 		}
 
 		function startCheckingExport(exportId) {
 			stopExportInterval();
+			activeExportId = exportId;
+			syncCancelExportButton();
 
 			exportInterval = setInterval(function () {
 				$.ajax({
 					url: "{{ url('damage-assessment/exports/check') }}/" + exportId,
 					type: "GET",
 					success: function (response) {
-						updateProgress(response.progress, response.processed);
+						updateProgress(response.progress, response.processed, response.total_rows);
 
 						if (response.status === 'finished' && response.file) {
 							showSuccess(response.file);
@@ -1326,6 +1350,8 @@
 				success: function (newRes) {
 					if (newRes.status) {
 						toastr.success(newRes.message || @json(__('ui.exports.export_started')));
+						activeExportId = newRes.export_id;
+						syncCancelExportButton();
 						startCheckingExport(newRes.export_id);
 					} else {
 						enableExportButtons();
@@ -1479,6 +1505,31 @@
 				});
 			});
 
+			$(document).on('click', '#cancelCurrentExportBtn', function () {
+				if (!activeExportId) {
+					return;
+				}
+
+				const button = $(this);
+				button.prop('disabled', true);
+
+				$.ajax({
+					url: "{{ url('damage-assessment/exports') }}/" + activeExportId + "/cancel",
+					type: "POST",
+					data: {
+						_token: "{{ csrf_token() }}"
+					},
+					success: function (response) {
+						toastr.success(response.message || 'تم إيقاف التحميل.');
+						showError(@json(__('ui.exports.export_cancelled')));
+					},
+					error: function (xhr) {
+						button.prop('disabled', false);
+						toastr.error(xhr.responseJSON?.message || 'تعذر إيقاف التحميل.');
+					}
+				});
+			});
+
 			$('.export-btn').on('click', function (e) {
 				e.preventDefault();
 
@@ -1513,6 +1564,8 @@
 					success: function (response) {
 						if (response.status) {
 							toastr.success(response.message || @json(__('ui.exports.export_started')));
+							activeExportId = response.export_id;
+							syncCancelExportButton();
 							startCheckingExport(response.export_id);
 						} else {
 							enableExportButtons();
@@ -1531,6 +1584,7 @@
 																					<div class="text-center">
 																						<p>${res.message}</p>
 																						<p>${@json(__('ui.exports.running_export_progress', ['progress' => '__PROGRESS__'])).replace('__PROGRESS__', res.running_export.progress ?? 0)}</p>
+																						${res.running_export.total_rows ? `<p>تم تجهيز ${res.running_export.processed ?? 0} من ${res.running_export.total_rows} صف</p>` : ''}
 																					</div>
 																				`,
 								icon: 'warning',

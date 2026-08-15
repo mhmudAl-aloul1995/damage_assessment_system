@@ -13,5 +13,6 @@ class Export extends Model
         'user_id',
         'progress',
         'processed',
+        'total_rows',
     ];
 }

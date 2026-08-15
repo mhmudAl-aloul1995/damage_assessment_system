@@ -169,6 +169,7 @@ class ExportDataController extends Controller
             'status' => $export->status,
             'progress' => $export->progress ?? 0,
             'processed' => $export->processed ?? 0,
+            'total_rows' => $export->total_rows,
             'file' => $export->file_name ? asset('storage/'.$export->file_name) : null,
             'message' => $export->status === 'done' && (int) $export->processed === 0
                 ? 'لا توجد بيانات مطابقة لخيارات التصدير.'
@@ -198,6 +199,7 @@ class ExportDataController extends Controller
                         'status' => $runningExport->status,
                         'progress' => $runningExport->progress ?? 0,
                         'processed' => $runningExport->processed ?? 0,
+                        'total_rows' => $runningExport->total_rows,
                     ],
                 ], 409);
             }
@@ -246,6 +248,7 @@ class ExportDataController extends Controller
                 'user_id' => auth()->id(),
                 'progress' => 0,
                 'processed' => 0,
+                'total_rows' => null,
                 'file_name' => null,
             ]);
 

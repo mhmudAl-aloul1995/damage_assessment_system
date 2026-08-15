@@ -102,6 +102,7 @@ test('it updates processed rows while streaming the export file', function () {
         'user_id' => $user->id,
         'progress' => 0,
         'processed' => 0,
+        'total_rows' => 2,
         'file_name' => null,
     ]);
 
@@ -126,6 +127,7 @@ test('it updates processed rows while streaming the export file', function () {
         ];
 
         expect($export->fresh()->processed)->toBe(1);
+        expect($export->fresh()->progress)->toBe(47);
 
         yield [
             'export_row_id' => 2,

@@ -51,6 +51,7 @@ class ExportDataJob implements ShouldQueue
                 'status' => 'processing',
                 'progress' => 0,
                 'processed' => 0,
+                'total_rows' => null,
                 'file_name' => null,
             ]);
 
@@ -251,8 +252,11 @@ class ExportDataJob implements ShouldQueue
                 'source' => 'base_tables',
             ]);
 
+            $totalRows = $this->countExportRows($query, $paginateByHousing);
+
             $export->update([
                 'progress' => 1,
+                'total_rows' => $totalRows,
             ]);
 
             $fileName = 'exports/export_'.now()->timestamp.'.xlsx';
@@ -339,6 +343,7 @@ class ExportDataJob implements ShouldQueue
                     'status' => 'done',
                     'progress' => 100,
                     'processed' => 0,
+                    'total_rows' => $totalRows,
                     'file_name' => null,
                 ]);
 
@@ -362,6 +367,7 @@ class ExportDataJob implements ShouldQueue
                 'status' => 'done',
                 'progress' => 100,
                 'processed' => $processed,
+                'total_rows' => $totalRows,
                 'file_name' => $fileName,
             ]);
 
@@ -408,6 +414,7 @@ class ExportDataJob implements ShouldQueue
 
         $headers = [];
         $processed = 0;
+        $totalRows = (int) ($export->total_rows ?? 0);
 
         try {
             foreach ($rows as $row) {
@@ -422,9 +429,9 @@ class ExportDataJob implements ShouldQueue
                 $writer->addRow(Row::fromValues($this->exportValues($row, array_keys($headers)), $dataStyle));
                 $processed++;
 
-                if ($processed === 1 || $processed % self::PROGRESS_UPDATE_ROW_INTERVAL === 0) {
+                if ($export->exists && ($processed === 1 || $processed % self::PROGRESS_UPDATE_ROW_INTERVAL === 0)) {
                     $export->update([
-                        'progress' => min(95, max(1, (int) floor($processed / 100))),
+                        'progress' => $this->exportProgressPercent($processed, $totalRows),
                         'processed' => $processed,
                     ]);
                 }
@@ -434,6 +441,26 @@ class ExportDataJob implements ShouldQueue
         }
 
         return $processed;
+    }
+
+    private function countExportRows(mixed $query, bool $paginateByHousing): int
+    {
+        $countColumn = $paginateByHousing ? 'h.objectid' : 'b.objectid';
+
+        return (int) (clone $query)
+            ->cloneWithout(['columns', 'orders', 'limit', 'offset'])
+            ->cloneWithoutBindings(['select', 'order'])
+            ->distinct()
+            ->count($countColumn);
+    }
+
+    private function exportProgressPercent(int $processed, int $totalRows): int
+    {
+        if ($totalRows > 0) {
+            return min(95, max(1, (int) floor(($processed / $totalRows) * 95)));
+        }
+
+        return min(95, max(1, (int) floor($processed / 100)));
     }
 
     /**

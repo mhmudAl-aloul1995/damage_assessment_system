@@ -58,6 +58,7 @@ class ExportAttachmentsJob implements ShouldQueue
                 'status' => 'processing',
                 'progress' => 0,
                 'processed' => 0,
+                'total_rows' => null,
                 'file_name' => null,
             ]);
 
@@ -79,6 +80,7 @@ class ExportAttachmentsJob implements ShouldQueue
             if (($params['export_mode'] ?? 'data') === 'data' && $this->shouldIncludeAttachmentExcelColumns($params)) {
                 $fileName = 'exports/export_'.now()->timestamp.'.xlsx';
                 $fullPath = storage_path('app/public/'.$fileName);
+                $totalRows = $this->dataRows($params, $sources, $this->dataColumns($params))->count();
 
                 $token = $arcgis->getToken();
                 $this->writeDataWorkbook($fullPath, $params, $sources, $arcgis, $token);
@@ -86,7 +88,8 @@ class ExportAttachmentsJob implements ShouldQueue
                 $export->update([
                     'status' => 'done',
                     'progress' => 100,
-                    'processed' => $this->dataRows($params, $sources, $this->dataColumns($params))->count(),
+                    'processed' => $totalRows,
+                    'total_rows' => $totalRows,
                     'file_name' => $fileName,
                 ]);
 

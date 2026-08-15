@@ -333,7 +333,8 @@ it('runs an orphaned pending export inline when checking status', function () {
     $response
         ->assertOk()
         ->assertJsonPath('status', 'done')
-        ->assertJsonPath('processed', 1);
+        ->assertJsonPath('processed', 1)
+        ->assertJsonPath('total_rows', 1);
 
     $export->refresh();
 
@@ -390,7 +391,8 @@ it('runs an orphaned pending attachment column export with the attachment job wh
     $response
         ->assertOk()
         ->assertJsonPath('status', 'done')
-        ->assertJsonPath('processed', 1);
+        ->assertJsonPath('processed', 1)
+        ->assertJsonPath('total_rows', 1);
 
     $export->refresh();
 

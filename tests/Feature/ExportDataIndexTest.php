@@ -77,6 +77,58 @@ it('shows a selected export columns status button', function () {
     $response->assertSee('function updateSelectedColumnsStatus()', false);
 });
 
+it('shows a cancel button for the active export download', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response->assertOk();
+    $response->assertSee('id="cancelCurrentExportBtn"', false);
+    $response->assertSee('let activeExportId = null;', false);
+    $response->assertSee('activeExportId + "/cancel"', false);
+});
+
+it('shows processed rows out of total rows during export progress', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response->assertOk();
+    $response->assertSee('function updateProgress(progress, processed, totalRows = null)', false);
+    $response->assertSee('updateProgress(response.progress, response.processed, response.total_rows)', false);
+    $response->assertSee('تم تجهيز ', false);
+});
+
+it('cancels a pending export download', function () {
+    $user = User::factory()->create();
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->post("damage-assessment/exports/{$export->id}/cancel");
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    expect($export->fresh()->status)->toBe('cancelled');
+});
+
 it('shows the assessment obstacle export filter with a readable label', function () {
     Filter::query()->where('list_name', 'assessment_obstacle')->delete();
 
