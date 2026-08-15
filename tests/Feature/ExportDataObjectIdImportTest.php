@@ -207,6 +207,36 @@ it('passes page embedded imported objectids into the export payload after the se
     Queue::assertPushed(ExportDataJob::class);
 });
 
+it('defaults to the matching objectid column when imported objectids arrive without selected columns', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('export.start'), [
+            'export_type' => 'excel',
+            'imported_object_ids' => ['273', '360'],
+            'imported_object_id_target' => 'housing_unit',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    $export = Export::query()->latest('id')->first();
+
+    expect($export)->not->toBeNull();
+
+    $payload = json_decode($export->filters, true);
+
+    expect($payload['housing_columns'])->toBe(['objectid']);
+    expect($payload['imported_object_ids'])->toBe(['273', '360']);
+    expect($payload['imported_object_id_target'])->toBe('housing_unit');
+
+    Queue::assertPushed(ExportDataJob::class);
+});
+
 it('filters exports by housing unit objectid without matching building objectids', function () {
     $user = User::factory()->create();
 

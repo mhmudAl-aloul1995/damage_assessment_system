@@ -221,13 +221,6 @@ class ExportDataController extends Controller
                 $payload['include_engineering_notes'] = '1';
             }
 
-            if ($this->requiresDataColumns($payload) && ! $this->hasSelectedDataColumns($payload)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'يرجى اختيار عمود واحد على الأقل من أعمدة البيانات قبل التصدير.',
-                ], 422);
-            }
-
             $requestedImportedObjectIds = $this->normalizeObjectIdValues($request->input('imported_object_ids', []));
             $sessionImportedObjectIds = $this->importedObjectIds();
             $importedObjectIds = ! empty($requestedImportedObjectIds)
@@ -240,6 +233,21 @@ class ExportDataController extends Controller
             if (! empty($importedObjectIds)) {
                 $payload['imported_object_ids'] = $importedObjectIds;
                 $payload['imported_object_id_target'] = $importedObjectIdTarget;
+
+                if ($this->requiresDataColumns($payload) && ! $this->hasSelectedDataColumns($payload)) {
+                    $defaultColumnKey = $importedObjectIdTarget === self::OBJECT_ID_FILTER_TARGET_HOUSING_UNIT
+                        ? 'housing_columns'
+                        : 'building_columns';
+
+                    $payload[$defaultColumnKey] = ['objectid'];
+                }
+            }
+
+            if ($this->requiresDataColumns($payload) && ! $this->hasSelectedDataColumns($payload)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'يرجى اختيار عمود واحد على الأقل من أعمدة البيانات قبل التصدير.',
+                ], 422);
             }
 
             $export = Export::query()->create([
