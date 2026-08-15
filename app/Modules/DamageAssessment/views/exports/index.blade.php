@@ -99,6 +99,17 @@
 									<i class="fas fa-times me-1"></i>
 									{{ __('ui.exports.clear_filters') }}
 								</button>
+
+								<button type="button" class="btn btn-sm btn-light-info d-flex align-items-center gap-2"
+									id="selectedColumnsStatusBtn">
+									<i class="ki-duotone ki-check-square fs-5">
+										<span class="path1"></span>
+										<span class="path2"></span>
+									</i>
+									<span>الأعمدة المختارة</span>
+									<span class="badge badge-primary" id="selectedColumnsCount">0</span>
+								</button>
+
 								<button type="button"
 									class="btn btn-light-primary btn-sm dropdown-toggle d-flex align-items-center gap-1"
 									data-bs-toggle="dropdown" aria-expanded="false">
@@ -673,7 +684,8 @@
 															<label
 																class="form-check form-check-custom form-check-solid border rounded p-3 w-100">
 																<input class="form-check-input mt-1" type="checkbox"
-																	name="building_columns[]" value="{{ $column }}">
+																	name="building_columns[]" value="{{ $column }}"
+																	data-export-column-checkbox>
 
 																<span class="form-check-label ms-3">
 																	<strong class="d-block">
@@ -764,7 +776,8 @@
 															<label
 																class="form-check form-check-custom form-check-solid border rounded p-3 w-100">
 																<input class="form-check-input mt-1" type="checkbox"
-																	name="housing_columns[]" value="{{ $column }}">
+																	name="housing_columns[]" value="{{ $column }}"
+																	data-export-column-checkbox>
 
 																<span class="form-check-label ms-3">
 																	<strong class="d-block">
@@ -898,6 +911,36 @@
 			}).get().filter(Boolean);
 		}
 
+		function selectedDataColumnValues() {
+			return [
+				...checkedColumnValues('building_columns[]'),
+				...checkedColumnValues('housing_columns[]')
+			].filter(Boolean);
+		}
+
+		function selectedDataColumnCount(formData = null) {
+			const selectedColumns = new Set(selectedDataColumnValues());
+
+			if (Array.isArray(formData)) {
+				formData.forEach(function (field) {
+					if ((field.name === 'building_columns[]' || field.name === 'housing_columns[]') && field.value) {
+						selectedColumns.add(field.value);
+					}
+				});
+			}
+
+			return selectedColumns.size;
+		}
+
+		function updateSelectedColumnsStatus() {
+			const count = selectedDataColumnCount();
+			const button = $('#selectedColumnsStatusBtn');
+
+			$('#selectedColumnsCount').text(count);
+			button.toggleClass('btn-light-info', count === 0);
+			button.toggleClass('btn-light-success', count > 0);
+		}
+
 		function appendMissingFormFields(formData, inputName, values) {
 			const existingValues = formData
 				.filter(function (field) {
@@ -924,7 +967,7 @@
 		}
 
 		function hasSelectedDataColumns(formData) {
-			if (checkedColumnValues('building_columns[]').length > 0 || checkedColumnValues('housing_columns[]').length > 0) {
+			if (selectedDataColumnCount(formData) > 0) {
 				return true;
 			}
 
@@ -968,6 +1011,8 @@
 					}
 				}
 			});
+
+			updateSelectedColumnsStatus();
 		}
 
 		function toggleColumnGroup(button, inputName, checked) {
@@ -984,6 +1029,8 @@
 					}
 				}
 			});
+
+			updateSelectedColumnsStatus();
 		}
 
 		function filterColumns(inputId, listId, counterId) {
@@ -1298,6 +1345,7 @@
 			filterFilterCards();
 			syncObjectIdInputMethod();
 			syncAttachmentExportOptions();
+			updateSelectedColumnsStatus();
 
 			$('.filter-select2').select2({
 				width: '100%',
@@ -1329,6 +1377,15 @@
 				if ($(this).val()) {
 					$('#exportIncludeEngineeringNotes').prop('checked', true);
 				}
+			});
+
+			$('input[data-export-column-checkbox]').on('change', updateSelectedColumnsStatus);
+
+			$('#selectedColumnsStatusBtn').on('click', function () {
+				document.getElementById('buildingColumnsList')?.scrollIntoView({
+					behavior: 'smooth',
+					block: 'start'
+				});
 			});
 
 			$('.attachment-type-select2').on('change', function () {

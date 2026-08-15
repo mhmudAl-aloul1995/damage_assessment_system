@@ -63,6 +63,20 @@ it('shows select controls for each export field group', function () {
     $response->assertSee("toggleColumnGroup(this,'housing_columns[]',false)", false);
 });
 
+it('shows a selected export columns status button', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response->assertOk();
+    $response->assertSee('id="selectedColumnsStatusBtn"', false);
+    $response->assertSee('id="selectedColumnsCount"', false);
+    $response->assertSee('data-export-column-checkbox', false);
+    $response->assertSee('function updateSelectedColumnsStatus()', false);
+});
+
 it('shows the assessment obstacle export filter with a readable label', function () {
     Filter::query()->where('list_name', 'assessment_obstacle')->delete();
 
