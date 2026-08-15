@@ -958,6 +958,16 @@
 			});
 		}
 
+		function replaceFormField(formData, inputName, value) {
+			for (let index = formData.length - 1; index >= 0; index -= 1) {
+				if (formData[index].name === inputName) {
+					formData.splice(index, 1);
+				}
+			}
+
+			formData.push({ name: inputName, value: value });
+		}
+
 		function syncSelectedColumnsIntoForm() {
 			$('.selected-export-column-mirror').remove();
 
@@ -980,6 +990,13 @@
 			syncSelectedColumnsIntoForm();
 
 			const formData = $('#exportForm').serializeArray();
+			const exportMode = selectedExportMode();
+
+			replaceFormField(formData, 'export_mode', exportMode);
+
+			if (exportMode === 'data_with_attachments') {
+				replaceFormField(formData, 'include_attachment_excel_columns', '1');
+			}
 
 			appendMissingFormFields(formData, 'building_columns[]', checkedColumnValues('building_columns[]'));
 			appendMissingFormFields(formData, 'housing_columns[]', checkedColumnValues('housing_columns[]'));

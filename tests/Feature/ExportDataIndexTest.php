@@ -321,6 +321,20 @@ it('forces attachment export modes to zip in the browser payload', function () {
     $response->assertSee("exportType = 'zip';", false);
 });
 
+it('sends the selected export mode explicitly in the browser payload', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee("replaceFormField(formData, 'export_mode', exportMode);", false)
+        ->assertSee("if (exportMode === 'data_with_attachments')", false)
+        ->assertSee("replaceFormField(formData, 'include_attachment_excel_columns', '1');", false);
+});
+
 it('fills the neighborhood filter from unique building neighborhoods', function () {
     Filter::query()->create([
         'list_name' => 'neighborhood',
