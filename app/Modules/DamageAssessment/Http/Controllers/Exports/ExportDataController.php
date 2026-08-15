@@ -213,6 +213,10 @@ class ExportDataController extends Controller
                 $payload['include_attachment_excel_columns'] = '1';
             }
 
+            if (in_array(($payload['export_mode'] ?? 'data'), ['attachments', 'data_with_attachments'], true)) {
+                $payload['export_type'] = 'zip';
+            }
+
             if (filled($payload['legal_notes_filter'] ?? null)) {
                 $payload['include_legal_notes'] = '1';
             }

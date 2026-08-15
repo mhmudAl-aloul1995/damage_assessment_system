@@ -1555,10 +1555,14 @@
 
 				if ($('.export-btn').prop('disabled')) return;
 
-				const exportType = $(this).data('type');
+				let exportType = $(this).data('type');
 				if (exportType === 'zip' && selectedExportMode() === 'data') {
 					$('#exportModeAttachments').prop('checked', true);
 					syncAttachmentExportOptions();
+				}
+
+				if (['attachments', 'data_with_attachments'].includes(selectedExportMode())) {
+					exportType = 'zip';
 				}
 
 				syncAttachmentExcelDisplay();

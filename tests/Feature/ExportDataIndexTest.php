@@ -303,9 +303,22 @@ it('treats data with attachments mode as a request for excel attachment columns'
     $filters = json_decode((string) $export->filters, true);
 
     expect($filters['include_attachment_excel_columns'])->toBe('1');
+    expect($filters['export_type'])->toBe('zip');
 
     Queue::assertPushed(ExportAttachmentsJob::class);
     Queue::assertNotPushed(ExportDataJob::class);
+});
+
+it('forces attachment export modes to zip in the browser payload', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('export.data.index'));
+
+    $response->assertOk();
+    $response->assertSee("['attachments', 'data_with_attachments'].includes(selectedExportMode())", false);
+    $response->assertSee("exportType = 'zip';", false);
 });
 
 it('fills the neighborhood filter from unique building neighborhoods', function () {
