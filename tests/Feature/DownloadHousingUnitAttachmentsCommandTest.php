@@ -37,9 +37,11 @@ it('downloads matching housing unit ownership and permit attachments from object
 
     $inputPath = storage_path('app/testing-unit-objectids.txt');
     $outputPath = storage_path('app/public/exports/testing_unit_attachments');
+    $zipPath = storage_path('app/public/exports/testing_unit_attachments.zip');
 
     File::put($inputPath, "ObjectID رقم الوحدة\n10\n11\n10\n");
     File::deleteDirectory($outputPath);
+    File::delete($zipPath);
 
     try {
         $this->artisan('arcgis:download-housing-unit-attachments', [
@@ -64,9 +66,20 @@ it('downloads matching housing unit ownership and permit attachments from object
 
         $spreadsheet->disconnectWorksheets();
 
+        expect(File::exists($zipPath))->toBeTrue();
+
+        $zip = new ZipArchive;
+        $zip->open($zipPath);
+
+        expect($zip->getFromName('attachments-index.xlsx'))->not->toBeFalse();
+        expect($zip->getFromName('housing_units/10/10_unit_ownership_501_ownership_image.jpg'))->toBe('ownership-file');
+
+        $zip->close();
+
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments/502'));
     } finally {
         File::delete($inputPath);
         File::deleteDirectory($outputPath);
+        File::delete($zipPath);
     }
 });

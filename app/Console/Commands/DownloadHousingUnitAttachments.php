@@ -170,6 +170,7 @@ class DownloadHousingUnitAttachments extends Command
         fclose($indexHandle);
         $this->writeExcelIndexFromCsv($indexPath, $xlsxIndexPath);
         File::put($htmlIndexPath, $this->htmlIndex($htmlRows));
+        $zipPath = $this->createZipArchive($outputDirectory, $outputName);
 
         $this->newLine(2);
         $this->info("Downloaded: {$downloaded}");
@@ -179,7 +180,9 @@ class DownloadHousingUnitAttachments extends Command
         $this->info("Index: {$indexPath}");
         $this->info("Excel index: {$xlsxIndexPath}");
         $this->info("HTML index: {$htmlIndexPath}");
+        $this->info("ZIP archive: {$zipPath}");
         $this->info('Open URL: '.asset('storage/exports/'.$outputName.'/index.html'));
+        $this->info('Download ZIP: '.asset('storage/exports/'.$outputName.'.zip'));
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }
@@ -334,6 +337,30 @@ class DownloadHousingUnitAttachments extends Command
 
         (new Xlsx($spreadsheet))->save($xlsxPath);
         $spreadsheet->disconnectWorksheets();
+    }
+
+    private function createZipArchive(string $outputDirectory, string $outputName): string
+    {
+        $zipPath = dirname($outputDirectory).'/'.$outputName.'.zip';
+
+        if (File::exists($zipPath)) {
+            File::delete($zipPath);
+        }
+
+        $zip = new \ZipArchive;
+
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException("Unable to create ZIP archive: {$zipPath}");
+        }
+
+        foreach (File::allFiles($outputDirectory) as $file) {
+            $relativePath = str_replace('\\', '/', $file->getRelativePathname());
+            $zip->addFile($file->getRealPath(), $relativePath);
+        }
+
+        $zip->close();
+
+        return $zipPath;
     }
 
     private function htmlIndex(array $rows): string
