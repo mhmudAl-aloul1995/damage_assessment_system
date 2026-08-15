@@ -773,6 +773,74 @@ test('it matches semantic attachment type filters using arabic names and arcgis 
     }
 });
 
+test('it exports housing unit attachments even when the local building join is missing', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/7001/attachments' => Http::response([
+            'attachmentInfos' => [
+                [
+                    'id' => 1201,
+                    'name' => 'unit-photo.jpg',
+                    'contentType' => 'image/jpeg',
+                ],
+            ],
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/7001/attachments/1201*' => Http::response('unit-image'),
+    ]);
+
+    $user = User::factory()->create();
+
+    DB::table('housing_units')->insert([
+        'objectid' => 7001,
+        'globalid' => 'housing-without-local-building',
+        'parentglobalid' => 'missing-building-globalid',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_mode' => 'attachments',
+            'export_type' => 'zip',
+            'attachment_sources' => ['housing_unit_arcgis'],
+            'attachment_type_filters' => ['all'],
+            'attachment_grouping' => 'by_housing_unit',
+            'attachment_filename_strategy' => 'objectid_type',
+            'include_attachment_index' => '1',
+            'imported_object_ids' => ['7001'],
+            'imported_object_id_target' => 'housing_unit',
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportAttachmentsJob($export->id))->handle(app(ArcgisService::class));
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+        expect($export->total_rows)->toBe(1);
+
+        $zip = new \ZipArchive;
+        $zip->open(storage_path('app/public/'.$export->file_name));
+
+        expect($zip->getFromName('housing_units/7001/7001_housing_unit_1201_unit-photo.jpg'))->toBe('unit-image');
+
+        $zip->close();
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
 test('it can export all image attachments inside xlsx attachment columns', function () {
     $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=');
 

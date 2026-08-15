@@ -115,6 +115,9 @@ class ExportAttachmentsJob implements ShouldQueue
             $processedArcgisRecords = [];
             $seenPaths = [];
             $totalRows = max(1, $rows->count());
+            $export->update([
+                'total_rows' => $totalRows,
+            ]);
 
             if (($params['export_mode'] ?? null) === 'data_with_attachments') {
                 $this->addDataWorkbookToZip($zip, $params, $sources, $arcgis, $token);
@@ -191,6 +194,7 @@ class ExportAttachmentsJob implements ShouldQueue
                 'status' => 'done',
                 'progress' => 100,
                 'processed' => $processed,
+                'total_rows' => $totalRows,
                 'file_name' => $fileName,
             ]);
         } catch (\Throwable $e) {
@@ -238,10 +242,13 @@ class ExportAttachmentsJob implements ShouldQueue
             || (($params['imported_object_id_target'] ?? 'building') === 'housing_unit')
             || collect(array_keys((array) $filters))
                 ->contains(fn (string $field): bool => ExportDataColumns::hasColumn($housingUnitsSource, $field));
+        $anchorOnHousing = $this->shouldAnchorRowsOnHousing($params, $sources);
 
-        $query = $needsHousingJoin
-            ? DB::table("{$buildingsSource} as b")->leftJoin("{$housingUnitsSource} as h", 'b.globalid', '=', 'h.parentglobalid')
-            : DB::table("{$buildingsSource} as b");
+        $query = $anchorOnHousing
+            ? DB::table("{$housingUnitsSource} as h")->leftJoin("{$buildingsSource} as b", 'b.globalid', '=', 'h.parentglobalid')
+            : ($needsHousingJoin
+                ? DB::table("{$buildingsSource} as b")->leftJoin("{$housingUnitsSource} as h", 'b.globalid', '=', 'h.parentglobalid')
+                : DB::table("{$buildingsSource} as b"));
 
         $query->select([
             'b.objectid as building_objectid',
@@ -249,7 +256,7 @@ class ExportAttachmentsJob implements ShouldQueue
             'b.owner_name',
         ]);
 
-        if ($needsHousingJoin) {
+        if ($needsHousingJoin || $anchorOnHousing) {
             $query->addSelect([
                 'h.objectid as housing_objectid',
                 'h.globalid as housing_globalid',
@@ -259,12 +266,23 @@ class ExportAttachmentsJob implements ShouldQueue
             $query->selectRaw('NULL as housing_objectid, NULL as housing_globalid, NULL as housing_unit_number');
         }
 
-        $this->applyFilters($query, $params, $needsHousingJoin);
+        $this->applyFilters($query, $params, $needsHousingJoin || $anchorOnHousing);
 
         return $query
             ->orderBy('b.objectid')
-            ->when($needsHousingJoin, fn ($query) => $query->orderBy('h.objectid'))
+            ->when($needsHousingJoin || $anchorOnHousing, fn ($query) => $query->orderBy('h.objectid'))
             ->get();
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @param  array<int, string>  $sources
+     */
+    private function shouldAnchorRowsOnHousing(array $params, array $sources): bool
+    {
+        return ! in_array(self::SOURCE_BUILDING_ARCGIS, $sources, true)
+            && in_array(self::SOURCE_HOUSING_UNIT_ARCGIS, $sources, true)
+            && (($params['imported_object_id_target'] ?? 'building') === 'housing_unit');
     }
 
     /**
