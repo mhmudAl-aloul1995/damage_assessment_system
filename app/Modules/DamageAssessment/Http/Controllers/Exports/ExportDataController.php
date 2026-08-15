@@ -208,6 +208,10 @@ class ExportDataController extends Controller
 
             $payload = $request->all();
 
+            if (($payload['export_type'] ?? null) === 'zip' && ($payload['export_mode'] ?? 'data') === 'data') {
+                $payload['export_mode'] = 'attachments';
+            }
+
             if (
                 ($payload['attachment_excel_display'] ?? null) === 'images'
                 || ($payload['export_mode'] ?? null) === 'data_with_attachments'

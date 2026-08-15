@@ -321,6 +321,37 @@ it('forces attachment export modes to zip in the browser payload', function () {
     $response->assertSee("exportType = 'zip';", false);
 });
 
+it('treats zip exports as attachment exports when the browser leaves data mode selected', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('export.start'), [
+            'export_mode' => 'data',
+            'export_type' => 'zip',
+            'building_columns' => ['objectid'],
+            'attachment_sources' => ['housing_unit_arcgis'],
+            'attachment_type_filters' => ['all'],
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJson([
+            'status' => true,
+        ]);
+
+    $export = Export::query()->firstOrFail();
+    $filters = json_decode((string) $export->filters, true);
+
+    expect($filters['export_mode'])->toBe('attachments');
+    expect($filters['export_type'])->toBe('zip');
+
+    Queue::assertPushed(ExportAttachmentsJob::class);
+    Queue::assertNotPushed(ExportDataJob::class);
+});
+
 it('sends the selected export mode explicitly in the browser payload', function () {
     $user = User::factory()->create();
 
