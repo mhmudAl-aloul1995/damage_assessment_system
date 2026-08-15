@@ -208,9 +208,9 @@ it('shows imported objectids once on the export page and then clears the session
 
     $response
         ->assertOk()
-        ->assertSee('name="imported_object_ids[]" value="273"', false)
-        ->assertSee('name="imported_object_ids[]" value="360"', false)
-        ->assertSee('name="imported_object_id_target" value="housing_unit"', false);
+        ->assertSee('name="imported_object_ids_json"', false)
+        ->assertSee('name="imported_object_id_target" value="housing_unit"', false)
+        ->assertDontSee('name="imported_object_ids[]"', false);
 
     expect(session()->has('exports.imported_object_ids'))->toBeFalse();
     expect(session()->has('exports.imported_object_id_target'))->toBeFalse();
@@ -241,6 +241,39 @@ it('passes page embedded imported objectids into the export payload after the se
     $payload = json_decode($export->filters, true);
 
     expect($payload['imported_object_ids'])->toBe(['273', '360']);
+    expect($payload['imported_object_id_target'])->toBe('housing_unit');
+
+    Queue::assertPushed(ExportDataJob::class);
+});
+
+it('passes large page embedded imported objectid lists without relying on many form inputs', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $objectIds = range(1, 1500);
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('export.start'), [
+            'export_type' => 'excel',
+            'building_columns' => ['objectid'],
+            'imported_object_ids_json' => json_encode($objectIds),
+            'imported_object_id_target' => 'housing_unit',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    $export = Export::query()->latest('id')->first();
+
+    expect($export)->not->toBeNull();
+
+    $payload = json_decode($export->filters, true);
+
+    expect($payload['imported_object_ids'])->toHaveCount(1500);
+    expect($payload['imported_object_ids'][0])->toBe('1');
+    expect($payload['imported_object_ids'][1499])->toBe('1500');
     expect($payload['imported_object_id_target'])->toBe('housing_unit');
 
     Queue::assertPushed(ExportDataJob::class);

@@ -231,7 +231,7 @@ class ExportDataController extends Controller
                 $payload['include_engineering_notes'] = '1';
             }
 
-            $requestedImportedObjectIds = $this->normalizeObjectIdValues($request->input('imported_object_ids', []));
+            $requestedImportedObjectIds = $this->importedObjectIdsFromRequest($request);
             $sessionImportedObjectIds = $this->importedObjectIds();
             $importedObjectIds = ! empty($requestedImportedObjectIds)
                 ? $requestedImportedObjectIds
@@ -446,6 +446,38 @@ class ExportDataController extends Controller
     private function importedObjectIds(): array
     {
         return $this->normalizeObjectIdValues(session(self::OBJECT_ID_FILTER_SESSION_KEY, []));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function importedObjectIdsFromRequest(Request $request): array
+    {
+        $jsonObjectIds = $this->objectIdsFromJson((string) $request->input('imported_object_ids_json', ''));
+
+        if ($jsonObjectIds !== []) {
+            return $jsonObjectIds;
+        }
+
+        return $this->normalizeObjectIdValues($request->input('imported_object_ids', []));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function objectIdsFromJson(string $json): array
+    {
+        if (! filled($json)) {
+            return [];
+        }
+
+        $decoded = json_decode($json, true);
+
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        return $this->normalizeObjectIdValues($decoded);
     }
 
     /**

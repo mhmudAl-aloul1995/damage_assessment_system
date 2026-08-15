@@ -74,9 +74,7 @@
 				<form id="exportForm" method="POST">
 					@csrf
 					<div id="importedObjectIdsInputs">
-						@foreach($importedObjectIds as $objectId)
-							<input type="hidden" name="imported_object_ids[]" value="{{ $objectId }}">
-						@endforeach
+						<input type="hidden" name="imported_object_ids_json" value='@json($importedObjectIds)'>
 						@if(!empty($importedObjectIds))
 							<input type="hidden" name="imported_object_id_target" value="{{ $importedObjectIdTarget }}">
 						@endif
@@ -1250,13 +1248,12 @@
 			}
 
 			const inputs = $('#importedObjectIdsInputs').empty();
-			ids.forEach(function (objectId) {
-				$('<input>')
-					.attr('type', 'hidden')
-					.attr('name', 'imported_object_ids[]')
-					.val(objectId)
-					.appendTo(inputs);
-			});
+
+			$('<input>')
+				.attr('type', 'hidden')
+				.attr('name', 'imported_object_ids_json')
+				.val(JSON.stringify(ids))
+				.appendTo(inputs);
 
 			if (ids.length > 0) {
 				$('<input>')
