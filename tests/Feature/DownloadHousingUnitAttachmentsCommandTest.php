@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 it('downloads matching housing unit ownership and permit attachments from objectids file', function () {
     Http::fake([
@@ -49,7 +50,19 @@ it('downloads matching housing unit ownership and permit attachments from object
         expect(File::get($outputPath.'/housing_units/10/10_unit_ownership_501_ownership_image.jpg'))->toBe('ownership-file');
         expect(File::get($outputPath.'/housing_units/10/10_unit_permit_503_municipality_permit.pdf'))->toBe('permit-file');
         expect(File::exists($outputPath.'/attachments-index.csv'))->toBeTrue();
+        expect(File::exists($outputPath.'/attachments-index.xlsx'))->toBeTrue();
         expect(File::get($outputPath.'/attachments-index.csv'))->toContain('not_found');
+        expect(File::exists($outputPath.'/index.html'))->toBeTrue();
+        expect(File::get($outputPath.'/index.html'))->toContain('فتح المرفق');
+        expect(File::get($outputPath.'/index.html'))->toContain('/storage/exports/testing_unit_attachments/housing_units/10/10_unit_ownership_501_ownership_image.jpg');
+
+        $spreadsheet = IOFactory::load($outputPath.'/attachments-index.xlsx');
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->getCell('H2')->getValue())->toBe('فتح المرفق');
+        expect($sheet->getCell('H2')->getHyperlink()->getUrl())->toContain('/storage/exports/testing_unit_attachments/housing_units/10/10_unit_ownership_501_ownership_image.jpg');
+
+        $spreadsheet->disconnectWorksheets();
 
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments/502'));
     } finally {
