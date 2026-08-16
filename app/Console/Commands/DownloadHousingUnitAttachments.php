@@ -370,9 +370,6 @@ class DownloadHousingUnitAttachments extends Command
         $rowNumber = 1;
         $localRows = [];
         $arcgisUrlsByObjectId = [];
-        $sheet->setCellValue('A1', 'objectid');
-        $sheet->setCellValue('B1', 'رابط المرفق المحلي');
-        $sheet->setCellValue('C1', 'روابط مرفقات ArcGIS');
 
         while (($row = fgetcsv($handle)) !== false) {
             if ($rowNumber === 1) {
@@ -411,6 +408,17 @@ class DownloadHousingUnitAttachments extends Command
 
         fclose($handle);
 
+        $maxArcgisLinks = collect($arcgisUrlsByObjectId)
+            ->map(fn (array $urls): int => count(array_unique($urls)))
+            ->max() ?? 0;
+
+        $sheet->setCellValue('A1', 'objectid');
+        $sheet->setCellValue('B1', 'رابط المرفق المحلي');
+
+        for ($index = 1; $index <= $maxArcgisLinks; $index++) {
+            $sheet->setCellValue([$index + 2, 1], "مرفق ArcGIS {$index}");
+        }
+
         foreach ($localRows as $localRow) {
             $excelRow = $sheet->getHighestRow() + 1;
             $sheet->setCellValue("A{$excelRow}", $localRow['object_id']);
@@ -429,35 +437,27 @@ class DownloadHousingUnitAttachments extends Command
             $excelRow = $sheet->getHighestRow() + 1;
             $sheet->setCellValue("A{$excelRow}", $objectId);
             $sheet->setCellValue("B{$excelRow}", '');
-            $sheet->setCellValue("C{$excelRow}", $this->attachmentLabels($urls));
-            $sheet->getCell("C{$excelRow}")->getHyperlink()->setUrl($urls[0]);
-            $sheet->getStyle("C{$excelRow}")->getAlignment()->setWrapText(true);
-            $sheet->getRowDimension($excelRow)->setRowHeight(max(24, count($urls) * 18));
-            $this->styleHyperlink("C{$excelRow}", $sheet);
+
+            foreach ($urls as $index => $url) {
+                $columnNumber = $index + 3;
+                $coordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnNumber).$excelRow;
+                $sheet->setCellValue($coordinate, 'مرفق '.($index + 1));
+                $sheet->getCell($coordinate)->getHyperlink()->setUrl($url);
+                $this->styleHyperlink($coordinate, $sheet);
+            }
         }
 
-        foreach (range('A', 'C') as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
+        $highestColumnIndex = max(2, $maxArcgisLinks + 2);
+
+        for ($columnIndex = 1; $columnIndex <= $highestColumnIndex; $columnIndex++) {
+            $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnIndex))->setAutoSize(true);
         }
 
-        $sheet->getColumnDimension('C')->setAutoSize(false);
-        $sheet->getColumnDimension('C')->setWidth(120);
-
-        $sheet->getStyle('A1:C1')->getFont()->setBold(true);
+        $lastHeaderCoordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($highestColumnIndex).'1';
+        $sheet->getStyle("A1:{$lastHeaderCoordinate}")->getFont()->setBold(true);
 
         (new Xlsx($spreadsheet))->save($xlsxPath);
         $spreadsheet->disconnectWorksheets();
-    }
-
-    /**
-     * @param  array<int, string>  $urls
-     */
-    private function attachmentLabels(array $urls): string
-    {
-        return collect($urls)
-            ->values()
-            ->map(fn (string $url, int $index): string => 'مرفق '.($index + 1))
-            ->implode("\n");
     }
 
     private function styleHyperlink(string $coordinate, \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet): void

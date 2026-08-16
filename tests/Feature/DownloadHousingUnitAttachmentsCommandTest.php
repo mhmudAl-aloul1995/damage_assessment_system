@@ -97,17 +97,22 @@ it('downloads matching housing unit ownership and permit attachments from object
         $spreadsheet = IOFactory::load($outputPath.'/attachments-index.xlsx');
         $sheet = $spreadsheet->getActiveSheet();
 
-        expect($sheet->getHighestColumn())->toBe('C');
+        expect($sheet->getHighestColumn())->toBe('E');
         expect($sheet->getCell('A1')->getValue())->toBe('objectid');
         expect($sheet->getCell('B1')->getValue())->toBe('رابط المرفق المحلي');
-        expect($sheet->getCell('C1')->getValue())->toBe('روابط مرفقات ArcGIS');
+        expect($sheet->getCell('C1')->getValue())->toBe('مرفق ArcGIS 1');
+        expect($sheet->getCell('D1')->getValue())->toBe('مرفق ArcGIS 2');
+        expect($sheet->getCell('E1')->getValue())->toBe('مرفق ArcGIS 3');
         expect($sheet->getCell('A2')->getValue())->toBe(10);
         expect($sheet->getCell('B2')->getValue())->toBe('فتح المرفق');
         expect($sheet->getCell('B2')->getHyperlink()->getUrl())->toBe('housing_units/10/10_unit_identity_500_identity_image.jpg');
         expect($sheet->getCell('A5')->getValue())->toBe(11);
-        expect($sheet->getCell('C5')->getValue())->toBe("مرفق 1\nمرفق 2\nمرفق 3");
+        expect($sheet->getCell('C5')->getValue())->toBe('مرفق 1');
+        expect($sheet->getCell('D5')->getValue())->toBe('مرفق 2');
+        expect($sheet->getCell('E5')->getValue())->toBe('مرفق 3');
         expect($sheet->getCell('C5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments/601?token=arcgis-token');
-        expect($sheet->getRowDimension(5)->getRowHeight())->toBeGreaterThan(24);
+        expect($sheet->getCell('D5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments/602?token=arcgis-token');
+        expect($sheet->getCell('E5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments/336370?token=arcgis-token');
 
         $spreadsheet->disconnectWorksheets();
 
