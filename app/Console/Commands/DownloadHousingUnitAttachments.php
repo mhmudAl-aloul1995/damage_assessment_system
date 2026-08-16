@@ -6,6 +6,7 @@ use App\services\ArcgisService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -17,9 +18,9 @@ class DownloadHousingUnitAttachments extends Command
      * @var string
      */
     protected $signature = 'arcgis:download-housing-unit-attachments
-        {file : Text/CSV file containing housing unit ObjectIDs}
+        {file : Text/CSV/XLSX file containing housing unit ObjectIDs}
         {--output= : Output directory relative to storage/app/public/exports}
-        {--types=ownership,permit : Comma separated attachment types: ownership,permit}
+        {--types=ownership,permit : Comma separated attachment types: identity,ownership,permit}
         {--limit= : Process only the first N ObjectIDs}
         {--force : Re-download files that already exist}';
 
@@ -111,8 +112,8 @@ class DownloadHousingUnitAttachments extends Command
 
             if ($matchingAttachments->isEmpty()) {
                 $missing++;
-                fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', 'No ownership or permit attachments matched.']);
-                $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'not_found', '', 'No ownership or permit attachments matched.');
+                fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', 'No matching attachments were found.']);
+                $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'not_found', '', 'No matching attachments were found.');
                 $bar->advance();
 
                 continue;
@@ -192,6 +193,10 @@ class DownloadHousingUnitAttachments extends Command
      */
     private function objectIdsFromFile(string $filePath): array
     {
+        if (in_array(Str::lower(pathinfo($filePath, PATHINFO_EXTENSION)), ['xlsx', 'xls'], true)) {
+            return $this->objectIdsFromSpreadsheet($filePath);
+        }
+
         preg_match_all('/\d+(?:\.0+)?/', File::get($filePath), $matches);
 
         return collect($matches[0] ?? [])
@@ -205,9 +210,36 @@ class DownloadHousingUnitAttachments extends Command
     /**
      * @return array<int, string>
      */
+    private function objectIdsFromSpreadsheet(string $filePath): array
+    {
+        $spreadsheet = IOFactory::load($filePath);
+        $values = [];
+
+        foreach ($spreadsheet->getWorksheetIterator() as $worksheet) {
+            foreach ($worksheet->getRowIterator() as $row) {
+                foreach ($row->getCellIterator() as $cell) {
+                    $values[] = $cell->getFormattedValue();
+                }
+            }
+        }
+
+        $spreadsheet->disconnectWorksheets();
+
+        return collect($values)
+            ->map(fn (mixed $value): string => trim((string) $value))
+            ->filter(fn (string $value): bool => preg_match('/^\d+(?:\.0+)?$/', $value) === 1)
+            ->map(fn (string $value): string => (string) (int) $value)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
     private function selectedTypes(): array
     {
-        $allowed = ['ownership', 'permit'];
+        $allowed = ['identity', 'ownership', 'permit'];
 
         $types = collect(explode(',', (string) $this->option('types')))
             ->map(fn (string $type): string => trim($type))
@@ -228,6 +260,10 @@ class DownloadHousingUnitAttachments extends Command
         $searchableText = $this->attachmentSearchableText($attachment);
 
         foreach ($types as $type) {
+            if ($type === 'identity' && $this->containsAny($searchableText, ['identity', ' id ', 'id_', '_id', 'id-', '-id', 'passport', 'هوية', 'الهويه', 'الهوية', 'جواز'])) {
+                return 'identity';
+            }
+
             if ($type === 'ownership' && $this->containsAny($searchableText, ['ownership', 'owner', 'deed', 'title', 'land', 'ملكية', 'الملكية', 'طابو', 'سند', 'ارض', 'أرض'])) {
                 return 'ownership';
             }
@@ -301,42 +337,64 @@ class DownloadHousingUnitAttachments extends Command
         }
 
         $rowNumber = 1;
-        $publicUrlColumn = 8;
+        $sheet->setCellValue('A1', 'objectid');
+        $sheet->setCellValue('B1', 'رابط المرفق');
 
         while (($row = fgetcsv($handle)) !== false) {
-            foreach ($row as $index => $value) {
-                $columnNumber = $index + 1;
-                $cell = $sheet->getCell([$columnNumber, $rowNumber]);
+            if ($rowNumber === 1) {
+                $rowNumber++;
 
-                if ($rowNumber > 1 && $columnNumber === $publicUrlColumn && filled($value)) {
-                    $cell->setValue('فتح المرفق');
-                    $cell->getHyperlink()->setUrl((string) $value);
-                    $sheet->getStyle([$columnNumber, $rowNumber])->applyFromArray([
-                        'font' => [
-                            'color' => ['rgb' => '0563C1'],
-                            'underline' => true,
-                        ],
-                    ]);
-
-                    continue;
-                }
-
-                $cell->setValue($value);
+                continue;
             }
 
-            $rowNumber++;
+            $objectId = (string) ($row[0] ?? '');
+            $status = (string) ($row[5] ?? '');
+            $localPath = (string) ($row[6] ?? '');
+
+            if (! in_array($status, ['downloaded', 'skipped_existing'], true) || ! filled($localPath)) {
+                continue;
+            }
+
+            $relativePath = $this->localHyperlinkPath($localPath);
+
+            if (! filled($relativePath)) {
+                continue;
+            }
+
+            $excelRow = $sheet->getHighestRow() + 1;
+            $sheet->setCellValue("A{$excelRow}", $objectId);
+            $sheet->setCellValue("B{$excelRow}", 'فتح المرفق');
+            $sheet->getCell("B{$excelRow}")->getHyperlink()->setUrl($relativePath);
+            $sheet->getStyle("B{$excelRow}")->applyFromArray([
+                'font' => [
+                    'color' => ['rgb' => '0563C1'],
+                    'underline' => true,
+                ],
+            ]);
         }
 
         fclose($handle);
 
-        foreach (range('A', 'I') as $column) {
+        foreach (range('A', 'B') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:B1')->getFont()->setBold(true);
 
         (new Xlsx($spreadsheet))->save($xlsxPath);
         $spreadsheet->disconnectWorksheets();
+    }
+
+    private function localHyperlinkPath(string $localPath): string
+    {
+        $normalizedPath = str_replace('\\', '/', $localPath);
+        $position = strpos($normalizedPath, '/housing_units/');
+
+        if ($position === false) {
+            return '';
+        }
+
+        return ltrim(substr($normalizedPath, $position + 1), '/');
     }
 
     private function createZipArchive(string $outputDirectory, string $outputName): string
