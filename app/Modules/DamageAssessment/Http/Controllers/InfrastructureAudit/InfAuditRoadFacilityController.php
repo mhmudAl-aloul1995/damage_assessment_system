@@ -87,7 +87,7 @@ class InfAuditRoadFacilityController extends Controller
 
     public function mapData(Request $request): JsonResponse
     {
-        $query = $this->filteredAuditQuery($request)
+        $query = $this->filteredAuditQuery($request, applyVisibilityScope: false)
             ->select([
                 'road_facility_surveys.id',
                 'road_facility_surveys.objectid',
@@ -105,7 +105,7 @@ class InfAuditRoadFacilityController extends Controller
 
     public function mapObjectIds(Request $request): JsonResponse
     {
-        $objectIds = $this->filteredAuditQuery($request, false)
+        $objectIds = $this->filteredAuditQuery($request, false, false)
             ->whereNotNull('objectid')
             ->pluck('objectid')
             ->map(fn (mixed $objectId): int => (int) $objectId)
@@ -659,7 +659,7 @@ class InfAuditRoadFacilityController extends Controller
         $query->when($request->filled('to_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '<=', $request->date('to_date')?->toDateString()));
     }
 
-    private function filteredAuditQuery(Request $request, bool $includeDisplayColumns = true): Builder
+    private function filteredAuditQuery(Request $request, bool $includeDisplayColumns = true, bool $applyVisibilityScope = true): Builder
     {
         $query = RoadFacilitySurvey::query();
 
@@ -671,7 +671,9 @@ class InfAuditRoadFacilityController extends Controller
             $this->joinFieldEngineer($query);
         }
 
-        $this->scopeVisibleToUser($query);
+        if ($applyVisibilityScope) {
+            $this->scopeVisibleToUser($query);
+        }
         $this->applyFilters($query, $request);
         $this->applyExportSearch($query, $request);
 

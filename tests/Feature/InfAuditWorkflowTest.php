@@ -222,6 +222,64 @@ test('road audit map is wired to the current audit filters', function (): void {
         ->assertDontSee('Hidden Road');
 });
 
+test('road audit map shows all filtered roads regardless of auditor role visibility', function (): void {
+    $databaseOfficer = infAuditUser('Database Officer');
+    $engineer = infAuditUser('Inf - QC/QA Engineer');
+    $otherEngineer = infAuditUser('Inf - QC/QA Engineer');
+
+    $assignedRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 9201,
+        'globalid' => 'qc-assigned-road-global-id',
+        'str_name' => 'QC Assigned Road',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+    ]);
+
+    $unassignedToUserRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 9202,
+        'globalid' => 'qc-unassigned-road-global-id',
+        'str_name' => 'QC Unassigned Road',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+    ]);
+
+    foreach ([[$assignedRoad, $engineer], [$unassignedToUserRoad, $otherEngineer]] as [$road, $assignee]) {
+        InfAuditAssignment::query()->create([
+            'type' => 'road_facility',
+            'globalid' => $road->globalid,
+            'manager_id' => $databaseOfficer->id,
+            'user_id' => $assignee->id,
+        ]);
+    }
+
+    $filters = [
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+    ];
+
+    $this->actingAs($engineer)
+        ->getJson(route('inf-audit.roads.data', array_merge($filters, [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ])), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'objectid' => 9201,
+        ])
+        ->assertDontSee('QC Unassigned Road');
+
+    $this->actingAs($engineer)
+        ->getJson(route('inf-audit.roads.map-objectids', $filters))
+        ->assertOk()
+        ->assertJson([
+            'objectids' => [9201, 9202],
+            'count' => 2,
+        ]);
+});
+
 test('database officer can assign and inf engineer can audit public building and units', function (): void {
     $officer = infAuditUser('Database Officer');
     $engineer = infAuditUser('Inf - QC/QA Engineer');
