@@ -113,8 +113,38 @@ class DownloadHousingUnitAttachments extends Command
 
             if ($matchingAttachments->isEmpty()) {
                 $missing++;
-                fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', $this->arcgisAttachmentsUrl($objectId, $token), 'No matching attachments were found.']);
-                $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'not_found', '', 'No matching attachments were found.');
+
+                if ($attachments === []) {
+                    fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', '', 'No matching attachments were found.']);
+                    $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'not_found', '', 'No matching attachments were found.');
+                    $bar->advance();
+
+                    continue;
+                }
+
+                foreach ($attachments as $attachment) {
+                    $attachmentId = $attachment['id'] ?? null;
+                    $originalName = (string) ($attachment['name'] ?? "attachment-{$attachmentId}");
+                    $contentType = (string) ($attachment['contentType'] ?? '');
+
+                    if (! filled($attachmentId)) {
+                        continue;
+                    }
+
+                    fputcsv($indexHandle, [
+                        $objectId,
+                        $attachmentId,
+                        'arcgis',
+                        $originalName,
+                        $contentType,
+                        'online_only',
+                        '',
+                        '',
+                        $this->arcgisAttachmentUrl($objectId, (string) $attachmentId, $token),
+                        'No selected attachment types matched; direct ArcGIS attachment link was added.',
+                    ]);
+                }
+
                 $bar->advance();
 
                 continue;
@@ -354,11 +384,11 @@ class DownloadHousingUnitAttachments extends Command
             $localPath = (string) ($row[6] ?? '');
             $arcgisUrl = (string) ($row[8] ?? '');
 
-            if ($status === 'not_found' && filled($arcgisUrl)) {
+            if (in_array($status, ['not_found', 'online_only'], true) && filled($arcgisUrl)) {
                 $excelRow = $sheet->getHighestRow() + 1;
                 $sheet->setCellValue("A{$excelRow}", $objectId);
                 $sheet->setCellValue("B{$excelRow}", '');
-                $sheet->setCellValue("C{$excelRow}", 'فتح مرفقات ArcGIS');
+                $sheet->setCellValue("C{$excelRow}", 'فتح المرفق من ArcGIS');
                 $sheet->getCell("C{$excelRow}")->getHyperlink()->setUrl($arcgisUrl);
                 $this->styleHyperlink("C{$excelRow}", $sheet);
 
@@ -404,11 +434,13 @@ class DownloadHousingUnitAttachments extends Command
         ]);
     }
 
-    private function arcgisAttachmentsUrl(string $objectId, string $token): string
+    private function arcgisAttachmentUrl(string $objectId, string $attachmentId, string $token): string
     {
         return 'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/'
             .rawurlencode($objectId)
-            .'/attachments?f=html&token='
+            .'/attachments/'
+            .rawurlencode($attachmentId)
+            .'?token='
             .rawurlencode($token);
     }
 

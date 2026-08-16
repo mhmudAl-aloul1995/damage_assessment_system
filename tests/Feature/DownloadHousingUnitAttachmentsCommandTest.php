@@ -36,7 +36,13 @@ it('downloads matching housing unit ownership and permit attachments from object
             ],
         ]),
         'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/11/attachments' => Http::response([
-            'attachmentInfos' => [],
+            'attachmentInfos' => [
+                [
+                    'id' => 601,
+                    'name' => 'damage_photo.jpg',
+                    'contentType' => 'image/jpeg',
+                ],
+            ],
         ]),
         'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/10/attachments/500*' => Http::response('identity-file'),
         'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/10/attachments/501*' => Http::response('ownership-file'),
@@ -73,7 +79,7 @@ it('downloads matching housing unit ownership and permit attachments from object
         expect(File::get($outputPath.'/housing_units/10/10_unit_permit_503_municipality_permit.pdf'))->toBe('permit-file');
         expect(File::exists($outputPath.'/attachments-index.csv'))->toBeTrue();
         expect(File::exists($outputPath.'/attachments-index.xlsx'))->toBeTrue();
-        expect(File::get($outputPath.'/attachments-index.csv'))->toContain('not_found');
+        expect(File::get($outputPath.'/attachments-index.csv'))->toContain('online_only');
         expect(File::exists($outputPath.'/index.html'))->toBeTrue();
         expect(File::get($outputPath.'/index.html'))->toContain('فتح المرفق');
         expect(File::get($outputPath.'/index.html'))->toContain('/storage/exports/testing_unit_attachments/housing_units/10/10_unit_ownership_501_ownership_image.jpg');
@@ -89,8 +95,8 @@ it('downloads matching housing unit ownership and permit attachments from object
         expect($sheet->getCell('B2')->getValue())->toBe('فتح المرفق');
         expect($sheet->getCell('B2')->getHyperlink()->getUrl())->toBe('housing_units/10/10_unit_identity_500_identity_image.jpg');
         expect($sheet->getCell('A5')->getValue())->toBe(11);
-        expect($sheet->getCell('C5')->getValue())->toBe('فتح مرفقات ArcGIS');
-        expect($sheet->getCell('C5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments?f=html&token=arcgis-token');
+        expect($sheet->getCell('C5')->getValue())->toBe('فتح المرفق من ArcGIS');
+        expect($sheet->getCell('C5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments/601?token=arcgis-token');
 
         $spreadsheet->disconnectWorksheets();
 
