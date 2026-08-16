@@ -432,12 +432,16 @@ class DownloadHousingUnitAttachments extends Command
             $sheet->setCellValue("C{$excelRow}", implode("\n", $urls));
             $sheet->getCell("C{$excelRow}")->getHyperlink()->setUrl($urls[0]);
             $sheet->getStyle("C{$excelRow}")->getAlignment()->setWrapText(true);
+            $sheet->getRowDimension($excelRow)->setRowHeight(max(24, count($urls) * 18));
             $this->styleHyperlink("C{$excelRow}", $sheet);
         }
 
         foreach (range('A', 'C') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
+
+        $sheet->getColumnDimension('C')->setAutoSize(false);
+        $sheet->getColumnDimension('C')->setWidth(120);
 
         $sheet->getStyle('A1:C1')->getFont()->setBold(true);
 

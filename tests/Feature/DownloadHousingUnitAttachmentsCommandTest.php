@@ -47,6 +47,11 @@ it('downloads matching housing unit ownership and permit attachments from object
                     'name' => 'damage_photo_2.jpg',
                     'contentType' => 'image/jpeg',
                 ],
+                [
+                    'id' => 336370,
+                    'name' => 'احمد.jpeg',
+                    'contentType' => 'image/jpeg',
+                ],
             ],
         ]),
         'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/10/attachments/500*' => Http::response('identity-file'),
@@ -102,7 +107,9 @@ it('downloads matching housing unit ownership and permit attachments from object
         expect($sheet->getCell('A5')->getValue())->toBe(11);
         expect($sheet->getCell('C5')->getValue())->toContain("/FeatureServer/1/11/attachments/601?token=arcgis-token\n");
         expect($sheet->getCell('C5')->getValue())->toContain('/FeatureServer/1/11/attachments/602?token=arcgis-token');
+        expect($sheet->getCell('C5')->getValue())->toContain('/FeatureServer/1/11/attachments/336370?token=arcgis-token');
         expect($sheet->getCell('C5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments/601?token=arcgis-token');
+        expect($sheet->getRowDimension(5)->getRowHeight())->toBeGreaterThan(24);
 
         $spreadsheet->disconnectWorksheets();
 
