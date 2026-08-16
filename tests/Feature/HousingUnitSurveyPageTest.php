@@ -51,6 +51,11 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Apartment');
     $response->assertSee('Totally Damaged');
     $response->assertSee('Engineer One');
+
+    expect(file_get_contents(base_path('assets/js/custom/DamageAssessment/export-housings.js')))
+        ->toContain('showExportLoading')
+        ->toContain('hideExportLoading')
+        ->toContain('startDownload');
 });
 
 it('counts housing page total units from fully and partially damaged units only', function () {

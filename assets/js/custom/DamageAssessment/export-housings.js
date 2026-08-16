@@ -1,7 +1,6 @@
 "use strict";
 
 var KTHousingExportModals = function () {
-    var successText = "The export request has been started successfully.";
     var errorText = "Please fix the highlighted errors and try again.";
     var cancelText = "Are you sure you want to cancel?";
 
@@ -17,6 +16,44 @@ var KTHousingExportModals = function () {
         }
 
         return payload;
+    };
+
+    var showExportLoading = function (button) {
+        button.setAttribute('data-kt-indicator', 'on');
+        button.disabled = true;
+
+        if (typeof showAppLoading === 'function') {
+            showAppLoading();
+        }
+    };
+
+    var hideExportLoading = function (button) {
+        button.removeAttribute('data-kt-indicator');
+        button.disabled = false;
+
+        if (typeof hideAppLoading === 'function') {
+            hideAppLoading();
+        }
+    };
+
+    var startDownload = function (url, button) {
+        var iframe = document.createElement('iframe');
+        var timeout = window.setTimeout(function () {
+            hideExportLoading(button);
+            iframe.remove();
+        }, 120000);
+
+        iframe.style.display = 'none';
+        iframe.onload = function () {
+            window.clearTimeout(timeout);
+            hideExportLoading(button);
+            window.setTimeout(function () {
+                iframe.remove();
+            }, 1000);
+        };
+
+        iframe.src = url;
+        document.body.appendChild(iframe);
     };
 
     var initExportModal = function (config) {
@@ -79,27 +116,12 @@ var KTHousingExportModals = function () {
                     return;
                 }
 
-                submitButton.setAttribute('data-kt-indicator', 'on');
-                submitButton.disabled = true;
+                showExportLoading(submitButton);
 
                 var format = ($(form).find('[name="format"]').val() || 'xlsx').toString().toLowerCase();
                 var exportUrl = buildExportUrl(format);
 
-                window.location.href = exportUrl + "?" + serializeForms(form, config.includeFilters);
-
-                Swal.fire({
-                    text: successText,
-                    icon: "success",
-                    buttonsStyling: false,
-                    confirmButtonText: "OK",
-                    customClass: {
-                        confirmButton: "btn btn-primary"
-                    }
-                }).then(function () {
-                    modal.hide();
-                    submitButton.removeAttribute('data-kt-indicator');
-                    submitButton.disabled = false;
-                });
+                startDownload(exportUrl + "?" + serializeForms(form, config.includeFilters), submitButton);
             });
         });
 
