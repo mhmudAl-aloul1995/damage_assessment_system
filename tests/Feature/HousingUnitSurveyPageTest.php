@@ -55,7 +55,8 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     expect(file_get_contents(base_path('assets/js/custom/DamageAssessment/export-housings.js')))
         ->toContain('showExportLoading')
         ->toContain('hideExportLoading')
-        ->toContain('startDownload');
+        ->toContain('startDownload')
+        ->not->toContain('120000');
 });
 
 it('counts housing page total units from fully and partially damaged units only', function () {

@@ -38,14 +38,9 @@ var KTHousingExportModals = function () {
 
     var startDownload = function (url, button) {
         var iframe = document.createElement('iframe');
-        var timeout = window.setTimeout(function () {
-            hideExportLoading(button);
-            iframe.remove();
-        }, 120000);
 
         iframe.style.display = 'none';
         iframe.onload = function () {
-            window.clearTimeout(timeout);
             hideExportLoading(button);
             window.setTimeout(function () {
                 iframe.remove();
