@@ -32,6 +32,7 @@ class DownloadHousingUnitAttachments extends Command
         {--types=ownership,permit : Comma separated attachment types: identity,ownership,permit}
         {--exclude-damage : Download all housing unit attachments except damage photos}
         {--include-boq-pdf : Generate a local BOQ PDF from v_housing_units_audited and link it in Excel}
+        {--boq-pdf-url : Link to the existing online BOQ PDF export instead of generating local PDF files}
         {--limit= : Process only the first N ObjectIDs}
         {--force : Re-download files that already exist}';
 
@@ -71,6 +72,7 @@ class DownloadHousingUnitAttachments extends Command
         $types = $this->selectedTypes();
         $excludeDamage = (bool) $this->option('exclude-damage');
         $includeBoqPdf = (bool) $this->option('include-boq-pdf');
+        $useBoqPdfUrl = (bool) $this->option('boq-pdf-url');
         $outputName = $this->safePathSegment((string) ($this->option('output') ?: 'housing_unit_attachments_'.now()->format('Ymd_His')));
         $outputDirectory = storage_path('app/public/exports/'.$outputName);
         $boqPdfDirectory = $outputDirectory.'/boq_pdfs';
@@ -105,7 +107,7 @@ class DownloadHousingUnitAttachments extends Command
         $htmlRows = [];
         $this->info('ObjectIDs: '.count($objectIds));
         $this->info($excludeDamage ? 'Mode: all attachments except damage photos' : 'Types: '.implode(', ', $types));
-        $this->info($includeBoqPdf ? 'BOQ PDF: enabled' : 'BOQ PDF: disabled');
+        $this->info($includeBoqPdf ? 'BOQ PDF: '.($useBoqPdfUrl ? 'online export links' : 'local files') : 'BOQ PDF: disabled');
         $this->info("Output: {$outputDirectory}");
 
         $token = $arcgis->getToken();
@@ -119,7 +121,7 @@ class DownloadHousingUnitAttachments extends Command
 
         foreach ($objectIds as $objectId) {
             $boqPdfRelativePath = $includeBoqPdf
-                ? $this->generateBoqPdf($objectId, $boqPdfDirectory)
+                ? ($useBoqPdfUrl ? $this->boqPdfExportUrl($objectId) : $this->generateBoqPdf($objectId, $boqPdfDirectory))
                 : '';
 
             $attachmentsResult = $this->getHousingUnitAttachments($arcgis, $objectId, $token);
@@ -365,6 +367,22 @@ class DownloadHousingUnitAttachments extends Command
         }
 
         return File::exists($localPath) ? 'boq_pdfs/'.$fileName : '';
+    }
+
+    private function boqPdfExportUrl(string $objectId): string
+    {
+        $housingUnit = VHousingUnitAudited::query()
+            ->where('objectid', $objectId)
+            ->first(['objectid', 'globalid']);
+
+        if ($housingUnit === null || ! filled($housingUnit->globalid)) {
+            return '';
+        }
+
+        return route('housing.export', [
+            'format' => 'pdf',
+            'globalid' => $housingUnit->globalid,
+        ]);
     }
 
     /**
@@ -859,7 +877,7 @@ class DownloadHousingUnitAttachments extends Command
             $boqPdfPath = (string) ($row[10] ?? '');
 
             if (filled($boqPdfPath)) {
-                $boqPdfPathsByObjectId[$objectId] = $this->localHyperlinkPath($boqPdfPath);
+                $boqPdfPathsByObjectId[$objectId] = $this->boqPdfHyperlink($boqPdfPath);
             }
 
             if (in_array($status, ['not_found', 'online_only'], true) && filled($arcgisUrl)) {
@@ -1021,6 +1039,15 @@ class DownloadHousingUnitAttachments extends Command
         }
 
         return '';
+    }
+
+    private function boqPdfHyperlink(string $boqPdfPath): string
+    {
+        if (Str::startsWith($boqPdfPath, ['http://', 'https://'])) {
+            return $boqPdfPath;
+        }
+
+        return $this->localHyperlinkPath($boqPdfPath);
     }
 
     private function createZipArchive(string $outputDirectory, string $outputName): string

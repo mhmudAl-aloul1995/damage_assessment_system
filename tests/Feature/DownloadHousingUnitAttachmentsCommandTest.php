@@ -337,3 +337,63 @@ it('adds a local BOQ PDF link generated from the audited housing units view', fu
         File::delete($zipPath);
     }
 });
+
+it('adds an online BOQ PDF export link without generating local PDF files', function () {
+    Cache::forget('arcgis_token');
+
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+    });
+
+    DB::table('v_housing_units_audited')->insert([
+        'objectid' => 15,
+        'globalid' => 'housing-unit-online-boq-pdf',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/15/attachments' => Http::response([
+            'attachmentInfos' => [],
+        ]),
+    ]);
+
+    $inputPath = storage_path('app/testing-unit-online-boq-objectids.txt');
+    $outputPath = storage_path('app/public/exports/testing_unit_online_boq_pdf_link');
+    $zipPath = storage_path('app/public/exports/testing_unit_online_boq_pdf_link.zip');
+
+    File::put($inputPath, '15');
+    File::deleteDirectory($outputPath);
+    File::delete($zipPath);
+
+    try {
+        $this->artisan('arcgis:download-housing-unit-attachments', [
+            'file' => $inputPath,
+            '--output' => 'testing_unit_online_boq_pdf_link',
+            '--include-boq-pdf' => true,
+            '--boq-pdf-url' => true,
+        ])->assertSuccessful();
+
+        expect(File::exists($outputPath.'/boq_pdfs'))->toBeFalse();
+
+        $spreadsheet = IOFactory::load($outputPath.'/attachments-index.xlsx');
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->getCell('A2')->getValue())->toBe(15);
+        expect($sheet->getCell('B2')->getValue())->toBe('فتح جدول الكميات');
+        expect($sheet->getCell('B2')->getHyperlink()->getUrl())
+            ->toBe(route('housing.export', [
+                'format' => 'pdf',
+                'globalid' => 'housing-unit-online-boq-pdf',
+            ]));
+
+        $spreadsheet->disconnectWorksheets();
+    } finally {
+        File::delete($inputPath);
+        File::deleteDirectory($outputPath);
+        File::delete($zipPath);
+    }
+});
