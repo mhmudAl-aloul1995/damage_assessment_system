@@ -118,6 +118,22 @@ it('shows missing citizen identities sidebar link to auditing supervisor and pro
     'project officer' => 'Project Officer',
 ]);
 
+it('shows infrastructure audit links to project officers', function () {
+    $role = Role::findOrCreate('Project Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $urls = Sidebar::forUser($user)
+        ->flatMap(fn (array $module) => $module['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->pluck('url')
+        ->all();
+
+    expect($urls)
+        ->toContain('damage-assessment/inf-audit/public-buildings')
+        ->toContain('damage-assessment/inf-audit/roads');
+});
+
 it('groups visible sidebar sections by module', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

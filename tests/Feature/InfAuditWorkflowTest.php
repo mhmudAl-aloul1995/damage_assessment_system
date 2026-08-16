@@ -27,6 +27,7 @@ beforeEach(function (): void {
     app(PermissionRegistrar::class)->forgetCachedPermissions();
 
     Role::query()->firstOrCreate(['name' => 'Database Officer']);
+    Role::query()->firstOrCreate(['name' => 'Project Officer']);
 
     $this->seed([
         InfAuditRolesSeeder::class,
@@ -41,6 +42,85 @@ function infAuditUser(string $role): User
 
     return $user;
 }
+
+test('project officer can open infrastructure audit records without assignment powers', function (): void {
+    $projectOfficer = infAuditUser('Project Officer');
+    $engineer = infAuditUser('Inf - QC/QA Engineer');
+
+    $publicBuilding = PublicBuildingSurvey::query()->create([
+        'objectid' => 8149,
+        'globalid' => 'project-officer-public-building-global-id',
+        'building_name' => 'Project Officer Public Building',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Al-Sabra',
+    ]);
+
+    $road = RoadFacilitySurvey::query()->create([
+        'objectid' => 8361,
+        'globalid' => 'project-officer-road-global-id',
+        'str_name' => 'Project Officer Road',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+    ]);
+
+    $this->actingAs($projectOfficer)
+        ->get(route('inf-audit.public-buildings.index'))
+        ->assertOk();
+
+    $this->actingAs($projectOfficer)
+        ->getJson(route('inf-audit.public-buildings.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'objectid' => 8149,
+        ]);
+
+    $this->actingAs($projectOfficer)
+        ->get(route('inf-audit.public-buildings.show', $publicBuilding))
+        ->assertOk()
+        ->assertSee('Project Officer Public Building');
+
+    $this->actingAs($projectOfficer)
+        ->get(route('inf-audit.roads.index'))
+        ->assertOk();
+
+    $this->actingAs($projectOfficer)
+        ->getJson(route('inf-audit.roads.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'objectid' => 8361,
+        ]);
+
+    $this->actingAs($projectOfficer)
+        ->get(route('inf-audit.roads.show', $road))
+        ->assertOk()
+        ->assertSee('Project Officer Road');
+
+    $this->actingAs($projectOfficer)
+        ->postJson(route('inf-audit.public-buildings.assign'), [
+            'ids' => [$publicBuilding->id],
+            'assigned_to' => $engineer->id,
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($projectOfficer)
+        ->postJson(route('inf-audit.roads.assign'), [
+            'ids' => [$road->id],
+            'assigned_to' => $engineer->id,
+        ])
+        ->assertForbidden();
+});
 
 test('database officer can assign and inf engineer can audit public building and units', function (): void {
     $officer = infAuditUser('Database Officer');

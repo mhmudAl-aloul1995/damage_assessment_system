@@ -217,6 +217,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.export',
             'audit.view',
             'audit.final-approve',
+            'inf-audit.public-buildings.view',
+            'inf-audit.roads.view',
             'committee-decisions.view',
             'committee-decisions.create',
             'committee-decisions.update',

@@ -256,7 +256,7 @@ class AreaProductivityReportService
         $lengthColumn = $this->roadLengthColumn();
         $lengthExpression = $lengthColumn !== null
             ? "ROUND(SUM(CASE
-                    WHEN road_facility_surveys.road_damage_level IN ('destroyed', 'severe', 'moderate', 'minor', 'No_Damage', 'no_damage')
+                    WHEN road_facility_surveys.field_status = 'COMPLETED'
                     THEN COALESCE(road_facility_surveys.{$lengthColumn}, 0)
                     ELSE 0
                 END) * 111, 2)"
