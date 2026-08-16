@@ -81,12 +81,16 @@ it('downloads matching housing unit ownership and permit attachments from object
         $spreadsheet = IOFactory::load($outputPath.'/attachments-index.xlsx');
         $sheet = $spreadsheet->getActiveSheet();
 
-        expect($sheet->getHighestColumn())->toBe('B');
+        expect($sheet->getHighestColumn())->toBe('C');
         expect($sheet->getCell('A1')->getValue())->toBe('objectid');
-        expect($sheet->getCell('B1')->getValue())->toBe('رابط المرفق');
+        expect($sheet->getCell('B1')->getValue())->toBe('رابط المرفق المحلي');
+        expect($sheet->getCell('C1')->getValue())->toBe('رابط مرفقات ArcGIS');
         expect($sheet->getCell('A2')->getValue())->toBe(10);
         expect($sheet->getCell('B2')->getValue())->toBe('فتح المرفق');
         expect($sheet->getCell('B2')->getHyperlink()->getUrl())->toBe('housing_units/10/10_unit_identity_500_identity_image.jpg');
+        expect($sheet->getCell('A5')->getValue())->toBe(11);
+        expect($sheet->getCell('C5')->getValue())->toBe('فتح مرفقات ArcGIS');
+        expect($sheet->getCell('C5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments?f=html&token=arcgis-token');
 
         $spreadsheet->disconnectWorksheets();
 

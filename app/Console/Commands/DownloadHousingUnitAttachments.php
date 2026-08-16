@@ -83,6 +83,7 @@ class DownloadHousingUnitAttachments extends Command
             'status',
             'local_path',
             'public_url',
+            'arcgis_attachments_url',
             'message',
         ]);
 
@@ -112,7 +113,7 @@ class DownloadHousingUnitAttachments extends Command
 
             if ($matchingAttachments->isEmpty()) {
                 $missing++;
-                fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', 'No matching attachments were found.']);
+                fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', $this->arcgisAttachmentsUrl($objectId, $token), 'No matching attachments were found.']);
                 $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'not_found', '', 'No matching attachments were found.');
                 $bar->advance();
 
@@ -128,7 +129,7 @@ class DownloadHousingUnitAttachments extends Command
 
                 if (! filled($attachmentId)) {
                     $failed++;
-                    fputcsv($indexHandle, [$objectId, '', $matchedType, $originalName, $contentType, 'failed', '', '', 'Missing attachment id.']);
+                    fputcsv($indexHandle, [$objectId, '', $matchedType, $originalName, $contentType, 'failed', '', '', '', 'Missing attachment id.']);
                     $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'failed', '', 'Missing attachment id.');
 
                     continue;
@@ -141,7 +142,7 @@ class DownloadHousingUnitAttachments extends Command
 
                 if (File::exists($localPath) && ! $this->option('force')) {
                     $matched++;
-                    fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'skipped_existing', $localPath, $publicUrl, 'File already exists.']);
+                    fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'skipped_existing', $localPath, $publicUrl, '', 'File already exists.']);
                     $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'skipped_existing', $publicUrl, 'File already exists.');
 
                     continue;
@@ -151,7 +152,7 @@ class DownloadHousingUnitAttachments extends Command
 
                 if (! ($download['success'] ?? false)) {
                     $failed++;
-                    fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'failed', '', '', (string) ($download['message'] ?? 'Download failed.')]);
+                    fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'failed', '', '', '', (string) ($download['message'] ?? 'Download failed.')]);
                     $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'failed', '', (string) ($download['message'] ?? 'Download failed.'));
 
                     continue;
@@ -160,7 +161,7 @@ class DownloadHousingUnitAttachments extends Command
                 File::put($localPath, (string) ($download['body'] ?? ''));
                 $downloaded++;
                 $matched++;
-                fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'downloaded', $localPath, $publicUrl, '']);
+                fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'downloaded', $localPath, $publicUrl, '', '']);
                 $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'downloaded', $publicUrl, '');
             }
 
@@ -338,7 +339,8 @@ class DownloadHousingUnitAttachments extends Command
 
         $rowNumber = 1;
         $sheet->setCellValue('A1', 'objectid');
-        $sheet->setCellValue('B1', 'رابط المرفق');
+        $sheet->setCellValue('B1', 'رابط المرفق المحلي');
+        $sheet->setCellValue('C1', 'رابط مرفقات ArcGIS');
 
         while (($row = fgetcsv($handle)) !== false) {
             if ($rowNumber === 1) {
@@ -350,6 +352,18 @@ class DownloadHousingUnitAttachments extends Command
             $objectId = (string) ($row[0] ?? '');
             $status = (string) ($row[5] ?? '');
             $localPath = (string) ($row[6] ?? '');
+            $arcgisUrl = (string) ($row[8] ?? '');
+
+            if ($status === 'not_found' && filled($arcgisUrl)) {
+                $excelRow = $sheet->getHighestRow() + 1;
+                $sheet->setCellValue("A{$excelRow}", $objectId);
+                $sheet->setCellValue("B{$excelRow}", '');
+                $sheet->setCellValue("C{$excelRow}", 'فتح مرفقات ArcGIS');
+                $sheet->getCell("C{$excelRow}")->getHyperlink()->setUrl($arcgisUrl);
+                $this->styleHyperlink("C{$excelRow}", $sheet);
+
+                continue;
+            }
 
             if (! in_array($status, ['downloaded', 'skipped_existing'], true) || ! filled($localPath)) {
                 continue;
@@ -365,24 +379,37 @@ class DownloadHousingUnitAttachments extends Command
             $sheet->setCellValue("A{$excelRow}", $objectId);
             $sheet->setCellValue("B{$excelRow}", 'فتح المرفق');
             $sheet->getCell("B{$excelRow}")->getHyperlink()->setUrl($relativePath);
-            $sheet->getStyle("B{$excelRow}")->applyFromArray([
-                'font' => [
-                    'color' => ['rgb' => '0563C1'],
-                    'underline' => true,
-                ],
-            ]);
+            $this->styleHyperlink("B{$excelRow}", $sheet);
         }
 
         fclose($handle);
 
-        foreach (range('A', 'B') as $column) {
+        foreach (range('A', 'C') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        $sheet->getStyle('A1:B1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:C1')->getFont()->setBold(true);
 
         (new Xlsx($spreadsheet))->save($xlsxPath);
         $spreadsheet->disconnectWorksheets();
+    }
+
+    private function styleHyperlink(string $coordinate, \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet): void
+    {
+        $sheet->getStyle($coordinate)->applyFromArray([
+            'font' => [
+                'color' => ['rgb' => '0563C1'],
+                'underline' => true,
+            ],
+        ]);
+    }
+
+    private function arcgisAttachmentsUrl(string $objectId, string $token): string
+    {
+        return 'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/'
+            .rawurlencode($objectId)
+            .'/attachments?f=html&token='
+            .rawurlencode($token);
     }
 
     private function localHyperlinkPath(string $localPath): string
