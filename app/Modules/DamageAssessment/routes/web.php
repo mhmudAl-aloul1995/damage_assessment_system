@@ -165,6 +165,8 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/roads', [InfAuditRoadFacilityController::class, 'index'])->name('roads.index');
         Route::get('/roads/data', [InfAuditRoadFacilityController::class, 'data'])->name('roads.data');
+        Route::get('/roads/map-data', [InfAuditRoadFacilityController::class, 'mapData'])->name('roads.map-data');
+        Route::get('/roads/map-objectids', [InfAuditRoadFacilityController::class, 'mapObjectIds'])->name('roads.map-objectids');
         Route::get('/roads/export/{format}', [InfAuditRoadFacilityController::class, 'export'])->name('roads.export');
         Route::post('/roads/assign', [InfAuditRoadFacilityController::class, 'bulkAssign'])->name('roads.assign');
         Route::get('/roads/{road:globalid}', [InfAuditRoadFacilityController::class, 'show'])->name('roads.show');

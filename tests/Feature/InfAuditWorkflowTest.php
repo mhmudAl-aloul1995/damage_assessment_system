@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Exports\InfAuditRoadsSummaryExport;
+use App\Models\InfAuditAssignment;
 use App\Models\InfAuditStatus;
 use App\Models\InfEditAssessment;
 use App\Models\PublicBuildingAuditHistory;
@@ -16,6 +17,7 @@ use App\Models\RoadFacilityFilter;
 use App\Models\RoadFacilitySurvey;
 use App\Models\RoadFacilitySurveyItem;
 use App\Models\User;
+use App\services\ArcgisService;
 use Database\Seeders\InfAuditRolesSeeder;
 use Database\Seeders\InfAuditStatusesSeeder;
 use Illuminate\Support\Facades\Schema;
@@ -25,6 +27,14 @@ use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function (): void {
     app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
 
     Role::query()->firstOrCreate(['name' => 'Database Officer']);
     Role::query()->firstOrCreate(['name' => 'Project Officer']);
@@ -120,6 +130,96 @@ test('project officer can open infrastructure audit records without assignment p
             'assigned_to' => $engineer->id,
         ])
         ->assertForbidden();
+});
+
+test('road audit map is wired to the current audit filters', function (): void {
+    config()->set('services.arcgis.road_facility_survey_layer_url', 'https://example.test/FeatureServer');
+
+    $databaseOfficer = infAuditUser('Database Officer');
+    $auditor = infAuditUser('Inf - QC/QA Engineer');
+    $otherAuditor = infAuditUser('Inf - QC/QA Engineer');
+    $status = InfAuditStatus::query()->where('name', 'assigned')->firstOrFail();
+
+    $matchingRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 9101,
+        'globalid' => 'filtered-road-global-id',
+        'str_name' => 'Filtered Road',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'road_damage_level' => 'moderate',
+    ]);
+
+    $hiddenRoad = RoadFacilitySurvey::query()->create([
+        'objectid' => 9102,
+        'globalid' => 'hidden-road-global-id',
+        'str_name' => 'Hidden Road',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'road_damage_level' => 'severe',
+    ]);
+
+    InfAuditAssignment::query()->create([
+        'type' => 'road_facility',
+        'globalid' => $matchingRoad->globalid,
+        'manager_id' => $databaseOfficer->id,
+        'user_id' => $auditor->id,
+    ]);
+
+    InfAuditAssignment::query()->create([
+        'type' => 'road_facility',
+        'globalid' => $hiddenRoad->globalid,
+        'manager_id' => $databaseOfficer->id,
+        'user_id' => $otherAuditor->id,
+    ]);
+
+    foreach ([$matchingRoad, $hiddenRoad] as $road) {
+        RoadFacilityAuditStatus::query()->create([
+            'road_facility_survey_id' => $road->id,
+            'objectid' => $road->objectid,
+            'globalid' => $road->globalid,
+            'status_id' => $status->id,
+            'assigned_to' => $auditor->id,
+            'updated_by' => $databaseOfficer->id,
+        ]);
+    }
+
+    $this->actingAs($databaseOfficer)
+        ->get(route('inf-audit.roads.index'))
+        ->assertOk()
+        ->assertSee('open_roads_map_modal_btn', false)
+        ->assertSee('inf_roads_map_modal', false)
+        ->assertSee('infRoadFacilityViewDiv', false)
+        ->assertSee('map-objectids', false)
+        ->assertSee('map-data', false);
+
+    $filters = [
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'status' => 'assigned',
+        'auditor' => $auditor->id,
+    ];
+
+    $this->actingAs($databaseOfficer)
+        ->getJson(route('inf-audit.roads.map-objectids', $filters))
+        ->assertOk()
+        ->assertExactJson([
+            'objectids' => [9101],
+            'count' => 1,
+        ]);
+
+    $this->actingAs($databaseOfficer)
+        ->getJson(route('inf-audit.roads.map-data', array_merge($filters, [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ])), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonFragment([
+            'objectid' => 9101,
+        ])
+        ->assertDontSee('Hidden Road');
 });
 
 test('database officer can assign and inf engineer can audit public building and units', function (): void {

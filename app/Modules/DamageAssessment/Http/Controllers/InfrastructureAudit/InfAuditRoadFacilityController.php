@@ -85,6 +85,39 @@ class InfAuditRoadFacilityController extends Controller
             ->toJson();
     }
 
+    public function mapData(Request $request): JsonResponse
+    {
+        $query = $this->filteredAuditQuery($request)
+            ->select([
+                'road_facility_surveys.id',
+                'road_facility_surveys.objectid',
+                'road_facility_surveys.str_name',
+                'road_facility_surveys.municipalitie',
+                'road_facility_surveys.neighborhood',
+                'road_facility_surveys.road_damage_level',
+            ]);
+
+        return DataTables::eloquent($query)
+            ->editColumn('road_damage_level', fn (RoadFacilitySurvey $survey): string => $this->damageLevelBadge($survey->road_damage_level))
+            ->rawColumns(['road_damage_level'])
+            ->toJson();
+    }
+
+    public function mapObjectIds(Request $request): JsonResponse
+    {
+        $objectIds = $this->filteredAuditQuery($request, false)
+            ->whereNotNull('objectid')
+            ->pluck('objectid')
+            ->map(fn (mixed $objectId): int => (int) $objectId)
+            ->filter(fn (int $objectId): bool => $objectId > 0)
+            ->values();
+
+        return response()->json([
+            'objectids' => $objectIds,
+            'count' => $objectIds->count(),
+        ]);
+    }
+
     public function export(Request $request, string $format): BinaryFileResponse|Response
     {
         $format = strtolower($format);
@@ -337,13 +370,32 @@ class InfAuditRoadFacilityController extends Controller
 
     private function indexData(): array
     {
+        $arcgis = app(ArcgisService::class);
+
         return [
             'statuses' => InfAuditStatus::query()->orderBy('order_step')->get(),
             'engineers' => User::role('Inf - QC/QA Engineer')->orderBy('name')->get(['id', 'name']),
             'fieldEngineers' => $this->fieldEngineerOptions(),
             'municipalities' => RoadFacilitySurvey::query()->whereNotNull('municipalitie')->distinct()->orderBy('municipalitie')->pluck('municipalitie'),
             'neighborhoods' => RoadFacilitySurvey::query()->whereNotNull('neighborhood')->distinct()->orderBy('neighborhood')->pluck('neighborhood'),
+            'roadFacilityLayerUrl' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url')),
+            'token' => $arcgis->getToken(),
         ];
+    }
+
+    private function normalizeFeatureLayerUrl(string $url): string
+    {
+        $normalized = rtrim($url, '/');
+
+        if ($normalized === '') {
+            return $normalized;
+        }
+
+        if (preg_match('/\/\d+$/', $normalized) === 1) {
+            return $normalized;
+        }
+
+        return $normalized.'/0';
     }
 
     private function assignment(string $globalid): ?InfAuditAssignment
@@ -929,6 +981,18 @@ class InfAuditRoadFacilityController extends Controller
         return $status
             ? '<span class="'.e($status->badge_class).'">'.e($status->label).'</span>'
             : '<span class="badge badge-light">-</span>';
+    }
+
+    private function damageLevelBadge(?string $damageLevel): string
+    {
+        return match ($damageLevel) {
+            'destroyed' => '<span class="badge badge-light-danger fw-bold">'.e(__('multilingual.damage_dashboard.destroyed')).'</span>',
+            'severe' => '<span class="badge badge-light-danger fw-bold">'.e(__('multilingual.damage_dashboard.severe')).'</span>',
+            'moderate' => '<span class="badge badge-light-warning fw-bold">'.e(__('multilingual.damage_dashboard.moderate')).'</span>',
+            'minor' => '<span class="badge badge-light-success fw-bold">'.e(__('multilingual.damage_dashboard.minor')).'</span>',
+            'No_Damage' => '<span class="badge badge-light-success fw-bold">'.e(__('multilingual.damage_dashboard.no_damage')).'</span>',
+            default => '<span class="badge badge-light">-</span>',
+        };
     }
 
     private function dateColumn(): string
