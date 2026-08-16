@@ -42,6 +42,11 @@ it('downloads matching housing unit ownership and permit attachments from object
                     'name' => 'damage_photo.jpg',
                     'contentType' => 'image/jpeg',
                 ],
+                [
+                    'id' => 602,
+                    'name' => 'damage_photo_2.jpg',
+                    'contentType' => 'image/jpeg',
+                ],
             ],
         ]),
         'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/10/attachments/500*' => Http::response('identity-file'),
@@ -90,12 +95,13 @@ it('downloads matching housing unit ownership and permit attachments from object
         expect($sheet->getHighestColumn())->toBe('C');
         expect($sheet->getCell('A1')->getValue())->toBe('objectid');
         expect($sheet->getCell('B1')->getValue())->toBe('رابط المرفق المحلي');
-        expect($sheet->getCell('C1')->getValue())->toBe('رابط مرفقات ArcGIS');
+        expect($sheet->getCell('C1')->getValue())->toBe('روابط مرفقات ArcGIS');
         expect($sheet->getCell('A2')->getValue())->toBe(10);
         expect($sheet->getCell('B2')->getValue())->toBe('فتح المرفق');
         expect($sheet->getCell('B2')->getHyperlink()->getUrl())->toBe('housing_units/10/10_unit_identity_500_identity_image.jpg');
         expect($sheet->getCell('A5')->getValue())->toBe(11);
-        expect($sheet->getCell('C5')->getValue())->toBe('فتح المرفق من ArcGIS');
+        expect($sheet->getCell('C5')->getValue())->toContain("/FeatureServer/1/11/attachments/601?token=arcgis-token\n");
+        expect($sheet->getCell('C5')->getValue())->toContain('/FeatureServer/1/11/attachments/602?token=arcgis-token');
         expect($sheet->getCell('C5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments/601?token=arcgis-token');
 
         $spreadsheet->disconnectWorksheets();

@@ -368,9 +368,11 @@ class DownloadHousingUnitAttachments extends Command
         }
 
         $rowNumber = 1;
+        $localRows = [];
+        $arcgisUrlsByObjectId = [];
         $sheet->setCellValue('A1', 'objectid');
         $sheet->setCellValue('B1', 'رابط المرفق المحلي');
-        $sheet->setCellValue('C1', 'رابط مرفقات ArcGIS');
+        $sheet->setCellValue('C1', 'روابط مرفقات ArcGIS');
 
         while (($row = fgetcsv($handle)) !== false) {
             if ($rowNumber === 1) {
@@ -385,12 +387,8 @@ class DownloadHousingUnitAttachments extends Command
             $arcgisUrl = (string) ($row[8] ?? '');
 
             if (in_array($status, ['not_found', 'online_only'], true) && filled($arcgisUrl)) {
-                $excelRow = $sheet->getHighestRow() + 1;
-                $sheet->setCellValue("A{$excelRow}", $objectId);
-                $sheet->setCellValue("B{$excelRow}", '');
-                $sheet->setCellValue("C{$excelRow}", 'فتح المرفق من ArcGIS');
-                $sheet->getCell("C{$excelRow}")->getHyperlink()->setUrl($arcgisUrl);
-                $this->styleHyperlink("C{$excelRow}", $sheet);
+                $arcgisUrlsByObjectId[$objectId] ??= [];
+                $arcgisUrlsByObjectId[$objectId][] = $arcgisUrl;
 
                 continue;
             }
@@ -405,14 +403,37 @@ class DownloadHousingUnitAttachments extends Command
                 continue;
             }
 
-            $excelRow = $sheet->getHighestRow() + 1;
-            $sheet->setCellValue("A{$excelRow}", $objectId);
-            $sheet->setCellValue("B{$excelRow}", 'فتح المرفق');
-            $sheet->getCell("B{$excelRow}")->getHyperlink()->setUrl($relativePath);
-            $this->styleHyperlink("B{$excelRow}", $sheet);
+            $localRows[] = [
+                'object_id' => $objectId,
+                'relative_path' => $relativePath,
+            ];
         }
 
         fclose($handle);
+
+        foreach ($localRows as $localRow) {
+            $excelRow = $sheet->getHighestRow() + 1;
+            $sheet->setCellValue("A{$excelRow}", $localRow['object_id']);
+            $sheet->setCellValue("B{$excelRow}", 'فتح المرفق');
+            $sheet->getCell("B{$excelRow}")->getHyperlink()->setUrl($localRow['relative_path']);
+            $this->styleHyperlink("B{$excelRow}", $sheet);
+        }
+
+        foreach ($arcgisUrlsByObjectId as $objectId => $urls) {
+            $urls = array_values(array_unique($urls));
+
+            if ($urls === []) {
+                continue;
+            }
+
+            $excelRow = $sheet->getHighestRow() + 1;
+            $sheet->setCellValue("A{$excelRow}", $objectId);
+            $sheet->setCellValue("B{$excelRow}", '');
+            $sheet->setCellValue("C{$excelRow}", implode("\n", $urls));
+            $sheet->getCell("C{$excelRow}")->getHyperlink()->setUrl($urls[0]);
+            $sheet->getStyle("C{$excelRow}")->getAlignment()->setWrapText(true);
+            $this->styleHyperlink("C{$excelRow}", $sheet);
+        }
 
         foreach (range('A', 'C') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
