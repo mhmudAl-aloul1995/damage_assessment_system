@@ -82,6 +82,7 @@ class AreaProductivityReportService
                 'minor' => (int) $rows->sum('minor_count'),
                 'no_damage' => (int) $rows->sum('no_damage_count'),
                 'total_records' => (int) $rows->sum('total_count'),
+                'total_road_length_km' => round((float) $rows->sum('total_road_length_km'), 2),
                 'housing_units_count' => (int) $rows->sum('housing_units_count'),
             ],
         ];
@@ -252,6 +253,14 @@ class AreaProductivityReportService
     {
         $groupKey = $this->normalizedGroupExpression('road_facility_surveys.neighborhood');
         $assignedExpression = $this->assignedValueExpression('road_facility_surveys');
+        $lengthColumn = $this->roadLengthColumn();
+        $lengthExpression = $lengthColumn !== null
+            ? "ROUND(SUM(CASE
+                    WHEN road_facility_surveys.road_damage_level IN ('destroyed', 'severe', 'moderate', 'minor', 'No_Damage', 'no_damage')
+                    THEN COALESCE(road_facility_surveys.{$lengthColumn}, 0)
+                    ELSE 0
+                END) * 111, 2)"
+            : '0';
 
         $query = RoadFacilitySurvey::query()
             ->selectRaw("
@@ -267,7 +276,8 @@ class AreaProductivityReportService
                 SUM(CASE
                     WHEN road_facility_surveys.road_damage_level IN ('destroyed', 'severe', 'moderate', 'minor', 'No_Damage', 'no_damage')
                     THEN 1 ELSE 0
-                END) as total_count
+                END) as total_count,
+                {$lengthExpression} as total_road_length_km
             ")
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
@@ -461,6 +471,12 @@ class AreaProductivityReportService
         }
 
         return "{$table}.created_at";
+    }
+
+    private function roadLengthColumn(): ?string
+    {
+        return collect(['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'])
+            ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
     }
 
     /**

@@ -53,6 +53,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             'minor_count' => $this->data->sum('minor_count'),
             'no_damage_count' => $this->data->sum('no_damage_count'),
             'total_count' => $this->data->sum('total_count'),
+            'total_road_length_km' => $this->data->sum('total_road_length_km'),
             'housing_units_count' => $this->data->sum('housing_units_count'),
         ];
 
@@ -64,6 +65,10 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         $headings = [
             __('multilingual.area_productivity_reports.columns.total_count'),
         ];
+
+        if ($this->isRoadFacilitiesReport()) {
+            $headings[] = __('multilingual.area_productivity_reports.columns.total_road_length');
+        }
 
         if ($this->includeHousingUnitsCount) {
             $headings[] = __('multilingual.area_productivity_reports.columns.housing_units_count');
@@ -101,6 +106,10 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         $mapped = [
             $row->total_count ?? 0,
         ];
+
+        if ($this->isRoadFacilitiesReport()) {
+            $mapped[] = round((float) ($row->total_road_length_km ?? 0), 2);
+        }
 
         if ($this->includeHousingUnitsCount) {
             $mapped[] = $row->housing_units_count ?? 0;
@@ -201,6 +210,10 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             $formats['F'] = '#,##0';
         }
 
+        if ($this->isRoadFacilitiesReport()) {
+            $formats['B'] = '#,##0.00';
+        }
+
         return $formats;
     }
 
@@ -212,7 +225,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
     private function lastColumn(): string
     {
         if ($this->isRoadFacilitiesReport()) {
-            return 'K';
+            return 'L';
         }
 
         return $this->includeHousingUnitsCount ? 'J' : 'I';

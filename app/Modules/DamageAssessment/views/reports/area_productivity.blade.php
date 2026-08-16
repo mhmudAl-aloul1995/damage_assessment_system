@@ -600,6 +600,9 @@
                             <thead>
                                 <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
                                     <th>{{ __('multilingual.area_productivity_reports.columns.total_count') }}</th>
+                                    @if ($showRoadDamageColumns)
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.total_road_length') }}</th>
+                                    @endif
                                     @if ($showHousingUnitsCount)
                                         <th>{{ __('multilingual.area_productivity_reports.columns.housing_units_count') }}</th>
                                     @endif
@@ -625,6 +628,9 @@
                                 @forelse ($rows as $row)
                                     <tr>
                                         <td class="fw-bold">{{ $row->total_count }}</td>
+                                        @if ($showRoadDamageColumns)
+                                            <td>{{ number_format((float) ($row->total_road_length_km ?? 0), 2) }}</td>
+                                        @endif
                                         @if ($showHousingUnitsCount)
                                             <td>{{ $row->housing_units_count ?? 0 }}</td>
                                         @endif
@@ -647,7 +653,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ $showRoadDamageColumns ? 11 : ($showHousingUnitsCount ? 10 : 9) }}" class="text-center text-muted">
+                                        <td colspan="{{ $showRoadDamageColumns ? 12 : ($showHousingUnitsCount ? 10 : 9) }}" class="text-center text-muted">
                                             {{ __('multilingual.area_productivity_reports.labels.empty') }}
                                         </td>
                                     </tr>
@@ -656,6 +662,9 @@
                             <tfoot class="border-top-2">
                                 <tr class="fw-bold bg-light">
                                     <td class="text-success fs-5">{{ $summary['total_records'] }}</td>
+                                    @if ($showRoadDamageColumns)
+                                        <td class="text-success">{{ number_format((float) ($summary['total_road_length_km'] ?? 0), 2) }}</td>
+                                    @endif
                                     @if ($showHousingUnitsCount)
                                         <td>{{ $summary['housing_units_count'] }}</td>
                                     @endif

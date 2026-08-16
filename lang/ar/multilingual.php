@@ -151,6 +151,7 @@ return [
             'minor' => 'طفيف',
             'no_damage' => 'بدون ضرر',
             'total_count' => 'إجمالي العدد',
+            'total_road_length' => 'إجمالي طول الطرق',
             'housing_units_count' => 'عدد الوحدات',
         ],
         'metrics' => [

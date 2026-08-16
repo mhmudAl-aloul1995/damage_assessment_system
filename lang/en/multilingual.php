@@ -151,6 +151,7 @@ return [
             'minor' => 'Minor',
             'no_damage' => 'No Damage',
             'total_count' => 'Total Count',
+            'total_road_length' => 'Total Road Length',
             'housing_units_count' => 'Housing Units',
         ],
         'metrics' => [

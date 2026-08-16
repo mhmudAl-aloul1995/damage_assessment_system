@@ -185,6 +185,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'destroyed',
+        'shape__length' => 0.01,
         'zone_code' => 'RZ-1',
         'creationdate' => '2026-04-10 09:00:00',
         'created_at' => '2026-04-10 09:00:00',
@@ -199,6 +200,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'moderate',
+        'shape__length' => 0.02,
         'zone_code' => 'RZ-2',
         'creationdate' => '2026-04-11 09:00:00',
         'created_at' => '2026-04-11 09:00:00',
@@ -213,6 +215,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'severe',
+        'shape__length' => 0.03,
         'zone_code' => 'RZ-3',
         'creationdate' => '2026-04-12 09:00:00',
         'created_at' => '2026-04-12 09:00:00',
@@ -227,6 +230,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'minor',
+        'shape__length' => 0.04,
         'zone_code' => 'RZ-4',
         'creationdate' => '2026-04-13 09:00:00',
         'created_at' => '2026-04-13 09:00:00',
@@ -241,6 +245,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'No_Damage',
+        'shape__length' => 0.05,
         'zone_code' => 'RZ-5',
         'creationdate' => '2026-04-14 09:00:00',
         'created_at' => '2026-04-14 09:00:00',
@@ -255,6 +260,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
         'road_damage_level' => 'not_classified',
+        'shape__length' => 0.99,
         'zone_code' => 'RZ-6',
         'creationdate' => '2026-04-15 09:00:00',
         'created_at' => '2026-04-15 09:00:00',
@@ -403,14 +409,17 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee(__('multilingual.area_productivity_reports.columns.moderate'), false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.minor'), false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.no_damage'), false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.total_road_length'), false)
         ->assertDontSee(__('multilingual.area_productivity_reports.columns.cra'), false)
         ->assertSee('<td>Rimal</td>', false)
+        ->assertSee('16.65', false)
         ->assertSee('5', false)
         ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.road_facilities'), false);
 
     $roadFacilitiesResponse->assertViewHas('summary', function (array $summary): bool {
-        return $summary['total_records'] === 5;
+        return $summary['total_records'] === 5
+            && (float) $summary['total_road_length_km'] === 16.65;
     });
 
     $roadFacilitiesResponse->assertViewHas('rows', function ($rows): bool {
@@ -422,7 +431,8 @@ it('renders separated area productivity reports for all supported datasets with 
             && (int) $rimal->severe_count === 1
             && (int) $rimal->moderate_count === 1
             && (int) $rimal->minor_count === 1
-            && (int) $rimal->no_damage_count === 1;
+            && (int) $rimal->no_damage_count === 1
+            && (float) $rimal->total_road_length_km === 16.65;
     });
 
     $roadFacilitiesResponse->assertViewHas('charts', function (array $charts): bool {
@@ -478,6 +488,7 @@ it('renders separated area productivity reports for all supported datasets with 
 
     expect($export->map($exportCollection->firstWhere('neighborhood', 'Rimal')))->toBe([
         5,
+        16.65,
         1,
         1,
         1,
@@ -491,6 +502,7 @@ it('renders separated area productivity reports for all supported datasets with 
     ]);
     expect($export->map($exportCollection->last()))->toBe([
         5,
+        16.65,
         1,
         1,
         1,
