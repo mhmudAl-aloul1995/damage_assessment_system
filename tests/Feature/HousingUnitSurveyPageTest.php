@@ -7,6 +7,7 @@ use App\Models\Filter;
 use App\Models\HousingUnit;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\LaravelPdf\Facades\Pdf;
@@ -627,6 +628,42 @@ it('exports a selected housing unit to pdf from the actions menu', function () {
             && $pdf->contains('اسم مالك الوحدة')
             && $pdf->contains('جدول الكميات BOQ')
             && $pdf->contains('إزالة حوائط');
+    });
+});
+
+it('opens a signed housing unit BOQ PDF export link without authentication', function () {
+    Pdf::fake();
+
+    Building::query()->create([
+        'objectid' => 2602,
+        'globalid' => 'building-signed-pdf-export',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3602,
+        'globalid' => 'housing-unit-signed-pdf-export',
+        'parentglobalid' => 'building-signed-pdf-export',
+        'unit_owner' => 'Signed PDF Owner',
+        'dm1' => '7',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'dm1',
+        'label' => 'DM1-Demolish walls',
+        'hint' => 'Ø¥Ø²Ø§Ù„Ø© Ø­ÙˆØ§Ø¦Ø· Ø´Ø§Ù…Ù„Ø§ Ø§Ù„Ù…Ø¹Ø¯Ø§Øª ÙˆØ§Ù„Ù…ØµÙ†Ø¹ÙŠØ© ØÙˆØ§Ù„ØªØ±Ø­ÙŠÙ„ Ù„Ø£Ù‚Ø±Ø¨ Ù…ÙƒØ¨ (M2)',
+    ]);
+
+    $response = $this->get(URL::signedRoute('housing.export.signed', [
+        'format' => 'pdf',
+        'globalid' => 'housing-unit-signed-pdf-export',
+    ], absolute: false));
+
+    $response->assertOk();
+
+    Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf): bool {
+        return $pdf->viewName === 'damage-assessment::surveys.housing-units.export_pdf'
+            && $pdf->contains('3602')
+            && $pdf->contains('Signed PDF Owner');
     });
 });
 

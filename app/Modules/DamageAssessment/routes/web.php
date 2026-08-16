@@ -408,6 +408,9 @@ Route::middleware('auth')->group(function () {
 
 });
 
+Route::get('/housing/export-signed/{format}', [HousingUnitController::class, 'export'])
+    ->middleware('signed:relative')
+    ->name('housing.export.signed');
 Route::get('/housing-summary', [auditController::class, 'housingSummary'])
     ->name('housing.summary');
 Route::get('/import-buildings-test', [BuildingImportController::class, 'import']);

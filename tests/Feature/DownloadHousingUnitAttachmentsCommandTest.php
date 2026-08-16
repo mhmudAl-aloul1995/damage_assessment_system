@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -385,10 +386,10 @@ it('adds an online BOQ PDF export link without generating local PDF files', func
         expect($sheet->getCell('A2')->getValue())->toBe(15);
         expect($sheet->getCell('B2')->getValue())->toBe('فتح جدول الكميات');
         expect($sheet->getCell('B2')->getHyperlink()->getUrl())
-            ->toBe(route('housing.export', [
+            ->toBe(url(URL::signedRoute('housing.export.signed', [
                 'format' => 'pdf',
                 'globalid' => 'housing-unit-online-boq-pdf',
-            ]));
+            ], absolute: false)));
 
         $spreadsheet->disconnectWorksheets();
     } finally {

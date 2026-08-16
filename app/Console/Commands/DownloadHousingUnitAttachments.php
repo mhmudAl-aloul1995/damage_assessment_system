@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -379,10 +380,10 @@ class DownloadHousingUnitAttachments extends Command
             return '';
         }
 
-        return route('housing.export', [
+        return url(URL::signedRoute('housing.export.signed', [
             'format' => 'pdf',
             'globalid' => $housingUnit->globalid,
-        ]);
+        ], absolute: false));
     }
 
     /**
