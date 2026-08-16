@@ -105,9 +105,7 @@ it('downloads matching housing unit ownership and permit attachments from object
         expect($sheet->getCell('B2')->getValue())->toBe('فتح المرفق');
         expect($sheet->getCell('B2')->getHyperlink()->getUrl())->toBe('housing_units/10/10_unit_identity_500_identity_image.jpg');
         expect($sheet->getCell('A5')->getValue())->toBe(11);
-        expect($sheet->getCell('C5')->getValue())->toContain("/FeatureServer/1/11/attachments/601?token=arcgis-token\n");
-        expect($sheet->getCell('C5')->getValue())->toContain('/FeatureServer/1/11/attachments/602?token=arcgis-token');
-        expect($sheet->getCell('C5')->getValue())->toContain('/FeatureServer/1/11/attachments/336370?token=arcgis-token');
+        expect($sheet->getCell('C5')->getValue())->toBe("مرفق 1\nمرفق 2\nمرفق 3");
         expect($sheet->getCell('C5')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/11/attachments/601?token=arcgis-token');
         expect($sheet->getRowDimension(5)->getRowHeight())->toBeGreaterThan(24);
 

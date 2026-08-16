@@ -429,7 +429,7 @@ class DownloadHousingUnitAttachments extends Command
             $excelRow = $sheet->getHighestRow() + 1;
             $sheet->setCellValue("A{$excelRow}", $objectId);
             $sheet->setCellValue("B{$excelRow}", '');
-            $sheet->setCellValue("C{$excelRow}", implode("\n", $urls));
+            $sheet->setCellValue("C{$excelRow}", $this->attachmentLabels($urls));
             $sheet->getCell("C{$excelRow}")->getHyperlink()->setUrl($urls[0]);
             $sheet->getStyle("C{$excelRow}")->getAlignment()->setWrapText(true);
             $sheet->getRowDimension($excelRow)->setRowHeight(max(24, count($urls) * 18));
@@ -447,6 +447,17 @@ class DownloadHousingUnitAttachments extends Command
 
         (new Xlsx($spreadsheet))->save($xlsxPath);
         $spreadsheet->disconnectWorksheets();
+    }
+
+    /**
+     * @param  array<int, string>  $urls
+     */
+    private function attachmentLabels(array $urls): string
+    {
+        return collect($urls)
+            ->values()
+            ->map(fn (string $url, int $index): string => 'مرفق '.($index + 1))
+            ->implode("\n");
     }
 
     private function styleHyperlink(string $coordinate, \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet): void
