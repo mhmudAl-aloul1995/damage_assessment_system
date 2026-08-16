@@ -55,6 +55,13 @@ class ArcgisService
     // =========================
     public function getAttachments($objectId, $layerId, $token): array
     {
+        $result = $this->getAttachmentsResult($objectId, $layerId, $token);
+
+        return $result['attachments'] ?? [];
+    }
+
+    public function getAttachmentsResult($objectId, $layerId, $token): array
+    {
         $url = "{$this->baseUrl}/{$layerId}/{$objectId}/attachments";
 
         $response = Http::asForm()->withoutVerifying()->post($url, [
@@ -63,10 +70,35 @@ class ArcgisService
         ]);
 
         if (! $response->successful()) {
-            return [];
+            return [
+                'success' => false,
+                'attachments' => [],
+                'message' => $response->body(),
+                'token_expired' => $this->isTokenError($response->body(), $response->status()),
+            ];
         }
 
-        return $response->json()['attachmentInfos'] ?? [];
+        $body = $response->json();
+        $error = data_get($body, 'error');
+
+        if (is_array($error)) {
+            $message = (string) data_get($error, 'message', $response->body());
+            $code = (int) data_get($error, 'code', 0);
+
+            return [
+                'success' => false,
+                'attachments' => [],
+                'message' => $message,
+                'token_expired' => $this->isTokenError($message, $code),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'attachments' => $body['attachmentInfos'] ?? [],
+            'message' => null,
+            'token_expired' => false,
+        ];
     }
 
     public function getAttachmentsFromLayerUrl(string $layerUrl, int|string|null $objectId, string $token): array
@@ -228,6 +260,21 @@ class ArcgisService
                 'success' => false,
                 'message' => $response->body(),
                 'body' => null,
+                'token_expired' => $this->isTokenError($response->body(), $response->status()),
+            ];
+        }
+
+        $json = $response->json();
+
+        if (is_array($json) && is_array(data_get($json, 'error'))) {
+            $message = (string) data_get($json, 'error.message', $response->body());
+            $code = (int) data_get($json, 'error.code', 0);
+
+            return [
+                'success' => false,
+                'message' => $message,
+                'body' => null,
+                'token_expired' => $this->isTokenError($message, $code),
             ];
         }
 
@@ -235,6 +282,7 @@ class ArcgisService
             'success' => true,
             'message' => 'Attachment downloaded.',
             'body' => $response->body(),
+            'token_expired' => false,
         ];
     }
 
@@ -348,5 +396,18 @@ class ArcgisService
         }
 
         return $url;
+    }
+
+    private function isTokenError(string $message, int $code = 0): bool
+    {
+        if (in_array($code, [498, 499], true)) {
+            return true;
+        }
+
+        return Str::of($message)->lower()->contains([
+            'token',
+            'expired',
+            'invalid token',
+        ]);
     }
 }

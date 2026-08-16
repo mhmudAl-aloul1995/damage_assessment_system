@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\services\ArcgisService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -21,6 +22,7 @@ class DownloadHousingUnitAttachments extends Command
         {file : Text/CSV/XLSX file containing housing unit ObjectIDs}
         {--output= : Output directory relative to storage/app/public/exports}
         {--types=ownership,permit : Comma separated attachment types: identity,ownership,permit}
+        {--exclude-damage : Download all housing unit attachments except damage photos}
         {--limit= : Process only the first N ObjectIDs}
         {--force : Re-download files that already exist}';
 
@@ -58,6 +60,7 @@ class DownloadHousingUnitAttachments extends Command
         }
 
         $types = $this->selectedTypes();
+        $excludeDamage = (bool) $this->option('exclude-damage');
         $outputName = $this->safePathSegment((string) ($this->option('output') ?: 'housing_unit_attachments_'.now()->format('Ymd_His')));
         $outputDirectory = storage_path('app/public/exports/'.$outputName);
 
@@ -89,7 +92,7 @@ class DownloadHousingUnitAttachments extends Command
 
         $htmlRows = [];
         $this->info('ObjectIDs: '.count($objectIds));
-        $this->info('Types: '.implode(', ', $types));
+        $this->info($excludeDamage ? 'Mode: all attachments except damage photos' : 'Types: '.implode(', ', $types));
         $this->info("Output: {$outputDirectory}");
 
         $token = $arcgis->getToken();
@@ -102,19 +105,25 @@ class DownloadHousingUnitAttachments extends Command
         $bar->start();
 
         foreach ($objectIds as $objectId) {
-            $attachments = $arcgis->getAttachments($objectId, 1, $token);
-            $matchingAttachments = collect($attachments)
-                ->map(fn (array $attachment): array => [
-                    'attachment' => $attachment,
-                    'type' => $this->matchingAttachmentType($attachment, $types),
-                ])
-                ->filter(fn (array $entry): bool => filled($entry['type']))
-                ->values();
+            $attachmentsResult = $this->getHousingUnitAttachments($arcgis, $objectId, $token);
+
+            if (! ($attachmentsResult['success'] ?? false)) {
+                $failed++;
+                fputcsv($indexHandle, [$objectId, '', '', '', '', 'failed_request', '', '', '', (string) ($attachmentsResult['message'] ?? 'ArcGIS request failed.')]);
+                $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'failed_request', '', (string) ($attachmentsResult['message'] ?? 'ArcGIS request failed.'));
+                $bar->advance();
+
+                continue;
+            }
+
+            $token = (string) ($attachmentsResult['token'] ?? $token);
+            $attachments = $attachmentsResult['attachments'] ?? [];
+            $matchingAttachments = $this->matchingAttachments($attachments, $types, $excludeDamage);
 
             if ($matchingAttachments->isEmpty()) {
                 $missing++;
 
-                if ($attachments === []) {
+                if ($attachments === [] || $excludeDamage) {
                     fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', '', 'No matching attachments were found.']);
                     $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'not_found', '', 'No matching attachments were found.');
                     $bar->advance();
@@ -178,7 +187,8 @@ class DownloadHousingUnitAttachments extends Command
                     continue;
                 }
 
-                $download = $arcgis->downloadAttachment($objectId, 1, $attachmentId, $token);
+                $download = $this->downloadHousingUnitAttachment($arcgis, $objectId, $attachmentId, $token);
+                $token = (string) ($download['token'] ?? $token);
 
                 if (! ($download['success'] ?? false)) {
                     $failed++;
@@ -283,6 +293,101 @@ class DownloadHousingUnitAttachments extends Command
     }
 
     /**
+     * @return array{success: bool, attachments: array<int, array<string, mixed>>, message?: string|null, token: string}
+     */
+    private function getHousingUnitAttachments(ArcgisService $arcgis, string $objectId, string $token): array
+    {
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $result = $arcgis->getAttachmentsResult($objectId, 1, $token);
+
+            if ($result['success'] ?? false) {
+                return [
+                    'success' => true,
+                    'attachments' => $result['attachments'] ?? [],
+                    'message' => $result['message'] ?? null,
+                    'token' => $token,
+                ];
+            }
+
+            if (! ($result['token_expired'] ?? false) || $attempt === 2) {
+                return [
+                    'success' => false,
+                    'attachments' => [],
+                    'message' => $result['message'] ?? 'ArcGIS request failed.',
+                    'token' => $token,
+                ];
+            }
+
+            Cache::forget('arcgis_token');
+            $token = $arcgis->getToken();
+        }
+
+        return [
+            'success' => false,
+            'attachments' => [],
+            'message' => 'ArcGIS request failed.',
+            'token' => $token,
+        ];
+    }
+
+    /**
+     * @return array{success: bool, message?: string|null, body?: string|null, token: string}
+     */
+    private function downloadHousingUnitAttachment(ArcgisService $arcgis, string $objectId, int|string $attachmentId, string $token): array
+    {
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $download = $arcgis->downloadAttachment($objectId, 1, $attachmentId, $token);
+
+            if ($download['success'] ?? false) {
+                return [
+                    ...$download,
+                    'token' => $token,
+                ];
+            }
+
+            if (! ($download['token_expired'] ?? false) || $attempt === 2) {
+                return [
+                    ...$download,
+                    'token' => $token,
+                ];
+            }
+
+            Cache::forget('arcgis_token');
+            $token = $arcgis->getToken();
+        }
+
+        return [
+            'success' => false,
+            'message' => 'Download failed.',
+            'body' => null,
+            'token' => $token,
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $attachments
+     * @param  array<int, string>  $types
+     */
+    private function matchingAttachments(array $attachments, array $types, bool $excludeDamage = false): \Illuminate\Support\Collection
+    {
+        return collect($attachments)
+            ->map(function (array $attachment) use ($types, $excludeDamage): array {
+                $type = $this->matchingAttachmentType($attachment, $types);
+
+                if ($excludeDamage) {
+                    $type = $this->isDamageAttachment($attachment) ? null : ($type ?? 'attachment');
+                }
+
+                return [
+                    'attachment' => $attachment,
+                    'type' => $type,
+                ];
+            })
+            ->filter(fn (array $entry): bool => filled($entry['type']))
+            ->values();
+    }
+
+    /**
      * @param  array<string, mixed>  $attachment
      * @param  array<int, string>  $types
      */
@@ -305,6 +410,25 @@ class DownloadHousingUnitAttachments extends Command
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attachment
+     */
+    private function isDamageAttachment(array $attachment): bool
+    {
+        return $this->containsAny($this->attachmentSearchableText($attachment), [
+            'damage',
+            'damge',
+            'damaged',
+            'photo_',
+            '_photo',
+            'صورة الضرر',
+            'صور الضرر',
+            'اضرار',
+            'أضرار',
+            'ضرر',
+        ]);
     }
 
     /**
@@ -470,9 +594,11 @@ class DownloadHousingUnitAttachments extends Command
         ]);
     }
 
-    private function arcgisAttachmentUrl(string $objectId, string $attachmentId, string $token): string
+    private function arcgisAttachmentUrl(string $objectId, string $attachmentId, string $token, int $layerId = 1): string
     {
-        return 'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/'
+        return 'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/'
+            .$layerId
+            .'/'
             .rawurlencode($objectId)
             .'/attachments/'
             .rawurlencode($attachmentId)
