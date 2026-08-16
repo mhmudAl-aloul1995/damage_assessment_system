@@ -27,6 +27,10 @@ it('exports productivity report using the same housing-unit date filter as the t
         'name' => 'Area Manager',
         'guard_name' => 'web',
     ]);
+    Role::query()->create([
+        'name' => 'Team Leader',
+        'guard_name' => 'web',
+    ]);
 
     Schema::table('buildings', function (Blueprint $table): void {
         $table->string('region')->nullable();
@@ -38,6 +42,8 @@ it('exports productivity report using the same housing-unit date filter as the t
         'region' => 'south',
     ]);
     $southAreaManager->assignRole('Area Manager');
+    $teamLeader = User::factory()->create();
+    $teamLeader->assignRole('Team Leader');
 
     User::factory()->create([
         'region' => 'south',
@@ -172,4 +178,9 @@ it('exports productivity report using the same housing-unit date filter as the t
                 && ! isset($stats['eng-north'])
                 && ! isset($stats['eng-south-unlinked']);
         });
+
+    $this->actingAs($teamLeader)
+        ->get('damage-assessment/reports/productivity?minDate=2026-05-01&maxDate=2026-05-31')
+        ->assertOk()
+        ->assertSee('productivity-table', false);
 });

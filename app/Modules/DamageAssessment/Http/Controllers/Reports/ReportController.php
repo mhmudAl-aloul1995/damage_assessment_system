@@ -22,7 +22,7 @@ class ReportController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager');
+        $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|Team Leader');
     }
 
     public function export_productivity(Request $request): BinaryFileResponse

@@ -312,3 +312,18 @@ it('shows the read only audit home link for team leaders', function () {
 
     expect($urls)->toContain('damage-assessment/audit');
 });
+
+it('shows productivity report link for team leaders', function () {
+    $role = Role::findOrCreate('Team Leader', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $urls = Sidebar::forUser($user)
+        ->flatMap(fn (array $module) => $module['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->flatMap(fn (array $item) => $item['children'] ?? [$item])
+        ->pluck('url')
+        ->all();
+
+    expect($urls)->toContain('damage-assessment/reports/productivity');
+});

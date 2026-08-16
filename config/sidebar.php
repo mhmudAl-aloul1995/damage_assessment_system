@@ -165,7 +165,7 @@ return [
                         'title' => 'menu.reports.productivity_items.engineers',
                         'url' => 'damage-assessment/reports/productivity',
                         'pattern' => 'damage-assessment/reports/productivity*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager'],
+                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Team Leader'],
                     ],
                 ],
             ],
