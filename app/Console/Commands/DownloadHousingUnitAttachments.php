@@ -2,17 +2,25 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Assessment;
+use App\Models\VHousingUnitAudited;
 use App\services\ArcgisService;
+use App\Support\BrowsershotConfiguration;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Spatie\LaravelPdf\Facades\Pdf;
 
 class DownloadHousingUnitAttachments extends Command
 {
+    private const HOUSING_EXPORT_SOURCE_TABLE = 'v_housing_units_audited';
+
     /**
      * The name and signature of the console command.
      *
@@ -23,6 +31,7 @@ class DownloadHousingUnitAttachments extends Command
         {--output= : Output directory relative to storage/app/public/exports}
         {--types=ownership,permit : Comma separated attachment types: identity,ownership,permit}
         {--exclude-damage : Download all housing unit attachments except damage photos}
+        {--include-boq-pdf : Generate a local BOQ PDF from v_housing_units_audited and link it in Excel}
         {--limit= : Process only the first N ObjectIDs}
         {--force : Re-download files that already exist}';
 
@@ -61,8 +70,10 @@ class DownloadHousingUnitAttachments extends Command
 
         $types = $this->selectedTypes();
         $excludeDamage = (bool) $this->option('exclude-damage');
+        $includeBoqPdf = (bool) $this->option('include-boq-pdf');
         $outputName = $this->safePathSegment((string) ($this->option('output') ?: 'housing_unit_attachments_'.now()->format('Ymd_His')));
         $outputDirectory = storage_path('app/public/exports/'.$outputName);
+        $boqPdfDirectory = $outputDirectory.'/boq_pdfs';
 
         File::ensureDirectoryExists($outputDirectory);
 
@@ -88,11 +99,13 @@ class DownloadHousingUnitAttachments extends Command
             'public_url',
             'arcgis_attachments_url',
             'message',
+            'boq_pdf_path',
         ]);
 
         $htmlRows = [];
         $this->info('ObjectIDs: '.count($objectIds));
         $this->info($excludeDamage ? 'Mode: all attachments except damage photos' : 'Types: '.implode(', ', $types));
+        $this->info($includeBoqPdf ? 'BOQ PDF: enabled' : 'BOQ PDF: disabled');
         $this->info("Output: {$outputDirectory}");
 
         $token = $arcgis->getToken();
@@ -105,11 +118,15 @@ class DownloadHousingUnitAttachments extends Command
         $bar->start();
 
         foreach ($objectIds as $objectId) {
+            $boqPdfRelativePath = $includeBoqPdf
+                ? $this->generateBoqPdf($objectId, $boqPdfDirectory)
+                : '';
+
             $attachmentsResult = $this->getHousingUnitAttachments($arcgis, $objectId, $token);
 
             if (! ($attachmentsResult['success'] ?? false)) {
                 $failed++;
-                fputcsv($indexHandle, [$objectId, '', '', '', '', 'failed_request', '', '', '', (string) ($attachmentsResult['message'] ?? 'ArcGIS request failed.')]);
+                fputcsv($indexHandle, [$objectId, '', '', '', '', 'failed_request', '', '', '', (string) ($attachmentsResult['message'] ?? 'ArcGIS request failed.'), $boqPdfRelativePath]);
                 $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'failed_request', '', (string) ($attachmentsResult['message'] ?? 'ArcGIS request failed.'));
                 $bar->advance();
 
@@ -124,7 +141,7 @@ class DownloadHousingUnitAttachments extends Command
                 $missing++;
 
                 if ($attachments === [] || $excludeDamage) {
-                    fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', '', 'No matching attachments were found.']);
+                    fputcsv($indexHandle, [$objectId, '', '', '', '', 'not_found', '', '', '', 'No matching attachments were found.', $boqPdfRelativePath]);
                     $htmlRows[] = $this->htmlRow($objectId, '', '', '', 'not_found', '', 'No matching attachments were found.');
                     $bar->advance();
 
@@ -151,6 +168,7 @@ class DownloadHousingUnitAttachments extends Command
                         '',
                         $this->arcgisAttachmentUrl($objectId, (string) $attachmentId, $token),
                         'No selected attachment types matched; direct ArcGIS attachment link was added.',
+                        $boqPdfRelativePath,
                     ]);
                 }
 
@@ -168,7 +186,7 @@ class DownloadHousingUnitAttachments extends Command
 
                 if (! filled($attachmentId)) {
                     $failed++;
-                    fputcsv($indexHandle, [$objectId, '', $matchedType, $originalName, $contentType, 'failed', '', '', '', 'Missing attachment id.']);
+                    fputcsv($indexHandle, [$objectId, '', $matchedType, $originalName, $contentType, 'failed', '', '', '', 'Missing attachment id.', $boqPdfRelativePath]);
                     $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'failed', '', 'Missing attachment id.');
 
                     continue;
@@ -181,7 +199,7 @@ class DownloadHousingUnitAttachments extends Command
 
                 if (File::exists($localPath) && ! $this->option('force')) {
                     $matched++;
-                    fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'skipped_existing', $localPath, $publicUrl, '', 'File already exists.']);
+                    fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'skipped_existing', $localPath, $publicUrl, '', 'File already exists.', $boqPdfRelativePath]);
                     $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'skipped_existing', $publicUrl, 'File already exists.');
 
                     continue;
@@ -192,7 +210,7 @@ class DownloadHousingUnitAttachments extends Command
 
                 if (! ($download['success'] ?? false)) {
                     $failed++;
-                    fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'failed', '', '', '', (string) ($download['message'] ?? 'Download failed.')]);
+                    fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'failed', '', '', '', (string) ($download['message'] ?? 'Download failed.'), $boqPdfRelativePath]);
                     $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'failed', '', (string) ($download['message'] ?? 'Download failed.'));
 
                     continue;
@@ -201,7 +219,7 @@ class DownloadHousingUnitAttachments extends Command
                 File::put($localPath, (string) ($download['body'] ?? ''));
                 $downloaded++;
                 $matched++;
-                fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'downloaded', $localPath, $publicUrl, '', '']);
+                fputcsv($indexHandle, [$objectId, $attachmentId, $matchedType, $originalName, $contentType, 'downloaded', $localPath, $publicUrl, '', '', $boqPdfRelativePath]);
                 $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'downloaded', $publicUrl, '');
             }
 
@@ -290,6 +308,120 @@ class DownloadHousingUnitAttachments extends Command
             ->all();
 
         return $types === [] ? $allowed : $types;
+    }
+
+    private function generateBoqPdf(string $objectId, string $boqPdfDirectory): string
+    {
+        $boqColumns = $this->housingBoqColumns();
+        $selectColumns = $this->housingBoqSelectColumns($boqColumns);
+
+        if ($selectColumns === []) {
+            return '';
+        }
+
+        $housingUnit = VHousingUnitAudited::query()
+            ->with('building:globalid,objectid')
+            ->where('objectid', $objectId)
+            ->first($selectColumns);
+
+        if ($housingUnit === null) {
+            return '';
+        }
+
+        $assessmentHints = Assessment::query()
+            ->whereIn('name', $boqColumns)
+            ->get(['name', 'hint', 'label'])
+            ->keyBy('name');
+
+        $housing = collect([$housingUnit]);
+        $boqRows = $this->housingBoqRows($housing, $boqColumns, $assessmentHints);
+        $summary = $this->housingBoqSummary($housing, $boqRows);
+        $fileName = $this->boqPdfFileName($housingUnit);
+        $localPath = $boqPdfDirectory.'/'.$fileName;
+
+        File::ensureDirectoryExists($boqPdfDirectory);
+
+        if (File::exists($localPath) && ! $this->option('force')) {
+            return 'boq_pdfs/'.$fileName;
+        }
+
+        Pdf::view('damage-assessment::surveys.housing-units.export_pdf', [
+            'housing' => $housing,
+            'boqRows' => $boqRows,
+            'summary' => $summary,
+            'sourceTable' => self::HOUSING_EXPORT_SOURCE_TABLE,
+            'generatedAt' => now()->format('Y-m-d H:i'),
+        ])
+            ->format('a4')
+            ->landscape()
+            ->name($fileName)
+            ->withBrowsershot(function ($browsershot): void {
+                app(BrowsershotConfiguration::class)->apply($browsershot);
+            })
+            ->save($localPath);
+
+        if (app()->runningUnitTests() && ! File::exists($localPath)) {
+            File::put($localPath, '');
+        }
+
+        return File::exists($localPath) ? 'boq_pdfs/'.$fileName : '';
+    }
+
+    /**
+     * @param  array<int, string>  $boqColumns
+     * @return array<int, string>
+     */
+    private function housingBoqSelectColumns(array $boqColumns): array
+    {
+        $availableColumns = $this->housingAuditedColumns();
+
+        return array_values(array_intersect(array_unique(array_merge([
+            'objectid',
+            'globalid',
+            'parentglobalid',
+            'housing_unit_number',
+            'unit_owner',
+            'q_9_3_1_first_name',
+            'q_9_3_2_second_name__father',
+            'q_9_3_3_third_name__grandfather',
+            'q_9_3_4_last_name',
+            'municipalitie',
+            'neighborhood',
+            'unit_damage_status',
+        ], $boqColumns)), $availableColumns));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function housingBoqColumns(): array
+    {
+        return collect($this->housingAuditedColumns())
+            ->filter(fn (string $column): bool => $this->isHousingBoqColumn($column))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function housingAuditedColumns(): array
+    {
+        try {
+            $columns = Schema::getColumnListing(self::HOUSING_EXPORT_SOURCE_TABLE);
+        } catch (\Throwable) {
+            $columns = [];
+        }
+
+        if ($columns !== []) {
+            return $columns;
+        }
+
+        try {
+            return Schema::getColumnListing('housing_units');
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**
@@ -412,6 +544,223 @@ class DownloadHousingUnitAttachments extends Command
         return null;
     }
 
+    private function isHousingBoqColumn(string $column): bool
+    {
+        return (bool) preg_match('/^(dm|bl|co|fn|al|wd|mt|cm|pm|el|pv)\d+$/', $column)
+            || (bool) preg_match('/^(item|quant)\d+$/', $column)
+            || $column === 'pv_note';
+    }
+
+    /**
+     * @param  Collection<int, VHousingUnitAudited>  $housing
+     * @param  array<int, string>  $boqColumns
+     * @param  Collection<string, Assessment>  $assessmentHints
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function housingBoqRows(Collection $housing, array $boqColumns, Collection $assessmentHints): Collection
+    {
+        $rows = collect();
+
+        foreach ($housing as $housingUnit) {
+            $miscDescriptions = [];
+
+            foreach ($boqColumns as $column) {
+                $value = $this->cleanBoqValue($housingUnit->{$column} ?? null);
+
+                if ($value === null) {
+                    continue;
+                }
+
+                if (preg_match('/^item(\d+)$/', $column, $matches)) {
+                    $miscDescriptions[$matches[1]] = $value;
+
+                    continue;
+                }
+
+                if (preg_match('/^quant(\d+)$/', $column, $matches)) {
+                    $description = $miscDescriptions[$matches[1]] ?? $this->boqDescription($column, $assessmentHints);
+                    $rows->push($this->housingBoqRow($housingUnit, $column, $description, $value, 'ITEM'.$matches[1], 'Miscellaneous Works'));
+
+                    continue;
+                }
+
+                $rows->push($this->housingBoqRow(
+                    $housingUnit,
+                    $column,
+                    $this->boqDescription($column, $assessmentHints),
+                    $value,
+                    $this->boqItemCode($column, $assessmentHints),
+                    $this->boqSection($column)
+                ));
+            }
+        }
+
+        return $rows->values();
+    }
+
+    private function housingBoqRow(VHousingUnitAudited $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
+    {
+        return [
+            'building_objectid' => $housingUnit->building?->objectid ?? '-',
+            'objectid' => $housingUnit->objectid,
+            'globalid' => $housingUnit->globalid,
+            'housing_unit_number' => $housingUnit->housing_unit_number ?: '-',
+            'unit_owner' => $this->housingUnitOwnerName($housingUnit),
+            'municipalitie' => $housingUnit->municipalitie ?: '-',
+            'neighborhood' => $housingUnit->neighborhood ?: '-',
+            'unit_damage_status' => $housingUnit->unit_damage_status ?: '-',
+            'field' => $column,
+            'section' => $section,
+            'item_code' => $itemCode,
+            'description' => $description,
+            'unit' => $this->boqUnit($description),
+            'quantity' => $quantity,
+        ];
+    }
+
+    private function cleanBoqValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '' || $value === '0' || strtolower($value) === 'null') {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  Collection<string, Assessment>  $assessmentHints
+     */
+    private function boqDescription(string $column, Collection $assessmentHints): string
+    {
+        $assessment = $assessmentHints->get($column);
+        $description = trim((string) ($assessment?->hint ?: $assessment?->label ?: $column));
+
+        return $description !== '' ? $description : $column;
+    }
+
+    /**
+     * @param  Collection<string, Assessment>  $assessmentHints
+     */
+    private function boqItemCode(string $column, Collection $assessmentHints): string
+    {
+        $label = trim((string) ($assessmentHints->get($column)?->label ?? ''));
+
+        if (preg_match('/^([A-Za-z]{1,4}\d+[A-Za-z]?)\s*[-–]/', $label, $matches)) {
+            return strtoupper($matches[1]);
+        }
+
+        return strtoupper($column);
+    }
+
+    private function boqUnit(string $description): string
+    {
+        if (preg_match('/\(([^()]+)\)\s*$/u', $description, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return '-';
+    }
+
+    private function boqSection(string $column): string
+    {
+        if (preg_match('/^fn(\d+)$/', $column, $matches)) {
+            $number = (int) $matches[1];
+
+            if ($number >= 1 && $number <= 3) {
+                return 'Painting Works';
+            }
+
+            if (in_array($number, [5, 6, 7, 8, 10], true)) {
+                return 'Tiling Works';
+            }
+
+            if ($number === 4 || ($number >= 11 && $number <= 15)) {
+                return 'Marble Works';
+            }
+
+            if ($number >= 16 && $number <= 26) {
+                return 'Plastering Works (Gypsum / Plaster)';
+            }
+
+            return 'External Finishings Works';
+        }
+
+        foreach ([
+            'dm' => 'Demolishing Works',
+            'bl' => 'Blocks Works',
+            'co' => 'Concrete Works',
+            'al' => 'Aluminum Works',
+            'wd' => 'Wood Works',
+            'mt' => 'Metal Works',
+            'cm' => 'Combined',
+            'pm' => 'Plumping Works',
+            'el' => 'Electrical Works',
+            'pv' => 'PV System Works',
+        ] as $prefix => $section) {
+            if (str_starts_with($column, $prefix)) {
+                return $section;
+            }
+        }
+
+        return 'Miscellaneous Works';
+    }
+
+    private function housingUnitOwnerName(VHousingUnitAudited $housingUnit): string
+    {
+        $name = collect([
+            $housingUnit->q_9_3_1_first_name,
+            $housingUnit->q_9_3_2_second_name__father,
+            $housingUnit->q_9_3_3_third_name__grandfather,
+            $housingUnit->q_9_3_4_last_name,
+        ])->filter()->implode(' ');
+
+        return $name !== '' ? $name : ($housingUnit->unit_owner ?: '-');
+    }
+
+    /**
+     * @param  Collection<int, VHousingUnitAudited>  $housing
+     * @param  Collection<int, array<string, mixed>>  $boqRows
+     * @return array<string, mixed>
+     */
+    private function housingBoqSummary(Collection $housing, Collection $boqRows): array
+    {
+        return [
+            'units_count' => $housing->count(),
+            'rows_count' => $boqRows->count(),
+            'sections_count' => $boqRows->pluck('section')->unique()->count(),
+            'generated_at' => now()->format('Y-m-d H:i'),
+        ];
+    }
+
+    private function boqPdfFileName(VHousingUnitAudited $housingUnit): string
+    {
+        $ownerName = $this->safeExportFileSegment($this->housingUnitOwnerName($housingUnit)) ?? 'unit';
+        $objectId = $this->safeExportFileSegment((string) ($housingUnit->objectid ?? '')) ?? (string) $housingUnit->getKey();
+
+        return 'boq-'.$ownerName.'-'.$objectId.'.pdf';
+    }
+
+    private function safeExportFileSegment(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '' || $value === '-') {
+            return null;
+        }
+
+        $value = (string) preg_replace('/[\\\\\/:*?"<>|]+/u', ' ', $value);
+        $value = (string) preg_replace('/\s+/u', '-', trim($value));
+        $value = trim($value, '-_. ');
+
+        return $value !== '' ? (string) str($value)->limit(80, '') : null;
+    }
+
     /**
      * @param  array<string, mixed>  $attachment
      */
@@ -494,6 +843,7 @@ class DownloadHousingUnitAttachments extends Command
         $rowNumber = 1;
         $localRows = [];
         $arcgisUrlsByObjectId = [];
+        $boqPdfPathsByObjectId = [];
 
         while (($row = fgetcsv($handle)) !== false) {
             if ($rowNumber === 1) {
@@ -506,6 +856,11 @@ class DownloadHousingUnitAttachments extends Command
             $status = (string) ($row[5] ?? '');
             $localPath = (string) ($row[6] ?? '');
             $arcgisUrl = (string) ($row[8] ?? '');
+            $boqPdfPath = (string) ($row[10] ?? '');
+
+            if (filled($boqPdfPath)) {
+                $boqPdfPathsByObjectId[$objectId] = $this->localHyperlinkPath($boqPdfPath);
+            }
 
             if (in_array($status, ['not_found', 'online_only'], true) && filled($arcgisUrl)) {
                 $arcgisUrlsByObjectId[$objectId] ??= [];
@@ -535,20 +890,34 @@ class DownloadHousingUnitAttachments extends Command
         $maxArcgisLinks = collect($arcgisUrlsByObjectId)
             ->map(fn (array $urls): int => count(array_unique($urls)))
             ->max() ?? 0;
+        $hasBoqPdfLinks = collect($boqPdfPathsByObjectId)->filter()->isNotEmpty();
+        $boqColumnNumber = $hasBoqPdfLinks ? 2 : null;
+        $localColumnNumber = $hasBoqPdfLinks ? 3 : 2;
+        $arcgisStartColumnNumber = $localColumnNumber + 1;
 
         $sheet->setCellValue('A1', 'objectid');
-        $sheet->setCellValue('B1', 'رابط المرفق المحلي');
+        if ($hasBoqPdfLinks) {
+            $sheet->setCellValue([$boqColumnNumber, 1], 'رابط جدول الكميات PDF');
+        }
+
+        $sheet->setCellValue([$localColumnNumber, 1], 'رابط المرفق المحلي');
 
         for ($index = 1; $index <= $maxArcgisLinks; $index++) {
-            $sheet->setCellValue([$index + 2, 1], "مرفق ArcGIS {$index}");
+            $sheet->setCellValue([$arcgisStartColumnNumber + $index - 1, 1], "مرفق ArcGIS {$index}");
         }
+
+        $writtenObjectIds = [];
 
         foreach ($localRows as $localRow) {
             $excelRow = $sheet->getHighestRow() + 1;
             $sheet->setCellValue("A{$excelRow}", $localRow['object_id']);
-            $sheet->setCellValue("B{$excelRow}", 'فتح المرفق');
-            $sheet->getCell("B{$excelRow}")->getHyperlink()->setUrl($localRow['relative_path']);
-            $this->styleHyperlink("B{$excelRow}", $sheet);
+            $this->writeBoqPdfLink($sheet, $excelRow, (string) $localRow['object_id'], $boqPdfPathsByObjectId, $boqColumnNumber);
+
+            $localCoordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($localColumnNumber).$excelRow;
+            $sheet->setCellValue($localCoordinate, 'فتح المرفق');
+            $sheet->getCell($localCoordinate)->getHyperlink()->setUrl($localRow['relative_path']);
+            $this->styleHyperlink($localCoordinate, $sheet);
+            $writtenObjectIds[] = (string) $localRow['object_id'];
         }
 
         foreach ($arcgisUrlsByObjectId as $objectId => $urls) {
@@ -560,18 +929,32 @@ class DownloadHousingUnitAttachments extends Command
 
             $excelRow = $sheet->getHighestRow() + 1;
             $sheet->setCellValue("A{$excelRow}", $objectId);
-            $sheet->setCellValue("B{$excelRow}", '');
+            $this->writeBoqPdfLink($sheet, $excelRow, (string) $objectId, $boqPdfPathsByObjectId, $boqColumnNumber);
+            $localCoordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($localColumnNumber).$excelRow;
+            $sheet->setCellValue($localCoordinate, '');
 
             foreach ($urls as $index => $url) {
-                $columnNumber = $index + 3;
+                $columnNumber = $arcgisStartColumnNumber + $index;
                 $coordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnNumber).$excelRow;
                 $sheet->setCellValue($coordinate, 'مرفق '.($index + 1));
                 $sheet->getCell($coordinate)->getHyperlink()->setUrl($url);
                 $this->styleHyperlink($coordinate, $sheet);
             }
+
+            $writtenObjectIds[] = (string) $objectId;
         }
 
-        $highestColumnIndex = max(2, $maxArcgisLinks + 2);
+        foreach ($boqPdfPathsByObjectId as $objectId => $boqPdfPath) {
+            if (! filled($boqPdfPath) || in_array((string) $objectId, $writtenObjectIds, true)) {
+                continue;
+            }
+
+            $excelRow = $sheet->getHighestRow() + 1;
+            $sheet->setCellValue("A{$excelRow}", $objectId);
+            $this->writeBoqPdfLink($sheet, $excelRow, (string) $objectId, $boqPdfPathsByObjectId, $boqColumnNumber);
+        }
+
+        $highestColumnIndex = max($localColumnNumber, $maxArcgisLinks + $arcgisStartColumnNumber - 1);
 
         for ($columnIndex = 1; $columnIndex <= $highestColumnIndex; $columnIndex++) {
             $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnIndex))->setAutoSize(true);
@@ -582,6 +965,21 @@ class DownloadHousingUnitAttachments extends Command
 
         (new Xlsx($spreadsheet))->save($xlsxPath);
         $spreadsheet->disconnectWorksheets();
+    }
+
+    /**
+     * @param  array<string, string>  $boqPdfPathsByObjectId
+     */
+    private function writeBoqPdfLink(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, int $excelRow, string $objectId, array $boqPdfPathsByObjectId, ?int $boqColumnNumber): void
+    {
+        if ($boqColumnNumber === null || ! filled($boqPdfPathsByObjectId[$objectId] ?? '')) {
+            return;
+        }
+
+        $coordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($boqColumnNumber).$excelRow;
+        $sheet->setCellValue($coordinate, 'فتح جدول الكميات');
+        $sheet->getCell($coordinate)->getHyperlink()->setUrl($boqPdfPathsByObjectId[$objectId]);
+        $this->styleHyperlink($coordinate, $sheet);
     }
 
     private function styleHyperlink(string $coordinate, \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet): void
@@ -609,13 +1007,20 @@ class DownloadHousingUnitAttachments extends Command
     private function localHyperlinkPath(string $localPath): string
     {
         $normalizedPath = str_replace('\\', '/', $localPath);
-        $position = strpos($normalizedPath, '/housing_units/');
 
-        if ($position === false) {
-            return '';
+        foreach (['/housing_units/', '/boq_pdfs/'] as $pathMarker) {
+            $position = strpos($normalizedPath, $pathMarker);
+
+            if ($position !== false) {
+                return ltrim(substr($normalizedPath, $position + 1), '/');
+            }
         }
 
-        return ltrim(substr($normalizedPath, $position + 1), '/');
+        if (str_starts_with($normalizedPath, 'boq_pdfs/')) {
+            return $normalizedPath;
+        }
+
+        return '';
     }
 
     private function createZipArchive(string $outputDirectory, string $outputName): string

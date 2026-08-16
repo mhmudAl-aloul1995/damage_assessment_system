@@ -1,11 +1,16 @@
 <?php
 
+use App\Models\Assessment;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Spatie\LaravelPdf\Facades\Pdf;
 
 it('downloads matching housing unit ownership and permit attachments from objectids file', function () {
     Cache::forget('arcgis_token');
@@ -256,6 +261,76 @@ it('downloads all housing unit attachments except damage photos when requested',
         expect(File::exists($outputPath.'/housing_units/13/13_unit_attachment_801_damge_photo_1.jpg'))->toBeFalse();
 
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments/801'));
+    } finally {
+        File::delete($inputPath);
+        File::deleteDirectory($outputPath);
+        File::delete($zipPath);
+    }
+});
+
+it('adds a local BOQ PDF link generated from the audited housing units view', function () {
+    Cache::forget('arcgis_token');
+    Pdf::fake();
+
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+        $table->string('parentglobalid')->nullable();
+        $table->string('unit_owner')->nullable();
+        $table->string('dm1')->nullable();
+    });
+
+    DB::table('v_housing_units_audited')->insert([
+        'objectid' => 14,
+        'globalid' => 'housing-unit-boq-pdf',
+        'unit_owner' => 'BOQ Owner',
+        'dm1' => '4',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'dm1',
+        'label' => 'DM1-Demolish walls',
+        'hint' => 'إزالة حوائط (M2)',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/14/attachments' => Http::response([
+            'attachmentInfos' => [],
+        ]),
+    ]);
+
+    $inputPath = storage_path('app/testing-unit-objectids.txt');
+    $outputPath = storage_path('app/public/exports/testing_unit_boq_pdf_link');
+    $zipPath = storage_path('app/public/exports/testing_unit_boq_pdf_link.zip');
+
+    File::put($inputPath, '14');
+    File::deleteDirectory($outputPath);
+    File::delete($zipPath);
+
+    try {
+        $this->artisan('arcgis:download-housing-unit-attachments', [
+            'file' => $inputPath,
+            '--output' => 'testing_unit_boq_pdf_link',
+            '--include-boq-pdf' => true,
+        ])->assertSuccessful();
+
+        expect(File::exists($outputPath.'/boq_pdfs/boq-BOQ-Owner-14.pdf'))->toBeTrue();
+
+        $spreadsheet = IOFactory::load($outputPath.'/attachments-index.xlsx');
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->getCell('A1')->getValue())->toBe('objectid');
+        expect($sheet->getCell('B1')->getValue())->toBe('رابط جدول الكميات PDF');
+        expect($sheet->getCell('C1')->getValue())->toBe('رابط المرفق المحلي');
+        expect($sheet->getCell('A2')->getValue())->toBe(14);
+        expect($sheet->getCell('B2')->getValue())->toBe('فتح جدول الكميات');
+        expect($sheet->getCell('B2')->getHyperlink()->getUrl())->toBe('boq_pdfs/boq-BOQ-Owner-14.pdf');
+
+        $spreadsheet->disconnectWorksheets();
     } finally {
         File::delete($inputPath);
         File::deleteDirectory($outputPath);
