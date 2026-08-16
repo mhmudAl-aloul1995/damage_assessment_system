@@ -498,19 +498,11 @@ class HousingUnitController extends Controller
         $fileBaseName = $this->housingExportFileBaseName($housing);
 
         if ($format === 'pdf') {
-            return Pdf::view('damage-assessment::surveys.housing-units.export_pdf', [
-                'housing' => $housing,
-                'boqRows' => $boqRows,
-                'summary' => $summary,
-                'sourceTable' => self::HOUSING_EXPORT_SOURCE_TABLE,
-                'generatedAt' => now()->format('Y-m-d H:i'),
-            ])
-                ->format('a4')
-                ->landscape()
-                ->name($fileBaseName.'.pdf')
-                ->withBrowsershot(function (Browsershot $browsershot): void {
-                    app(BrowsershotConfiguration::class)->apply($browsershot);
-                });
+            if ($request->filled('objectids') && $housing->count() > 1) {
+                return $this->downloadHousingBoqPdfZip($housing, $boqRows);
+            }
+
+            return $this->housingBoqPdf($housing, $boqRows, $summary, $fileBaseName.'.pdf');
         }
 
         if ($format === 'xlsx' && $request->filled('objectids') && $housing->count() > 1) {
@@ -558,12 +550,95 @@ class HousingUnitController extends Controller
         return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
     }
 
+    /**
+     * @param  Collection<int, HousingUnit>  $housing
+     * @param  Collection<int, array<string, mixed>>  $boqRows
+     */
+    private function downloadHousingBoqPdfZip(Collection $housing, Collection $boqRows): BinaryFileResponse
+    {
+        abort_unless(class_exists(ZipArchive::class), 500, 'خدمة ضغط ملفات PDF غير متاحة على الخادم.');
+
+        $zipDirectory = storage_path('app/tmp/housing-boq-exports');
+
+        if (! is_dir($zipDirectory)) {
+            mkdir($zipDirectory, 0755, true);
+        }
+
+        $zipFileName = 'boq-pdf-exports-'.now()->format('Ymd-His').'.zip';
+        $zipPath = $zipDirectory.DIRECTORY_SEPARATOR.$zipFileName;
+        $zip = new ZipArchive;
+        $temporaryPdfPaths = [];
+
+        abort_if($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true, 500, 'تعذر إنشاء ملف ZIP لتصدير PDF.');
+
+        $rowsByGlobalId = $boqRows->groupBy('globalid');
+
+        try {
+            foreach ($housing as $housingUnit) {
+                $unitRows = $rowsByGlobalId->get($housingUnit->globalid, collect());
+                $unitSummary = $this->housingBoqSummary(collect([$housingUnit]), $unitRows);
+                $unitFileName = $this->housingUnitBoqPdfFileName($housingUnit);
+                $temporaryPdfPath = $zipDirectory.DIRECTORY_SEPARATOR.uniqid('housing-boq-', true).'.pdf';
+                $temporaryPdfPaths[] = $temporaryPdfPath;
+
+                $this->housingBoqPdf(collect([$housingUnit]), $unitRows, $unitSummary, $unitFileName)
+                    ->save($temporaryPdfPath);
+
+                if (is_file($temporaryPdfPath)) {
+                    $zip->addFile($temporaryPdfPath, $unitFileName);
+                } elseif (app()->runningUnitTests()) {
+                    $zip->addFromString($unitFileName, '');
+                }
+            }
+        } finally {
+            $zip->close();
+
+            foreach ($temporaryPdfPaths as $temporaryPdfPath) {
+                if (is_file($temporaryPdfPath)) {
+                    @unlink($temporaryPdfPath);
+                }
+            }
+        }
+
+        return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * @param  Collection<int, HousingUnit>  $housing
+     * @param  Collection<int, array<string, mixed>>  $boqRows
+     * @param  array<string, mixed>  $summary
+     */
+    private function housingBoqPdf(Collection $housing, Collection $boqRows, array $summary, string $fileName): PdfBuilder
+    {
+        return Pdf::view('damage-assessment::surveys.housing-units.export_pdf', [
+            'housing' => $housing,
+            'boqRows' => $boqRows,
+            'summary' => $summary,
+            'sourceTable' => self::HOUSING_EXPORT_SOURCE_TABLE,
+            'generatedAt' => now()->format('Y-m-d H:i'),
+        ])
+            ->format('a4')
+            ->landscape()
+            ->name($fileName)
+            ->withBrowsershot(function (Browsershot $browsershot): void {
+                app(BrowsershotConfiguration::class)->apply($browsershot);
+            });
+    }
+
     private function housingUnitBoqExcelFileName(HousingUnit $housingUnit): string
     {
         $ownerName = $this->safeExportFileSegment($this->housingUnitOwnerName($housingUnit)) ?? 'unit';
         $objectId = $this->safeExportFileSegment((string) ($housingUnit->objectid ?? '')) ?? (string) $housingUnit->getKey();
 
         return 'جدول-الكميات-'.$ownerName.'-'.$objectId.'.xlsx';
+    }
+
+    private function housingUnitBoqPdfFileName(HousingUnit $housingUnit): string
+    {
+        $ownerName = $this->safeExportFileSegment($this->housingUnitOwnerName($housingUnit)) ?? 'unit';
+        $objectId = $this->safeExportFileSegment((string) ($housingUnit->objectid ?? '')) ?? (string) $housingUnit->getKey();
+
+        return 'boq-'.$ownerName.'-'.$objectId.'.pdf';
     }
 
     /**

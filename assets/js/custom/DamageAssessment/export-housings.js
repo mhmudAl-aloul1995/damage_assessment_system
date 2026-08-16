@@ -1,156 +1,158 @@
 "use strict";
 
-// Class definition
-var KTModalExportUsers = function () {
-    // Shared variables
-    const element = document.getElementById('kt_modal_export_housing');
-    const form = element.querySelector('#kt_modal_export_housing_form');
-    const modal = new bootstrap.Modal(element);
+var KTHousingExportModals = function () {
+    var successText = "The export request has been started successfully.";
+    var errorText = "Please fix the highlighted errors and try again.";
+    var cancelText = "Are you sure you want to cancel?";
 
-    // Init form inputs
-    var initForm = function () {
+    var buildExportUrl = function (format) {
+        return housing_export_url.replace('__FORMAT__', encodeURIComponent(format));
+    };
 
-        // Init form validation rules. For more info check the FormValidation plugin's official documentation:https://formvalidation.io/
-        var validator = FormValidation.formValidation(
-            form,
-            {
-                fields: {
-                    'format': {
-                        validators: {
-                            notEmpty: {
-                                message: 'File format is required'
-                            }
-                        }
-                    },
-                },
-                plugins: {
-                    trigger: new FormValidation.plugins.Trigger(),
-                    bootstrap: new FormValidation.plugins.Bootstrap5({
-                        rowSelector: '.fv-row',
-                        eleInvalidClass: '',
-                        eleValidClass: ''
-                    })
+    var serializeForms = function (form, includeFilters) {
+        var payload = $(form).serialize();
+
+        if (includeFilters) {
+            payload += '&' + $("#filter_housing_form").serialize();
+        }
+
+        return payload;
+    };
+
+    var initExportModal = function (config) {
+        var element = document.getElementById(config.modalId);
+
+        if (!element) {
+            return;
+        }
+
+        var form = element.querySelector(config.formSelector);
+        var modal = new bootstrap.Modal(element);
+        var fields = {
+            'format': {
+                validators: {
+                    notEmpty: {
+                        message: 'File format is required'
+                    }
                 }
             }
-        );
+        };
 
-        // Submit button handler
-        const submitButton = element.querySelector('[data-kt-housing-modal-action="submit"]');
+        if (config.requireObjectIds) {
+            fields.objectids = {
+                validators: {
+                    notEmpty: {
+                        message: 'Housing Unit Object IDs are required'
+                    }
+                }
+            };
+        }
+
+        var validator = FormValidation.formValidation(form, {
+            fields: fields,
+            plugins: {
+                trigger: new FormValidation.plugins.Trigger(),
+                bootstrap: new FormValidation.plugins.Bootstrap5({
+                    rowSelector: '.fv-row',
+                    eleInvalidClass: '',
+                    eleValidClass: ''
+                })
+            }
+        });
+
+        var submitButton = element.querySelector('[data-kt-housing-modal-action="submit"]');
         submitButton.addEventListener('click', function (e) {
             e.preventDefault();
 
-            // Validate form before submit
-            if (validator) {
-                validator.validate().then(function (status) {
-                    console.log('validated!');
-
-                    if (status == 'Valid') {
-                        submitButton.setAttribute('data-kt-indicator', 'on');
-
-                        // Disable submit button whilst loading
-                        submitButton.disabled = true;
-
-                        setTimeout(function () {
-                            submitButton.removeAttribute('data-kt-indicator');
-
-                            const format = ($(form).find('[name="format"]').val() || 'xlsx').toString().toLowerCase();
-                            const exportUrl = housing_export_url.replace('__FORMAT__', encodeURIComponent(format));
-
-                            window.location.href = exportUrl + "?" + $("#kt_modal_export_housing_form").serialize() + '&' + $("#filter_housing_form").serialize()
-
-                            Swal.fire({
-                                text: "تم تصدير البيانات المطلوبة بنجاخ !",
-                                icon: "success",
-                                buttonsStyling: false,
-                                confirmButtonText: "حسناً، موافق!",
-                                customClass: {
-                                    confirmButton: "btn btn-primary"
-                                }
-                            }).then(function (result) {
-                                if (result.isConfirmed) {
-
-                                    modal.hide();
-
-                                    submitButton.disabled = false;
-
-
-                                }
-                            });
-
-
-
-
-
-                        }, 60000);
-                    } else {
-                        Swal.fire({
-                            text: "عذراً، يبدو أنه تم اكتشاف بعض الأخطاء، يرجى المحاولة مرة أخرى.",
-                            icon: "error",
-                            buttonsStyling: false,
-                            confirmButtonText: "حسناً، موافق!",
-                            customClass: {
-                                confirmButton: "btn btn-primary"
-                            }
-                        });
-                    }
-                });
-            }
-        });
-
-        // Cancel button handler
-        const cancelButton = element.querySelector('[data-kt-housing-modal-action="close"]');
-        const selectOptions = element.querySelectorAll('select');
-
-        cancelButton.addEventListener('click', function (e) {
-            e.preventDefault();
-
-            Swal.fire({
-                text: "هل أنت متأكد من رغبتك في الإلغاء؟",
-                icon: "warning",
-                showCancelButton: true,
-                buttonsStyling: false,
-                confirmButtonText: "نعم، قم بإلغائه!",
-                cancelButtonText: "لا، عودة",
-                customClass: {
-                    confirmButton: "btn btn-primary",
-                    cancelButton: "btn btn-active-light"
-                }
-            }).then(function (result) {
-                if (result.value) {
-
-                    selectOptions.forEach(selectOptions => {
-                        $(selectOptions).val('').trigger('change');
-                    });
-
-                    form.reset(); // Reset form	
-                    modal.hide(); // Hide modal		
-
-                } else if (result.dismiss === 'cancel') {
+            validator.validate().then(function (status) {
+                if (status !== 'Valid') {
                     Swal.fire({
-                        text: "لم يتم إلغاء طلبك!",
+                        text: errorText,
                         icon: "error",
                         buttonsStyling: false,
-                        confirmButtonText: "حسناً، موافق!",
+                        confirmButtonText: "OK",
                         customClass: {
-                            confirmButton: "btn btn-primary",
+                            confirmButton: "btn btn-primary"
                         }
                     });
+
+                    return;
                 }
+
+                submitButton.setAttribute('data-kt-indicator', 'on');
+                submitButton.disabled = true;
+
+                var format = ($(form).find('[name="format"]').val() || 'xlsx').toString().toLowerCase();
+                var exportUrl = buildExportUrl(format);
+
+                window.location.href = exportUrl + "?" + serializeForms(form, config.includeFilters);
+
+                Swal.fire({
+                    text: successText,
+                    icon: "success",
+                    buttonsStyling: false,
+                    confirmButtonText: "OK",
+                    customClass: {
+                        confirmButton: "btn btn-primary"
+                    }
+                }).then(function () {
+                    modal.hide();
+                    submitButton.removeAttribute('data-kt-indicator');
+                    submitButton.disabled = false;
+                });
             });
         });
 
+        element.querySelectorAll('[data-kt-housing-modal-action="close"]').forEach(function (cancelButton) {
+            cancelButton.addEventListener('click', function (e) {
+                e.preventDefault();
 
-    }
+                Swal.fire({
+                    text: cancelText,
+                    icon: "warning",
+                    showCancelButton: true,
+                    buttonsStyling: false,
+                    confirmButtonText: "Yes",
+                    cancelButtonText: "No",
+                    customClass: {
+                        confirmButton: "btn btn-primary",
+                        cancelButton: "btn btn-active-light"
+                    }
+                }).then(function (result) {
+                    if (!result.value) {
+                        return;
+                    }
+
+                    element.querySelectorAll('select').forEach(function (select) {
+                        $(select).val('').trigger('change');
+                    });
+
+                    form.reset();
+                    modal.hide();
+                });
+            });
+        });
+    };
 
     return {
-        // Public functions
         init: function () {
-            initForm();
+            initExportModal({
+                modalId: 'kt_modal_export_housing',
+                formSelector: '#kt_modal_export_housing_form',
+                includeFilters: true,
+                requireObjectIds: false
+            });
+
+            initExportModal({
+                modalId: 'kt_modal_export_housing_boq_objectids',
+                formSelector: '#kt_modal_export_housing_boq_objectids_form',
+                includeFilters: false,
+                requireObjectIds: true
+            });
         }
     };
 }();
 
-// On document ready
 KTUtil.onDOMContentLoaded(function () {
-    KTModalExportUsers.init();
+    KTHousingExportModals.init();
 });

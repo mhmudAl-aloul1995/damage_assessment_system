@@ -44,9 +44,8 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Housing Unit Filters');
     $response->assertSee('Unit information and damage');
     $response->assertSee('Resident and household');
-    $response->assertSee('Support and safety');
-    $response->assertSee('Object ID للوحدات السكنية');
-    $response->assertSee('الحد الأقصى 200 وحدة');
+    $response->assertSee('Housing Unit Object IDs');
+    $response->assertSee('Paste up to 200 Object IDs from Excel');
     $response->assertSee('var url_phc', false);
     $response->assertSee('export-housings.js?v=', false);
     $response->assertSee('Apartment');
@@ -508,6 +507,56 @@ it('exports housing unit BOQ by pasted housing object ids with a maximum of ten 
     expect($zipEntries->contains(fn (string $name): bool => str_contains($name, 'Object-Three-3703.xlsx')))->toBeFalse();
 
     $zip->close();
+    @unlink($zipPath);
+});
+
+it('exports pasted housing object ids to separate pdf files inside a zip', function () {
+    Pdf::fake();
+
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3751,
+        'globalid' => 'housing-unit-objectids-pdf-one',
+        'unit_owner' => 'PDF One',
+        'dm1' => '4',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3752,
+        'globalid' => 'housing-unit-objectids-pdf-two',
+        'unit_owner' => 'PDF Two',
+        'dm1' => '5',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'dm1',
+        'label' => 'DM1-Demolish walls',
+        'hint' => 'Ø¥Ø²Ø§Ù„Ø© Ø­ÙˆØ§Ø¦Ø· Ø´Ø§Ù…Ù„Ø§ Ø§Ù„Ù…Ø¹Ø¯Ø§Øª ÙˆØ§Ù„Ù…ØµÙ†Ø¹ÙŠØ© ÙˆØ§Ù„ØªØ±Ø­ÙŠÙ„ Ù„Ø£Ù‚Ø±Ø¨ Ù…ÙƒØ¨ (M2)',
+    ]);
+
+    $response = $this->actingAs($user)->get(route('housing.export', [
+        'format' => 'pdf',
+        'objectids' => "3751\r\n3752",
+    ]));
+
+    $response->assertOk();
+    expect($response->baseResponse->headers->get('content-disposition'))->toContain('.zip');
+
+    Pdf::assertSaved(function (PdfBuilder $pdf, string $path): bool {
+        return str_contains($pdf->downloadName, 'PDF-One-3751.pdf')
+            && str_contains($path, 'housing-boq-')
+            && $pdf->contains('3751')
+            && ! $pdf->contains('3752');
+    });
+
+    Pdf::assertSaved(function (PdfBuilder $pdf): bool {
+        return str_contains($pdf->downloadName, 'PDF-Two-3752.pdf')
+            && $pdf->contains('3752')
+            && ! $pdf->contains('3751');
+    });
+
+    $zipPath = $response->baseResponse->getFile()->getPathname();
     @unlink($zipPath);
 });
 
