@@ -269,6 +269,76 @@ it('downloads all housing unit attachments except damage photos when requested',
     }
 });
 
+it('adds ArcGIS attachment links without downloading files when requested', function () {
+    Cache::forget('arcgis_token');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/16/attachments' => Http::response([
+            'attachmentInfos' => [
+                [
+                    'id' => 900,
+                    'name' => 'ownership_image.jpg',
+                    'contentType' => 'image/jpeg',
+                ],
+                [
+                    'id' => 901,
+                    'name' => 'municipality_permit.pdf',
+                    'contentType' => 'application/pdf',
+                ],
+                [
+                    'id' => 902,
+                    'name' => 'damage_photo.jpg',
+                    'contentType' => 'image/jpeg',
+                ],
+            ],
+        ]),
+    ]);
+
+    $inputPath = storage_path('app/testing-unit-url-only-objectids.txt');
+    $outputPath = storage_path('app/public/exports/testing_unit_attachment_url_only');
+    $zipPath = storage_path('app/public/exports/testing_unit_attachment_url_only.zip');
+
+    File::put($inputPath, '16');
+    File::deleteDirectory($outputPath);
+    File::delete($zipPath);
+
+    try {
+        $this->artisan('arcgis:download-housing-unit-attachments', [
+            'file' => $inputPath,
+            '--output' => 'testing_unit_attachment_url_only',
+            '--exclude-damage' => true,
+            '--attachments-url-only' => true,
+        ])->assertSuccessful();
+
+        expect(File::exists($outputPath.'/housing_units'))->toBeFalse();
+        expect(File::get($outputPath.'/attachments-index.csv'))->toContain('online_only');
+        expect(File::get($outputPath.'/attachments-index.csv'))->not->toContain('downloaded');
+
+        $spreadsheet = IOFactory::load($outputPath.'/attachments-index.xlsx');
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->getCell('A2')->getValue())->toBe(16);
+        expect($sheet->getCell('B2')->getValue())->toBeNull();
+        expect($sheet->getCell('C2')->getValue())->toBe('مرفق 1');
+        expect($sheet->getCell('D2')->getValue())->toBe('مرفق 2');
+        expect($sheet->getCell('C2')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/16/attachments/900?token=arcgis-token');
+        expect($sheet->getCell('D2')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/16/attachments/901?token=arcgis-token');
+
+        $spreadsheet->disconnectWorksheets();
+
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments/900?token='));
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments/901?token='));
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments/902'));
+    } finally {
+        File::delete($inputPath);
+        File::deleteDirectory($outputPath);
+        File::delete($zipPath);
+    }
+});
+
 it('adds a local BOQ PDF link generated from the audited housing units view', function () {
     Cache::forget('arcgis_token');
     Pdf::fake();

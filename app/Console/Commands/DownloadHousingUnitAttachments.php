@@ -32,6 +32,7 @@ class DownloadHousingUnitAttachments extends Command
         {--output= : Output directory relative to storage/app/public/exports}
         {--types=ownership,permit : Comma separated attachment types: identity,ownership,permit}
         {--exclude-damage : Download all housing unit attachments except damage photos}
+        {--attachments-url-only : Add direct ArcGIS attachment links to Excel without downloading files to the server}
         {--include-boq-pdf : Generate a local BOQ PDF from v_housing_units_audited and link it in Excel}
         {--boq-pdf-url : Link to the existing online BOQ PDF export instead of generating local PDF files}
         {--limit= : Process only the first N ObjectIDs}
@@ -72,6 +73,7 @@ class DownloadHousingUnitAttachments extends Command
 
         $types = $this->selectedTypes();
         $excludeDamage = (bool) $this->option('exclude-damage');
+        $attachmentsUrlOnly = (bool) $this->option('attachments-url-only');
         $includeBoqPdf = (bool) $this->option('include-boq-pdf');
         $useBoqPdfUrl = (bool) $this->option('boq-pdf-url');
         $outputName = $this->safePathSegment((string) ($this->option('output') ?: 'housing_unit_attachments_'.now()->format('Ymd_His')));
@@ -108,6 +110,7 @@ class DownloadHousingUnitAttachments extends Command
         $htmlRows = [];
         $this->info('ObjectIDs: '.count($objectIds));
         $this->info($excludeDamage ? 'Mode: all attachments except damage photos' : 'Types: '.implode(', ', $types));
+        $this->info($attachmentsUrlOnly ? 'Attachments: ArcGIS links only' : 'Attachments: download files');
         $this->info($includeBoqPdf ? 'BOQ PDF: '.($useBoqPdfUrl ? 'online export links' : 'local files') : 'BOQ PDF: disabled');
         $this->info("Output: {$outputDirectory}");
 
@@ -191,6 +194,27 @@ class DownloadHousingUnitAttachments extends Command
                     $failed++;
                     fputcsv($indexHandle, [$objectId, '', $matchedType, $originalName, $contentType, 'failed', '', '', '', 'Missing attachment id.', $boqPdfRelativePath]);
                     $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'failed', '', 'Missing attachment id.');
+
+                    continue;
+                }
+
+                if ($attachmentsUrlOnly) {
+                    $matched++;
+                    $arcgisUrl = $this->arcgisAttachmentUrl($objectId, (string) $attachmentId, $token);
+                    fputcsv($indexHandle, [
+                        $objectId,
+                        $attachmentId,
+                        $matchedType,
+                        $originalName,
+                        $contentType,
+                        'online_only',
+                        '',
+                        '',
+                        $arcgisUrl,
+                        'Direct ArcGIS attachment link was added without downloading the file.',
+                        $boqPdfRelativePath,
+                    ]);
+                    $htmlRows[] = $this->htmlRow($objectId, $matchedType, $originalName, $contentType, 'online_only', $arcgisUrl, 'Direct ArcGIS attachment link.');
 
                     continue;
                 }
