@@ -11,28 +11,34 @@
             </div>
             <div class="card-toolbar d-flex gap-2 flex-wrap">
                 @role('Database Officer|Team Leader -INF')
-                    <select id="bulk_assign_engineer" class="form-select form-select-solid w-250px" data-placeholder="اختر المدقق">
-                        <option value=""></option>
-                        @foreach ($engineers as $engineer)
-                            <option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
-                        @endforeach
-                    </select>
-                    <button type="button" id="bulk_assign_btn" class="btn btn-light-info">إسناد المحدد</button>
+                <select id="bulk_assign_engineer" class="form-select form-select-solid w-250px"
+                    data-placeholder="اختر المدقق">
+                    <option value=""></option>
+                    @foreach ($engineers as $engineer)
+                        <option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
+                    @endforeach
+                </select>
+                <button type="button" id="bulk_assign_btn" class="btn btn-light-info">إسناد المحدد</button>
                 @endrole
-                <button type="button" id="open_roads_map_modal_btn" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#inf_roads_map_modal">خريطة مرافق الطرق</button>
-                <button type="button" id="open_export_modal_btn" class="btn btn-light-success" data-bs-toggle="modal" data-bs-target="#inf_roads_export_modal">تصدير تقرير</button>
+                <button type="button" id="open_roads_map_modal_btn" class="btn btn-light-primary" data-bs-toggle="modal"
+                    data-bs-target="#inf_roads_map_modal">خريطة مرافق الطرق</button>
+                <button type="button" id="open_export_modal_btn" class="btn btn-light-success" data-bs-toggle="modal"
+                    data-bs-target="#inf_roads_export_modal">تصدير تقرير</button>
                 <button type="button" id="reset_filters_btn" class="btn btn-light">إعادة تعيين الفلاتر</button>
-                <button class="btn btn-light-primary" onclick="$('#inf_roads_table').DataTable().ajax.reload(null, false)">تحديث</button>
+                <button class="btn btn-light-primary"
+                    onclick="$('#inf_roads_table').DataTable().ajax.reload(null, false)">تحديث</button>
             </div>
         </div>
 
         <div class="card-body">
             <div class="row g-3 mb-6">
                 <div class="col-md-2">
-                    <input id="filter_objectid" type="text" class="form-control form-control-solid audit-filter" placeholder="ObjectID">
+                    <input id="filter_objectid" type="text" class="form-control form-control-solid audit-filter"
+                        placeholder="ObjectID">
                 </div>
                 <div class="col-md-2">
-                    <select id="filter_municipalitie" class="form-select form-select-solid audit-filter audit-select" data-placeholder="البلدية">
+                    <select id="filter_municipalitie" class="form-select form-select-solid audit-filter audit-select"
+                        data-placeholder="البلدية">
                         <option value="">كل البلديات</option>
                         @foreach ($municipalities as $municipality)
                             <option value="{{ $municipality }}">{{ $municipality }}</option>
@@ -40,7 +46,8 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select id="filter_neighborhood" class="form-select form-select-solid audit-filter audit-select" data-placeholder="الحي">
+                    <select id="filter_neighborhood" class="form-select form-select-solid audit-filter audit-select"
+                        data-placeholder="الحي">
                         <option value="">كل الأحياء</option>
                         @foreach ($neighborhoods as $neighborhood)
                             <option value="{{ $neighborhood }}">{{ $neighborhood }}</option>
@@ -48,15 +55,25 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select id="filter_status" class="form-select form-select-solid audit-filter audit-select" data-placeholder="الحالة">
+                    <select id="filter_status" class="form-select form-select-solid audit-filter audit-select"
+                        data-placeholder="الحالة">
+
                         <option value="">كل الحالات</option>
+
+                        <option value="__no_audit_status__">
+                            لم تأخذ حالة تدقيق
+                        </option>
+
                         @foreach ($statuses as $status)
-                            <option value="{{ $status->name }}">{{ $status->label }}</option>
+                            <option value="{{ $status->name }}">
+                                {{ $status->label }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select id="filter_auditor" class="form-select form-select-solid audit-filter audit-select" data-placeholder="المدقق">
+                    <select id="filter_auditor" class="form-select form-select-solid audit-filter audit-select"
+                        data-placeholder="المدقق">
                         <option value="">كل المدققين</option>
                         @foreach ($engineers as $engineer)
                             <option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
@@ -64,7 +81,8 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select id="filter_field_engineer" class="form-select form-select-solid audit-filter audit-select" data-placeholder="المهندس الميداني">
+                    <select id="filter_field_engineer" class="form-select form-select-solid audit-filter audit-select"
+                        data-placeholder="المهندس الميداني">
                         <option value="">كل المهندسين الميدانيين</option>
                         @foreach ($fieldEngineers as $fieldEngineer)
                             <option value="{{ $fieldEngineer['value'] }}">{{ $fieldEngineer['label'] }}</option>
@@ -171,7 +189,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">إغلاق</button>
-                    <button type="button" class="btn btn-light-primary inf-roads-export-btn" data-format="xlsx">Excel</button>
+                    <button type="button" class="btn btn-light-primary inf-roads-export-btn"
+                        data-format="xlsx">Excel</button>
                     <button type="button" class="btn btn-light-danger inf-roads-export-btn" data-format="pdf">PDF</button>
                 </div>
             </div>
